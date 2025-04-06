@@ -32,7 +32,8 @@ def build_facet_selects(properties_metadata, facets):
         property_metadata = properties_metadata.get_property_metadata_for_str(
             facet.property_path
         )
-        select_field = "facet_" + facet.property_path.replace(".", "_")
+        select_field = ("facet_" + facet.property_path.replace(".", "_")).lower()
+
         new_fields_config.append(
             FieldMappingConfiguration(
                 map_from_pattern=facet.property_path,
@@ -87,21 +88,31 @@ def build_facets_data_query(
         sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
     """
     instance = get_cel_to_sql_provider(properties_metadata)
+    # if facet_options_query.cel:
+    #     base_query = (
+    #         select(text("*"))
+    #         .select_from(base_query)
+    #         .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
+    #         .cte("base_filtered_query")
+    #     )
+    # else:
+    #     base_query = base_query.cte("base_filtered_query")
+
     if facet_options_query.cel:
-        base_query = (
-            select(text("*"))
-            .select_from(base_query)
-            .filter(text(instance.convert_to_sql_str(facet_options_query.cel)))
-            .cte("base_filtered_query")
+        base_query = base_query.filter(
+            text(instance.convert_to_sql_str(facet_options_query.cel))
         )
-    else:
-        base_query = base_query.cte("base_filtered_query")
+
+    base_query = base_query.cte("base_filtered_query")
 
     # Main Query: JSON Extraction and Counting
     union_queries = []
+    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    new_fields_config = facet_selects_metadata["new_fields_config"]
+    facets_properties_metadata = PropertiesMetadata(new_fields_config)
 
     for facet in facets:
-        metadata = properties_metadata.get_property_metadata_for_str(
+        metadata = facets_properties_metadata.get_property_metadata_for_str(
             facet.property_path
         )
         facet_value = []
@@ -191,6 +202,11 @@ def get_facet_options(
                     facets=valid_facets,
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
+                )
+                strq = str(
+                    db_query.compile(
+                        compile_kwargs={"literal_binds": True}, dialect=engine.dialect
+                    )
                 )
 
                 data = session.exec(db_query).all()

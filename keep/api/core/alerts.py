@@ -4,14 +4,13 @@ import logging
 import os
 from typing import Tuple
 
-from sqlalchemy import and_, func, literal_column, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
-    remap_fields_configurations,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
@@ -19,7 +18,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 from keep.api.core.db import engine
 
 # This import is required to create the tables
-from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.core.facets import build_facet_selects, get_facet_options, get_facets
 from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     Alert,
@@ -40,21 +39,21 @@ alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 50000))
 
 alert_field_configurations = [
     FieldMappingConfiguration(
-        map_from_pattern="source", map_to="filter_provider_type", data_type=str
+        map_from_pattern="source", map_to="alert.provider_type", data_type=str
     ),
     FieldMappingConfiguration(
-        map_from_pattern="providerId", map_to="filter_provider_id", data_type=str
+        map_from_pattern="providerId", map_to="alert.provider_id", data_type=str
     ),
     FieldMappingConfiguration(
-        map_from_pattern="providerType", map_to="filter_provider_type", data_type=str
+        map_from_pattern="providerType", map_to="alert.provider_type", data_type=str
     ),
     FieldMappingConfiguration(
         map_from_pattern="timestamp",
-        map_to="filter_timestamp",
+        map_to="lastalert.timestamp",
         data_type=datetime.datetime,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="fingerprint", map_to="filter_fingerprint", data_type=str
+        map_from_pattern="fingerprint", map_to="lastalert.fingerprint", data_type=str
     ),
     FieldMappingConfiguration(
         map_from_pattern="startedAt", map_to="startedAt", data_type=datetime.datetime
@@ -62,23 +61,23 @@ alert_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="incident.id",
         map_to=[
-            "filter_incident_id",
+            "incident.id",
         ],
         data_type=str,
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.name",
         map_to=[
-            "filter_incident_user_generated_name",
-            "filter_incident_ai_generated_name",
+            "incident.user_generated_name",
+            "incident.ai_generated_name",
         ],
         data_type=str,
     ),
     FieldMappingConfiguration(
         map_from_pattern="severity",
         map_to=[
-            "JSON(filter_alert_enrichment_json).*",
-            "JSON(filter_alert_event_json).*",
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
         ],
         enum_values=[
             severity.value
@@ -92,16 +91,16 @@ alert_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="lastReceived",
         map_to=[
-            "JSON(filter_alert_enrichment_json).*",
-            "JSON(filter_alert_event_json).*",
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
         ],
         data_type=datetime.datetime,
     ),
     FieldMappingConfiguration(
         map_from_pattern="status",
         map_to=[
-            "JSON(filter_alert_enrichment_json).*",
-            "JSON(filter_alert_event_json).*",
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
         ],
         enum_values=list(reversed([item.value for _, item in enumerate(AlertStatus)])),
         data_type=str,
@@ -109,16 +108,16 @@ alert_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="firingCounter",
         map_to=[
-            "JSON(filter_alert_enrichment_json).*",
-            "JSON(filter_alert_event_json).*",
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
         ],
         data_type=int,
     ),
     FieldMappingConfiguration(
         map_from_pattern="*",
         map_to=[
-            "JSON(filter_alert_enrichment_json).*",
-            "JSON(filter_alert_event_json).*",
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
         ],
         data_type=str,
     ),
@@ -140,24 +139,8 @@ for item in alert_field_configurations:
 alert_field_configurations = (
     field_configurations_with_alert_prefix + alert_field_configurations
 )
-alias_column_mapping = {
-    "filter_timestamp": "lastalert.timestamp",
-    "filter_provider_id": "alert.provider_id",
-    "filter_provider_type": "alert.provider_type",
-    "filter_incident_id": "incident.id",
-    "filter_incident_user_generated_name": "incident.user_generated_name",
-    "filter_incident_ai_generated_name": "incident.ai_generated_name",
-    "filter_alert_enrichment_json": "alertenrichment.enrichments",
-    "filter_alert_event_json": "alert.event",
-    "filter_fingerprint": "lastalert.fingerprint",
-}
-
-remapped_field_configurations = remap_fields_configurations(
-    alias_column_mapping, alert_field_configurations
-)
 
 properties_metadata = PropertiesMetadata(alert_field_configurations)
-remapped_properties_metadata = PropertiesMetadata(remapped_field_configurations)
 
 static_facets = [
     FacetDto(
@@ -212,56 +195,16 @@ def get_threeshold_query(tenant_id: str):
     )
 
 
-def __build_query_for_filtering(tenant_id: str):
-    select_args = [
-        LastAlert.alert_id,
-        LastAlert.tenant_id.label("last_alert_tenant_id"),
-        LastAlert.first_timestamp.label("startedAt"),
-        LastAlert.alert_id.label("entity_id"),
-        LastAlert.fingerprint.label("alert_fingerprint"),
-    ]
-
-    for key, value in alias_column_mapping.items():
-        select_args.append(literal_column(value).label(key))
-
-    query = select(*select_args).select_from(LastAlert)
-
-    query = query.join(
-        Alert,
-        and_(Alert.id == LastAlert.alert_id, Alert.tenant_id == LastAlert.tenant_id),
-    ).outerjoin(
-        AlertEnrichment,
-        and_(
-            LastAlert.tenant_id == AlertEnrichment.tenant_id,
-            LastAlert.fingerprint == AlertEnrichment.alert_fingerprint,
-        ),
-    )
-
-    query = query.outerjoin(
-        LastAlertToIncident,
-        and_(
-            LastAlert.tenant_id == LastAlertToIncident.tenant_id,
-            LastAlert.fingerprint == LastAlertToIncident.fingerprint,
-        ),
-    ).outerjoin(
-        Incident,
-        and_(
-            LastAlertToIncident.tenant_id == Incident.tenant_id,
-            LastAlertToIncident.incident_id == Incident.id,
-            Incident.status == IncidentStatus.FIRING.value,
-        ),
-    )
-
-    query = query.filter(LastAlert.tenant_id == tenant_id)
-    query = query.filter(LastAlert.timestamp >= get_threeshold_query(tenant_id))
-    return query
-
-
 def __build_query_for_filtering_v2(
-    tenant_id: str, select_args: list, cel=None, limit=None, fetch_alerts_data=True
+    tenant_id: str,
+    select_args: list,
+    cel=None,
+    limit=None,
+    fetch_alerts_data=True,
+    force_fetch=False,
 ):
     fetch_incidents = cel and "incident." in cel
-    cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sql_filter = None
     involved_fields = []
 
@@ -280,7 +223,7 @@ def __build_query_for_filtering_v2(
 
     sql_query = select(*select_args).select_from(LastAlert)
 
-    if fetch_alerts_data:
+    if fetch_alerts_data or force_fetch:
         sql_query = sql_query.join(
             Alert,
             and_(
@@ -294,7 +237,7 @@ def __build_query_for_filtering_v2(
             ),
         )
 
-    if fetch_incidents:
+    if fetch_incidents or force_fetch:
         sql_query = sql_query.outerjoin(
             LastAlertToIncident,
             and_(
@@ -345,7 +288,7 @@ def build_total_alerts_query(tenant_id, query: QueryDto):
 
 
 def build_alerts_query(tenant_id, query: QueryDto):
-    cel_to_sql_instance = get_cel_to_sql_provider(remapped_properties_metadata)
+    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sort_by_exp = cel_to_sql_instance.get_order_by_expression(
         [
             (sort_option.sort_by, sort_option.sort_dir)
@@ -459,7 +402,17 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    base_query_cte = __build_query_for_filtering(tenant_id).cte("alerts_query")
+    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    select_expressions = facet_selects_metadata["select_expressions"]
+
+    select_expressions.append(LastAlert.alert_id.label("entity_id"))
+
+    base_query_cte = __build_query_for_filtering_v2(
+        tenant_id=tenant_id,
+        select_args=select_expressions,
+        cel=facet_options_query.cel,
+        force_fetch=True,
+    )["query"]
 
     return get_facet_options(
         base_query=base_query_cte,

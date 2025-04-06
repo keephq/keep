@@ -75,7 +75,7 @@ incident_field_configurations = [
     ),
     FieldMappingConfiguration(
         map_from_pattern="hasLinkedIncident",
-        map_to="addionalIncidentFields.incident_has_linked_incident",
+        map_to="addional_incident_fields.incident_has_linked_incident",
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.providerType", map_to="alert.provider_type"
@@ -209,7 +209,7 @@ def __build_base_incident_query(
                 ).label("incident_has_linked_incident"),
             )
             .select_from(Incident)
-            .subquery("addionalIncidentFields")
+            .subquery("addional_incident_fields")
         )
         sql_query = sql_query.join(
             additional_incident_fields, Incident.id == additional_incident_fields.c.id
@@ -480,7 +480,6 @@ def get_incident_facets_data(
         facets = static_facets
 
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    new_fields_config = facet_selects_metadata["new_fields_config"]
     select_expressions = facet_selects_metadata["select_expressions"]
 
     select_expressions.append(Incident.id.label("entity_id"))
@@ -488,7 +487,6 @@ def get_incident_facets_data(
     base_query = __build_base_incident_query(
         tenant_id,
         select_expressions,
-        cel=facet_options_query.cel,
         force_fetch=True,
     )["query"]
 
@@ -499,7 +497,7 @@ def get_incident_facets_data(
         base_query=base_query,
         facets=facets,
         facet_options_query=facet_options_query,
-        properties_metadata=PropertiesMetadata(new_fields_config),
+        properties_metadata=properties_metadata,
     )
 
 
