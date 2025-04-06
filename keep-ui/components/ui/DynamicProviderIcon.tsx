@@ -22,6 +22,7 @@ export const DynamicImageProviderIcon = (props: any) => {
 
   useEffect(() => {
     if (!providerType || !providers) return;
+    if (imageSrc === fallbackIcon) return;
 
     const loadImage = async () => {
       const isKnownProvider = providers.providers.some(
