@@ -85,7 +85,7 @@ export const useIncidents = (
 
   return {
     ...swrValue,
-    data: swrValue.data?.result,
+    data: swrValue.data?.result as PaginatedIncidentsDto,
     responseTimeMs: swrValue.data?.responseTimeMs,
     isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
   };
