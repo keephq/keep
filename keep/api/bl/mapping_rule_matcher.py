@@ -109,29 +109,20 @@ class MappingRuleMatcher:
                     if attr_value is not None:
                         param_name = f"val_{i}_{j}"
 
-                        # Build condition using JSON_EXTRACT for MySQL
-                        # Handle the @@ syntax by replacing with . and wrapping in quotes
-                        json_attr = attr
-                        if "@@" in json_attr:
-                            json_attr = json_attr.replace("@@", ".")
-                            json_attr = f'"{json_attr}"'
-                        else:
-                            json_attr = json_attr
-
                         if isinstance(attr_value, str):
                             and_conditions.append(
-                                f"""(JSON_EXTRACT(jt.json_object, '$.{json_attr}') = :{param_name}
-                                OR JSON_EXTRACT(jt.json_object, '$.{json_attr}') = '"*"')"""
+                                f"""(JSON_EXTRACT(jt.json_object, '$.{attr}') = :{param_name}
+                                OR JSON_EXTRACT(jt.json_object, '$.{attr}') = '"*"')"""
                             )
                         elif isinstance(attr_value, (int, float)):
                             and_conditions.append(
-                                f"""(CAST(JSON_EXTRACT(jt.json_object, '$.{json_attr}') AS CHAR) = :{param_name}
-                                OR JSON_EXTRACT(jt.json_object, '$.{json_attr}') = '"*"')"""
+                                f"""(CAST(JSON_EXTRACT(jt.json_object, '$.{attr}') AS CHAR) = :{param_name}
+                                OR JSON_EXTRACT(jt.json_object, '$.{attr}') = '"*"')"""
                             )
                         else:
                             and_conditions.append(
-                                f"""(JSON_EXTRACT(jt.json_object, '$.{json_attr}') = :{param_name}
-                                OR JSON_EXTRACT(jt.json_object, '$.{json_attr}') = '"*"')"""
+                                f"""(JSON_EXTRACT(jt.json_object, '$.{attr}') = :{param_name}
+                                OR JSON_EXTRACT(jt.json_object, '$.{attr}') = '"*"')"""
                             )
 
                 if and_conditions:
@@ -172,18 +163,11 @@ class MappingRuleMatcher:
 
                         params[param_name] = attr_value
 
-                        # Escape quotes and handle @@ for SQLite
-                        attr_for_json = attr
-                        if "@@" in attr_for_json:
-                            attr_for_json = attr_for_json.replace("@@", ".")
-                        # Escape quotes for SQLite JSON path
-                        attr_for_json = attr_for_json.replace('"', '""')
-
                         # Build condition to check if the attribute matches or if there's a wildcard
                         and_conditions.append(
                             f"""
-                            json_extract(row_data, '$."{attr_for_json}"') = :{param_name}
-                            OR json_extract(row_data, '$."{attr_for_json}"') = '*'
+                            json_extract(row_data, '$."{attr}"') = :{param_name}
+                            OR json_extract(row_data, '$."{attr}"') = '*'
                         """
                         )
 
