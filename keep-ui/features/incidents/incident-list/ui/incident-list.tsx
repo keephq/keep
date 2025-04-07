@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -41,12 +41,12 @@ import EnhancedDateRangePicker, {
 } from "@/components/ui/DateRangePicker";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import {
-  DEFAULT_INCIDENTS_CEL,
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
   DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
 } from "@/entities/incidents/model/models";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useIncidentsTableData } from "./useIncidentsTableData";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -75,7 +75,6 @@ export function IncidentList({
   ]);
 
   const [filterCel, setFilterCel] = useState<string>("");
-  const [dateRangeCel, setDateRangeCel] = useState<string>("");
 
   const [dateRange, setDateRange] = useState<TimeFrame>({
     start: null,
@@ -83,61 +82,24 @@ export function IncidentList({
     paused: false,
   });
 
-  const mainCelQuery = useMemo(() => {
-    const filterArray = ["is_candidate == false", dateRangeCel];
-    return filterArray.filter(Boolean).join(" && ");
-  }, [dateRangeCel]);
-
-  const incidentsCelQuery = useMemo(() => {
-    const filterArray = [mainCelQuery, filterCel];
-    return filterArray.filter(Boolean).join(" && ");
-  }, [filterCel, mainCelQuery]);
-
-  // This is used to decide if the "No active incidents found" state should be shown
-  const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
-    useIncidents(
-      null,
-      null,
-      DEFAULT_INCIDENTS_PAGE_SIZE,
-      0,
-      DEFAULT_INCIDENTS_SORTING,
-      DEFAULT_INCIDENTS_CEL,
-      {
-        revalidateOnFocus: false,
-        revalidateOnMount: false,
-        fallbackData: initialData,
-      }
-    );
-  const isTrueEmptyState = defaultIncidents?.items.length === 0;
-
   const {
-    data: incidents,
-    isLoading,
-    mutate: mutateIncidents,
-    error: incidentsError,
-  } = useIncidents(
-    null,
-    null,
-    incidentsPagination.limit,
-    incidentsPagination.offset,
-    incidentsSorting[0],
-    incidentsCelQuery,
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount: !initialData,
-      fallbackData: initialData,
-      onSuccess: () => {
-        refreshDefaultIncidents();
-      },
-    }
-  );
+    defaultIncidents,
+    incidents,
+    incidentsError,
+    predictedIncidents,
+    isPredictedLoading,
+    facetsCel,
+  } = useIncidentsTableData(initialData, {
+    candidate: null,
+    predicted: null,
+    limit: incidentsPagination.limit,
+    offset: incidentsPagination.offset,
+    sorting: incidentsSorting[0],
+    filterCel: filterCel,
+    timeFrame: dateRange,
+  });
 
-  const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(true, true);
-  const { incidentChangeToken } = usePollIncidents(
-    mutateIncidents,
-    dateRange.paused
-  );
+  const isTrueEmptyState = defaultIncidents?.items.length === 0;
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -150,24 +112,6 @@ export function IncidentList({
     string | undefined
   >(undefined);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    setFilterRevalidationToken(incidentChangeToken);
-  }, [incidentChangeToken]);
-
-  useEffect(() => {
-    const filterArray: string[] = [];
-
-    if (dateRange?.start) {
-      filterArray.push(`creation_time >= '${dateRange.start.toISOString()}'`);
-    }
-
-    if (dateRange?.paused && dateRange?.end) {
-      filterArray.push(`creation_time <= '${dateRange.end.toISOString()}'`);
-    }
-
-    setDateRangeCel(filterArray.filter(Boolean).join(" && "));
-  }, [dateRange]);
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -290,7 +234,7 @@ export function IncidentList({
     if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
-          filterCel={mainCelQuery}
+          filterCel={facetsCel}
           incidents={incidents}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
@@ -304,7 +248,7 @@ export function IncidentList({
       return <IncidentsNotFoundPlaceholder />;
     }
 
-    if (mainCelQuery && incidents?.items.length === 0) {
+    if (facetsCel && incidents?.items.length === 0) {
       return (
         <IncidentsNotFoundForFiltersPlaceholder
           onClearFilters={handleClearFilters}
@@ -325,7 +269,9 @@ export function IncidentList({
       <div className="flex justify-end">
         <EnhancedDateRangePicker
           timeFrame={dateRange}
-          setTimeFrame={(timeFrame) => setDateRange(timeFrame)}
+          setTimeFrame={(timeFrame) => {
+            setDateRange(timeFrame);
+          }}
           timeframeRefreshInterval={20000}
           hasPlay={true}
           pausedByDefault={false}
@@ -387,7 +333,7 @@ export function IncidentList({
                   className="mt-14"
                   entityName={"incidents"}
                   facetsConfig={facetsConfig}
-                  facetOptionsCel={mainCelQuery}
+                  facetOptionsCel={facetsCel}
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
