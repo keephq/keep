@@ -124,7 +124,7 @@ export const useIncidentsTableData = (
 
   useEffect(() => {
     // so that gap between poll is 2x of query time and minimum 3sec
-    const refreshInterval = Math.max((responseTimeMs || 1000) * 2, 3000);
+    const refreshInterval = Math.max((responseTimeMs || 1000) * 2, 6000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
         updateAlertsCelDateRange();
