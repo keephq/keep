@@ -253,8 +253,6 @@ export function TextField({
   const [touched, setTouched] = useState(false);
   const shouldHideSensitiveFields = appConfig.KEEP_HIDE_SENSITIVE_FIELDS;
 
-  console.log("shouldHideSensitiveFields", shouldHideSensitiveFields);
-
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setTouched(true);
     onChange(e);
