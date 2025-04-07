@@ -249,6 +249,7 @@ export function TextField({
 }) {
   const isSensitive = config.sensitive;
   const [touched, setTouched] = useState(false);
+  const shouldHideSensitiveFields = process.env.NEXT_PUBLIC_HIDE_SENSITIVE_FIELDS === 'true';
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setTouched(true);
@@ -262,13 +263,13 @@ export function TextField({
         type={isSensitive ? "password" : "text"}
         id={id}
         name={id}
-        value={isSensitive && !touched ? "" : value?.toString() ?? ""}
+        value={isSensitive && shouldHideSensitiveFields && !touched ? "" : value?.toString() ?? ""}
         onChange={handleChange}
         autoComplete="off"
         error={Boolean(error)}
         errorMessage={error}
         placeholder={
-          isSensitive && value && !touched
+          isSensitive && shouldHideSensitiveFields && value && !touched
             ? ""
             : config.placeholder ?? `Enter ${id}`
         }
