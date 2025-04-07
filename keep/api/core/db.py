@@ -165,7 +165,7 @@ def retry_on_race_condition(session, tries=3, delay=0.1, backoff=2, jitter=(0, 0
         except StaleDataError as e:
             if "expected to update" in str(e):
                 logger.info(
-                    f"Phantom read detected, retrying transaction", extra={"error": str(e), "attempt": attempt},
+                    "Phantom read detected, retrying transaction", extra={"error": str(e), "attempt": attempt},
                 )
                 if attempt >= tries:
                     raise
