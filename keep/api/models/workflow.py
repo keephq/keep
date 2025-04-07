@@ -43,6 +43,7 @@ class WorkflowDTO(BaseModel):
     provisioned: bool = False
     provisioned_file: str = None
     alertRule: bool = False
+    canRun: bool = True
 
     @property
     def workflow_raw_id(self):
@@ -126,10 +127,13 @@ class WorkflowCreateOrUpdateDTO(BaseModel):
     status: Literal["created", "updated"]
     revision: int = 1
 
+
 class WorkflowRunResponseDTO(BaseModel):
     workflow_execution_id: str
 
+
 class WorkflowRawDto(BaseModel):
     workflow_raw: str
+
 
 # trigger CI. TODO: remove this
