@@ -29,6 +29,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function getRequiredConfigs(
   config: Provider["config"]
@@ -247,9 +248,12 @@ export function TextField({
   title?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const { data: appConfig } = useConfig();
   const isSensitive = config.sensitive;
   const [touched, setTouched] = useState(false);
-  const shouldHideSensitiveFields = process.env.NEXT_PUBLIC_HIDE_SENSITIVE_FIELDS === 'true';
+  const shouldHideSensitiveFields = appConfig.KEEP_HIDE_SENSITIVE_FIELDS;
+
+  console.log("shouldHideSensitiveFields", shouldHideSensitiveFields);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setTouched(true);
