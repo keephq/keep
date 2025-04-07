@@ -23,7 +23,7 @@ class PrometheusProviderAuthConfig:
             "required": True,
             "description": "Prometheus server URL",
             "hint": "https://prometheus-us-central1.grafana.net/api/prom",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
     username: str = dataclasses.field(
@@ -67,7 +67,9 @@ receivers:
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,
+        "high": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
+        "medium": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
     }

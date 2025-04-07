@@ -99,6 +99,7 @@
           "group": "Syntax",
           "pages": [
             "workflows/syntax/triggers",
+            "workflows/syntax/permissions",
             "workflows/syntax/steps-and-actions",
             "workflows/syntax/conditions",
             "workflows/syntax/functions",

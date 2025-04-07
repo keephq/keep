@@ -48,6 +48,7 @@ export class ApiClient {
     }
     return {
       Authorization: `Bearer ${this.session.accessToken}`,
+      "ngrok-skip-browser-warning": true,
       ...this.additionalHeaders,
     };
   }

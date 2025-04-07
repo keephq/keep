@@ -26,6 +26,8 @@ import { useToggleWorkflow } from "@/features/workflows/enable-disable/model";
 import "./workflow-tile.css";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 import Link from "next/link";
+import { WorkflowPermissionsBadge } from "@/entities/workflows/ui/WorkflowPermissionsBadge";
+import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -59,6 +61,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const { toggleWorkflow } = useToggleWorkflow(workflow.id);
 
   const { deleteWorkflow } = useWorkflowActions();
+  const workflowYaml = parseWorkflowYamlStringToJSON(workflow.workflow_raw);
   const {
     isRunning,
     handleRunClick,
@@ -148,7 +151,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       >
         <Link
           href={`/workflows/${workflow.id}`}
-          aria-label={`View details for workflow: ${workflow?.name || "Unknown"}`}
+          aria-label={`View details for workflow: ${
+            workflow?.name || "Unknown"
+          }`}
         >
           <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
             {workflow.provisioned && (
@@ -191,6 +196,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                   />
                 ))}
               </div>
+              {workflowYaml.permissions && (
+                <div className="flex flex-row items-center gap-1 flex-wrap text-sm ml-1">
+                  <WorkflowPermissionsBadge
+                    permissions={workflowYaml.permissions}
+                  />
+                </div>
+              )}
               {!isAllExecutionProvidersConfigured &&
                 workflow?.last_execution_started && (
                   <div className="text-gray-500 text-sm text-right cursor-pointer truncate max-w-full mt-2 grow min-w-[max-content]">
