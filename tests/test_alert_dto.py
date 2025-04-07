@@ -1,15 +1,20 @@
 import hashlib
+import urllib.parse
+from datetime import datetime, timedelta
+from time import sleep
 
 import pytest
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from tests.fixtures.client import client, test_app  # noqa
 
 
-def create_basic_alert(name, last_received):
+def create_basic_alert(name, last_received, **kwargs):
     """Helper function to create AlertDto with minimal fields"""
     return AlertDto(
         name=name,
         lastReceived=last_received,
+        **kwargs
     )
 
 
@@ -165,3 +170,51 @@ def test_alert_dto_invalid_timestamps():
                 raise
             # if no error, fail the test
             pytest.fail(f"Expected ValueError for timestamp {timestamp}")
+
+def test_alert_dto_url_encoding():
+    """Test that the url is encoded correctly and no exception is raised"""
+    unencoded_urls = [
+        "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
+        "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2#[lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
+        " https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down "
+    ]
+    for url in unencoded_urls:
+        alert = create_basic_alert(name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=url)
+        unquoted_url = urllib.parse.unquote(str(alert.url))
+        reencoded_url = urllib.parse.quote(unquoted_url, safe='/:?=&')
+        assert alert.url == reencoded_url
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_alert_started_at(db_session, create_alert, client, test_app):
+    dt = datetime.utcnow()
+    dt2 = dt + timedelta(hours=1)
+    create_alert(
+        "Something went wrong",
+        AlertStatus.FIRING,
+        dt,
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+
+    assert len(alerts) == 1
+    assert alerts[0]["fingerprint"] == "Something went wrong"
+    assert alerts[0]["startedAt"] == dt.isoformat(sep=' ')
+
+    create_alert(
+        "Something went wrong again",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+            "startedAt": dt2.isoformat()
+         },
+    )
+
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+
+    assert len(alerts) == 2
+    assert alerts[0]["fingerprint"] == "Something went wrong again"
+    assert alerts[0]["startedAt"] == dt2.isoformat()
+
+

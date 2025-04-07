@@ -17,9 +17,9 @@ from sqlmodel import Session, select
 
 from keep.api.bl.mapping_rule_matcher import MappingRuleMatcher
 from keep.api.core.config import config
-from keep.api.core.db import batch_enrich
+from keep.api.core.db import batch_enrich, get_incidents_by_alert_fingerprint
 from keep.api.core.db import enrich_entity as enrich_alert_db, get_last_alert_by_fingerprint, \
-    enrich_alerts_with_incidents, is_all_alerts_resolved
+    is_all_alerts_resolved
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_enrichment_with_session,
@@ -1072,10 +1072,11 @@ class EnrichmentsBl:
                 },
             )
 
-    def check_incident_resolution(self, alert):
-        enrich_alerts_with_incidents(tenant_id=self.tenant_id, alerts=alert, session=self.db_session)
+    def check_incident_resolution(self, alert: Alert | AlertDto):
+        incidents = get_incidents_by_alert_fingerprint(self.tenant_id, alert.fingerprint, self.db_session)
+
         self.db_session.expire_on_commit = False
-        for incident in alert[0]._incidents:
+        for incident in incidents:
             if (
                 incident.resolve_on == ResolveOn.ALL.value
                 and is_all_alerts_resolved(incident=incident, session=self.db_session)

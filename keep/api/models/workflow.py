@@ -43,11 +43,12 @@ class WorkflowDTO(BaseModel):
     provisioned: bool = False
     provisioned_file: str = None
     alertRule: bool = False
+    canRun: bool = True
 
     @property
     def workflow_raw_id(self):
-        id = cyaml.safe_load(self.workflow_raw).get("id")
-        return id
+        workflow_id = cyaml.safe_load(self.workflow_raw).get("id")
+        return workflow_id
 
     @validator("workflow_raw", pre=False, always=True)
     def manipulate_raw(cls, raw, values):
@@ -126,7 +127,13 @@ class WorkflowCreateOrUpdateDTO(BaseModel):
     status: Literal["created", "updated"]
     revision: int = 1
 
+
 class WorkflowRunResponseDTO(BaseModel):
     workflow_execution_id: str
+
+
+class WorkflowRawDto(BaseModel):
+    workflow_raw: str
+
 
 # trigger CI. TODO: remove this

@@ -8,11 +8,11 @@ import hashlib
 import json
 import logging
 import random
+import time
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
@@ -154,28 +154,44 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         return None
 
 
-def retry_on_deadlock(f):
-    @retry(
-        exceptions=(OperationalError,),
-        tries=3,
-        delay=0.1,
-        backoff=2,
-        jitter=(0, 0.1),
-        logger=logger,
-    )
-    @wraps(f)
-    def wrapper(*args, **kwargs):
+@contextmanager
+def retry_on_race_condition(session, tries=3, delay=0.1, backoff=2, jitter=(0, 0.1)):
+    attempt = 0
+    while attempt < tries:
         try:
-            return f(*args, **kwargs)
+            yield
+            return
+        except StaleDataError as e:
+            if "expected to update" in str(e):
+                logger.info(
+                    "Phantom read detected, retrying transaction", extra={"error": str(e), "attempt": attempt},
+                )
+                if attempt >= tries:
+                    raise
+
+                if not session.is_active:
+                    session.rollback()
+
+                time.sleep(delay + random.uniform(*jitter))
+                delay *= backoff
+            else:
+                raise
         except OperationalError as e:
             if "Deadlock found" in str(e):
+                attempt += 1
                 logger.warning(
-                    "Deadlock detected, retrying transaction", extra={"error": str(e)}
+                    "Deadlock detected, retrying transaction", extra={"error": str(e), "attempt": attempt},
                 )
-                raise  # retry will catch this
-            raise  # if it's not a deadlock, let it propagate
+                if attempt >= tries:
+                    raise
 
-    return wrapper
+                if not session.is_active:
+                    session.rollback()
+
+                time.sleep(delay + random.uniform(*jitter))
+                delay *= backoff
+            else:
+                raise  # re-raise if it's not a deadlock
 
 
 def create_workflow_execution(
@@ -656,7 +672,7 @@ def get_all_workflows_yamls(tenant_id: str) -> List[str]:
     return workflows
 
 
-def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
+def get_workflow(tenant_id: str, workflow_id: str) -> Workflow | None:
     with Session(engine) as session:
         # if the workflow id is uuid:
         if validators.uuid(workflow_id):
@@ -739,7 +755,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 extra={
                     "tenant_id": tenant_id,
                     "workflow_id": workflow_id,
-                    "execution_id": execution_id,
+                    "workflow_execution_id": execution_id,
                 },
             )
             raise ValueError("Execution not found")
@@ -749,11 +765,21 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         #   we need to fix it in the future, create a migration that increases the size of the error field
         #   and then we can remove the [:511] from here
         workflow_execution.error = error[:511] if error else None
-        workflow_execution.execution_time = (
+        execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
+        workflow_execution.execution_time = int(execution_time)
         # TODO: logs
         session.commit()
+        logger.info(
+            f"Finished workflow execution {execution_id} for workflow {workflow_id} with status {status}",
+            extra={
+                "tenant_id": tenant_id,
+                "workflow_id": workflow_id,
+                "workflow_execution_id": execution_id,
+                "execution_time": execution_time,
+            },
+        )
 
 
 def get_workflow_executions(
@@ -987,8 +1013,10 @@ def add_audit(
     user_id: str,
     action: ActionType,
     description: str,
+    session: Session = None,
+    commit: bool = True,
 ) -> AlertAudit:
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         audit = AlertAudit(
             tenant_id=tenant_id,
             fingerprint=fingerprint,
@@ -997,8 +1025,9 @@ def add_audit(
             description=description,
         )
         session.add(audit)
-        session.commit()
-        session.refresh(audit)
+        if commit:
+            session.commit()
+            session.refresh(audit)
     return audit
 
 
@@ -1592,7 +1621,10 @@ def get_last_alerts(
         for alert_data in alerts_with_start:
             alert = alert_data[0]
             startedAt = alert_data[1]
-            alert.event["startedAt"] = str(startedAt)
+            if not alert.event.get("startedAt"):
+                alert.event["startedAt"] = str(startedAt)
+            else:
+                alert.event["firstTimestamp"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
 
             if with_incidents:
@@ -3541,6 +3573,30 @@ def enrich_alerts_with_incidents(
         return alerts
 
 
+def get_incidents_by_alert_fingerprint(
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None
+) -> List[Incident]:
+    with existed_or_new_session(session) as session:
+        alert_incidents = session.exec(
+            select(Incident)
+            .select_from(LastAlert)
+            .join(
+                LastAlertToIncident,
+                and_(
+                    LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                    LastAlertToIncident.fingerprint == LastAlert.fingerprint,
+                    LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                ),
+            )
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
+            .where(
+                LastAlert.tenant_id == tenant_id,
+                LastAlertToIncident.fingerprint == fingerprint,
+            )
+        ).all()
+        return alert_incidents
+
+
 def get_last_incidents(
     tenant_id: str,
     limit: int = 25,
@@ -3966,7 +4022,6 @@ def get_alerts_data_for_incident(
         }
 
 
-@retry_on_deadlock
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,
@@ -4049,18 +4104,19 @@ def add_alerts_to_incident(
                 )
                 for fingerprint in new_fingerprints
             ]
+            with retry_on_race_condition(session, tries=max_retries):
+                for idx, entry in enumerate(alert_to_incident_entries):
+                    session.add(entry)
+                    if (idx + 1) % 100 == 0:
+                        logger.info(
+                            f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
+                            extra={
+                                "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
+                            },
+                        )
+                        session.flush()
 
-            for idx, entry in enumerate(alert_to_incident_entries):
-                session.add(entry)
-                if (idx + 1) % 100 == 0:
-                    logger.info(
-                        f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
-                        extra={
-                            "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
-                        },
-                    )
-                    session.flush()
-            session.commit()
+                session.commit()
 
             incident.sources = list(
                 set(incident.sources if incident.sources else [])
@@ -4115,21 +4171,11 @@ def add_alerts_to_incident(
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
-            incident_id = incident.id
-            for attempt in range(max_retries):
-                try:
-                    session.add(incident)
-                    session.commit()
-                    break
-                except StaleDataError as ex:
-                    if "expected to update" in ex.args[0]:
-                        logger.info(
-                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
-                        )
-                        session.rollback()
-                        continue
-                    else:
-                        raise
+
+            with retry_on_race_condition(session, tries=max_retries):
+                session.add(incident)
+                session.commit()
+
             session.refresh(incident)
 
             return incident
@@ -4658,9 +4704,10 @@ def bulk_upsert_alert_fields(
     provider_id: str,
     provider_type: str,
     session: Optional[Session] = None,
+    max_retries=3,
 ):
     with existed_or_new_session(session) as session:
-        try:
+        with retry_on_race_condition(session, tries=max_retries):
             # Prepare the data for bulk insert
             data = [
                 {
@@ -4696,7 +4743,7 @@ def bulk_upsert_alert_fields(
                     index_elements=[
                         "tenant_id",
                         "field_name",
-                    ],  # Unique constraint columns
+                    ],  # Unique constraßint columns
                     set_={
                         "provider_id": stmt.excluded.provider_id,
                         "provider_type": stmt.excluded.provider_type,
@@ -4709,7 +4756,7 @@ def bulk_upsert_alert_fields(
                     for field in fields
                 )
 
-                merge_query = text(
+                stmt = text(
                     f"""
                     MERGE INTO AlertField AS target
                     USING (VALUES {values}) AS source (tenant_id, field_name, provider_id, provider_type)
@@ -4721,21 +4768,13 @@ def bulk_upsert_alert_fields(
                         VALUES (source.tenant_id, source.field_name, source.provider_id, source.provider_type)
                 """
                 )
-
-                session.execute(merge_query)
             else:
                 raise NotImplementedError(
                     f"Upsert not supported for {engine.dialect.name}"
                 )
 
-            # Execute the statement
-            if engine.dialect.name != "mssql":  # Already executed for SQL Server
-                session.execute(stmt)
+            session.execute(stmt)
             session.commit()
-
-        except IntegrityError:
-            # Handle any potential race conditions
-            session.rollback()
 
 
 def get_alerts_fields(tenant_id: str) -> List[AlertField]:
@@ -5395,7 +5434,7 @@ def enrich_incidents_with_enrichments(
         return incidents
 
 
-def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+def get_error_alerts(tenant_id: str, limit: int = 100) -> List[AlertRaw]:
     with Session(engine) as session:
         return (
             session.query(AlertRaw)
@@ -5404,6 +5443,7 @@ def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
                 AlertRaw.error == True,
                 AlertRaw.dismissed == False,
             )
+            .limit(limit)
             .all()
         )
 

@@ -127,6 +127,11 @@ class AksProvider(BaseProvider):
             raise ProviderException(f"Failed to load kubeconfig: {e}")
 
     def _query(self, command_type: str, **kwargs: dict):
+        """
+        Query AKS resources using the Kubernetes client.
+        Args:
+            command_type (str): The command type to operate on the k8s cluster (`get_pods`, `get_pvc`, `get_node_pressure`).
+        """
         if command_type == "get_pods":
             pods = self.client.list_pod_for_all_namespaces(watch=False)
             return [pod.to_dict() for pod in pods.items]

@@ -26,6 +26,7 @@ function createPresetBody(data: PresetCreateUpdateDto) {
     ],
     is_private: data.isPrivate,
     is_noisy: data.isNoisy,
+    counter_shows_firing_only: data.counterShowsFiringOnly,
     tags: data.tags,
   };
 }

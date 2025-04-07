@@ -1,0 +1,40 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **account_id**: Zoom Account ID (required: True, sensitive: True)
+- **client_id**: Zoom Client ID (required: True, sensitive: True)
+- **client_secret**: Zoom Client Secret (required: True, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **create_meeting**: Create a new Zoom meeting (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query zoom
+      provider: zoom
+      config: "{{ provider.my_provider_name }}"
+      with:
+        topic: {value}  
+        start_time: {value}  
+        duration: {value}  
+        timezone: {value}  
+        record_meeting: {value}  
+        host_email: {value}  
+```
+
+
+
+
+Check the following workflow example:
+- [zoom_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/zoom_example.yml)

@@ -1,0 +1,35 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host**: Redmine Host (required: True, sensitive: False)
+- **api_access_key**: Redmine API Access key (required: True, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: Authenticated with Redmine API (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query redmine
+      provider: redmine
+      config: "{{ provider.my_provider_name }}"
+      with:
+        project_id: {value}  
+        subject: {value}  
+        priority_id: {value}  
+        description: {value}  
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

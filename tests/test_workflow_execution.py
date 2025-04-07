@@ -5,12 +5,24 @@ from datetime import datetime, timedelta
 
 import pytest
 import pytz
+from fastapi import HTTPException
 
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id
+from keep.api.core.db import (
+    assign_alert_to_incident,
+    create_incident_from_dict,
+    get_last_alerts,
+    get_last_workflow_execution_by_workflow_id,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.incident import Incident, IncidentStatus
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identity_managers.db.db_authverifier import (  # noqa
+    DbAuthVerifier,
+)
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -59,6 +71,8 @@ steps:
   provider:
     type: keep
     with:
+      if: "1 == 1"
+      for: 1s
       filters:
         - key: status
           value: open
@@ -73,7 +87,7 @@ actions:
 """
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def workflow_manager():
     """
     Fixture to create and manage a WorkflowManager instance.
@@ -88,14 +102,15 @@ def workflow_manager():
         manager.scheduler = scheduler
         asyncio.run(manager.start())
         yield manager
-    finally:
-        if manager:
-            try:
-                manager.stop()
-                # Give some time for threads to clean up
-                time.sleep(1)
-            except Exception as e:
-                print(f"Error stopping workflow manager: {e}")
+    except Exception:
+        pass
+    if manager:
+        try:
+            manager.stop()
+            # Give some time for threads to clean up
+            time.sleep(1)
+        except Exception as e:
+            print(f"Error stopping workflow manager: {e}")
 
 
 @pytest.fixture
@@ -1371,3 +1386,243 @@ def test_nested_conditional_flow(
                     expected_message in json.dumps(result)
                     for result in workflow_execution.results[action_name]
                 ), f"Expected message '{expected_message}' not found in {action_name} results"
+
+
+workflow_resolve_definition = """workflow:
+  id: Resolve-Alert
+  name: Resolve Alert
+  description: ""
+  disabled: false
+  triggers:
+    - type: alert
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: resolve-alert
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: status
+              value: resolved
+"""
+
+
+def test_alert_resolved(db_session, create_alert, workflow_manager):
+
+    # Create the current alert
+    create_alert("fp1", AlertStatus.FIRING, datetime.now(tz=pytz.utc), {})
+
+    incident = create_incident_from_dict(
+        "keep", {"user_generated_name": "test", "description": "test"}
+    )
+
+    assign_alert_to_incident("fp1", incident, SINGLE_TENANT_UUID, db_session)
+
+    # Setup the workflow
+    workflow = Workflow(
+        id="Resolve-Alert",
+        name="Resolve-Alert",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Resolve Alert",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_resolve_definition,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    alerts = get_last_alerts(SINGLE_TENANT_UUID)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+
+    assert len(alerts_dto) == 1
+    assert alerts_dto[0].status == AlertStatus.FIRING.value
+
+    incident = db_session.query(Incident).first()
+    assert incident.status == IncidentStatus.FIRING.value
+
+    # Insert the alert into workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, alerts_dto)
+
+    # Wait for workflow execution
+    workflow_execution = None
+    count = 0
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "Resolve-Alert"
+        )
+        if workflow_execution is not None and workflow_execution.status == "success":
+            break
+
+        elif workflow_execution is not None and workflow_execution.status == "error":
+            raise Exception("Workflow execution failed")
+
+        time.sleep(1)
+        count += 1
+
+    # Verify workflow execution
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    db_session.expire_all()
+
+    alerts = get_last_alerts(SINGLE_TENANT_UUID)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    assert len(alerts_dto) == 1
+    assert alerts_dto[0].status == AlertStatus.RESOLVED.value
+
+    incident = db_session.query(Incident).first()
+    assert incident.status == IncidentStatus.RESOLVED.value
+
+
+workflow_definition_with_permissions = """workflow:
+  id: workflow-with-permissions
+  name: Workflow With Permissions
+  description: "A workflow with restricted access"
+  permissions:
+    - admin
+    - noc
+    - test@keephq.dev
+  triggers:
+    - type: manual
+  steps: []
+  actions:
+    - name: console-action
+      provider:
+        type: console
+        with:
+          message: "Executed restricted workflow"
+"""
+
+workflow_definition_without_permissions = """workflow:
+  id: workflow-without-permissions
+  name: Workflow Without Permissions
+  description: "A workflow without restricted access"
+  triggers:
+    - type: manual
+  steps: []
+  actions:
+    - name: console-action
+      provider:
+        type: console
+        with:
+          message: "Executed unrestricted workflow"
+"""
+
+
+@pytest.mark.parametrize(
+    "test_app, token, workflow_id, expected_status",
+    [
+        # Admin can always run workflows regardless of permissions
+        ({"AUTH_TYPE": "DB"}, "admin_token", "workflow-with-permissions", 200),
+        # User with role in permissions can run the workflow
+        ({"AUTH_TYPE": "DB"}, "noc_token", "workflow-with-permissions", 200),
+        # User with email in permissions can run the workflow
+        ({"AUTH_TYPE": "DB"}, "listed_email_token", "workflow-with-permissions", 403),
+        # User without proper role or email gets forbidden
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-with-permissions", 403),
+        # Anyone can run workflows without permissions
+        ({"AUTH_TYPE": "DB"}, "unlisted_token", "workflow-without-permissions", 200),
+    ],
+    indirect=["test_app"],
+)
+def test_workflow_permissions(
+    db_session,
+    test_app,
+    client,
+    token,
+    workflow_id,
+    expected_status,
+    mocker,
+):
+    """Test that workflow permissions are enforced correctly when executing workflows."""
+
+    # Setup workflows with and without permissions
+    workflow_with_permissions = Workflow(
+        id="workflow-with-permissions",
+        name="workflow-with-permissions",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow with restricted access",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_permissions,
+    )
+
+    workflow_without_permissions = Workflow(
+        id="workflow-without-permissions",
+        name="workflow-without-permissions",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow without restricted access",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_without_permissions,
+    )
+
+    db_session.add(workflow_with_permissions)
+    db_session.add(workflow_without_permissions)
+    db_session.commit()
+    db_session.refresh(workflow_with_permissions)
+    db_session.refresh(workflow_without_permissions)
+
+    # Define user data for different tokens
+    user_data = {
+        "admin_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "admin@keephq.dev", None, "admin"
+        ),
+        "noc_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "noc@keephq.dev", None, "noc"
+        ),
+        "listed_email_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "test@keephq.dev", None, "webhook"
+        ),
+        "unlisted_token": AuthenticatedEntity(
+            SINGLE_TENANT_UUID, "dev@keephq.dev", None, "workflowrunner"
+        ),
+    }
+
+    # Create a mock function that matches the signature of _verify_bearer_token
+    def mock_verify_bearer_token(token, *args, **kwargs):
+        if token not in user_data:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user_data[token]
+
+    # Mock the DbAuthVerifier._verify_bearer_token method
+    mocker.patch(
+        "keep.identitymanager.identity_managers.db.db_authverifier.DbAuthVerifier._verify_bearer_token",
+        side_effect=mock_verify_bearer_token,
+    )
+
+    # Mock the workflow execution process
+    mock_wf_manager = mocker.MagicMock()
+    mock_scheduler = mocker.MagicMock()
+    mock_wf_manager.scheduler = mock_scheduler
+    mock_scheduler.handle_manual_event_workflow.return_value = "mock-execution-id"
+
+    # Patch the WorkflowManager.get_instance method
+    mocker.patch(
+        "keep.workflowmanager.workflowmanager.WorkflowManager.get_instance",
+        return_value=mock_wf_manager,
+    )
+
+    # Run the workflow manually with the appropriate token
+    response = client.post(
+        f"/workflows/{workflow_id}/run",
+        headers={"Authorization": f"Bearer {token}"},
+        json={},
+    )
+
+    # Verify the response status code matches expectations
+    assert response.status_code == expected_status
+
+    # If the response should be successful, verify that the workflow execution was attempted
+    if expected_status == 200:
+        mock_scheduler.handle_manual_event_workflow.assert_called_once()
+    else:
+        # For 403 responses, the workflow execution should not be attempted
+        mock_scheduler.handle_manual_event_workflow.assert_not_called()

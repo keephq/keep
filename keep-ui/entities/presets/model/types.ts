@@ -16,6 +16,7 @@ export interface Preset {
   options: Option[];
   is_private: boolean;
   is_noisy: boolean;
+  counter_shows_firing_only: boolean;
   should_do_noise_now: boolean;
   alerts_count: number;
   created_by?: string;
@@ -33,5 +34,6 @@ export type PresetCreateUpdateDto = {
   CEL: string;
   isPrivate: boolean;
   isNoisy: boolean;
+  counterShowsFiringOnly: boolean;
   tags: TagPayload[];
 };

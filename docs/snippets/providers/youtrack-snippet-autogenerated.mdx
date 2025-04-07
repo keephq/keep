@@ -1,0 +1,36 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host_url**: YouTrack Host URL (required: True, sensitive: False)
+- **project_id**: YouTrack Project ID (required: True, sensitive: False)
+- **permanent_token**: YouTrack Permanent Token (required: True, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **create_issue**:  (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query youtrack
+      provider: youtrack
+      config: "{{ provider.my_provider_name }}"
+      with:
+        summary: {value}  
+        description: {value}  
+```
+
+
+
+
+Check the following workflow example:
+- [create-issue-youtrack.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/create-issue-youtrack.yaml)

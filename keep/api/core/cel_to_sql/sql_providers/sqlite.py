@@ -2,16 +2,14 @@ from datetime import datetime
 from types import NoneType
 from typing import List
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
-from keep.api.core.cel_to_sql.properties_metadata import (
-    JsonFieldMapping,
-    SimpleFieldMapping,
-)
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
 class CelToSqliteProvider(BaseCelToSqlProvider):
-    def json_extract_as_text(self, column: str, path: str) -> str:
-        return f"json_extract({column}, '$.{path}')"
+
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"json_extract({column}, '$.{property_path_str}')"
 
     def coalesce(self, args):
         coalesce_args = args
@@ -48,16 +46,6 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             raise ValueError(f"Unsupported type: {type}")
 
         return f"CAST({expression_to_cast} as {to_type_str})"
-
-    def _get_order_by_field(self, field_mapping, data_type: type):
-        if isinstance(field_mapping, JsonFieldMapping):
-            return self.json_extract_as_text(
-                field_mapping.json_prop, field_mapping.prop_in_json
-            )
-        elif isinstance(field_mapping, SimpleFieldMapping):
-            return field_mapping.map_to
-
-        raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
 
     def _visit_constant_node(self, value: str) -> str:
         if isinstance(value, datetime):

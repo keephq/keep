@@ -38,12 +38,10 @@ class ChecklyProvider(BaseProvider):
     """
     Get alerts from Checkly into Keep.
     """
-    
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure Checkly to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/checkly-provider).
-
 To send alerts from Checkly to Keep, Use the following webhook url to configure Checkly send alerts to Keep:
 
 1. In Checkly dashboard open "Alerts" tab.

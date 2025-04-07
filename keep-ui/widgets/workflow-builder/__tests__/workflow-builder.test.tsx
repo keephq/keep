@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { WorkflowBuilder } from "../workflow-builder";
 import { WorkflowState } from "@/entities/workflows";
+import { InternalConfig } from "@/types/internal-config";
+import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
 
 // Mock next-auth
 jest.mock("next-auth/react", () => ({
@@ -23,9 +25,9 @@ jest.mock("next-auth/react", () => ({
 }));
 
 // Mock all ES module imports
-jest.mock("@/features/workflows/builder/ui/ReactFlowBuilder", () => ({
+jest.mock("@/features/workflows/builder", () => ({
   __esModule: true,
-  default: function MockReactFlowBuilder() {
+  ReactFlowBuilder: function MockReactFlowBuilder() {
     const { useWorkflowStore } = require("@/entities/workflows");
     const { nodes } = useWorkflowStore();
     return (
@@ -50,9 +52,9 @@ jest.mock("@/features/workflows/ai-assistant", () => ({
   WorkflowBuilderChatSafe: () => <div>WorkflowBuilderChat</div>,
 }));
 
-jest.mock("@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor", () => ({
+jest.mock("@/shared/ui/WorkflowYAMLEditor", () => ({
   __esModule: true,
-  default: () => <div>MonacoYAMLEditor</div>,
+  WorkflowYAMLEditor: () => <div>WorkflowYAMLEditor</div>,
 }));
 
 jest.mock("next/navigation", () => ({
@@ -112,6 +114,7 @@ const mockStore: WorkflowState = {
     },
     isValid: true,
   },
+  yamlSchema: getYamlWorkflowDefinitionSchema([], { partial: true }),
   isInitialized: true,
   isEditorSyncedWithNodes: true,
   canDeploy: true,
@@ -133,6 +136,7 @@ const mockStore: WorkflowState = {
   selectedEdge: null,
   isLayouted: false,
   changes: 0,
+  isDeployed: false,
   validationErrors: {},
   triggerSave: jest.fn(),
   triggerRun: jest.fn(),
@@ -167,12 +171,43 @@ const mockStore: WorkflowState = {
   onNodesChange: jest.fn(),
   onEdgesChange: jest.fn(),
   onLayout: jest.fn(),
+  updateFromYamlString: jest.fn(),
+  setSecrets: jest.fn(),
+  validateDefinition: jest.fn(),
+  secrets: {},
 };
 
 const mockedUseWorkflowStore = jest.fn(() => mockStore);
 
 jest.mock("@/entities/workflows", () => ({
   useWorkflowStore: () => mockedUseWorkflowStore(),
+}));
+
+const mockConfig: InternalConfig = {
+  API_URL: "http://localhost:8000",
+  API_URL_CLIENT: "http://localhost:8000",
+  AUTH_TYPE: "test",
+  PUSHER_DISABLED: false,
+  PUSHER_HOST: "localhost",
+  PUSHER_PORT: 6001,
+  PUSHER_APP_KEY: "test",
+  PUSHER_CLUSTER: "test",
+  POSTHOG_KEY: "test",
+  POSTHOG_HOST: "localhost",
+  POSTHOG_DISABLED: "true",
+  READ_ONLY: false,
+  OPEN_AI_API_KEY_SET: false,
+  NOISY_ALERTS_ENABLED: false,
+  FRIGADE_DISABLED: "false",
+  KEEP_DOCS_URL: "https://docs.keephq.dev",
+  KEEP_CONTACT_US_URL: "https://docs.keephq.dev/slack",
+  SENTRY_DISABLED: "true",
+};
+
+jest.mock("@/utils/hooks/useConfig", () => ({
+  useConfig: () => ({
+    data: mockConfig,
+  }),
 }));
 
 const mockProvider = {
@@ -252,7 +287,7 @@ describe("WorkflowBuilder", () => {
         workflowId="test-workflow"
         providers={[mockProvider]}
         installedProviders={[mockProvider]}
-        loadedAlertFile={null}
+        loadedYamlFileContents={null}
       />
     );
 
@@ -281,7 +316,7 @@ describe("WorkflowBuilder", () => {
         workflowId="test-workflow"
         providers={[mockProvider]}
         installedProviders={[mockProvider]}
-        loadedAlertFile={null}
+        loadedYamlFileContents={null}
       />
     );
 

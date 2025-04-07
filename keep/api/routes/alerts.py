@@ -29,15 +29,17 @@ from keep.api.core.alerts import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
+from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
+from keep.api.core.db import enrich_alerts_with_incidents
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
-    get_error_alerts as get_error_alerts_db,
-    get_alert_audit as get_alert_audit_db,
-    dismiss_error_alerts as dismiss_error_alerts_db,
-    enrich_alerts_with_incidents,
     get_alerts_by_fingerprint,
     get_alerts_by_ids,
     get_alerts_metrics_by_provider,
     get_enrichment,
+)
+from keep.api.core.db import get_error_alerts as get_error_alerts_db
+from keep.api.core.db import (
     get_last_alerts,
     get_last_alerts_by_fingerprints,
     get_provider_by_name,
@@ -58,7 +60,6 @@ from keep.api.models.alert import (
     EnrichAlertNoteRequestBody,
     EnrichAlertRequestBody,
     UnEnrichAlertRequestBody,
-
 )
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.incident import IncidentStatus
@@ -221,14 +222,7 @@ def query_alerts(
     )
 
     try:
-        db_alerts, total_count = query_last_alerts(
-            tenant_id=tenant_id,
-            limit=query.limit,
-            offset=query.offset,
-            cel=query.cel,
-            sort_by=query.sort_by,
-            sort_dir=query.sort_dir,
-        )
+        db_alerts, total_count = query_last_alerts(tenant_id=tenant_id, query=query)
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
         raise HTTPException(
@@ -243,6 +237,8 @@ def query_alerts(
         "Fetched alerts from DB",
         extra={
             "tenant_id": tenant_id,
+            "query": query,
+            "total_count": total_count,
         },
     )
 
@@ -581,7 +577,7 @@ async def receive_generic_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
-            "async_process_event",
+            "process_event_in_worker",
             authenticated_entity.tenant_id,
             None,
             provider_id,
@@ -700,7 +696,7 @@ async def receive_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
-            "async_process_event",
+            "process_event_in_worker",
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
@@ -776,7 +772,7 @@ def enrich_alert_note(
         enriched_data,
         authenticated_entity=authenticated_entity,
         dispose_on_new_alert=True,
-        session=session
+        session=session,
     )
 
 
@@ -849,7 +845,7 @@ def batch_enrich_alerts(
             ]
 
             enrichment_bl.batch_enrich(
-                fingerprint=formatted_alert_ids,
+                fingerprints=formatted_alert_ids,
                 enrichments=enrich_data.enrichments,
                 action_type=action_type,
                 action_callee=authenticated_entity.email,
@@ -1046,7 +1042,7 @@ def _enrich_alert(
             )
 
         if should_check_incidents_resolution:
-            enrichement_bl.check_incident_resolution(alert)
+            enrichement_bl.check_incident_resolution(enriched_alerts_dto[0])
 
         return {"status": "ok"}
 
@@ -1307,7 +1303,7 @@ def get_error_alerts(
     error_alerts_dtos = [
         AlertErrorDto(
             id=str(alert.id),
-            event=alert.raw_alert,
+            event=alert.raw_alert or {},
             error_message=alert.error_message,
             timestamp=alert.timestamp,
             provider_type=alert.provider_type or "keep",

@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@tremor/react";
 import { Provider } from "@/shared/api/providers";
-import { stringify } from "yaml";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import ReactFlowBuilder from "@/features/workflows/builder/ui/ReactFlowBuilder";
+import { ReactFlowBuilder } from "@/features/workflows/builder";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useWorkflowStore } from "@/entities/workflows";
 import { showErrorToast, KeepLoader } from "@/shared/ui";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import MonacoYAMLEditor from "@/shared/ui/YAMLCodeblock/ui/MonacoYAMLEditor";
-import Skeleton from "react-loading-skeleton";
+import { WorkflowYAMLEditor } from "@/shared/ui";
 import {
-  generateWorkflow,
+  getWorkflowDefinition,
   getYamlWorkflowDefinition,
   parseWorkflow,
   wrapDefinitionV2,
@@ -21,6 +19,9 @@ import { CodeBracketIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { ResizableColumns } from "@/shared/ui";
 import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
+import debounce from "lodash.debounce";
+import { getOrderedWorkflowYamlStringFromJSON } from "@/entities/workflows/lib/yaml-utils";
+import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 
 interface Props {
   loadedYamlFileContents: string | null;
@@ -39,6 +40,9 @@ export function WorkflowBuilder({
 }: Props) {
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
+    getSecrets: { data: workflowSecrets },
+  } = useWorkflowSecrets(workflowId ?? null);
+  const {
     // Definition
     definition,
     setDefinition,
@@ -54,6 +58,8 @@ export function WorkflowBuilder({
     initializeWorkflow,
     setProviders,
     setInstalledProviders,
+    setSecrets,
+    updateFromYamlString,
   } = useWorkflowStore();
   const router = useRouter();
 
@@ -73,6 +79,13 @@ export function WorkflowBuilder({
     [providers, installedProviders]
   );
 
+  useEffect(
+    function syncSecrets() {
+      setSecrets(workflowSecrets ?? {});
+    },
+    [workflowSecrets]
+  );
+
   // TODO: move to workflow initialization
   useEffect(
     function updateDefinitionFromInput() {
@@ -88,6 +101,7 @@ export function WorkflowBuilder({
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
+            secrets: workflowSecrets ?? {},
           });
         } else if (loadedYamlFileContents == null) {
           const alertUuid = uuidv4();
@@ -97,7 +111,7 @@ export function WorkflowBuilder({
           if (alertName && alertSource) {
             triggers = { alert: { source: alertSource, name: alertName } };
           }
-          const definition = generateWorkflow(
+          const definition = getWorkflowDefinition(
             alertUuid,
             "",
             "",
@@ -107,15 +121,15 @@ export function WorkflowBuilder({
             [],
             triggers
           );
-          setDefinition(
-            wrapDefinitionV2({
-              ...definition,
-              isValid: true,
-            })
-          );
+          const wrappedDefinition = wrapDefinitionV2({
+            ...definition,
+            isValid: true,
+          });
+          setDefinition(wrappedDefinition);
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
+            secrets: workflowSecrets ?? {},
           });
         } else {
           const parsedDefinition = parseWorkflow(
@@ -131,6 +145,7 @@ export function WorkflowBuilder({
           initializeWorkflow(workflowId ?? null, {
             providers,
             installedProviders: installedProviders ?? [],
+            secrets: workflowSecrets ?? {},
           });
         }
       } catch (error) {
@@ -145,7 +160,9 @@ export function WorkflowBuilder({
     if (!definition?.value) {
       return null;
     }
-    return stringify({ workflow: getYamlWorkflowDefinition(definition.value) });
+    return getOrderedWorkflowYamlStringFromJSON({
+      workflow: getYamlWorkflowDefinition(definition.value),
+    });
   }, [definition?.value]);
 
   // TODO: move to workflow initialization or somewhere upper
@@ -197,22 +214,33 @@ export function WorkflowBuilder({
     router,
   ]);
 
+  const lastSaveRequestCount = useRef(saveRequestCount);
   // save workflow on "Deploy" button click
   useEffect(() => {
-    if (saveRequestCount) {
+    if (saveRequestCount && saveRequestCount !== lastSaveRequestCount.current) {
       saveWorkflow();
+      lastSaveRequestCount.current = saveRequestCount;
     }
     // ignore since we want the latest values, but to run effect only when triggerSave changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveRequestCount]);
 
-  useEffect(
-    function resetZustandStateOnUnMount() {
-      return () => {
-        reset();
-      };
-    },
-    [reset]
+  useEffect(function resetZustandStateOnUnMount() {
+    return () => {
+      console.log("resetting zustand state");
+      reset();
+    };
+  }, []);
+
+  const handleYamlChange = useMemo(
+    () =>
+      debounce((yamlString: string | undefined) => {
+        if (!yamlString) {
+          return;
+        }
+        updateFromYamlString(yamlString);
+      }, 1000),
+    [updateFromYamlString]
   );
 
   if (isLoading) {
@@ -223,24 +251,6 @@ export function WorkflowBuilder({
     );
   }
 
-  const YamlEditor = () => {
-    if (!workflowYaml) {
-      return <Skeleton className="w-full h-full" />;
-    }
-    return (
-      <MonacoYAMLEditor
-        // TODO: do not re-render editor on every workflowYaml change, handle updates inside the editor
-        key={workflowYaml}
-        workflowRaw={workflowYaml}
-        filename={workflowId ?? "workflow"}
-        workflowId={workflowId}
-        // TODO: support write for not yet deployed workflows
-        readOnly={!workflowId}
-        data-testid="wf-builder-yaml-editor"
-      />
-    );
-  };
-
   return (
     <ResizableColumns initialLeftWidth={leftColumnMode !== null ? 33 : 0}>
       <>
@@ -249,7 +259,13 @@ export function WorkflowBuilder({
             leftColumnMode === "yaml" ? "visible h-full" : "hidden"
           )}
         >
-          <YamlEditor />
+          <WorkflowYAMLEditor
+            workflowYamlString={workflowYaml ?? ""}
+            filename={workflowId ?? "workflow"}
+            workflowId={workflowId}
+            data-testid="wf-builder-yaml-editor"
+            onChange={handleYamlChange}
+          />
         </div>
         <div
           className={clsx(
@@ -279,7 +295,7 @@ export function WorkflowBuilder({
                 <button
                   className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
                   onClick={() => setLeftColumnMode(null)}
-                  data-testid="wf-close-editor-button"
+                  data-testid="wf-close-yaml-editor-button"
                   title="Hide YAML editor"
                 >
                   <CodeBracketIcon className="size-5" />

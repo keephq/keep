@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { AreaChart, Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
 import { WidgetData, WidgetType } from "./types";
-import AlertQuality from "@/app/(keep)/alerts/alert-quality-table";
+import AlertQuality from "@/app/(keep)/dashboard/alert-quality-table";
 import { useSearchParams } from "next/navigation";
 
 interface GridItemProps {

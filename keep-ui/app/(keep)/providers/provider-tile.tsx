@@ -231,7 +231,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
 
             {provider.details && provider.details.name && (
               <Subtitle className="truncate">
-                id: {provider.details.name}
+                Name: {provider.details.name}
               </Subtitle>
             )}
             {provider.last_alert_received ? (
@@ -243,7 +243,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text className="truncate">Id: {provider.id}</Text>
+              <Text className="truncate">Name: {provider.id}</Text>
             ) : null}
             {renderChart()}
           </div>

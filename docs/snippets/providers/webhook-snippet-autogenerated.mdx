@@ -1,0 +1,58 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **url**: Webhook URL (required: True, sensitive: False)
+- **method**: HTTP method (required: True, sensitive: False)
+- **http_basic_authentication_username**: HTTP basic authentication - Username (required: False, sensitive: False)
+- **http_basic_authentication_password**: HTTP basic authentication - Password (required: False, sensitive: True)
+- **api_key**: API key (required: False, sensitive: True)
+- **headers**: Headers (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **send_webhook**:  (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query webhook
+      provider: webhook
+      config: "{{ provider.my_provider_name }}"
+      with:
+        url: {value}  
+        method: {value}  
+        http_basic_authentication_username: {value}  
+        http_basic_authentication_password: {value}  
+        api_key: {value}  
+        headers: {value}  
+        body: {value}  
+        params: {value}  
+        fail_on_error: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query webhook
+      provider: webhook
+      config: "{{ provider.my_provider_name }}"
+      with:
+        body: {value}  
+        params: {value}  
+```
+
+
+
+
+Check the following workflow examples:
+- [webhook_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/webhook_example.yml)
+- [webhook_example_foreach.yml](https://github.com/keephq/keep/blob/main/examples/workflows/webhook_example_foreach.yml)

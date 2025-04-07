@@ -47,7 +47,8 @@ export function IncidentLayoutClient({
           initialLeftWidth={65}
         />
       ) : (
-        <div className="flex-1 min-w-0">{children}</div>
+        // Adding padding to avoid cutting off card border and shadow
+        <div className="flex-1 min-w-0 py-2 p-px">{children}</div>
       )}
     </div>
   );

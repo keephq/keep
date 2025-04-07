@@ -66,6 +66,8 @@ export type Workflow = {
   last_executions?: LastWorkflowExecution[];
   provisioned?: boolean;
   alertRule?: boolean;
+  revision?: number;
+  canRun?: boolean;
 };
 
 export type MockProvider = {
@@ -117,6 +119,13 @@ export type WorkflowTemplate = {
   workflow: MockWorkflow;
   workflow_raw: string;
   workflow_raw_id: string;
+};
+
+export type PaginatedWorkflowsResults = {
+  count: number;
+  results: Workflow[];
+  limit: number;
+  offset: number;
 };
 
 export async function getWorkflow(api: ApiClient, id: string) {

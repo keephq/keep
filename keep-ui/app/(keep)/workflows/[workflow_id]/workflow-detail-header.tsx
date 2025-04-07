@@ -1,12 +1,12 @@
 "use client";
 
-import { useApi } from "@/shared/lib/hooks/useApi";
+import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { Workflow } from "@/shared/api/workflows";
-import useSWR from "swr";
-import Skeleton from "react-loading-skeleton";
-import { Button, Text } from "@tremor/react";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
+import { Button, Text } from "@tremor/react";
+import Skeleton from "react-loading-skeleton";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
+import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 
 export default function WorkflowDetailHeader({
   workflowId: workflow_id,
@@ -15,23 +15,18 @@ export default function WorkflowDetailHeader({
   workflowId: string;
   initialData?: Workflow;
 }) {
-  const api = useApi();
-  const {
-    data: workflow,
-    isLoading,
-    error,
-  } = useSWR<Partial<Workflow>>(
-    api.isReady() ? `/workflows/${workflow_id}` : null,
-    (url: string) => api.get(url),
-    { fallbackData: initialData, revalidateOnMount: false }
-  );
+  const { workflow, isLoading, error } = useWorkflowDetail(workflow_id, {
+    fallbackData: initialData,
+  });
 
   const {
     isRunning,
     handleRunClick,
     getTriggerModalProps,
+    getManualInputModalProps,
     isRunButtonDisabled,
     message,
+    hasInputs,
   } = useWorkflowRun(workflow as Workflow);
 
   if (error) {
@@ -91,8 +86,19 @@ export default function WorkflowDetailHeader({
         </div>
       </div>
 
+      {/* Alert Trigger Modal */}
       {!!workflow && !!getTriggerModalProps && (
         <AlertTriggerModal {...getTriggerModalProps()} />
+      )}
+
+      {/* Manual Input Modal */}
+      {!!workflow && !!getManualInputModalProps && (
+        <ManualRunWorkflowModal
+          workflow={workflow}
+          handleClose={() => getManualInputModalProps().onClose()}
+          isOpen={getManualInputModalProps().isOpen}
+          onSubmit={getManualInputModalProps().onSubmit}
+        />
       )}
     </div>
   );

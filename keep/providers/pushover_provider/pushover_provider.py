@@ -52,7 +52,7 @@ class PushoverProvider(BaseProvider):
         https://support.pushover.net/i44-example-code-and-pushover-libraries#python
 
         Args:
-            kwargs (dict): The providers with context
+            message (str): The content of the message.
         """
         self.logger.debug("Notifying alert message to Pushover")
         resp = requests.post(

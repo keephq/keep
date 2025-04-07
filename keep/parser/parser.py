@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import typing
+import keyword
 
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.config import config
@@ -161,6 +162,7 @@ class Parser:
         workflow_id = self._parse_id(workflow)
         workflow_name = workflow.get("name", "Untitled")
         workflow_description = workflow.get("description", "No description")
+        workflow_permissions = workflow.get("permissions", [])
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
@@ -201,6 +203,7 @@ class Parser:
             workflow_strategy=workflow_strategy,
             workflow_consts=workflow_consts,
             workflow_debug=workflow_debug,
+            workflow_permissions=workflow_permissions,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow_class
@@ -406,7 +409,9 @@ class Parser:
 
         # Convert time strings to seconds
         if isinstance(workflow_interval, str):
-            if workflow_interval.endswith("m"):
+            if workflow_interval.isnumeric():
+                workflow_interval = int(workflow_interval)
+            elif workflow_interval.endswith("m"):
                 try:
                     minutes = int(workflow_interval[:-1])
                     workflow_interval = minutes * 60
@@ -447,16 +452,23 @@ class Parser:
     def parse_provider_parameters(provider_parameters: dict) -> dict:
         parsed_provider_parameters = {}
         for parameter in provider_parameters:
+            if keyword.iskeyword(parameter):
+                # add suffix _ to provider parameters if it's a reserved keyword in python
+                parameter_name = parameter + "_"
+            else:
+                parameter_name = parameter
             if isinstance(provider_parameters[parameter], (str, list, int, bool)):
-                parsed_provider_parameters[parameter] = provider_parameters[parameter]
+                parsed_provider_parameters[parameter_name] = provider_parameters[
+                    parameter
+                ]
             elif isinstance(provider_parameters[parameter], dict):
                 try:
-                    parsed_provider_parameters[parameter] = StepProviderParameter(
+                    parsed_provider_parameters[parameter_name] = StepProviderParameter(
                         **provider_parameters[parameter]
                     )
                 except Exception:
                     # It could be a dict/list but not of ProviderParameter type
-                    parsed_provider_parameters[parameter] = provider_parameters[
+                    parsed_provider_parameters[parameter_name] = provider_parameters[
                         parameter
                     ]
         return parsed_provider_parameters
@@ -814,9 +826,15 @@ class Parser:
             workflow (dict): _description_
         """
         actions_providers = [
-            action.get("provider") for action in workflow.get("actions", []) if "provider" in action
+            action.get("provider")
+            for action in workflow.get("actions", [])
+            if "provider" in action
         ]
-        steps_providers = [step.get("provider") for step in workflow.get("steps", []) if "provider" in step]
+        steps_providers = [
+            step.get("provider")
+            for step in workflow.get("steps", [])
+            if "provider" in step
+        ]
         providers = actions_providers + steps_providers
         try:
             providers = [

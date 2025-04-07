@@ -57,6 +57,12 @@ class GithubProvider(BaseProvider):
         self.client = self.__generate_client()
 
     def get_last_commits(self, repository: str, n: int = 10):
+        """
+        Get the last N commits from a GitHub repository.
+        Args:
+            repository (str): The GitHub repository to get the commits from.
+            n (int): The number of commits to get.
+        """
         self.logger.info(f"Getting last {n} commits from {repository}")
         # get only the name so if the repo is
         # https://github.com/keephq/keep -> keephq/keep
@@ -70,6 +76,12 @@ class GithubProvider(BaseProvider):
         return commits
 
     def get_last_releases(self, repository: str, n: int = 10):
+        """
+        Get the last N releases from a GitHub repository.
+        Args:
+            repository (str): The GitHub repository to get the releases from.
+            n (int): The number of releases to get.
+        """
         self.logger.info(f"Getting last {n} releases from {repository}")
         repo = self.client.get_repo(repository)
         releases = repo.get_releases()
@@ -96,6 +108,16 @@ class GithubProvider(BaseProvider):
         )
 
     def _notify(self, **kwargs):
+        """
+        Notify the provider.
+        Args:
+            run_action (str): The action to run.
+            workflow (str): The workflow to run.
+            repo_name (str): The repository name.
+            repo_owner (str): The repository owner.
+            ref (str): The ref to use.
+            inputs (dict): The inputs to use.
+        """
         if "run_action" in kwargs:
             workflow_name = kwargs.get("workflow")
             repo_name = kwargs.get("repo_name")

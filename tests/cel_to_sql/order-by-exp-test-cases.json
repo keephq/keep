@@ -1,65 +1,74 @@
 [
   {
-    "field": "floatNumberColumn",
+    "fields": ["floatNumberColumn"],
     "description": "Float single column no cast",
     "expected_sql_dialect_based": {
-      "mysql": "float_number_column",
-      "postgresql": "float_number_column",
-      "sqlite": "float_number_column"
+      "mysql": "float_number_column ASC",
+      "postgresql": "float_number_column ASC",
+      "sqlite": "float_number_column ASC"
     }
   },
   {
-    "field": "intNumberColumn",
+    "fields": ["intNumberColumn"],
     "description": "Int single column no cast",
     "expected_sql_dialect_based": {
-      "mysql": "int_number_column",
-      "postgresql": "int_number_column",
-      "sqlite": "int_number_column"
+      "mysql": "int_number_column ASC",
+      "postgresql": "int_number_column ASC",
+      "sqlite": "int_number_column ASC"
     }
   },
   {
-    "field": "floatNumberColumnFromJson",
+    "fields": ["floatNumberColumnFromJson"],
     "description": "Float from JSON column",
     "expected_sql_dialect_based": {
-      "mysql": "JSON_EXTRACT(json_column, '$.floatNumberColumnFromJson')",
-      "postgresql": "((json_column) ->> 'floatNumberColumnFromJson')::FLOAT",
-      "sqlite": "json_extract(json_column, '$.floatNumberColumnFromJson')"
+      "mysql": "JSON_EXTRACT(json_column, '$.\"floatNumberColumnFromJson\"') ASC",
+      "postgresql": "((json_column) ->> 'floatNumberColumnFromJson')::FLOAT ASC",
+      "sqlite": "json_extract(json_column, '$.\"floatNumberColumnFromJson\"') ASC"
     }
   },
   {
-    "field": "intNumberColumnFromJson",
+    "fields": ["intNumberColumnFromJson"],
     "description": "Int from JSON column",
     "expected_sql_dialect_based": {
-      "mysql": "JSON_EXTRACT(json_column, '$.intNumberColumnFromJson')",
-      "postgresql": "((json_column) ->> 'intNumberColumnFromJson')::FLOAT",
-      "sqlite": "json_extract(json_column, '$.intNumberColumnFromJson')"
+      "mysql": "JSON_EXTRACT(json_column, '$.\"intNumberColumnFromJson\"') ASC",
+      "postgresql": "((json_column) ->> 'intNumberColumnFromJson')::FLOAT ASC",
+      "sqlite": "json_extract(json_column, '$.\"intNumberColumnFromJson\"') ASC"
     }
   },
   {
-    "field": "intNumberColumnFromMultipleJson",
+    "fields": ["intNumberColumnFromMultipleJson"],
     "description": "Int from multiple JSON columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(JSON_EXTRACT(json_column_first, '$.intNumberColumnFromMultipleJson'), JSON_EXTRACT(json_column_second, '$.intNumberColumnFromMultipleJson'))",
-      "postgresql": "COALESCE(((json_column_first) ->> 'intNumberColumnFromMultipleJson')::FLOAT, ((json_column_second) ->> 'intNumberColumnFromMultipleJson')::FLOAT)",
-      "sqlite": "COALESCE(json_extract(json_column_first, '$.intNumberColumnFromMultipleJson'), json_extract(json_column_second, '$.intNumberColumnFromMultipleJson'))"
+      "mysql": "COALESCE(JSON_EXTRACT(json_column_first, '$.\"intNumberColumnFromMultipleJson\"'), JSON_EXTRACT(json_column_second, '$.\"intNumberColumnFromMultipleJson\"')) ASC",
+      "postgresql": "COALESCE(((json_column_first) ->> 'intNumberColumnFromMultipleJson')::FLOAT, ((json_column_second) ->> 'intNumberColumnFromMultipleJson')::FLOAT) ASC",
+      "sqlite": "COALESCE(json_extract(json_column_first, '$.\"intNumberColumnFromMultipleJson\"'), json_extract(json_column_second, '$.\"intNumberColumnFromMultipleJson\"')) ASC"
     }
   },
   {
-    "field": "jsonPropWithoutType",
+    "fields": ["jsonPropWithoutType"],
     "description": "For JSON prop without type no cast applied",
     "expected_sql_dialect_based": {
-      "mysql": "JSON_EXTRACT(json_column_first, '$.jsonPropWithoutType')",
-      "postgresql": "(json_column_first) ->> 'jsonPropWithoutType'",
-      "sqlite": "json_extract(json_column_first, '$.jsonPropWithoutType')"
+      "mysql": "JSON_EXTRACT(json_column_first, '$.\"jsonPropWithoutType\"') ASC",
+      "postgresql": "(json_column_first) ->> 'jsonPropWithoutType' ASC",
+      "sqlite": "json_extract(json_column_first, '$.\"jsonPropWithoutType\"') ASC"
     }
   },
   {
-    "field": "stringJsonProp",
+    "fields": ["stringJsonProp"],
     "description": "String JSON prop no cast applied",
     "expected_sql_dialect_based": {
-      "mysql": "JSON_EXTRACT(json_column_first, '$.stringJsonProp')",
-      "postgresql": "(json_column_first) ->> 'stringJsonProp'",
-      "sqlite": "json_extract(json_column_first, '$.stringJsonProp')"
+      "mysql": "JSON_EXTRACT(json_column_first, '$.\"stringJsonProp\"') ASC",
+      "postgresql": "(json_column_first) ->> 'stringJsonProp' ASC",
+      "sqlite": "json_extract(json_column_first, '$.\"stringJsonProp\"') ASC"
+    }
+  },
+  {
+    "fields": ["stringJsonProp", "floatNumberColumn"],
+    "description": "Sort using multiple fields",
+    "expected_sql_dialect_based": {
+      "mysql": "JSON_EXTRACT(json_column_first, '$.\"stringJsonProp\"') ASC, float_number_column DESC",
+      "postgresql": "(json_column_first) ->> 'stringJsonProp' ASC, float_number_column DESC",
+      "sqlite": "json_extract(json_column_first, '$.\"stringJsonProp\"') ASC, float_number_column DESC"
     }
   }
 ]

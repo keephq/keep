@@ -8,6 +8,7 @@ from keep.api.core.elastic import ElasticClient
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.preset import PresetDto, PresetSearchQuery
+from keep.api.models.query import QueryDto
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
@@ -99,8 +100,10 @@ class SearchEngine:
         self.logger.info("Searching alerts by CEL")
         db_alerts, _ = query_last_alerts(
             tenant_id=self.tenant_id,
-            limit=limit,
-            cel=cel_query,
+            query=QueryDto(
+                cel=cel_query,
+                limit=limit,
+            ),
         )
         filtered_alerts = convert_db_alerts_to_dto_alerts(db_alerts)
         self.logger.info("Finished searching alerts by CEL")

@@ -1,0 +1,36 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host_url**: Grafana Host URL (required: True, sensitive: False)
+- **service_account_token**: Service Account Token (required: True, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: User is Authenticated  
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query grafana_incident
+      provider: grafana_incident
+      config: "{{ provider.my_provider_name }}"
+      with:
+        operationType: {value}  
+        updateType: {value}  
+```
+
+
+
+
+Check the following workflow examples:
+- [create-new-incident-grafana-incident.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/create-new-incident-grafana-incident.yaml)
+- [update-incident-grafana-incident.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/update-incident-grafana-incident.yaml)

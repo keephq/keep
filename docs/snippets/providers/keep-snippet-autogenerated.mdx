@@ -1,0 +1,61 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query keep
+      provider: keep
+      config: "{{ provider.my_provider_name }}"
+      with:
+        filters: {value}  # filters to query Keep (only for version 1)
+        version: {value}  # version of Keep API
+        distinct: {value}  # if True, return only distinct alerts
+        time_delta: {value}  # time delta in days to query Keep
+        timerange: {value}  # timerange dict to calculate time delta
+        filter: {value}  # filter to query Keep (only for version 2)
+        limit: {value}  # limit number of results (only for version 2)
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query keep
+      provider: keep
+      config: "{{ provider.my_provider_name }}"
+      with:
+        delete_all_other_workflows: {value}  # if True, delete all other workflows
+        workflow_full_sync: {value}  # if True, sync all workflows
+        workflow_to_update_yaml: {value}  # workflow yaml to update
+        alert: {value}  # alert data to create
+        fingerprint_fields: {value}  # fields to use for alert fingerprinting
+        override_source_with: {value}  # override alert source
+        read_only: {value}  # if True, don't modify existing alerts
+        fingerprint: {value}  # alert fingerprint
+        if: {value}  # condition to evaluate for alert creation
+        for: {value}  # duration for state alerts
+```
+
+
+
+
+Check the following workflow examples:
+- [create_alert_from_vm_metric.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_alert_from_vm_metric.yml)
+- [create_alert_in_keep.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_alert_in_keep.yml)
+- [create_alerts_from_elastic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_alerts_from_elastic.yml)
+- [create_alerts_from_mysql.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_alerts_from_mysql.yml)
+- [create_multi_alert_from_vm_metric.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_multi_alert_from_vm_metric.yml)
+- [cron-digest-alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/cron-digest-alerts.yml)
+- [resolve_old_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/resolve_old_alerts.yml)
+- [retrieve_cloudwatch_logs.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/retrieve_cloudwatch_logs.yaml)
+- [update_service_now_tickets_status.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_service_now_tickets_status.yml)
+- [update_workflows_from_http.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_workflows_from_http.yml)
+- [update_workflows_from_s3.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_workflows_from_s3.yml)
+- [webhook_example_foreach.yml](https://github.com/keephq/keep/blob/main/examples/workflows/webhook_example_foreach.yml)
