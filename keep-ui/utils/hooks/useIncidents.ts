@@ -204,45 +204,45 @@ export const usePollIncidents = (
   mutateIncidents: any,
   paused: boolean = false
 ) => {
-  const [incidentChangeToken, setIncidentChangeToken] = useState<
-    string | undefined
-  >(undefined);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIncidentChangeToken(uuidv4());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-  return {
-    incidentChangeToken,
-  };
-  // const { bind, unbind } = useWebsocket();
   // const [incidentChangeToken, setIncidentChangeToken] = useState<
   //   string | undefined
   // >(undefined);
-  // const handleIncoming = useCallback(
-  //   (data: any) => {
-  //     mutateIncidents();
-  //     setIncidentChangeToken(uuidv4()); // changes every time incident change happens on the server
-  //   },
-  //   [mutateIncidents, setIncidentChangeToken]
-  // );
-
   // useEffect(() => {
-  //   if (paused) {
-  //     return;
-  //   }
+  //   const interval = setInterval(() => {
+  //     setIncidentChangeToken(uuidv4());
+  //   }, 1000);
 
-  //   bind("incident-change", handleIncoming);
-  //   return () => {
-  //     unbind("incident-change", handleIncoming);
-  //   };
-  // }, [bind, unbind, handleIncoming, paused]);
-
+  //   return () => clearInterval(interval);
+  // }, []);
   // return {
   //   incidentChangeToken,
   // };
+  const { bind, unbind } = useWebsocket();
+  const [incidentChangeToken, setIncidentChangeToken] = useState<
+    string | undefined
+  >(undefined);
+  const handleIncoming = useCallback(
+    (data: any) => {
+      mutateIncidents();
+      setIncidentChangeToken(uuidv4()); // changes every time incident change happens on the server
+    },
+    [mutateIncidents, setIncidentChangeToken]
+  );
+
+  useEffect(() => {
+    if (paused) {
+      return;
+    }
+
+    bind("incident-change", handleIncoming);
+    return () => {
+      unbind("incident-change", handleIncoming);
+    };
+  }, [bind, unbind, handleIncoming, paused]);
+
+  return {
+    incidentChangeToken,
+  };
 };
 
 export const useIncidentsMeta = (
