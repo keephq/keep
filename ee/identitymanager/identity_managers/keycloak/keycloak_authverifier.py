@@ -74,6 +74,9 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             .get(self.keycloak_client_id, {})
             .get("roles", [])
         )
+        # LDAP
+        if not role:
+            role = payload.get("realm_access", {}).get("roles", [])
         # filter out uma_protection
         role = [r for r in role if not r.startswith("uma_protection")]
         if not role:
@@ -103,8 +106,11 @@ class KeycloakAuthVerifier(AuthVerifierBase):
                 token=authenticated_entity.token, permissions=[permission]
             )
             if not allowed:
-                raise HTTPException(status_code=401, detail="Permission check failed")
-        # secure fallback
+                raise HTTPException(status_code=403, detail="Permission check failed")
+        # raise the 403 if needed
+        except HTTPException:
+            raise
+        # secure fallback for other errors
         except Exception as e:
             raise HTTPException(
                 status_code=401, detail="Permission check failed - " + str(e)

@@ -2,10 +2,42 @@
   "id": "keep",
   "realm": "${KEEP_REALM}",
   "enabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Role for admin"
+      },
+      {
+        "name": "noc",
+        "description": "Role for network operations center"
+      },
+      {
+        "name": "teamA",
+        "description": "LDAP group teamA",
+        "composite": true,
+        "composites": {
+          "realm": ["admin"]
+        }
+      },
+      {
+        "name": "teamB",
+        "description": "LDAP group teamB",
+        "composite": true,
+        "composites": {
+          "realm": ["noc"]
+        }
+      }
+    ]
+  },
   "users": [
     {
       "username": "${KEEP_ADMIN_USER}",
       "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "keepadmin@keep.com",
       "credentials": [
         {
           "type": "password",
@@ -128,5 +160,124 @@
         }
       ]
     }
-  ]
+  ],
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": [
+      {
+        "name": "keep-ldap",
+        "providerId": "ldap",
+        "subComponents": {
+          "org.keycloak.storage.ldap.mappers.LDAPStorageMapper": [
+            {
+              "name": "username",
+              "providerId": "user-attribute-ldap-mapper",
+              "config": {
+                "ldap.attribute": ["uid"],
+                "is.mandatory.in.ldap": ["true"],
+                "read.only": ["true"],
+                "always.read.value.from.ldap": ["true"],
+                "user.model.attribute": ["username"]
+              }
+            },
+            {
+              "name": "email",
+              "providerId": "user-attribute-ldap-mapper",
+              "config": {
+                "ldap.attribute": ["mail"],
+                "is.mandatory.in.ldap": ["false"],
+                "read.only": ["true"],
+                "always.read.value.from.ldap": ["true"],
+                "user.model.attribute": ["email"]
+              }
+            },
+            {
+              "name": "first name",
+              "providerId": "user-attribute-ldap-mapper",
+              "config": {
+                "ldap.attribute": ["givenName"],
+                "is.mandatory.in.ldap": ["false"],
+                "read.only": ["true"],
+                "always.read.value.from.ldap": ["true"],
+                "user.model.attribute": ["firstName"]
+              }
+            },
+            {
+              "name": "last name",
+              "providerId": "user-attribute-ldap-mapper",
+              "config": {
+                "ldap.attribute": ["sn"],
+                "is.mandatory.in.ldap": ["false"],
+                "read.only": ["true"],
+                "always.read.value.from.ldap": ["true"],
+                "user.model.attribute": ["lastName"]
+              }
+            },
+            {
+              "name": "groups",
+              "providerId": "group-ldap-mapper",
+              "config": {
+                "groups.dn": ["ou=groups,dc=keep,dc=com"],
+                "group.name.ldap.attribute": ["cn"],
+                "group.object.classes": ["groupOfUniqueNames"],
+                "membership.ldap.attribute": ["uniqueMember"],
+                "membership.attribute.type": ["DN"],
+                "membership.user.ldap.attribute": ["uid"],
+                "mode": ["READ_ONLY"],
+                "user.groups.retrieve.strategy": [
+                  "GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE"
+                ],
+                "memberof.ldap.attribute": ["memberOf"],
+                "preserve.group.inheritance": ["true"],
+                "ignore.missing.groups": ["false"],
+                "drop.non.existing.groups.during.sync": ["false"]
+              }
+            },
+            {
+              "name": "group-to-role-mapper",
+              "providerId": "role-ldap-mapper",
+              "config": {
+                "roles.dn": ["ou=groups,dc=keep,dc=com"],
+                "role.name.ldap.attribute": ["cn"],
+                "role.object.classes": ["groupOfUniqueNames"],
+                "membership.ldap.attribute": ["uniqueMember"],
+                "membership.attribute.type": ["DN"],
+                "membership.user.ldap.attribute": ["uid"],
+                "ldap.filter": ["(|(cn=teamA)(cn=teamB))"],
+                "mode": ["READ_ONLY"],
+                "user.roles.retrieve.strategy": [
+                  "LOAD_ROLES_BY_MEMBER_ATTRIBUTE"
+                ],
+                "memberof.ldap.attribute": ["memberOf"],
+                "use.realm.roles.mapping": ["true"]
+              }
+            }
+          ]
+        },
+        "config": {
+          "vendor": ["ad"],
+          "usernameLDAPAttribute": ["uid"],
+          "rdnLDAPAttribute": ["uid"],
+          "uuidLDAPAttribute": ["entryUUID"],
+          "userObjectClasses": ["inetOrgPerson"],
+          "connectionUrl": ["ldap://openldap:389"],
+          "usersDn": ["ou=users,dc=keep,dc=com"],
+          "authType": ["simple"],
+          "bindDn": ["cn=admin,dc=keep,dc=com"],
+          "bindCredential": ["admin_password"],
+          "searchScope": ["1"],
+          "useTruststoreSpi": ["ldapsOnly"],
+          "connectionPooling": ["true"],
+          "pagination": ["true"],
+          "allowKerberosAuthentication": ["false"],
+          "syncRegistrations": ["false"],
+          "importEnabled": ["true"],
+          "editMode": ["READ_ONLY"],
+          "batchSizeForSync": ["1000"],
+          "fullSyncPeriod": ["604800"],
+          "changedSyncPeriod": ["86400"],
+          "cachePolicy": ["DEFAULT"]
+        }
+      }
+    ]
+  }
 }

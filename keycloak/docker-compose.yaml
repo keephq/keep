@@ -56,6 +56,7 @@ services:
 
   openldap:
     image: osixia/openldap:1.5.0
+    command: --copy-service --loglevel debug
     ports:
       - "389:389"
       - "636:636"
@@ -64,11 +65,31 @@ services:
       LDAP_DOMAIN: "keep.com"
       LDAP_ADMIN_PASSWORD: "admin_password"
       LDAP_BASE_DN: ""
+      LDAP_CUSTOM_BOOTSTRAP_LDIF: "true"
     volumes:
       - openldap-data:/var/lib/ldap
       - openldap-config:/etc/ldap/slapd.d
+      - ./ldifs:/container/service/slapd/assets/config/bootstrap/ldif/custom
     networks:
       - keycloak-and-mysql-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "ldapsearch",
+          "-x",
+          "-H",
+          "ldap://localhost:389",
+          "-D",
+          "cn=admin,dc=keep,dc=com",
+          "-w",
+          "admin_password",
+          "-b",
+          "dc=keep,dc=com",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ldap-ui:
     image: dnknth/ldap-ui
@@ -80,7 +101,8 @@ services:
       BIND_DN: "cn=admin,dc=keep,dc=com"
       BIND_PASSWORD: "admin_password"
     depends_on:
-      - openldap
+      openldap:
+        condition: service_healthy
     networks:
       - keycloak-and-mysql-network
 

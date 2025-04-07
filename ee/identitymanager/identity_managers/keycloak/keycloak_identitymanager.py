@@ -261,7 +261,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 self.client_id,
                 {
                     "name": role.name,
-                    "description": f"Role for {role.name}",
+                    "description": role.description or f"Role for {role.name}",
                     # we will use this to identify the role as predefined
                     "attributes": {
                         "predefined": [str(predefined).lower()],

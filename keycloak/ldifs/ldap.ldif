@@ -1,43 +1,24 @@
-# Root entry for the domain
-dn: dc=keep,dc=com
-objectClass: top
-objectClass: dcObject
-objectClass: organization
-o: Keep Organization
-dc: keep
-
-# Administrator user
+# Admin user
 dn: cn=admin,dc=keep,dc=com
-objectClass: simpleSecurityObject
+objectClass: top
 objectClass: organizationalRole
+objectClass: simpleSecurityObject
 cn: admin
+description: LDAP Administrator
 userPassword: admin_password
-description: LDAP administrator
 
-# Groups
+# Organizational Units
 dn: ou=groups,dc=keep,dc=com
 objectClass: top
 objectClass: organizationalUnit
 ou: groups
 
-dn: cn=developers,ou=groups,dc=keep,dc=com
-objectClass: top
-objectClass: groupOfUniqueNames
-cn: developers
-uniqueMember: cn=admin,dc=keep,dc=com
-
-dn: cn=managers,ou=groups,dc=keep,dc=com
-objectClass: top
-objectClass: groupOfUniqueNames
-cn: managers
-uniqueMember: cn=admin,dc=keep,dc=com
-
-# Users
 dn: ou=users,dc=keep,dc=com
 objectClass: top
 objectClass: organizationalUnit
 ou: users
 
+# Users
 dn: uid=john.doe,ou=users,dc=keep,dc=com
 objectClass: inetOrgPerson
 uid: john.doe
@@ -49,7 +30,6 @@ userPassword: password123
 mail: john.doe@keep.com
 o: Keep Organization
 employeeType: Developer
-memberOf: cn=developers,ou=groups,dc=keep,dc=com
 
 dn: uid=jane.smith,ou=users,dc=keep,dc=com
 objectClass: inetOrgPerson
@@ -61,8 +41,7 @@ displayName: Jane Smith
 userPassword: password123
 mail: jane.smith@keep.com
 o: Keep Organization
-employeeType: Manager
-memberOf: cn=managers,ou=groups,dc=keep,dc=com
+employeeType: Developer
 
 dn: uid=alice.johnson,ou=users,dc=keep,dc=com
 objectClass: inetOrgPerson
@@ -75,17 +54,19 @@ userPassword: password123
 mail: alice.johnson@keep.com
 o: Keep Organization
 employeeType: Developer
-memberOf: cn=developers,ou=groups,dc=keep,dc=com
 
-dn: uid=alice.bob,ou=users,dc=keep,dc=com
-objectClass: inetOrgPerson
-uid: alice.bob
-sn: Bob
-givenName: Alice
-cn: Alice Bob
-displayName: Alice Bob
-userPassword: password123
-mail: alice.bob@keep.com
-o: Keep Organization
-employeeType: Developer
-memberOf: cn=developers,ou=groups,dc=keep,dc=com
+# Groups
+dn: cn=teamA,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: teamA
+uniqueMember: uid=john.doe,ou=users,dc=keep,dc=com
+uniqueMember: uid=alice.johnson,ou=users,dc=keep,dc=com
+uniqueMember: cn=admin,dc=keep,dc=com
+
+dn: cn=teamB,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: teamB
+uniqueMember: uid=jane.smith,ou=users,dc=keep,dc=com
+uniqueMember: cn=admin,dc=keep,dc=com
