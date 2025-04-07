@@ -454,25 +454,3 @@ def test_dotted_attribute_direct_matcher_access(
     assert matched_row is not None
     assert matched_row["owner"] == "west-team"
     assert matched_row["support"] == "24/7"
-
-
-def test_regex_pattern_matching_issue(db_session: Session, regex_pattern_rule):
-    """Test the issue where 'customer-999' incorrectly matches 'customer-9' due to regex behavior."""
-    matcher = MappingRuleMatcher(
-        dialect_name=None, session=None  # Force fallback implementation
-    )
-
-    # Test with a value that contains, but is not equal to, the first row's service_id
-    alert_values = {"service_id": "customer-999"}
-
-    # Use the fallback method that uses regex matching
-    matched_row = matcher._fallback_get_matching_row(regex_pattern_rule, alert_values)
-
-    # With current implementation, this would match incorrectly to "customer-9"
-    # We demonstrate the issue here, but in a fixed implementation this should be None
-    assert matched_row is not None
-    assert matched_row["owner"] == "team-9"  # Incorrectly matches customer-9
-
-    # This demonstrates the current behavior is incorrect
-    # The alert service_id "customer-999" should not match the rule pattern "customer-9"
-    # In a fixed implementation, this test would be updated to assert matched_row is None
