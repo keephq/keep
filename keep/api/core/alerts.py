@@ -286,6 +286,7 @@ def build_total_alerts_query(tenant_id, query: QueryDto):
 
     return built_query_result["query"]
 
+
 def build_alerts_query(tenant_id, query: QueryDto):
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sort_by_exp = cel_to_sql_instance.get_order_by_expression(
