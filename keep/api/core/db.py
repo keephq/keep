@@ -8,11 +8,11 @@ import hashlib
 import json
 import logging
 import random
-import time
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
@@ -113,11 +113,15 @@ def dispose_session():
 
 @contextmanager
 def existed_or_new_session(session: Optional[Session] = None) -> Session:
-    if session:
-        yield session
-    else:
-        with Session(engine) as session:
+    try:
+        if session:
             yield session
+        else:
+            with Session(engine) as session:
+                yield session
+    except Exception as e:
+        e.session = session
+        raise e
 
 
 def get_session() -> Session:
@@ -154,44 +158,32 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         return None
 
 
-@contextmanager
-def retry_on_race_condition(session, tries=3, delay=0.1, backoff=2, jitter=(0, 0.1)):
-    attempt = 0
-    while attempt < tries:
+def retry_on_deadlock(f):
+    @retry(
+        exceptions=(OperationalError,),
+        tries=3,
+        delay=0.1,
+        backoff=2,
+        jitter=(0, 0.1),
+        logger=logger,
+    )
+    @wraps(f)
+    def wrapper(*args, **kwargs):
         try:
-            yield
-            return
-        except StaleDataError as e:
-            if "expected to update" in str(e):
-                logger.info(
-                    "Phantom read detected, retrying transaction", extra={"error": str(e), "attempt": attempt},
-                )
-                if attempt >= tries:
-                    raise
-
-                if not session.is_active:
-                    session.rollback()
-
-                time.sleep(delay + random.uniform(*jitter))
-                delay *= backoff
-            else:
-                raise
+            return f(*args, **kwargs)
         except OperationalError as e:
+
+            if hasattr(e, "session") and not e.session.is_active:
+                e.session.rollback()
+
             if "Deadlock found" in str(e):
-                attempt += 1
                 logger.warning(
-                    "Deadlock detected, retrying transaction", extra={"error": str(e), "attempt": attempt},
+                    "Deadlock detected, retrying transaction", extra={"error": str(e)}
                 )
-                if attempt >= tries:
-                    raise
+                raise  # retry will catch this
+            raise  # if it's not a deadlock, let it propagate
 
-                if not session.is_active:
-                    session.rollback()
-
-                time.sleep(delay + random.uniform(*jitter))
-                delay *= backoff
-            else:
-                raise  # re-raise if it's not a deadlock
+    return wrapper
 
 
 def create_workflow_execution(
@@ -4022,6 +4014,7 @@ def get_alerts_data_for_incident(
         }
 
 
+@retry_on_deadlock
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,
@@ -4104,19 +4097,18 @@ def add_alerts_to_incident(
                 )
                 for fingerprint in new_fingerprints
             ]
-            with retry_on_race_condition(session, tries=max_retries):
-                for idx, entry in enumerate(alert_to_incident_entries):
-                    session.add(entry)
-                    if (idx + 1) % 100 == 0:
-                        logger.info(
-                            f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
-                            extra={
-                                "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
-                            },
-                        )
-                        session.flush()
 
-                session.commit()
+            for idx, entry in enumerate(alert_to_incident_entries):
+                session.add(entry)
+                if (idx + 1) % 100 == 0:
+                    logger.info(
+                        f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
+                        extra={
+                            "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
+                        },
+                    )
+                    session.flush()
+            session.commit()
 
             incident.sources = list(
                 set(incident.sources if incident.sources else [])
@@ -4171,11 +4163,21 @@ def add_alerts_to_incident(
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
-
-            with retry_on_race_condition(session, tries=max_retries):
-                session.add(incident)
-                session.commit()
-
+            incident_id = incident.id
+            for attempt in range(max_retries):
+                try:
+                    session.add(incident)
+                    session.commit()
+                    break
+                except StaleDataError as ex:
+                    if "expected to update" in ex.args[0]:
+                        logger.info(
+                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
+                        )
+                        session.rollback()
+                        continue
+                    else:
+                        raise
             session.refresh(incident)
 
             return incident
@@ -4707,74 +4709,94 @@ def bulk_upsert_alert_fields(
     max_retries=3,
 ):
     with existed_or_new_session(session) as session:
-        with retry_on_race_condition(session, tries=max_retries):
-            # Prepare the data for bulk insert
-            data = [
-                {
-                    "tenant_id": tenant_id,
-                    "field_name": field,
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                }
-                for field in fields
-            ]
-
-            if engine.dialect.name == "postgresql":
-                stmt = pg_insert(AlertField).values(data)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "tenant_id",
-                        "field_name",
-                    ],  # Unique constraint columns
-                    set_={
-                        "provider_id": stmt.excluded.provider_id,
-                        "provider_type": stmt.excluded.provider_type,
-                    },
-                )
-            elif engine.dialect.name == "mysql":
-                stmt = mysql_insert(AlertField).values(data)
-                stmt = stmt.on_duplicate_key_update(
-                    provider_id=stmt.inserted.provider_id,
-                    provider_type=stmt.inserted.provider_type,
-                )
-            elif engine.dialect.name == "sqlite":
-                stmt = sqlite_insert(AlertField).values(data)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "tenant_id",
-                        "field_name",
-                    ],  # Unique constraßint columns
-                    set_={
-                        "provider_id": stmt.excluded.provider_id,
-                        "provider_type": stmt.excluded.provider_type,
-                    },
-                )
-            elif engine.dialect.name == "mssql":
-                # SQL Server requires a raw query with a MERGE statement
-                values = ", ".join(
-                    f"('{tenant_id}', '{field}', '{provider_id}', '{provider_type}')"
+        for attempt in range(max_retries):
+            try:
+                # Prepare the data for bulk insert
+                data = [
+                    {
+                        "tenant_id": tenant_id,
+                        "field_name": field,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    }
                     for field in fields
-                )
+                ]
 
-                stmt = text(
-                    f"""
-                    MERGE INTO AlertField AS target
-                    USING (VALUES {values}) AS source (tenant_id, field_name, provider_id, provider_type)
-                    ON target.tenant_id = source.tenant_id AND target.field_name = source.field_name
-                    WHEN MATCHED THEN
-                        UPDATE SET provider_id = source.provider_id, provider_type = source.provider_type
-                    WHEN NOT MATCHED THEN
-                        INSERT (tenant_id, field_name, provider_id, provider_type)
-                        VALUES (source.tenant_id, source.field_name, source.provider_id, source.provider_type)
-                """
-                )
-            else:
-                raise NotImplementedError(
-                    f"Upsert not supported for {engine.dialect.name}"
-                )
+                if engine.dialect.name == "postgresql":
+                    stmt = pg_insert(AlertField).values(data)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=[
+                            "tenant_id",
+                            "field_name",
+                        ],  # Unique constraint columns
+                        set_={
+                            "provider_id": stmt.excluded.provider_id,
+                            "provider_type": stmt.excluded.provider_type,
+                        },
+                    )
+                elif engine.dialect.name == "mysql":
+                    stmt = mysql_insert(AlertField).values(data)
+                    stmt = stmt.on_duplicate_key_update(
+                        provider_id=stmt.inserted.provider_id,
+                        provider_type=stmt.inserted.provider_type,
+                    )
+                elif engine.dialect.name == "sqlite":
+                    stmt = sqlite_insert(AlertField).values(data)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=[
+                            "tenant_id",
+                            "field_name",
+                        ],  # Unique constraint columns
+                        set_={
+                            "provider_id": stmt.excluded.provider_id,
+                            "provider_type": stmt.excluded.provider_type,
+                        },
+                    )
+                elif engine.dialect.name == "mssql":
+                    # SQL Server requires a raw query with a MERGE statement
+                    values = ", ".join(
+                        f"('{tenant_id}', '{field}', '{provider_id}', '{provider_type}')"
+                        for field in fields
+                    )
 
-            session.execute(stmt)
-            session.commit()
+                    merge_query = text(
+                        f"""
+                        MERGE INTO AlertField AS target
+                        USING (VALUES {values}) AS source (tenant_id, field_name, provider_id, provider_type)
+                        ON target.tenant_id = source.tenant_id AND target.field_name = source.field_name
+                        WHEN MATCHED THEN
+                            UPDATE SET provider_id = source.provider_id, provider_type = source.provider_type
+                        WHEN NOT MATCHED THEN
+                            INSERT (tenant_id, field_name, provider_id, provider_type)
+                            VALUES (source.tenant_id, source.field_name, source.provider_id, source.provider_type)
+                    """
+                    )
+
+                    session.execute(merge_query)
+                else:
+                    raise NotImplementedError(
+                        f"Upsert not supported for {engine.dialect.name}"
+                    )
+
+                # Execute the statement
+                if engine.dialect.name != "mssql":  # Already executed for SQL Server
+                    session.execute(stmt)
+                session.commit()
+
+                break
+
+            except OperationalError as e:
+                # Handle any potential race conditions
+                session.rollback()
+                if "Deadlock found" in str(e):
+                    logger.info(
+                        f"Deadlock found during bulk_upsert_alert_fields `{e}`, retry #{attempt}"
+                    )
+                    if attempt >= max_retries:
+                        raise e
+                    continue
+                else:
+                    raise e
 
 
 def get_alerts_fields(tenant_id: str) -> List[AlertField]:
