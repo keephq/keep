@@ -3,11 +3,10 @@ import {
   DEFAULT_INCIDENTS_CEL,
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
-  IncidentDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model/models";
 import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface IncidentsTableDataQuery {
   candidate: boolean | null;
@@ -138,7 +137,7 @@ export const useIncidentsTableData = (
   }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
 
   const {
-    data: incidents,
+    data: paginatedIncidentsFromHook,
     isLoading: incidentsLoading,
     mutate: mutateIncidents,
     error: incidentsError,
@@ -153,7 +152,6 @@ export const useIncidentsTableData = (
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
-      fallbackData: initialData,
       onSuccess: () => {
         refreshDefaultIncidents();
       },
@@ -178,8 +176,29 @@ export const useIncidentsTableData = (
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
     useIncidents(true, true);
 
+  const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
+    PaginatedIncidentsDto | undefined
+  >(initialData);
+  useEffect(() => {
+    if (!paginatedIncidentsFromHook) {
+      return;
+    }
+
+    if (!isPaused) {
+      if (!incidentsLoading) {
+        setPaginatedIncidentsToReturn(paginatedIncidentsFromHook);
+      }
+
+      return;
+    }
+
+    setPaginatedIncidentsToReturn(
+      incidentsLoading ? undefined : paginatedIncidentsFromHook
+    );
+  }, [isPaused, incidentsLoading, paginatedIncidentsFromHook]);
+
   return {
-    incidents,
+    incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
     defaultIncidents,
     predictedIncidents,
