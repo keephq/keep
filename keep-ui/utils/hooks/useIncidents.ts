@@ -67,17 +67,26 @@ export const useIncidents = (
     filtersParams.set("cel", cel);
   }
 
-  const swrValue = useSWR<PaginatedIncidentsDto>(
+  const swrValue = useSWR(
     () =>
       api.isReady()
         ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
         : null,
-    (url) => api.get(url),
+    async (url) => {
+      const currentDate = new Date();
+      const result = await api.get(url);
+      return {
+        result,
+        responseTimeMs: new Date().getTime() - currentDate.getTime(),
+      };
+    },
     options
   );
 
   return {
     ...swrValue,
+    data: swrValue.data?.result,
+    responseTimeMs: swrValue.data?.responseTimeMs,
     isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
   };
 };
@@ -96,7 +105,7 @@ export const useIncidentAlerts = (
       api.isReady()
         ? `/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}`
         : null,
-    (url) => api.get(url),
+    async (url) => api.get(url),
     options
   );
 };

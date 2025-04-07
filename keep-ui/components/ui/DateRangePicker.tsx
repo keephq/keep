@@ -312,7 +312,7 @@ export default function EnhancedDateRangePicker({
     setSelectedPreset(preset);
     setTimeFrame({
       ...preset.value(),
-      paused: true,
+      paused: isPaused,
       isFromCalendar: false,
     });
     setIsPaused(true);

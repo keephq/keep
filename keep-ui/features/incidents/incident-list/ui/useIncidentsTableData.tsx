@@ -41,17 +41,28 @@ export const useIncidentsTableData = (
 
   function onLiveUpdateStateChange(isPaused: boolean) {}
 
+  useEffect(() => {
+    if (canRevalidate) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setCanRevalidate(true);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [canRevalidate]);
+
   const getDateRangeCel = useCallback(() => {
     const filterArray = [];
     const currentDate = new Date();
 
     if (timeframeDelta > 0) {
       filterArray.push(
-        `lastReceived >= '${new Date(
+        `creation_time >= '${new Date(
           currentDate.getTime() - timeframeDelta
         ).toISOString()}'`
       );
-      filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
+      filterArray.push(`creation_time <= '${currentDate.toISOString()}'`);
       return filterArray.join(" && ");
     }
 
@@ -59,9 +70,9 @@ export const useIncidentsTableData = (
   }, [timeframeDelta]);
 
   function updateAlertsCelDateRange() {
-    if (!canRevalidate) {
-      return;
-    }
+    // if (!canRevalidate) {
+    //   return;
+    // }
 
     const dateRangeCel = getDateRangeCel();
     setIsPolling(true);
@@ -79,25 +90,25 @@ export const useIncidentsTableData = (
 
   useEffect(() => updateAlertsCelDateRange(), [timeframeDelta]);
 
-  const { incidentChangeToken } = usePollIncidents(
-    () => {},
-    query.timeFrame.paused
-  );
+  const { incidentChangeToken } = usePollIncidents(() => {}, isPaused);
 
-  const timeframeChanged = useCallback(
-    (timeframe: TimeFrame | null) => {
-      if (timeframe?.paused != isPaused) {
-        onLiveUpdateStateChange &&
-          onLiveUpdateStateChange(!query.timeFrame?.paused);
-      }
+  useEffect(() => {
+    if (query.timeFrame?.paused != isPaused) {
+      onLiveUpdateStateChange &&
+        onLiveUpdateStateChange(!query.timeFrame?.paused);
+    }
 
-      const newDiff =
-        (timeframe?.end?.getTime() || 0) - (timeframe?.start?.getTime() || 0);
-      setTimeframeDelta(newDiff);
-      setIsPaused(!!timeframe?.paused);
-    },
-    [setIsPaused, onLiveUpdateStateChange, setTimeframeDelta]
-  );
+    const newDiff =
+      (query.timeFrame?.end?.getTime() || 0) -
+      (query.timeFrame?.start?.getTime() || 0);
+    setTimeframeDelta(newDiff);
+    setIsPaused(!!query.timeFrame?.paused);
+  }, [
+    query.timeFrame,
+    setIsPaused,
+    onLiveUpdateStateChange,
+    setTimeframeDelta,
+  ]);
 
   useEffect(() => {
     console.log("IHOR TOKEN CHANGE");
@@ -116,30 +127,37 @@ export const useIncidentsTableData = (
 
   useEffect(() => {
     // so that gap between poll is 2x of query time and minimum 3sec
-    const refreshInterval = Math.max((1 || 1) * 2, 3000);
+    const refreshInterval = Math.max((responseTimeMs || 1000) * 2, 3000);
     const interval = setInterval(() => {
-      if (!query.timeFrame.paused && shouldRefreshDate) {
+      if (!isPaused && shouldRefreshDate) {
         updateAlertsCelDateRange();
       }
     }, refreshInterval);
     return () => clearInterval(interval);
-  }, [query.timeFrame.paused, shouldRefreshDate]);
+  }, [isPaused, shouldRefreshDate]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = ["is_candidate == false", dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
   }, [dateRangeCel]);
 
-  const incidentsCelQuery = useMemo(() => {
-    const filterArray = [mainCelQuery, query.filterCel];
-    return filterArray.filter(Boolean).join(" && ");
-  }, [query.filterCel, mainCelQuery]);
+  useEffect(() => {
+    incidentsQueryRef.current = {
+      limit: query.limit,
+      offset: query.offset,
+      sorting: query.sorting,
+      incidentsCelQuery: [mainCelQuery, query.filterCel]
+        .filter(Boolean)
+        .join(" && "),
+    };
+  }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
 
   const {
     data: incidents,
-    isLoading,
+    isLoading: incidentsLoading,
     mutate: mutateIncidents,
     error: incidentsError,
+    responseTimeMs,
   } = useIncidents(
     null,
     null,
@@ -177,6 +195,7 @@ export const useIncidentsTableData = (
 
   return {
     incidents,
+    incidentsLoading: !isPolling && incidentsLoading,
     defaultIncidents,
     predictedIncidents,
     isPredictedLoading,

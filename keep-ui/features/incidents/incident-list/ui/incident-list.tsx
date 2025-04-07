@@ -269,7 +269,10 @@ export function IncidentList({
       <div className="flex justify-end">
         <EnhancedDateRangePicker
           timeFrame={dateRange}
-          setTimeFrame={(timeFrame) => setDateRange(timeFrame)}
+          setTimeFrame={(timeFrame) => {
+            console.log("Ihor Timeframe", timeFrame);
+            setDateRange(timeFrame);
+          }}
           timeframeRefreshInterval={20000}
           hasPlay={true}
           pausedByDefault={false}
