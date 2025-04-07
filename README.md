@@ -256,19 +256,26 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/opensearchserverless-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/opensearchserverless-icon.png" alt="OpenSearch Serverless"/><br/>
+            OpenSearch Serverless
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
             Parseable
         </a>
     </td>
+
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/pingdom-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/pingdom-icon.png" alt="Pingdom"/><br/>
             Pingdom
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/prometheus-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/prometheus-icon.png" alt="Prometheus"/><br/>
@@ -299,14 +306,15 @@
             OpenObserve
         </a>
     </td>
+
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
           Site24x7
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/splunk-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/splunk-icon.png" alt="Splunk"/><br/>
@@ -337,14 +345,15 @@
           UptimeKuma
         </a>
   </td>
-  <td align="center" width="150">
+
+</tr>
+<tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victorialogs-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victorialogs-icon.png" alt="VictoriaLogs"/><br/>
           VictoriaLogs
         </a>
   </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
