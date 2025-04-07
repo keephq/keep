@@ -229,6 +229,7 @@ def db_session(request, monkeypatch):
     # sqlite
     else:
         db_connection_string = "sqlite:///:memory:"
+        # db_connection_string = "sqlite:///state/db.sqlite3?check_same_thread=False"
         mock_engine = create_engine(
             db_connection_string,
             connect_args={"check_same_thread": False},
@@ -446,7 +447,7 @@ def elastic_container(docker_ip, docker_services):
 @pytest.fixture
 def elastic_client(request):
 
-    if hasattr(request, 'param') and request.param is False:
+    if hasattr(request, "param") and request.param is False:
         yield None
     else:
         # this is so if any other module initialized Elasticsearch, it will be deleted
