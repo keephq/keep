@@ -200,23 +200,7 @@ export const usePollIncidentAlerts = (incidentId: string) => {
   }, [bind, unbind, handleIncoming]);
 };
 
-export const usePollIncidents = (
-  mutateIncidents: any,
-  paused: boolean = false
-) => {
-  // const [incidentChangeToken, setIncidentChangeToken] = useState<
-  //   string | undefined
-  // >(undefined);
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setIncidentChangeToken(uuidv4());
-  //   }, 1000);
-
-  //   return () => clearInterval(interval);
-  // }, []);
-  // return {
-  //   incidentChangeToken,
-  // };
+export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) => {
   const { bind, unbind } = useWebsocket();
   const [incidentChangeToken, setIncidentChangeToken] = useState<
     string | undefined
