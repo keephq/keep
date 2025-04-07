@@ -1,12 +1,12 @@
-from datetime import datetime, timezone
+import asyncio
 import logging
 import os
 import pathlib
 import sys
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
-import asyncio
 from fastapi import HTTPException
 from pusher import Pusher
 from sqlalchemy.orm.exc import StaleDataError
@@ -73,7 +73,9 @@ class IncidentBl:
         self.redis = os.environ.get("REDIS", "false") == "true"
 
     def create_incident(
-        self, incident_dto: [IncidentDtoIn | IncidentDto], generated_from_ai: bool = False
+        self,
+        incident_dto: [IncidentDtoIn | IncidentDto],
+        generated_from_ai: bool = False,
     ) -> IncidentDto:
         """
         Creates a new incident.
@@ -133,9 +135,7 @@ class IncidentBl:
             },
         )
         incident = get_incident_by_id(
-            tenant_id=self.tenant_id,
-            incident_id=incident_id,
-            session=self.session
+            tenant_id=self.tenant_id, incident_id=incident_id, session=self.session
         )
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
@@ -145,7 +145,7 @@ class IncidentBl:
             incident,
             alert_fingerprints,
             is_created_by_ai,
-            session=self.session
+            session=self.session,
         )
         self.logger.info(
             "Alerts added to incident",
@@ -424,7 +424,9 @@ class IncidentBl:
             limit=limit, offset=offset, count=total_count, items=incidents_dto
         )
 
-    def resolve_incident_if_require(self, incident: Incident, max_retries=3) -> Incident:
+    def resolve_incident_if_require(
+        self, incident: Incident, max_retries=3
+    ) -> Incident:
 
         should_resolve = False
 
@@ -468,8 +470,7 @@ class IncidentBl:
         self,
         incident_id: UUID | str,
         new_status: IncidentStatus,
-        change_by:
-        AuthenticatedEntity
+        change_by: AuthenticatedEntity,
     ) -> IncidentDto:
 
         self.logger.info(
@@ -500,9 +501,7 @@ class IncidentBl:
                 action_description,
                 should_run_workflow,
                 should_check_incidents_resolution,
-            ) = enrichments_bl.get_enrichment_metadata(
-                enrichments, change_by
-            )
+            ) = enrichments_bl.get_enrichment_metadata(enrichments, change_by)
             enrichments_bl.batch_enrich(
                 fingerprints,
                 enrichments,
@@ -524,6 +523,8 @@ class IncidentBl:
                 change_by.email,
                 ActionType.INCIDENT_ASSIGN,
                 f"Incident self-assigned to {change_by.email}",
+                session=self.session,
+                commit=False,
             )
 
         add_audit(
@@ -532,6 +533,8 @@ class IncidentBl:
             change_by.email,
             ActionType.INCIDENT_STATUS_CHANGE,
             f"Incident status changed from {incident.status} to {new_status.value}",
+            session=self.session,
+            commit=False,
         )
         incident.status = new_status.value
         self.session.add(incident)

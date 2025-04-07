@@ -995,8 +995,10 @@ def add_audit(
     user_id: str,
     action: ActionType,
     description: str,
+    session: Session = None,
+    commit: bool = True,
 ) -> AlertAudit:
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         audit = AlertAudit(
             tenant_id=tenant_id,
             fingerprint=fingerprint,
@@ -1005,8 +1007,9 @@ def add_audit(
             description=description,
         )
         session.add(audit)
-        session.commit()
-        session.refresh(audit)
+        if commit:
+            session.commit()
+            session.refresh(audit)
     return audit
 
 
@@ -4772,7 +4775,7 @@ def bulk_upsert_alert_fields(
 
                 break
 
-            except IntegrityError as e:
+            except OperationalError as e:
                 # Handle any potential race conditions
                 session.rollback()
                 if "Deadlock found" in str(e):
@@ -5443,7 +5446,7 @@ def enrich_incidents_with_enrichments(
         return incidents
 
 
-def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+def get_error_alerts(tenant_id: str, limit: int = 100) -> List[AlertRaw]:
     with Session(engine) as session:
         return (
             session.query(AlertRaw)
@@ -5452,6 +5455,7 @@ def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
                 AlertRaw.error == True,
                 AlertRaw.dismissed == False,
             )
+            .limit(limit)
             .all()
         )
 
