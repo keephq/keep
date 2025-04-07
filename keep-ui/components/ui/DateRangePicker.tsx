@@ -302,20 +302,20 @@ export default function EnhancedDateRangePicker({
   useEffect(() => {
     setTimeout(() => {
       handlePresetSelect(
-        quickPresets.find((preset) => preset.badge === "all") as TimePreset
+        quickPresets.find((preset) => preset.badge === "all") as TimePreset,
+        pausedByDefault
       );
-      setIsPaused(false);
     }, 100);
   }, []);
 
-  const handlePresetSelect = (preset: TimePreset) => {
+  const handlePresetSelect = (preset: TimePreset, isPaused = true) => {
     setSelectedPreset(preset);
     setTimeFrame({
       ...preset.value(),
       paused: isPaused,
       isFromCalendar: false,
     });
-    setIsPaused(true);
+    setIsPaused(isPaused);
     setIsOpen(false);
     setSelectedCategory(null);
     setShowMoreOptions(false);

@@ -35,8 +35,8 @@ export const useIncidentsTableData = (
     sorting: { id: string; desc: boolean };
     incidentsCelQuery: string;
   } | null>(null);
-
-  function onLiveUpdateStateChange(isPaused: boolean) {}
+  const timeframeDeltaRef = useRef<number>(0);
+  timeframeDeltaRef.current = timeframeDelta;
 
   useEffect(() => {
     if (canRevalidate) {
@@ -49,14 +49,14 @@ export const useIncidentsTableData = (
     return () => clearTimeout(timeout);
   }, [canRevalidate]);
 
-  const getDateRangeCel = useCallback(() => {
+  const getDateRangeCel = function () {
     const filterArray = [];
     const currentDate = new Date();
 
-    if (timeframeDelta > 0) {
+    if (timeframeDeltaRef.current > 0) {
       filterArray.push(
         `creation_time >= '${new Date(
-          currentDate.getTime() - timeframeDelta
+          currentDate.getTime() - timeframeDeltaRef.current
         ).toISOString()}'`
       );
       filterArray.push(`creation_time <= '${currentDate.toISOString()}'`);
@@ -64,13 +64,9 @@ export const useIncidentsTableData = (
     }
 
     return null;
-  }, [timeframeDelta]);
+  };
 
-  function updateAlertsCelDateRange() {
-    // if (!canRevalidate) {
-    //   return;
-    // }
-
+  function updateIncidentsCelDateRange() {
     const dateRangeCel = getDateRangeCel();
     setIsPolling(true);
 
@@ -82,33 +78,21 @@ export const useIncidentsTableData = (
 
     // if date does not change, just reload the data
     mutateIncidents();
-    // onReload && onReload(incidentsQueryRef.current);
   }
 
-  useEffect(() => updateAlertsCelDateRange(), [timeframeDelta]);
+  useEffect(() => updateIncidentsCelDateRange(), [timeframeDelta]);
 
   const { incidentChangeToken } = usePollIncidents(() => {}, isPaused);
 
   useEffect(() => {
-    if (query.timeFrame?.paused != isPaused) {
-      onLiveUpdateStateChange &&
-        onLiveUpdateStateChange(!query.timeFrame?.paused);
-    }
-
     const newDiff =
       (query.timeFrame?.end?.getTime() || 0) -
       (query.timeFrame?.start?.getTime() || 0);
     setTimeframeDelta(newDiff);
     setIsPaused(!!query.timeFrame?.paused);
-  }, [
-    query.timeFrame,
-    setIsPaused,
-    onLiveUpdateStateChange,
-    setTimeframeDelta,
-  ]);
+  }, [query.timeFrame, setIsPaused, setTimeframeDelta]);
 
   useEffect(() => {
-    console.log("IHOR TOKEN CHANGE");
     // When refresh token comes, this code allows polling for certain time and then stops.
     // Will start polling again when new refresh token comes.
     // Why? Because events are throttled on BE side but we want to refresh the data frequently
@@ -123,11 +107,14 @@ export const useIncidentsTableData = (
   }, [incidentChangeToken]);
 
   useEffect(() => {
+    if (isPaused) {
+      return;
+    }
     // so that gap between poll is 2x of query time and minimum 3sec
     const refreshInterval = Math.max((responseTimeMs || 1000) * 2, 6000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
-        updateAlertsCelDateRange();
+        updateIncidentsCelDateRange();
       }
     }, refreshInterval);
     return () => clearInterval(interval);
@@ -135,6 +122,7 @@ export const useIncidentsTableData = (
 
   const mainCelQuery = useMemo(() => {
     const filterArray = ["is_candidate == false", dateRangeCel];
+
     return filterArray.filter(Boolean).join(" && ");
   }, [dateRangeCel]);
 
