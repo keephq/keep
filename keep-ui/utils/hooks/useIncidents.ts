@@ -80,7 +80,13 @@ export const useIncidents = (
         responseTimeMs: new Date().getTime() - currentDate.getTime(),
       };
     },
-    options
+    {
+      ...options,
+      fallbackData: {
+        result: options.fallbackData,
+        responseTimeMs: 0,
+      },
+    }
   );
 
   return {

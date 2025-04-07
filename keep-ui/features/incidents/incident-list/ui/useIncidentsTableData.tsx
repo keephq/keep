@@ -28,9 +28,6 @@ export const useIncidentsTableData = (
   const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
-  const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string | null>(
-    ""
-  );
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const incidentsQueryRef = useRef<{
     limit: number;
