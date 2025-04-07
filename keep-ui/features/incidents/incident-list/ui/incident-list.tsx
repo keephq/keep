@@ -270,7 +270,6 @@ export function IncidentList({
         <EnhancedDateRangePicker
           timeFrame={dateRange}
           setTimeFrame={(timeFrame) => {
-            console.log("Ihor Timeframe", timeFrame);
             setDateRange(timeFrame);
           }}
           timeframeRefreshInterval={20000}
