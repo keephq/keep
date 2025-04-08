@@ -9,6 +9,9 @@ import json
 import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
+from requests_oauthlib import OAuth2Session
+from oauthlib.oauth2 import BackendApplicationClient
+
 
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -101,9 +104,14 @@ class ServicenowProvider(BaseTopologyProvider):
                 "client_id": self.authentication_config.client_id,
                 "client_secret": self.authentication_config.client_secret,
             }
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            }
             response = requests.post(
                 url,
-                json=payload,
+                data=payload,
+                headers=headers,
             )
             if response.ok:
                 self._access_token = response.json().get("access_token")
@@ -113,7 +121,12 @@ class ServicenowProvider(BaseTopologyProvider):
                     extra={
                         "response": response.text,
                         "status_code": response.status_code,
+                        "provider_id": self.provider_id,
                     },
+                )
+                raise ProviderException(
+                    f"Failed to get OAuth access token from ServiceNow: {response.status_code}, {response.text}."
+                    " Please check your ServiceNow logs, information about this error should be there."
                 )
 
     def validate_scopes(self):
@@ -124,7 +137,7 @@ class ServicenowProvider(BaseTopologyProvider):
         # Optional scope validation skipping
         if (
             os.environ.get(
-                "KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "true"
+                "KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "false"
             ).lower()
             == "true"
         ):
