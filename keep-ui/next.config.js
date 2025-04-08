@@ -199,7 +199,7 @@ const sentryConfig = {
   // Hides source maps from generated client bundles
   hideSourceMaps: true,
   sourceMaps: {
-    deleteSourcemapsAfterUpload: !process.env.KEEP_INCLUDE_SOURCES,
+    deleteSourcemapsAfterUpload: process.env.KEEP_INCLUDE_SOURCES !== "false",
   },
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
