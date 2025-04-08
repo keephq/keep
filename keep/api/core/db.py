@@ -113,11 +113,15 @@ def dispose_session():
 
 @contextmanager
 def existed_or_new_session(session: Optional[Session] = None) -> Session:
-    if session:
-        yield session
-    else:
-        with Session(engine) as session:
+    try:
+        if session:
             yield session
+        else:
+            with Session(engine) as session:
+                yield session
+    except Exception as e:
+        e.session = session
+        raise e
 
 
 def get_session() -> Session:
@@ -168,6 +172,10 @@ def retry_on_deadlock(f):
         try:
             return f(*args, **kwargs)
         except OperationalError as e:
+
+            if hasattr(e, "session") and not e.session.is_active:
+                e.session.rollback()
+
             if "Deadlock found" in str(e):
                 logger.warning(
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}

@@ -299,6 +299,9 @@ class ServicenowProvider(BaseTopologyProvider):
                 extra={
                     "tenant_id": self.context_manager.tenant_id,
                     "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
                 },
             )
             return topology, {}
@@ -316,7 +319,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_type_response.ok:
-            self.logger.error("Failed to get topology types")
+            self.logger.error(
+                "Failed to get topology types",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_type_json = rel_type_response.json()
             for result in rel_type_json.get("result", []):
@@ -331,7 +343,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_response.ok:
-            self.logger.error("Failed to get topology relationships")
+            self.logger.error(
+                "Failed to get topology relationships",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_json = rel_response.json()
             for relationship in rel_json.get("result", []):
@@ -377,6 +398,8 @@ class ServicenowProvider(BaseTopologyProvider):
             extra={
                 "tenant_id": self.context_manager.tenant_id,
                 "len_of_topology": len(topology),
+                "using_access_token": self._access_token is not None,
+                "provider_id": self.provider_id,
             },
         )
         return topology, {}

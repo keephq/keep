@@ -18,7 +18,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
     get_cel_to_sql_provider,
 )
 from keep.api.core.db import existed_or_new_session
-from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.core.facets import build_facet_selects, get_facet_options, get_facets
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
@@ -304,19 +304,21 @@ def get_workflow_facets_data(
         facets = static_facets
 
     queries = __build_base_query(tenant_id)
+    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    select_expressions = facet_selects_metadata["select_expressions"]
+    new_fields_config = facet_selects_metadata["new_fields_config"]
 
-    base_query = select(
-        # here it creates aliases for table columns that will be used in filtering and faceting
-        text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
+    base_query_2 = select(
+        *([literal_column("entity_id")] + select_expressions)
     ).select_from(
         queries["workflows_with_last_executions_query"].cte("workflows_query")
     )
 
     return get_facet_options(
-        base_query=base_query,
+        base_query=base_query_2,
         facets=facets,
         facet_options_query=facet_options_query,
-        properties_metadata=properties_metadata,
+        properties_metadata=PropertiesMetadata(new_fields_config),
     )
 
 

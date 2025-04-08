@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.41.8"
+version = "0.41.13"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -105,7 +105,7 @@ isort = "^5.12.0"
 autopep8 = "^2.0.1"
 flake8 = "^6.0.0"
 coverage = "^7.2.2"
-ruff = "^0.1.6"
+ruff = "^0.11.4"
 playwright = "^1.44.0"
 pytest = "^8.2.0"
 pytest-xdist = "^3.6.1"

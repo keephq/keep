@@ -59,9 +59,9 @@ Keep is highly configurable through environment variables. This allows you to cu
 |   **DATABASE_MAX_OVERFLOW**    | Sets the maximum overflow for the connection pool |    No    |                10                 |          Positive integer          |
 |       **DATABASE_ECHO**        |    Enables SQLAlchemy echo mode for debugging     |    No    |               False               |        Boolean (True/False)        |
 |     **DB_CONNECTION_NAME**     |      Specifies the Cloud SQL connection name      |    No    | "keephq-sandbox:us-central1:keep" | Valid Cloud SQL connection string  |
-|           **DB_NAME**          |       Specifies the Cloud SQL database name       |    No    |             "keepdb"              |   Valid Cloud SQL database name    |
+|          **DB_NAME**           |       Specifies the Cloud SQL database name       |    No    |             "keepdb"              |   Valid Cloud SQL database name    |
 |     **DB_SERVICE_ACCOUNT**     |    Service account for database impersonation     |    No    |               None                |    Valid service account email     |
-|         **DB_IP_TYPE**         |          Specifies the Cloud SQL IP type          |    No    |              "public"             |    "public", "private" or "psc"    |
+|         **DB_IP_TYPE**         |          Specifies the Cloud SQL IP type          |    No    |             "public"              |    "public", "private" or "psc"    |
 |      **SKIP_DB_CREATION**      |      Skips database creation and migrations       |    No    |              "false"              |         "true" or "false"          |
 
 ### Resource Provisioning
@@ -153,20 +153,20 @@ Keep is highly configurable through environment variables. This allows you to cu
 |  **PUSHER_USE_SSL**   | Enables SSL for Pusher connection |          No           |     False     |     Boolean (True/False)     |
 |  **PUSHER_CLUSTER**   |          Pusher cluster           |          No           |     None      |  Valid Pusher cluster name   |
 
-### OpenAPI
+### OpenAI
 
 <Info>
-  OpenAPI configuration is used for integrating with OpenAI services. These
+  OpenAI configuration is used for integrating with OpenAI services. These
   settings are important if you're utilizing OpenAI capabilities within Keep for
   tasks such as natural language processing or AI-assisted operations.
 </Info>
 
-|           Env var           |                      Purpose                       | Required | Default Value |               Valid options               |
-| :-------------------------: | :------------------------------------------------: | :------: | :-----------: | :---------------------------------------: |
-|     **OPENAI_API_KEY**      |            API key for OpenAI services             |    No    |     None      |           Valid OpenAI API key            |
-|    **OPENAI_MODEL_NAME**    |        Model name to use for OpenAI requests       |    No    |    "gpt-4o-2024-08-06"   |        Valid OpenAI model name (e.g., "gpt-4o", "gpt-4o-mini", ...)        |
-| **OPEN_AI_ORGANIZATION_ID** |        Organization ID for OpenAI services         |    No    |     None      |       Valid OpenAI organization ID        |
-|     **OPENAI_BASE_URL**     | Base URL for OpenAI API (useful for LiteLLM proxy) |    No    |     None      | Valid URL (e.g., "http://localhost:4000") |
+|           Env var           |                      Purpose                       | Required |    Default Value    |                        Valid options                         | Backend/Frontend |
+| :-------------------------: | :------------------------------------------------: | :------: | :-----------------: | :----------------------------------------------------------: | :--------------: |
+|     **OPENAI_API_KEY**      |            API key for OpenAI services             |    No    |        None         |                     Valid OpenAI API key                     |       Both       |
+|    **OPENAI_MODEL_NAME**    |       Model name to use for OpenAI requests        |    No    | "gpt-4o-2024-08-06" | Valid OpenAI model name (e.g., "gpt-4o", "gpt-4o-mini", ...) |       Both       |
+| **OPEN_AI_ORGANIZATION_ID** |        Organization ID for OpenAI services         |    No    |        None         |                 Valid OpenAI organization ID                 |       Both       |
+|     **OPENAI_BASE_URL**     | Base URL for OpenAI API (useful for LiteLLM proxy) |    No    |        None         |          Valid URL (e.g., "http://localhost:4000")           |       Both       |
 
 <Tip>
   For various different LLM based features, we also require to set these
