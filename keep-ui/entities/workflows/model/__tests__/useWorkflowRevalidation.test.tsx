@@ -50,17 +50,21 @@ describe("useWorkflowRevalidation", () => {
 
     result.current.revalidateWorkflow(mockWorkflowId);
 
-    expect(mockMutate).toHaveBeenCalledTimes(2);
+    // one for the lists, one for the revisions, one for the detail
+    expect(mockMutate).toHaveBeenCalledTimes(3);
+
+    const [firstCall, secondCall, thirdCall] = mockMutate.mock.calls;
 
     // Verify list matcher function
-    const listMatcherFunction = mockMutate.mock.calls[0][0];
+    const listMatcherFunction = firstCall[0];
     expect(typeof listMatcherFunction).toBe("function");
     expect(listMatcherFunction("workflows::list::")).toBe(true);
     expect(listMatcherFunction("workflows::detail::")).toBe(false);
 
     // Verify detail key
-    expect(mockMutate.mock.calls[1][0]).toBe(
-      workflowKeys.detail(mockWorkflowId, null)
-    );
+    expect(thirdCall[0]).toBe(workflowKeys.detail(mockWorkflowId, null));
+
+    // Verify revisions key
+    expect(secondCall[0]).toBe(workflowKeys.revisions(mockWorkflowId));
   });
 });
