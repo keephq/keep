@@ -146,18 +146,6 @@ def build_facets_data_query(
 
     return query
 
-    # return (
-    #     select(
-    #         literal_column("facet_id"),
-    #         literal_column("facet_value"),
-    #         func.count(func.distinct(literal_column("entity_id"))).label(
-    #             "matches_count"
-    #         ),
-    #     )
-    #     .select_from(query)
-    #     .group_by(literal_column("facet_id"), literal_column("facet_value"))
-    # )
-
 
 def get_facet_options(
     base_query,
