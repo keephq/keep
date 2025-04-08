@@ -99,6 +99,7 @@
           "group": "Syntax",
           "pages": [
             "workflows/syntax/triggers",
+            "workflows/syntax/permissions",
             "workflows/syntax/steps-and-actions",
             "workflows/syntax/conditions",
             "workflows/syntax/functions",
@@ -216,6 +217,7 @@
             "providers/documentation/ollama-provider",
             "providers/documentation/openai-provider",
             "providers/documentation/openobserve-provider",
+            "providers/documentation/opensearchserverless-provider",
             "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",

@@ -60,6 +60,8 @@ class TelegramProvider(BaseProvider):
         reply_markup: Optional[dict[str, dict[str, any]]] = None,
         reply_markup_layout: Literal["horizontal", "vertical"] = "horizontal",
         parse_mode: str = None,
+        image_url: Optional[str] = None,
+        caption_on_image: bool = False,
         **kwargs: dict,
     ):
         """
@@ -73,6 +75,8 @@ class TelegramProvider(BaseProvider):
             reply_markup (dict): Inline keyboard markup to be attached to the message
             reply_markup_layout (str): Direction of the reply markup, could be "horizontal" or "vertical"
             parse_mode (str): Mode for parsing entities in the message text, could be "markdown" or "html"
+            image_url (str, optional): URL of the image to be attached to the message
+            caption_on_image (bool, optional): Whether to use the message as a caption for the image
         """
         self.logger.debug("Notifying alert message to Telegram")
 
@@ -107,15 +111,55 @@ class TelegramProvider(BaseProvider):
                     inline_keyboard=buttons,
                 )
 
-            task = loop.create_task(
-                telegram_bot.send_message(
-                    chat_id=chat_id,
-                    text=message,
-                    reply_markup=keyboard_markup,
-                    parse_mode=parse_mode,
-                    message_thread_id=topic_id,
+            if image_url:
+                # If image URL is provided, send the image
+                if caption_on_image:
+                    # Send image with caption
+                    task = loop.create_task(
+                        telegram_bot.send_photo(
+                            chat_id=chat_id,
+                            photo=image_url,
+                            caption=message,
+                            reply_markup=keyboard_markup,
+                            parse_mode=parse_mode,
+                            message_thread_id=topic_id,
+                        )
+                    )
+                else:
+                    # Send message first, then image
+                    if message:
+                        msg_task = loop.create_task(
+                            telegram_bot.send_message(
+                                chat_id=chat_id,
+                                text=message,
+                                reply_markup=None,  # Attach markup to the image instead
+                                parse_mode=parse_mode,
+                                message_thread_id=topic_id,
+                            )
+                        )
+                        loop.run_until_complete(msg_task)
+
+                    # Send image without caption
+                    task = loop.create_task(
+                        telegram_bot.send_photo(
+                            chat_id=chat_id,
+                            photo=image_url,
+                            reply_markup=keyboard_markup,
+                            message_thread_id=topic_id,
+                        )
+                    )
+            else:
+                # Send regular text message if no image URL is provided
+                task = loop.create_task(
+                    telegram_bot.send_message(
+                        chat_id=chat_id,
+                        text=message,
+                        reply_markup=keyboard_markup,
+                        parse_mode=parse_mode,
+                        message_thread_id=topic_id,
+                    )
                 )
-            )
+
             loop.run_until_complete(task)
         except Exception as e:
             raise ProviderException(
@@ -148,14 +192,47 @@ async def test_send_message():
     provider = TelegramProvider(
         context_manager, provider_id="telegram-test", config=config
     )
+
+    # Test with text only
     await provider.notify(
         message="Keep Alert",
         chat_id=telegram_chat_id,
     )
 
+    # Test with image
+    await provider.notify(
+        message="Keep Alert with Graph",
+        chat_id=telegram_chat_id,
+        image_url="https://example.com/path/to/grafana/graph.png",
+    )
+
+    # Test with image and using message as caption
+    await provider.notify(
+        message="CPU Usage Alert",
+        chat_id=telegram_chat_id,
+        image_url="https://example.com/path/to/grafana/cpu_graph.png",
+        caption_on_image=True,
+    )
+
 
 if __name__ == "__main__":
-    # Send the message
-    import asyncio
+    import threading
 
-    asyncio.run(test_send_message())
+    def run_in_thread():
+        import asyncio
+
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        # Set it as the event loop for this thread
+        asyncio.set_event_loop(loop)
+        try:
+            # Run your async function in this new loop
+            loop.run_until_complete(test_send_message())
+        finally:
+            loop.close()
+
+    # Create and start the thread
+    thread = threading.Thread(target=run_in_thread)
+    thread.start()
+    # Wait for the thread to complete if needed
+    thread.join()

@@ -48,11 +48,10 @@ class GcpmonitoringProviderAuthConfig:
 class GcpmonitoringProvider(BaseProvider, ProviderHealthMixin):
     """Get alerts from GCP Monitoring into Keep."""
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure GCP Monitoring to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/gcpmonitoring-provider). 💡
-
 To send alerts from GCP Monitoring to Keep, Use the following webhook url to configure GCP Monitoring send alerts to Keep:
 
 1. In GCP Monitoring, go to Notification Channels.

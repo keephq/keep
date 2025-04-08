@@ -4,6 +4,7 @@ import threading
 import typing
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.rbac import Roles
 from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
@@ -38,6 +39,7 @@ class Workflow:
         on_failure: Step = None,
         workflow_consts: typing.Dict[str, str] = {},
         workflow_debug: bool = False,
+        workflow_permissions: typing.List[str] = [],
     ):
         self.workflow_id = workflow_id
         self.workflow_revision = workflow_revision
@@ -61,6 +63,7 @@ class Workflow:
         self.io_nandler = IOHandler(context_manager)
         self.logger = logging.getLogger(__name__)
         self.workflow_debug = workflow_debug
+        self.workflow_permissions = workflow_permissions
 
     def run_steps(self):
         self.logger.debug(f"Running steps for workflow {self.workflow_id}")
@@ -177,3 +180,22 @@ class Workflow:
         actions_firing, actions_errors = self.run_actions()
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
+
+    @staticmethod
+    def check_run_permissions(
+        workflow_permissions: list[str], user_email: str, user_role: str | None
+    ) -> bool:
+        if not workflow_permissions:
+            return True
+        if user_role == Roles.ADMIN.value:
+            return True
+        if workflow_permissions:
+            workflow_permissions_standardized = [
+                permission.lower().strip() for permission in workflow_permissions
+            ]
+            if (
+                user_email not in workflow_permissions_standardized
+                and user_role not in workflow_permissions_standardized
+            ):
+                return False
+        return True

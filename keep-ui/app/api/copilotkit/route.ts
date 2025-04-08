@@ -12,6 +12,9 @@ export const POST = async (req: NextRequest) => {
       const openai = new OpenAI({
         organization: process.env.OPEN_AI_ORGANIZATION_ID,
         apiKey: process.env.OPEN_AI_API_KEY,
+        ...(process.env.OPENAI_MODEL_NAME
+          ? { model: process.env.OPENAI_MODEL_NAME }
+          : {}),
       });
       const serviceAdapter = new OpenAIAdapter({ openai });
       const runtime = new CopilotRuntime();

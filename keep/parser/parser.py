@@ -167,6 +167,7 @@ class Parser:
         workflow_id = self._parse_id(workflow)
         workflow_name = workflow.get("name", "Untitled")
         workflow_description = workflow.get("description", "No description")
+        workflow_permissions = workflow.get("permissions", [])
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
@@ -208,6 +209,7 @@ class Parser:
             workflow_strategy=workflow_strategy,
             workflow_consts=workflow_consts,
             workflow_debug=workflow_debug,
+            workflow_permissions=workflow_permissions,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow_class

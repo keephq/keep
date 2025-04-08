@@ -67,6 +67,7 @@ export type Workflow = {
   provisioned?: boolean;
   alertRule?: boolean;
   revision?: number;
+  canRun?: boolean;
 };
 
 export type MockProvider = {

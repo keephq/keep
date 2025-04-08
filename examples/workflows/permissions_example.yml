@@ -1,0 +1,35 @@
+workflow:
+  id: permissions-example
+  name: Permissions Example
+  description: "Demonstrates how to restrict workflow execution using permissions"
+
+  # Restrict execution to admin role and specific users
+  permissions:
+    - admin
+    - sarah.smith@example.com # noc user
+
+  triggers:
+    - type: manual
+
+  steps:
+    - name: get-system-status
+      provider:
+        type: http
+        with:
+          url: "https://api.example.com/status"
+          method: GET
+
+  actions:
+    - name: send-status-notification
+      provider:
+        type: slack
+        with:
+          channel: "#operations"
+          message: |
+            *Sensitive System Status Check*
+
+            Status: {{ steps.get-system-status.results.status }}
+            Health: {{ steps.get-system-status.results.health }}
+            Last Updated: {{ steps.get-system-status.results.last_updated }}
+
+            _This workflow has restricted permissions and can only be executed by authorized users._

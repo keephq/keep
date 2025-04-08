@@ -113,11 +113,15 @@ def dispose_session():
 
 @contextmanager
 def existed_or_new_session(session: Optional[Session] = None) -> Session:
-    if session:
-        yield session
-    else:
-        with Session(engine) as session:
+    try:
+        if session:
             yield session
+        else:
+            with Session(engine) as session:
+                yield session
+    except Exception as e:
+        e.session = session
+        raise e
 
 
 def get_session() -> Session:
@@ -168,6 +172,10 @@ def retry_on_deadlock(f):
         try:
             return f(*args, **kwargs)
         except OperationalError as e:
+
+            if hasattr(e, "session") and not e.session.is_active:
+                e.session.rollback()
+
             if "Deadlock found" in str(e):
                 logger.warning(
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}
@@ -1078,8 +1086,10 @@ def add_audit(
     user_id: str,
     action: ActionType,
     description: str,
+    session: Session = None,
+    commit: bool = True,
 ) -> AlertAudit:
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         audit = AlertAudit(
             tenant_id=tenant_id,
             fingerprint=fingerprint,
@@ -1088,8 +1098,9 @@ def add_audit(
             description=description,
         )
         session.add(audit)
-        session.commit()
-        session.refresh(audit)
+        if commit:
+            session.commit()
+            session.refresh(audit)
     return audit
 
 
@@ -4777,84 +4788,97 @@ def bulk_upsert_alert_fields(
     provider_id: str,
     provider_type: str,
     session: Optional[Session] = None,
+    max_retries=3,
 ):
     with existed_or_new_session(session) as session:
-        try:
-            # Prepare the data for bulk insert
-            data = [
-                {
-                    "tenant_id": tenant_id,
-                    "field_name": field,
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                }
-                for field in fields
-            ]
-
-            if engine.dialect.name == "postgresql":
-                stmt = pg_insert(AlertField).values(data)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "tenant_id",
-                        "field_name",
-                    ],  # Unique constraint columns
-                    set_={
-                        "provider_id": stmt.excluded.provider_id,
-                        "provider_type": stmt.excluded.provider_type,
-                    },
-                )
-            elif engine.dialect.name == "mysql":
-                stmt = mysql_insert(AlertField).values(data)
-                stmt = stmt.on_duplicate_key_update(
-                    provider_id=stmt.inserted.provider_id,
-                    provider_type=stmt.inserted.provider_type,
-                )
-            elif engine.dialect.name == "sqlite":
-                stmt = sqlite_insert(AlertField).values(data)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "tenant_id",
-                        "field_name",
-                    ],  # Unique constraint columns
-                    set_={
-                        "provider_id": stmt.excluded.provider_id,
-                        "provider_type": stmt.excluded.provider_type,
-                    },
-                )
-            elif engine.dialect.name == "mssql":
-                # SQL Server requires a raw query with a MERGE statement
-                values = ", ".join(
-                    f"('{tenant_id}', '{field}', '{provider_id}', '{provider_type}')"
+        for attempt in range(max_retries):
+            try:
+                # Prepare the data for bulk insert
+                data = [
+                    {
+                        "tenant_id": tenant_id,
+                        "field_name": field,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    }
                     for field in fields
-                )
+                ]
 
-                merge_query = text(
-                    f"""
-                    MERGE INTO AlertField AS target
-                    USING (VALUES {values}) AS source (tenant_id, field_name, provider_id, provider_type)
-                    ON target.tenant_id = source.tenant_id AND target.field_name = source.field_name
-                    WHEN MATCHED THEN
-                        UPDATE SET provider_id = source.provider_id, provider_type = source.provider_type
-                    WHEN NOT MATCHED THEN
-                        INSERT (tenant_id, field_name, provider_id, provider_type)
-                        VALUES (source.tenant_id, source.field_name, source.provider_id, source.provider_type)
-                """
-                )
+                if engine.dialect.name == "postgresql":
+                    stmt = pg_insert(AlertField).values(data)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=[
+                            "tenant_id",
+                            "field_name",
+                        ],  # Unique constraint columns
+                        set_={
+                            "provider_id": stmt.excluded.provider_id,
+                            "provider_type": stmt.excluded.provider_type,
+                        },
+                    )
+                elif engine.dialect.name == "mysql":
+                    stmt = mysql_insert(AlertField).values(data)
+                    stmt = stmt.on_duplicate_key_update(
+                        provider_id=stmt.inserted.provider_id,
+                        provider_type=stmt.inserted.provider_type,
+                    )
+                elif engine.dialect.name == "sqlite":
+                    stmt = sqlite_insert(AlertField).values(data)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=[
+                            "tenant_id",
+                            "field_name",
+                        ],  # Unique constraint columns
+                        set_={
+                            "provider_id": stmt.excluded.provider_id,
+                            "provider_type": stmt.excluded.provider_type,
+                        },
+                    )
+                elif engine.dialect.name == "mssql":
+                    # SQL Server requires a raw query with a MERGE statement
+                    values = ", ".join(
+                        f"('{tenant_id}', '{field}', '{provider_id}', '{provider_type}')"
+                        for field in fields
+                    )
 
-                session.execute(merge_query)
-            else:
-                raise NotImplementedError(
-                    f"Upsert not supported for {engine.dialect.name}"
-                )
+                    merge_query = text(
+                        f"""
+                        MERGE INTO AlertField AS target
+                        USING (VALUES {values}) AS source (tenant_id, field_name, provider_id, provider_type)
+                        ON target.tenant_id = source.tenant_id AND target.field_name = source.field_name
+                        WHEN MATCHED THEN
+                            UPDATE SET provider_id = source.provider_id, provider_type = source.provider_type
+                        WHEN NOT MATCHED THEN
+                            INSERT (tenant_id, field_name, provider_id, provider_type)
+                            VALUES (source.tenant_id, source.field_name, source.provider_id, source.provider_type)
+                    """
+                    )
 
-            # Execute the statement
-            if engine.dialect.name != "mssql":  # Already executed for SQL Server
-                session.execute(stmt)
-            session.commit()
+                    session.execute(merge_query)
+                else:
+                    raise NotImplementedError(
+                        f"Upsert not supported for {engine.dialect.name}"
+                    )
 
-        except IntegrityError:
-            # Handle any potential race conditions
-            session.rollback()
+                # Execute the statement
+                if engine.dialect.name != "mssql":  # Already executed for SQL Server
+                    session.execute(stmt)
+                session.commit()
+
+                break
+
+            except OperationalError as e:
+                # Handle any potential race conditions
+                session.rollback()
+                if "Deadlock found" in str(e):
+                    logger.info(
+                        f"Deadlock found during bulk_upsert_alert_fields `{e}`, retry #{attempt}"
+                    )
+                    if attempt >= max_retries:
+                        raise e
+                    continue
+                else:
+                    raise e
 
 
 def get_alerts_fields(tenant_id: str) -> List[AlertField]:
@@ -5514,7 +5538,7 @@ def enrich_incidents_with_enrichments(
         return incidents
 
 
-def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
+def get_error_alerts(tenant_id: str, limit: int = 100) -> List[AlertRaw]:
     with Session(engine) as session:
         return (
             session.query(AlertRaw)
@@ -5523,6 +5547,7 @@ def get_error_alerts(tenant_id: str, limit: int = 1000) -> int:
                 AlertRaw.error == True,
                 AlertRaw.dismissed == False,
             )
+            .limit(limit)
             .all()
         )
 

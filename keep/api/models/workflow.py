@@ -43,6 +43,7 @@ class WorkflowDTO(BaseModel):
     provisioned: bool = False
     provisioned_file: str = None
     alertRule: bool = False
+    canRun: bool = True
 
     @property
     def workflow_raw_id(self):

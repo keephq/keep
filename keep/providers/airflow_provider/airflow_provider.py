@@ -13,6 +13,7 @@ class AirflowProvider(BaseProvider):
     PROVIDER_CATEGORY = ["Orchestration"]
     FINGERPRINT_FIELDS = ["fingerprint"]
 
+    webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
