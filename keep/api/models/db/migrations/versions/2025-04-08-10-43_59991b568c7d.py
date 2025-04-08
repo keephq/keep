@@ -34,7 +34,7 @@ def upgrade() -> None:
                 ON workflowexecution (status(255), started)
                 """
             )
-        except Exception as e:
+        except Exception:
             # if it fails, it means the index already exists
             pass
 
