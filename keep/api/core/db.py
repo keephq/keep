@@ -3692,8 +3692,9 @@ def get_incident_by_id(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
         )
-        incident, enrichments = query.first()
-        if incident:
+        incident_with_enrichments = query.first()
+        if incident_with_enrichments:
+            incident, enrichments = incident_with_enrichments
             if with_alerts:
                 enrich_incidents_with_alerts(
                     tenant_id,
@@ -3702,6 +3703,8 @@ def get_incident_by_id(
                 )
             if enrichments:
                 incident.set_enrichments(enrichments.enrichments)
+        else:
+            incident = None
 
     return incident
 
