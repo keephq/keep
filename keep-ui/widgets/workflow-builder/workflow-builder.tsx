@@ -260,7 +260,7 @@ export function WorkflowBuilder({
           )}
         >
           <WorkflowYAMLEditor
-            workflowYamlString={workflowYaml ?? ""}
+            value={workflowYaml ?? ""}
             filename={workflowId ?? "workflow"}
             workflowId={workflowId}
             data-testid="wf-builder-yaml-editor"

@@ -18,7 +18,7 @@ export default function WorkflowVersionPage() {
       <h1>Workflow Revision {revision}</h1>
       <Card className="h-[calc(100vh-12rem)] p-0">
         <WorkflowYAMLEditor
-          workflowYamlString={workflow?.workflow_raw ?? ""}
+          value={workflow?.workflow_raw ?? ""}
           readOnly={true}
         />
       </Card>

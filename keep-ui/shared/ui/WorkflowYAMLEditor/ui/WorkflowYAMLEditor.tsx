@@ -5,7 +5,7 @@ import type { editor, Uri } from "monaco-editor";
 import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@tremor/react";
 import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
-import { KeepLoader } from "../../KeepLoader/KeepLoader";
+import { KeepLoader } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { YamlValidationError } from "../model/types";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
@@ -17,8 +17,7 @@ import { getSeverityString, MarkerSeverity } from "../lib/utils";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
-export interface WorkflowYAMLEditorProps {
-  workflowYamlString: string;
+interface BaseWorkflowYAMLEditorProps {
   workflowId?: string;
   filename?: string;
   readOnly?: boolean;
@@ -32,9 +31,17 @@ export interface WorkflowYAMLEditorProps {
   onSave?: (value: string) => void;
 }
 
+export type WorkflowYAMLEditorProps =
+  | (BaseWorkflowYAMLEditorProps & {
+      value: string;
+    })
+  | (BaseWorkflowYAMLEditorProps & {
+      original: string;
+      modified: string;
+    });
+
 export const WorkflowYAMLEditor = ({
   workflowId,
-  workflowYamlString,
   filename = "workflow",
   readOnly = false,
   "data-testid": dataTestId = "yaml-editor",
@@ -42,6 +49,7 @@ export const WorkflowYAMLEditor = ({
   onChange,
   onSave,
   onValidationErrors,
+  ...props
 }: WorkflowYAMLEditorProps) => {
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -142,12 +150,14 @@ export const WorkflowYAMLEditor = ({
     automaticLayout: true,
     tabSize: 2,
     insertSpaces: true,
-    fontSize: 14,
+    fontSize: 13,
     renderWhitespace: "all",
     wordWrap: "on",
     wordWrapColumn: 80,
     wrappingIndent: "indent",
     theme: "vs-light",
+    lineNumbersMinChars: 2,
+    folding: false,
     quickSuggestions: {
       other: true,
       comments: false,
@@ -213,13 +223,13 @@ export const WorkflowYAMLEditor = ({
               height="100%"
               className="[&_.monaco-editor]:outline-none [&_.decorationsOverviewRuler]:z-2"
               wrapperProps={{ "data-testid": dataTestId }}
-              value={workflowYamlString}
               onMount={handleEditorDidMount}
               onChange={onChange}
               options={editorOptions}
               loading={<KeepLoader loadingText="Loading YAML editor..." />}
               theme="light"
               schemas={schemas}
+              {...props}
             />
           </Suspense>
         </div>

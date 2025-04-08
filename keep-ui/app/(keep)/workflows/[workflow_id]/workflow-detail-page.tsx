@@ -29,6 +29,17 @@ import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { PiClockCounterClockwise } from "react-icons/pi";
 import { WorkflowRevisions } from "./workflow-revisions";
+
+const TABS_KEYS = ["overview", "builder", "yaml", "versions", "secrets"];
+
+function getTabIndex(tabKey: string) {
+  const index = TABS_KEYS.indexOf(tabKey);
+  if (index !== -1) {
+    return index;
+  }
+  return 0;
+}
+
 export default function WorkflowDetailPage({
   params,
   initialData,
@@ -37,24 +48,16 @@ export default function WorkflowDetailPage({
   initialData?: Workflow;
 }) {
   const { data: configData } = useConfig();
-  const [tabIndex, setTabIndex] = useState(0);
   const searchParams = useSearchParams();
+  const [tabIndex, setTabIndex] = useState(
+    getTabIndex(searchParams.get("tab") ?? "")
+  );
   const router = useRouter();
 
   // Set initial tab based on URL query param
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "yaml") {
-      setTabIndex(2);
-    } else if (tab === "builder") {
-      setTabIndex(1);
-    } else if (tab === "secrets") {
-      setTabIndex(3);
-    } else if (tab === "revisions") {
-      setTabIndex(4);
-    } else {
-      setTabIndex(0);
-    }
+    setTabIndex(getTabIndex(tab ?? ""));
   }, [searchParams]);
 
   const { workflow, isLoading, error } = useWorkflowDetail(
@@ -74,22 +77,9 @@ export default function WorkflowDetailPage({
   const handleTabChange = (index: number) => {
     setTabIndex(index);
     const basePath = `/workflows/${params.workflow_id}`;
-    switch (index) {
-      case 0:
-        router.push(basePath);
-        break;
-      case 1:
-        router.push(`${basePath}?tab=builder`);
-        break;
-      case 2:
-        router.push(`${basePath}?tab=yaml`);
-        break;
-      case 3:
-        router.push(`${basePath}?tab=secrets`);
-        break;
-      case 4:
-        router.push(`${basePath}?tab=revisions`);
-        break;
+    const tabKey = TABS_KEYS[index];
+    if (tabKey) {
+      router.push(`${basePath}?tab=${tabKey}`);
     }
   };
 
@@ -100,8 +90,8 @@ export default function WorkflowDetailPage({
           <Tab icon={AiOutlineSwap}>Overview</Tab>
           <Tab icon={WrenchIcon}>Builder</Tab>
           <Tab icon={CodeBracketIcon}>YAML Definition</Tab>
+          <Tab icon={PiClockCounterClockwise}>Versions</Tab>
           <Tab icon={KeyIcon}>Secrets</Tab>
-          <Tab icon={PiClockCounterClockwise}>Revisions</Tab>
           <TabNavigationLink
             href="https://www.youtube.com/@keepalerting"
             icon={ArrowUpRightIcon}
@@ -118,13 +108,13 @@ export default function WorkflowDetailPage({
           </TabNavigationLink>
         </TabList>
         <TabPanels>
-          <TabPanel>
+          <TabPanel id="overview">
             <WorkflowOverview
               workflow={workflow ?? null}
               workflow_id={params.workflow_id}
             />
           </TabPanel>
-          <TabPanel>
+          <TabPanel id="builder">
             {!workflow ? (
               <Skeleton className="w-full h-full" />
             ) : (
@@ -136,7 +126,7 @@ export default function WorkflowDetailPage({
               </Card>
             )}
           </TabPanel>
-          <TabPanel>
+          <TabPanel id="yaml">
             {!workflow || !workflow.workflow_raw ? (
               <Skeleton className="w-full h-full" />
             ) : (
@@ -151,14 +141,14 @@ export default function WorkflowDetailPage({
               </Card>
             )}
           </TabPanel>
-          <TabPanel>
-            <WorkflowSecrets workflowId={params.workflow_id} />
-          </TabPanel>
-          <TabPanel>
+          <TabPanel id="versions">
             <WorkflowRevisions
               workflowId={params.workflow_id}
               currentRevision={workflow?.revision ?? null}
             />
+          </TabPanel>
+          <TabPanel id="secrets">
+            <WorkflowSecrets workflowId={params.workflow_id} />
           </TabPanel>
         </TabPanels>
       </TabGroup>

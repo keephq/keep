@@ -26,7 +26,7 @@ export function WorkflowYAMLEditorWithLogs({
   setHoveredStep,
   selectedStep,
   setSelectedStep,
-  workflowYamlString,
+  value,
   ...props
 }: WorkflowYAMLEditorWithLogsProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -35,8 +35,8 @@ export function WorkflowYAMLEditorWithLogs({
   const hoverDecorationsRef = useRef<string[]>([]);
 
   const orderedWorkflowYamlString = useMemo(() => {
-    return getOrderedWorkflowYamlString(workflowYamlString);
-  }, [workflowYamlString]);
+    return getOrderedWorkflowYamlString(value);
+  }, [value]);
 
   const findStepNameForPosition = (
     lineNumber: number,
@@ -374,7 +374,7 @@ export function WorkflowYAMLEditorWithLogs({
   return (
     <WorkflowYAMLEditor
       onMount={handleEditorDidMount}
-      workflowYamlString={orderedWorkflowYamlString}
+      value={orderedWorkflowYamlString}
       {...props}
     />
   );

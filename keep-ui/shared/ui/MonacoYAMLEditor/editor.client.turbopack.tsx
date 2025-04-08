@@ -4,9 +4,9 @@
 
 import { useEffect, useState } from "react";
 import { configureMonacoYaml, MonacoYaml } from "monaco-yaml";
-import { Editor, loader, type EditorProps } from "@monaco-editor/react";
+import { DiffEditor, Editor, loader } from "@monaco-editor/react";
 import { KeepLoader, ErrorComponent } from "@/shared/ui";
-
+import { MonacoYamlEditorProps } from "./MonacoYAMLEditor.types";
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
 loader.config({
@@ -39,20 +39,14 @@ self.MonacoEnvironment = {
   },
 };
 
-type MonacoYamlEditorProps = {
-  schemas: {
-    fileMatch: string[];
-    schema: object;
-    uri: string;
-  }[];
-} & EditorProps;
-
 /**
  * This is a custom editor component that uses 'monaco-yaml' to provide YAML language support.
  * It is used to edit YAML files.
  */
 export function MonacoYAMLEditorTurbopack({
   schemas,
+  original,
+  modified,
   ...props
 }: MonacoYamlEditorProps) {
   const [error, setError] = useState<Error | null>(null);
@@ -98,7 +92,18 @@ export function MonacoYAMLEditorTurbopack({
     );
   }
 
-  return <Editor defaultLanguage="yaml" loading={Loader} {...props} />;
+  if (original && modified) {
+    return (
+      // @ts-expect-error - DiffEditorProps is not typed correctly yet
+      <DiffEditor
+        original={original}
+        modified={modified}
+        language="yaml"
+        loading={Loader}
+        {...props}
+      />
+    );
+  }
+
+  return <Editor language="yaml" loading={Loader} {...props} />;
 }
-// mv keep-ui/shared/ui/MonacoYAMLEditor keep-ui/shared/ui/MonacoYAMLEditor_temp && git rm --cached -r keep-ui/shared/ui/MonacoYAMLEditor 2>/dev/null || true
-// mv keep-ui/shared/ui/MonacoYAMLEditor_temp keep-ui/shared/ui/MonacoYAMLEditor && git add keep-ui/shared/ui/MonacoYAMLEditor/*

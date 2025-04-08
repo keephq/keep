@@ -23,9 +23,10 @@ interface GenericTableProps<T> {
   rowCount: number;
   offset: number;
   limit: number;
-  onPaginationChange: (limit: number, offset: number) => void;
+  onPaginationChange?: (limit: number, offset: number) => void;
   onRowClick?: (row: T) => void;
   dataFetchedAtOneGO?: boolean;
+  asCard?: boolean;
 }
 
 export function GenericTable<T>({
@@ -37,6 +38,7 @@ export function GenericTable<T>({
   onPaginationChange,
   onRowClick,
   dataFetchedAtOneGO,
+  asCard = true,
 }: GenericTableProps<T>) {
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setPagination] = useState({
@@ -82,9 +84,11 @@ export function GenericTable<T>({
     onExpandedChange: setExpanded,
   });
 
+  const Container = asCard ? Card : "div";
+
   return (
     <div className="flex flex-col gap-4 w-full h-full max-h-full">
-      <Card className="p-0">
+      <Container className="p-0">
         <TremorTable className="w-full">
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -122,7 +126,7 @@ export function GenericTable<T>({
             ))}
           </TableBody>
         </TremorTable>
-      </Card>
+      </Container>
       {pagination && <Pagination table={table} isRefreshAllowed={false} />}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { Workflow } from "@/shared/api/workflows";
 import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
-import { Badge, Button, Text } from "@tremor/react";
+import { Button, Text } from "@tremor/react";
 import Skeleton from "react-loading-skeleton";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
