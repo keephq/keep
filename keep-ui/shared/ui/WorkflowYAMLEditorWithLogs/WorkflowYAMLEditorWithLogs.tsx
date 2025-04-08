@@ -1,23 +1,24 @@
 "use client";
 import { LogEntry } from "@/shared/api/workflow-executions";
 import { type editor } from "monaco-editor";
-import {
-  WorkflowYAMLEditor,
-  WorkflowYAMLEditorProps,
-} from "../WorkflowYAMLEditor/ui/WorkflowYAMLEditor";
+import { WorkflowYAMLEditor } from "@/shared/ui";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getStepStatus } from "@/shared/lib/logs-utils";
-import "./WorkflowYAMLEditorWithLogs.css";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
+import {
+  WorkflowYAMLEditorProps,
+  isDiffEditorProps,
+} from "@/shared/ui/WorkflowYAMLEditor";
+import "./WorkflowYAMLEditorWithLogs.css";
 
-interface WorkflowYAMLEditorWithLogsProps extends WorkflowYAMLEditorProps {
+type WorkflowYAMLEditorWithLogsProps = WorkflowYAMLEditorProps & {
   executionLogs: LogEntry[] | null | undefined;
   executionStatus: string | null | undefined;
   hoveredStep: string | null | undefined;
   setHoveredStep: (step: string | null) => void;
   selectedStep: string | null | undefined;
   setSelectedStep: (step: string | null) => void;
-}
+};
 
 export function WorkflowYAMLEditorWithLogs({
   executionLogs,
@@ -26,7 +27,6 @@ export function WorkflowYAMLEditorWithLogs({
   setHoveredStep,
   selectedStep,
   setSelectedStep,
-  value,
   ...props
 }: WorkflowYAMLEditorWithLogsProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -35,8 +35,11 @@ export function WorkflowYAMLEditorWithLogs({
   const hoverDecorationsRef = useRef<string[]>([]);
 
   const orderedWorkflowYamlString = useMemo(() => {
-    return getOrderedWorkflowYamlString(value);
-  }, [value]);
+    if (isDiffEditorProps(props)) {
+      return getOrderedWorkflowYamlString(props.modified);
+    }
+    return getOrderedWorkflowYamlString(props.value);
+  }, [props]);
 
   const findStepNameForPosition = (
     lineNumber: number,

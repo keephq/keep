@@ -1,5 +1,4 @@
 export { useWorkflowRevisions } from "./useWorkflowRevisions";
-export type { WorkflowRevision } from "./useWorkflowRevisions";
 export { useWorkflowDetail } from "./useWorkflowDetail";
 export { useWorkflows } from "./useWorkflows";
 export { useWorkflowsV2 } from "./useWorkflowsV2";

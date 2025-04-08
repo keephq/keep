@@ -7,7 +7,7 @@ import { Button } from "@tremor/react";
 import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
 import { KeepLoader } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
-import { YamlValidationError } from "../model/types";
+import { WorkflowYAMLEditorProps, YamlValidationError } from "../model/types";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
 import clsx from "clsx";
 
@@ -16,29 +16,6 @@ import { MonacoYAMLEditor } from "@/shared/ui";
 import { getSeverityString, MarkerSeverity } from "../lib/utils";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
-
-interface BaseWorkflowYAMLEditorProps {
-  workflowId?: string;
-  filename?: string;
-  readOnly?: boolean;
-  "data-testid"?: string;
-  onMount?: (
-    editor: editor.IStandaloneCodeEditor,
-    monacoInstance: typeof import("monaco-editor")
-  ) => void;
-  onChange?: (value: string | undefined) => void;
-  onValidationErrors?: (errors: YamlValidationError[]) => void;
-  onSave?: (value: string) => void;
-}
-
-export type WorkflowYAMLEditorProps =
-  | (BaseWorkflowYAMLEditorProps & {
-      value: string;
-    })
-  | (BaseWorkflowYAMLEditorProps & {
-      original: string;
-      modified: string;
-    });
 
 export const WorkflowYAMLEditor = ({
   workflowId,

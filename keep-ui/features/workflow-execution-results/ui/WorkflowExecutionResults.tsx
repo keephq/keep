@@ -108,10 +108,6 @@ export function WorkflowExecutionResults({
     }
   }, [executionData]);
 
-  if (!executionData || !finalYaml) {
-    return <Loading />;
-  }
-
   if (executionError) {
     return (
       <Callout
@@ -131,6 +127,10 @@ export function WorkflowExecutionResults({
         Failed to load workflow definition
       </Callout>
     );
+  }
+
+  if (!executionData || !workflowData || !finalYaml) {
+    return <Loading />;
   }
 
   return (
@@ -198,6 +198,7 @@ export function WorkflowExecutionResultsInternal({
 
   const tabs = [
     {
+      id: "workflow-definition",
       name: (
         <span className="flex items-center gap-2">
           Workflow Definition{" "}
@@ -226,6 +227,7 @@ export function WorkflowExecutionResultsInternal({
     ...(hasEvent
       ? [
           {
+            id: "event-trigger",
             name: "Event Trigger",
             content: (
               <div className="p-4">
@@ -288,12 +290,12 @@ export function WorkflowExecutionResultsInternal({
             <TabGroup>
               <TabList className="p-2">
                 {tabs.map((tab) => (
-                  <Tab key={tab.name}>{tab.name}</Tab>
+                  <Tab key={tab.id}>{tab.name}</Tab>
                 ))}
               </TabList>
               <TabPanels>
                 {tabs.map((tab) => (
-                  <TabPanel key={tab.name}>{tab.content}</TabPanel>
+                  <TabPanel key={tab.id}>{tab.content}</TabPanel>
                 ))}
               </TabPanels>
             </TabGroup>

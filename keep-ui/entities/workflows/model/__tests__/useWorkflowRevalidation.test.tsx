@@ -41,7 +41,7 @@ describe("useWorkflowRevalidation", () => {
     result.current.revalidateDetail(mockWorkflowId);
 
     expect(mockMutate).toHaveBeenCalledWith(
-      workflowKeys.detail(mockWorkflowId)
+      workflowKeys.detail(mockWorkflowId, null)
     );
   });
 
@@ -60,7 +60,7 @@ describe("useWorkflowRevalidation", () => {
 
     // Verify detail key
     expect(mockMutate.mock.calls[1][0]).toBe(
-      workflowKeys.detail(mockWorkflowId)
+      workflowKeys.detail(mockWorkflowId, null)
     );
   });
 });

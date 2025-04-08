@@ -56,7 +56,7 @@ export function GenericTable<T>({
   useEffect(() => {
     const currentOffset = pagination.pageSize * pagination.pageIndex;
     if (offset !== currentOffset || limit !== pagination.pageSize) {
-      onPaginationChange(pagination.pageSize, currentOffset);
+      onPaginationChange?.(pagination.pageSize, currentOffset);
     }
   }, [pagination]);
 
