@@ -40,7 +40,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import joinedload, subqueryload, foreign
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -3681,11 +3681,18 @@ def get_incident_by_id(
     with existed_or_new_session(session) as session:
         query = session.query(
             Incident,
+            AlertEnrichment,
+        ).outerjoin(
+            AlertEnrichment,
+            and_(
+                Incident.tenant_id == AlertEnrichment.tenant_id,
+                cast(col(Incident.id), String) == foreign(AlertEnrichment.alert_fingerprint),
+            ),
         ).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
         )
-        incident = query.first()
+        incident, enrichments = query.first()
         if incident:
             if with_alerts:
                 enrich_incidents_with_alerts(
@@ -3693,7 +3700,8 @@ def get_incident_by_id(
                     [incident],
                     session,
                 )
-            enrich_incidents_with_enrichments(tenant_id, [incident], session)
+            if enrichments:
+                incident.set_enrichments(enrichments.enrichments)
 
     return incident
 
