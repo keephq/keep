@@ -22,6 +22,8 @@ from keep.api.models.db.facet import Facet, FacetType
 
 logger = logging.getLogger(__name__)
 
+OPTIONS_PER_FACET = 50
+
 
 def build_facet_selects(properties_metadata, facets):
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
@@ -132,7 +134,7 @@ def build_facets_data_query(
                 )
             )
             .group_by(literal_column("facet_id"), literal_column("facet_value"))
-            .limit(50)
+            .limit(OPTIONS_PER_FACET)
         )
 
     query = None
