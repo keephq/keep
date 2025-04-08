@@ -21,6 +21,7 @@ class Provider(SQLModel, table=True):
     )  # scope name is key and value is either True if validated or string with error message, e.g: {"read": True, "write": "error message"}
     consumer: bool = False
     pulling_enabled: bool = True
+    pulling_interval: Optional[int] = None
     last_pull_time: Optional[datetime]
     provisioned: bool = Field(default=False)
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Any
+from typing import Literal, Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -41,6 +41,7 @@ class Provider(BaseModel):
     installation_time: datetime | None = None
     pulling_available: bool = False
     pulling_enabled: bool = True
+    pulling_interval: Optional[int] = None
     last_pull_time: datetime | None = None
     docs: str | None = None
     tags: list[

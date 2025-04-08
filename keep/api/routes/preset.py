@@ -88,7 +88,10 @@ def pull_data_from_providers(
         if provider.last_pull_time is not None:
             now = datetime.now()
             minutes_passed = (now - provider.last_pull_time).total_seconds() / 60
-            if minutes_passed <= PROVIDER_PULL_INTERVAL_MINUTE:
+
+            pull_interval_minutes = provider.pulling_interval or PROVIDER_PULL_INTERVAL_MINUTE
+
+            if minutes_passed <= pull_interval_minutes:
                 logger.info(
                     "Skipping provider data pulling since not enough time has passed",
                     extra={

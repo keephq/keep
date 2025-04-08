@@ -501,6 +501,7 @@ class ProvidersFactory:
             provider_copy.last_pull_time = p.last_pull_time
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
+            provider_copy.pulling_interval = p.pulling_interval
             provider_copy.installed = True
             try:
                 provider_auth = {"name": p.name}
