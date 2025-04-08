@@ -9,6 +9,9 @@ import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
 import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { severityMapping } from "@/entities/alerts/model";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import { useRouter } from "next/navigation";
 
 interface GridItemProps {
   item: WidgetData;
@@ -16,6 +19,7 @@ interface GridItemProps {
 
 const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   const presets = useDashboardPreset();
+  const lastAlertsCount = 5;
   const preset = useMemo(
     () => presets.find((preset) => preset.id === item.preset?.id),
     [presets, item.preset?.id]
@@ -31,9 +35,14 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   } = usePresetAlertsCount(
     presetCel,
     !!preset?.counter_shows_firing_only,
-    5,
+    lastAlertsCount,
     0
   );
+  const router = useRouter();
+
+  function handleGoToPresetClick() {
+    router.replace(`/alerts/${preset?.name.toLowerCase()}`);
+  }
 
   const getColor = () => {
     let color = "#000000";
@@ -73,6 +82,65 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     return `rgb(${r}, ${g}, ${b}, ${alpha})`;
   }
 
+  function renderLastAlertsGrid() {
+    if (isLoading) {
+      return (
+        <>
+          {Array.from({ length: lastAlertsCount }).map((_, index) => (
+            <div
+              key={index}
+              className="flex flex-row min-h-7 h-7 items-center gap-2"
+            >
+              <Skeleton containerClassName="h-4 w-1" />
+              <Skeleton containerClassName="h-4 w-4" />
+              <Skeleton containerClassName="h-4 w-4" />
+              <Skeleton containerClassName="h-4 flex-1" />
+              <Skeleton containerClassName="h-4 flex-1" />
+            </div>
+          ))}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {alerts?.map((alert) => (
+          <div className="flex flex-row min-h-7 h-7 items-center gap-2">
+            <SeverityBorderIcon
+              severity={
+                (severityMapping[Number(alert.severity)] ||
+                  alert.severity) as UISeverity
+              }
+            />
+            <Icon
+              icon={getStatusIcon(alert.status)}
+              size="sm"
+              color={getStatusColor(alert.status)}
+              className="!p-0"
+            />
+            <div>
+              <DynamicImageProviderIcon
+                className="inline-block"
+                alt={(alert as any).providerType}
+                height={16}
+                width={16}
+                title={(alert as any).providerType}
+                providerType={(alert as any).providerType}
+                src={`/icons/${(alert as any).providerType}-icon.png`}
+              />
+            </div>
+            <div className="flex-1 truncate text-xs" title={alert.name}>
+              {alert.name}
+            </div>
+            <div className="flex-1 truncate text-xs" title={alert.description}>
+              {alert.description}
+            </div>
+          </div>
+        ))}
+      </>
+    );
+  }
+
   function renderCEL() {
     return (
       <Tooltip.Provider>
@@ -96,9 +164,36 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   }
 
   function renderAlertsCountText() {
-    return preset?.counter_shows_firing_only
+    const label = preset?.counter_shows_firing_only
       ? "Firing alerts count:"
       : "Alerts count:";
+
+    return (
+      <div className="flex gap-1 items-center">
+        <div>{label}</div>
+        <div
+          className="flex items-center text-base font-bold"
+          style={{ color: getColor() }}
+        >
+          {isLoading && (
+            <Skeleton containerClassName="h-4 w-8 relative -top-0.5" />
+          )}
+          {!isLoading && (
+            <>
+              {preset?.counter_shows_firing_only && (
+                <Icon
+                  className="p-0"
+                  style={{ color: getColor() }}
+                  size={"md"}
+                  icon={FireIcon}
+                ></Icon>
+              )}
+              <span>{presetAlertsCount}</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -112,73 +207,24 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           <div>Preset CEL:</div>
           {renderCEL()}
         </div>
-        <div className="flex gap-1 items-center">
-          <div>{renderAlertsCountText()}</div>
-          <div
-            className="flex items-center text-base font-bold"
-            style={{ color: getColor() }}
-          >
-            {preset?.counter_shows_firing_only && (
-              <Icon
-                className="p-0"
-                style={{ color: getColor() }}
-                size={"md"}
-                icon={FireIcon}
-              ></Icon>
-            )}
-            <span>{presetAlertsCount}</span>
-          </div>
-        </div>
+        {renderAlertsCountText()}
       </div>
       <div
-        style={{ background: hexToRgb(getColor(), 0.1) }}
+        style={{
+          background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
+        }}
         className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
       >
-        {alerts?.map((alert) => (
-          <div className="flex flex-row min-h-7 h-7 items-center gap-2">
-            <SeverityBorderIcon
-              severity={
-                (severityMapping[Number(alert.severity)] ||
-                  alert.severity) as UISeverity
-              }
-            />
-            <Icon
-              icon={getStatusIcon(alert.status)}
-              size="sm"
-              color={getStatusColor(alert.status)}
-              className="!p-0"
-            />
-            <div key={alert.id + 3}>
-              <DynamicImageProviderIcon
-                className="inline-block"
-                alt={(alert as any).providerType}
-                height={16}
-                width={16}
-                title={(alert as any).providerType}
-                providerType={(alert as any).providerType}
-                src={`/icons/${(alert as any).providerType}-icon.png`}
-              />
-            </div>
-            <div
-              key={alert.id + 1}
-              className="flex-1 truncate text-xs"
-              title={alert.name}
-            >
-              {alert.name}
-            </div>
-            <div
-              key={alert.id + 2}
-              className="flex-1 truncate text-xs"
-              title={alert.description}
-            >
-              {alert.description}
-            </div>
-          </div>
-        ))}
+        {renderLastAlertsGrid()}
       </div>
       <div className="flex justify-end">
-        <Button color="orange" variant="secondary" size="xs">
-          Go to widget
+        <Button
+          color="orange"
+          variant="secondary"
+          size="xs"
+          onClick={handleGoToPresetClick}
+        >
+          Go to preset
         </Button>
       </div>
     </div>

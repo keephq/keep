@@ -49,7 +49,9 @@ const GenericMetricsGridItem: React.FC<GridItemProps> = ({ item, onEdit }) => {
     }
   }
 
-  return <div className="w-full h-[90%]">{renderGenericMetrics()}</div>;
+  return (
+    <div className="w-full h-[90%] overflow-auto">{renderGenericMetrics()}</div>
+  );
 };
 
 export default GenericMetricsGridItem;
