@@ -22,6 +22,8 @@ from keep.api.models.db.facet import Facet, FacetType
 
 logger = logging.getLogger(__name__)
 
+OPTIONS_PER_FACET = 50
+
 
 def build_facet_selects(properties_metadata, facets):
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
@@ -119,7 +121,9 @@ def build_facets_data_query(
             select(
                 literal(facet.id).label("facet_id"),
                 text(f"{casted} AS facet_value"),
-                literal_column("entity_id").label("entity_id"),
+                func.count(func.distinct(literal_column("entity_id"))).label(
+                    "matches_count"
+                ),
             )
             .select_from(base_query)
             .filter(
@@ -129,6 +133,8 @@ def build_facets_data_query(
                     )
                 )
             )
+            .group_by(literal_column("facet_id"), literal_column("facet_value"))
+            .limit(OPTIONS_PER_FACET)
         )
 
     query = None
@@ -138,17 +144,7 @@ def build_facets_data_query(
     else:
         query = union_queries[0]
 
-    return (
-        select(
-            literal_column("facet_id"),
-            literal_column("facet_value"),
-            func.count(func.distinct(literal_column("entity_id"))).label(
-                "matches_count"
-            ),
-        )
-        .select_from(query)
-        .group_by(literal_column("facet_id"), literal_column("facet_value"))
-    )
+    return query
 
 
 def get_facet_options(

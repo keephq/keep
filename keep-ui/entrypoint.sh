@@ -3,6 +3,7 @@
 echo "Starting Nextjs [${API_URL}]"
 echo "AUTH_TYPE: ${AUTH_TYPE}"
 echo "DEBUG AUTH: ${AUTH_DEBUG}"
+echo "SENTRY_DISABLED: ${SENTRY_DISABLED}"
 
 if [ -n "${NEXTAUTH_SECRET}" ]; then
     echo "NEXTAUTH_SECRET is set"
