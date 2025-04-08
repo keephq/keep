@@ -1,0 +1,35 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_server**: The openshift api server url (required: True, sensitive: False)
+- **token**: The openshift token (required: True, sensitive: True)
+- **insecure**: Skip TLS verification (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **connect_to_openshift**: Check if the provided token can connect to the openshift server (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query openshift
+      provider: openshift
+      config: "{{ provider.my_provider_name }}"
+      with:
+        kind: {value}  # The kind of object to restart. Could be deployments, statefulset, daemonset.
+        name: {value}  # The name of the object to restart
+        project_name: {value}  # The project name where the object is located
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

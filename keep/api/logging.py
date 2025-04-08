@@ -4,6 +4,7 @@ import logging
 import logging.config
 import logging.handlers
 import os
+import sys
 import threading
 import uuid
 from datetime import datetime
@@ -25,6 +26,32 @@ KEEP_STORE_WORKFLOW_LOGS = (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_gunicorn_log_level():
+    """
+    Check for --log-level flag in gunicorn command line arguments
+    Returns the log level or None if not found
+    """
+    log_level = None
+    try:
+        for i, arg in enumerate(sys.argv):
+            if arg == "--log-level" and i + 1 < len(sys.argv):
+                log_level = sys.argv[i + 1].upper()
+                break
+            elif arg.startswith("--log-level="):
+                log_level = arg.split("=", 1)[1].upper()
+                break
+    except Exception:
+        pass
+
+    # Validate the log level
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if log_level in valid_levels:
+        return log_level
+
+    # o/w, use Keep's log level
+    return LOG_LEVEL
 
 
 class WorkflowContextFilter(logging.Filter):
@@ -278,10 +305,33 @@ class DevTerminalFormatter(logging.Formatter):
         return f"{message} {extra_info}"
 
 
+def get_worker_type():
+    """Determine if this is a uvicorn or arq worker"""
+    import sys
+
+    # Check command line arguments or process name to identify worker type
+    if any("arq" in arg.lower() for arg in sys.argv):
+        return "arqworker"
+    elif any("uvicorn" in arg.lower() for arg in sys.argv):
+        return "uvicorn"
+    else:
+        return None
+
+
+# Set this as a global variable during initialization
+WORKER_TYPE = get_worker_type()
+
+
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def __init__(self, *args, rename_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.rename_fields = rename_fields if RUNNING_IN_CLOUD_RUN else {}
+
+    def add_fields(self, log_record, record, message_dict):
+        super().add_fields(log_record, record, message_dict)
+        # Add worker type to all logs
+        if WORKER_TYPE:
+            log_record["worker_type"] = getattr(record, "worker_type", WORKER_TYPE)
 
 
 CONFIG = {
@@ -290,7 +340,7 @@ CONFIG = {
     "formatters": {
         "json": {
             "()": CustomJsonFormatter,
-            "fmt": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelTraceSampled)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
+            "fmt": "%(worker_type) %(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelTraceSampled)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
             "rename_fields": {
                 "levelname": "severity",
                 "asctime": "timestamp",
@@ -345,13 +395,13 @@ CONFIG = {
         },
         "uvicorn.access": {  # Add uvicorn.access logger configuration
             "handlers": ["uvicorn_access"],
-            "level": "INFO",
+            "level": get_gunicorn_log_level(),
             "propagate": False,
         },
         "uvicorn.error": {  # Add uvicorn.error logger configuration
             "()": "CustomizedUvicornLogger",  # Use custom logger class
             "handlers": ["default"],
-            "level": "INFO",
+            "level": get_gunicorn_log_level(),
             "propagate": False,
         },
         "opentelemetry.context": {
@@ -377,6 +427,11 @@ CONFIG = {
         "Environment": {
             "handlers": [],
             "level": "CRITICAL",
+            "propagate": False,
+        },
+        "httpx": {
+            "handlers": [],
+            "level": "ERROR",
             "propagate": False,
         },
     },

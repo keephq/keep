@@ -2,6 +2,7 @@
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
 """
 
+import os
 import dataclasses
 import json
 
@@ -119,6 +120,16 @@ class ServicenowProvider(BaseTopologyProvider):
         """
         Validates that the user has the required scopes to use the provider.
         """
+
+        # Optional scope validation skipping
+        if (
+            os.environ.get(
+                "KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "true"
+            ).lower()
+            == "true"
+        ):
+            return {"itil": True}
+
         try:
             self.logger.info("Validating ServiceNow scopes")
             url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_user_role?sysparm_query=user_name={self.authentication_config.username}"
@@ -189,6 +200,14 @@ class ServicenowProvider(BaseTopologyProvider):
         sysparm_offset: int = 0,
         **kwargs: dict,
     ):
+        """
+        Query ServiceNow for records.
+        Args:
+            table_name (str): The name of the table to query.
+            incident_id (str): The incident ID to query.
+            sysparm_limit (int): The maximum number of records to return.
+            sysparm_offset (int): The offset to start from.
+        """
         request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -280,6 +299,9 @@ class ServicenowProvider(BaseTopologyProvider):
                 extra={
                     "tenant_id": self.context_manager.tenant_id,
                     "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
                 },
             )
             return topology, {}
@@ -297,7 +319,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_type_response.ok:
-            self.logger.error("Failed to get topology types")
+            self.logger.error(
+                "Failed to get topology types",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_type_json = rel_type_response.json()
             for result in rel_type_json.get("result", []):
@@ -312,7 +343,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_response.ok:
-            self.logger.error("Failed to get topology relationships")
+            self.logger.error(
+                "Failed to get topology relationships",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_json = rel_response.json()
             for relationship in rel_json.get("result", []):
@@ -358,6 +398,8 @@ class ServicenowProvider(BaseTopologyProvider):
             extra={
                 "tenant_id": self.context_manager.tenant_id,
                 "len_of_topology": len(topology),
+                "using_access_token": self._access_token is not None,
+                "provider_id": self.provider_id,
             },
         )
         return topology, {}
@@ -369,7 +411,14 @@ class ServicenowProvider(BaseTopologyProvider):
         pass
 
     def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
-        # Create ticket
+        """
+        Create a ticket in ServiceNow.
+        Args:
+            table_name (str): The name of the table to create the ticket in.
+            payload (dict): The ticket payload.
+            ticket_id (str): The ticket ID (optional to update a ticket).
+            fingerprint (str): The fingerprint of the ticket (optional to update a ticket).
+        """
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
             (

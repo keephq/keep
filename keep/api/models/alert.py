@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import logging
+import urllib.parse
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, Optional
@@ -82,6 +83,7 @@ class AlertDto(BaseModel):
     apiKeyRef: str | None = None
     message: str | None = None
     description: str | None = None
+    description_format: str | None = None  # Can be 'markdown' or 'html'
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
@@ -148,11 +150,15 @@ class AlertDto(BaseModel):
 
     @validator("url", pre=True)
     def prepend_https(cls, url):
-        if isinstance(url, str) and not url.startswith("http"):
+        if not isinstance(url, str):
+            return url
+
+        url = url.strip()
+        if not url.startswith("http"):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)
-            return f"https://{url}"
-        return url
+            url = f"https://{url}"
+        return urllib.parse.quote(url, safe='/:?=&')
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
@@ -218,6 +224,15 @@ class AlertDto(BaseModel):
             datetime.datetime.now(datetime.timezone.utc) < dismiss_until_datetime
         )
         return dismissed
+
+    @validator("description_format")
+    def validate_description_format(cls, description_format):
+        if description_format is None:
+            return None
+        valid_formats = ["markdown", "html"]
+        if description_format not in valid_formats:
+            raise ValueError(f"description_format must be one of {valid_formats}")
+        return description_format
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:

@@ -13,13 +13,13 @@ import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
 import { Badge, Callout } from "@tremor/react";
 import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
-import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
+import { IncidentChangeStatusSelect } from "features/incidents/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
 import {
   SameIncidentField,
   FollowingIncidents,
-} from "@/features/same-incidents-in-the-past/";
+} from "@/features/incidents/same-incidents-in-the-past/";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
 import clsx from "clsx";
 import { TbSparkles } from "react-icons/tb";
@@ -33,8 +33,9 @@ import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
 import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
-import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
+import { IncidentChangeSeveritySelect } from "features/incidents/change-incident-severity";
 import remarkGfm from "remark-gfm";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Props {
   incident: IncidentDto;
@@ -56,6 +57,7 @@ function Summary({
   incident: IncidentDto;
 }) {
   const [generatedSummary, setGeneratedSummary] = useState("");
+  const { data: config } = useConfig();
   const { updateIncident } = useIncidentActions();
   const context = useCopilotContext();
   useCopilotReadable({
@@ -133,10 +135,15 @@ function Summary({
         variant="secondary"
         onClick={executeTask}
         className="mt-2.5"
-        disabled={generatingSummary}
+        disabled={generatingSummary || !config?.OPEN_AI_API_KEY_SET}
         loading={generatingSummary}
         icon={TbSparkles}
         size="xs"
+        tooltip={
+          !config?.OPEN_AI_API_KEY_SET
+            ? "AI is not configured"
+            : "Generate AI summary"
+        }
       >
         AI Summary
       </Button>

@@ -11,6 +11,7 @@ import logging
 import os
 import types
 import typing
+import keyword
 from dataclasses import fields
 from typing import get_args
 
@@ -19,6 +20,7 @@ from keep.api.core.db import (
     get_consumer_providers,
     get_installed_providers,
     get_linked_providers,
+    get_provider_by_type_and_id,
 )
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
@@ -36,6 +38,18 @@ PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.j
 READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 logger = logging.getLogger(__name__)
+
+
+def get_method_parameters_safe(raw_params: list[str]) -> list[str]:
+    safe_params = []
+    for param in raw_params:
+        if param == "self":
+            continue
+        if param.endswith("_") and keyword.iskeyword(param[:-1]):
+            safe_params.append(param[:-1])
+        else:
+            safe_params.append(param)
+    return safe_params
 
 
 class ProviderConfigurationException(Exception):
@@ -319,13 +333,15 @@ class ProvidersFactory:
                 notify_params = (
                     None
                     if not can_notify
-                    else list(
-                        dict(
-                            inspect.signature(
-                                provider_class.__dict__.get("_notify")
-                            ).parameters
-                        ).keys()
-                    )[1:]
+                    else get_method_parameters_safe(
+                        list(
+                            dict(
+                                inspect.signature(
+                                    provider_class.__dict__.get("_notify")
+                                ).parameters
+                            ).keys()
+                        )
+                    )
                 )
                 can_query = (
                     issubclass(provider_class, BaseProvider)
@@ -334,13 +350,15 @@ class ProvidersFactory:
                 query_params = (
                     None
                     if not can_query
-                    else list(
-                        dict(
-                            inspect.signature(
-                                provider_class.__dict__.get("_query")
-                            ).parameters
-                        ).keys()
-                    )[1:]
+                    else get_method_parameters_safe(
+                        list(
+                            dict(
+                                inspect.signature(
+                                    provider_class.__dict__.get("_query")
+                                ).parameters
+                            ).keys()
+                        )
+                    )
                 )
                 config = {}
                 if provider_auth_config_class:
@@ -540,8 +558,16 @@ class ProvidersFactory:
     ) -> dict:
         context_manager = context_manager or ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_from_db = get_provider_by_type_and_id(
+            tenant_id=tenant_id, provider_id=provider_id, provider_type=provider_type
+        )
+        logger.info(
+            f"Getting provider secret for provider id: {provider_from_db.id},"
+            f" configuration key: {provider_from_db.configuration_key},"
+            f" secret manager type: {secret_manager.__class__.__name__}"
+        )
         return secret_manager.read_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+            secret_name=provider_from_db.configuration_key,
             is_json=True,
         )
 

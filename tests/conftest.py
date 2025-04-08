@@ -451,23 +451,26 @@ def elastic_client(request):
     else:
         # this is so if any other module initialized Elasticsearch, it will be deleted
         ElasticClient._instance = None
-        os.environ["ELASTIC_ENABLED"] = "true"
-        os.environ["ELASTIC_USER"] = "elastic"
-        os.environ["ELASTIC_PASSWORD"] = "keeptests"
-        os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-        os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
-        # request.getfixturevalue("elastic_container")
-        elastic_client = ElasticClient(
-            tenant_id=SINGLE_TENANT_UUID,
-        )
+        env_vars = {}
+        env_vars["ELASTIC_ENABLED"] = "true"
+        env_vars["ELASTIC_USER"] = "elastic"
+        env_vars["ELASTIC_PASSWORD"] = "keeptests"
+        env_vars["ELASTIC_HOSTS"] = "http://localhost:9200"
+        env_vars["ELASTIC_INDEX_SUFFIX"] = "test"
 
-        yield elastic_client
+        with patch.dict(os.environ, env_vars):
+            # request.getfixturevalue("elastic_container")
+            elastic_client = ElasticClient(
+                tenant_id=SINGLE_TENANT_UUID,
+            )
 
-        # remove all from elasticsearch
-        try:
-            elastic_client.drop_index()
-        except Exception:
-            pass
+            yield elastic_client
+
+            # remove all from elasticsearch
+            try:
+                elastic_client.drop_index()
+            except Exception:
+                pass
 
 
 @pytest.fixture(scope="session")
@@ -725,6 +728,9 @@ def create_alert(db_session):
         fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID
     ):
         details = details or {}
+        if fingerprint and "fingerprint" not in details:
+            details["fingerprint"] = fingerprint
+
         random_name = "test-{}".format(fingerprint)
         process_event(
             ctx={"job_try": 1},
@@ -740,7 +746,6 @@ def create_alert(db_session):
             api_key_name="test",
             event={
                 "name": random_name,
-                "fingerprint": fingerprint,
                 "lastReceived": details.pop("lastReceived", timestamp.isoformat()),
                 "status": status.value,
                 **details,

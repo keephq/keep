@@ -7,36 +7,49 @@ This module contains the CRUD database functions for Keep.
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
 
-from sqlalchemy import and_, asc, case, desc, func, literal_column, select, text
+from sqlalchemy import and_, case, desc, func, literal_column, select, text
 from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
-    JsonFieldMapping,
     PropertiesMetadata,
-    SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
-from keep.api.core.db import engine
-from keep.api.core.facets import get_facet_options, get_facets
+from keep.api.core.db import existed_or_new_session
+from keep.api.core.facets import build_facet_selects, get_facet_options, get_facets
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
-
 workflow_field_configurations = [
-    FieldMappingConfiguration("name", "filter_workflow_name"),
-    FieldMappingConfiguration("description", "filter_workflow_description"),
-    FieldMappingConfiguration("started", "filter_started"),
-    FieldMappingConfiguration("last_execution_status", "filter_last_execution_status"),
-    FieldMappingConfiguration("last_execution_time", "filter_last_execution_time"),
-    FieldMappingConfiguration("disabled", "filter_workflow_is_disabled"),
-    FieldMappingConfiguration("last_updated", "filter_workflow_last_updated"),
-    FieldMappingConfiguration("created_at", "filter_workflow_creation_time"),
-    FieldMappingConfiguration("created_by", "filter_workflow_created_by"),
-    FieldMappingConfiguration("updated_by", "filter_workflow_updated_by"),
+    FieldMappingConfiguration(map_from_pattern="name", map_to="filter_workflow_name"),
+    FieldMappingConfiguration(
+        map_from_pattern="description", map_to="filter_workflow_description"
+    ),
+    FieldMappingConfiguration(map_from_pattern="started", map_to="filter_started"),
+    FieldMappingConfiguration(
+        map_from_pattern="last_execution_status", map_to="filter_last_execution_status"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="last_execution_time", map_to="filter_last_execution_time"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="disabled", map_to="filter_workflow_is_disabled"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="last_updated", map_to="filter_workflow_last_updated"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_at", map_to="filter_workflow_creation_time"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_by", map_to="filter_workflow_created_by"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="updated_by", map_to="filter_workflow_updated_by"
+    ),
 ]
 alias_column_mapping = {
     "filter_workflow_name": "workflow.name",
@@ -178,32 +191,8 @@ def build_workflows_query(
         sort_by = "started"
         sort_dir = "desc"
 
-    metadata = properties_metadata.get_property_metadata(sort_by)
-    group_by_exp = []
-
-    for item in metadata.field_mappings:
-        if isinstance(item, JsonFieldMapping):
-            group_by_exp.append(
-                cel_to_sql_instance.json_extract_as_text(
-                    item.json_prop, item.prop_in_json
-                )
-            )
-        elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            group_by_exp.append(item.map_to)
-
-    if len(group_by_exp) > 1:
-        order_by_field = cel_to_sql_instance.coalesce(
-            [cel_to_sql_instance.cast(item, str) for item in group_by_exp]
-        )
-    else:
-        order_by_field = group_by_exp[0]
-
-    if sort_dir == "desc":
-        base_query = base_query.order_by(desc(text(order_by_field)))
-    else:
-        base_query = base_query.order_by(asc(text(order_by_field)))
-
-    base_query = base_query.limit(limit).offset(offset)
+    order_by_exp = cel_to_sql_instance.get_order_by_expression([(sort_by, sort_dir)])
+    base_query = base_query.order_by(text(order_by_exp)).limit(limit).offset(offset)
 
     if cel:
         sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
@@ -248,8 +237,9 @@ def get_workflows_with_last_executions_v2(
     sort_by: str,
     sort_dir: str,
     fetch_last_executions: int = 15,
+    session: Session = None,
 ) -> Tuple[list[dict], int]:
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id, cel=cel
         )
@@ -314,19 +304,21 @@ def get_workflow_facets_data(
         facets = static_facets
 
     queries = __build_base_query(tenant_id)
+    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    select_expressions = facet_selects_metadata["select_expressions"]
+    new_fields_config = facet_selects_metadata["new_fields_config"]
 
-    base_query = select(
-        # here it creates aliases for table columns that will be used in filtering and faceting
-        text(",".join(["entity_id"] + [key for key in alias_column_mapping.keys()]))
+    base_query_2 = select(
+        *([literal_column("entity_id")] + select_expressions)
     ).select_from(
         queries["workflows_with_last_executions_query"].cte("workflows_query")
     )
 
     return get_facet_options(
-        base_query=base_query,
+        base_query=base_query_2,
         facets=facets,
         facet_options_query=facet_options_query,
-        properties_metadata=properties_metadata,
+        properties_metadata=PropertiesMetadata(new_fields_config),
     )
 
 

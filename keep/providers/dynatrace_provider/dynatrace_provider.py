@@ -8,6 +8,7 @@ import datetime
 import json
 import logging
 import os
+from urllib.parse import quote
 
 import pydantic
 import requests
@@ -17,6 +18,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -233,7 +236,12 @@ class DynatraceProvider(BaseProvider):
             status = DynatraceProvider.STATUS_MAP.get(
                 event.get("State"), AlertStatus.FIRING
             )
-
+            url = event.get("ProblemURL")
+            if url:
+                try:
+                    url = quote(url, safe=":/%#?=@&;+!")
+                except Exception as e:
+                    logger.exception(f"Failed to quote URL: {e}")
             alert_dto = AlertDto(
                 id=event.get("ProblemID"),
                 name=event.get("ProblemTitle"),
@@ -247,7 +255,7 @@ class DynatraceProvider(BaseProvider):
                 impact=event.get("ProblemImpact"),
                 tags=tags,
                 impactedEntities=impacted_entities,
-                url=event.get("ProblemURL"),
+                url=url,
                 problem_details_json=problem_details_json,
                 problem_details_jsonv2=problem_details_jsonv2,
                 problem_details_text=problem_details_text,
@@ -272,6 +280,12 @@ class DynatraceProvider(BaseProvider):
             tags = event.pop("entityTags")
             impacted_entities = event.pop("impactedEntities", [])
             url = event.pop("ProblemURL", None)
+            if url:
+                # Make the URL safe by properly encoding special characters
+                try:
+                    url = quote(url, safe=":/%#?=@&;+!")
+                except Exception as e:
+                    logger.exception(f"Failed to quote URL: {e}")
             lastReceived = datetime.datetime.fromtimestamp(
                 event.pop("startTime") / 1000, tz=datetime.timezone.utc
             )

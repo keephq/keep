@@ -4,16 +4,15 @@ import {
   useIncidentActions,
   type IncidentDto,
 } from "@/entities/incidents/model";
-import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
+import { Badge, Button, Icon, Subtitle } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
-import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
+import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
+import { CreateOrUpdateIncidentForm } from "features/incidents/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";

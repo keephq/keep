@@ -18,8 +18,10 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
 from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
     PropertiesMetadata,
     PropertyMetadataInfo,
+    SimpleFieldMapping,
 )
 from celpy import CELParseError
 
@@ -96,6 +98,7 @@ class BaseCelToSqlProvider:
     def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
         self.__literal_proc = String("").literal_processor(dialect=dialect)
+        self.properties_metadata = properties_metadata
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
@@ -136,11 +139,51 @@ class BaseCelToSqlProvider:
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
+    def get_order_by_expression(self, sort_options: list[tuple[str, str]]) -> str:
+        sort_expressions: list[str] = []
+
+        for sort_option in sort_options:
+            sort_by, sort_dir = sort_option
+            sort_dir = sort_dir.lower()
+            order_by_exp = self.get_field_expression(sort_by)
+
+            sort_expressions.append(
+                f"{order_by_exp} {sort_dir == 'asc' and 'ASC' or 'DESC'}"
+            )
+
+        return ", ".join(sort_expressions)
+
+    def get_field_expression(self, cel_field: str) -> str:
+        metadata = self.properties_metadata.get_property_metadata_for_str(cel_field)
+        field_expressions = []
+
+        for field_mapping in metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                field_expressions.append(
+                    self.json_extract_as_text(
+                        field_mapping.json_prop, field_mapping.prop_in_json
+                    )
+                )
+                continue
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                field_expressions.append(field_mapping.map_to)
+                continue
+
+            raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
+
+        if len(field_expressions) > 1:
+            return self.coalesce(field_expressions)
+        else:
+            return field_expressions[0]
+
     def literal_proc(self, value: Any) -> str:
         if isinstance(value, str):
             return self.__literal_proc(value)
 
         return f"'{str(value)}'"
+
+    def _get_order_by_field(self, cel_sort_by: str) -> str:
+        return self.get_field_expression(cel_sort_by)
 
     def _get_default_value_for_type(self, type: type) -> str:
         if type is str or type is NoneType:
@@ -183,16 +226,13 @@ class BaseCelToSqlProvider:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def json_extract(self, column: str, path: str) -> str:
-        raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
-
-    def json_extract_as_text(self, column: str, path: str) -> str:
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
     def coalesce(self, args: List[str]) -> str:
         raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
 
-    def cast(self, expression_to_cast: str, to_type: type) -> str:
+    def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
@@ -362,7 +402,9 @@ class BaseCelToSqlProvider:
         if (isinstance(property_access_node, JsonPropertyAccessNode)):
             return self.json_extract_as_text(property_access_node.json_property_name, property_access_node.property_to_extract)
 
-        return property_access_node.get_property_path()
+        return ".".join(
+            [f"{item}" for item in property_access_node.get_property_path()]
+        )
 
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")

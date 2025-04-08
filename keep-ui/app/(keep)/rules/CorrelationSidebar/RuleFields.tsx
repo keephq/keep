@@ -22,11 +22,16 @@ import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 import { useDeduplicationFields } from "@/utils/hooks/useDeduplicationRules";
+import { get } from "lodash";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
     "=",
     "!=",
+    ">",
+    "<",
+    ">=",
+    "<=",
     "contains",
     "beginsWith",
     "endsWith",
@@ -39,6 +44,13 @@ const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
     "notIn",
   ].includes(operator.name)
 );
+
+const OPERATORS_FORCE_TYPE_CAST = {
+  ">=": "number",
+  "<=": "number",
+  "<": "number",
+  ">": "number",
+}
 
 const DEFAULT_FIELDS: QueryField[] = [
   { name: "source", label: "source", datatype: "text" },
@@ -74,6 +86,8 @@ const Field = ({
   }, [avaliableFields]);
 
   const onValueChange = (selectedValue: string) => {
+    selectedValue = selectedValue || ""; // prevent null values
+
     if (searchValue.length) {
       const doesSearchedValueExistInFields = fields.some(
         ({ name }) =>
@@ -102,53 +116,59 @@ const Field = ({
     return setIsValueEnabled(true);
   };
 
+  const castValueToOperationType = (value: string) => {
+    const castTo: string = get(OPERATORS_FORCE_TYPE_CAST, ruleField.operator, "text");
+    return castTo === "number" ? Number(value) : value;
+  }
+
   return (
     <div key={ruleField.id}>
-      <div className="flex items-start gap-x-2">
-        <SearchSelect
-          defaultValue={ruleField.field}
-          onValueChange={onValueChange}
-          onSearchValueChange={setSearchValue}
-          enableClear={false}
-          required
-        >
-          {fields.map((field) => (
-            <SearchSelectItem key={field.name} value={field.name}>
-              {field.label}
-            </SearchSelectItem>
-          ))}
-          {searchValue.trim() && (
-            <SearchSelectItem value={searchValue}>
-              {searchValue}
-            </SearchSelectItem>
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0 grid grid-cols-3 gap-2">
+          <SearchSelect
+            defaultValue={ruleField.field}
+            onValueChange={onValueChange}
+            onSearchValueChange={setSearchValue}
+            enableClear={false}
+            required
+          >
+            {fields.map((field) => (
+              <SearchSelectItem key={field.name} value={field.name}>
+                {field.label}
+              </SearchSelectItem>
+            ))}
+            {searchValue.trim() && (
+              <SearchSelectItem value={searchValue}>
+                {searchValue}
+              </SearchSelectItem>
+            )}
+          </SearchSelect>
+          <Select
+            className="[&_ul]:max-h-96"
+            defaultValue={ruleField.operator}
+            onValueChange={onOperatorSelect}
+            required
+          >
+            {DEFAULT_OPERATORS.map((operator) => (
+              <SelectItem key={operator.name} value={operator.name}>
+                {operator.label}
+              </SelectItem>
+            ))}
+          </Select>
+          {isValueEnabled && (
+            <div>
+              <TextInput
+                onValueChange={(newValue) => onFieldChange("value", castValueToOperationType(newValue))}
+                defaultValue={ruleField.value}
+                required
+                error={!ruleField.value}
+                errorMessage={
+                  ruleField.value ? undefined : "Rule value is required"
+                }
+              />
+            </div>
           )}
-        </SearchSelect>
-        <Select
-          className="[&_ul]:max-h-96"
-          defaultValue={ruleField.operator}
-          onValueChange={onOperatorSelect}
-          required
-        >
-          {DEFAULT_OPERATORS.map((operator) => (
-            <SelectItem key={operator.name} value={operator.name}>
-              {operator.label}
-            </SelectItem>
-          ))}
-        </Select>
-        {isValueEnabled && (
-          <div>
-            <TextInput
-              onValueChange={(newValue) => onFieldChange("value", newValue)}
-              defaultValue={ruleField.value}
-              required
-              error={!ruleField.value}
-              errorMessage={
-                ruleField.value ? undefined : "Rule value is required"
-              }
-            />
-          </div>
-        )}
-
+        </div>
         <Button
           className="mt-2"
           onClick={onRemoveFieldClick}
@@ -325,7 +345,11 @@ export const RuleFields = ({
           </Button>
         </div>
 
-        <AlertsFoundBadge alertsFound={alertsFound} isLoading={isLoading} />
+        <AlertsFoundBadge
+          alertsFound={alertsFound}
+          isLoading={isLoading}
+          role={"ruleCondition"}
+        />
       </div>
     </div>
   );

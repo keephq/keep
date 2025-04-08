@@ -6,8 +6,10 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
 class CelToSqliteProvider(BaseCelToSqlProvider):
-    def json_extract_as_text(self, column: str, path: str) -> str:
-        return f"json_extract({column}, '$.{path}')"
+
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"json_extract({column}, '$.{property_path_str}')"
 
     def coalesce(self, args):
         coalesce_args = args
@@ -17,7 +19,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
 
         return f"COALESCE({', '.join(coalesce_args)})"
 
-    def cast(self, expression_to_cast: str, to_type):
+    def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is NoneType:

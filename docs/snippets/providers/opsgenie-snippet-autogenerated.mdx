@@ -1,0 +1,71 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: OpsGenie api key (required: True, sensitive: True)
+- **integration_name**: OpsGenie integration name (required: True, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **opsgenie:create**: Create OpsGenie alerts (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query opsgenie
+      provider: opsgenie
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query_type: {value}  
+        query: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query opsgenie
+      provider: opsgenie
+      config: "{{ provider.my_provider_name }}"
+      with:
+        user: {value}  # Display name of the request owner
+        note: {value}  # Additional note that will be added while creating the alert
+        source: {value}  # Source field of the alert. Default value is IP address of the incoming request
+        message: {value}  # Message of the alert
+        alias: {value}  # Client-defined identifier of the alert, that is also the key element of alert deduplication
+        description: {value}  # Description field of the alert that is generally used to provide a detailed information
+        responders: {value}  # Responders that the alert will be routed to send notifications
+        visible_to: {value}  # Teams and users that the alert will become visible to without sending any notification
+        actions: {value}  # Custom actions that will be available for the alert
+        tags: {value}  # Tags of the alert
+        details: {value}  # Map of key-value pairs to use as custom properties of the alert
+        entity: {value}  # Entity field of the alert that is generally used to specify which domain alert is related to
+        priority: {value}  # Priority level of the alert
+        type: {value}  # Type of the request, e.g. create_alert, close_alert
+        # Additional arguments
+```
+
+
+
+
+Check the following workflow examples:
+- [failed-to-login-workflow.yml](https://github.com/keephq/keep/blob/main/examples/workflows/failed-to-login-workflow.yml)
+- [opsgenie-close-alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-close-alert.yml)
+- [opsgenie-create-alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-create-alert.yml)
+- [opsgenie_open_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie_open_alerts.yml)
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **close_alert** Close an alert (action, scopes: opsgenie:create)
+
+- **comment_alert** Comment an alert (action, scopes: opsgenie:create)
+

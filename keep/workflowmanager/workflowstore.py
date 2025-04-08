@@ -2,8 +2,8 @@ import io
 import logging
 import os
 import random
-from typing import Tuple
 import uuid
+from typing import Tuple
 
 import requests
 import validators
@@ -19,7 +19,6 @@ from keep.api.core.db import (
     get_raw_workflow,
     get_workflow,
     get_workflow_execution,
-    get_workflows_with_last_execution,
 )
 from keep.api.core.workflows import get_workflows_with_last_executions_v2
 from keep.api.models.db.workflow import Workflow as WorkflowModel
@@ -36,8 +35,7 @@ class WorkflowStore:
         self.logger = logging.getLogger(__name__)
 
     def get_workflow_execution(self, tenant_id: str, workflow_execution_id: str):
-        workflow_execution = get_workflow_execution(tenant_id, workflow_execution_id)
-        return workflow_execution
+        return get_workflow_execution(tenant_id, workflow_execution_id)
 
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
@@ -153,21 +151,19 @@ class WorkflowStore:
         offset: int = None,
         sort_by: str = None,
         sort_dir: str = None,
-        is_v2: bool = False,
+        session=None,
     ) -> Tuple[list[dict], int]:
         # list all tenant's workflows
-        if is_v2:
-            return get_workflows_with_last_executions_v2(
-                tenant_id=tenant_id,
-                cel=cel,
-                limit=limit,
-                offset=offset,
-                sort_by=sort_by,
-                sort_dir=sort_dir,
-                fetch_last_executions=15,
-            )
-        workflows = get_workflows_with_last_execution(tenant_id)
-        return workflows, len(workflows)
+        return get_workflows_with_last_executions_v2(
+            tenant_id=tenant_id,
+            cel=cel,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            fetch_last_executions=15,
+            session=session,
+        )
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
@@ -289,8 +285,6 @@ class WorkflowStore:
 
         Args:
             tenant_id (str): The tenant ID.
-            workflows_dir (str, optional): A directory containing workflow YAML files.
-                If not provided, it will be read from the WORKFLOWS_DIR environment variable.
 
         Returns:
             list[Workflow]: A list of provisioned Workflow objects.
@@ -310,7 +304,7 @@ class WorkflowStore:
             and provisioned_workflow_yaml is not None
         ):
             raise Exception(
-                "Workflows providioned via env var and directory at the same time. Please choose one."
+                "Workflows provisioned via env var and directory at the same time. Please choose one."
             )
 
         if provisioned_workflows_dir is not None and not os.path.isdir(
@@ -545,7 +539,7 @@ class WorkflowStore:
         return results
 
     def get_workflow_meta_data(
-        self, tenant_id: str, workflow: dict, installed_providers_by_type: dict
+        self, tenant_id: str, workflow: WorkflowModel, installed_providers_by_type: dict
     ):
         providers_dto = []
         triggers = []

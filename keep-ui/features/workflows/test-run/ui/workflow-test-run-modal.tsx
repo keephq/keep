@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { useWorkflowStore } from "@/entities/workflows";
+import { useEffect, useRef } from "react";
+import { DefinitionV2, useWorkflowStore } from "@/entities/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
@@ -12,9 +12,20 @@ import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/
 import { Button, Callout } from "@tremor/react";
 import { PlayIcon } from "@heroicons/react/24/outline";
 
+interface WorkflowTestRunButtonProps {
+  workflowId: string;
+  definition: DefinitionV2 | null;
+  runRequestCount: number;
+}
+
 // It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
-export function WorkflowTestRunButton({ workflowId }: { workflowId: string }) {
-  const { definition } = useWorkflowStore();
+export function WorkflowTestRunButton({
+  workflowId,
+  definition: definitionFromProps,
+  runRequestCount,
+}: WorkflowTestRunButtonProps) {
+  const { definition: definitionFromStore } = useWorkflowStore();
+  const definition = definitionFromProps ?? definitionFromStore;
   const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
 
   const api = useApi();
@@ -82,6 +93,10 @@ export function WorkflowTestRunButton({ workflowId }: { workflowId: string }) {
         currentRequestId.current = null;
       });
   };
+
+  if (!testRunModalOpen) {
+    return null;
+  }
 
   return (
     <>

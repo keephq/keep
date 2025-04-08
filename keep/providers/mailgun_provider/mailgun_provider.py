@@ -235,9 +235,12 @@ class MailgunProvider(BaseProvider):
         name = event["subject"]
         source = event["from"]
         message = event["stripped-text"]
-        timestamp = datetime.datetime.fromtimestamp(
-            float(event["timestamp"])
-        ).isoformat()
+        try:
+            timestamp = datetime.datetime.fromtimestamp(
+                float(event["timestamp"])
+            ).isoformat()
+        except Exception:
+            timestamp = datetime.datetime.now().isoformat()
         # default values
         severity = "info"
         status = "firing"

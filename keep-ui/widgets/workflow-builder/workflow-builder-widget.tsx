@@ -6,6 +6,7 @@ import {
   ArrowUpOnSquareIcon,
   PencilIcon,
   PlusIcon,
+  PlayIcon,
 } from "@heroicons/react/20/solid";
 import { WorkflowBuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
@@ -16,6 +17,7 @@ import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflo
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
 import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-modal";
+import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
 
 export interface WorkflowBuilderWidgetProps {
   workflowRaw: string | undefined;
@@ -37,26 +39,21 @@ export function WorkflowBuilderWidget({
     triggerTestRun,
     updateV2Properties,
     isInitialized,
+    lastDeployedAt,
     isEditorSyncedWithNodes,
     canDeploy,
     isSaving,
     v2Properties,
+    definition,
+    runRequestCount,
   } = useWorkflowStore();
+  const isChangesSaved = useWorkflowEditorChangesSaved();
 
   const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
 
   function loadWorkflow() {
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    }
-  }
-
-  function createNewWorkflow() {
-    const confirmed = confirm(
-      "Are you sure you want to create a new workflow?"
-    );
-    if (confirmed) {
-      window.location.reload();
     }
   }
 
@@ -102,22 +99,16 @@ export function WorkflowBuilderWidget({
             <Title className={clsx(workflowId ? "mx-2" : "mx-0")}>
               {workflowId ? "Edit" : "New"} Workflow
             </Title>
-            <WorkflowSyncStatus />
+            <WorkflowSyncStatus
+              workflowId={workflowId ?? null}
+              isInitialized={isInitialized}
+              lastDeployedAt={lastDeployedAt}
+              isChangesSaved={isChangesSaved}
+            />
           </div>
           <div className="flex gap-2">
             {!workflowRaw && (
               <>
-                <Button
-                  color="orange"
-                  size="md"
-                  onClick={createNewWorkflow}
-                  icon={PlusIcon}
-                  className="min-w-28"
-                  variant="secondary"
-                  disabled={!isInitialized}
-                >
-                  New
-                </Button>
                 <Button
                   color="orange"
                   size="md"
@@ -127,7 +118,7 @@ export function WorkflowBuilderWidget({
                   icon={ArrowUpOnSquareIcon}
                   disabled={!isInitialized}
                 >
-                  Load
+                  Import from YAML
                 </Button>
                 <input
                   type="file"
@@ -157,7 +148,6 @@ export function WorkflowBuilderWidget({
               color="orange"
               size="md"
               className="min-w-28 relative disabled:opacity-70"
-              icon={ArrowUpOnSquareIcon}
               disabled={!canDeploy || isSaving || !isEditorSyncedWithNodes}
               onClick={() => triggerSave()}
               data-testid="wf-builder-main-save-deploy-button"

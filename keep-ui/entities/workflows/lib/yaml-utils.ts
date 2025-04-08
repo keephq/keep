@@ -1,10 +1,13 @@
 import {
   parseDocument,
   Document,
-  YAMLMap,
   Pair,
   Scalar,
+  visit,
+  isPair,
+  isSeq,
   stringify,
+  isMap,
 } from "yaml";
 import { Definition } from "../model/types";
 import { getYamlWorkflowDefinition } from "./parser";
@@ -15,14 +18,19 @@ const YAML_STRINGIFY_OPTIONS = {
 };
 
 export function getOrderedWorkflowYamlString(yamlString: string) {
-  const content = yamlString.startsWith('"')
-    ? JSON.parse(yamlString)
-    : yamlString;
-  const doc = parseDocument(content);
+  try {
+    const content = yamlString.startsWith('"')
+      ? JSON.parse(yamlString)
+      : yamlString;
+    const doc = parseDocument(content);
 
-  orderDocument(doc);
+    orderDocument(doc);
 
-  return doc.toString(YAML_STRINGIFY_OPTIONS);
+    return doc.toString(YAML_STRINGIFY_OPTIONS);
+  } catch (error) {
+    console.error("Error ordering workflow yaml", error);
+    return yamlString;
+  }
 }
 
 /**
@@ -38,26 +46,141 @@ function orderDocument(doc: Document) {
     "disabled",
     "debug",
     "triggers",
+    "inputs",
     "consts",
     "owners",
     "services",
     "steps",
     "actions",
   ];
-  const stepFieldsOrder = ["name", "foreach", "if", "provider", "with"];
-  const providerFieldsOrder = ["config", "type", "with"];
-  // TODO: sort step props and provider props according to the order of the fields
+  const stepFieldsOrder = [
+    "name",
+    "foreach",
+    "if",
+    "condition",
+    "provider",
+    "with",
+  ];
+  const providerFieldsOrder = ["type", "config", "with"];
+
   try {
     const workflowSeq = doc.get("workflow");
-    if (!workflowSeq || !(workflowSeq instanceof YAMLMap)) {
+    if (!workflowSeq || !isMap(workflowSeq)) {
       throw new Error("Workflow section not found");
     }
     workflowSeq.items.sort((a: Pair, b: Pair) => {
-      // TODO: sort according to the order of the sections
-      const aIndex = fieldsOrder.indexOf((a.key as Scalar).value as string);
-      const bIndex = fieldsOrder.indexOf((b.key as Scalar).value as string);
-      return aIndex > bIndex ? 1 : -1;
+      const aKey = (a.key as Scalar).value as string;
+      const bKey = (b.key as Scalar).value as string;
+      const aIndex = fieldsOrder.indexOf(aKey);
+      const bIndex = fieldsOrder.indexOf(bKey);
+
+      // If both keys are known, sort by their order
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      // If only a is known, it comes first
+      if (aIndex !== -1) return -1;
+      // If only b is known, it comes first
+      if (bIndex !== -1) return 1;
+      // If both are unknown, maintain original order
+      return 0;
     });
+
+    // Order steps
+    const steps = workflowSeq.get("steps");
+    if (steps && isSeq(steps)) {
+      steps.items.forEach((step) => {
+        if (isMap(step)) {
+          step.items.sort((a: Pair, b: Pair) => {
+            const aKey = (a.key as Scalar).value as string;
+            const bKey = (b.key as Scalar).value as string;
+            const aIndex = stepFieldsOrder.indexOf(aKey);
+            const bIndex = stepFieldsOrder.indexOf(bKey);
+
+            // If both keys are known, sort by their order
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
+            // If only a is known, it comes first
+            if (aIndex !== -1) return -1;
+            // If only b is known, it comes first
+            if (bIndex !== -1) return 1;
+            // If both are unknown, maintain original order
+            return 0;
+          });
+
+          // Order provider fields
+          const provider = step.get("provider");
+          if (provider && isMap(provider)) {
+            provider.items.sort((a: Pair, b: Pair) => {
+              const aKey = (a.key as Scalar).value as string;
+              const bKey = (b.key as Scalar).value as string;
+              const aIndex = providerFieldsOrder.indexOf(aKey);
+              const bIndex = providerFieldsOrder.indexOf(bKey);
+
+              // If both keys are known, sort by their order
+              if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+              }
+              // If only a is known, it comes first
+              if (aIndex !== -1) return -1;
+              // If only b is known, it comes first
+              if (bIndex !== -1) return 1;
+              // If both are unknown, maintain original order
+              return 0;
+            });
+          }
+        }
+      });
+    }
+
+    // Order actions
+    const actions = workflowSeq.get("actions");
+    if (actions && isSeq(actions)) {
+      actions.items.forEach((action) => {
+        if (isMap(action)) {
+          action.items.sort((a: Pair, b: Pair) => {
+            const aKey = (a.key as Scalar).value as string;
+            const bKey = (b.key as Scalar).value as string;
+            const aIndex = stepFieldsOrder.indexOf(aKey);
+            const bIndex = stepFieldsOrder.indexOf(bKey);
+
+            // If both keys are known, sort by their order
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
+            // If only a is known, it comes first
+            if (aIndex !== -1) return -1;
+            // If only b is known, it comes first
+            if (bIndex !== -1) return 1;
+            // If both are unknown, maintain original order
+            return 0;
+          });
+
+          // Order provider fields in actions
+          const provider = action.get("provider");
+          if (provider && isMap(provider)) {
+            provider.items.sort((a: Pair, b: Pair) => {
+              const aKey = (a.key as Scalar).value as string;
+              const bKey = (b.key as Scalar).value as string;
+              const aIndex = providerFieldsOrder.indexOf(aKey);
+              const bIndex = providerFieldsOrder.indexOf(bKey);
+
+              // If both keys are known, sort by their order
+              if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+              }
+              // If only a is known, it comes first
+              if (aIndex !== -1) return -1;
+              // If only b is known, it comes first
+              if (bIndex !== -1) return 1;
+              // If both are unknown, maintain original order
+              return 0;
+            });
+          }
+        }
+      });
+    }
   } catch (error) {
     console.error("Error reordering workflow sections", error);
   }
@@ -76,6 +199,39 @@ export function parseWorkflowYamlStringToJSON(yamlString: string) {
   return parseDocument(content).toJSON();
 }
 
+export function getCurrentPath(document: Document, absolutePosition: number) {
+  let path: (string | number)[] = [];
+  if (!document.contents) return [];
+
+  visit(document, {
+    Scalar(key, node, ancestors) {
+      if (!node.range) return;
+      if (
+        absolutePosition >= node.range[0] &&
+        absolutePosition <= node.range[2]
+      ) {
+        // Create a new array to store path components
+        ancestors.forEach((ancestor, index) => {
+          if (isPair(ancestor)) {
+            path.push((ancestor.key as Scalar).value as string);
+          } else if (isSeq(ancestor)) {
+            // If ancestor is a Sequence, we need to find the index of the child item
+            const childNode = ancestors[index + 1]; // Get the child node
+            const seqIndex = ancestor.items.findIndex(
+              (item) => item === childNode
+            );
+            if (seqIndex !== -1) {
+              path.push(seqIndex);
+            }
+          }
+        });
+        return visit.BREAK;
+      }
+    },
+  });
+
+  return path;
+}
 export function getBodyFromStringOrDefinitionOrObject(
   definition: Definition | string | Record<string, unknown>
 ) {

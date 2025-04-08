@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from sqlalchemy import text
+from tenacity import sleep
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -399,38 +400,38 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     ],
     indirect=True,
 )
-def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
+def test_mapping_rule_with_elastic(mock_session, mock_alert_dto, setup_alerts):
     import os
 
     # first, use elastic
-    os.environ["ELASTIC_ENABLED"] = "true"
-    # Setup a mapping rule with || condition in matchers
-    rule = MappingRule(
-        id=1,
-        tenant_id=SINGLE_TENANT_UUID,
-        priority=1,
-        matchers=[["name"], ["severity"]],
-        rows=[
-            {"name": "Test Alert", "service": "new_service"},
-            {"severity": "high", "service": "high_severity_service"},
-        ],
-        disabled=False,
-        type="csv",
-    )
-    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
-        rule
-    ]
+    with patch.dict(os.environ, {"ELASTIC_ENABLED": "true"}):
+        # Setup a mapping rule with || condition in matchers
+        rule = MappingRule(
+            id=1,
+            tenant_id=SINGLE_TENANT_UUID,
+            priority=1,
+            matchers=[["name"], ["severity"]],
+            rows=[
+                {"name": "Test Alert", "service": "new_service"},
+                {"severity": "high", "service": "high_severity_service"},
+            ],
+            disabled=False,
+            type="csv",
+        )
+        mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+            rule
+        ]
 
-    enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=mock_session)
+        enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=mock_session)
 
-    # Test case where alert matches name condition
-    mock_alert_dto.name = "Test Alert"
-    enrichment_bl.run_mapping_rules(mock_alert_dto)
-    assert mock_alert_dto.service == "new_service"
+        # Test case where alert matches name condition
+        mock_alert_dto.name = "Test Alert"
+        enrichment_bl.run_mapping_rules(mock_alert_dto)
+        assert mock_alert_dto.service == "new_service"
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client):
+def test_enrichment_with_elastic(db_session, client, test_app, mock_alert_dto, elastic_client):
     # add some rule
     rule = MappingRule(
         id=1,
@@ -463,6 +464,45 @@ def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client
     alerts = response.json()
     assert len(alerts) == 1
     assert response.headers.get("x-search-type") == "elastic"
+    alert = alerts[0]
+    assert alert["service"] == "new_service"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_enrichment(db_session, client, test_app, mock_alert_dto):
+    # add some rule
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=[["name"], ["severity"]],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        name="new_rule",
+        disabled=False,
+        type="csv",
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    # now post an alert
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key-everything-works-because-no-auth"},
+        json=mock_alert_dto.dict(),
+    )
+    sleep(1)
+
+    # now query the feed preset to get the alerts
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key-everything-works-because-no-auth"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    assert response.headers.get("x-search-type") == "internal"
     alert = alerts[0]
     assert alert["service"] == "new_service"
 
@@ -788,18 +828,12 @@ def test_disposable_enrichment_and_alert_history(
     )
 
     # Verify the disposable enrichment is reset
+    time.sleep(1)
     response = client.get(
         "/preset/feed/alerts",
         headers={"x-api-key": "some-key"},
     )
     alerts = response.json()
-    while alerts[0]["status"] != "firing":
-        time.sleep(0.1)
-        response = client.get(
-            "/preset/feed/alerts",
-            headers={"x-api-key": "some-key"},
-        )
-        alerts = response.json()
 
     assert len(alerts) == 1
     alert = alerts[0]

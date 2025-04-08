@@ -40,3 +40,7 @@ export function isWorkflowExecution(
 ): data is WorkflowExecutionDetail {
   return typeof data === "object" && "id" in data;
 }
+
+export function isWorkflowFailure(data: any): data is WorkflowExecutionFailure {
+  return typeof data === "object" && "error" in data;
+}

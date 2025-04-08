@@ -31,12 +31,14 @@ RUN NODE_OPTIONS=--max-old-space-size=8192  npm run build
 FROM base AS runner
 ARG GIT_COMMIT_HASH=local
 ARG KEEP_VERSION=local
+ARG KEEP_INCLUDE_SOURCES=false
 
 WORKDIR /app
 # Inject the git commit hash into the build
 # This is being injected from the build script
 ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 ENV KEEP_VERSION=${KEEP_VERSION}
+ENV KEEP_INCLUDE_SOURCES=${KEEP_INCLUDE_SOURCES}
 
 
 

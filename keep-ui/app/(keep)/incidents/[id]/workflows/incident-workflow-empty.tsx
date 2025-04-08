@@ -1,9 +1,10 @@
 import { useState } from "react";
-import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
+import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { EmptyStateCard } from "@/shared/ui";
 import { Button } from "@tremor/react";
 import { Workflows as WorkflowsIcon } from "components/icons";
+
 export function IncidentWorkflowsEmptyState({
   incident,
 }: {

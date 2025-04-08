@@ -10,6 +10,7 @@ const turbopackAliases =
   process.env.NODE_ENV === "development"
     ? {
         "./MonacoEditor": "@/shared/ui/MonacoEditor/index.turbopack.ts",
+        "./MonacoYAMLEditor": "@/shared/ui/MonacoYAMLEditor/index.turbopack.ts",
       }
     : {};
 
@@ -106,7 +107,7 @@ const nextConfig = {
     ],
   },
   compiler: {
-    removeConsole: false,
+    removeConsole: process.env.NODE_ENV === "production",
   },
   output: "standalone",
   productionBrowserSourceMaps: !isSentryDisabled,
@@ -198,7 +199,7 @@ const sentryConfig = {
   // Hides source maps from generated client bundles
   hideSourceMaps: true,
   sourceMaps: {
-    deleteSourcemapsAfterUpload: true,
+    deleteSourcemapsAfterUpload: process.env.KEEP_INCLUDE_SOURCES !== "false",
   },
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size

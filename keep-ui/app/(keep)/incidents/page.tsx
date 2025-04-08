@@ -1,4 +1,4 @@
-import { IncidentList } from "@/features/incident-list";
+import { IncidentList } from "features/incidents/incident-list";
 import { getIncidents, GetIncidentsParams } from "@/entities/incidents/api";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
 import { createServerApiClient } from "@/shared/api/server";

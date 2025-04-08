@@ -2,230 +2,34 @@ import { Edge, Node } from "@xyflow/react";
 import { Workflow } from "@/shared/api/workflows";
 import { z } from "zod";
 import { Provider } from "@/shared/api/providers";
+import {
+  WorkflowPropertiesSchema,
+  V2StepConditionSchema,
+  V2StepSchema,
+  V2StepConditionThresholdSchema,
+  V2StepConditionAssertSchema,
+  V2ActionOrStepSchema,
+  V2ActionSchema,
+  V2StepTriggerSchema,
+  IncidentEventEnum,
+  V2StepStepSchema,
+  V2StepForeachSchema,
+  V2StepTemplateSchema,
+} from "./schema";
 
-const ManualTriggerValueSchema = z.literal("true");
-
-export const V2StepManualTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
-  type: z.literal("manual"),
-  properties: z.object({
-    manual: ManualTriggerValueSchema,
-  }),
-});
-
-const IntervalTriggerValueSchema = z.union([z.string(), z.number()]);
-
-export const V2StepIntervalTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
-  type: z.literal("interval"),
-  properties: z.object({
-    interval: IntervalTriggerValueSchema,
-  }),
-});
-
-const AlertTriggerValueSchema = z.record(z.string(), z.string());
-export const V2StepAlertTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
-  type: z.literal("alert"),
-  properties: z.object({
-    alert: AlertTriggerValueSchema,
-    source: z.string().optional(),
-  }),
-});
-
-export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
 export type IncidentEvent = z.infer<typeof IncidentEventEnum>;
-
-const IncidentTriggerValueSchema = z.object({
-  events: z.array(IncidentEventEnum),
-});
-export const V2StepIncidentTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
-  type: z.literal("incident"),
-  properties: z.object({
-    incident: IncidentTriggerValueSchema,
-  }),
-});
-
-export const V2StepTriggerSchema = z.union([
-  V2StepManualTriggerSchema,
-  V2StepIntervalTriggerSchema,
-  V2StepAlertTriggerSchema,
-  V2StepIncidentTriggerSchema,
-]);
-
 export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
 export type TriggerType = V2StepTrigger["type"];
-
-const EnrichAlertSchema = z.array(
-  z.object({
-    key: z.string(),
-    value: z.string(),
-  })
-);
-
-const EnrichIncidentSchema = z.array(
-  z.object({
-    key: z.string(),
-    value: z.string(),
-  })
-);
-
-export const V2ActionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("task"),
-  type: z.string().startsWith("action"),
-  properties: z.object({
-    actionParams: z.array(z.string()),
-    config: z.string().optional(),
-    if: z.string().optional(),
-    vars: z.record(z.string(), z.string()).optional(),
-    with: z
-      .object({
-        enrich_alert: EnrichAlertSchema.optional(),
-        enrich_incident: EnrichIncidentSchema.optional(),
-      })
-      .catchall(
-        z.union([
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.object({}),
-          z.array(z.any()),
-        ])
-      )
-      .optional(),
-  }),
-});
-
 export type V2ActionStep = z.infer<typeof V2ActionSchema>;
-
-export const V2StepStepSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("task"),
-  type: z.string().startsWith("step"),
-  properties: z.object({
-    stepParams: z.array(z.string()),
-    config: z.string().optional(),
-    vars: z.record(z.string(), z.string()).optional(),
-    if: z.string().optional(),
-    with: z
-      .object({
-        enrich_alert: EnrichAlertSchema.optional(),
-        enrich_incident: EnrichIncidentSchema.optional(),
-      })
-      .catchall(
-        z.union([
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.record(z.string(), z.any()),
-          z.object({}),
-          z.array(z.any()),
-        ])
-      )
-      .optional(),
-  }),
-});
-
 export type V2StepStep = z.infer<typeof V2StepStepSchema>;
-
-export const V2ActionOrStepSchema = z.union([V2ActionSchema, V2StepStepSchema]);
-
 export type V2ActionOrStep = z.infer<typeof V2ActionOrStepSchema>;
-
-export const V2StepConditionAssertSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("switch"),
-  type: z.literal("condition-assert"),
-  properties: z.object({
-    assert: z.string(),
-  }),
-  branches: z.object({
-    true: z.array(V2ActionOrStepSchema),
-    false: z.array(V2ActionOrStepSchema),
-  }),
-});
-
 export type V2StepConditionAssert = z.infer<typeof V2StepConditionAssertSchema>;
-
-export const V2StepConditionThresholdSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("switch"),
-  type: z.literal("condition-threshold"),
-  properties: z.object({
-    value: z.string(),
-    compare_to: z.string(),
-  }),
-  branches: z.object({
-    true: z.array(V2ActionOrStepSchema),
-    false: z.array(V2ActionOrStepSchema),
-  }),
-});
-
 export type V2StepConditionThreshold = z.infer<
   typeof V2StepConditionThresholdSchema
 >;
-
-export const V2StepConditionSchema = z.union([
-  V2StepConditionAssertSchema,
-  V2StepConditionThresholdSchema,
-]);
-
 export type V2StepCondition = z.infer<typeof V2StepConditionSchema>;
-
-export const V2StepForeachSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("container"),
-  type: z.literal("foreach"),
-  properties: z.object({
-    value: z.string(),
-    if: z.string().optional(),
-  }),
-  // TODO: make a generic sequence type
-  sequence: z.array(z.union([V2ActionOrStepSchema, V2StepConditionSchema])),
-});
-
 export type V2StepForeach = z.infer<typeof V2StepForeachSchema>;
-
-export const V2StepSchema = z.union([
-  V2ActionSchema,
-  V2StepStepSchema,
-  V2StepConditionAssertSchema,
-  V2StepConditionThresholdSchema,
-  V2StepForeachSchema,
-]);
-
-export const V2StepTemplateSchema = z.union([
-  V2ActionSchema.partial({ id: true }),
-  V2StepStepSchema.partial({ id: true }),
-  V2StepConditionAssertSchema.partial({ id: true }),
-  V2StepConditionThresholdSchema.partial({ id: true }),
-  V2StepForeachSchema.partial({ id: true }),
-]);
-
 export type V2StepTemplate = z.infer<typeof V2StepTemplateSchema>;
-
-export const NodeDataStepSchema = z.union([
-  V2ActionSchema.partial({ id: true }),
-  V2StepStepSchema.partial({ id: true }),
-  V2StepConditionAssertSchema.partial({ id: true, branches: true }),
-  V2StepConditionThresholdSchema.partial({ id: true, branches: true }),
-  V2StepForeachSchema.partial({ id: true, sequence: true }),
-]);
 
 export type V2StartStep = {
   id: "start";
@@ -260,26 +64,8 @@ export type TriggerEndLabelStep = {
 };
 
 export type V2Step = z.infer<typeof V2StepSchema>;
-
 export type WorkflowMetadata = Pick<Workflow, "name" | "description">;
-
 export type V2Properties = Record<string, any>;
-
-export const WorkflowPropertiesSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  disabled: z.boolean(),
-  isLocked: z.boolean(),
-  consts: z.record(z.string(), z.string()),
-  alert: AlertTriggerValueSchema.optional(),
-  interval: IntervalTriggerValueSchema.optional(),
-  incident: IncidentTriggerValueSchema.optional(),
-  manual: ManualTriggerValueSchema.optional(),
-  services: z.array(z.string()).optional(),
-  owners: z.array(z.string()).optional(),
-});
-
 export type WorkflowProperties = z.infer<typeof WorkflowPropertiesSchema>;
 
 export type Definition = {
@@ -311,7 +97,6 @@ type UIProps = {
 };
 
 export type V2StepUI = V2Step & UIProps;
-
 export type V2StepTriggerUI = V2StepTrigger & UIProps;
 
 export type EmptyNode = {
@@ -386,9 +171,10 @@ export type ToolboxConfiguration = {
   )[];
 };
 
-export type ProvidersConfiguration = {
+export type InitializationConfiguration = {
   providers: Provider[];
   installedProviders: Provider[];
+  secrets: Record<string, string>;
 };
 
 export interface WorkflowStateValues {
@@ -402,6 +188,7 @@ export interface WorkflowStateValues {
   toolboxConfiguration: ToolboxConfiguration | null;
   providers: Provider[] | null;
   installedProviders: Provider[] | null;
+  secrets: Record<string, string> | null;
   isLayouted: boolean;
   isInitialized: boolean;
 
@@ -421,6 +208,9 @@ export interface WorkflowStateValues {
   editorOpen: boolean;
   saveRequestCount: number;
   testRunRequestCount: number;
+  runRequestCount: number;
+
+  yamlSchema: z.ZodSchema | null;
 }
 
 export interface WorkflowState extends WorkflowStateValues {
@@ -444,6 +234,7 @@ export interface WorkflowState extends WorkflowStateValues {
   ) => string | null;
   setProviders: (providers: Provider[]) => void;
   setInstalledProviders: (providers: Provider[]) => void;
+  setSecrets: (secrets: Record<string, string>) => void;
   setEditorOpen: (open: boolean) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
   updateV2Properties: (properties: Record<string, any>) => void;
@@ -467,11 +258,17 @@ export interface WorkflowState extends WorkflowStateValues {
   }) => void;
   initializeWorkflow: (
     workflowId: string | null,
-    { providers, installedProviders }: ProvidersConfiguration
+    { providers, installedProviders, secrets }: InitializationConfiguration
   ) => void;
   updateDefinition: () => void;
   // Deprecated
   onConnect: (connection: any) => void;
   onDragOver: (event: React.DragEvent) => void;
   onDrop: (event: DragEvent, screenToFlowPosition: any) => void;
+  updateFromYamlString: (yamlString: string) => void;
+  validateDefinition: (definition: Definition) => {
+    isValid: boolean;
+    validationErrors: Record<string, string>;
+    canDeploy: boolean;
+  };
 }

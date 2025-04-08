@@ -106,6 +106,24 @@ def __internal_prepartion(
             alert.apiKeyRef = api_key_name
 
 
+def __validate_last_received(event):
+    # Make sure the lastReceived is a valid date string
+    # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
+    # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
+    if not event.lastReceived:
+        event.lastReceived = datetime.datetime.now(
+            tz=datetime.timezone.utc
+        ).isoformat()
+    else:
+        try:
+            dateutil.parser.isoparse(event.lastReceived)
+        except ValueError:
+            logger.warning("Invalid lastReceived date, setting to now")
+            event.lastReceived = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat()
+
+
 def __save_to_db(
     tenant_id,
     provider_type,
@@ -131,6 +149,7 @@ def __save_to_db(
                 )
                 session.add(alert)
 
+        enrichments_bl = EnrichmentsBl(tenant_id, session)
         # add audit to the deduplicated events
         # TODO: move this to the alert deduplicator
         if KEEP_AUDIT_EVENTS_ENABLED:
@@ -144,6 +163,17 @@ def __save_to_db(
                     description="Alert was deduplicated",
                 )
                 session.add(audit)
+
+                __validate_last_received(event)
+                enrichments_bl.enrich_entity(
+                    event.fingerprint,
+                    enrichments={"lastReceived": event.lastReceived},
+                    dispose_on_new_alert=True,
+                    action_type=ActionType.GENERIC_ENRICH,
+                    action_callee="system",
+                    action_description="Alert lastReceived enriched on deduplication",
+                )
+
 
         enriched_formatted_events = []
         saved_alerts = []
@@ -168,7 +198,6 @@ def __save_to_db(
                     formatted_event, previous_alert
                 )
 
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Dispose enrichments that needs to be disposed
             try:
                 enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
@@ -193,21 +222,7 @@ def __save_to_db(
                     },
                 )
 
-            # Make sure the lastReceived is a valid date string
-            # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
-            # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
-            if not formatted_event.lastReceived:
-                formatted_event.lastReceived = datetime.datetime.now(
-                    tz=datetime.timezone.utc
-                ).isoformat()
-            else:
-                try:
-                    dateutil.parser.isoparse(formatted_event.lastReceived)
-                except ValueError:
-                    logger.warning("Invalid lastReceived date, setting to now")
-                    formatted_event.lastReceived = datetime.datetime.now(
-                        tz=datetime.timezone.utc
-                    ).isoformat()
+            __validate_last_received(formatted_event)
 
             alert_args = {
                 "tenant_id": tenant_id,
@@ -282,10 +297,10 @@ def __save_to_db(
                         extra={"alert_id": alert.id, "tenant_id": tenant_id},
                     )
                     for incident in alert._incidents:
-                        if incident.status in IncidentStatus.get_active(return_values=True):
-                            incident_bl.resolve_incident_if_require(
-                                incident
-                            )
+                        if incident.status in IncidentStatus.get_active(
+                            return_values=True
+                        ):
+                            incident_bl.resolve_incident_if_require(incident)
             logger.info(
                 "Completed checking for incidents to resolve",
                 extra={"tenant_id": tenant_id},

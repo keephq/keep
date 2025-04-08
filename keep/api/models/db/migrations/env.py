@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -104,7 +105,8 @@ def list_migrations(connectable):
         script_directory = ScriptDirectory.from_config(config)
         current_rev = script_directory.get_current_head()
         # List all available migrations
-        print("Available migrations:")
+        pid = os.getpid()
+        print(f"[{pid}] Available migrations:")
         try:
             for script in script_directory.walk_revisions():
                 status = (

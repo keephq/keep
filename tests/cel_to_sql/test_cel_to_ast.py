@@ -25,6 +25,13 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
         ("fakeProp == 12349983", ComparisonNode.EQ, int, 12349983),
         ("fakeProp == 1234.9983", ComparisonNode.EQ, float, 1234.9983),
         (
+            "fakeProp == 'MON'",
+            ComparisonNode.EQ,
+            str,
+            "MON",
+        ),  # check that day-of-week short names do not get converted to dates
+        ("fakeProp == 'mon'", ComparisonNode.EQ, str, "mon"),
+        (
             "fakeProp == '2025-01-20'",
             ComparisonNode.EQ,
             datetime.datetime,

@@ -1,12 +1,12 @@
 "use client";
 
-import Loading from "@/app/(keep)/loading";
+import React, { useEffect, useMemo, useState } from "react";
 import type { IncidentDto } from "@/entities/incidents/model";
-import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Button, Card } from "@tremor/react";
-import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertSeverity } from "@/entities/alerts/ui";
+import { AlertDto, AuditEvent } from "@/entities/alerts/model";
 import {
   format,
   parseISO,
@@ -14,10 +14,10 @@ import {
   differenceInHours,
 } from "date-fns";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { CiViewTimeline } from "react-icons/ci";
-import { EmptyStateCard } from "@/shared/ui";
+import { KeepLoader, EmptyStateCard } from "@/shared/ui";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -60,7 +60,12 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
   return (
     <div className="h-full p-4 bg-gray-100 border-l">
       <h2 className="font-semibold mb-2">{alert.name}</h2>
-      <p className="mb-2 text-md">{alert.description}</p>
+      <p className="mb-2 text-md">
+        <FormattedContent
+          content={alert.description}
+          format={alert.description_format}
+        />
+      </p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <p className="text-gray-400">Date:</p>
         <p>
@@ -367,7 +372,7 @@ export default function IncidentTimeline({
   if (_auditEventsLoading || _alertsLoading) {
     return (
       <Card>
-        <Loading />
+        <KeepLoader />
       </Card>
     );
   }

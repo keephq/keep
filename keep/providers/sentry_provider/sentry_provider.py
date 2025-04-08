@@ -120,10 +120,18 @@ class SentryProvider(BaseProvider):
         self.authentication_config = SentryProviderAuthConfig(
             **self.config.authentication
         )
+        if "sntryu_" in self.authentication_config.api_key:
+            raise ProviderConfigException(
+                "Invalid user-based token provided instead of API token",
+                self.provider_id,
+            )
 
     def _query(self, project: str, time: str = "14d", **kwargs: dict):
         """
         Query Sentry using the given query
+        Args:
+            project (str): project name
+            time (str): time range, for example: 14d
 
         Returns:
             list[tuple] | list[dict]: results of the query

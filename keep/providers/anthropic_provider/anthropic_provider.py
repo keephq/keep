@@ -47,10 +47,18 @@ class AnthropicProvider(BaseProvider):
         max_tokens=1024,
         structured_output_format=None,
     ):
+        """
+        Query the Anthropic API with the given prompt and model.
+        Args:
+            prompt (str): The prompt to query the model with.
+            model (str): The model to query.
+            max_tokens (int): The maximum number of tokens to generate.
+            structured_output_format (dict): The structured output format to use.
+        """
         client = Anthropic(api_key=self.authentication_config.api_key)
-        
+
         messages = [{"role": "user", "content": prompt}]
-        
+
         # Handle structured output with system prompt if needed
         system_prompt = ""
         if structured_output_format:
@@ -64,11 +72,11 @@ class AnthropicProvider(BaseProvider):
             model=model,
             max_tokens=max_tokens,
             messages=messages,
-            system=system_prompt if system_prompt else None
+            system=system_prompt if system_prompt else None,
         )
-        
+
         content = response.content[0].text
-        
+
         try:
             content = json.loads(content)
         except Exception:
