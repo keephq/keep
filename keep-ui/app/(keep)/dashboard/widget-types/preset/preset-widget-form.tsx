@@ -28,6 +28,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   presets,
   onChange,
 }: PresetWidgetFormProps) => {
+  const [countOfLastAlerts, setCountOfLastAlerts] = useState(
+    editingItem ? editingItem.preset.countOfLastAlerts || 0 : 5
+  );
   const [thresholds, setThresholds] = useState<Threshold[]>(
     editingItem?.thresholds || [
       { value: 0, color: "#22c55e" }, // Green
@@ -61,16 +64,24 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   }
 
   useEffect(() => {
+    console.log("Ihor", { isValid, errors, formValues });
     const preset = presets.find((p) => p.id === formValues.selectedPreset);
     const formattedThresholds = thresholds.map((t) => ({
       ...t,
       value: parseInt(t.value.toString(), 10) || 0,
     }));
     onChange(
-      { ...getLayoutValues(), preset, thresholds: formattedThresholds },
+      {
+        ...getLayoutValues(),
+        preset: {
+          ...preset,
+          countOfLastAlerts: parseInt(countOfLastAlerts),
+        },
+        thresholds: formattedThresholds,
+      },
       isValid
     );
-  }, [formValues, thresholds]);
+  }, [formValues, thresholds, countOfLastAlerts]);
 
   const handleThresholdChange = (
     index: number,
@@ -134,6 +145,17 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
               ))}
             </Select>
           )}
+        />
+      </div>
+      <div className="mb-4 mt-2">
+        <Subtitle>Last alerts count to display</Subtitle>
+        <TextInput
+          value={countOfLastAlerts}
+          onChange={(e) => setCountOfLastAlerts(e.target.value)}
+          onBlur={handleThresholdBlur}
+          type="number"
+          placeholder="Value indicating how many alerts to display in widget"
+          required
         />
       </div>
       <div className="mb-4">

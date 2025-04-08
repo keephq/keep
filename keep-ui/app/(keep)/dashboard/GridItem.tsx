@@ -26,21 +26,10 @@ const GridItem: React.FC<GridItemProps> = ({
   };
 
   return (
-    <Card
-      className={`relative w-full h-full ${!item.metric ? "!p-4" : "!pt-0.5"}`}
-    >
-      <div className="flex flex-col h-full">
-        <div
-          className={`flex-none flex items-center justify-between p-2 ${
-            item.preset ? "h-1/5" : item.metric ? "h-1/5 mb-3" : "h-[10%]"
-          }`}
-        >
-          {/* For table view we need intract with table filter and pagination.so we aare dragging the widget here */}
-          <span
-            className={`text-lg font-semibold truncate ${
-              item.preset ? "" : "grid-item__widget"
-            }`}
-          >
+    <Card className="relative w-full h-full p-3">
+      <div className="flex flex-col h-full px-2">
+        <div className={`flex-none flex items-center justify-between`}>
+          <span className="text-lg font-bold truncate grid-item__widget">
             {item.name}
           </span>
           <MenuButton

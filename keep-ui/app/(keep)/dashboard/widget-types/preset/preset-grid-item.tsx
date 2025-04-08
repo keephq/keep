@@ -12,6 +12,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
+import TimeAgo from "react-timeago";
 
 interface GridItemProps {
   item: WidgetData;
@@ -19,7 +20,7 @@ interface GridItemProps {
 
 const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   const presets = useDashboardPreset();
-  const lastAlertsCount = 5;
+  const countOfLastAlerts = (item.preset as any).countOfLastAlerts;
   const preset = useMemo(
     () => presets.find((preset) => preset.id === item.preset?.id),
     [presets, item.preset?.id]
@@ -35,13 +36,14 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   } = usePresetAlertsCount(
     presetCel,
     !!preset?.counter_shows_firing_only,
-    lastAlertsCount,
-    0
+    countOfLastAlerts,
+    0,
+    10000 // refresh interval
   );
   const router = useRouter();
 
   function handleGoToPresetClick() {
-    router.replace(`/alerts/${preset?.name.toLowerCase()}`);
+    router.push(`/alerts/${preset?.name.toLowerCase()}`);
   }
 
   const getColor = () => {
@@ -86,7 +88,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     if (isLoading) {
       return (
         <>
-          {Array.from({ length: lastAlertsCount }).map((_, index) => (
+          {Array.from({ length: countOfLastAlerts }).map((_, index) => (
             <div
               key={index}
               className="flex flex-row min-h-7 h-7 items-center gap-2"
@@ -130,7 +132,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
               />
             </div>
             <div className="flex-1 truncate text-xs" title={alert.name}>
-              {alert.name}
+              {alert.name} (<TimeAgo date={alert.lastReceived} />)
             </div>
             <div className="flex-1 truncate text-xs" title={alert.description}>
               {alert.description}
@@ -142,24 +144,31 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
   }
 
   function renderCEL() {
+    if (!presetCel) {
+      return;
+    }
+
     return (
-      <Tooltip.Provider>
-        <Tooltip.Root>
-          <Tooltip.Trigger asChild>
-            <div className="border py-0.5 px-1 rounded-md text-orange-500 truncate">
-              {presetCel}
-            </div>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content sideOffset={5}>
-              <div className="bg-white invert-dark-mode border py-0.5 px-1 rounded-md text-orange-500">
+      <div className="flex gap-1 items-center">
+        <div>Preset CEL:</div>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <div className="border py-0.5 px-1 rounded-md text-orange-500 truncate">
                 {presetCel}
               </div>
-              <Tooltip.Arrow />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-      </Tooltip.Provider>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content sideOffset={5}>
+                <div className="bg-white invert-dark-mode border py-0.5 px-1 rounded-md text-orange-500">
+                  {presetCel}
+                </div>
+                <Tooltip.Arrow />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      </div>
     );
   }
 
@@ -167,6 +176,19 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     const label = preset?.counter_shows_firing_only
       ? "Firing alerts count:"
       : "Alerts count:";
+    const showJustCount = presetAlertsCount <= countOfLastAlerts;
+    console.log("Ihor", { presetCel, showJustCount, countOfLastAlerts });
+    const nothingToShow = countOfLastAlerts === 0;
+
+    let state: string = "nothingToShow";
+
+    if (countOfLastAlerts > 0) {
+      if (presetAlertsCount <= countOfLastAlerts) {
+        state = "allAlertsShown";
+      } else {
+        state = "someAlertsShown";
+      }
+    }
 
     return (
       <div className="flex gap-1 items-center">
@@ -180,6 +202,18 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           )}
           {!isLoading && (
             <>
+              {state === "nothingToShow" && (
+                <span>{presetAlertsCount} alerts</span>
+              )}
+              {state === "allAlertsShown" && (
+                <span>showing {presetAlertsCount} alerts</span>
+              )}
+              {state === "someAlertsShown" && (
+                <span>
+                  showing {countOfLastAlerts} out of {presetAlertsCount}
+                </span>
+              )}
+
               {preset?.counter_shows_firing_only && (
                 <Icon
                   className="p-0"
@@ -188,7 +222,6 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
                   icon={FireIcon}
                 ></Icon>
               )}
-              <span>{presetAlertsCount}</span>
             </>
           )}
         </div>
@@ -198,35 +231,36 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
 
   return (
     <div className="flex flex-col overflow-y-auto gap-2">
-      <div className="flex-col whitespace-nowrap">
-        <div className="flex gap-1 items-center">
-          <div>Preset name:</div>
-          <div className="truncate">{preset?.name}</div>
-        </div>
-        <div className="flex gap-1 items-center">
-          <div>Preset CEL:</div>
+      <div className="flex gap-2">
+        <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
+          <div className="flex gap-1 items-center">
+            <div>Preset name:</div>
+            <div className="truncate">{preset?.name}</div>
+          </div>
           {renderCEL()}
+          {renderAlertsCountText()}
         </div>
-        {renderAlertsCountText()}
+        <div className="flex items-center">
+          <Button
+            color="orange"
+            variant="secondary"
+            size="xs"
+            onClick={handleGoToPresetClick}
+          >
+            Go to preset
+          </Button>
+        </div>
       </div>
-      <div
-        style={{
-          background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
-        }}
-        className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
-      >
-        {renderLastAlertsGrid()}
-      </div>
-      <div className="flex justify-end">
-        <Button
-          color="orange"
-          variant="secondary"
-          size="xs"
-          onClick={handleGoToPresetClick}
+      {countOfLastAlerts > 0 && (
+        <div
+          style={{
+            background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
+          }}
+          className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
         >
-          Go to preset
-        </Button>
-      </div>
+          {renderLastAlertsGrid()}
+        </div>
+      )}
     </div>
   );
 };
