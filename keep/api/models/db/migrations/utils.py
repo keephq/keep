@@ -24,7 +24,3 @@ def drop_foreign_key_constraint(table_name, column_name, referred_table):
     if fk_name:
         with op.batch_alter_table(table_name, schema=None) as batch_op:
             batch_op.drop_constraint(fk_name, type_="foreignkey")
-
-
-def drop_primary_key_constraint(table_name):
-

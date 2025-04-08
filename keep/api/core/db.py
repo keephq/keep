@@ -447,7 +447,7 @@ def update_workflow_by_id(
     provisioned_file=None,
     updated_by=None,
 ):
-    with Session(engine, expire_on_commit=False) as session:
+    with Session(engine, expire_on_commit=False):
         existing_workflow = get_workflow(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
