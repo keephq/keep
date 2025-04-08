@@ -1,7 +1,7 @@
 """Workflow Versions
 
 Revision ID: 0b6af21c56a3
-Revises: 78777e6b12d3
+Revises: 59991b568c7d
 Create Date: 2025-04-02 16:51:51.974499
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0b6af21c56a3"
-down_revision = "78777e6b12d3"
+down_revision = "59991b568c7d"
 branch_labels = None
 depends_on = None
 
