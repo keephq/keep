@@ -263,9 +263,11 @@ class ElasticProvider(BaseProvider):
             query = json.loads(query)
         if "query" in query:
             _query_to_run = query.get("query")
+            _size = query.get("size", 10)
         else:
             _query_to_run = query
-        response = self.client.search(index=index, query=_query_to_run)
+            _size = query.get("size", 10)
+        response = self.client.search(index=index, query=_query_to_run, size=_size)
         self.logger.debug(
             "Got elasticsearch hits",
             extra={
@@ -302,11 +304,21 @@ if __name__ == "__main__":
             "api_key": elastic_api_key,
         },
     }
+    index = "keep-alerts-keep"
+    query = """{
+              "size": "1000",
+              "query": {
+                    "query_string": {
+                    "query": "firing"
+                }
+              }
+    }"""
+
     provider = ProvidersFactory.get_provider(
         context_manager,
         provider_id="elastic",
         provider_type="elastic",
         provider_config=config,
     )
-    result = provider.query('{"match_all": {}}', index="test-index")
+    result = provider.query(query=query, index=index)
     print(result)
