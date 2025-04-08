@@ -9,9 +9,6 @@ import json
 import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
-from requests_oauthlib import OAuth2Session
-from oauthlib.oauth2 import BackendApplicationClient
-
 
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
