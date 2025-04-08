@@ -215,7 +215,9 @@ def __build_base_incident_query(
             additional_incident_fields, Incident.id == additional_incident_fields.c.id
         )
 
-    sql_query = sql_query.filter(Incident.tenant_id == tenant_id)
+    sql_query = sql_query.filter(Incident.tenant_id == tenant_id).filter(
+        Incident.is_visible == True
+    )
     if sql_filter:
         sql_query = sql_query.where(text(sql_filter))
 
