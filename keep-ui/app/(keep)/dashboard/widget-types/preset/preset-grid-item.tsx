@@ -253,9 +253,9 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
       </div>
       {countOfLastAlerts > 0 && (
         <div
-          style={{
-            background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
-          }}
+          // style={{
+          //   background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
+          // }}
           className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
         >
           {renderLastAlertsGrid()}
