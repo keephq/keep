@@ -23,7 +23,7 @@ export const useSearchAlerts = (
   const [debouncedArgsString] = useDebouncedValue(argsString, 2000);
   const debouncedArgs = JSON.parse(debouncedArgsString);
 
-  const doesTimeframExceed90Days = Math.floor(args.timeframe / 86400) > 90;
+  const doesTimeframExceed90Days = Math.floor(args.timeframe / 86400) >= 90;
 
   const key =
     api.isReady() && !doesTimeframExceed90Days
