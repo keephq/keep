@@ -8,6 +8,8 @@ import {
 } from "@heroicons/react/20/solid";
 import clsx from "clsx";
 
+const severityOrder = ["error", "warning", "info"];
+
 export function WorkflowYAMLValidationErrors({
   isMounted,
   validationErrors,
@@ -65,6 +67,17 @@ export function WorkflowYAMLValidationErrors({
       </div>
     );
   }
+  const sortedValidationErrors = validationErrors.sort((a, b) => {
+    if (a.lineNumber === b.lineNumber) {
+      return a.column - b.column;
+    }
+    if (a.column === b.column) {
+      return (
+        severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
+      );
+    }
+    return a.lineNumber - b.lineNumber;
+  });
   return (
     <details
       className={clsx(
@@ -88,7 +101,7 @@ export function WorkflowYAMLValidationErrors({
         className="flex flex-col"
         data-testid="wf-yaml-editor-validation-errors-list"
       >
-        {validationErrors.map((error, index) => (
+        {sortedValidationErrors.map((error, index) => (
           <div
             key={`${error.lineNumber}-${error.column}-${error.message}-${index}`}
             className={clsx(

@@ -139,9 +139,6 @@ export const WorkflowYAMLEditor = ({
       return;
     }
 
-    console.log("providers", providers);
-    console.log("installedProviders", installedProviders);
-
     try {
       const text = model.getValue();
       const yamlDoc = parseDocument(text);
