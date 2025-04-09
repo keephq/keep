@@ -69,12 +69,12 @@ export function WorkflowYAMLValidationErrors({
   }
   const sortedValidationErrors = validationErrors.sort((a, b) => {
     if (a.lineNumber === b.lineNumber) {
+      if (a.column === b.column) {
+        return (
+          severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
+        );
+      }
       return a.column - b.column;
-    }
-    if (a.column === b.column) {
-      return (
-        severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
-      );
     }
     return a.lineNumber - b.lineNumber;
   });
