@@ -586,7 +586,7 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         ).first
         expect(
             yaml_editor.get_by_test_id("wf-yaml-editor-validation-errors-summary").first
-        ).to_contain_text("6 validation errors")
+        ).to_contain_text("12 validation errors")
         expect(errors_list).to_contain_text(
             "String is shorter than the minimum length of 1."
         )
@@ -599,6 +599,9 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         )
         expect(errors_list).to_contain_text("Property enrich_incident is not allowed.")
         expect(errors_list).to_contain_text("Property enrich_alert is not allowed.")
+        expect(errors_list).to_contain_text(
+            'Variable: steps.clickhouse-step.results.level - a "clickhouse-step" step doesn\'t exist.'
+        )
 
     except Exception:
         save_failure_artifacts(browser, log_entries)
