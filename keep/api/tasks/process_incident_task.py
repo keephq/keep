@@ -85,7 +85,7 @@ def process_incident(
                     incident_from_db = incident_bl.create_incident(
                         incident_dto=incident,
                     )
-                    session.commit()
+
                     logger.info(
                         f"Created incident: {incident.id}",
                         extra={**extra, "fingerprint": incident.fingerprint},
