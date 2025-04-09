@@ -42,9 +42,9 @@ export interface WorkflowYAMLEditorProps {
     monacoInstance: typeof import("monaco-editor")
   ) => void;
   onChange?: (value: string | undefined) => void;
-  onValidationErrors?: (
-    value: React.SetStateAction<YamlValidationError[] | null>
-  ) => void;
+  onValidationErrors?: React.Dispatch<
+    React.SetStateAction<YamlValidationError[]>
+  >;
   onSave?: (value: string) => void;
 }
 
