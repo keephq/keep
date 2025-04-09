@@ -77,7 +77,6 @@ export const WorkflowYAMLEditor = ({
 
   const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const mustacheDecorationsRef = useRef<string[]>([]);
 
   // Function to find the current step in the workflow based on the path
   const findStepFromPath = useCallback((path: (string | number)[]) => {
@@ -132,7 +131,8 @@ export const WorkflowYAMLEditor = ({
       }
 
       const mustacheRegex = /\{\{([^}]+)\}\}/g;
-      const decorations: editor.IModelDeltaDecoration[] = [];
+      // Collect markers to add to the model
+      const markers: editor.IMarkerData[] = [];
 
       let match;
       while ((match = mustacheRegex.exec(text)) !== null) {
@@ -152,6 +152,7 @@ export const WorkflowYAMLEditor = ({
 
         let errorMessage: string | null = null;
         let isError = false;
+        let severity: "error" | "warning" = "warning";
 
         // Basic validation that works without full context
         const variableContent = match[1].trim();
@@ -176,6 +177,9 @@ export const WorkflowYAMLEditor = ({
             );
 
             isError = !!errorMessage;
+            if (isError) {
+              severity = "error";
+            }
           }
         } else {
           // Fallback to basic validation
@@ -184,22 +188,24 @@ export const WorkflowYAMLEditor = ({
 
           if (isError) {
             errorMessage = `Invalid mustache variable: '${variableContent}' - Parts cannot be empty.`;
+            severity = "error";
           }
         }
 
         // Add decoration for errors
         if (isError && errorMessage) {
-          decorations.push({
-            range: new monaco.Range(
-              startPos.lineNumber,
-              startPos.column,
-              endPos.lineNumber,
-              endPos.column
-            ),
-            options: {
-              inlineClassName: "mustache-error",
-              hoverMessage: { value: errorMessage },
-            },
+          // Add marker for the problems panel and collection
+          markers.push({
+            severity:
+              severity === "error"
+                ? MarkerSeverity.Error
+                : MarkerSeverity.Warning,
+            message: errorMessage,
+            startLineNumber: startPos.lineNumber,
+            startColumn: startPos.column,
+            endLineNumber: endPos.lineNumber,
+            endColumn: endPos.column,
+            source: "mustache-validation",
           });
         }
         // For valid patterns, add warnings if we couldn't do full validation
@@ -210,28 +216,23 @@ export const WorkflowYAMLEditor = ({
             variableContent.startsWith("alert.") ||
             variableContent.startsWith("incident."))
         ) {
-          decorations.push({
-            range: new monaco.Range(
-              startPos.lineNumber,
-              startPos.column,
-              endPos.lineNumber,
-              endPos.column
-            ),
-            options: {
-              inlineClassName: "mustache-warning",
-              hoverMessage: {
-                value: `Warning: Unable to fully validate mustache variable '${variableContent}' without complete workflow context.`,
-              },
-            },
+          const warningMessage = `Warning: Unable to fully validate mustache variable '${variableContent}' without complete workflow context.`;
+
+          // Add warning marker
+          markers.push({
+            severity: MarkerSeverity.Warning,
+            message: warningMessage,
+            startLineNumber: startPos.lineNumber,
+            startColumn: startPos.column,
+            endLineNumber: endPos.lineNumber,
+            endColumn: endPos.column,
+            source: "mustache-validation",
           });
         }
       }
 
-      // Apply the decorations
-      mustacheDecorationsRef.current = editor.deltaDecorations(
-        mustacheDecorationsRef.current,
-        decorations
-      );
+      // Set markers on the model for the problems panel
+      monaco.editor.setModelMarkers(model, "mustache-validation", markers);
     } catch (error) {
       console.error("Error validating mustache expressions:", error);
     }
@@ -239,13 +240,14 @@ export const WorkflowYAMLEditor = ({
 
   const handleMarkersChanged = (
     modelUri: Uri,
-    markers: editor.IMarker[] | editor.IMarkerData[]
+    markers: editor.IMarker[] | editor.IMarkerData[],
+    owner: string
   ) => {
     const editorUri = editorRef.current!.getModel()?.uri;
     if (modelUri.path !== editorUri?.path) {
       return;
     }
-    const errors = [];
+    const errors: YamlValidationError[] = [];
     for (const marker of markers) {
       if (marker.severity === MarkerSeverity.Hint) {
         continue;
@@ -255,9 +257,13 @@ export const WorkflowYAMLEditor = ({
         severity: getSeverityString(marker.severity),
         lineNumber: marker.startLineNumber,
         column: marker.startColumn,
+        owner,
       });
     }
-    setValidationErrors(errors);
+    setValidationErrors((prevErrors) => {
+      const prevOtherOwners = prevErrors?.filter((e) => e.owner !== owner);
+      return [...(prevOtherOwners ?? []), ...errors];
+    });
     onValidationErrors?.(errors);
   };
 
@@ -279,7 +285,7 @@ export const WorkflowYAMLEditor = ({
     const setModelMarkers = monacoInstance.editor.setModelMarkers;
     monacoInstance.editor.setModelMarkers = function (model, owner, markers) {
       setModelMarkers.call(monacoInstance.editor, model, owner, markers);
-      handleMarkersChanged(model.uri, markers);
+      handleMarkersChanged(model.uri, markers, owner);
     };
 
     // Run initial mustache validation

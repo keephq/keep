@@ -5,4 +5,5 @@ export type YamlValidationError = {
   severity: YamlValidationErrorSeverity;
   lineNumber: number;
   column: number;
+  owner: string;
 };
