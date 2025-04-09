@@ -1,33 +1,33 @@
-import { useEffect, useRef } from "react";
-import { DefinitionV2, useWorkflowStore } from "@/entities/workflows";
+import { useMemo, useRef } from "react";
+import type { DefinitionV2 } from "@/entities/workflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
 import { KeepApiError } from "@/shared/api/KeepApiError";
-import { BuilderWorkflowTestRunModalContent } from "./builder-workflow-testrun-modal-content";
 import Modal from "@/components/ui/Modal";
-import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
+import {
+  extractWorkflowYamlDependencies,
+  getYamlWorkflowDefinition,
+  WorkflowYamlDependencies,
+} from "@/entities/workflows/lib/parser";
 import { v4 as uuidv4 } from "uuid";
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
-import { Button, Callout } from "@tremor/react";
+import { Button, Callout, Title } from "@tremor/react";
 import { PlayIcon } from "@heroicons/react/24/outline";
-
+import { IoClose } from "react-icons/io5";
+import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
+import { WorkflowAlertDependenciesForm } from "./workflow-alert-dependencies-form";
 interface WorkflowTestRunButtonProps {
   workflowId: string;
   definition: DefinitionV2 | null;
-  runRequestCount: number;
+  isValid: boolean;
 }
 
-// It listens for the runRequestCount and triggers the test run of the workflow, opening the modal with the results.
 export function WorkflowTestRunButton({
   workflowId,
-  definition: definitionFromProps,
-  runRequestCount,
+  definition,
+  isValid,
 }: WorkflowTestRunButtonProps) {
-  const { definition: definitionFromStore } = useWorkflowStore();
-  const definition = definitionFromProps ?? definitionFromStore;
-  const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
-
   const api = useApi();
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
   const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
@@ -36,12 +36,19 @@ export function WorkflowTestRunButton({
   const [error, setError] = useState<string | null>(null);
   const currentRequestId = useRef<string | null>(null);
   const [workflowYamlSent, setWorkflowYamlSent] = useState<string | null>(null);
+  const [dependencies, setDependencies] =
+    useState<WorkflowYamlDependencies | null>(null);
 
   const closeWorkflowExecutionResultsModal = () => {
     currentRequestId.current = null;
     setTestRunModalOpen(false);
     setWorkflowExecutionId(null);
     setError(null);
+  };
+
+  const handleCancel = (e: React.FormEvent) => {
+    e.preventDefault();
+    closeWorkflowExecutionResultsModal();
   };
 
   const testRunWorkflow = () => {
@@ -63,7 +70,21 @@ export function WorkflowTestRunButton({
     const body = getBodyFromStringOrDefinitionOrObject({
       workflow,
     });
+    const dependencies = extractWorkflowYamlDependencies(body);
+    setDependencies(dependencies);
+    if (
+      dependencies &&
+      (dependencies.providers.length > 0 ||
+        dependencies.secrets.length > 0 ||
+        dependencies.inputs.length > 0 ||
+        dependencies.alert.length > 0 ||
+        dependencies.incident.length > 0)
+    ) {
+      return;
+    }
     setWorkflowYamlSent(body);
+    // TODO: extract dependencies from the workflow
+    // TODO: move to useWorkflowActions
     api
       .request(`/workflows/test`, {
         method: "POST",
@@ -94,9 +115,79 @@ export function WorkflowTestRunButton({
       });
   };
 
-  if (!testRunModalOpen) {
-    return null;
-  }
+  const alertStaticFields = useMemo(() => {
+    if (
+      !definition?.value?.properties?.alert ||
+      typeof definition?.value?.properties?.alert !== "object"
+    ) {
+      return [];
+    }
+    return Object.entries(definition?.value?.properties?.alert).map(
+      ([key, value]) => ({
+        key,
+        value,
+      })
+    );
+  }, [definition]);
+
+  const renderModalContent = () => {
+    if (dependencies) {
+      if (dependencies.alert.length > 0 && dependencies.incident.length > 0) {
+        return (
+          <Callout title="Mixed alert and incident dependencies" color="red">
+            Alert and incident dependencies cannot be used together
+          </Callout>
+        );
+      }
+      if (dependencies.alert.length > 0) {
+        return (
+          <WorkflowAlertDependenciesForm
+            dependencies={dependencies.alert}
+            staticFields={alertStaticFields}
+            onCancel={closeWorkflowExecutionResultsModal}
+            onSubmit={() => {}}
+          />
+        );
+      }
+    }
+    if (error !== null) {
+      return (
+        <div className="flex justify-center">
+          <Callout title="Workflow execution failed" color="red">
+            {error}
+          </Callout>
+        </div>
+      );
+    }
+    if (workflowExecutionId !== null) {
+      return (
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <Title>Workflow Execution Results</Title>
+            </div>
+            <div>
+              <button onClick={handleCancel}>
+                <IoClose size={20} />
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <WorkflowExecutionResults
+              workflowId={workflowId}
+              workflowExecutionId={workflowExecutionId}
+              workflowYaml={workflowYamlSent ?? ""}
+            />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex justify-center">
+        <KeepLoader loadingText="Waiting for workflow execution results..." />
+      </div>
+    );
+  };
 
   return (
     <>
@@ -115,28 +206,9 @@ export function WorkflowTestRunButton({
       <Modal
         isOpen={testRunModalOpen}
         onClose={closeWorkflowExecutionResultsModal}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+        title="Test Run"
       >
-        {workflowExecutionId !== null && (
-          <BuilderWorkflowTestRunModalContent
-            closeModal={closeWorkflowExecutionResultsModal}
-            workflowExecutionId={workflowExecutionId}
-            workflowId={workflowId ?? ""}
-            workflowYamlSent={workflowYamlSent}
-          />
-        )}
-        {error !== null && (
-          <div className="flex justify-center">
-            <Callout title="Workflow execution failed" color="red">
-              {error}
-            </Callout>
-          </div>
-        )}
-        {workflowExecutionId === null && (
-          <div className="flex justify-center">
-            <KeepLoader loadingText="Waiting for workflow execution results..." />
-          </div>
-        )}
+        {renderModalContent()}
       </Modal>
     </>
   );

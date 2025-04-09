@@ -13,7 +13,10 @@ const TextInput = forwardRef(
     return (
       <TremorTextInput
         ref={ref}
-        className={cn("[&>input]:placeholder:text-gray-400", className)}
+        className={cn(
+          "[&>input:not([disabled])]:placeholder:text-gray-400 [&>input:disabled]:text-gray-500",
+          className
+        )}
         {...props}
       />
     );

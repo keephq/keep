@@ -2,12 +2,7 @@
 
 import { Button, Title } from "@tremor/react";
 import { useRef, useState } from "react";
-import {
-  ArrowUpOnSquareIcon,
-  PencilIcon,
-  PlusIcon,
-  PlayIcon,
-} from "@heroicons/react/20/solid";
+import { ArrowUpOnSquareIcon, PencilIcon } from "@heroicons/react/20/solid";
 import { WorkflowBuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
 import { useWorkflowStore } from "@/entities/workflows";
@@ -36,7 +31,6 @@ export function WorkflowBuilderWidget({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
     triggerSave,
-    triggerTestRun,
     updateV2Properties,
     isInitialized,
     lastDeployedAt,
@@ -45,7 +39,6 @@ export function WorkflowBuilderWidget({
     isSaving,
     v2Properties,
     definition,
-    runRequestCount,
   } = useWorkflowStore();
   const isChangesSaved = useWorkflowEditorChangesSaved();
 
@@ -143,7 +136,11 @@ export function WorkflowBuilderWidget({
                 Edit Metadata
               </Button>
             )}
-            <WorkflowTestRunButton workflowId={workflowId ?? ""} />
+            <WorkflowTestRunButton
+              workflowId={workflowId ?? ""}
+              definition={definition}
+              isValid={isValid}
+            />
             <Button
               color="orange"
               size="md"

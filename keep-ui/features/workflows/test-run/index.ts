@@ -1,1 +1,1 @@
-export { WorkflowTestRunButton as WorkflowTestRunModal } from "./ui/workflow-test-run-modal";
+export { WorkflowTestRunButton } from "./ui/workflow-test-run-modal";

@@ -1,16 +1,16 @@
 import type { editor } from "monaco-editor";
 import { WorkflowYAMLEditor } from "./WorkflowYAMLEditor";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DefinitionV2 } from "@/entities/workflows";
 import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
 import { parseWorkflow } from "@/entities/workflows/lib/parser";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
-import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowYamlEditorHeader } from "./WorkflowYamlEditorHeader";
-import { useState } from "react";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { YamlValidationError } from "../model/types";
+import { Button } from "@tremor/react";
+import { WorkflowTestRunButton } from "@/features/workflows/test-run";
 
 export function WorkflowYAMLEditorStandalone({
   workflowId,
@@ -32,7 +32,8 @@ export function WorkflowYAMLEditorStandalone({
   const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
   const [definition, setDefinition] = useState<DefinitionV2 | null>(null);
-  const [runRequestCount, setRunRequestCount] = useState(0);
+
+  const isValid = validationErrors?.length === 0;
 
   const { updateWorkflow } = useWorkflowActions();
   const { data: { providers } = {} } = useProviders();
@@ -107,35 +108,38 @@ export function WorkflowYAMLEditorStandalone({
   };
 
   return (
-    <>
-      <div className="w-full h-full flex flex-col relative">
-        <WorkflowYamlEditorHeader
-          workflowId={workflowId}
-          isInitialized={isEditorMounted}
-          lastDeployedAt={lastDeployedAt}
-          isValid={validationErrors?.length === 0}
-          isSaving={isSaving}
-          hasChanges={hasChanges}
-          onRun={() => {
-            setRunRequestCount((prev) => prev + 1);
-          }}
-          onSave={handleSaveWorkflow}
-        />
-        <WorkflowYAMLEditor
-          workflowYamlString={yamlString}
-          filename={workflowId ?? "workflow"}
-          workflowId={workflowId}
-          onMount={handleEditorDidMount}
-          onChange={handleContentChange}
-          onValidationErrors={setValidationErrors}
-          data-testid={dataTestId}
-        />
-      </div>
-      <WorkflowTestRunModal
+    <div className="w-full h-full flex flex-col relative">
+      <WorkflowYamlEditorHeader
         workflowId={workflowId}
-        definition={definition}
-        runRequestCount={runRequestCount}
+        isInitialized={isEditorMounted}
+        lastDeployedAt={lastDeployedAt}
+        hasChanges={hasChanges}
+      >
+        <WorkflowTestRunButton
+          workflowId={workflowId}
+          definition={definition}
+          isValid={isValid}
+        />
+        <Button
+          color="orange"
+          size="sm"
+          className="min-w-28 relative disabled:opacity-70"
+          disabled={!hasChanges || isSaving}
+          onClick={handleSaveWorkflow}
+          data-testid="wf-yaml-editor-save-button"
+        >
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+      </WorkflowYamlEditorHeader>
+      <WorkflowYAMLEditor
+        workflowYamlString={yamlString}
+        filename={workflowId ?? "workflow"}
+        workflowId={workflowId}
+        onMount={handleEditorDidMount}
+        onChange={handleContentChange}
+        onValidationErrors={setValidationErrors}
+        data-testid={dataTestId}
       />
-    </>
+    </div>
   );
 }
