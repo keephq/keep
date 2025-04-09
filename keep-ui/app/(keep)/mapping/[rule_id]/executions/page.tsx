@@ -20,8 +20,10 @@ import {
   ArrowRightIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/16/solid";
 import { useMappingRule, useMappings } from "@/utils/hooks/useMappingRules";
+import { Tooltip } from "@/shared/ui/Tooltip";
 
 interface Pagination {
   limit: number;
@@ -80,7 +82,17 @@ export default function MappingExecutionsPage(props: {
               className="flex justify-between items-center cursor-pointer"
               onClick={() => setIsDataPreviewExpanded(!isDataPreviewExpanded)}
             >
-              <Title>Data Preview</Title>
+              <Title>
+                Data Preview
+                <Tooltip
+                  content={
+                    <>The data preview shows the first 20 rows of the data.</>
+                  }
+                  className="z-50"
+                >
+                  <QuestionMarkCircleIcon className="w-4 h-4 ml-1 text-gray-400" />
+                </Tooltip>
+              </Title>
               <Icon
                 icon={isDataPreviewExpanded ? ChevronUpIcon : ChevronDownIcon}
                 color="gray"
@@ -98,7 +110,7 @@ export default function MappingExecutionsPage(props: {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rule.rows.slice(0, 5).map((row, idx) => (
+                    {rule.rows.slice(0, 20).map((row, idx) => (
                       <TableRow key={idx}>
                         {Object.values(row).map((value: any, valueIdx) => (
                           <TableCell key={valueIdx}>

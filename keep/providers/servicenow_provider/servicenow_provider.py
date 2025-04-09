@@ -101,9 +101,14 @@ class ServicenowProvider(BaseTopologyProvider):
                 "client_id": self.authentication_config.client_id,
                 "client_secret": self.authentication_config.client_secret,
             }
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            }
             response = requests.post(
                 url,
-                json=payload,
+                data=payload,
+                headers=headers,
             )
             if response.ok:
                 self._access_token = response.json().get("access_token")
@@ -113,7 +118,12 @@ class ServicenowProvider(BaseTopologyProvider):
                     extra={
                         "response": response.text,
                         "status_code": response.status_code,
+                        "provider_id": self.provider_id,
                     },
+                )
+                raise ProviderException(
+                    f"Failed to get OAuth access token from ServiceNow: {response.status_code}, {response.text}."
+                    " Please check your ServiceNow logs, information about this error should be there."
                 )
 
     def validate_scopes(self):
@@ -124,7 +134,7 @@ class ServicenowProvider(BaseTopologyProvider):
         # Optional scope validation skipping
         if (
             os.environ.get(
-                "KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "true"
+                "KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "false"
             ).lower()
             == "true"
         ):
@@ -299,6 +309,9 @@ class ServicenowProvider(BaseTopologyProvider):
                 extra={
                     "tenant_id": self.context_manager.tenant_id,
                     "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
                 },
             )
             return topology, {}
@@ -316,7 +329,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_type_response.ok:
-            self.logger.error("Failed to get topology types")
+            self.logger.error(
+                "Failed to get topology types",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_type_json = rel_type_response.json()
             for result in rel_type_json.get("result", []):
@@ -331,7 +353,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_response.ok:
-            self.logger.error("Failed to get topology relationships")
+            self.logger.error(
+                "Failed to get topology relationships",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_json = rel_response.json()
             for relationship in rel_json.get("result", []):
@@ -377,6 +408,8 @@ class ServicenowProvider(BaseTopologyProvider):
             extra={
                 "tenant_id": self.context_manager.tenant_id,
                 "len_of_topology": len(topology),
+                "using_access_token": self._access_token is not None,
+                "provider_id": self.provider_id,
             },
         )
         return topology, {}
