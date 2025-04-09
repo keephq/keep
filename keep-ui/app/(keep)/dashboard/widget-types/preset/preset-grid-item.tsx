@@ -135,7 +135,10 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     return (
       <>
         {alerts?.map((alert) => (
-          <div className="flex flex-row min-h-7 h-7 items-center gap-2">
+          <div
+            key={alert.fingerprint}
+            className="flex flex-row min-h-7 h-7 items-center gap-2"
+          >
             <SeverityBorderIcon
               severity={
                 (severityMapping[Number(alert.severity)] ||
