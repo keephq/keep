@@ -144,6 +144,8 @@ export const WorkflowYAMLEditor = ({
       const mustacheRegex = /\{\{([^}]+)\}\}/g;
       // Collect markers to add to the model
       const markers: editor.IMarkerData[] = [];
+      // Use an empty secrets object for now - could be passed as a prop in the future
+      const secrets: Record<string, string> = {};
 
       let match;
       while ((match = mustacheRegex.exec(text)) !== null) {
@@ -163,19 +165,16 @@ export const WorkflowYAMLEditor = ({
         const actionInfo = findActionFromPath(path);
 
         const currentStepType = stepInfo?.isInStep ? "step" : "action";
+        // Extract the content from the mustache expression (remove {{ and }})
+        const variableContent = match[1].trim();
 
         let errorMessage: string | null = null;
-        let isError = false;
         let severity: "error" | "warning" = "warning";
-
-        // Basic validation that works without full context
-        const variableContent = match[1].trim();
 
         // If we have both the workflow definition and step info, we can do proper validation
         if (
-          workflowDefinition &&
+          workflowDefinition?.workflow &&
           (stepInfo || actionInfo) &&
-          workflowDefinition.workflow &&
           (workflowDefinition.workflow.steps ||
             workflowDefinition.workflow.actions)
         ) {
@@ -192,55 +191,45 @@ export const WorkflowYAMLEditor = ({
               currentStep,
               currentStepType,
               workflowDefinition.workflow,
-              {} // secrets, which you'd need to obtain from somewhere
+              secrets
             );
 
-            isError = !!errorMessage;
-            if (isError) {
+            if (errorMessage) {
               severity = "error";
             }
           }
         } else {
-          // Fallback to basic validation
+          // Fallback to basic validation when we don't have full context
           const parts = variableContent.split(".");
-          isError = parts.some((part) => !part || part.trim() === "");
+          const hasEmptyParts = parts.some(
+            (part: string) => !part || part.trim() === ""
+          );
 
-          if (isError) {
+          if (hasEmptyParts) {
             errorMessage = `Invalid mustache variable: '${variableContent}' - Parts cannot be empty.`;
             severity = "error";
           }
+          // Add warnings for variables we can't fully validate
+          else if (
+            !workflowDefinition &&
+            (variableContent.startsWith("steps.") ||
+              variableContent.startsWith("secrets.") ||
+              variableContent.startsWith("alert.") ||
+              variableContent.startsWith("incident."))
+          ) {
+            errorMessage = `Warning: Unable to fully validate mustache variable '${variableContent}' without complete workflow context.`;
+            severity = "warning";
+          }
         }
 
-        // Add decoration for errors
-        if (isError && errorMessage) {
-          // Add marker for the problems panel and collection
+        // Add marker for validation issues
+        if (errorMessage) {
           markers.push({
             severity:
               severity === "error"
                 ? MarkerSeverity.Error
                 : MarkerSeverity.Warning,
             message: errorMessage,
-            startLineNumber: startPos.lineNumber,
-            startColumn: startPos.column,
-            endLineNumber: endPos.lineNumber,
-            endColumn: endPos.column,
-            source: "mustache-validation",
-          });
-        }
-        // For valid patterns, add warnings if we couldn't do full validation
-        else if (
-          !workflowDefinition &&
-          (variableContent.startsWith("steps.") ||
-            variableContent.startsWith("secrets.") ||
-            variableContent.startsWith("alert.") ||
-            variableContent.startsWith("incident."))
-        ) {
-          const warningMessage = `Warning: Unable to fully validate mustache variable '${variableContent}' without complete workflow context.`;
-
-          // Add warning marker
-          markers.push({
-            severity: MarkerSeverity.Warning,
-            message: warningMessage,
             startLineNumber: startPos.lineNumber,
             startColumn: startPos.column,
             endLineNumber: endPos.lineNumber,
