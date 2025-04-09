@@ -106,7 +106,7 @@ export const WorkflowYAMLEditor = ({
     const setModelMarkers = monacoInstance.editor.setModelMarkers;
     monacoInstance.editor.setModelMarkers = function (model, owner, markers) {
       setModelMarkers.call(monacoInstance.editor, model, owner, markers);
-      handleMarkersChanged(model.uri, markers, owner);
+      handleMarkersChanged(editor, model.uri, markers, owner);
     };
 
     setIsEditorMounted(true);

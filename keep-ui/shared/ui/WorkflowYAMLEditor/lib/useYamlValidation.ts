@@ -23,6 +23,7 @@ export interface UseYamlValidationResult {
     monaco: typeof import("monaco-editor") | null
   ) => void;
   handleMarkersChanged: (
+    editor: editor.IStandaloneCodeEditor,
     modelUri: Uri,
     markers: editor.IMarker[] | editor.IMarkerData[],
     owner: string
@@ -220,10 +221,16 @@ export function useYamlValidation({
 
   const handleMarkersChanged = useCallback(
     (
+      editor: editor.IStandaloneCodeEditor,
       modelUri: Uri,
       markers: editor.IMarker[] | editor.IMarkerData[],
       owner: string
     ) => {
+      const editorUri = editor.getModel()?.uri;
+      if (modelUri.path !== editorUri?.path) {
+        return;
+      }
+
       const errors: YamlValidationError[] = [];
       for (const marker of markers) {
         if (marker.severity === MarkerSeverity.Hint) {

@@ -87,7 +87,7 @@ export function WorkflowYAMLValidationErrors({
         highestSeverity === "error" && "bg-red-100"
       )}
       data-testid="wf-yaml-editor-validation-errors"
-      open
+      open={validationErrors.length < 5}
     >
       <summary
         className="text-sm cursor-pointer hover:underline gap-1 px-4 py-1"
