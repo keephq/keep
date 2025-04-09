@@ -81,7 +81,7 @@ export const CorrelationForm = ({
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="When the first alert arrives, Keep calculates the timespan. Any new alert within this timeframe will correlate into the same incident. The timeframe cannot exceed 14 days."
+              tooltip="When the first alert arrives, Keep calculates the timespan. Any new alert within this timeframe will correlate into the same incident. The timeframe cannot exceed 90 days."
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"
