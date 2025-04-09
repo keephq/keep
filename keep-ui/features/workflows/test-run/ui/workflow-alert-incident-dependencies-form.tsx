@@ -1,26 +1,9 @@
 import { useMemo, useState } from "react";
-import { Button, Subtitle, Text, Title } from "@tremor/react";
+import { Button, Subtitle, Text } from "@tremor/react";
 import { TextInput } from "@/components/ui";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { JsonCard } from "@/shared/ui/JsonCard";
-
-function buildNestedObject(
-  acc: Record<string, any>,
-  key: string,
-  value: string
-) {
-  const keys = key.split(".");
-  let current = acc;
-
-  for (let i = 0; i < keys.length - 1; i++) {
-    const part = keys[i];
-    current[part] = current[part] || {};
-    current = current[part];
-  }
-
-  current[keys[keys.length - 1]] = value;
-  return acc;
-}
+import { buildNestedObject } from "../lib/buildNestedObject";
 
 const getAlertPayload = (
   dynamicFields: Field[],
@@ -59,19 +42,23 @@ interface Field {
 
 type Payload = Record<string, any>;
 
-interface WorkflowAlertDependenciesFormProps {
+interface WorkflowAlertIncidentDependenciesFormProps {
+  type: "alert" | "incident";
   dependencies: string[];
   staticFields: Field[];
+  submitLabel?: string;
   onCancel: () => void;
   onSubmit: (payload: Payload) => void;
 }
 
-export function WorkflowAlertDependenciesForm({
+export function WorkflowAlertIncidentDependenciesForm({
+  type,
   dependencies,
   staticFields,
   onCancel,
   onSubmit,
-}: WorkflowAlertDependenciesFormProps) {
+  submitLabel = "Continue",
+}: WorkflowAlertIncidentDependenciesFormProps) {
   const [dynamicFields, setDynamicFields] = useState<Field[]>([]);
   const [fieldErrors, setFieldErrors] = useState(
     new Array(dynamicFields.length).fill({ key: false, value: false })
@@ -177,12 +164,17 @@ export function WorkflowAlertDependenciesForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <header>
-        <Subtitle>Build Alert Payload</Subtitle>
+        <Subtitle>
+          Build {type === "alert" ? "Alert" : "Incident"} Payload
+        </Subtitle>
         <Text>Enter values required to run the workflow</Text>
       </header>
       {Array.isArray(staticFields) && staticFields.length > 0 && (
         <section>
-          <Text className="mb-2">Fields defined in alert trigger filters</Text>
+          <Text className="mb-2">
+            Fields defined in {type === "alert" ? "Alert" : "Incident"} trigger
+            filters
+          </Text>
           {staticFields.map((field, index) => (
             <div key={field.key} className="flex gap-2 mb-2">
               <TextInput
@@ -203,7 +195,9 @@ export function WorkflowAlertDependenciesForm({
       )}
 
       <section>
-        <Text className="mb-2">Alert fields used in the workflow</Text>
+        <Text className="mb-2">
+          {type === "alert" ? "Alert" : "Incident"} fields used in the workflow
+        </Text>
         {Array.isArray(dependencies) &&
           dependencies.map((dependencyName, index) => (
             <div key={dependencyName} className="flex gap-2 mb-2">
@@ -272,7 +266,7 @@ export function WorkflowAlertDependenciesForm({
           color="orange"
           disabled={!isValid}
         >
-          Test Run
+          {submitLabel}
         </Button>
       </div>
     </form>

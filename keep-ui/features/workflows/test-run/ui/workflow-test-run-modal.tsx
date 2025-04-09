@@ -1,22 +1,20 @@
 import { useMemo, useRef } from "react";
 import type { DefinitionV2 } from "@/entities/workflows";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
-import { KeepApiError } from "@/shared/api/KeepApiError";
 import Modal from "@/components/ui/Modal";
 import {
   extractWorkflowYamlDependencies,
   getYamlWorkflowDefinition,
-  WorkflowYamlDependencies,
 } from "@/entities/workflows/lib/parser";
-import { v4 as uuidv4 } from "uuid";
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
 import { Button, Callout, Title } from "@tremor/react";
-import { PlayIcon } from "@heroicons/react/24/outline";
+import { ExclamationCircleIcon, PlayIcon } from "@heroicons/react/24/outline";
 import { IoClose } from "react-icons/io5";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
-import { WorkflowAlertDependenciesForm } from "./workflow-alert-dependencies-form";
+import { WorkflowAlertIncidentDependenciesForm } from "./workflow-alert-incident-dependencies-form";
+import { useWorkflowTestRun } from "../model/useWorkflowTestRun";
+import { v4 as uuidv4 } from "uuid";
 interface WorkflowTestRunButtonProps {
   workflowId: string;
   definition: DefinitionV2 | null;
@@ -28,20 +26,38 @@ export function WorkflowTestRunButton({
   definition,
   isValid,
 }: WorkflowTestRunButtonProps) {
-  const api = useApi();
-  const [testRunModalOpen, setTestRunModalOpen] = useState(false);
+  const [isTestRunModalOpen, setIsTestRunModalOpen] = useState(false);
   const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
     null
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const currentRequestId = useRef<string | null>(null);
-  const [workflowYamlSent, setWorkflowYamlSent] = useState<string | null>(null);
-  const [dependencies, setDependencies] =
-    useState<WorkflowYamlDependencies | null>(null);
+
+  const yamlString = useMemo(() => {
+    if (!definition?.value) {
+      return null;
+    }
+    const workflow = getYamlWorkflowDefinition(definition.value);
+    // NOTE: prevent the workflow from being disabled, so test run doesn't fail
+    workflow.disabled = false;
+    const body = getBodyFromStringOrDefinitionOrObject({
+      workflow,
+    });
+    return body;
+  }, [definition]);
+
+  const dependencies = useMemo(() => {
+    if (!yamlString) {
+      return null;
+    }
+    return extractWorkflowYamlDependencies(yamlString);
+  }, [yamlString]);
+
+  const testRunWorkflow = useWorkflowTestRun();
 
   const closeWorkflowExecutionResultsModal = () => {
     currentRequestId.current = null;
-    setTestRunModalOpen(false);
+    setIsTestRunModalOpen(false);
     setWorkflowExecutionId(null);
     setError(null);
   };
@@ -51,68 +67,47 @@ export function WorkflowTestRunButton({
     closeWorkflowExecutionResultsModal();
   };
 
-  const testRunWorkflow = () => {
-    if (!definition?.value) {
+  const handleTestRunWorkflow = async (
+    eventType: "alert" | "incident",
+    eventPayload: any
+  ) => {
+    if (!yamlString) {
       showErrorToast(new Error("Workflow is not initialized"));
       return;
     }
-    if (currentRequestId.current) {
-      showErrorToast(new Error("Workflow is already running"));
+    try {
+      const result = await testRunWorkflow(yamlString, eventType, eventPayload);
+      if (!result) {
+        setError(new Error("Failed to test run workflow"));
+        return;
+      }
+      setWorkflowExecutionId(result.workflow_execution_id);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error
+          : new Error(
+              "An unknown error occurred during test run. Please try again."
+            )
+      );
+    }
+  };
+
+  const handleClickTestRun = () => {
+    if (!dependencies) {
       return;
     }
-    // TODO: handle workflows with alert triggers, like in useWorkflowRun.ts
-    const requestId = uuidv4();
-    currentRequestId.current = requestId;
-    setTestRunModalOpen(true);
-    const workflow = getYamlWorkflowDefinition(definition.value);
-    // NOTE: prevent the workflow from being disabled, so test run doesn't fail
-    workflow.disabled = false;
-    const body = getBodyFromStringOrDefinitionOrObject({
-      workflow,
-    });
-    const dependencies = extractWorkflowYamlDependencies(body);
-    setDependencies(dependencies);
-    if (
-      dependencies &&
-      (dependencies.providers.length > 0 ||
-        dependencies.secrets.length > 0 ||
-        dependencies.inputs.length > 0 ||
-        dependencies.alert.length > 0 ||
-        dependencies.incident.length > 0)
-    ) {
-      return;
-    }
-    setWorkflowYamlSent(body);
-    // TODO: extract dependencies from the workflow
-    // TODO: move to useWorkflowActions
-    api
-      .request(`/workflows/test`, {
-        method: "POST",
-        body,
-        headers: { "Content-Type": "application/yaml" },
-      })
-      .then((data) => {
-        if (currentRequestId.current !== requestId) {
-          return;
-        }
-        setError(null);
-        setWorkflowExecutionId(data.workflow_execution_id);
-      })
-      .catch((error) => {
-        if (currentRequestId.current !== requestId) {
-          return;
-        }
-        setError(
-          error instanceof KeepApiError ? error.message : "Unknown error"
-        );
-        setWorkflowExecutionId(null);
-      })
-      .finally(() => {
-        if (currentRequestId.current !== requestId) {
-          return;
-        }
-        currentRequestId.current = null;
+    setIsTestRunModalOpen(true);
+    if (!dependencies.alert.length && !dependencies.incident.length) {
+      handleTestRunWorkflow("alert", {
+        id: "manual-run",
+        name: "manual-run",
+        lastReceived: new Date().toISOString(),
+        source: ["manual"],
       });
+      return;
+    }
+    // else will be handled in onSubmit of WorkflowAlertDependenciesForm
   };
 
   const alertStaticFields = useMemo(() => {
@@ -130,31 +125,39 @@ export function WorkflowTestRunButton({
     );
   }, [definition]);
 
+  const incidentStaticFields = [
+    {
+      key: "id",
+      value: uuidv4(),
+    },
+    {
+      key: "alerts_count",
+      value: 1,
+    },
+    {
+      key: "alert_sources",
+      value: ["manual"],
+    },
+    {
+      key: "services",
+      value: ["manual"],
+    },
+    {
+      key: "is_predicted",
+      value: false,
+    },
+    {
+      key: "is_candidate",
+      value: false,
+    },
+  ];
+
   const renderModalContent = () => {
-    if (dependencies) {
-      if (dependencies.alert.length > 0 && dependencies.incident.length > 0) {
-        return (
-          <Callout title="Mixed alert and incident dependencies" color="red">
-            Alert and incident dependencies cannot be used together
-          </Callout>
-        );
-      }
-      if (dependencies.alert.length > 0) {
-        return (
-          <WorkflowAlertDependenciesForm
-            dependencies={dependencies.alert}
-            staticFields={alertStaticFields}
-            onCancel={closeWorkflowExecutionResultsModal}
-            onSubmit={() => {}}
-          />
-        );
-      }
-    }
     if (error !== null) {
       return (
         <div className="flex justify-center">
-          <Callout title="Workflow execution failed" color="red">
-            {error}
+          <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
+            {error.message}
           </Callout>
         </div>
       );
@@ -176,11 +179,44 @@ export function WorkflowTestRunButton({
             <WorkflowExecutionResults
               workflowId={workflowId}
               workflowExecutionId={workflowExecutionId}
-              workflowYaml={workflowYamlSent ?? ""}
+              workflowYaml={yamlString ?? ""}
             />
           </div>
         </div>
       );
+    }
+    if (dependencies) {
+      if (dependencies.alert.length > 0 && dependencies.incident.length > 0) {
+        return (
+          <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
+            Alert and incident dependencies cannot be used together
+          </Callout>
+        );
+      }
+      if (dependencies.alert.length > 0) {
+        return (
+          <WorkflowAlertIncidentDependenciesForm
+            type="alert"
+            dependencies={dependencies.alert}
+            staticFields={alertStaticFields}
+            onCancel={closeWorkflowExecutionResultsModal}
+            onSubmit={(payload) => handleTestRunWorkflow("alert", payload)}
+            submitLabel="Test Run with Payload"
+          />
+        );
+      }
+      if (dependencies.incident.length > 0) {
+        return (
+          <WorkflowAlertIncidentDependenciesForm
+            type="incident"
+            dependencies={dependencies.incident}
+            staticFields={incidentStaticFields}
+            onCancel={closeWorkflowExecutionResultsModal}
+            onSubmit={(payload) => handleTestRunWorkflow("incident", payload)}
+            submitLabel="Test Run with Payload"
+          />
+        );
+      }
     }
     return (
       <div className="flex justify-center">
@@ -199,14 +235,15 @@ export function WorkflowTestRunButton({
         icon={PlayIcon}
         disabled={!isValid}
         // TODO: check if it freezes UI
-        onClick={testRunWorkflow}
+        onClick={handleClickTestRun}
       >
         Test Run
       </Button>
       <Modal
-        isOpen={testRunModalOpen}
+        isOpen={isTestRunModalOpen}
         onClose={closeWorkflowExecutionResultsModal}
         title="Test Run"
+        className="max-w-screen-md"
       >
         {renderModalContent()}
       </Modal>

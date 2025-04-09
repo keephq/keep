@@ -14,7 +14,7 @@ import {
 import { WorkflowExecutionError } from "./WorkflowExecutionError";
 import { WorkflowExecutionLogs } from "./WorkflowExecutionLogs";
 import { setFavicon } from "@/shared/ui/utils/favicon";
-import { EmptyStateCard, ResizableColumns } from "@/shared/ui";
+import { EmptyStateCard, MonacoEditor, ResizableColumns } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { WorkflowYAMLEditorWithLogs } from "@/shared/ui/WorkflowYAMLEditorWithLogs";
 import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
@@ -138,6 +138,8 @@ export function WorkflowExecutionResults({
   );
 }
 
+const editorHeightClassName = "h-[calc(100vh-220px)]";
+
 export function WorkflowExecutionResultsInternal({
   workflowId,
   executionData,
@@ -194,7 +196,7 @@ export function WorkflowExecutionResultsInternal({
     {
       name: "Workflow Definition",
       content: (
-        <div className="h-[calc(100vh-220px)]">
+        <div className={editorHeightClassName}>
           <WorkflowYAMLEditorWithLogs
             workflowYamlString={workflowRaw ?? ""}
             workflowId={workflowId}
@@ -214,15 +216,29 @@ export function WorkflowExecutionResultsInternal({
       ? [
           {
             name: "Event Trigger",
-            content: (
-              <div className="p-4">
+            content:
+              typeof eventData === "object" ? (
+                <div className={editorHeightClassName}>
+                  <MonacoEditor
+                    value={JSON.stringify(eventData, null, 2)}
+                    language="json"
+                    theme="vs-light"
+                    options={{
+                      readOnly: true,
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      fontSize: 12,
+                      lineNumbers: "off",
+                      folding: true,
+                      wordWrap: "on",
+                    }}
+                  />
+                </div>
+              ) : (
                 <pre className="whitespace-pre-wrap overflow-auto rounded-lg p-4 text-sm">
-                  {typeof eventData === "object"
-                    ? JSON.stringify(eventData, null, 2)
-                    : eventData}
+                  {eventData}
                 </pre>
-              </div>
-            ),
+              ),
           },
         ]
       : []),
