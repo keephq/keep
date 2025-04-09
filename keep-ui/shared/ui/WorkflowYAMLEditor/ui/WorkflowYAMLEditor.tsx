@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useRef, useState } from "react";
+import React, { Suspense, useMemo, useRef, useState, useCallback } from "react";
 import type { editor, Uri } from "monaco-editor";
 import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@tremor/react";
@@ -10,12 +10,28 @@ import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { YamlValidationError } from "../model/types";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
 import clsx from "clsx";
+import { validateMustacheVariableNameForYAML } from "@/entities/workflows/lib/validation";
+import { parseDocument } from "yaml";
+import {
+  getCurrentPath,
+  parseWorkflowYamlStringToJSON,
+} from "@/entities/workflows/lib/yaml-utils";
 
 // NOTE: IT IS IMPORTANT TO IMPORT FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor } from "@/shared/ui";
 import { getSeverityString, MarkerSeverity } from "../lib/utils";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
+
+// CSS for mustache validation errors
+const SQUIGGLY_VALIDATION_CSS = `
+.mustache-error {
+  text-decoration: wavy underline #ef4444;
+}
+.mustache-warning {
+  text-decoration: wavy underline #f59e0b;
+}
+`;
 
 export interface WorkflowYAMLEditorProps {
   workflowYamlString: string;
@@ -61,6 +77,165 @@ export const WorkflowYAMLEditor = ({
 
   const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const mustacheDecorationsRef = useRef<string[]>([]);
+
+  // Function to find the current step in the workflow based on the path
+  const findStepFromPath = useCallback((path: (string | number)[]) => {
+    if (!path || path.length < 3) return null;
+
+    // Look for 'steps' in the path
+    const stepsIdx = path.findIndex((p) => p === "steps");
+    if (stepsIdx === -1) return null;
+
+    // Check if there's an index after 'steps'
+    if (stepsIdx + 1 >= path.length || typeof path[stepsIdx + 1] !== "number")
+      return null;
+
+    return {
+      stepIndex: path[stepsIdx + 1] as number,
+      isInStep: true,
+    };
+  }, []);
+
+  // Function to validate mustache expressions and apply decorations
+  const validateMustacheExpressions = useCallback(() => {
+    if (!editorRef.current || !monacoRef.current) {
+      return;
+    }
+
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    const model = editor.getModel();
+
+    if (!model) {
+      return;
+    }
+
+    // Add CSS for validation error decoration if not already added
+    if (!document.getElementById("mustache-validation-css")) {
+      const styleElement = document.createElement("style");
+      styleElement.id = "mustache-validation-css";
+      styleElement.textContent = SQUIGGLY_VALIDATION_CSS;
+      document.head.appendChild(styleElement);
+    }
+
+    try {
+      const text = model.getValue();
+      const yamlDoc = parseDocument(text);
+      let workflowDefinition;
+
+      try {
+        // Parse the YAML to JSON to get the workflow definition
+        workflowDefinition = parseWorkflowYamlStringToJSON(text);
+      } catch (e) {
+        console.warn("Unable to parse YAML for mustache validation", e);
+      }
+
+      const mustacheRegex = /\{\{([^}]+)\}\}/g;
+      const decorations: editor.IModelDeltaDecoration[] = [];
+
+      let match;
+      while ((match = mustacheRegex.exec(text)) !== null) {
+        const fullMatch = match[0]; // The entire {{...}} expression
+        const matchStart = match.index;
+        const matchEnd = matchStart + fullMatch.length;
+
+        // Get the position (line, column) for the match
+        const startPos = model.getPositionAt(matchStart);
+        const endPos = model.getPositionAt(matchEnd);
+
+        // Get the current path in the YAML document
+        const path = getCurrentPath(yamlDoc, matchStart);
+
+        // Extract step information from the path
+        const stepInfo = findStepFromPath(path);
+
+        let errorMessage: string | null = null;
+        let isError = false;
+
+        // Basic validation that works without full context
+        const variableContent = match[1].trim();
+
+        // If we have both the workflow definition and step info, we can do proper validation
+        if (
+          workflowDefinition &&
+          stepInfo &&
+          workflowDefinition.workflow &&
+          workflowDefinition.workflow.steps
+        ) {
+          const currentStep =
+            workflowDefinition.workflow.steps[stepInfo.stepIndex];
+
+          if (currentStep) {
+            // Use the actual validation function from the workflow library
+            errorMessage = validateMustacheVariableNameForYAML(
+              fullMatch,
+              currentStep,
+              workflowDefinition.workflow,
+              {} // secrets, which you'd need to obtain from somewhere
+            );
+
+            isError = !!errorMessage;
+          }
+        } else {
+          // Fallback to basic validation
+          const parts = variableContent.split(".");
+          isError = parts.some((part) => !part || part.trim() === "");
+
+          if (isError) {
+            errorMessage = `Invalid mustache variable: '${variableContent}' - Parts cannot be empty.`;
+          }
+        }
+
+        // Add decoration for errors
+        if (isError && errorMessage) {
+          decorations.push({
+            range: new monaco.Range(
+              startPos.lineNumber,
+              startPos.column,
+              endPos.lineNumber,
+              endPos.column
+            ),
+            options: {
+              inlineClassName: "mustache-error",
+              hoverMessage: { value: errorMessage },
+            },
+          });
+        }
+        // For valid patterns, add warnings if we couldn't do full validation
+        else if (
+          !workflowDefinition &&
+          (variableContent.startsWith("steps.") ||
+            variableContent.startsWith("secrets.") ||
+            variableContent.startsWith("alert.") ||
+            variableContent.startsWith("incident."))
+        ) {
+          decorations.push({
+            range: new monaco.Range(
+              startPos.lineNumber,
+              startPos.column,
+              endPos.lineNumber,
+              endPos.column
+            ),
+            options: {
+              inlineClassName: "mustache-warning",
+              hoverMessage: {
+                value: `Warning: Unable to fully validate mustache variable '${variableContent}' without complete workflow context.`,
+              },
+            },
+          });
+        }
+      }
+
+      // Apply the decorations
+      mustacheDecorationsRef.current = editor.deltaDecorations(
+        mustacheDecorationsRef.current,
+        decorations
+      );
+    } catch (error) {
+      console.error("Error validating mustache expressions:", error);
+    }
+  }, [findStepFromPath]);
 
   const handleMarkersChanged = (
     modelUri: Uri,
@@ -106,6 +281,14 @@ export const WorkflowYAMLEditor = ({
       setModelMarkers.call(monacoInstance.editor, model, owner, markers);
       handleMarkersChanged(model.uri, markers);
     };
+
+    // Run initial mustache validation
+    validateMustacheExpressions();
+
+    // Set up a listener for content changes to re-validate mustache expressions
+    editor.onDidChangeModelContent(() => {
+      validateMustacheExpressions();
+    });
 
     setIsEditorMounted(true);
   };

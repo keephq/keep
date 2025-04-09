@@ -1,6 +1,7 @@
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "../model/types";
 import { getWithParams } from "./parser";
+import { YamlStepOrAction, YamlWorkflowDefinition } from "../model/yaml.types";
 
 export type ValidationResult = [string, string];
 export type ValidationError = [string, "error" | "warning"];
@@ -17,6 +18,74 @@ function extractMustacheValue(mustacheString: string): string {
   // Return the captured group if found, otherwise return empty string
   return match ? match[1] : "";
 }
+
+export const validateMustacheVariableNameForYAML = (
+  variableName: string,
+  currentStep: YamlStepOrAction,
+  definition: YamlWorkflowDefinition,
+  secrets: Record<string, string>
+) => {
+  const cleanedVariableName = extractMustacheValue(variableName);
+  const parts = cleanedVariableName.split(".");
+  if (!parts.every((part) => part.length > 0)) {
+    return `Variable: '${variableName}' - Parts cannot be empty.`;
+  }
+  if (parts[0] === "alert") {
+    // todo: validate alert properties
+    return null;
+  }
+  if (parts[0] === "incident") {
+    // todo: validate incident properties
+    return null;
+  }
+  if (parts[0] === "secrets") {
+    const secretName = parts[1];
+    if (!secretName) {
+      return `Variable: '${variableName}' - To access a secret, you need to specify the secret name.`;
+    }
+    if (!secrets[secretName]) {
+      return `Variable: '${variableName}' - Secret '${secretName}' not found.`;
+    }
+    return null;
+  }
+  if (parts[0] === "steps") {
+    const stepName = parts[1];
+    if (!stepName) {
+      return `Variable: '${variableName}' - To access the results of a step, you need to specify the step name.`;
+    }
+    // todo: check if
+    // - the step exists
+    // - it's not the current step (can't access own results, only enrich_alert and enrich_incident can access their own results)
+    // - it's above the current step
+    // - if it's a step it cannot access actions since they run after steps
+    const step = definition.steps.find((s) => s.name === stepName);
+    const stepIndex = definition.steps.findIndex((s) => s.name === stepName);
+    const currentStepIndex = definition.steps.findIndex(
+      (s) => s.name === currentStep.name
+    );
+    if (!step) {
+      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
+    }
+    const isCurrentStep = step.name === currentStep.name;
+    if (isCurrentStep) {
+      return `Variable: '${variableName}' - You can't access the results of the current step.`;
+    }
+    if (stepIndex > currentStepIndex) {
+      return `Variable: '${variableName}' - You can't access the results of a step that appears after the current step.`;
+    }
+
+    if (!definition.steps?.some((step) => step.name === stepName)) {
+      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
+    }
+    if (parts[2] === "results") {
+      // todo: validate results properties
+      return null;
+    } else {
+      return `Variable: '${variableName}' - To access the results of a step, use 'results' as suffix.`;
+    }
+  }
+  return null;
+};
 
 export const validateMustacheVariableName = (
   variableName: string,
