@@ -67,7 +67,6 @@ const DashboardPage = () => {
   const closeModal = () => setIsModalOpen(false);
 
   const handleAddWidget = (widget: any) => {
-    console.log(layout);
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
