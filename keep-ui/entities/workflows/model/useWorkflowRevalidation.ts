@@ -18,24 +18,33 @@ export function useWorkflowRevalidation() {
   /**
    * Revalidates a specific workflow by ID
    */
-  const revalidateDetail = useCallback((workflowId: string) => {
-    return mutate(workflowKeys.detail(workflowId));
+  const revalidateDetail = useCallback(
+    (workflowId: string, workflowRevision: number | null = null) => {
+      return mutate(workflowKeys.detail(workflowId, workflowRevision));
+    },
+    []
+  );
+
+  const revalidateWorkflowRevisions = useCallback((workflowId: string) => {
+    return mutate(workflowKeys.revisions(workflowId));
   }, []);
 
   /**
    * Revalidates both the lists and a specific workflow detail
    */
   const revalidateWorkflow = useCallback(
-    (workflowId: string) => {
+    (workflowId: string, workflowRevision: number | null = null) => {
       revalidateLists();
-      revalidateDetail(workflowId);
+      revalidateWorkflowRevisions(workflowId);
+      revalidateDetail(workflowId, workflowRevision);
     },
-    [revalidateLists, revalidateDetail]
+    [revalidateLists, revalidateDetail, revalidateWorkflowRevisions]
   );
 
   return {
     revalidateLists,
     revalidateDetail,
     revalidateWorkflow,
+    revalidateWorkflowRevisions,
   };
 }

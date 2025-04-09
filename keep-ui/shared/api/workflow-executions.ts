@@ -18,6 +18,7 @@ export interface WorkflowExecutionDetail {
   status: string;
   triggered_by: string;
   workflow_id: string;
+  workflow_revision: number;
   workflow_name?: string;
   tenant_id: string;
 }

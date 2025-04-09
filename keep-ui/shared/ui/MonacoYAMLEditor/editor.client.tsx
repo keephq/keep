@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { configureMonacoYaml, MonacoYaml } from "monaco-yaml";
-import { Editor, loader, type EditorProps } from "@monaco-editor/react";
+import { DiffEditor, Editor, loader } from "@monaco-editor/react";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { KeepLoader, ErrorComponent } from "@/shared/ui";
 import * as monaco from "monaco-editor";
+import { MonacoYamlEditorProps } from "./MonacoYAMLEditor.types";
 
 // Loading these workers from NPM only works with webpack. For turbopack, we use 'editor.client.turbopack.tsx'
 self.MonacoEnvironment = {
@@ -39,19 +40,16 @@ const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 // In the docs, it is stated that there should only be one monaco yaml instance configured at a time
 let monacoYamlInstance: MonacoYaml | undefined;
 
-type MonacoYamlEditorProps = {
-  schemas: {
-    fileMatch: string[];
-    schema: object;
-    uri: string;
-  }[];
-} & EditorProps;
-
 /**
  * This is a custom editor component that uses 'monaco-yaml' to provide YAML language support.
  * It is used to edit YAML files.
  */
-export function MonacoYAMLEditor({ schemas, ...props }: MonacoYamlEditorProps) {
+export function MonacoYAMLEditor({
+  schemas,
+  original,
+  modified,
+  ...props
+}: MonacoYamlEditorProps) {
   const [isMonacoInitialized, setIsMonacoInitialized] = useState(false);
 
   useEffect(() => {
@@ -108,5 +106,17 @@ export function MonacoYAMLEditor({ schemas, ...props }: MonacoYamlEditorProps) {
     );
   }
 
-  return <Editor defaultLanguage="yaml" loading={Loader} {...props} />;
+  if (original && modified) {
+    return (
+      // @ts-expect-error - DiffEditorProps is not typed correctly yet
+      <DiffEditor
+        original={original}
+        modified={modified}
+        language="yaml"
+        loading={Loader}
+        {...props}
+      />
+    );
+  }
+  return <Editor language="yaml" loading={Loader} {...props} />;
 }

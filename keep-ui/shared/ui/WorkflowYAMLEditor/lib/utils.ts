@@ -1,4 +1,8 @@
-import { YamlValidationErrorSeverity } from "../model/types";
+import {
+  WorkflowYAMLEditorDiffProps,
+  WorkflowYAMLEditorProps,
+  YamlValidationErrorSeverity,
+} from "../model/types";
 
 // Copied from monaco-editor/esm/vs/editor/editor.api.d.ts because we can't import with turbopack
 export enum MarkerSeverity {
@@ -21,6 +25,12 @@ function getSeverityString(
     return "info";
   }
   return "info";
+}
+
+export function isDiffEditorProps(
+  props: WorkflowYAMLEditorProps
+): props is WorkflowYAMLEditorDiffProps {
+  return "original" in props && "modified" in props;
 }
 
 export { getSeverityString };

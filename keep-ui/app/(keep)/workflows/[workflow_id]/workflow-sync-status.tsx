@@ -17,7 +17,7 @@ export function WorkflowSyncStatus({
   lastDeployedAt,
   isChangesSaved,
 }: WorkflowSyncStatusProps) {
-  const { workflow } = useWorkflowDetail(workflowId);
+  const { workflow } = useWorkflowDetail(workflowId, null);
 
   const lastSavedAt = workflow?.last_updated + "Z" || lastDeployedAt;
   const revision = workflow?.revision;

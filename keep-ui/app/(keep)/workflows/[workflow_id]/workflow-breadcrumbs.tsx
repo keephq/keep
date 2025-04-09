@@ -12,15 +12,28 @@ export function WorkflowBreadcrumbs({ workflowId }: { workflowId: string }) {
   return (
     <Subtitle className="text-sm">
       <Link href="/workflows">All Workflows</Link>{" "}
-      <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
       {clientParams.workflow_execution_id ? (
         <>
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
           <Link href={`/workflows/${workflowId}`}>Workflow Details</Link>
           <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Workflow
           Execution Details
         </>
       ) : (
-        "Workflow Details"
+        <>
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
+          <Link href={`/workflows/${workflowId}`}>Workflow Details</Link>
+        </>
+      )}
+      {clientParams.revision && (
+        <>
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
+          <Link
+            href={`/workflows/${workflowId}/versions/${clientParams.revision}`}
+          >
+            Workflow Revision {clientParams.revision}
+          </Link>
+        </>
       )}
     </Subtitle>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Card, Callout, Button } from "@tremor/react";
+import { Card, Callout, Button, Badge } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { TabGroup, Tab, TabList, TabPanel, TabPanels } from "@tremor/react";
@@ -19,6 +19,7 @@ import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { WorkflowYAMLEditorWithLogs } from "@/shared/ui/WorkflowYAMLEditorWithLogs";
 import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
+import { Workflow } from "@/shared/api/workflows";
 
 const convertWorkflowStatusToFaviconStatus = (
   status: WorkflowExecutionDetail["status"]
@@ -66,8 +67,13 @@ export function WorkflowExecutionResults({
         : undefined,
     });
 
+  const workflowRevision = isWorkflowExecution(executionData)
+    ? executionData.workflow_revision
+    : undefined;
+
   const { workflow: workflowData, error: workflowError } = useWorkflowDetail(
-    !workflowYaml ? workflowId : null
+    !workflowYaml ? workflowId : null,
+    workflowRevision ?? null
   );
 
   const finalYaml = workflowYaml ?? workflowData?.workflow_raw;
@@ -102,10 +108,6 @@ export function WorkflowExecutionResults({
     }
   }, [executionData]);
 
-  if (!executionData || !finalYaml) {
-    return <Loading />;
-  }
-
   if (executionError) {
     return (
       <Callout
@@ -127,9 +129,13 @@ export function WorkflowExecutionResults({
     );
   }
 
+  if (!executionData || !workflowData || !finalYaml) {
+    return <Loading />;
+  }
+
   return (
     <WorkflowExecutionResultsInternal
-      workflowId={workflowId}
+      workflow={workflowData}
       executionData={executionData}
       workflowRaw={finalYaml}
       checks={checks}
@@ -139,14 +145,14 @@ export function WorkflowExecutionResults({
 }
 
 export function WorkflowExecutionResultsInternal({
-  workflowId,
+  workflow,
   executionData,
   workflowRaw,
   checks,
   isLoading,
 }: {
   executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
-  workflowId: string;
+  workflow: Workflow;
   workflowRaw: string | undefined;
   checks: number;
   isLoading: boolean;
@@ -192,12 +198,20 @@ export function WorkflowExecutionResultsInternal({
 
   const tabs = [
     {
-      name: "Workflow Definition",
+      id: "workflow-definition",
+      name: (
+        <span className="flex items-center gap-2">
+          Workflow Definition{" "}
+          <Badge color="gray" size="xs">
+            Revision {workflow.revision}
+          </Badge>
+        </span>
+      ),
       content: (
         <div className="h-[calc(100vh-220px)]">
           <WorkflowYAMLEditorWithLogs
-            workflowYamlString={workflowRaw ?? ""}
-            workflowId={workflowId}
+            value={workflowRaw ?? ""}
+            workflowId={workflow.id}
             executionLogs={logs}
             executionStatus={status}
             hoveredStep={hoveredStep}
@@ -205,7 +219,7 @@ export function WorkflowExecutionResultsInternal({
             selectedStep={selectedStep}
             setSelectedStep={setSelectedStep}
             readOnly={true}
-            filename={workflowId}
+            filename={workflow.id}
           />
         </div>
       ),
@@ -213,6 +227,7 @@ export function WorkflowExecutionResultsInternal({
     ...(hasEvent
       ? [
           {
+            id: "event-trigger",
             name: "Event Trigger",
             content: (
               <div className="p-4">
@@ -233,7 +248,7 @@ export function WorkflowExecutionResultsInternal({
       {executionData.error && (
         <WorkflowExecutionError
           error={executionData.error}
-          workflowId={workflowId}
+          workflowId={workflow.id}
           eventId={eventId}
           eventType={eventType}
         />
@@ -262,7 +277,7 @@ export function WorkflowExecutionResultsInternal({
                 color="orange"
                 size="sm"
                 onClick={() => {
-                  revalidateMultiple([`/workflows/${workflowId}/runs`]);
+                  revalidateMultiple([`/workflows/${workflow.id}/runs`]);
                 }}
               >
                 Refresh
@@ -275,12 +290,12 @@ export function WorkflowExecutionResultsInternal({
             <TabGroup>
               <TabList className="p-2">
                 {tabs.map((tab) => (
-                  <Tab key={tab.name}>{tab.name}</Tab>
+                  <Tab key={tab.id}>{tab.name}</Tab>
                 ))}
               </TabList>
               <TabPanels>
                 {tabs.map((tab) => (
-                  <TabPanel key={tab.name}>{tab.content}</TabPanel>
+                  <TabPanel key={tab.id}>{tab.content}</TabPanel>
                 ))}
               </TabPanels>
             </TabGroup>

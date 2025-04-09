@@ -37,6 +37,7 @@ export default function WorkflowOverview({
   });
   const searchParams = useSearchParams();
 
+  // TODO: This is a hack to reset the pagination when the search params change. WHY?
   useEffect(() => {
     setExecutionPagination({
       ...executionPagination,
@@ -44,7 +45,7 @@ export default function WorkflowOverview({
     });
   }, [searchParams]);
 
-  const { data, isLoading, error, isValidating } = useWorkflowExecutionsV2(
+  const { data, isLoading, error } = useWorkflowExecutionsV2(
     workflow_id,
     executionPagination.limit,
     executionPagination.offset

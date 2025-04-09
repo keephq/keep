@@ -47,7 +47,7 @@ class WorkflowStore:
         else:
             workflow_name = workflow.get("name")
 
-        workflow = add_or_update_workflow(
+        workflow_db = add_or_update_workflow(
             id=str(uuid.uuid4()),
             name=workflow_name,
             tenant_id=tenant_id,
@@ -57,8 +57,10 @@ class WorkflowStore:
             is_disabled=Parser.parse_disabled(workflow),
             workflow_raw=cyaml.dump(workflow, width=99999),
         )
-        self.logger.info(f"Workflow {workflow_id} created successfully")
-        return workflow
+        self.logger.info(
+            f"Workflow {workflow_db.id}, {workflow_db.revision} created successfully"
+        )
+        return workflow_db
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
@@ -103,16 +105,21 @@ class WorkflowStore:
         valid_workflow_yaml = {"workflow": workflow_yaml}
         return cyaml.dump(valid_workflow_yaml, width=99999)
 
-    def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        workflow = get_raw_workflow(tenant_id, workflow_id)
-        if not workflow:
+    def get_workflow(
+        self, tenant_id: str, workflow_id: str, revision: int = None
+    ) -> Workflow:
+        workflow_raw = get_raw_workflow(tenant_id, workflow_id)
+        if not workflow_raw:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow {workflow_id} not found",
             )
-        workflow_yaml = cyaml.safe_load(workflow)
+        workflow_yaml = cyaml.safe_load(workflow_raw)
         workflow = self.parser.parse(
-            tenant_id, workflow_yaml, workflow_db_id=workflow_id
+            tenant_id,
+            workflow_yaml,
+            workflow_db_id=workflow_id,
+            workflow_revision=revision,
         )
         if len(workflow) > 1:
             raise HTTPException(
@@ -127,9 +134,9 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
 
-    def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
-        logging.info("Parsing workflow from dict", extra={"workflow": workflow})
-        workflow = self.parser.parse(tenant_id, workflow)
+    def get_workflow_from_dict(self, tenant_id: str, workflow_dict: dict) -> Workflow:
+        logging.info("Parsing workflow from dict", extra={"workflow": workflow_dict})
+        workflow = self.parser.parse(tenant_id, workflow_dict)
         if workflow:
             return workflow[0]
         else:
@@ -139,9 +146,7 @@ class WorkflowStore:
             )
 
     def get_all_workflows(self, tenant_id: str) -> list[WorkflowModel]:
-        # list all tenant's workflows
-        workflows = get_all_workflows(tenant_id)
-        return workflows
+        return list(get_all_workflows(tenant_id))
 
     def get_all_workflows_with_last_execution(
         self,
@@ -167,8 +172,7 @@ class WorkflowStore:
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
-        workflow_yamls = get_all_workflows_yamls(tenant_id)
-        return workflow_yamls
+        return list(get_all_workflows_yamls(tenant_id))
 
     def get_workflows_from_path(
         self,
@@ -539,7 +543,10 @@ class WorkflowStore:
         return results
 
     def get_workflow_meta_data(
-        self, tenant_id: str, workflow: WorkflowModel, installed_providers_by_type: dict
+        self,
+        tenant_id: str,
+        workflow: WorkflowModel | None,
+        installed_providers_by_type: dict,
     ):
         providers_dto = []
         triggers = []

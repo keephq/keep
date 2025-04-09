@@ -280,6 +280,7 @@ class WorkflowScheduler:
     def handle_manual_event_workflow(
         self,
         workflow_id,
+        workflow_revision,
         tenant_id,
         triggered_by_user,
         event: AlertDto | IncidentDto,
@@ -303,6 +304,7 @@ class WorkflowScheduler:
 
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
@@ -503,6 +505,7 @@ class WorkflowScheduler:
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
+                        workflow_revision=workflow.revision,
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
