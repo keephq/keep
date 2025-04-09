@@ -98,7 +98,7 @@ export default function MappingExecutionsPage(props: {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rule.rows.slice(0, 5).map((row, idx) => (
+                    {rule.rows.slice(0, 20).map((row, idx) => (
                       <TableRow key={idx}>
                         {Object.values(row).map((value: any, valueIdx) => (
                           <TableCell key={valueIdx}>
