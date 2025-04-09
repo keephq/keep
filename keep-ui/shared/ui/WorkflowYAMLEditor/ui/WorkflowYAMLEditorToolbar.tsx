@@ -1,6 +1,6 @@
 import { Check, Copy, Download } from "lucide-react";
 import { Button } from "@tremor/react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
 
 export interface WorkflowYAMLEditorToolbarProps {
@@ -21,12 +21,24 @@ export function WorkflowYAMLEditorToolbar({
   className,
 }: WorkflowYAMLEditorToolbarProps) {
   const [isCopied, setIsCopied] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCopy = async () => {
     try {
       await onCopy();
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy text:", err);
     }
