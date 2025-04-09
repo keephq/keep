@@ -67,11 +67,12 @@ const DashboardPage = () => {
   const closeModal = () => setIsModalOpen(false);
 
   const handleAddWidget = (widget: any) => {
+    console.log(layout);
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
-      x: (layout.length % 12) * 2,
-      y: Math.floor(layout.length / 12) * 2,
+      x: 0,
+      y: 0,
       w: 3,
       h: 3,
       minW: 2,

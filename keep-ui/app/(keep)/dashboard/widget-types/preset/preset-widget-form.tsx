@@ -8,7 +8,7 @@ import {
   Subtitle,
   TextInput,
 } from "@tremor/react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Controller,
   get,
@@ -59,39 +59,47 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
 
   const formValues = useWatch({ control });
 
+  const normalizedFormValues = useMemo(() => {
+    return {
+      countOfLastAlerts: parseInt(formValues.countOfLastAlerts || "0"),
+      selectedPreset: presets.find((p) => p.id === formValues.selectedPreset),
+      thresholds: formValues.thresholds?.map((t) => ({
+        ...t,
+        value: parseInt(t.value?.toString() as string, 10) || 0,
+      })),
+    };
+  }, [formValues]);
+
   function getLayoutValues(): LayoutItem {
     if (editingItem) {
       return {} as LayoutItem;
     }
 
+    const itemHeight = normalizedFormValues.countOfLastAlerts > 0 ? 6 : 4;
+    const itemWidth = normalizedFormValues.countOfLastAlerts > 0 ? 4 : 3;
+
     return {
-      w: 3,
-      h: 3,
-      minW: 2,
-      minH: 3,
+      w: itemWidth,
+      h: itemHeight,
+      minW: 4,
+      minH: 4,
       static: false,
     } as LayoutItem;
   }
 
   useEffect(() => {
-    const preset = presets.find((p) => p.id === formValues.selectedPreset);
-    const formattedThresholds = formValues.thresholds?.map((t) => ({
-      ...t,
-      value: parseInt(t.value?.toString() as string, 10) || 0,
-    }));
-
     onChange(
       {
         ...getLayoutValues(),
         preset: {
-          ...preset,
-          countOfLastAlerts: parseInt(formValues.countOfLastAlerts || "0"),
+          ...normalizedFormValues.selectedPreset,
+          countOfLastAlerts: normalizedFormValues.countOfLastAlerts,
         },
-        thresholds: formattedThresholds,
+        thresholds: normalizedFormValues.thresholds,
       },
       isValid
     );
-  }, [formValues, isValid]);
+  }, [normalizedFormValues, isValid]);
 
   const handleThresholdBlur = () => {
     const reorderedThreesholds = formValues?.thresholds
