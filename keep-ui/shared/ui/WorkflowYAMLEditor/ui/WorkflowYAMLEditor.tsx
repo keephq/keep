@@ -195,8 +195,7 @@ export const WorkflowYAMLEditor = ({
               : null;
 
           if (currentStep) {
-            // Use the actual validation function from the workflow library
-            errorMessage = validateMustacheVariableNameForYAML(
+            const result = validateMustacheVariableNameForYAML(
               fullMatch,
               currentStep,
               currentStepType,
@@ -206,8 +205,9 @@ export const WorkflowYAMLEditor = ({
               installedProviders
             );
 
-            if (errorMessage) {
-              severity = "error";
+            if (result) {
+              errorMessage = result[0];
+              severity = result[1] as "error" | "warning";
             }
           }
         } else {
@@ -287,6 +287,16 @@ export const WorkflowYAMLEditor = ({
     onValidationErrors?.(errors);
   };
 
+  const handleChange = useCallback(
+    (value: string | undefined) => {
+      if (onChange) {
+        onChange(value);
+      }
+      validateMustacheExpressions();
+    },
+    [onChange, validateMustacheExpressions]
+  );
+
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
     monacoInstance: typeof import("monaco-editor")
@@ -307,11 +317,6 @@ export const WorkflowYAMLEditor = ({
       setModelMarkers.call(monacoInstance.editor, model, owner, markers);
       handleMarkersChanged(model.uri, markers, owner);
     };
-
-    // Set up a listener for content changes to re-validate mustache expressions
-    editor.onDidChangeModelContent(() => {
-      validateMustacheExpressions();
-    });
 
     setIsEditorMounted(true);
   };
@@ -425,7 +430,7 @@ export const WorkflowYAMLEditor = ({
               wrapperProps={{ "data-testid": dataTestId }}
               value={workflowYamlString}
               onMount={handleEditorDidMount}
-              onChange={onChange}
+              onChange={handleChange}
               options={editorOptions}
               loading={<KeepLoader loadingText="Loading YAML editor..." />}
               theme="light"

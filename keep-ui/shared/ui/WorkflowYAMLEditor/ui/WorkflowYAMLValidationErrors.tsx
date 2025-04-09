@@ -103,12 +103,12 @@ export function WorkflowYAMLValidationErrors({
       >
         {sortedValidationErrors.map((error, index) => (
           <div
-            key={`${error.lineNumber}-${error.column}-${error.message}-${index}`}
+            key={`${error.lineNumber}-${error.column}-${error.message}-${index}-${error.severity}`}
             className={clsx(
               "text-sm cursor-pointer hover:underline flex items-start gap-1 px-4 py-1",
-              highestSeverity === "error" && "bg-red-100",
-              highestSeverity === "warning" && "bg-yellow-100",
-              highestSeverity === "info" && "bg-blue-100"
+              error.severity === "error" && "bg-red-100",
+              error.severity === "warning" && "bg-yellow-100",
+              error.severity === "info" && "bg-blue-100"
             )}
             onClick={() => onErrorClick?.(error)}
           >
