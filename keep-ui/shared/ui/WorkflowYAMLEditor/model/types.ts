@@ -1,4 +1,4 @@
-export type YamlValidationErrorSeverity = "error" | "warning" | "info";
+export type YamlValidationErrorSeverity = "error" | "warning" | "info" | "hint";
 
 export type YamlValidationError = {
   message: string;

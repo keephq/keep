@@ -25,8 +25,8 @@ export const validateMustacheVariableNameForYAML = (
   currentStepType: "step" | "action",
   definition: YamlWorkflowDefinition,
   secrets: Record<string, string>,
-  providers: Provider[] | undefined,
-  installedProviders: Provider[] | undefined
+  providers: Provider[] | null,
+  installedProviders: Provider[] | null
 ) => {
   const cleanedVariableName = extractMustacheValue(variableName);
   if (!cleanedVariableName) {
