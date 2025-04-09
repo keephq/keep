@@ -3702,6 +3702,7 @@ def create_incident_from_dto(
     tenant_id: str,
     incident_dto: IncidentDtoIn | IncidentDto,
     generated_from_ai: bool = False,
+    session: Optional[Session] = None,
 ) -> Optional[Incident]:
     """
     Creates an incident for a specified tenant based on the provided incident data transfer object (DTO).
@@ -3747,7 +3748,7 @@ def create_incident_from_dto(
     if incident_dto.severity is not None:
         incident_dict["severity"] = incident_dto.severity.order
 
-    return create_incident_from_dict(tenant_id, incident_dict)
+    return create_incident_from_dict(tenant_id, incident_dict, session)
 
 
 def create_incident_from_dict(
