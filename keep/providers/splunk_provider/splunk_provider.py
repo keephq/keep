@@ -142,6 +142,9 @@ class SplunkProvider(BaseProvider):
 
             all_permissions = set()
             t = time.time()
+            # a token is created and is coupled to a user, we need to check that user permissions
+            # @tb: Didn't investigate in depth if I can get the user from the token...
+            # @tb: I can't understand why in hell do we iterate over all users, but I guess it's legacy???
             if self.authentication_config.username:
                 self.logger.info(
                     "Validating scopes for Splunk provider with username",
