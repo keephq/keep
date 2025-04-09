@@ -69,19 +69,49 @@ export const WorkflowYAMLEditor = ({
 
   // Function to find the current step in the workflow based on the path
   const findStepFromPath = useCallback((path: (string | number)[]) => {
-    if (!path || path.length < 3) return null;
+    if (!path || path.length < 3) {
+      return null;
+    }
 
     // Look for 'steps' in the path
     const stepsIdx = path.findIndex((p) => p === "steps");
-    if (stepsIdx === -1) return null;
+    if (stepsIdx === -1) {
+      return null;
+    }
 
     // Check if there's an index after 'steps'
-    if (stepsIdx + 1 >= path.length || typeof path[stepsIdx + 1] !== "number")
+    if (stepsIdx + 1 >= path.length || typeof path[stepsIdx + 1] !== "number") {
       return null;
+    }
 
     return {
       stepIndex: path[stepsIdx + 1] as number,
       isInStep: true,
+    };
+  }, []);
+
+  const findActionFromPath = useCallback((path: (string | number)[]) => {
+    if (!path || path.length < 3) {
+      return null;
+    }
+
+    // Look for 'actions' in the path
+    const actionsIdx = path.findIndex((p) => p === "actions");
+    if (actionsIdx === -1) {
+      return null;
+    }
+
+    // Check if there's an index after 'actions'
+    if (
+      actionsIdx + 1 >= path.length ||
+      typeof path[actionsIdx + 1] !== "number"
+    ) {
+      return null;
+    }
+
+    return {
+      actionIndex: path[actionsIdx + 1] as number,
+      isInAction: true,
     };
   }, []);
 
@@ -130,6 +160,9 @@ export const WorkflowYAMLEditor = ({
 
         // Extract step information from the path
         const stepInfo = findStepFromPath(path);
+        const actionInfo = findActionFromPath(path);
+
+        const currentStepType = stepInfo?.isInStep ? "step" : "action";
 
         let errorMessage: string | null = null;
         let isError = false;
@@ -141,18 +174,23 @@ export const WorkflowYAMLEditor = ({
         // If we have both the workflow definition and step info, we can do proper validation
         if (
           workflowDefinition &&
-          stepInfo &&
+          (stepInfo || actionInfo) &&
           workflowDefinition.workflow &&
-          workflowDefinition.workflow.steps
+          (workflowDefinition.workflow.steps ||
+            workflowDefinition.workflow.actions)
         ) {
-          const currentStep =
-            workflowDefinition.workflow.steps[stepInfo.stepIndex];
+          const currentStep = stepInfo?.isInStep
+            ? workflowDefinition.workflow.steps[stepInfo.stepIndex]
+            : actionInfo?.isInAction
+              ? workflowDefinition.workflow.actions[actionInfo.actionIndex]
+              : null;
 
           if (currentStep) {
             // Use the actual validation function from the workflow library
             errorMessage = validateMustacheVariableNameForYAML(
               fullMatch,
               currentStep,
+              currentStepType,
               workflowDefinition.workflow,
               {} // secrets, which you'd need to obtain from somewhere
             );

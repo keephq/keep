@@ -22,6 +22,7 @@ function extractMustacheValue(mustacheString: string): string {
 export const validateMustacheVariableNameForYAML = (
   variableName: string,
   currentStep: YamlStepOrAction,
+  currentStepType: "step" | "action",
   definition: YamlWorkflowDefinition,
   secrets: Record<string, string>
 ) => {
@@ -60,9 +61,10 @@ export const validateMustacheVariableNameForYAML = (
     // - if it's a step it cannot access actions since they run after steps
     const step = definition.steps.find((s) => s.name === stepName);
     const stepIndex = definition.steps.findIndex((s) => s.name === stepName);
-    const currentStepIndex = definition.steps.findIndex(
-      (s) => s.name === currentStep.name
-    );
+    const currentStepIndex =
+      currentStepType === "step"
+        ? definition.steps.findIndex((s) => s.name === currentStep.name)
+        : -1;
     if (!step) {
       return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
     }
@@ -70,7 +72,7 @@ export const validateMustacheVariableNameForYAML = (
     if (isCurrentStep) {
       return `Variable: '${variableName}' - You can't access the results of the current step.`;
     }
-    if (stepIndex > currentStepIndex) {
+    if (currentStepIndex !== -1 && stepIndex > currentStepIndex) {
       return `Variable: '${variableName}' - You can't access the results of a step that appears after the current step.`;
     }
 
