@@ -24,12 +24,41 @@ export const validateMustacheVariableNameForYAML = (
   currentStep: YamlStepOrAction,
   currentStepType: "step" | "action",
   definition: YamlWorkflowDefinition,
-  secrets: Record<string, string>
+  secrets: Record<string, string>,
+  providers: Provider[] | undefined,
+  installedProviders: Provider[] | undefined
 ) => {
   const cleanedVariableName = extractMustacheValue(variableName);
+  if (!cleanedVariableName) {
+    return `Empty mustache variable.`;
+  }
   const parts = cleanedVariableName.split(".");
   if (!parts.every((part) => part.length > 0)) {
-    return `Variable: ${variableName} - Parts cannot be empty.`;
+    return `Variable: ${cleanedVariableName} - path parts cannot be empty.`;
+  }
+  if (parts[0] === "providers") {
+    const providerName = parts[1];
+    if (!providerName) {
+      return `Variable: ${cleanedVariableName} - To access a provider, you need to specify the provider name.`;
+    }
+    if (!providers || !installedProviders) {
+      // Skip validation if providers or installedProviders are not available
+      return null;
+    }
+    const isDefault = providerName.startsWith("default-");
+    if (isDefault) {
+      const providerType = isDefault ? providerName.split("-")[1] : null;
+      const provider = providers.find((p) => p.type === providerType);
+      if (!provider) {
+        return `Variable: ${cleanedVariableName} - Provider "${providerName}" not found.`;
+      }
+    } else {
+      const provider = installedProviders.find((p) => p.id === providerName);
+      if (!provider) {
+        return `Variable: ${cleanedVariableName} - Provider "${providerName}" is not installed.`;
+      }
+    }
+    return null;
   }
   if (parts[0] === "alert") {
     // todo: validate alert properties

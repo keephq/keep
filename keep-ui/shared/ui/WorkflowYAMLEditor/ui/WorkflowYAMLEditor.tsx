@@ -1,6 +1,13 @@
 "use client";
 
-import React, { Suspense, useMemo, useRef, useState, useCallback } from "react";
+import React, {
+  Suspense,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import type { editor, Uri } from "monaco-editor";
 import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@tremor/react";
@@ -20,6 +27,7 @@ import {
 // NOTE: IT IS IMPORTANT TO IMPORT FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor } from "@/shared/ui";
 import { getSeverityString, MarkerSeverity } from "../lib/utils";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 export interface WorkflowYAMLEditorProps {
@@ -53,6 +61,8 @@ export const WorkflowYAMLEditor = ({
   const [validationErrors, setValidationErrors] = useState<
     YamlValidationError[] | null
   >(null);
+  const { data: { providers, installed_providers: installedProviders } = {} } =
+    useProviders();
   const workflowJsonSchema = useWorkflowJsonSchema();
   const schemas = useMemo(() => {
     return [
@@ -129,6 +139,9 @@ export const WorkflowYAMLEditor = ({
       return;
     }
 
+    console.log("providers", providers);
+    console.log("installedProviders", installedProviders);
+
     try {
       const text = model.getValue();
       const yamlDoc = parseDocument(text);
@@ -191,7 +204,9 @@ export const WorkflowYAMLEditor = ({
               currentStep,
               currentStepType,
               workflowDefinition.workflow,
-              secrets
+              secrets,
+              providers,
+              installedProviders
             );
 
             if (errorMessage) {
@@ -244,7 +259,7 @@ export const WorkflowYAMLEditor = ({
     } catch (error) {
       console.error("Error validating mustache expressions:", error);
     }
-  }, [findStepFromPath]);
+  }, [findStepFromPath, findActionFromPath, providers, installedProviders]);
 
   const handleMarkersChanged = (
     modelUri: Uri,
@@ -296,9 +311,6 @@ export const WorkflowYAMLEditor = ({
       handleMarkersChanged(model.uri, markers, owner);
     };
 
-    // Run initial mustache validation
-    validateMustacheExpressions();
-
     // Set up a listener for content changes to re-validate mustache expressions
     editor.onDidChangeModelContent(() => {
       validateMustacheExpressions();
@@ -306,6 +318,10 @@ export const WorkflowYAMLEditor = ({
 
     setIsEditorMounted(true);
   };
+
+  useEffect(() => {
+    validateMustacheExpressions();
+  }, [validateMustacheExpressions, isEditorMounted]);
 
   const downloadYaml = () => {
     if (!editorRef.current) {
