@@ -22,17 +22,6 @@ import { MonacoYAMLEditor } from "@/shared/ui";
 import { getSeverityString, MarkerSeverity } from "../lib/utils";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
-
-// CSS for mustache validation errors
-const SQUIGGLY_VALIDATION_CSS = `
-.mustache-error {
-  text-decoration: wavy underline #ef4444;
-}
-.mustache-warning {
-  text-decoration: wavy underline #f59e0b;
-}
-`;
-
 export interface WorkflowYAMLEditorProps {
   workflowYamlString: string;
   workflowId?: string;
@@ -108,14 +97,6 @@ export const WorkflowYAMLEditor = ({
 
     if (!model) {
       return;
-    }
-
-    // Add CSS for validation error decoration if not already added
-    if (!document.getElementById("mustache-validation-css")) {
-      const styleElement = document.createElement("style");
-      styleElement.id = "mustache-validation-css";
-      styleElement.textContent = SQUIGGLY_VALIDATION_CSS;
-      document.head.appendChild(styleElement);
     }
 
     try {
