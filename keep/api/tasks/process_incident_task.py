@@ -4,11 +4,7 @@ from arq import Retry
 from sqlmodel import Session
 
 from keep.api.bl.incidents_bl import IncidentBl
-from keep.api.core.db import (
-    get_incident_by_fingerprint,
-    get_incident_by_id,
-    engine,
-)
+from keep.api.core.db import engine, get_incident_by_fingerprint, get_incident_by_id
 from keep.api.models.incident import IncidentDto
 from keep.api.tasks.process_event_task import process_event
 
@@ -62,7 +58,9 @@ def process_incident(
                 # Try to get by fingerprint if no incident was found by id
                 if incident_from_db is None and incident.fingerprint:
                     incident_from_db = get_incident_by_fingerprint(
-                        tenant_id=tenant_id, fingerprint=incident.fingerprint, session=session
+                        tenant_id=tenant_id,
+                        fingerprint=incident.fingerprint,
+                        session=session,
                     )
 
                 if incident_from_db:
@@ -87,6 +85,7 @@ def process_incident(
                     incident_from_db = incident_bl.create_incident(
                         incident_dto=incident,
                     )
+                    session.commit()
                     logger.info(
                         f"Created incident: {incident.id}",
                         extra={**extra, "fingerprint": incident.fingerprint},
@@ -112,8 +111,6 @@ def process_incident(
                                     processed_alert.fingerprint
                                     for processed_alert in processed_alerts
                                 ],
-                                # Because the incident was created with the alerts count, we need to override it
-                                # otherwise it will be the sum of the previous count + the newly attached alerts count
                                 override_count=True,
                             )
                             logger.info("Added incident alerts", extra=extra)

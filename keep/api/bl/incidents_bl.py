@@ -92,7 +92,10 @@ class IncidentBl:
             extra={"incident_dto": incident_dto.dict(), "tenant_id": self.tenant_id},
         )
         incident = create_incident_from_dto(
-            self.tenant_id, incident_dto, generated_from_ai=generated_from_ai
+            self.tenant_id,
+            incident_dto,
+            generated_from_ai=generated_from_ai,
+            session=self.session,
         )
         self.logger.info(
             "Incident created",
@@ -126,6 +129,7 @@ class IncidentBl:
         incident_id: UUID,
         alert_fingerprints: List[str],
         is_created_by_ai: bool = False,
+        override_count: bool = False,
     ) -> None:
         self.logger.info(
             "Adding alerts to incident",
@@ -146,6 +150,7 @@ class IncidentBl:
             alert_fingerprints,
             is_created_by_ai,
             session=self.session,
+            override_count=override_count,
         )
         self.logger.info(
             "Alerts added to incident",
