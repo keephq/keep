@@ -155,7 +155,7 @@ class MailgunProvider(BaseProvider):
             logging.getLogger(__name__).info("Mail Body Not Found")
             return {
                 "subject": "Unknown Alert",
-                "from": "system",
+                "from": "system@keep",
                 "stripped-text": content,
             }
 
@@ -232,9 +232,15 @@ class MailgunProvider(BaseProvider):
         )
         event = dict(event)
 
-        name = event["subject"]
+        name = event.get("subject")
         source = event["from"]
-        message = event["stripped-text"]
+        message = event.get("stripped-text")
+
+        if not name or not message:
+            raise Exception(
+                "Could not create alert from email when name or message is missing."
+            )
+
         try:
             timestamp = datetime.datetime.fromtimestamp(
                 float(event["timestamp"])

@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import json
 import logging
+import time
 from xml.etree.ElementTree import ParseError
 
 import pydantic
@@ -29,24 +30,28 @@ class SplunkProviderAuthConfig:
     host: NoSchemeUrl = dataclasses.field(
         metadata={
             "description": "Splunk Host (default is localhost)",
-            "validation": "no_scheme_url"
+            "validation": "no_scheme_url",
         },
         default="localhost",
     )
     port: UrlPort = dataclasses.field(
-        metadata={
-            "description": "Splunk Port (default is 8089)",
-            "validation": "port"
-        },
+        metadata={"description": "Splunk Port (default is 8089)", "validation": "port"},
         default=8089,
     )
     verify: bool = dataclasses.field(
         metadata={
             "description": "Enable SSL verification",
             "hint": "An `https` protocol will be used if enabled.",
-            "type": "switch"
+            "type": "switch",
         },
         default=True,
+    )
+    username: str = dataclasses.field(
+        metadata={
+            "description": "The username connected with the API key/token provided.",
+            "required": False,
+        },
+        default="",
     )
 
 
@@ -109,58 +114,108 @@ class SplunkProvider(BaseProvider):
         try:
             self.logger.debug(
                 "Connecting to Splunk",
-                extra={"auth_config": self.authentication_config},
+                extra={
+                    "auth_config": self.authentication_config,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
             )
             service = connect(
                 token=self.authentication_config.api_key,
                 host=self.authentication_config.host,
                 port=self.authentication_config.port,
-                scheme='https' if self.authentication_config.verify else 'http',
-                verify=self.authentication_config.verify
+                scheme="https" if self.authentication_config.verify else "http",
+                verify=self.authentication_config.verify,
             )
-            self.logger.debug("Connected to Splunk", extra={"service": service})
+            self.logger.debug(
+                "Connected to Splunk",
+                extra={"service": service, "tenant_id": self.context_manager.tenant_id},
+            )
 
             if not self.authentication_config.verify:
                 self.logger.warning(
                     "SSL verification is disabled - connection is not secure",
-                    extra={"host": self.authentication_config.host}
-                )
-
-            if len(service.users) > 1:
-                self.logger.warning(
-                    "Splunk provider has more than one user",
                     extra={
-                        "users_count": len(service.users),
-                        "users": [user.content for user in service.users],
+                        "host": self.authentication_config.host,
+                        "tenant_id": self.context_manager.tenant_id,
                     },
                 )
 
             all_permissions = set()
-            for user in service.users:
+            t = time.time()
+            # a token is created and is coupled to a user, we need to check that user permissions
+            # @tb: Didn't investigate in depth if I can get the user from the token...
+            # @tb: I can't understand why in hell do we iterate over all users, but I guess it's legacy???
+            if self.authentication_config.username:
+                self.logger.info(
+                    "Validating scopes for Splunk provider with username",
+                    extra={
+                        "username": self.authentication_config.username,
+                        "tenant_id": self.context_manager.tenant_id,
+                    },
+                )
+                user = service.users[self.authentication_config.username]
                 user_roles = user.content["roles"]
                 for role_name in user_roles:
                     perms = self.__get_role_capabilities(
                         role_name=role_name, service=service
                     )
                     all_permissions.update(perms)
+            else:
+                self.logger.info(
+                    "Validating scopes for Splunk provider without username",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
+
+                if len(service.users) > 1:
+                    self.logger.warning(
+                        "Splunk provider has more than one user",
+                        extra={
+                            "users_count": len(service.users),
+                            "tenant_id": self.context_manager.tenant_id,
+                        },
+                    )
+
+                for user in service.users:
+                    user_roles = user.content["roles"]
+                    for role_name in user_roles:
+                        perms = self.__get_role_capabilities(
+                            role_name=role_name, service=service
+                        )
+                        all_permissions.update(perms)
 
             for scope in self.PROVIDER_SCOPES:
                 if scope.name in all_permissions:
                     validated_scopes[scope.name] = True
                 else:
                     validated_scopes[scope.name] = "NOT_FOUND"
+            self.logger.info(
+                "Validated scopes for Splunk provider",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "time": time.time() - t,
+                },
+            )
         except AuthenticationError:
-            self.logger.exception("Error authenticating to Splunk")
+            self.logger.exception(
+                "Error authenticating to Splunk",
+                extra={"tenant_id": self.context_manager.tenant_id},
+            )
             validated_scopes = dict(
                 [[scope.name, "AUTHENTICATION_ERROR"] for scope in self.PROVIDER_SCOPES]
             )
         except HTTPError as e:
             self.logger.exception(
                 "Error connecting to Splunk",
+                extra={"tenant_id": self.context_manager.tenant_id},
             )
             self.logger.debug(
                 "Splunk error response",
-                extra={"body": e.body, "status": e.status, "headers": e.headers},
+                extra={
+                    "body": e.body,
+                    "status": e.status,
+                    "headers": e.headers,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
             )
             validated_scopes = dict(
                 [
@@ -171,16 +226,15 @@ class SplunkProvider(BaseProvider):
         except ConnectionRefusedError:
             self.logger.exception(
                 "Error connecting to Splunk",
+                extra={"tenant_id": self.context_manager.tenant_id},
             )
             validated_scopes = dict(
                 [[scope.name, "CONNECTION_REFUSED"] for scope in self.PROVIDER_SCOPES]
             )
-        except ParseError as e:
+        except ParseError:
             self.logger.exception(
                 "Error parsing XML",
-                extra={
-                    "error": str(e),
-                },
+                extra={"tenant_id": self.context_manager.tenant_id},
             )
             if self.logger.getEffectiveLevel() == logging.DEBUG:
                 response = self.__debug_fetch_users_response()
@@ -233,8 +287,8 @@ class SplunkProvider(BaseProvider):
             token=self.authentication_config.api_key,
             host=self.authentication_config.host,
             port=self.authentication_config.port,
-            scheme='https' if self.authentication_config.verify else 'http',
-            verify=self.authentication_config.verify
+            scheme="https" if self.authentication_config.verify else "http",
+            verify=self.authentication_config.verify,
         )
         for saved_search in service.saved_searches:
             existing_webhook_url = saved_search["_state"]["content"].get(
@@ -337,9 +391,11 @@ if __name__ == "__main__":
     import os
 
     api_key = os.environ.get("SPLUNK_API_KEY")
+    host = os.environ.get("SPLUNK_HOST")
+    port = os.environ.get("SPLUNK_PORT")
 
     provider_config = {
-        "authentication": {"api_key": api_key},
+        "authentication": {"api_key": api_key, "host": host, "port": port},
     }
     provider = ProvidersFactory.get_provider(
         context_manager=context_manager,
@@ -347,9 +403,4 @@ if __name__ == "__main__":
         provider_type="splunk",
         provider_config=provider_config,
     )
-    results = provider.setup_webhook(
-        "keep",
-        "https://eb8a-77-137-44-66.ngrok-free.app/alerts/event/splunk?provider_id=keep-pd",
-        "just-a-test",
-        True,
-    )
+    provider.validate_scopes()
