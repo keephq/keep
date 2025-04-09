@@ -30,6 +30,7 @@ import { getSeverityString, MarkerSeverity } from "../lib/utils";
 import { useProviders } from "@/utils/hooks/useProviders";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
+
 export interface WorkflowYAMLEditorProps {
   workflowYamlString: string;
   workflowId?: string;
@@ -41,7 +42,9 @@ export interface WorkflowYAMLEditorProps {
     monacoInstance: typeof import("monaco-editor")
   ) => void;
   onChange?: (value: string | undefined) => void;
-  onValidationErrors?: (errors: YamlValidationError[]) => void;
+  onValidationErrors?: (
+    value: React.SetStateAction<YamlValidationError[] | null>
+  ) => void;
   onSave?: (value: string) => void;
 }
 
@@ -280,11 +283,12 @@ export const WorkflowYAMLEditor = ({
         owner,
       });
     }
-    setValidationErrors((prevErrors) => {
+    const errorsUpdater = (prevErrors: YamlValidationError[] | null) => {
       const prevOtherOwners = prevErrors?.filter((e) => e.owner !== owner);
       return [...(prevOtherOwners ?? []), ...errors];
-    });
-    onValidationErrors?.(errors);
+    };
+    setValidationErrors(errorsUpdater);
+    onValidationErrors?.(errorsUpdater);
   };
 
   const handleChange = useCallback(
