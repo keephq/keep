@@ -13,12 +13,22 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import TimeAgo from "react-timeago";
+import { useSearchParams } from "next/navigation";
 
 interface GridItemProps {
   item: WidgetData;
 }
 
 const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
+  const searchParams = useSearchParams();
+  const timeRangeCel = useMemo(() => {
+    const timeRangeSearchParam = searchParams.get("time_stamp");
+    if (timeRangeSearchParam) {
+      const parsedTimeRange = JSON.parse(timeRangeSearchParam);
+      return `lastReceived >= "${parsedTimeRange.start}" && lastReceived <= "${parsedTimeRange.end}"`;
+    }
+    return "";
+  }, [searchParams]);
   const presets = useDashboardPreset();
   const countOfLastAlerts = (item.preset as any).countOfLastAlerts;
   const preset = useMemo(
@@ -29,12 +39,16 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     () => preset?.options.find((option) => option.label === "CEL")?.value || "",
     [preset]
   );
+  const filterCel = useMemo(
+    () => [timeRangeCel, presetCel].filter(Boolean).join(" && "),
+    [presetCel, timeRangeCel]
+  );
   const {
     alerts,
     totalCount: presetAlertsCount,
     isLoading,
   } = usePresetAlertsCount(
-    presetCel,
+    filterCel,
     !!preset?.counter_shows_firing_only,
     countOfLastAlerts,
     0,
@@ -101,6 +115,20 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
             </div>
           ))}
         </>
+      );
+    }
+
+    if (presetAlertsCount === 0) {
+      let emptyStateText = "No alerts matching this preset";
+
+      if (timeRangeCel) {
+        emptyStateText = "No alerts matching this preset and time range";
+      }
+
+      return (
+        <div className="flex items-center justify-center h-10">
+          {emptyStateText}
+        </div>
       );
     }
 
