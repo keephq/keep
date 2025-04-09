@@ -29,7 +29,7 @@ export const validateMustacheVariableNameForYAML = (
   const cleanedVariableName = extractMustacheValue(variableName);
   const parts = cleanedVariableName.split(".");
   if (!parts.every((part) => part.length > 0)) {
-    return `Variable: '${variableName}' - Parts cannot be empty.`;
+    return `Variable: ${variableName} - Parts cannot be empty.`;
   }
   if (parts[0] === "alert") {
     // todo: validate alert properties
@@ -42,17 +42,17 @@ export const validateMustacheVariableNameForYAML = (
   if (parts[0] === "secrets") {
     const secretName = parts[1];
     if (!secretName) {
-      return `Variable: '${variableName}' - To access a secret, you need to specify the secret name.`;
+      return `Variable: ${cleanedVariableName} - To access a secret, you need to specify the secret name.`;
     }
     if (!secrets[secretName]) {
-      return `Variable: '${variableName}' - Secret '${secretName}' not found.`;
+      return `Variable: ${cleanedVariableName} - Secret "${secretName}" not found.`;
     }
     return null;
   }
   if (parts[0] === "steps") {
     const stepName = parts[1];
     if (!stepName) {
-      return `Variable: '${variableName}' - To access the results of a step, you need to specify the step name.`;
+      return `Variable: ${cleanedVariableName} - To access the results of a step, you need to specify the step name.`;
     }
     // todo: check if
     // - the step exists
@@ -66,24 +66,24 @@ export const validateMustacheVariableNameForYAML = (
         ? definition.steps.findIndex((s) => s.name === currentStep.name)
         : -1;
     if (!step) {
-      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
+      return `Variable: ${cleanedVariableName} - a "${stepName}" step doesn't exist.`;
     }
     const isCurrentStep = step.name === currentStep.name;
     if (isCurrentStep) {
-      return `Variable: '${variableName}' - You can't access the results of the current step.`;
+      return `Variable: ${cleanedVariableName} - You can't access the results of the current step.`;
     }
     if (currentStepIndex !== -1 && stepIndex > currentStepIndex) {
-      return `Variable: '${variableName}' - You can't access the results of a step that appears after the current step.`;
+      return `Variable: ${cleanedVariableName} - You can't access the results of a step that appears after the current step.`;
     }
 
     if (!definition.steps?.some((step) => step.name === stepName)) {
-      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
+      return `Variable: ${cleanedVariableName} - a "${stepName}" step that doesn't exist.`;
     }
     if (parts[2] === "results") {
       // todo: validate results properties
       return null;
     } else {
-      return `Variable: '${variableName}' - To access the results of a step, use 'results' as suffix.`;
+      return `Variable: ${cleanedVariableName} - To access the results of a step, use "results" as suffix.`;
     }
   }
   return null;
