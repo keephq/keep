@@ -66,50 +66,23 @@ const DashboardPage = () => {
   };
   const closeModal = () => setIsModalOpen(false);
 
-  const handleAddWidget = (
-    name: string,
-    widgetType: WidgetType,
-    preset?: Preset,
-    thresholds?: Threshold[],
-    metric?: MetricsWidget,
-    genericMetrics?: GenericsMetrics
-  ) => {
+  const handleAddWidget = (widget: any) => {
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
-      x: (layout.length % 12) * 2,
-      y: Math.floor(layout.length / 12) * 2,
-      w:
-        widgetType === WidgetType.GENERICS_METRICS
-          ? 12
-          : widgetType === WidgetType.METRIC
-            ? 6
-            : 3,
-      h:
-        widgetType === WidgetType.GENERICS_METRICS
-          ? 20
-          : widgetType === WidgetType.METRIC
-            ? 8
-            : 3,
-      minW: widgetType === WidgetType.GENERICS_METRICS ? 10 : 2,
-      minH:
-        widgetType === WidgetType.GENERICS_METRICS
-          ? 15
-          : widgetType === WidgetType.METRIC
-            ? 7
-            : 3,
+      x: 0,
+      y: 0,
+      w: 3,
+      h: 3,
+      minW: 2,
+      minH: 3,
       static: false,
     };
     const newWidget: WidgetData = {
       ...newItem,
-      thresholds,
-      preset,
-      name,
-      widgetType,
-      genericMetrics,
-      metric,
+      ...widget,
     };
-    setLayout((prevLayout) => [...prevLayout, newItem]);
+    setLayout((prevLayout) => [...prevLayout, newWidget]);
     setWidgetData((prevData) => [...prevData, newWidget]);
   };
 
@@ -250,15 +223,17 @@ const DashboardPage = () => {
           />
         </Card>
       )}
-      <WidgetModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onAddWidget={handleAddWidget}
-        onEditWidget={handleSaveEdit}
-        presets={allPresets}
-        editingItem={editingItem}
-        metricWidgets={allMetricWidgets}
-      />
+      {isModalOpen && (
+        <WidgetModal
+          isOpen={true}
+          onClose={closeModal}
+          onAddWidget={handleAddWidget}
+          onEditWidget={handleSaveEdit}
+          presets={allPresets}
+          editingItem={editingItem}
+          metricWidgets={allMetricWidgets}
+        />
+      )}
     </div>
   );
 };
