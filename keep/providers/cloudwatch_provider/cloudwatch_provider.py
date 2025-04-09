@@ -297,10 +297,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
 
         # 4. validate start query
         logs_client = self.__generate_client("logs")
-        query = False
 
         try:
-            query = logs_client.start_query(
+            logs_client.start_query(
                 logGroupName="keepTest",
                 queryString="keepTest",
                 startTime=int(
@@ -310,6 +309,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 ),
                 endTime=int(datetime.datetime.now().timestamp()),
             )
+            scopes["logs:StartQuery"] = True
         except Exception as e:
             # that means that the user/role have the permissions but we've just made up the logGroupName which make sense
             if "ResourceNotFoundException" in str(e):
@@ -333,23 +333,22 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 "tenant_id": self.context_manager.tenant_id,
             },
         )
-        if query:
-            try:
-                query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-                scopes["logs:DescribeQueries"] = True
-            except Exception:
-                self.logger.exception(
-                    "Error validating AWS logs:DescribeQueries scope",
-                    extra={
-                        "tenant_id": self.context_manager.tenant_id,
-                    },
-                )
-                scopes["logs:DescribeQueries"] = (
-                    "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-                )
+        try:
+            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+            scopes["logs:DescribeQueries"] = True
+        except Exception:
+            self.logger.exception(
+                "Error validating AWS logs:DescribeQueries scope",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                },
+            )
+            scopes["logs:DescribeQueries"] = (
+                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         self.logger.info(
-            "Validating AWS logs:GetQueryResults scope",
+            "Validating AWS logs:StartQuery scope",
             extra={
                 "tenant_id": self.context_manager.tenant_id,
             },
@@ -364,6 +363,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     extra={"tenant_id": self.context_manager.tenant_id},
                 )
                 scopes["logs:StartQuery"] = str(e)
+        else:
+            scopes["logs:StartQuery"] = (
+                "Could not validate logs:StartQuery scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         # 5. validate get query results
         self.logger.info(
@@ -379,6 +382,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
+        else:
+            scopes["logs:DescribeQueries"] = (
+                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         # Finally
         return scopes
@@ -698,6 +705,7 @@ if __name__ == "__main__":
             "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
             "region": os.environ.get("AWS_REGION"),
+            "session_token": os.environ.get("AWS_SESSION_TOKEN"),
         }
     )
     context_manager = ContextManager(
