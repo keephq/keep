@@ -176,10 +176,6 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     const label = preset?.counter_shows_firing_only
       ? "Firing alerts count:"
       : "Alerts count:";
-    const showJustCount = presetAlertsCount <= countOfLastAlerts;
-    console.log("Ihor", { presetCel, showJustCount, countOfLastAlerts });
-    const nothingToShow = countOfLastAlerts === 0;
-
     let state: string = "nothingToShow";
 
     if (countOfLastAlerts > 0) {
@@ -253,9 +249,9 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
       </div>
       {countOfLastAlerts > 0 && (
         <div
-          // style={{
-          //   background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
-          // }}
+          style={{
+            background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
+          }}
           className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
         >
           {renderLastAlertsGrid()}

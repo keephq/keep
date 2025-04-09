@@ -8,12 +8,19 @@ import {
   Subtitle,
   TextInput,
 } from "@tremor/react";
-import { ChangeEvent, useEffect, useState } from "react";
-import { Controller, get, useForm, useWatch, Control } from "react-hook-form";
-import { LayoutItem, Threshold, WidgetType } from "../../types";
+import { useEffect } from "react";
+import {
+  Controller,
+  get,
+  useForm,
+  useWatch,
+  useFieldArray,
+} from "react-hook-form";
+import { LayoutItem, Threshold } from "../../types";
 
 interface PresetForm {
   selectedPreset: string;
+  countOfLastAlerts: string;
   thresholds: Threshold[];
 }
 
@@ -28,23 +35,26 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   presets,
   onChange,
 }: PresetWidgetFormProps) => {
-  const [countOfLastAlerts, setCountOfLastAlerts] = useState(
-    editingItem ? editingItem.preset.countOfLastAlerts || 0 : 5
-  );
-  const [thresholds, setThresholds] = useState<Threshold[]>(
-    editingItem?.thresholds || [
-      { value: 0, color: "#22c55e" }, // Green
-      { value: 20, color: "#ef4444" }, // Red
-    ]
-  );
-
   const {
     control,
     formState: { errors, isValid },
+    register,
   } = useForm<PresetForm>({
     defaultValues: {
       selectedPreset: editingItem?.preset?.id,
+      countOfLastAlerts: editingItem
+        ? editingItem.preset.countOfLastAlerts || 0
+        : 5,
+      thresholds: editingItem?.thresholds || [
+        { value: 0, color: "#22c55e" }, // Green
+        { value: 20, color: "#ef4444" }, // Red
+      ],
     },
+  });
+
+  const { fields, append, remove, move, replace } = useFieldArray({
+    control,
+    name: "thresholds",
   });
 
   const formValues = useWatch({ control });
@@ -64,58 +74,44 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   }
 
   useEffect(() => {
-    console.log("Ihor", { isValid, errors, formValues });
     const preset = presets.find((p) => p.id === formValues.selectedPreset);
-    const formattedThresholds = thresholds.map((t) => ({
+    const formattedThresholds = formValues.thresholds?.map((t) => ({
       ...t,
-      value: parseInt(t.value.toString(), 10) || 0,
+      value: parseInt(t.value?.toString() as string, 10) || 0,
     }));
+
     onChange(
       {
         ...getLayoutValues(),
         preset: {
           ...preset,
-          countOfLastAlerts: parseInt(countOfLastAlerts),
+          countOfLastAlerts: parseInt(formValues.countOfLastAlerts || "0"),
         },
         thresholds: formattedThresholds,
       },
       isValid
     );
-  }, [formValues, thresholds, countOfLastAlerts]);
-
-  const handleThresholdChange = (
-    index: number,
-    field: "value" | "color",
-    e: ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = field === "value" ? e.target.value : e.target.value;
-    const updatedThresholds = thresholds.map((t, i) =>
-      i === index ? { ...t, [field]: value } : t
-    );
-    setThresholds(updatedThresholds);
-  };
+  }, [formValues, isValid]);
 
   const handleThresholdBlur = () => {
-    setThresholds((prevThresholds) => {
-      return prevThresholds
-        .map((t) => ({
-          ...t,
-          value: parseInt(t.value.toString(), 10) || 0,
-        }))
-        .sort((a, b) => a.value - b.value);
-    });
+    const reorderedThreesholds = formValues?.thresholds
+      ?.map((t) => ({
+        ...t,
+        value: parseInt(t.value?.toString() as string, 10) || 0,
+      }))
+      .sort((a, b) => a.value - b.value);
+    if (!reorderedThreesholds) {
+      return;
+    }
+    replace(reorderedThreesholds as any);
   };
 
   const handleAddThreshold = () => {
-    const maxThreshold = Math.max(...thresholds.map((t) => t.value), 0);
-    setThresholds([
-      ...thresholds,
-      { value: maxThreshold + 10, color: "#000000" },
-    ]);
-  };
-
-  const handleRemoveThreshold = (index: number) => {
-    setThresholds(thresholds.filter((_, i) => i !== index));
+    const maxThreshold = Math.max(
+      ...(formValues.thresholds?.map((t) => t.value) as any),
+      0
+    );
+    append({ value: maxThreshold + 10, color: "#000000" });
   };
 
   return (
@@ -149,13 +145,26 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       </div>
       <div className="mb-4 mt-2">
         <Subtitle>Last alerts count to display</Subtitle>
-        <TextInput
-          value={countOfLastAlerts}
-          onChange={(e) => setCountOfLastAlerts(e.target.value)}
-          onBlur={handleThresholdBlur}
-          type="number"
-          placeholder="Value indicating how many alerts to display in widget"
-          required
+        <Controller
+          name="countOfLastAlerts"
+          control={control}
+          rules={{
+            required: {
+              value: true,
+              message: "Preset selection is required",
+            },
+          }}
+          render={({ field }) => (
+            <TextInput
+              {...field}
+              error={!!get(errors, "countOfLastAlerts.message")}
+              errorMessage={get(errors, "countOfLastAlerts.message")}
+              onBlur={handleThresholdBlur}
+              type="number"
+              placeholder="Value indicating how many alerts to display in widget"
+              required
+            />
+          )}
         />
       </div>
       <div className="mb-4">
@@ -171,26 +180,25 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           </Button>
         </div>
         <div className="mt-4">
-          {thresholds.map((threshold, index) => (
-            <div key={index} className="flex items-center space-x-2 mb-2">
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex items-center space-x-2 mb-2">
               <TextInput
-                value={threshold.value.toString()}
-                onChange={(e) => handleThresholdChange(index, "value", e)}
+                {...register(`thresholds.${index}.value`, { required: true })}
                 onBlur={handleThresholdBlur}
                 placeholder="Threshold value"
+                type="number"
                 required
               />
               <input
                 type="color"
-                value={threshold.color}
-                onChange={(e) => handleThresholdChange(index, "color", e)}
+                {...register(`thresholds.${index}.color`, { required: true })}
                 className="w-10 h-10 p-1 border"
                 required
               />
-              {thresholds.length > 1 && (
+              {fields.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => handleRemoveThreshold(index)}
+                  onClick={() => remove(index)}
                   className="p-2"
                 >
                   <Icon color="orange" icon={Trashcan} className="h-5 w-5" />
