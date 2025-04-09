@@ -43,7 +43,7 @@ export const validateMustacheVariableNameForYAML = (
     const providerName = parts[1];
     if (!providerName) {
       return [
-        "Variable: ${cleanedVariableName} - To access a provider, you need to specify the provider name.",
+        `Variable: ${cleanedVariableName} - To access a provider, you need to specify the provider name.`,
         "warning",
       ];
     }
