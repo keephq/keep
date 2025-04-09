@@ -16,10 +16,11 @@ export function getSeverityString(
       return "error";
     case MarkerSeverity.Warning:
       return "warning";
-    case MarkerSeverity.Info:
-      return "info";
     case MarkerSeverity.Hint:
       return "hint";
+    case MarkerSeverity.Info:
+    default:
+      return "info";
   }
 }
 
