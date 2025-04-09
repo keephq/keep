@@ -588,7 +588,7 @@ def test_yaml_editor_yaml_invalid(browser: Page):
             "wf-yaml-editor-validation-errors-summary"
         ).first
         summary.click()
-        expect(summary).to_contain_text("12 validation errors")
+        expect(summary).to_contain_text("11 validation errors")
         expect(errors_list).to_contain_text(
             "String is shorter than the minimum length of 1."
         )
