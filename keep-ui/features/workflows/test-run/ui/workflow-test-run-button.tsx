@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import type { DefinitionV2 } from "@/entities/workflows";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
@@ -31,7 +31,6 @@ export function WorkflowTestRunButton({
     null
   );
   const [error, setError] = useState<Error | null>(null);
-  const currentRequestId = useRef<string | null>(null);
 
   const yamlString = useMemo(() => {
     if (!definition?.value) {
@@ -56,7 +55,6 @@ export function WorkflowTestRunButton({
   const testRunWorkflow = useWorkflowTestRun();
 
   const closeWorkflowExecutionResultsModal = () => {
-    currentRequestId.current = null;
     setIsTestRunModalOpen(false);
     setWorkflowExecutionId(null);
     setError(null);
