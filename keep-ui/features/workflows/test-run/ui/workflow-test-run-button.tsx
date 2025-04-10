@@ -8,13 +8,14 @@ import {
   getYamlWorkflowDefinition,
 } from "@/entities/workflows/lib/parser";
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
-import { Button, Callout, Title } from "@tremor/react";
+import { Button, ButtonProps, Callout, Title } from "@tremor/react";
 import { ExclamationCircleIcon, PlayIcon } from "@heroicons/react/24/outline";
 import { IoClose } from "react-icons/io5";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
 import { WorkflowAlertIncidentDependenciesForm } from "./workflow-alert-incident-dependencies-form";
 import { useWorkflowTestRun } from "../model/useWorkflowTestRun";
 import { v4 as uuidv4 } from "uuid";
+
 interface WorkflowTestRunButtonProps {
   workflowId: string;
   definition: DefinitionV2 | null;
@@ -25,7 +26,8 @@ export function WorkflowTestRunButton({
   workflowId,
   definition,
   isValid,
-}: WorkflowTestRunButtonProps) {
+  ...props
+}: WorkflowTestRunButtonProps & ButtonProps) {
   const [isTestRunModalOpen, setIsTestRunModalOpen] = useState(false);
   const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
     null
@@ -236,6 +238,7 @@ export function WorkflowTestRunButton({
         disabled={!isValid}
         // TODO: check if it freezes UI
         onClick={handleClickTestRun}
+        {...props}
       >
         Test Run
       </Button>

@@ -11,7 +11,7 @@ import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
-import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-modal";
+import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-button";
 import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
 
 export interface WorkflowBuilderWidgetProps {
@@ -140,6 +140,7 @@ export function WorkflowBuilderWidget({
               workflowId={workflowId ?? ""}
               definition={definition}
               isValid={isValid}
+              data-testid="wf-builder-main-test-run-button"
             />
             <Button
               color="orange"

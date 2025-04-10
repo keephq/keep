@@ -119,6 +119,7 @@ export function WorkflowYAMLEditorStandalone({
           workflowId={workflowId}
           definition={definition}
           isValid={isValid}
+          data-testid="wf-yaml-editor-test-run-button"
         />
         <Button
           color="orange"
