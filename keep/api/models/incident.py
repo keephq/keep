@@ -190,6 +190,10 @@ class IncidentDto(IncidentDtoIn):
 
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
+
+        if db_incident.enrichments:
+            dto = dto.copy(update=db_incident.enrichments)
+
         return dto
 
     def to_db_incident(self) -> "Incident":

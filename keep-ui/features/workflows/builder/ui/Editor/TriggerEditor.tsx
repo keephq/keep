@@ -175,7 +175,7 @@ export function TriggerEditor() {
               }
               value={value || ("" as string)}
               error={!!error}
-              errorMessage={error}
+              errorMessage={error?.[0]}
             />
             {value && (
               <Text className="text-sm text-gray-500">
