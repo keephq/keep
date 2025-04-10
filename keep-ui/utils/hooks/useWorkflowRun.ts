@@ -68,7 +68,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
   // Check if there is a manual trigger
   const hasManualTrigger = workflow?.triggers?.some(
     (trigger) => trigger.type === "manual"
-  ); // Replace 'manual' with the actual value that represents a manual trigger in your data
+  );
 
   const hasAlertTrigger = workflow?.triggers?.some(
     (trigger) => trigger.type === "alert"

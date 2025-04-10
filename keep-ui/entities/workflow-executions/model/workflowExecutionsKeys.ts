@@ -24,8 +24,10 @@ export const workflowExecutionsKeys = {
       workflowExecutionId,
     ].join("::"),
   getListMatcher: () => (key: any) =>
+    typeof key === "string" &&
     key.startsWith([workflowExecutionsKeys.all, "list"].join("::")),
   getDetailMatcher: (workflowId: string) => (key: any) =>
+    typeof key === "string" &&
     key.startsWith(
       [workflowExecutionsKeys.all, "detail", workflowId].join("::")
     ),
