@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { DefinitionV2 } from "@/entities/workflows";
-import { KeepLoader, showErrorToast } from "@/shared/ui";
+import { KeepLoader, showErrorToast, Tooltip } from "@/shared/ui";
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
@@ -214,27 +214,38 @@ export function WorkflowTestRunButton({
     );
   };
 
+  const testRunDescription = useMemo(() => {
+    if (!isValid) {
+      return "Workflow is not valid";
+    }
+    return `Test run with current changes${
+      dependencies ? " and provided payload" : ""
+    }. Will not be saved in history`;
+  }, [isValid, dependencies]);
+
   return (
     <>
-      <Button
-        variant="primary"
-        color="orange"
-        size="md"
-        className="min-w-28 disabled:opacity-70"
-        icon={PlayIcon}
-        disabled={!isValid}
-        // TODO: check if it freezes UI
-        onClick={handleClickTestRun}
-        {...props}
-      >
-        Test Run
-      </Button>
+      <Tooltip content={testRunDescription}>
+        <Button
+          variant="primary"
+          color="orange"
+          size="md"
+          className="min-w-28 disabled:opacity-70"
+          icon={PlayIcon}
+          disabled={!isValid}
+          // TODO: check if it freezes UI
+          onClick={handleClickTestRun}
+          {...props}
+        >
+          Test Run
+        </Button>
+      </Tooltip>
       {isTestRunModalOpen && (
         <Modal
           isOpen={isTestRunModalOpen}
           onClose={closeWorkflowExecutionResultsModal}
           title="Test Run"
-          description="Test run will use current definition (even unsaved changes), and will not be saved in execution history"
+          description={testRunDescription}
           className="max-w-7xl"
         >
           {renderModalContent()}
