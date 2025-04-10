@@ -20,7 +20,7 @@ services:
     image: "%KEEPBACKEND_IMAGE%"
     environment:
       - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=sqlite:///state/db.sqlite3?check_same_thread=False
+      # - DATABASE_CONNECTION_STRING=sqlite:///state/db.sqlite3?check_same_thread=False
       - POSTHOG_DISABLED=true
       - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
@@ -69,7 +69,7 @@ services:
       - PUSHER_PORT=6001
       - USE_NGROK=false
       - AUTH_TYPE=DB
-      - DATABASE_CONNECTION_STRING=sqlite:///state/db.sqlite3auth?check_same_thread=False
+      # - DATABASE_CONNECTION_STRING=sqlite:///state/db.sqlite3auth?check_same_thread=False
       - POSTHOG_DISABLED=true
       - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
