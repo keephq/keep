@@ -409,3 +409,8 @@ class DeduplicationRuleRequestDto(BaseModel):
 class EnrichIncidentRequestBody(BaseModel):
     enrichments: Dict[str, Any]
     force: bool = False
+
+
+class UnEnrichIncidentRequestBody(BaseModel):
+    enrichments: list[str]
+    fingerprint: str

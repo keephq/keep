@@ -204,6 +204,9 @@ class Incident(SQLModel, table=True):
     def enrichments(self):
         return getattr(self, "_enrichments", {})
 
+    def set_enrichments(self, enrichments):
+        self._enrichments = enrichments
+
 
 @retry(exceptions=(IntegrityError,), tries=3, delay=0.1, backoff=2, jitter=(0, 0.1))
 def get_next_running_number(session, tenant_id: str) -> int:

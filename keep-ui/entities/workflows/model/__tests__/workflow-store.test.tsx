@@ -534,13 +534,15 @@ describe("useWorkflowStore", () => {
 
       // Verify step validation errors are captured
       expect(result.current.validationErrors).toHaveProperty("step1");
-      expect(result.current.validationErrors["step1"]).toBe(
+      expect(result.current.validationErrors["step1"][0]).toBe(
         "No parameters configured"
       );
+      expect(result.current.validationErrors["step1"][1]).toBe("error");
       expect(result.current.validationErrors).toHaveProperty("step2");
-      expect(result.current.validationErrors["step2"]).toBe(
+      expect(result.current.validationErrors["step2"][0]).toBe(
         "Step name cannot be empty."
       );
+      expect(result.current.validationErrors["step2"][1]).toBe("error");
     });
 
     it("should allow deployment if errors exist but are about missing providers", () => {

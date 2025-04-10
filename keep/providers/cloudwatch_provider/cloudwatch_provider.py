@@ -63,7 +63,7 @@ class CloudwatchProviderAuthConfig:
         metadata={
             "required": False,
             "description": "AWS Cloudwatch SNS Topic [ARN or name]",
-            "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the exists SNS topic)",
+            "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the existing SNS topic)",
             "sensitive": False,
         },
     )
@@ -193,7 +193,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             identity = sts_client.get_caller_identity()["Arn"]
             iam_client = self.__generate_client("iam")
         except Exception as e:
-            self.logger.exception("Error validating AWS IAM scopes")
+            self.logger.exception(
+                "Error validating AWS IAM scopes",
+                extra={"tenant_id": self.context_manager.tenant_id},
+            )
             scopes = {s: str(e) for s in scopes.keys()}
             return scopes
         # 0. try to validate all scopes using simulate_principal_policy
@@ -209,18 +212,28 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             scopes["iam:SimulatePrincipalPolicy"] = True
             if all(scopes.values()):
                 self.logger.info(
-                    "All AWS IAM scopes are granted!", extra={"scopes": scopes}
+                    "All AWS IAM scopes are granted!",
+                    extra={
+                        "scopes": scopes,
+                        "tenant_id": self.context_manager.tenant_id,
+                    },
                 )
                 return scopes
             # if not all the scopes are granted, we need to test them one by one
             else:
                 self.logger.warning(
                     "Some of the AWS IAM scopes are not granted, testing them one by one...",
-                    extra={"scopes": scopes},
+                    extra={
+                        "scopes": scopes,
+                        "tenant_id": self.context_manager.tenant_id,
+                    },
                 )
         # otherwise, we need to test them one by one
         except Exception:
-            self.logger.info("Error validating AWS IAM scopes")
+            self.logger.exception(
+                "Error validating AWS IAM scopes",
+                extra={"tenant_id": self.context_manager.tenant_id},
+            )
             scopes["iam:SimulatePrincipalPolicy"] = (
                 "No permissions to simulate_principal_policy (but its cool, its not a must)"
             )
@@ -234,7 +247,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             scopes["cloudwatch:DescribeAlarms"] = True
         except Exception as e:
             self.logger.exception(
-                "Error validating AWS cloudwatch:DescribeAlarms scope"
+                "Error validating AWS cloudwatch:DescribeAlarms scope",
+                extra={"tenant_id": self.context_manager.tenant_id},
             )
             scopes["cloudwatch:DescribeAlarms"] = str(e)
         # if we got the response, we can validate the other scopes
@@ -252,7 +266,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 scopes["cloudwatch:PutMetricAlarm"] = True
             except Exception as e:
                 self.logger.exception(
-                    "Error validating AWS cloudwatch:PutMetricAlarm scope"
+                    "Error validating AWS cloudwatch:PutMetricAlarm scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
                 )
                 scopes["cloudwatch:PutMetricAlarm"] = str(e)
         else:
@@ -271,7 +286,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 scopes["sns:ListSubscriptionsByTopic"] = True
             except Exception as e:
                 self.logger.exception(
-                    "Error validating AWS sns:ListSubscriptionsByTopic scope"
+                    "Error validating AWS sns:ListSubscriptionsByTopic scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
                 )
                 scopes["sns:ListSubscriptionsByTopic"] = str(e)
         else:
@@ -281,9 +297,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
 
         # 4. validate start query
         logs_client = self.__generate_client("logs")
-        query = False
+
         try:
-            query = logs_client.start_query(
+            logs_client.start_query(
                 logGroupName="keepTest",
                 queryString="keepTest",
                 startTime=int(
@@ -293,34 +309,72 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 ),
                 endTime=int(datetime.datetime.now().timestamp()),
             )
+            scopes["logs:StartQuery"] = True
         except Exception as e:
             # that means that the user/role have the permissions but we've just made up the logGroupName which make sense
             if "ResourceNotFoundException" in str(e):
-                self.logger.info("AWS logs:StartQuery scope is not required")
+                self.logger.info(
+                    "AWS logs:StartQuery scope is not required",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
                 scopes["logs:StartQuery"] = True
             # other/wise the scope is false
             else:
-                self.logger.info("Error validating AWS logs:StartQuery scope")
+                self.logger.info(
+                    "Error validating AWS logs:StartQuery scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
                 scopes["logs:StartQuery"] = str(e)
 
         query_id = False
-        if query:
-            try:
-                query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-            except Exception:
-                self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-                scopes["logs:GetQueryResults", "logs:DescribeQueries"] = (
-                    "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-                )
+        self.logger.info(
+            "Validating AWS logs:DescribeQueries scope",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+            },
+        )
+        try:
+            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+            scopes["logs:DescribeQueries"] = True
+        except Exception:
+            self.logger.exception(
+                "Error validating AWS logs:DescribeQueries scope",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                },
+            )
+            scopes["logs:DescribeQueries"] = (
+                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
+
+        self.logger.info(
+            "Validating AWS logs:StartQuery scope",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+            },
+        )
+        if query_id:
             try:
                 logs_client.get_query_results(queryId=query_id)
                 scopes["logs:StartQuery"] = True
-                scopes["logs:DescribeQueries"] = True
             except Exception as e:
-                self.logger.exception("Error validating AWS logs:StartQuery scope")
+                self.logger.exception(
+                    "Error validating AWS logs:StartQuery scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
                 scopes["logs:StartQuery"] = str(e)
+        else:
+            scopes["logs:StartQuery"] = (
+                "Could not validate logs:StartQuery scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         # 5. validate get query results
+        self.logger.info(
+            "Validating AWS logs:GetQueryResults scope",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+            },
+        )
         if query_id:
             try:
                 logs_client.get_query_results(queryId=query_id)
@@ -328,6 +382,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
+        else:
+            scopes["logs:DescribeQueries"] = (
+                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         # Finally
         return scopes
@@ -647,6 +705,7 @@ if __name__ == "__main__":
             "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
             "region": os.environ.get("AWS_REGION"),
+            "session_token": os.environ.get("AWS_SESSION_TOKEN"),
         }
     )
     context_manager = ContextManager(

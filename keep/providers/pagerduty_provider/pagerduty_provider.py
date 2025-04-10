@@ -853,6 +853,8 @@ class PagerdutyProvider(
         )
         paginated_response = []
         offset = 0
+        max_iterations = os.environ.get("KEEP_PAGERDUTY_MAX_ITERATIONS", 100)
+        current_iteration = 0
         while True:
             try:
                 url = f"{self.BASE_API_URL}/incidents"
@@ -881,13 +883,28 @@ class PagerdutyProvider(
                 raise
             offset = response.get("offset", 0)
             paginated_response.extend(response.get(resource, []))
-            self.logger.info("Fetched incidents or alerts", extra={"offset": offset})
+            self.logger.info(
+                "Fetched incidents or alerts",
+                extra={"offset": offset, "tenant_id": self.context_manager.tenant_id},
+            )
             # No more results
-            if not response.get("more", False):
-                self.logger.info("No more incidents or alerts")
+            if not response.get("more", False) or current_iteration >= max_iterations:
+                self.logger.info(
+                    "No more incidents or alerts",
+                    extra={
+                        "tenant_id": self.context_manager.tenant_id,
+                        "current_iteration": current_iteration,
+                        "max_iterations": max_iterations,
+                    },
+                )
+                current_iteration += 1
                 break
         self.logger.info(
-            "Fetched all incidents or alerts", extra={"count": len(paginated_response)}
+            "Fetched all incidents or alerts",
+            extra={
+                "count": len(paginated_response),
+                "tenant_id": self.context_manager.tenant_id,
+            },
         )
         return paginated_response
 
@@ -1073,10 +1090,4 @@ if __name__ == "__main__":
         provider_type="pagerduty",
         provider_config=provider_config,
     )
-    results = provider.setup_webhook(
-        "keep",
-        "https://eb8a-77-137-44-66.ngrok-free.app/alerts/event/pagerduty?provider_id=keep-pd",
-        "https://eb8a-77-137-44-66.ngrok-free.app/incidents/event/pagerduty?provider_id=keep-pd",
-        "just-a-test",
-        True,
-    )
+    provider.get_incidents()
