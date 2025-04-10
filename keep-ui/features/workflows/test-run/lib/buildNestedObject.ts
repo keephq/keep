@@ -1,7 +1,7 @@
 export function buildNestedObject(
   acc: Record<string, any>,
   key: string,
-  value: string
+  value: string | number | boolean | string[] | number[] | boolean[]
 ) {
   const keys = key.split(".");
   let current = acc;

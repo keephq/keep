@@ -239,14 +239,16 @@ export function WorkflowTestRunButton({
       >
         Test Run
       </Button>
-      <Modal
-        isOpen={isTestRunModalOpen}
-        onClose={closeWorkflowExecutionResultsModal}
-        title="Test Run"
-        className="max-w-screen-md"
-      >
-        {renderModalContent()}
-      </Modal>
+      {isTestRunModalOpen && (
+        <Modal
+          isOpen={isTestRunModalOpen}
+          onClose={closeWorkflowExecutionResultsModal}
+          title="Test Run"
+          className="max-w-screen-md"
+        >
+          {renderModalContent()}
+        </Modal>
+      )}
     </>
   );
 }

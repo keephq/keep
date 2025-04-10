@@ -37,7 +37,7 @@ const getAlertPayload = (
 
 interface Field {
   key: string;
-  value: string;
+  value: string | number | boolean | string[] | number[] | boolean[];
 }
 
 type Payload = Record<string, any>;
@@ -185,7 +185,11 @@ export function WorkflowAlertIncidentDependenciesForm({
               />
               <TextInput
                 placeholder="value"
-                value={field.value}
+                value={
+                  typeof field.value === "string"
+                    ? field.value
+                    : JSON.stringify(field.value)
+                }
                 className={valueClassName}
                 disabled
               />
@@ -209,7 +213,11 @@ export function WorkflowAlertIncidentDependenciesForm({
               />
               <TextInput
                 placeholder="value"
-                value={dependencyValues[dependencyName] || ""}
+                value={
+                  typeof dependencyValues[dependencyName] === "string"
+                    ? dependencyValues[dependencyName]
+                    : JSON.stringify(dependencyValues[dependencyName])
+                }
                 onChange={(e) =>
                   handleDependencyChange(dependencyName, e.target.value)
                 }
@@ -229,7 +237,11 @@ export function WorkflowAlertIncidentDependenciesForm({
             />
             <TextInput
               placeholder="value"
-              value={field.value}
+              value={
+                typeof field.value === "string"
+                  ? field.value
+                  : JSON.stringify(field.value)
+              }
               className={valueClassName}
               onChange={(e) =>
                 handleFieldChange(index, "value", e.target.value)

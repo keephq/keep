@@ -207,15 +207,12 @@ export interface WorkflowStateValues {
   // UI
   editorOpen: boolean;
   saveRequestCount: number;
-  testRunRequestCount: number;
-  runRequestCount: number;
 
   yamlSchema: z.ZodSchema | null;
 }
 
 export interface WorkflowState extends WorkflowStateValues {
   triggerSave: () => void;
-  triggerTestRun: () => void;
   setIsSaving: (state: boolean) => void;
   setCanDeploy: (deploy: boolean) => void;
   setEditorSynced: (sync: boolean) => void;
