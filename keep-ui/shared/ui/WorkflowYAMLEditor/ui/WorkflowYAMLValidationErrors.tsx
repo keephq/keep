@@ -8,6 +8,8 @@ import {
 } from "@heroicons/react/20/solid";
 import clsx from "clsx";
 
+const severityOrder = ["error", "warning", "info"];
+
 export function WorkflowYAMLValidationErrors({
   isMounted,
   validationErrors,
@@ -65,6 +67,17 @@ export function WorkflowYAMLValidationErrors({
       </div>
     );
   }
+  const sortedValidationErrors = validationErrors.sort((a, b) => {
+    if (a.lineNumber === b.lineNumber) {
+      if (a.column === b.column) {
+        return (
+          severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
+        );
+      }
+      return a.column - b.column;
+    }
+    return a.lineNumber - b.lineNumber;
+  });
   return (
     <details
       className={clsx(
@@ -74,7 +87,7 @@ export function WorkflowYAMLValidationErrors({
         highestSeverity === "error" && "bg-red-100"
       )}
       data-testid="wf-yaml-editor-validation-errors"
-      open
+      open={validationErrors.length < 5}
     >
       <summary
         className="text-sm cursor-pointer hover:underline gap-1 px-4 py-1"
@@ -88,14 +101,14 @@ export function WorkflowYAMLValidationErrors({
         className="flex flex-col"
         data-testid="wf-yaml-editor-validation-errors-list"
       >
-        {validationErrors.map((error, index) => (
+        {sortedValidationErrors.map((error, index) => (
           <div
-            key={`${error.lineNumber}-${error.column}-${error.message}-${index}`}
+            key={`${error.lineNumber}-${error.column}-${error.message}-${index}-${error.severity}`}
             className={clsx(
               "text-sm cursor-pointer hover:underline flex items-start gap-1 px-4 py-1",
-              highestSeverity === "error" && "bg-red-100",
-              highestSeverity === "warning" && "bg-yellow-100",
-              highestSeverity === "info" && "bg-blue-100"
+              error.severity === "error" && "bg-red-100",
+              error.severity === "warning" && "bg-yellow-100",
+              error.severity === "info" && "bg-blue-100"
             )}
             onClick={() => onErrorClick?.(error)}
           >

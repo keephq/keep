@@ -7,7 +7,7 @@ import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
 import { BellAlertIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
 import { IncidentDto } from "@/entities/incidents/model";
-import { useIncident } from "@/utils/hooks/useIncidents";
+import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts" },
@@ -21,17 +21,12 @@ export const tabs = [
   { icon: Workflows, label: "Workflows", path: "workflows" },
 ];
 
-export function IncidentTabsNavigation({
-  incident: initialIncidentData,
-}: {
-  incident?: IncidentDto;
-}) {
+export function IncidentTabsNavigation() {
   // Using type assertion because this component only renders on the /incidents/[id] routes
   const { id } = useParams<{ id: string }>() as { id: string };
-  const { data: incident } = useIncident(id, {
-    fallbackData: initialIncidentData,
-  });
   const pathname = usePathname();
+  const { data: alerts } = useIncidentAlerts(id);
+
   return (
     <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted">
       {tabs.map((tab) => (
@@ -41,7 +36,7 @@ export function IncidentTabsNavigation({
           isActive={pathname?.endsWith(tab.path)}
           href={`/incidents/${id}/${tab.path}`}
           prefetch={!!tab.prefetch}
-          count={tab.path === "alerts" ? incident?.alerts_count : undefined}
+          count={tab.path === "alerts" ? alerts?.count : undefined}
         >
           {tab.label}
         </TabNavigationLink>

@@ -107,7 +107,7 @@ const nextConfig = {
     ],
   },
   compiler: {
-    removeConsole: false,
+    removeConsole: process.env.NODE_ENV === "production",
   },
   output: "standalone",
   productionBrowserSourceMaps: !isSentryDisabled,
@@ -199,7 +199,7 @@ const sentryConfig = {
   // Hides source maps from generated client bundles
   hideSourceMaps: true,
   sourceMaps: {
-    deleteSourcemapsAfterUpload: true,
+    deleteSourcemapsAfterUpload: process.env.KEEP_INCLUDE_SOURCES !== "true",
   },
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
