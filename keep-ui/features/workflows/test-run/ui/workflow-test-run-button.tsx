@@ -93,6 +93,7 @@ export function WorkflowTestRunButton({
 
   const handleClickTestRun = () => {
     if (!dependencies) {
+      showErrorToast(new Error("Failed to parse workflow dependencies"));
       return;
     }
     setIsTestRunModalOpen(true);
