@@ -3,10 +3,8 @@ import type { DefinitionV2 } from "@/entities/workflows";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
-import {
-  extractWorkflowYamlDependencies,
-  getYamlWorkflowDefinition,
-} from "@/entities/workflows/lib/parser";
+import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
+import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/extractWorkflowYamlDependencies";
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
 import { Button, ButtonProps, Callout, Title } from "@tremor/react";
 import { ExclamationCircleIcon, PlayIcon } from "@heroicons/react/24/outline";

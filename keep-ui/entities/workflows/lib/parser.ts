@@ -543,54 +543,6 @@ export function wrapDefinitionV2({
   };
 }
 
-export type WorkflowYamlDependencies = {
-  providers: string[];
-  secrets: string[];
-  inputs: string[];
-  alert: string[];
-  incident: string[];
-};
-
-export function extractWorkflowYamlDependencies(
-  workflowYaml: string
-): WorkflowYamlDependencies {
-  const providers: string[] = [];
-  const secrets: string[] = [];
-  const inputs: string[] = [];
-  const alert: string[] = [];
-  const incident: string[] = [];
-
-  const variables = extractMustacheVariables(workflowYaml);
-  variables.forEach((variable) => {
-    const parts = variable.split(".");
-    switch (parts[0]) {
-      case "providers":
-        providers.push(parts[1]);
-        break;
-      case "secrets":
-        secrets.push(parts[1]);
-        break;
-      case "alert":
-        alert.push(parts[1]);
-        break;
-      case "incident":
-        incident.push(parts[1]);
-        break;
-      case "inputs":
-        inputs.push(parts[1]);
-        break;
-    }
-  });
-
-  return {
-    providers,
-    secrets,
-    inputs,
-    alert,
-    incident,
-  };
-}
-
 export function extractWorkflowInputs(workflowYaml: string): WorkflowInput[] {
   const parsedWorkflow = parseWorkflowYamlStringToJSON(workflowYaml);
   const inputs = parsedWorkflow.inputs || parsedWorkflow.workflow.inputs || [];

@@ -1,4 +1,4 @@
-import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/parser";
+import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/extractWorkflowYamlDependencies";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import { useCallback, useRef } from "react";
