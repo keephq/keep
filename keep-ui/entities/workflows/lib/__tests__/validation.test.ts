@@ -3,9 +3,9 @@ import {
   validateAllMustacheVariablesInString,
   validateStepPure,
   validateGlobalPure,
-} from "../../lib/validation";
+} from "../validation";
 import { Provider } from "@/shared/api/providers";
-import { Definition, V2Step } from "../types";
+import { Definition, V2Step } from "../../model/types";
 
 describe("validateMustacheVariableName", () => {
   const mockDefinition: Definition = {
