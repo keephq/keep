@@ -8,7 +8,6 @@ import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/extrac
 import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/yaml-utils";
 import { Button, ButtonProps, Callout, Title } from "@tremor/react";
 import { ExclamationCircleIcon, PlayIcon } from "@heroicons/react/24/outline";
-import { IoClose } from "react-icons/io5";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
 import { WorkflowAlertIncidentDependenciesForm } from "./workflow-alert-incident-dependencies-form";
 import { useWorkflowTestRun } from "../model/useWorkflowTestRun";
@@ -168,11 +167,7 @@ export function WorkflowTestRunButton({
             <div>
               <Title>Workflow Execution Results</Title>
             </div>
-            <div>
-              <button onClick={handleCancel}>
-                <IoClose size={20} />
-              </button>
-            </div>
+            <div></div>
           </div>
           <div className="flex flex-col">
             <WorkflowExecutionResults
@@ -244,7 +239,8 @@ export function WorkflowTestRunButton({
           isOpen={isTestRunModalOpen}
           onClose={closeWorkflowExecutionResultsModal}
           title="Test Run"
-          className="max-w-screen-md"
+          description="Test run will use current definition (even unsaved changes), and will not be saved in execution history"
+          className="max-w-7xl"
         >
           {renderModalContent()}
         </Modal>

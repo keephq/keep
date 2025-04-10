@@ -60,22 +60,28 @@ export function WorkflowAlertIncidentDependenciesForm({
   submitLabel = "Continue",
 }: WorkflowAlertIncidentDependenciesFormProps) {
   const [dynamicFields, setDynamicFields] = useState<Field[]>([]);
-  const [fieldErrors, setFieldErrors] = useState(
-    new Array(dynamicFields.length).fill({ key: false, value: false })
-  );
-  const [dependenciesErrors, setDependenciesErrors] = useState(
-    new Array(dependencies.length).fill(false)
-  );
+  const [fieldErrors, setFieldErrors] = useState<
+    Record<number, { key: boolean; value: boolean }>
+  >({});
+  const [dependenciesErrors, setDependenciesErrors] = useState<
+    Record<number, boolean>
+  >({});
   const [dependencyValues, setDependencyValues] = useState<
     Record<string, string>
   >({});
 
   const validateDynamicFields = (newDynamicFields: Field[]) => {
     // verify all fields are filled
-    return newDynamicFields.map((field) => ({
-      key: !field.key,
-      value: !field.value,
-    }));
+    const errors: Record<number, { key: boolean; value: boolean }> = {};
+    newDynamicFields.forEach((field, index) => {
+      if (!field.key || !field.value) {
+        errors[index] = {
+          key: !field.key,
+          value: !field.value,
+        };
+      }
+    });
+    return errors;
   };
 
   const validateDependencies = (
@@ -83,7 +89,13 @@ export function WorkflowAlertIncidentDependenciesForm({
     newDependencyValues: Record<string, string>
   ) => {
     // Verify dependencies have values
-    return dependencies.map((dep) => !newDependencyValues[dep]);
+    const errors: Record<number, boolean> = {};
+    dependencies.forEach((dep, index) => {
+      if (!newDependencyValues[dep]) {
+        errors[index] = true;
+      }
+    });
+    return errors;
   };
 
   const handleFieldChange = (
@@ -98,6 +110,8 @@ export function WorkflowAlertIncidentDependenciesForm({
       return field;
     });
     setDynamicFields(newDynamicFields);
+
+    // Re-validate all fields
     setFieldErrors(validateDynamicFields(newDynamicFields));
   };
 
@@ -107,6 +121,8 @@ export function WorkflowAlertIncidentDependenciesForm({
       [dependencyName]: newValue,
     };
     setDependencyValues(newDependencyValues);
+
+    // Re-validate dependencies
     setDependenciesErrors(
       validateDependencies(dependencies, newDependencyValues)
     );
@@ -115,7 +131,10 @@ export function WorkflowAlertIncidentDependenciesForm({
   const handleDeleteField = (index: number) => {
     const newDynamicFields = dynamicFields.filter((_, i) => i !== index);
     setDynamicFields(newDynamicFields);
-    setFieldErrors(validateDynamicFields(newDynamicFields));
+
+    // Re-validate remaining fields
+    const newErrors = validateDynamicFields(newDynamicFields);
+    setFieldErrors(newErrors);
   };
 
   const handleAddField = (e: React.FormEvent) => {
@@ -130,27 +149,28 @@ export function WorkflowAlertIncidentDependenciesForm({
   }, [dynamicFields, dependencyValues, staticFields]);
 
   const isValid = useMemo(() => {
-    return (
-      fieldErrors.every((error) => !error.key && !error.value) &&
-      dependenciesErrors.every((error) => !error)
-    );
+    const fieldErrorsExist = Object.keys(fieldErrors).length > 0;
+    const depErrorsExist = Object.keys(dependenciesErrors).length > 0;
+    return !fieldErrorsExist && !depErrorsExist;
   }, [fieldErrors, dependenciesErrors]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const dynamicFieldErrors = validateDynamicFields(dynamicFields);
-    const dependenciesErrors = validateDependencies(
+    const dependencyValidationErrors = validateDependencies(
       dependencies,
       dependencyValues
     );
     setFieldErrors(dynamicFieldErrors);
-    setDependenciesErrors(dependenciesErrors);
-    const isValid =
-      dynamicFieldErrors.every((error) => !error.key && !error.value) &&
-      dependenciesErrors.every((error) => !error);
-    if (!isValid) {
+    setDependenciesErrors(dependencyValidationErrors);
+
+    const fieldErrorsExist = Object.keys(dynamicFieldErrors).length > 0;
+    const depErrorsExist = Object.keys(dependencyValidationErrors).length > 0;
+
+    if (fieldErrorsExist || depErrorsExist) {
       return;
     }
+
     const payload = getAlertPayload(
       dynamicFields,
       dependencyValues,
@@ -165,110 +185,126 @@ export function WorkflowAlertIncidentDependenciesForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <header>
-        <Subtitle>
-          Build {type === "alert" ? "Alert" : "Incident"} Payload
-        </Subtitle>
-        <Text>Enter values required to run the workflow</Text>
-      </header>
-      {Array.isArray(staticFields) && staticFields.length > 0 && (
-        <section>
-          <Text className="mb-2">
-            Fields defined in {type === "alert" ? "Alert" : "Incident"} trigger
-            filters
-          </Text>
-          {staticFields.map((field, index) => (
-            <div key={field.key} className="flex gap-2 mb-2">
-              <TextInput
-                placeholder="key"
-                value={field.key}
-                className={keyClassName}
-                disabled
-              />
-              <TextInput
-                placeholder="value"
-                value={
-                  typeof field.value === "string"
-                    ? field.value
-                    : JSON.stringify(field.value)
-                }
-                className={valueClassName}
-                disabled
-              />
-            </div>
-          ))}
-        </section>
-      )}
-
-      <section>
-        <Text className="mb-2">
-          {type === "alert" ? "Alert" : "Incident"} fields used in the workflow
+        <Text className="font-bold">
+          Build {type === "alert" ? "Alert" : "Incident"} payload required to
+          run the workflow
         </Text>
-        {Array.isArray(dependencies) &&
-          dependencies.map((dependencyName, index) => (
-            <div key={dependencyName} className="flex gap-2 mb-2">
-              <TextInput
-                placeholder={dependencyName}
-                value={dependencyName}
-                className={keyClassName}
-                disabled
-              />
-              <TextInput
-                placeholder="value"
-                value={
-                  typeof dependencyValues[dependencyName] === "string"
-                    ? dependencyValues[dependencyName]
-                    : JSON.stringify(dependencyValues[dependencyName])
-                }
-                onChange={(e) =>
-                  handleDependencyChange(dependencyName, e.target.value)
-                }
-                error={dependenciesErrors[index]}
-                className={valueClassName}
-              />
+      </header>
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          {Array.isArray(staticFields) && staticFields.length > 0 && (
+            <section>
+              <Text className="mb-2">
+                {type === "alert"
+                  ? "Fields defined in alert trigger filters"
+                  : "Mocked default values for incident fields"}
+              </Text>
+              {staticFields.map((field, index) => (
+                <div key={field.key} className="flex gap-2 mb-2">
+                  <TextInput
+                    placeholder="key"
+                    value={field.key}
+                    className={keyClassName}
+                    disabled
+                  />
+                  <TextInput
+                    placeholder="value"
+                    value={
+                      typeof field.value === "string"
+                        ? field.value
+                        : JSON.stringify(field.value)
+                    }
+                    className={valueClassName}
+                    disabled
+                  />
+                </div>
+              ))}
+            </section>
+          )}
+
+          <section>
+            <Text className="mb-2">
+              {type === "alert" ? "Alert" : "Incident"} fields used in the
+              workflow
+            </Text>
+            {Array.isArray(dependencies) &&
+              dependencies.map((dependencyName, index) => (
+                <div key={dependencyName} className="flex gap-2 mb-2">
+                  <TextInput
+                    placeholder={dependencyName}
+                    value={dependencyName}
+                    className={keyClassName}
+                    disabled
+                  />
+                  <TextInput
+                    placeholder="value"
+                    value={
+                      typeof dependencyValues[dependencyName] === "string"
+                        ? dependencyValues[dependencyName]
+                        : JSON.stringify(dependencyValues[dependencyName])
+                    }
+                    onChange={(e) =>
+                      handleDependencyChange(dependencyName, e.target.value)
+                    }
+                    error={dependenciesErrors[index]}
+                    className={valueClassName}
+                  />
+                </div>
+              ))}
+            {dynamicFields.map((field, index) => (
+              <div key={index} className="flex items-center gap-2 mb-2">
+                <TextInput
+                  placeholder="key"
+                  value={field.key}
+                  className={keyClassName}
+                  onChange={(e) =>
+                    handleFieldChange(index, "key", e.target.value)
+                  }
+                  error={fieldErrors[index]?.key}
+                />
+                <TextInput
+                  placeholder="value"
+                  value={
+                    typeof field.value === "string"
+                      ? field.value
+                      : JSON.stringify(field.value)
+                  }
+                  className={valueClassName}
+                  onChange={(e) =>
+                    handleFieldChange(index, "value", e.target.value)
+                  }
+                  error={fieldErrors[index]?.value}
+                />
+                <button
+                  onClick={() => handleDeleteField(index)}
+                  className="flex items-center text-gray-500 hover:text-gray-700"
+                >
+                  <TrashIcon className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+            <div className="flex justify-end">
+              <Button
+                variant="light"
+                icon={PlusIcon}
+                color="orange"
+                onClick={handleAddField}
+              >
+                Add another field
+              </Button>
             </div>
-          ))}
-        {dynamicFields.map((field, index) => (
-          <div key={index} className="flex items-center gap-2 mb-2">
-            <TextInput
-              placeholder="key"
-              value={field.key}
-              className={keyClassName}
-              onChange={(e) => handleFieldChange(index, "key", e.target.value)}
-              error={fieldErrors[index]?.key}
-            />
-            <TextInput
-              placeholder="value"
-              value={
-                typeof field.value === "string"
-                  ? field.value
-                  : JSON.stringify(field.value)
-              }
-              className={valueClassName}
-              onChange={(e) =>
-                handleFieldChange(index, "value", e.target.value)
-              }
-              error={fieldErrors[index]?.value}
-            />
-            <button
-              onClick={() => handleDeleteField(index)}
-              className="flex items-center text-gray-500 hover:text-gray-700"
-            >
-              <TrashIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
-        ))}
-        <div className="flex justify-end">
-          <Button
-            variant="light"
-            icon={PlusIcon}
-            color="orange"
-            onClick={handleAddField}
-          >
-            Add another field
-          </Button>
+          </section>
         </div>
-      </section>
-      {payload && <JsonCard title="alertPayload" json={payload} />}
+        <div className="flex-1">
+          {payload && (
+            <JsonCard
+              title={`${type}Payload (readonly)`}
+              json={payload}
+              maxHeight={400}
+            />
+          )}
+        </div>
+      </div>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" color="orange" onClick={onCancel}>
           Cancel

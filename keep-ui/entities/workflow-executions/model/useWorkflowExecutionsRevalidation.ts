@@ -13,8 +13,17 @@ export const useWorkflowExecutionsRevalidation = () => {
     revalidateLists();
   };
 
+  const revalidateForWorkflowExecution = (
+    workflowId: string | null,
+    workflowExecutionId: string
+  ) => {
+    mutate(workflowExecutionsKeys.detail(workflowId, workflowExecutionId));
+    revalidateLists();
+  };
+
   return {
     revalidateLists,
     revalidateForWorkflow,
+    revalidateForWorkflowExecution,
   };
 };
