@@ -40,3 +40,4 @@ class ActionType(enum.Enum):
     INCIDENT_ENRICH = "Incident enriched"
     INCIDENT_STATUS_CHANGE = "Incident status changed"
     INCIDENT_ASSIGN = "Incident assigned"
+    INCIDENT_UNENRICH = "Incident enriched"

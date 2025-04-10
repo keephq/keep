@@ -12,11 +12,15 @@ import { FlowNode } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
 import { WF_DEBUG_INFO } from "./debug-settings";
-import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
+import {
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
+import { ValidationError } from "@/entities/workflows/lib/validation";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   if (!WF_DEBUG_INFO) {
@@ -48,6 +52,39 @@ function IconUrlProvider(data: FlowNode["data"]) {
   return `/icons/${normalizeStepType(type)}-icon.png`;
 }
 
+function ErrorIcon({ error }: { error: ValidationError | null }) {
+  if (!error) {
+    return null;
+  }
+  const errorMessage = error?.[0];
+  const severity = error?.[1];
+  switch (severity) {
+    case "error": {
+      return (
+        <Tooltip
+          content={errorMessage}
+          className="text-center max-w-48 text-sm"
+        >
+          <ExclamationCircleIcon className="size-5 text-red-500" />
+        </Tooltip>
+      );
+    }
+    case "warning": {
+      return (
+        <Tooltip
+          content={errorMessage}
+          className="text-center max-w-48 text-sm"
+        >
+          <ExclamationTriangleIcon className="size-5 text-yellow-500" />
+        </Tooltip>
+      );
+    }
+    default: {
+      return null;
+    }
+  }
+}
+
 function WorkflowNode({ id, data }: FlowNode) {
   const {
     selectedNode,
@@ -59,9 +96,9 @@ function WorkflowNode({ id, data }: FlowNode) {
 
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ["start", "end"].includes(type);
-  const errorMessage =
-    validationErrors?.[data?.name] || validationErrors?.[data?.id];
-  const isError = !!errorMessage;
+  const error = validationErrors?.[data?.name] || validationErrors?.[data?.id];
+  const isError = error?.[1] === "error";
+  const isWarning = error?.[1] === "warning";
   const isTrigger =
     data?.componentType === "trigger" && triggerTypes.includes(type);
 
@@ -102,14 +139,6 @@ function WorkflowNode({ id, data }: FlowNode) {
           )}
         >
           {data.name}
-          {isError && (
-            <Tooltip
-              content={errorMessage}
-              className="text-center max-w-48 text-sm"
-            >
-              <ExclamationCircleIcon className="size-5 text-red-500" />
-            </Tooltip>
-          )}
         </div>
         {data.id !== "trigger_start" && (
           <Handle type="target" position={Position.Top} className="w-32" />
@@ -134,7 +163,8 @@ function WorkflowNode({ id, data }: FlowNode) {
               ? "border-orange-500 bg-orange-50"
               : "border-stone-400 bg-white",
             id !== selectedNode && "hover:bg-gray-50",
-            id !== selectedNode && isError && "border-red-500",
+            id !== selectedNode && isError && "!border-red-500",
+            id !== selectedNode && isWarning && "!border-yellow-500",
             isTrigger ? "rounded-full" : "rounded-md"
           )}
           onClick={handleNodeClick}
@@ -179,14 +209,7 @@ function WorkflowNode({ id, data }: FlowNode) {
                   <span className="truncate" title={displayName}>
                     {displayName}
                   </span>
-                  {isError && (
-                    <Tooltip
-                      content={errorMessage}
-                      className="text-center max-w-48 text-sm"
-                    >
-                      <ExclamationCircleIcon className="size-5 text-red-500" />
-                    </Tooltip>
-                  )}
+                  <ErrorIcon error={error} />
                 </div>
                 <div className="text-gray-500 truncate">{subtitle}</div>
               </div>

@@ -1,9 +1,10 @@
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "../model/types";
 import { getWithParams } from "./parser";
+import { YamlStepOrAction, YamlWorkflowDefinition } from "../model/yaml.types";
 
 export type ValidationResult = [string, string];
-export type ValidationError = [string, "error" | "warning"];
+export type ValidationError = [string, "error" | "warning" | "info"];
 /**
  * Extracts the trimmed value from mustache syntax by removing curly brackets.
  *
@@ -270,7 +271,7 @@ export function validateStepPure(
       secrets
     );
     variableErrors.forEach((error) => {
-      validationErrors.push([error, "warning"]);
+      validationErrors.push([error, "error"]);
     });
   }
   if (step.componentType === "task" && step.properties.with?.enrich_alert) {
@@ -282,7 +283,7 @@ export function validateStepPure(
       secrets
     );
     variableErrors.forEach((error) => {
-      validationErrors.push([error, "warning"]);
+      validationErrors.push([error, "error"]);
     });
   }
   if (step.componentType === "task" && step.properties.with?.enrich_incident) {
@@ -296,7 +297,7 @@ export function validateStepPure(
       secrets
     );
     variableErrors.forEach((error) => {
-      validationErrors.push([error, "warning"]);
+      validationErrors.push([error, "error"]);
     });
   }
   if (step.componentType === "switch") {
@@ -329,7 +330,7 @@ export function validateStepPure(
         secrets
       );
       variableErrorsCompareTo.forEach((error) => {
-        validationErrors.push([error, "warning"]);
+        validationErrors.push([error, "error"]);
       });
     }
     if (step.type === "condition-assert") {
@@ -343,7 +344,7 @@ export function validateStepPure(
         secrets
       );
       variableErrors.forEach((error) => {
-        validationErrors.push([error, "warning"]);
+        validationErrors.push([error, "error"]);
       });
     }
     const branches = step.branches || {
@@ -389,7 +390,7 @@ export function validateStepPure(
           secrets
         );
         variableErrors.forEach((error) => {
-          validationErrors.push([error, "warning"]);
+          validationErrors.push([error, "error"]);
         });
       }
     }
@@ -405,7 +406,7 @@ export function validateStepPure(
       secrets
     );
     variableErrors.forEach((error) => {
-      validationErrors.push([error, "warning"]);
+      validationErrors.push([error, "error"]);
     });
   }
   return validationErrors;
