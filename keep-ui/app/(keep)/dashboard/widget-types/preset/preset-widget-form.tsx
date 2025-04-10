@@ -52,7 +52,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       ],
     },
   });
-  const [presetColumns, setPresetColumns] = useState<string[]>([]);
+  const [presetColumns, setPresetColumns] = useState<string[] | undefined>(
+    editingItem ? editingItem.presetColumns : undefined
+  );
 
   const { fields, append, remove, move, replace } = useFieldArray({
     control,
@@ -65,12 +67,13 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
     return {
       countOfLastAlerts: parseInt(formValues.countOfLastAlerts || "0"),
       selectedPreset: presets.find((p) => p.id === formValues.selectedPreset),
+      presetColumns,
       thresholds: formValues.thresholds?.map((t) => ({
         ...t,
         value: parseInt(t.value?.toString() as string, 10) || 0,
       })),
     };
-  }, [formValues]);
+  }, [formValues, presetColumns]);
 
   function getLayoutValues(): LayoutItem {
     if (editingItem) {
@@ -97,7 +100,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           ...normalizedFormValues.selectedPreset,
           countOfLastAlerts: normalizedFormValues.countOfLastAlerts,
         },
-        presetColumns: presetColumns,
+        presetColumns: normalizedFormValues.presetColumns,
         thresholds: normalizedFormValues.thresholds,
       },
       isValid

@@ -1,6 +1,7 @@
 import { useFacetPotentialFields } from "@/features/filter/hooks";
 import { MultiSelect, MultiSelectItem } from "@tremor/react";
 import React, { useEffect, useMemo, useState } from "react";
+import { defaultColumns } from "./constants";
 
 interface ColumnsSelectionProps {
   selectedColumns?: string[];
@@ -12,9 +13,9 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
   onChange,
 }) => {
   const [selectedColumnsState, setSelectedColumnsState] = useState<Set<string>>(
-    new Set(selectedColumns || [])
+    new Set(selectedColumns || defaultColumns)
   );
-  const { data, isLoading } = useFacetPotentialFields("alerts");
+  const { data } = useFacetPotentialFields("alerts");
 
   useEffect(
     () => onChange(Array.from(selectedColumnsState)),

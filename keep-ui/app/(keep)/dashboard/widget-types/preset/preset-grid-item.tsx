@@ -14,6 +14,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import TimeAgo from "react-timeago";
 import { useSearchParams } from "next/navigation";
+import WidgetAlertsTable from "./widget-alerts-table";
 
 interface GridItemProps {
   item: WidgetData;
@@ -285,7 +286,11 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           }}
           className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
         >
-          {renderLastAlertsGrid()}
+          {/* {renderLastAlertsGrid()} */}
+          <WidgetAlertsTable
+            alerts={alerts}
+            columns={(item as any).presetColumns}
+          />
         </div>
       )}
     </div>
