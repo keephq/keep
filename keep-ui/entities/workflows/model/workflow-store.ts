@@ -31,7 +31,11 @@ import {
   WorkflowProperties,
   InitializationConfiguration,
 } from "@/entities/workflows";
-import { validateStepPure, validateGlobalPure } from "../lib/validation";
+import {
+  validateStepPure,
+  validateGlobalPure,
+  ValidationError,
+} from "../lib/validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
 import {
   parseWorkflow,
@@ -461,12 +465,12 @@ export const useWorkflowStore = create<WorkflowState>()(
     validateDefinition: (definition: Definition) => {
       // Use validators to check if the workflow is valid
       let isValid = true;
-      const validationErrors: Record<string, string> = {};
+      const validationErrors: Record<string, ValidationError> = {};
 
       const result = validateGlobalPure(definition);
       if (result) {
         result.forEach(([key, error]) => {
-          validationErrors[key] = error;
+          validationErrors[key] = [error, "error"];
         });
         isValid = result.length === 0;
       }
@@ -490,7 +494,7 @@ export const useWorkflowStore = create<WorkflowState>()(
               definition
             );
             if (errors.length > 0) {
-              validationErrors[branch.name || branch.id] = errors[0][0];
+              validationErrors[branch.name || branch.id] = errors[0];
               isValid = false;
             }
           });
@@ -505,13 +509,13 @@ export const useWorkflowStore = create<WorkflowState>()(
               definition
             );
             if (errors.length > 0) {
-              validationErrors[s.name || s.id] = errors[0][0];
+              validationErrors[s.name || s.id] = errors[0];
               isValid = false;
             }
           });
         }
         if (errors.length > 0) {
-          validationErrors[step.name || step.id] = errors[0][0];
+          validationErrors[step.name || step.id] = errors[0];
           isValid = false;
         }
       }
@@ -521,8 +525,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       // - variable errors, as the user can fix them later
       const canDeploy =
         Object.values(validationErrors).filter(
-          (error) =>
-            !error.includes("provider") && !error.startsWith("Variable:")
+          ([_, severity]) => severity === "error"
         ).length === 0;
 
       return { isValid, validationErrors, canDeploy };

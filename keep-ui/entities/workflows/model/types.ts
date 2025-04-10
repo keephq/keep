@@ -16,6 +16,7 @@ import {
   V2StepForeachSchema,
   V2StepTemplateSchema,
 } from "./schema";
+import { ValidationError } from "@/entities/workflows/lib/validation";
 
 export type IncidentEvent = z.infer<typeof IncidentEventEnum>;
 export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;
@@ -199,7 +200,7 @@ export interface WorkflowStateValues {
   isSaving: boolean;
   isLoading: boolean;
   isDeployed: boolean;
-  validationErrors: Record<string, string>;
+  validationErrors: Record<string, ValidationError>;
 
   lastChangedAt: number | null;
   lastDeployedAt: number | null;
@@ -267,7 +268,7 @@ export interface WorkflowState extends WorkflowStateValues {
   updateFromYamlString: (yamlString: string) => void;
   validateDefinition: (definition: Definition) => {
     isValid: boolean;
-    validationErrors: Record<string, string>;
+    validationErrors: Record<string, ValidationError>;
     canDeploy: boolean;
   };
 }

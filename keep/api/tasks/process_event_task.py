@@ -111,9 +111,7 @@ def __validate_last_received(event):
     # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
     # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
     if not event.lastReceived:
-        event.lastReceived = datetime.datetime.now(
-            tz=datetime.timezone.utc
-        ).isoformat()
+        event.lastReceived = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
     else:
         try:
             dateutil.parser.isoparse(event.lastReceived)
@@ -173,7 +171,6 @@ def __save_to_db(
                     action_callee="system",
                     action_description="Alert lastReceived enriched on deduplication",
                 )
-
 
         enriched_formatted_events = []
         saved_alerts = []
@@ -696,12 +693,14 @@ def process_event(
                 #         todo: move it to be generic
                 if event is None and provider_type == "cloudwatch":
                     logger.info(
-                        "This is a subscription notification message from AWS - skipping processing"
+                        "This is a subscription notification message from AWS - skipping processing",
+                        extra=extra_dict,
                     )
                     return
                 elif event is None:
                     logger.info(
-                        "Provider returned None (failed silently), skipping processing"
+                        "Provider returned None (failed silently), skipping processing",
+                        extra=extra_dict,
                     )
 
         if event:

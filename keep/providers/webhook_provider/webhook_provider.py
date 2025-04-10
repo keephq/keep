@@ -31,6 +31,15 @@ class WebhookProviderAuthConfig:
         }
     )
 
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Enable SSL verification",
+            "hint": "Whether to verify the SSL certificate of the webhook URL or not",
+            "type": "switch",
+        },
+        default=True,
+    )
+
     method: typing.Literal["GET", "POST", "PUT", "DELETE"] = dataclasses.field(
         default="POST",
         metadata={
@@ -194,6 +203,7 @@ class WebhookProvider(BaseProvider):
 
         extra_args = copy.deepcopy(kwargs)
         extra_args.pop("enrich_alert", None)
+        verify = extra_args.pop("verify", self.authentication_config.verify)
 
         if http_basic_authentication_username and http_basic_authentication_password:
             credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
@@ -215,19 +225,24 @@ class WebhookProvider(BaseProvider):
         )
         if method == "GET":
             response = requests.get(
-                url, headers=headers, params=params, timeout=10, **extra_args
+                url,
+                headers=headers,
+                params=params,
+                timeout=10,
+                verify=verify,
+                **extra_args,
             )
         elif method == "POST":
             response = requests.post(
-                url, headers=headers, json=body, timeout=10, **extra_args
+                url, headers=headers, json=body, timeout=10, verify=verify, **extra_args
             )
         elif method == "PUT":
             response = requests.put(
-                url, headers=headers, json=body, timeout=10, **extra_args
+                url, headers=headers, json=body, timeout=10, verify=verify, **extra_args
             )
         elif method == "DELETE":
             response = requests.delete(
-                url, headers=headers, json=body, timeout=10, **extra_args
+                url, headers=headers, json=body, timeout=10, verify=verify, **extra_args
             )
 
         self.logger.debug(

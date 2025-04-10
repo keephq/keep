@@ -32,7 +32,10 @@ import { NodeDataStepSchema } from "@/entities/workflows/model/schema";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import debounce from "lodash.debounce";
 import { TestRunStepForm } from "./StepTest";
-import { checkProviderNeedsInstallation } from "@/entities/workflows/lib/validation";
+import {
+  checkProviderNeedsInstallation,
+  ValidationError,
+} from "@/entities/workflows/lib/validation";
 import { EditorField } from "./EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
@@ -380,7 +383,7 @@ function KeepStepEditor({
           )}
           {variableError && (
             <Callout
-              color="yellow"
+              color="red"
               className="text-sm my-1"
               title={variableError.split("-")[0]}
             >
@@ -489,13 +492,14 @@ function KeepThresholdConditionEditor({
 }: {
   properties: V2StepConditionThreshold["properties"];
   updateProperty: (key: string, value: any) => void;
-  error?: string | null;
+  error?: ValidationError | null;
 }) {
   const currentValueValue = properties.value ?? "";
   const currentCompareToValue = properties.compare_to ?? "";
+  const errorMessage = error?.[0];
   return (
     <>
-      {error && <Text className="text-red-500">{error}</Text>}
+      {errorMessage && <Text className="text-red-500">{errorMessage}</Text>}
       <Text>Value</Text>
       <TextInput
         placeholder="Value"
@@ -521,9 +525,10 @@ function KeepAssertConditionEditor({
 }: {
   properties: V2StepConditionAssert["properties"];
   updateProperty: (key: string, value: any) => void;
-  error?: string | null;
+  error?: ValidationError | null;
 }) {
   const currentAssertValue = properties.assert ?? "";
+  const errorMessage = error?.[0];
   return (
     <>
       <Text>Assert</Text>
@@ -532,8 +537,8 @@ function KeepAssertConditionEditor({
         onChange={(e: any) => updateProperty("assert", e.target.value)}
         className="mb-2.5"
         value={currentAssertValue}
-        error={!!error}
-        errorMessage={error ?? undefined}
+        error={!!errorMessage}
+        errorMessage={errorMessage ?? undefined}
       />
     </>
   );
@@ -546,10 +551,10 @@ function KeepForeachEditor({
 }: {
   properties: V2StepForeach["properties"];
   updateProperty: (key: string, value: any) => void;
-  error?: string | null;
+  error?: ValidationError | null;
 }) {
   const currentValueValue = properties.value ?? "";
-
+  const errorMessage = error?.[0];
   return (
     <>
       <Text>Foreach Value</Text>
@@ -558,8 +563,8 @@ function KeepForeachEditor({
         onChange={(e: any) => updateProperty("value", e.target.value)}
         className="mb-2.5"
         value={currentValueValue}
-        error={!!error}
-        errorMessage={error ?? undefined}
+        error={!!errorMessage}
+        errorMessage={errorMessage ?? undefined}
       />
     </>
   );
@@ -793,16 +798,18 @@ function ActionOrStepEditor({
   let parametersError = null;
   let providerError = null;
   let variableError = null;
-  if (error?.includes("parameters")) {
-    parametersError = error;
+  const errorMessage = error?.[0];
+
+  if (errorMessage?.includes("parameters")) {
+    parametersError = errorMessage;
   }
 
-  if (error?.includes("provider")) {
-    providerError = error;
+  if (errorMessage?.includes("provider")) {
+    providerError = errorMessage;
   }
 
-  if (error?.startsWith("Variable:")) {
-    variableError = error;
+  if (errorMessage?.startsWith("Variable:")) {
+    variableError = errorMessage;
   }
 
   const { data: { installed_providers: installedProviders } = {} } =
