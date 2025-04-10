@@ -96,7 +96,7 @@ export const CorrelationSidebarBody = ({
     };
 
     try {
-      const response = selectedId
+      selectedId
         ? await api.put(`/rules/${selectedId}`, body)
         : await api.post("/rules", body);
 
