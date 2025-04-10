@@ -17,7 +17,6 @@ import {
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
 import { parseWorkflowYamlStringToJSON } from "./yaml-utils";
-import { extractMustacheVariables } from "./mustache";
 import { WorkflowInput } from "../model/yaml.schema";
 
 type StepOrActionWithType = YamlStepOrAction & { type: "step" | "action" };
@@ -545,7 +544,8 @@ export function wrapDefinitionV2({
 
 export function extractWorkflowInputs(workflowYaml: string): WorkflowInput[] {
   const parsedWorkflow = parseWorkflowYamlStringToJSON(workflowYaml);
-  const inputs = parsedWorkflow.inputs || parsedWorkflow.workflow.inputs || [];
+  const inputs =
+    parsedWorkflow?.inputs || parsedWorkflow?.workflow?.inputs || [];
 
   // Add visual indicator of required status for inputs without defaults
   const enhancedInputs = inputs.map((input: WorkflowInput) => {
