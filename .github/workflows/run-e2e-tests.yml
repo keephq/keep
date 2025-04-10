@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Login to GitHub Container Registry
-        if: ${{ inputs.is-fork != 'true' }}
+        if: ${{ inputs.is-fork != true }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -88,12 +88,12 @@ jobs:
 
       # For forks: Build images locally again since they don't persist between jobs
       - name: Set up Docker Buildx
-        if: ${{ inputs.is-fork == 'true' }}
+        if: ${{ inputs.is-fork == true }}
         id: buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Rebuild frontend image locally for fork PRs
-        if: ${{ inputs.is-fork == 'true' }}
+        if: ${{ inputs.is-fork == true }}
         uses: docker/build-push-action@v4
         with:
           context: keep-ui
@@ -108,7 +108,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Rebuild backend image locally for fork PRs
-        if: ${{ inputs.is-fork == 'true' }}
+        if: ${{ inputs.is-fork == true }}
         uses: docker/build-push-action@v4
         with:
           context: .
