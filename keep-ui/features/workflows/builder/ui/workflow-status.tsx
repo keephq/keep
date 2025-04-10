@@ -6,12 +6,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { useWorkflowStore } from "@/entities/workflows";
 import clsx from "clsx";
+import { ValidationError } from "@/entities/workflows/lib/validation";
 
 function ErrorList({
   validationErrors,
   onErrorClick,
 }: {
-  validationErrors: Record<string, string>;
+  validationErrors: Record<string, ValidationError>;
   onErrorClick: (id: string) => void;
 }) {
   const textSummary = `${Object.keys(validationErrors).length} error${
@@ -31,7 +32,7 @@ function ErrorList({
                 {id}:
               </span>
             )}{" "}
-            {error}
+            {error[0]}
           </span>
         ))}
       </span>
