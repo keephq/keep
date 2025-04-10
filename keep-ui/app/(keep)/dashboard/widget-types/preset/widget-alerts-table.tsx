@@ -26,17 +26,19 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
 }) => {
   const columnsMeta: { [key: string]: any } = {
     severity: {
+      gridColumnTemplate: "min-content",
       renderHeader: () => <div className="min-w-1"></div>,
-      renderValue: (alert: any) => {
+      renderValue: (alert: any) => (
         <SeverityBorderIcon
           severity={
             (severityMapping[Number(alert.severity)] ||
               alert.severity) as UISeverity
           }
-        />;
-      },
+        />
+      ),
     },
     status: {
+      gridColumnTemplate: "min-content",
       renderHeader: () => <div className="min-w-4"></div>,
       renderValue: (alert: any) => (
         <Icon
@@ -48,10 +50,11 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
       ),
     },
     providerType: {
+      gridColumnTemplate: "min-content",
       renderHeader: () => <div className="min-w-4"></div>,
       renderValue: (alert: any) => (
         <DynamicImageProviderIcon
-          className="inline-block"
+          className="inline-block w-4 h-4"
           alt={(alert as any).providerType}
           height={16}
           width={16}
@@ -62,16 +65,23 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
       ),
     },
     name: {
+      columnTemplate: "1fr",
       renderValue: (alert: any) => (
-        <div className="max-w-32 truncate">{alert.name}</div>
+        <div title={alert.name} className="max-w-full truncate">
+          {alert.name}
+        </div>
       ),
     },
     description: {
+      gridColumnTemplate: "1fr",
       renderValue: (alert: any) => (
-        <div className="max-w-32 truncate">{alert.description}</div>
+        <div title={alert.description} className="max-w-full truncate">
+          {alert.description}
+        </div>
       ),
     },
     lastReceived: {
+      gridColumnTemplate: "min-content",
       renderValue: (alert: any) => <TimeAgo date={alert.lastReceived} />,
     },
   };
@@ -83,49 +93,65 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
       if (columnMeta?.renderHeader) {
         columnHeaderValue = columnMeta.renderHeader();
       } else {
-        columnHeaderValue = <div className="max-w-full truncate">{column}</div>;
+        columnHeaderValue = <div className="max-w-32 truncate">{column}</div>;
       }
 
       return (
-        <th>
-          <div className="flex items-center whitespace-nowrap">
-            {columnHeaderValue}
-          </div>
-        </th>
+        <div className="flex items-center whitespace-nowrap">
+          {columnHeaderValue}
+        </div>
       );
     });
   }
 
-  function renderColumns(alert: any) {
-    return columns?.map((column) => {
-      const columnMeta = columnsMeta[column];
-      let columnValue;
-      if (columnMeta?.renderValue) {
-        columnValue = columnMeta.renderValue(alert);
-      } else {
-        columnValue = <div className="max-w-32 truncate">{alert[column]}</div>;
-      }
+  function renderTableBody() {
+    return alerts
+      ?.map((alert) => {
+        return columns?.map((column) => {
+          const columnMeta = columnsMeta[column];
+          let columnValue;
+          if (columnMeta?.renderValue) {
+            columnValue = columnMeta.renderValue(alert);
+          } else {
+            columnValue = (
+              <div className="max-w-32 truncate">{alert[column]}</div>
+            );
+          }
 
-      return (
-        <td>
-          <div className="flex items-center">{columnValue}</div>
-        </td>
-      );
-    });
+          return (
+            <div className="flex min-w-0 items-center overflow-hidden">
+              {columnValue}
+            </div>
+          );
+        });
+      })
+      .flat();
+  }
+
+  function getTemplateColumns() {
+    return columns
+      ?.map((column) => {
+        const columnMeta = columnsMeta[column];
+        let gridColumnTemplate = "auto";
+
+        if (columnMeta?.gridColumnTemplate) {
+          gridColumnTemplate = columnMeta.gridColumnTemplate;
+        }
+
+        return gridColumnTemplate;
+      })
+      .join(" ");
   }
 
   return (
-    <div className="widget-alerts-table">
-      <table>
-        <thead>
-          <tr>{renderHeaders()}</tr>
-        </thead>
-        <tbody>
-          {alerts?.map((alert) => (
-            <tr key={alert.id}>{renderColumns(alert)}</tr>
-          ))}
-        </tbody>
-      </table>
+    <div
+      className="grid gap-x-3 max-w-full overflow-hidden"
+      style={{
+        gridTemplateColumns: getTemplateColumns(),
+      }}
+    >
+      {renderHeaders()}
+      {renderTableBody()}
     </div>
   );
 };
