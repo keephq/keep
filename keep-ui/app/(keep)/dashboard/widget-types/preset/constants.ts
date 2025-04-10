@@ -1,7 +1,7 @@
 export const defaultColumns = [
   "severity",
   "status",
-  "providerType",
+  "source",
   "name",
   "description",
   "lastReceived",
