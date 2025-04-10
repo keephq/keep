@@ -296,8 +296,8 @@ jobs:
     with:
       db-type: mysql
       redis_enabled: true
-      python-version: ${{ github.env.PYTHON_VERSION }}
-      is-fork: ${{ github.env.IS_FORK }}
+      python-version: 3.11
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
@@ -307,8 +307,8 @@ jobs:
     with:
       db-type: postgres
       redis_enabled: false
-      python-version: ${{ github.env.PYTHON_VERSION }}
-      is-fork: ${{ github.env.IS_FORK }}
+      python-version: 3.11
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
@@ -318,7 +318,7 @@ jobs:
   #   with:
   #     db-type: sqlite
   #     redis_enabled: false
-  #     python-version: ${{ github.env.PYTHON_VERSION }}
-  #     is-fork: ${{ github.env.IS_FORK }}
+  #     python-version: 3.11
+  #     is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
   #     backend-image-name: ${{ needs.build-backend.outputs.image_name }}
   #     frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
