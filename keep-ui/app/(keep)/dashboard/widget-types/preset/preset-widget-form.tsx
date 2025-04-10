@@ -8,7 +8,7 @@ import {
   Subtitle,
   TextInput,
 } from "@tremor/react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Controller,
   get,
@@ -17,6 +17,7 @@ import {
   useFieldArray,
 } from "react-hook-form";
 import { LayoutItem, Threshold } from "../../types";
+import ColumnsSelection from "./columns-selection";
 
 interface PresetForm {
   selectedPreset: string;
@@ -51,6 +52,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       ],
     },
   });
+  const [presetColumns, setPresetColumns] = useState<string[] | undefined>(
+    editingItem ? editingItem.presetColumns : undefined
+  );
 
   const { fields, append, remove, move, replace } = useFieldArray({
     control,
@@ -63,12 +67,13 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
     return {
       countOfLastAlerts: parseInt(formValues.countOfLastAlerts || "0"),
       selectedPreset: presets.find((p) => p.id === formValues.selectedPreset),
+      presetColumns,
       thresholds: formValues.thresholds?.map((t) => ({
         ...t,
         value: parseInt(t.value?.toString() as string, 10) || 0,
       })),
     };
-  }, [formValues]);
+  }, [formValues, presetColumns]);
 
   function getLayoutValues(): LayoutItem {
     if (editingItem) {
@@ -95,6 +100,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           ...normalizedFormValues.selectedPreset,
           countOfLastAlerts: normalizedFormValues.countOfLastAlerts,
         },
+        presetColumns: normalizedFormValues.presetColumns,
         thresholds: normalizedFormValues.thresholds,
       },
       isValid
@@ -175,6 +181,10 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           )}
         />
       </div>
+      <ColumnsSelection
+        selectedColumns={presetColumns}
+        onChange={(selectedColumns) => setPresetColumns(selectedColumns)}
+      ></ColumnsSelection>
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <Subtitle>Thresholds</Subtitle>
