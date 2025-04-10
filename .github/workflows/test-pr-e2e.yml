@@ -297,7 +297,7 @@ jobs:
       db-type: mysql
       redis_enabled: true
       python-version: ${{ github.env.PYTHON_VERSION }}
-      is-fork: ${{ github.env.PYTHON_VERSION }}
+      is-fork: ${{ github.env.IS_FORK }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
@@ -308,7 +308,7 @@ jobs:
       db-type: postgres
       redis_enabled: false
       python-version: ${{ github.env.PYTHON_VERSION }}
-      is-fork: ${{ github.env.PYTHON_VERSION }}
+      is-fork: ${{ github.env.IS_FORK }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
@@ -319,6 +319,6 @@ jobs:
   #     db-type: sqlite
   #     redis_enabled: false
   #     python-version: ${{ github.env.PYTHON_VERSION }}
-  #     is-fork: ${{ github.env.PYTHON_VERSION }}
+  #     is-fork: ${{ github.env.IS_FORK }}
   #     backend-image-name: ${{ needs.build-backend.outputs.image_name }}
   #     frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
