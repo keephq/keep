@@ -20,15 +20,13 @@ export interface InternalConfig {
   // READ ONLY
   READ_ONLY: boolean;
   OPEN_AI_API_KEY_SET: boolean;
-
   // NOISY ALERTS ENABLED
   NOISY_ALERTS_ENABLED: boolean;
-
   FRIGADE_DISABLED: string | undefined;
-
   // Keep Docs
   KEEP_DOCS_URL: string;
-
   // Keep Contact Us
   KEEP_CONTACT_US_URL: string;
+  // Hide sensitive fields
+  KEEP_HIDE_SENSITIVE_FIELDS: boolean;
 }
