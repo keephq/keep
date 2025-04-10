@@ -180,6 +180,8 @@ class Incident(SQLModel, table=True):
     _alerts: List = PrivateAttr(default_factory=list)
     _enrichments: dict = PrivateAttr(default={})
 
+    synced_to_servicenow = Column(Boolean, default=False)
+
     class Config:
         arbitrary_types_allowed = True
 
