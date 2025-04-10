@@ -59,11 +59,6 @@ export function WorkflowTestRunButton({
     setError(null);
   };
 
-  const handleCancel = (e: React.FormEvent) => {
-    e.preventDefault();
-    closeWorkflowExecutionResultsModal();
-  };
-
   const handleTestRunWorkflow = async (
     eventType: "alert" | "incident",
     eventPayload: any
