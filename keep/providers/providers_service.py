@@ -1,10 +1,12 @@
+import hashlib
 import json
 import logging
 import os
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
+import redis
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
@@ -12,9 +14,11 @@ from sqlmodel import Session, select
 from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
     provision_deduplication_rules,
 )
+from keep.api.consts import REDIS, REDIS_DB, REDIS_HOST, REDIS_PORT
 from keep.api.core.config import config
 from keep.api.core.db import (
     engine,
+    existed_or_new_session,
     get_all_provisioned_providers,
     get_provider_by_name,
     get_provider_logs,
@@ -150,6 +154,8 @@ class ProvidersService:
         provisioned: bool = False,
         validate_scopes: bool = True,
         pulling_enabled: bool = True,
+        session: Optional[Session] = None,
+        commit: bool = True,
     ) -> Dict[str, Any]:
         provider_unique_id = uuid.uuid4().hex
         logger.info(
@@ -186,23 +192,25 @@ class ProvidersService:
             secret_value=json.dumps(config),
         )
 
-        with Session(engine) as session:
-            provider_model = Provider(
-                id=provider_unique_id,
-                tenant_id=tenant_id,
-                name=provider_name,
-                type=provider_type,
-                installed_by=installed_by,
-                installation_time=time.time(),
-                configuration_key=secret_name,
-                validatedScopes=validated_scopes,
-                consumer=provider.is_consumer,
-                provisioned=provisioned,
-                pulling_enabled=pulling_enabled,
-            )
+        provider_model = Provider(
+            id=provider_unique_id,
+            tenant_id=tenant_id,
+            name=provider_name,
+            type=provider_type,
+            installed_by=installed_by,
+            installation_time=time.time(),
+            configuration_key=secret_name,
+            validatedScopes=validated_scopes,
+            consumer=provider.is_consumer,
+            provisioned=provisioned,
+            pulling_enabled=pulling_enabled,
+        )
+
+        with existed_or_new_session(session) as session:
             try:
                 session.add(provider_model)
-                session.commit()
+                if commit:
+                    session.commit()
             except IntegrityError as e:
                 if "FOREIGN KEY constraint" in str(e):
                     raise
@@ -223,19 +231,20 @@ class ProvidersService:
                     status_code=409, detail="Provider already installed"
                 )
 
-            if provider_model.consumer:
-                try:
-                    event_subscriber = EventSubscriber.get_instance()
-                    event_subscriber.add_consumer(provider)
-                except Exception:
-                    logger.exception("Failed to register provider as a consumer")
+        if provider_model.consumer:
+            try:
+                event_subscriber = EventSubscriber.get_instance()
+                event_subscriber.add_consumer(provider)
+            except Exception:
+                logger.exception("Failed to register provider as a consumer")
 
-            return {
-                "type": provider_type,
-                "id": provider_unique_id,
-                "details": config,
-                "validatedScopes": validated_scopes,
-            }
+        return {
+            "provider": provider_model,
+            "type": provider_type,
+            "id": provider_unique_id,
+            "details": config,
+            "validatedScopes": validated_scopes,
+        }
 
     @staticmethod
     def update_provider(
@@ -296,7 +305,11 @@ class ProvidersService:
 
     @staticmethod
     def delete_provider(
-        tenant_id: str, provider_id: str, session: Session, allow_provisioned=False
+        tenant_id: str,
+        provider_id: str,
+        session: Session,
+        allow_provisioned=False,
+        commit: bool = True,
     ):
         provider_model: Provider = session.exec(
             select(Provider).where(
@@ -342,7 +355,8 @@ class ProvidersService:
             logger.exception(msg="Provider deleted but failed to clean up provider")
 
         session.delete(provider_model)
-        session.commit()
+        if commit:
+            session.commit()
 
     @staticmethod
     def validate_provider_scopes(
@@ -379,6 +393,133 @@ class ProvidersService:
         return provider is not None
 
     @staticmethod
+    def provision_provider_deduplication_rules(
+        tenant_id: str,
+        provider: Provider,
+        deduplication_rules: Dict[str, Dict[str, Any]],
+    ):
+        """
+        Provision deduplication rules for a provider.
+
+        Args:
+            tenant_id (str): The tenant ID.
+            provider (Provider): The provider to provision the deduplication rules for.
+            deduplication_rules (Dict[str, Dict[str, Any]]): The deduplication rules to provision.
+        """
+
+        # Provision the deduplication rules
+        deduplication_rules_dict: dict[str, dict] = {}
+        for rule_name, rule_config in deduplication_rules.items():
+            logger.info(f"Provisioning deduplication rule {rule_name}")
+            rule_config["name"] = rule_name
+            rule_config["provider_name"] = provider.name
+            rule_config["provider_type"] = provider.type
+            deduplication_rules_dict[rule_name] = rule_config
+
+        # Provision deduplication rules
+        provision_deduplication_rules(
+            deduplication_rules=deduplication_rules_dict,
+            tenant_id=tenant_id,
+            provider=provider,
+        )
+
+    @staticmethod
+    def write_provisioned_hash(tenant_id: str, hash_value: str):
+        """
+        Write the provisioned hash to Redis or secret manager.
+
+        Args:
+            tenant_id (str): The tenant ID.
+            hash_value (str): The hash value to write.
+        """
+        if REDIS:
+            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+            r.set(f"{tenant_id}_providers_hash", hash_value)
+            logger.info(f"Provisioned hash for tenant {tenant_id} written to Redis!")
+        else:
+            context_manager = ContextManager(tenant_id=tenant_id)
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            secret_manager.write_secret(
+                secret_name=f"{tenant_id}_providers_hash",
+                secret_value=hash_value,
+            )
+            logger.info(
+                f"Provisioned hash for tenant {tenant_id} written to secret manager!"
+            )
+
+    @staticmethod
+    def get_provisioned_hash(tenant_id: str) -> Optional[str]:
+        """
+        Get the provisioned hash from Redis or secret manager.
+
+        Args:
+            tenant_id (str): The tenant ID.
+
+        Returns:
+            Optional[str]: The provisioned hash, or None if not found.
+        """
+        previous_hash = None
+        if REDIS:
+            try:
+                with redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB) as r:
+                    previous_hash = r.get(f"{tenant_id}_providers_hash")
+                    if isinstance(previous_hash, bytes):
+                        previous_hash = previous_hash.decode("utf-8").strip()
+                logger.info(
+                    f"Provisioned hash for tenant {tenant_id}: {previous_hash or 'Not found'}"
+                )
+            except redis.RedisError as e:
+                logger.warning(f"Redis error for tenant {tenant_id}: {e}")
+
+        if previous_hash is None:
+            try:
+                context_manager = ContextManager(tenant_id=tenant_id)
+                secret_manager = SecretManagerFactory.get_secret_manager(
+                    context_manager
+                )
+                previous_hash = secret_manager.read_secret(
+                    f"{tenant_id}_providers_hash"
+                )
+                logger.info(
+                    f"Provisioned hash for tenant {tenant_id} read from secret manager."
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to read hash from secret manager for tenant {tenant_id}: {e}"
+                )
+
+        return previous_hash if previous_hash else None
+
+    @staticmethod
+    def calculate_provider_hash(
+        provisioned_providers_dir: Optional[str] = None,
+        provisioned_providers_json: Optional[str] = None,
+    ) -> str:
+        """
+        Calculate the hash of the provider configurations.
+
+        Args:
+            provisioned_providers_dir (Optional[str]): Directory containing provider YAML files.
+            provisioned_providers_json (Optional[str]): JSON string of provider configurations.
+
+        Returns:
+            str: SHA256 hash of the provider configurations.
+        """
+        if provisioned_providers_json:
+            providers_data = provisioned_providers_json
+        elif provisioned_providers_dir:
+            providers_data = []
+            for file in os.listdir(provisioned_providers_dir):
+                if file.endswith((".yaml", ".yml")):
+                    provider_path = os.path.join(provisioned_providers_dir, file)
+                    with open(provider_path, "r") as yaml_file:
+                        providers_data.append(yaml_file.read())
+        else:
+            providers_data = ""  # No providers to provision
+
+        return hashlib.sha256(json.dumps(providers_data).encode("utf-8")).hexdigest()
+
+    @staticmethod
     def provision_providers(tenant_id: str):
         """
         Provision providers from a directory or env variable.
@@ -390,10 +531,6 @@ class ProvidersService:
 
         provisioned_providers_dir = os.environ.get("KEEP_PROVIDERS_DIRECTORY")
         provisioned_providers_json = os.environ.get("KEEP_PROVIDERS")
-
-        if not (provisioned_providers_dir or provisioned_providers_json):
-            logger.info("No providers for provisioning found")
-            return
 
         if (
             provisioned_providers_dir is not None
@@ -413,147 +550,185 @@ class ProvidersService:
         # Get all existing provisioned providers
         provisioned_providers = get_all_provisioned_providers(tenant_id)
 
-        ### Provisioning from env var
-        if provisioned_providers_json is not None:
-            # Avoid circular import
-            from keep.parser.parser import Parser
+        if not (provisioned_providers_dir or provisioned_providers_json):
+            if provisioned_providers:
+                logger.info(
+                    "No providers for provisioning found. Deleting all provisioned providers."
+                )
+            else:
+                logger.info("No providers for provisioning found. Nothing to do.")
+                return
 
-            parser = Parser()
-            context_manager = ContextManager(tenant_id=tenant_id)
-            parser._parse_providers_from_env(context_manager)
-            env_providers = context_manager.providers_context
+        # Calculate the hash of the provider configurations
+        providers_hash = ProvidersService.calculate_provider_hash(
+            provisioned_providers_dir, provisioned_providers_json
+        )
 
-            # Un-provisioning other providers.
-            for provider in provisioned_providers:
-                if provider.name not in env_providers:
-                    with Session(engine) as session:
-                        try:
-                            logger.info(f"Deleting provider {provider.name}")
-                            ProvidersService.delete_provider(
-                                tenant_id, provider.id, session, allow_provisioned=True
-                            )
-                            logger.info(f"Provider {provider.name} deleted")
-                        except Exception as e:
-                            logger.exception(
-                                "Failed to delete provisioned provider that does not exist in the env var",
-                                extra={"exception": e},
-                            )
-                            continue
+        # Get the previous hash from Redis or secret manager
+        previous_hash = ProvidersService.get_provisioned_hash(tenant_id)
+        if providers_hash == previous_hash:
+            logger.info(
+                "Provider configurations have not changed. Skipping provisioning."
+            )
+            return
+        else:
+            logger.info("Provider configurations have changed. Provisioning providers.")
 
-            for provider_name, provider_config in env_providers.items():
-                logger.info(f"Provisioning provider {provider_name}")
-                if ProvidersService.is_provider_installed(tenant_id, provider_name):
-                    logger.info(f"Provider {provider_name} already installed")
-                    continue
-
-                logger.info(f"Installing provider {provider_name}")
-                try:
-                    ProvidersService.install_provider(
-                        tenant_id=tenant_id,
-                        installed_by="system",
-                        provider_id=provider_config["type"],
-                        provider_name=provider_name,
-                        provider_type=provider_config["type"],
-                        provider_config=provider_config["authentication"],
-                        provisioned=True,
-                        validate_scopes=False,
-                    )
-                    logger.info(f"Provider {provider_name} provisioned successfully")
-                except Exception as e:
-                    logger.error(
-                        "Error provisioning provider from env var",
-                        extra={"exception": e},
-                    )
-
-        ### Provisioning from the directory
-        if provisioned_providers_dir is not None:
-            installed_providers = []
-            for file in os.listdir(provisioned_providers_dir):
-                if file.endswith((".yaml", ".yml")):
-                    logger.info(f"Provisioning provider from {file}")
-                    provider_path = os.path.join(provisioned_providers_dir, file)
-
+        # Do all the provisioning within a transaction
+        session = Session(engine)
+        try:
+            with session.begin():
+                ### We do delete all the provisioned providers and begin provisioning from the beginning.
+                logger.info(
+                    f"Deleting all provisioned providers for tenant {tenant_id}"
+                )
+                for provisioned_provider in provisioned_providers:
                     try:
-                        with open(provider_path, "r") as yaml_file:
-                            provider_yaml = cyaml.safe_load(yaml_file.read())
-                            provider_name = provider_yaml["name"]
-                            provider_type = provider_yaml["type"]
-                            provider_config = provider_yaml.get("authentication", {})
+                        logger.info(f"Deleting provider {provisioned_provider.name}")
+                        ProvidersService.delete_provider(
+                            tenant_id,
+                            provisioned_provider.id,
+                            session,
+                            allow_provisioned=True,
+                            commit=False,
+                        )
+                        logger.info(f"Provider {provisioned_provider.name} deleted")
+                    except Exception as e:
+                        logger.exception(
+                            "Failed to delete provisioned provider",
+                            extra={"exception": e},
+                        )
+                        continue
 
-                            # Skip if already installed
-                            if ProvidersService.is_provider_installed(
-                                tenant_id, provider_name
-                            ):
-                                logger.info(
-                                    f"Provider {provider_name} already installed"
-                                )
-                                # Add to installed providers list. This is necessary, otherwise the provider
-                                # will be un-provisioned on the process un-provisioning outdated providers.
-                                installed_providers.append(provider_name)
-                                continue
+                # Flush the session to ensure all deletions are committed
+                session.flush()
 
-                            logger.info(f"Installing provider {provider_name}")
-                            ProvidersService.install_provider(
+                ### Provisioning from env var
+                if provisioned_providers_json is not None:
+                    # Avoid circular import
+                    from keep.parser.parser import Parser
+
+                    parser = Parser()
+                    context_manager = ContextManager(tenant_id=tenant_id)
+                    parser._parse_providers_from_env(context_manager)
+                    env_providers = context_manager.providers_context
+
+                    for provider_name, provider_config in env_providers.items():
+                        # We skip checking if the provider is already installed, as it will skip the new configurations
+                        # and we want to update the provisioned provider with the new configuration
+                        logger.info(f"Provisioning provider {provider_name}")
+                        try:
+                            installed_provider_info = ProvidersService.install_provider(
                                 tenant_id=tenant_id,
                                 installed_by="system",
-                                provider_id=provider_type,
+                                provider_id=provider_config["type"],
                                 provider_name=provider_name,
-                                provider_type=provider_type,
-                                provider_config=provider_config,
+                                provider_type=provider_config["type"],
+                                provider_config=provider_config["authentication"],
                                 provisioned=True,
                                 validate_scopes=False,
+                                session=session,
+                                commit=False,
                             )
+                            provider = installed_provider_info["provider"]
                             logger.info(
                                 f"Provider {provider_name} provisioned successfully"
                             )
-                            installed_providers.append(provider_name)
-
-                            # Configure deduplication rules
-                            deduplication_rules = provider_yaml.get(
-                                "deduplication_rules", {}
+                        except Exception as e:
+                            logger.error(
+                                "Error provisioning provider from env var",
+                                extra={"exception": e},
                             )
-                            if deduplication_rules:
-                                logger.info(
-                                    f"Provisioning deduplication rules for provider {provider_name}"
-                                )
 
-                                deduplication_rules_dict: dict[str, dict] = {}
-                                for (
-                                    rule_name,
-                                    rule_config,
-                                ) in deduplication_rules.items():
-                                    logger.info(
-                                        f"Provisioning deduplication rule {rule_name}"
+                        # Flush the provider so that we can provision its deduplication rules
+                        session.flush()
+
+                        # Configure deduplication rules
+                        deduplication_rules = provider_config.get(
+                            "deduplication_rules", {}
+                        )
+                        if deduplication_rules:
+                            logger.info(
+                                f"Provisioning deduplication rules for provider {provider_name}"
+                            )
+                            ProvidersService.provision_provider_deduplication_rules(
+                                tenant_id=tenant_id,
+                                provider=provider,
+                                deduplication_rules=deduplication_rules,
+                            )
+
+                ### Provisioning from the directory
+                if provisioned_providers_dir is not None:
+                    for file in os.listdir(provisioned_providers_dir):
+                        if file.endswith((".yaml", ".yml")):
+                            logger.info(f"Provisioning provider from {file}")
+                            provider_path = os.path.join(
+                                provisioned_providers_dir, file
+                            )
+
+                            try:
+                                with open(provider_path, "r") as yaml_file:
+                                    provider_yaml = cyaml.safe_load(yaml_file.read())
+                                    provider_name = provider_yaml["name"]
+                                    provider_type = provider_yaml["type"]
+                                    provider_config = provider_yaml.get(
+                                        "authentication", {}
                                     )
-                                    rule_config["name"] = rule_name
-                                    rule_config["provider_name"] = provider_name
-                                    rule_config["provider_type"] = provider_type
-                                    deduplication_rules_dict[rule_name] = rule_config
 
-                                # Provision deduplication rules
-                                provision_deduplication_rules(
-                                    deduplication_rules=deduplication_rules_dict,
-                                    tenant_id=tenant_id,
+                                    # We skip checking if the provider is already installed, as it will skip the new configurations
+                                    # and we want to update the provisioned provider with the new configuration
+                                    logger.info(f"Installing provider {provider_name}")
+                                    installed_provider_info = (
+                                        ProvidersService.install_provider(
+                                            tenant_id=tenant_id,
+                                            installed_by="system",
+                                            provider_id=provider_type,
+                                            provider_name=provider_name,
+                                            provider_type=provider_type,
+                                            provider_config=provider_config,
+                                            provisioned=True,
+                                            validate_scopes=False,
+                                            session=session,
+                                            commit=False,
+                                        )
+                                    )
+                                    provider = installed_provider_info["provider"]
+                                    logger.info(
+                                        f"Provider {provider_name} provisioned successfully"
+                                    )
+
+                                    # Flush the provider so that we can provision its deduplication rules
+                                    session.flush()
+
+                                    # Configure deduplication rules
+                                    deduplication_rules = provider_yaml.get(
+                                        "deduplication_rules", {}
+                                    )
+                                    if deduplication_rules:
+                                        logger.info(
+                                            f"Provisioning deduplication rules for provider {provider_name}"
+                                        )
+                                        ProvidersService.provision_provider_deduplication_rules(
+                                            tenant_id=tenant_id,
+                                            provider=provider,
+                                            deduplication_rules=deduplication_rules,
+                                        )
+                            except Exception as e:
+                                logger.error(
+                                    "Error provisioning provider from directory",
+                                    extra={"exception": e},
                                 )
-                    except Exception as e:
-                        logger.error(
-                            "Error provisioning provider from directory",
-                            extra={"exception": e},
-                        )
-
-            # Un-provisioning other providers.
-            for provider in provisioned_providers:
-                if provider.name not in installed_providers:
-                    with Session(engine) as session:
-                        logger.info(
-                            f"Deprovisioning provider {provider.name} as its file no longer exists or is outside the providers directory"
-                        )
-                        ProvidersService.delete_provider(
-                            tenant_id, provider.id, session, allow_provisioned=True
-                        )
-                        logger.info(
-                            f"Provider {provider.name} deprovisioned successfully"
-                        )
+                                continue
+        except Exception as e:
+            logger.error("Provisioning failed, rolling back", extra={"exception": e})
+            session.rollback()
+        finally:
+            # Store the hash in Redis or secret manager
+            try:
+                ProvidersService.write_provisioned_hash(tenant_id, providers_hash)
+            except Exception as e:
+                logger.warning(f"Failed to store hash: {e}")
+            session.close()
 
     @staticmethod
     def get_provider_logs(
