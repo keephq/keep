@@ -85,8 +85,8 @@ export default function AlertTriggerModal({
   };
 
   const handleAddField = (e: React.FormEvent) => {
-    setDynamicFields([...dynamicFields, { key: "", value: "" }]);
     e.preventDefault();
+    setDynamicFields([...dynamicFields, { key: "", value: "" }]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {

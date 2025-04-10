@@ -121,6 +121,7 @@ export function WorkflowAlertIncidentDependenciesForm({
   const handleAddField = (e: React.FormEvent) => {
     e.preventDefault();
     setDynamicFields([...dynamicFields, { key: "", value: "" }]);
+    // it's intentional to validate previous fields, since new fields are not touched yet and we don't want to yell at user for no reason
     setFieldErrors(validateDynamicFields(dynamicFields));
   };
 
