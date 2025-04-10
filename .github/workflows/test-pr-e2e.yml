@@ -305,7 +305,7 @@ jobs:
     needs: [build-frontend, build-backend, prepare-test-environment]
     uses: ./.github/workflows/run-e2e-tests.yml
     with:
-      db-type: mysql
+      db-type: postgres
       redis_enabled: false
       python-version: ${{ github.env.PYTHON_VERSION }}
       is-fork: ${{ github.env.PYTHON_VERSION }}
