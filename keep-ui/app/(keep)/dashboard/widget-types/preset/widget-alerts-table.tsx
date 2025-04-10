@@ -26,6 +26,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
 }) => {
   const columnsMeta: { [key: string]: any } = {
     severity: {
+      renderHeader: () => <div className="min-w-1"></div>,
       renderValue: (alert: any) => {
         <SeverityBorderIcon
           severity={
@@ -36,6 +37,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
       },
     },
     status: {
+      renderHeader: () => <div className="min-w-4"></div>,
       renderValue: (alert: any) => (
         <Icon
           icon={getStatusIcon(alert.status)}
@@ -46,6 +48,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
       ),
     },
     providerType: {
+      renderHeader: () => <div className="min-w-4"></div>,
       renderValue: (alert: any) => (
         <DynamicImageProviderIcon
           className="inline-block"
@@ -59,28 +62,55 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
       ),
     },
     name: {
-      renderValue: (alert: any) => alert.name,
+      renderValue: (alert: any) => (
+        <div className="max-w-32 truncate">{alert.name}</div>
+      ),
     },
     description: {
-      renderValue: (alert: any) => alert.description,
+      renderValue: (alert: any) => (
+        <div className="max-w-32 truncate">{alert.description}</div>
+      ),
+    },
+    lastReceived: {
+      renderValue: (alert: any) => <TimeAgo date={alert.lastReceived} />,
     },
   };
 
   function renderHeaders() {
-    return columns?.map((column) => <th>{column}</th>);
+    return columns?.map((column) => {
+      const columnMeta = columnsMeta[column];
+      let columnHeaderValue;
+      if (columnMeta?.renderHeader) {
+        columnHeaderValue = columnMeta.renderHeader();
+      } else {
+        columnHeaderValue = <div className="max-w-full truncate">{column}</div>;
+      }
+
+      return (
+        <th>
+          <div className="flex items-center whitespace-nowrap">
+            {columnHeaderValue}
+          </div>
+        </th>
+      );
+    });
   }
 
   function renderColumns(alert: any) {
     return columns?.map((column) => {
       const columnMeta = columnsMeta[column];
       let columnValue;
-      if (columnMeta) {
+      if (columnMeta?.renderValue) {
         columnValue = columnMeta.renderValue(alert);
       } else {
-        columnValue = <span>{alert[column]}</span>;
+        columnValue = <div className="max-w-32 truncate">{alert[column]}</div>;
       }
 
-      return <td>{columnValue}</td>;
+      return (
+        <td>
+          <div className="flex items-center">{columnValue}</div>
+        </td>
+      );
     });
   }
 
