@@ -390,6 +390,21 @@ class ProvidersService:
         provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
         provider_config = secret_manager.read_secret(provider_secret_name, is_json=True)
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+
+        if (
+            provider_class.__dict__.get("setup_incident_webhook") is None
+            and provider_class.__dict__.get("setup_webhook") is None
+        ):
+            logger.info(
+                "Provider does not support webhook installation",
+                extra={
+                    "provider_type": provider_type,
+                    "provider_id": provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
+            return False
+
         provider = ProvidersFactory.get_provider(
             context_manager, provider_id, provider_type, provider_config
         )
@@ -407,29 +422,24 @@ class ProvidersService:
             unique_api_key_id="webhook",
             system_description="Webhooks API key",
         )
-        if (
-            provider_class.__dict__.get("setup_incident_webhook") is not None
-            or provider_class.__dict__.get("setup_webhook") is not None
-        ):
-            try:
-                if provider_class.__dict__.get("setup_incident_webhook") is not None:
-                    extra_config = provider.setup_incident_webhook(
-                        tenant_id, keep_webhook_incidents_api_url, webhook_api_key, True
-                    )
-                if provider_class.__dict__.get("setup_webhook") is not None:
-                    extra_config = provider.setup_webhook(
-                        tenant_id, keep_webhook_api_url, webhook_api_key, True
-                    )
-                if extra_config:
-                    provider_config["authentication"].update(extra_config)
-                    secret_manager.write_secret(
-                        secret_name=provider_secret_name,
-                        secret_value=json.dumps(provider_config),
-                    )
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=str(e))
-        else:
-            return False
+
+        try:
+            if provider_class.__dict__.get("setup_incident_webhook") is not None:
+                extra_config = provider.setup_incident_webhook(
+                    tenant_id, keep_webhook_incidents_api_url, webhook_api_key, True
+                )
+            if provider_class.__dict__.get("setup_webhook") is not None:
+                extra_config = provider.setup_webhook(
+                    tenant_id, keep_webhook_api_url, webhook_api_key, True
+                )
+            if extra_config:
+                provider_config["authentication"].update(extra_config)
+                secret_manager.write_secret(
+                    secret_name=provider_secret_name,
+                    secret_value=json.dumps(provider_config),
+                )
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
         return True
 
     @staticmethod
