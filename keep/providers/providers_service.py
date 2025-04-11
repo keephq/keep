@@ -21,6 +21,7 @@ from keep.api.core.db import (
 )
 from keep.api.models.db.provider import Provider, ProviderExecutionLog
 from keep.api.models.provider import Provider as ProviderModel
+from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.functions import cyaml
@@ -379,6 +380,59 @@ class ProvidersService:
         return provider is not None
 
     @staticmethod
+    def install_webhook(
+        tenant_id: str, provider_type: str, provider_id: str, session: Session
+    ) -> bool:
+        context_manager = ContextManager(
+            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+        )
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
+        provider_config = secret_manager.read_secret(provider_secret_name, is_json=True)
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+        provider = ProvidersFactory.get_provider(
+            context_manager, provider_id, provider_type, provider_config
+        )
+        api_url = config("KEEP_API_URL")
+        keep_webhook_api_url = (
+            f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
+        )
+        keep_webhook_incidents_api_url = (
+            f"{api_url}/incidents/event/{provider_type}?provider_id={provider_id}"
+        )
+        webhook_api_key = get_or_create_api_key(
+            session=session,
+            tenant_id=tenant_id,
+            created_by="system",
+            unique_api_key_id="webhook",
+            system_description="Webhooks API key",
+        )
+        if (
+            provider_class.__dict__.get("setup_incident_webhook") is not None
+            or provider_class.__dict__.get("setup_webhook") is not None
+        ):
+            try:
+                if provider_class.__dict__.get("setup_incident_webhook") is not None:
+                    extra_config = provider.setup_incident_webhook(
+                        tenant_id, keep_webhook_incidents_api_url, webhook_api_key, True
+                    )
+                if provider_class.__dict__.get("setup_webhook") is not None:
+                    extra_config = provider.setup_webhook(
+                        tenant_id, keep_webhook_api_url, webhook_api_key, True
+                    )
+                if extra_config:
+                    provider_config["authentication"].update(extra_config)
+                    secret_manager.write_secret(
+                        secret_name=provider_secret_name,
+                        secret_value=json.dumps(provider_config),
+                    )
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+        else:
+            return False
+        return True
+
+    @staticmethod
     def provision_providers(tenant_id: str):
         """
         Provision providers from a directory or env variable.
@@ -448,7 +502,7 @@ class ProvidersService:
 
                 logger.info(f"Installing provider {provider_name}")
                 try:
-                    ProvidersService.install_provider(
+                    installed_provider = ProvidersService.install_provider(
                         tenant_id=tenant_id,
                         installed_by="system",
                         provider_id=provider_config["type"],
@@ -457,6 +511,12 @@ class ProvidersService:
                         provider_config=provider_config["authentication"],
                         provisioned=True,
                         validate_scopes=False,
+                    )
+                    ProvidersService.install_webhook(
+                        tenant_id,
+                        installed_provider["type"],
+                        installed_provider["id"],
+                        session,
                     )
                     logger.info(f"Provider {provider_name} provisioned successfully")
                 except Exception as e:
