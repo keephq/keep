@@ -79,6 +79,7 @@ class HttpProvider(BaseProvider):
         body: dict = None,
         params: dict = None,
         proxies: dict = None,
+        fail_on_error: bool = True,
         **kwargs: dict,
     ) -> dict:
         """
@@ -133,6 +134,13 @@ class HttpProvider(BaseProvider):
             },
         )
 
+        if fail_on_error:
+            self.logger.info(
+                f"HTTP response: {response.status_code} {response.reason}",
+                extra={"body": body},
+            )
+            response.raise_for_status()
+
         result = {"status": response.ok, "status_code": response.status_code}
 
         try:
@@ -142,7 +150,4 @@ class HttpProvider(BaseProvider):
 
         result["body"] = body
 
-        if response.ok:
-            return result
-        else:
-            raise Exception(result)
+        return result
