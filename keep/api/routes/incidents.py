@@ -35,7 +35,7 @@ from keep.api.core.db import (
     get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,
-    merge_incidents_to_id,
+    merge_incidents_to_id, get_enrichment,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.incidents import (
@@ -44,7 +44,7 @@ from keep.api.core.incidents import (
     get_incident_potential_facet_fields,
 )
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody
+from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
 from keep.api.models.db.alert import AlertAudit
 from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.facet import FacetOptionsQueryDto
@@ -1034,7 +1034,7 @@ async def enrich_incident(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
-) -> IncidentDto:
+) -> Response:
     """Enrich incident with additional data."""
     tenant_id = authenticated_entity.tenant_id
 
@@ -1052,6 +1052,66 @@ async def enrich_incident(
         action_callee=authenticated_entity.email,
         action_description=f"Incident enriched by {authenticated_entity.email}",
         force=enrichment.force,
+    )
+
+    # Notify clients if pusher is available
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "incident-change",
+                {},
+            )
+        except Exception as e:
+            logger.exception(
+                "Failed to notify clients about incident change",
+                extra={"error": str(e)},
+            )
+
+    return Response(status_code=202)
+
+
+@router.post(
+    "/{incident_id}/unenrich",
+    description="Unenrich incident additional data",
+    status_code=202,
+)
+async def unenrich_incident(
+    incident_id: UUID,
+    enrichment: UnEnrichIncidentRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> Response:
+    """Unenrich incident additional data."""
+    tenant_id = authenticated_entity.tenant_id
+
+    # Get incident to verify it exists
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    enrichments_object = get_enrichment(tenant_id, enrichment.fingerprint)
+    if not enrichments_object:
+        raise HTTPException(status_code=404, detail="Enrichment not found")
+
+    enrichments = enrichments_object.enrichments
+    new_enrichments = {
+        key: value
+        for key, value in enrichments.items()
+        if key not in enrichment.enrichments
+    }
+
+    # Use the existing enrichment infrastructure
+    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl.enrich_entity(
+        fingerprint=enrichment.fingerprint,  # Use incident_id as fingerprint
+        enrichments=new_enrichments,
+        action_type=ActionType.INCIDENT_UNENRICH,
+        action_callee=authenticated_entity.email,
+        action_description=f"Incident un-enriched by {authenticated_entity.email}",
+        force=True,
     )
 
     # Notify clients if pusher is available

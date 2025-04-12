@@ -116,8 +116,7 @@ def build_facets_data_query(
                 facet_value.append(item.map_to)
 
         casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, str) for item in facet_value])}"
-
-        union_queries.append(
+        sub_query = (
             select(
                 literal(facet.id).label("facet_id"),
                 text(f"{casted} AS facet_value"),
@@ -134,8 +133,14 @@ def build_facets_data_query(
                 )
             )
             .group_by(literal_column("facet_id"), literal_column("facet_value"))
-            .limit(OPTIONS_PER_FACET)
         )
+
+        # For SQLite we can't limit the subquery
+        # so we limit the result after the result is fetched in get_facet_options
+        if engine.dialect.name != "sqlite":
+            sub_query = sub_query.limit(OPTIONS_PER_FACET)
+
+        union_queries.append(sub_query)
 
     query = None
 
@@ -201,6 +206,15 @@ def get_facet_options(
             for facet_data in data:
                 if facet_data.facet_id not in grouped_by_id_dict:
                     grouped_by_id_dict[facet_data.facet_id] = []
+
+                # This is to limit the number of options per facet
+                # It's done mostly for sqlite, because in sqlite we can't use limit in the subquery
+                if (
+                    engine.dialect.name == "sqlite"
+                    and len(grouped_by_id_dict[facet_data.facet_id])
+                    >= OPTIONS_PER_FACET
+                ):
+                    continue
 
                 grouped_by_id_dict[facet_data.facet_id].append(facet_data)
 

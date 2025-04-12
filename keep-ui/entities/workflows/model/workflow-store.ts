@@ -300,7 +300,6 @@ const defaultState: WorkflowStateValues = {
   lastDeployedAt: null,
   canDeploy: false,
   saveRequestCount: 0,
-  runRequestCount: 0,
   isSaving: false,
   definition: null,
   isLoading: false,
@@ -315,8 +314,6 @@ export const useWorkflowStore = create<WorkflowState>()(
     setIsLoading: (loading) => set({ isLoading: loading }),
     triggerSave: () =>
       set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
-    triggerRun: () =>
-      set((state) => ({ runRequestCount: state.runRequestCount + 1 })),
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
