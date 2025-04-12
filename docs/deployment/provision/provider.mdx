@@ -99,7 +99,6 @@ deduplication_rules:
 Keep supports a wide range of provider types. Each provider type has its own specific configuration requirements.
 To see the full list of supported providers and their detailed configuration options, please refer to our comprehensive provider documentation.
 
-
 ### Update Provisioned Providers
 
 Keep uses a consistent process for updating provider configurations regardless of whether you use `KEEP_PROVIDERS` or `KEEP_PROVIDERS_DIRECTORY`.
@@ -109,11 +108,6 @@ Keep uses a consistent process for updating provider configurations regardless o
 When Keep starts or restarts, it follows these steps to manage provider configurations:
 
 1. **Read Configurations**: Loads provider definitions from either the `KEEP_PROVIDERS` environment variable or YAML files in the `KEEP_PROVIDERS_DIRECTORY`.
-2. **Calculate Configuration Hash**: Generates a hash of the current configurations to detect changes.
-3. **Check for Changes**: Compares the new hash with the previously stored hash (in Redis or secret manager).
-4. **Update When Changed**: If configurations have changed:
-  - Backup the current state for potential rollback
-  - Delete all existing provisioned providers
-  - Provision new providers with their deduplication rules
-  - If any errors occur during provisioning, automatically rollback to the previous state
-5. **Skip When Unchanged**: If configurations haven't changed since the last startup, Keep skips the re-provisioning process to improve startup performance.
+2. **Create New Providers**: Installs any providers listed in the configuration that are not already present.
+3. **Update When Changed**: If an existing provider's configuration has changed, Keep reapplies the configuration, including deduplication rules. If errors occur during this update, changes are automatically rolled back.
+4. **Delete Providers**: Deletes any currently installed providers that are not found in the loaded configuration.
