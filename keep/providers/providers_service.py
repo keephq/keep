@@ -219,7 +219,6 @@ class ProvidersService:
                     logger.exception("Failed to register provider as a consumer")
 
             return {
-                "provider": provider_model,
                 "type": provider_type,
                 "id": provider_unique_id,
                 "details": config,
@@ -285,7 +284,6 @@ class ProvidersService:
             session.commit()
 
             return {
-                "provider": provider,
                 "details": provider_config,
                 "validatedScopes": validated_scopes,
             }
@@ -449,44 +447,25 @@ class ProvidersService:
         tenant_id: str,
         provider: Provider,
         deduplication_rules: Dict[str, Dict[str, Any]],
-        session: Optional[Session] = None,
     ):
-        """
-        Provision deduplication rules for a provider.
+        # Provision the deduplication rules
+        deduplication_rules_dict: dict[str, dict] = {}
+        for rule_name, rule_config in deduplication_rules.items():
+            logger.info(f"Provisioning deduplication rule {rule_name}")
+            rule_config["name"] = rule_name
+            rule_config["provider_name"] = provider.name
+            rule_config["provider_type"] = provider.type
+            deduplication_rules_dict[rule_name] = rule_config
 
-        Args:
-            tenant_id (str): The tenant ID.
-            provider (Provider): The provider to provision the deduplication rules for.
-            deduplication_rules (Dict[str, Dict[str, Any]]): The deduplication rules to provision.
-            session (Optional[Session]): SQLAlchemy session to use.
-        """
-        with existed_or_new_session(session) as session:
-            # Ensure provider is attached to the session
-            if provider not in session:
-                provider = session.merge(provider)
-
-            # Provision the deduplication rules
-            deduplication_rules_dict: dict[str, dict] = {}
-            for rule_name, rule_config in deduplication_rules.items():
-                logger.info(f"Provisioning deduplication rule {rule_name}")
-                rule_config["name"] = rule_name
-                rule_config["provider_name"] = provider.name
-                rule_config["provider_type"] = provider.type
-                deduplication_rules_dict[rule_name] = rule_config
-
-            try:
-                # Provision deduplication rules
-                provision_deduplication_rules(
-                    deduplication_rules=deduplication_rules_dict,
-                    tenant_id=tenant_id,
-                    provider=provider,
-                )
-            except Exception as e:
-                logger.error(
-                    "Provisioning failed, rolling back", extra={"exception": e}
-                )
-                session.rollback()
-                raise
+        try:
+            # Provision deduplication rules
+            provision_deduplication_rules(
+                deduplication_rules=deduplication_rules_dict,
+                tenant_id=tenant_id,
+                provider=provider,
+            )
+        except Exception as e:
+            logger.exception(f"Failed to provision deduplication rules: {e}")
 
     def install_webhook(
         tenant_id: str, provider_type: str, provider_id: str, session: Session
@@ -622,7 +601,7 @@ class ProvidersService:
                         provider_config = provider_info.get("authentication", {})
 
                         # Perform upsert operation for the provider
-                        installed_provider_info = ProvidersService.upsert_provider(
+                        ProvidersService.upsert_provider(
                             tenant_id=tenant_id,
                             provider_name=provider_name,
                             provider_type=provider_type,
@@ -638,20 +617,18 @@ class ProvidersService:
                         )
                         continue
 
-                    provider = installed_provider_info["provider"]
+                    provider = get_provider_by_name(tenant_id, provider_name)
 
                     # Configure deduplication rules
                     deduplication_rules = provider_info.get("deduplication_rules", {})
                     logger.info(
                         f"Provisioning deduplication rules for provider {provider_name}"
                     )
-                    with Session(engine) as session:
-                        ProvidersService.provision_provider_deduplication_rules(
-                            tenant_id=tenant_id,
-                            provider=provider,
-                            deduplication_rules=deduplication_rules,
-                            session=session,
-                        )
+                    ProvidersService.provision_provider_deduplication_rules(
+                        tenant_id=tenant_id,
+                        provider=provider,
+                        deduplication_rules=deduplication_rules,
+                    )
 
             ### Provisioning from the directory
             if provisioned_providers_dir is not None:
