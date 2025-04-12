@@ -29,6 +29,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function getRequiredConfigs(
   config: Provider["config"]
@@ -247,19 +248,38 @@ export function TextField({
   title?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const { data: appConfig } = useConfig();
+  const isSensitive = config.sensitive;
+  const [touched, setTouched] = useState(false);
+  const shouldHideSensitiveFields =
+    appConfig?.KEEP_HIDE_SENSITIVE_FIELDS ?? false;
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setTouched(true);
+    onChange(e);
+  }
+
   return (
     <>
       <FieldLabel id={id} config={config} />
       <TextInput
-        type={config.sensitive ? "password" : "text"}
+        type={isSensitive ? "password" : "text"}
         id={id}
         name={id}
-        value={value?.toString() ?? ""}
-        onChange={onChange}
+        value={
+          isSensitive && shouldHideSensitiveFields && !touched
+            ? ""
+            : value?.toString() ?? ""
+        }
+        onChange={handleChange}
         autoComplete="off"
         error={Boolean(error)}
         errorMessage={error}
-        placeholder={config.placeholder ?? `Enter ${id}`}
+        placeholder={
+          isSensitive && shouldHideSensitiveFields && value && !touched
+            ? ""
+            : config.placeholder ?? `Enter ${id}`
+        }
         disabled={disabled}
         title={title ?? ""}
       />
