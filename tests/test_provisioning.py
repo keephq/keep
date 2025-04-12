@@ -416,7 +416,7 @@ def test_delete_provisioned_providers_when_env_vars_unset(
 ):
     """Test deleting provisioned providers when env vars are unset"""
     # Import necessary modules
-    from unittest.mock import ANY, MagicMock, patch
+    from unittest.mock import MagicMock, patch
 
     from keep.providers.providers_service import ProvidersService
 
@@ -441,11 +441,9 @@ def test_delete_provisioned_providers_when_env_vars_unset(
 
         # Verify delete_provider was called with correct parameters
         mock_delete_provider.assert_called_once_with(
-            "test-tenant",
-            "test-id",
-            ANY,  # Session object
+            tenant_id="test-tenant",
+            provider_id="test-id",
             allow_provisioned=True,
-            commit=False,
         )
 
 
@@ -681,7 +679,7 @@ def test_update_deduplication_rules_when_reprovisioning(
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule1":{"description":"VM Rule","fingerprint_fields":["fingerprint"]}}}, "opsgenie_provider":{"type":"opsgenie","authentication":{"api_key":"somekey"},"deduplication_rules":{"og_rule1":{"description":"OG Rule","fingerprint_fields":["id"]}}}}',
+            "KEEP_PROVIDERS": '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule1":{"description":"VM Rule","fingerprint_fields":["fingerprint"]}}}, "pagerduty_provider":{"type":"pagerduty","authentication":{"api_key":"somekey","routing_key":"routingkey123"},"deduplication_rules":{"pd_rule1":{"description":"PD Rule","fingerprint_fields":["id"]}}}}',
         },
     ],
     indirect=True,
@@ -698,12 +696,12 @@ def test_multiple_providers_with_deduplication_rules(
 
     rule_names = [r["name"] for r in rules]
     assert "vm_rule1" in rule_names
-    assert "og_rule1" in rule_names
+    assert "pd_rule1" in rule_names
 
     # Update only the vm_provider, removing its rule and adding a new one
     monkeypatch.setenv(
         "KEEP_PROVIDERS",
-        '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule2":{"description":"New VM Rule","fingerprint_fields":["name"]}}}, "opsgenie_provider":{"type":"opsgenie","authentication":{"api_key":"somekey"},"deduplication_rules":{"og_rule1":{"description":"OG Rule","fingerprint_fields":["id"]}}}}',
+        '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule2":{"description":"New VM Rule","fingerprint_fields":["name"]}}}, "pagerduty_provider":{"type":"pagerduty","authentication":{"api_key":"somekey"},"deduplication_rules":{"pd_rule1":{"description":"PD Rule","fingerprint_fields":["id"]}}}}',
     )
 
     # Reload the app to apply the new environment changes
@@ -731,7 +729,7 @@ def test_multiple_providers_with_deduplication_rules(
     rule_names = [r["name"] for r in rules]
     assert "vm_rule1" not in rule_names  # vm_rule1 should be deleted
     assert "vm_rule2" in rule_names  # vm_rule2 should be added
-    assert "og_rule1" in rule_names  # og_rule1 should be kept
+    assert "pd_rule1" in rule_names  # pd_rule1 should be kept
 
     # Verify vm_rule2 was added correctly
     vm_rule2 = next(r for r in rules if r["name"] == "vm_rule2")
@@ -739,11 +737,11 @@ def test_multiple_providers_with_deduplication_rules(
     assert vm_rule2["fingerprint_fields"] == ["name"]
     assert vm_rule2["provider_type"] == "victoriametrics"
 
-    # Verify og_rule1 was kept unchanged
-    og_rule1 = next(r for r in rules if r["name"] == "og_rule1")
-    assert og_rule1["description"] == "OG Rule"
-    assert og_rule1["fingerprint_fields"] == ["id"]
-    assert og_rule1["provider_type"] == "opsgenie"
+    # Verify pd_rule1 was kept unchanged
+    pd_rule1 = next(r for r in rules if r["name"] == "pd_rule1")
+    assert pd_rule1["description"] == "PD Rule"
+    assert pd_rule1["fingerprint_fields"] == ["id"]
+    assert pd_rule1["provider_type"] == "pagerduty"
 
 
 @pytest.mark.parametrize(
@@ -751,7 +749,7 @@ def test_multiple_providers_with_deduplication_rules(
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule1":{"description":"VM Rule","fingerprint_fields":["fingerprint"]}}}, "opsgenie_provider":{"type":"opsgenie","authentication":{"api_key":"somekey"},"deduplication_rules":{"og_rule1":{"description":"OG Rule","fingerprint_fields":["id"]}}}}',
+            "KEEP_PROVIDERS": '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule1":{"description":"VM Rule","fingerprint_fields":["fingerprint"]}}}, "pagerduty_provider":{"type":"pagerduty","authentication":{"api_key":"somekey","routing_key":"routingkey123"},"deduplication_rules":{"pd_rule1":{"description":"PD Rule","fingerprint_fields":["id"]}}}}',
         },
     ],
     indirect=True,
@@ -768,9 +766,9 @@ def test_deleting_provider_removes_deduplication_rules(
 
     rule_names = [r["name"] for r in rules]
     assert "vm_rule1" in rule_names
-    assert "og_rule1" in rule_names
+    assert "pd_rule1" in rule_names
 
-    # Remove the opsgenie_provider completely
+    # Remove the pagerduty_provider completely
     monkeypatch.setenv(
         "KEEP_PROVIDERS",
         '{"vm_provider":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort":1234},"deduplication_rules":{"vm_rule1":{"description":"VM Rule","fingerprint_fields":["fingerprint"]}}}}',
@@ -800,7 +798,7 @@ def test_deleting_provider_removes_deduplication_rules(
 
     rule_names = [r["name"] for r in rules]
     assert "vm_rule1" in rule_names  # vm_rule1 should still exist
-    assert "og_rule1" not in rule_names  # og_rule1 should be deleted
+    assert "pd_rule1" not in rule_names  # pd_rule1 should be deleted
 
     # Verify vm_rule1 is unchanged
     vm_rule1 = next(r for r in rules if r["name"] == "vm_rule1")

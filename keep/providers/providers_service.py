@@ -234,6 +234,7 @@ class ProvidersService:
         updated_by: str,
         session: Optional[Session] = None,
         allow_provisioned: bool = False,
+        validate_scopes: bool = True,
     ) -> Dict[str, Any]:
         with existed_or_new_session(session) as session:
             provider = session.exec(
@@ -267,7 +268,10 @@ class ProvidersService:
             except Exception as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-            validated_scopes = provider_instance.validate_scopes()
+            if validate_scopes:
+                validated_scopes = provider_instance.validate_scopes()
+            else:
+                validated_scopes = {}
 
             secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
             secret_manager.write_secret(
@@ -311,6 +315,7 @@ class ProvidersService:
                     provider_info=provider_config,
                     updated_by="system",
                     allow_provisioned=True,
+                    validate_scopes=validate_scopes,
                 )
                 logger.info(f"Provider {provider_name} updated successfully")
             else:
@@ -636,18 +641,17 @@ class ProvidersService:
                     provider = installed_provider_info["provider"]
 
                     # Configure deduplication rules
-                    deduplication_rules = provider_info.get("deduplication_rules")
-                    if deduplication_rules is not None:
-                        logger.info(
-                            f"Provisioning deduplication rules for provider {provider_name}"
+                    deduplication_rules = provider_info.get("deduplication_rules", {})
+                    logger.info(
+                        f"Provisioning deduplication rules for provider {provider_name}"
+                    )
+                    with Session(engine) as session:
+                        ProvidersService.provision_provider_deduplication_rules(
+                            tenant_id=tenant_id,
+                            provider=provider,
+                            deduplication_rules=deduplication_rules,
+                            session=session,
                         )
-                        with Session(engine) as session:
-                            ProvidersService.provision_provider_deduplication_rules(
-                                tenant_id=tenant_id,
-                                provider=provider,
-                                deduplication_rules=deduplication_rules,
-                                session=session,
-                            )
 
             ### Provisioning from the directory
             if provisioned_providers_dir is not None:
@@ -701,18 +705,19 @@ class ProvidersService:
                         provider = installed_provider_info["provider"]
 
                         # Configure deduplication rules
-                        deduplication_rules = provider_info.get("deduplication_rules")
-                        if deduplication_rules is not None:
-                            logger.info(
-                                f"Provisioning deduplication rules for provider {provider_name}"
+                        deduplication_rules = provider_info.get(
+                            "deduplication_rules", {}
+                        )
+                        logger.info(
+                            f"Provisioning deduplication rules for provider {provider_name}"
+                        )
+                        with Session(engine) as session:
+                            ProvidersService.provision_provider_deduplication_rules(
+                                tenant_id=tenant_id,
+                                provider=provider,
+                                deduplication_rules=deduplication_rules,
+                                session=session,
                             )
-                            with Session(engine) as session:
-                                ProvidersService.provision_provider_deduplication_rules(
-                                    tenant_id=tenant_id,
-                                    provider=provider,
-                                    deduplication_rules=deduplication_rules,
-                                    session=session,
-                                )
 
             # Delete providers that are not in the incoming list
             for provider in provisioned_providers:
