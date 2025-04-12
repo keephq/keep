@@ -359,7 +359,7 @@ def test_custom_deduplication_rule_behaviour(db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepDatadogCustomRule":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
+            "KEEP_PROVIDERS": '{"keepDatadog":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
         },
     ],
     indirect=True,
@@ -432,7 +432,7 @@ def test_custom_deduplication_rule_2(db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepDatadogUpdateRule":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
+            "KEEP_PROVIDERS": '{"keepDatadog":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
         },
     ],
     indirect=True,
@@ -557,7 +557,7 @@ def test_update_deduplication_rule_linked_provider(db_session, client, test_app)
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepDatadogDeleteRule":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
+            "KEEP_PROVIDERS": '{"keepDatadog":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
         },
     ],
     indirect=True,
