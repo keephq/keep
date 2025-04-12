@@ -40,7 +40,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -2242,6 +2242,18 @@ def get_all_deduplication_rules(tenant_id):
     return rules
 
 
+def get_all_deduplication_rules_by_provider(tenant_id, provider_id, provider_type):
+    with Session(engine) as session:
+        rules = session.exec(
+            select(AlertDeduplicationRule).where(
+                AlertDeduplicationRule.tenant_id == tenant_id,
+                AlertDeduplicationRule.provider_id == provider_id,
+                AlertDeduplicationRule.provider_type == provider_type,
+            )
+        ).all()
+    return rules
+
+
 def get_deduplication_rule_by_id(tenant_id, rule_id: str):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -3679,18 +3691,23 @@ def get_incident_by_id(
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id, should_raise=True)
     with existed_or_new_session(session) as session:
-        query = session.query(
-            Incident,
-            AlertEnrichment,
-        ).outerjoin(
-            AlertEnrichment,
-            and_(
-                Incident.tenant_id == AlertEnrichment.tenant_id,
-                cast(col(Incident.id), String) == foreign(AlertEnrichment.alert_fingerprint),
-            ),
-        ).filter(
-            Incident.tenant_id == tenant_id,
-            Incident.id == incident_id,
+        query = (
+            session.query(
+                Incident,
+                AlertEnrichment,
+            )
+            .outerjoin(
+                AlertEnrichment,
+                and_(
+                    Incident.tenant_id == AlertEnrichment.tenant_id,
+                    cast(col(Incident.id), String)
+                    == foreign(AlertEnrichment.alert_fingerprint),
+                ),
+            )
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
         )
         incident_with_enrichments = query.first()
         if incident_with_enrichments:

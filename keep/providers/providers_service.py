@@ -14,8 +14,10 @@ from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
 )
 from keep.api.core.config import config
 from keep.api.core.db import (
+    delete_deduplication_rule,
     engine,
     existed_or_new_session,
+    get_all_deduplication_rules_by_provider,
     get_all_provisioned_providers,
     get_provider_by_name,
     get_provider_logs,
@@ -231,6 +233,7 @@ class ProvidersService:
         provider_info: Dict[str, Any],
         updated_by: str,
         session: Optional[Session] = None,
+        allow_provisioned: bool = False,
     ) -> Dict[str, Any]:
         with existed_or_new_session(session) as session:
             provider = session.exec(
@@ -242,7 +245,7 @@ class ProvidersService:
             if not provider:
                 raise HTTPException(404, detail="Provider not found")
 
-            if provider.provisioned:
+            if provider.provisioned and not allow_provisioned:
                 raise HTTPException(403, detail="Cannot update a provisioned provider")
 
             pulling_enabled = provider_info.pop("pulling_enabled", True)
@@ -307,6 +310,7 @@ class ProvidersService:
                     provider_id=provider.id,
                     provider_info=provider_config,
                     updated_by="system",
+                    allow_provisioned=True,
                 )
                 logger.info(f"Provider {provider_name} updated successfully")
             else:
@@ -335,54 +339,71 @@ class ProvidersService:
     def delete_provider(
         tenant_id: str,
         provider_id: str,
-        session: Session,
+        session: Optional[Session] = None,
         allow_provisioned=False,
     ):
-        provider_model: Provider = session.exec(
-            select(Provider).where(
-                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
-            )
-        ).one_or_none()
+        with existed_or_new_session(session) as session:
+            provider_model: Optional[Provider] = session.exec(
+                select(Provider).where(
+                    (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+                )
+            ).one_or_none()
 
-        if not provider_model:
-            raise HTTPException(404, detail="Provider not found")
+            if provider_model is None:
+                raise HTTPException(404, detail="Provider not found")
 
-        if provider_model.provisioned and not allow_provisioned:
-            raise HTTPException(403, detail="Cannot delete a provisioned provider")
+            if provider_model.provisioned and not allow_provisioned:
+                raise HTTPException(403, detail="Cannot delete a provisioned provider")
 
-        context_manager = ContextManager(tenant_id=tenant_id)
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        config = secret_manager.read_secret(
-            provider_model.configuration_key, is_json=True
-        )
-
-        try:
-            secret_manager.delete_secret(provider_model.configuration_key)
-        except Exception:
-            logger.exception("Failed to delete the provider secret")
-
-        if provider_model.consumer:
+            # Delete all associated deduplication rules
             try:
-                event_subscriber = EventSubscriber.get_instance()
-                event_subscriber.remove_consumer(provider_model)
+                deduplication_rules = get_all_deduplication_rules_by_provider(
+                    tenant_id, provider_model.id, provider_model.type
+                )
+                for rule in deduplication_rules:
+                    logger.info(
+                        f"Deleting deduplication rule {rule.name} for provider {provider_model.name}"
+                    )
+                    delete_deduplication_rule(str(rule.id), tenant_id)
+            except Exception as e:
+                logger.exception(
+                    "Failed to delete deduplication rules for provider",
+                    extra={"exception": e},
+                )
+
+            context_manager = ContextManager(tenant_id=tenant_id)
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            config = secret_manager.read_secret(
+                provider_model.configuration_key, is_json=True
+            )
+
+            try:
+                secret_manager.delete_secret(provider_model.configuration_key)
             except Exception:
-                logger.exception("Failed to unregister provider as a consumer")
+                logger.exception("Failed to delete the provider secret")
 
-        try:
-            provider = ProvidersFactory.get_provider(
-                context_manager, provider_model.id, provider_model.type, config
-            )
-            provider.clean_up()
-        except NotImplementedError:
-            logger.info(
-                "Being deleted provider of type %s does not have a clean_up method",
-                provider_model.type,
-            )
-        except Exception:
-            logger.exception(msg="Provider deleted but failed to clean up provider")
+            if provider_model.consumer:
+                try:
+                    event_subscriber = EventSubscriber.get_instance()
+                    event_subscriber.remove_consumer(provider_model)
+                except Exception:
+                    logger.exception("Failed to unregister provider as a consumer")
 
-        session.delete(provider_model)
-        session.commit()
+            try:
+                provider = ProvidersFactory.get_provider(
+                    context_manager, provider_model.id, provider_model.type, config
+                )
+                provider.clean_up()
+            except NotImplementedError:
+                logger.info(
+                    "Being deleted provider of type %s does not have a clean_up method",
+                    provider_model.type,
+                )
+            except Exception:
+                logger.exception(msg="Provider deleted but failed to clean up provider")
+
+            session.delete(provider_model)
+            session.commit()
 
     @staticmethod
     def validate_provider_scopes(
@@ -423,6 +444,7 @@ class ProvidersService:
         tenant_id: str,
         provider: Provider,
         deduplication_rules: Dict[str, Dict[str, Any]],
+        session: Optional[Session] = None,
     ):
         """
         Provision deduplication rules for a provider.
@@ -431,29 +453,42 @@ class ProvidersService:
             tenant_id (str): The tenant ID.
             provider (Provider): The provider to provision the deduplication rules for.
             deduplication_rules (Dict[str, Dict[str, Any]]): The deduplication rules to provision.
+            session (Optional[Session]): SQLAlchemy session to use.
         """
+        with existed_or_new_session(session) as session:
+            # Ensure provider is attached to the session
+            if provider not in session:
+                provider = session.merge(provider)
 
-        # Provision the deduplication rules
-        deduplication_rules_dict: dict[str, dict] = {}
-        for rule_name, rule_config in deduplication_rules.items():
-            logger.info(f"Provisioning deduplication rule {rule_name}")
-            rule_config["name"] = rule_name
-            rule_config["provider_name"] = provider.name
-            rule_config["provider_type"] = provider.type
-            deduplication_rules_dict[rule_name] = rule_config
+            # Provision the deduplication rules
+            deduplication_rules_dict: dict[str, dict] = {}
+            for rule_name, rule_config in deduplication_rules.items():
+                logger.info(f"Provisioning deduplication rule {rule_name}")
+                rule_config["name"] = rule_name
+                rule_config["provider_name"] = provider.name
+                rule_config["provider_type"] = provider.type
+                deduplication_rules_dict[rule_name] = rule_config
 
-        # Provision deduplication rules
-        provision_deduplication_rules(
-            deduplication_rules=deduplication_rules_dict,
-            tenant_id=tenant_id,
-            provider=provider,
-        )
+            try:
+                # Provision deduplication rules
+                provision_deduplication_rules(
+                    deduplication_rules=deduplication_rules_dict,
+                    tenant_id=tenant_id,
+                    provider=provider,
+                )
+            except Exception as e:
+                logger.error(
+                    "Provisioning failed, rolling back", extra={"exception": e}
+                )
+                session.rollback()
+                raise
 
     def install_webhook(
         tenant_id: str, provider_type: str, provider_id: str, session: Session
     ) -> bool:
         context_manager = ContextManager(
-            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+            tenant_id=tenant_id,
+            workflow_id="",  # this is not in a workflow scope
         )
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
@@ -566,11 +601,20 @@ class ProvidersService:
                 parser._parse_providers_from_env(context_manager)
                 env_providers = context_manager.providers_context
 
-                for provider_name, provider_config in env_providers.items():
+                for provider_name, provider_info in env_providers.items():
+                    # We need this to avoid failure in upsert operation results in
+                    # the deletion of the old provisioned provider
+                    incoming_providers_names.add(provider_name)
+
                     try:
-                        provider_name = provider_config["name"]
-                        provider_type = provider_config["type"]
-                        provider_config = provider_config["authentication"]
+                        provider_type = provider_info.get("type")
+                        if not provider_type:
+                            logger.error(
+                                f"Provider {provider_name} does not have a type"
+                            )
+                            continue
+
+                        provider_config = provider_info.get("authentication", {})
 
                         # Perform upsert operation for the provider
                         installed_provider_info = ProvidersService.upsert_provider(
@@ -590,19 +634,20 @@ class ProvidersService:
                         continue
 
                     provider = installed_provider_info["provider"]
-                    incoming_providers_names.add(provider_name)
 
                     # Configure deduplication rules
-                    deduplication_rules = provider_config.get("deduplication_rules", {})
-                    if deduplication_rules:
+                    deduplication_rules = provider_info.get("deduplication_rules")
+                    if deduplication_rules is not None:
                         logger.info(
                             f"Provisioning deduplication rules for provider {provider_name}"
                         )
-                        ProvidersService.provision_provider_deduplication_rules(
-                            tenant_id=tenant_id,
-                            provider=provider,
-                            deduplication_rules=deduplication_rules,
-                        )
+                        with Session(engine) as session:
+                            ProvidersService.provision_provider_deduplication_rules(
+                                tenant_id=tenant_id,
+                                provider=provider,
+                                deduplication_rules=deduplication_rules,
+                                session=session,
+                            )
 
             ### Provisioning from the directory
             if provisioned_providers_dir is not None:
@@ -613,10 +658,26 @@ class ProvidersService:
 
                         try:
                             with open(provider_path, "r") as yaml_file:
-                                provider_yaml = cyaml.safe_load(yaml_file.read())
-                                provider_name = provider_yaml["name"]
-                                provider_type = provider_yaml["type"]
-                                provider_config = provider_yaml.get(
+                                provider_info = cyaml.safe_load(yaml_file.read())
+                                provider_name = provider_info.get("name")
+                                if not provider_name:
+                                    logger.error(
+                                        f"Provider {provider_path} does not have a name"
+                                    )
+                                    continue
+
+                                # We need this to avoid failure in upsert operation results in
+                                # the deletion of the old provisioned provider
+                                incoming_providers_names.add(provider_name)
+
+                                provider_type = provider_info.get("type")
+                                if not provider_type:
+                                    logger.error(
+                                        f"Provider {provider_path} does not have a type"
+                                    )
+                                    continue
+
+                                provider_config = provider_info.get(
                                     "authentication", {}
                                 )
 
@@ -638,21 +699,20 @@ class ProvidersService:
                             continue
 
                         provider = installed_provider_info["provider"]
-                        incoming_providers_names.add(provider_name)
 
                         # Configure deduplication rules
-                        deduplication_rules = provider_config.get(
-                            "deduplication_rules", {}
-                        )
-                        if deduplication_rules:
+                        deduplication_rules = provider_info.get("deduplication_rules")
+                        if deduplication_rules is not None:
                             logger.info(
                                 f"Provisioning deduplication rules for provider {provider_name}"
                             )
-                            ProvidersService.provision_provider_deduplication_rules(
-                                tenant_id=tenant_id,
-                                provider=provider,
-                                deduplication_rules=deduplication_rules,
-                            )
+                            with Session(engine) as session:
+                                ProvidersService.provision_provider_deduplication_rules(
+                                    tenant_id=tenant_id,
+                                    provider=provider,
+                                    deduplication_rules=deduplication_rules,
+                                    session=session,
+                                )
 
             # Delete providers that are not in the incoming list
             for provider in provisioned_providers:
@@ -664,7 +724,6 @@ class ProvidersService:
                         ProvidersService.delete_provider(
                             tenant_id=tenant_id,
                             provider_id=provider.id,
-                            session=None,
                             allow_provisioned=True,
                         )
                         logger.info(f"Provider {provider.name} deleted successfully")
@@ -676,11 +735,15 @@ class ProvidersService:
                         continue
 
             logger.info(
-                "Provisioning completed successfully. Provisioned providers: %s",
-                incoming_providers_names,
+                "Providers provisioning completed. Provisioned providers: %s",
+                (
+                    ", ".join(incoming_providers_names)
+                    if incoming_providers_names
+                    else "None"
+                ),
             )
         except Exception as e:
-            logger.error("Provisioning failed, rolling back", extra={"exception": e})
+            logger.error("Provisioning failed", extra={"exception": e})
 
     @staticmethod
     def get_provider_logs(
