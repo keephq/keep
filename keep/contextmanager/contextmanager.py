@@ -159,6 +159,7 @@ class ContextManager:
         """
         full_context = {
             "steps": self.steps_context,
+            "actions": self.steps_context,  # this is an alias for steps
             "foreach": self.foreach_context,
             "event": self.event_context,
             "last_workflow_results": self.last_workflow_execution_results,

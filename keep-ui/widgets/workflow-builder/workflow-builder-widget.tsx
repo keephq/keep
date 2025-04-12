@@ -2,20 +2,16 @@
 
 import { Button, Title } from "@tremor/react";
 import { useRef, useState } from "react";
-import {
-  ArrowUpOnSquareIcon,
-  PencilIcon,
-  PlayIcon,
-} from "@heroicons/react/20/solid";
+import { ArrowUpOnSquareIcon, PencilIcon } from "@heroicons/react/20/solid";
 import { WorkflowBuilderCard } from "./workflow-builder-card";
 import { showErrorToast } from "@/shared/ui";
 import { useWorkflowStore } from "@/entities/workflows";
 import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
-import { WorkflowTestRunModal } from "@/features/workflows/test-run";
 import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
+import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-button";
 import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
 
 export interface WorkflowBuilderWidgetProps {
@@ -35,7 +31,6 @@ export function WorkflowBuilderWidget({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const {
     triggerSave,
-    triggerRun,
     updateV2Properties,
     isInitialized,
     lastDeployedAt,
@@ -44,7 +39,6 @@ export function WorkflowBuilderWidget({
     isSaving,
     v2Properties,
     definition,
-    runRequestCount,
   } = useWorkflowStore();
   const isChangesSaved = useWorkflowEditorChangesSaved();
 
@@ -142,17 +136,12 @@ export function WorkflowBuilderWidget({
                 Edit Metadata
               </Button>
             )}
-            <Button
-              color="orange"
-              size="md"
-              className="min-w-28 disabled:opacity-70"
-              icon={PlayIcon}
-              disabled={!isValid}
-              onClick={() => triggerRun()}
+            <WorkflowTestRunButton
+              workflowId={workflowId ?? ""}
+              definition={definition}
+              isValid={isValid}
               data-testid="wf-builder-main-test-run-button"
-            >
-              Test Run
-            </Button>
+            />
             <Button
               color="orange"
               size="md"
@@ -172,11 +161,6 @@ export function WorkflowBuilderWidget({
           standalone={standalone}
         />
       </main>
-      <WorkflowTestRunModal
-        workflowId={workflowId ?? null}
-        definition={definition}
-        runRequestCount={runRequestCount}
-      />
       <WorkflowMetadataModal
         isOpen={isEditModalOpen}
         workflow={{
