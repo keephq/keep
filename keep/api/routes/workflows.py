@@ -453,16 +453,17 @@ def run_workflow_with_query_params(
     description="Test run a workflow from a definition",
 )
 async def run_workflow_from_definition(
-    request: Request,
-    file: UploadFile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
-    body: Optional[Dict[Any, Any]] = Body({}),
+    body: Dict[Any, Any] = Body({}),
 ) -> WorkflowRunResponseDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow_dict = await __get_workflow_raw_data(request, file)
+    workflow_raw = body.get("workflow_raw", "")
+    if not workflow_raw:
+        raise HTTPException(status_code=400, detail="Workflow raw is required")
+    workflow_dict = await get_workflow_dict_from_string(workflow_raw)
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
@@ -504,18 +505,9 @@ async def run_workflow_from_definition(
     )
 
 
-async def __get_workflow_raw_data(
-    request: Request | None, file: UploadFile | None
-) -> dict:
-    if not request and not file:
-        raise HTTPException(status_code=400, detail="Nor file nor request provided")
+async def get_workflow_dict_from_string(workflow_raw: str | bytes) -> dict:
     try:
-        # we support both File upload (from frontend) or raw yaml (e.g. curl)
-        if file:
-            workflow_raw_data = await file.read()
-        else:
-            workflow_raw_data = await request.body()
-        workflow_data = cyaml.safe_load(workflow_raw_data)
+        workflow_data = cyaml.safe_load(workflow_raw)
         # backward compatibility
         if "alert" in workflow_data:
             workflow_data = workflow_data.pop("alert")
@@ -527,6 +519,19 @@ async def __get_workflow_raw_data(
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
+
+
+async def __get_workflow_raw_data(
+    request: Request | None, file: UploadFile | None
+) -> dict:
+    if not request and not file:
+        raise HTTPException(status_code=400, detail="Nor file nor request provided")
+    # we support both File upload (from frontend) or raw yaml (e.g. curl)
+    if file:
+        workflow_raw_data = await file.read()
+    else:
+        workflow_raw_data = await request.body()
+    return await get_workflow_dict_from_string(workflow_raw_data)
 
 
 @router.post(
