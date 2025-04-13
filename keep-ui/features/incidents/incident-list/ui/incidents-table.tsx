@@ -334,7 +334,7 @@ export default function IncidentsTable({
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (!selectedRowIds.length && table.getIsSomeRowsSelected()) {
-        // clear selection if selectedRowIds is empty but table.getIsSomeRowsSelected is true
+        // clear selection if selectedRowIds is empty but table.getIsSomeRowsSelected is still true
         table.setRowSelection({}); // clear selection
       }
     }, 1000);
