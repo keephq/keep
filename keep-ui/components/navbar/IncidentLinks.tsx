@@ -25,7 +25,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
       limit: 0,
       offset: 0,
       sorting: DEFAULT_INCIDENTS_SORTING,
-      incidentsCelQuery: DEFAULT_INCIDENTS_CEL,
+      cel: DEFAULT_INCIDENTS_CEL,
     },
     {}
   );

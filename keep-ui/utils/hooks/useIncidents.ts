@@ -34,7 +34,7 @@ export interface IncidentsQuery {
   limit?: number;
   offset?: number;
   sorting?: { id: string; desc: boolean };
-  incidentsCelQuery?: string;
+  cel?: string;
 }
 
 function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
@@ -58,8 +58,8 @@ function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
     query.sorting = DEFAULT_INCIDENTS_SORTING;
   }
 
-  if (query.incidentsCelQuery === undefined) {
-    query.incidentsCelQuery = "";
+  if (query.cel === undefined) {
+    query.cel = "";
   }
 
   const filtersParams = new URLSearchParams();
@@ -87,8 +87,8 @@ function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
     );
   }
 
-  if (query.incidentsCelQuery) {
-    filtersParams.set("cel", query.incidentsCelQuery);
+  if (query.cel) {
+    filtersParams.set("cel", query.cel);
   }
 
   return filtersParams;

@@ -67,7 +67,7 @@ export const CreateIncidentWithAIModal = ({
       limit: 20,
       offset: 0,
       sorting: { id: "creation_time", desc: true },
-      incidentsCelQuery: "",
+      cel: "",
     },
     {}
   );

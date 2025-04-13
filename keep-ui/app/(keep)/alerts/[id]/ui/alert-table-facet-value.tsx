@@ -33,7 +33,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
       limit: 100,
       offset: undefined,
       sorting: undefined,
-      incidentsCelQuery: "",
+      cel: "",
     },
     {
       revalidateOnFocus: false,

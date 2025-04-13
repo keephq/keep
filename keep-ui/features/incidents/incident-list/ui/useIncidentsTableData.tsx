@@ -134,9 +134,7 @@ export const useIncidentsTableData = (
       limit: query.limit,
       offset: query.offset,
       sorting: query.sorting,
-      incidentsCelQuery: [mainCelQuery, query.filterCel]
-        .filter(Boolean)
-        .join(" && "),
+      cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
     });
   }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
 
@@ -162,7 +160,7 @@ export const useIncidentsTableData = (
         limit: 0,
         offset: 0,
         sorting: DEFAULT_INCIDENTS_SORTING,
-        incidentsCelQuery: DEFAULT_INCIDENTS_CEL,
+        cel: DEFAULT_INCIDENTS_CEL,
       },
       {
         revalidateOnFocus: false,
