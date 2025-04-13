@@ -105,13 +105,6 @@ export const useIncidents = (
   const filtersParams = getQueryParams(query);
   const api = useApi();
 
-  useEffect(() => {
-    if (!trusk) {
-      return;
-    }
-    console.log("Ihor", decodeURIComponent(filtersParams?.get("cel") || ""));
-  }, [filtersParams?.toString(), trusk]);
-
   const swrValue = useSWR(
     () =>
       api.isReady() && filtersParams
