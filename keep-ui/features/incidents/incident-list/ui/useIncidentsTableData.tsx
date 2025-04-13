@@ -138,8 +138,6 @@ export const useIncidentsTableData = (
     });
   }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
 
-  console.log("Ihor", incidentsQueryState);
-
   const {
     data: paginatedIncidentsFromHook,
     isLoading: incidentsLoading,

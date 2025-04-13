@@ -75,16 +75,14 @@ export function IncidentList({
   ]);
 
   const [filterCel, setFilterCel] = useState<string>("");
-
+  useEffect(() => {
+    console.log("Ihor", filterCel);
+  }, [filterCel]);
   const [dateRange, setDateRange] = useState<TimeFrame>({
     start: null,
     end: null,
     paused: false,
   });
-
-  // useEffect(() => {
-  //   console.log("Ihor filterCel", filterCel);
-  // }, [filterCel]);
 
   const {
     defaultIncidents,
