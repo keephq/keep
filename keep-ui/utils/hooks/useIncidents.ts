@@ -7,7 +7,7 @@ import {
 import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { v4 as uuidv4 } from "uuid";
@@ -43,6 +43,7 @@ function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
   }
 
   if (query.candidate === undefined) {
+    // TODO: To verify if this is the correct default value
     query.candidate = true;
   }
 
@@ -95,19 +96,21 @@ function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
 }
 
 export const useIncidents = (
-  // candidate: boolean | null = true,
-  // predicted: boolean | null = null,
-  // limit: number = DEFAULT_INCIDENTS_PAGE_SIZE,
-  // offset: number = 0,
-  // sorting: { id: string; desc: boolean } = DEFAULT_INCIDENTS_SORTING,
-  // cel: string = "",
   query: IncidentsQuery | null,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
-  }
+  },
+  trusk: boolean = false
 ) => {
   const filtersParams = getQueryParams(query);
   const api = useApi();
+
+  useEffect(() => {
+    if (!trusk) {
+      return;
+    }
+    console.log("Ihor", decodeURIComponent(filtersParams?.get("cel") || ""));
+  }, [filtersParams?.toString(), trusk]);
 
   const swrValue = useSWR(
     () =>

@@ -144,33 +144,41 @@ export const useIncidentsTableData = (
     mutate: mutateIncidents,
     error: incidentsError,
     responseTimeMs,
-  } = useIncidents(incidentsQueryState, {
-    revalidateOnFocus: false,
-    revalidateOnMount: !initialData,
-    onSuccess: () => {
-      refreshDefaultIncidents();
-    },
-  });
-
-  const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
-    useIncidents(
-      {
-        candidate: null,
-        predicted: null,
-        limit: 0,
-        offset: 0,
-        sorting: DEFAULT_INCIDENTS_SORTING,
-        cel: DEFAULT_INCIDENTS_CEL,
+  } = useIncidents(
+    incidentsQueryState,
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount: !initialData,
+      onSuccess: () => {
+        // refreshDefaultIncidents();
       },
-      {
-        revalidateOnFocus: false,
-        revalidateOnMount: false,
-        fallbackData: initialData,
-      }
-    );
+    },
+    true
+  );
 
-  const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents({ candidate: true, predicted: true });
+  // useEffect(() => {
+  //   console.log("Ihor", incidentsQueryState?.cel);
+  // }, [incidentsQueryState]);
+
+  // const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
+  //   useIncidents(
+  //     {
+  //       candidate: null,
+  //       predicted: null,
+  //       limit: 0,
+  //       offset: 0,
+  //       sorting: DEFAULT_INCIDENTS_SORTING,
+  //       cel: DEFAULT_INCIDENTS_CEL,
+  //     },
+  //     {
+  //       revalidateOnFocus: false,
+  //       revalidateOnMount: false,
+  //       fallbackData: initialData,
+  //     }
+  //   );
+
+  // const { data: predictedIncidents, isLoading: isPredictedLoading } =
+  //   useIncidents({ candidate: true, predicted: true });
 
   const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
     PaginatedIncidentsDto | undefined
@@ -196,9 +204,9 @@ export const useIncidentsTableData = (
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
-    isEmptyState: defaultIncidents.count === 0,
-    predictedIncidents,
-    isPredictedLoading,
+    isEmptyState: false,
+    predictedIncidents: { items: [] },
+    isPredictedLoading: false,
     facetsCel: mainCelQuery,
     incidentChangeToken,
     incidentsError,
