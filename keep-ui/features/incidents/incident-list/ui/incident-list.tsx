@@ -83,7 +83,7 @@ export function IncidentList({
   });
 
   const {
-    defaultIncidents,
+    isEmptyState,
     incidents,
     incidentsError,
     predictedIncidents,
@@ -98,8 +98,6 @@ export function IncidentList({
     filterCel: filterCel,
     timeFrame: dateRange,
   });
-
-  const isTrueEmptyState = defaultIncidents?.items.length === 0;
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -244,7 +242,7 @@ export function IncidentList({
       );
     }
 
-    if (isTrueEmptyState) {
+    if (isEmptyState) {
       return <IncidentsNotFoundPlaceholder />;
     }
 

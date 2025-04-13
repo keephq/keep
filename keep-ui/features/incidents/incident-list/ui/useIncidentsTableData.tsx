@@ -164,7 +164,7 @@ export const useIncidentsTableData = (
     useIncidents(
       null,
       null,
-      DEFAULT_INCIDENTS_PAGE_SIZE,
+      0,
       0,
       DEFAULT_INCIDENTS_SORTING,
       DEFAULT_INCIDENTS_CEL,
@@ -202,7 +202,7 @@ export const useIncidentsTableData = (
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
-    defaultIncidents,
+    isEmptyState: defaultIncidents.count === 0,
     predictedIncidents,
     isPredictedLoading,
     facetsCel: mainCelQuery,
