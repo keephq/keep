@@ -21,7 +21,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const { data: incidents, mutate } = useIncidents(
     false,
     null,
-    DEFAULT_INCIDENTS_PAGE_SIZE,
+    0,
     0,
     DEFAULT_INCIDENTS_SORTING,
     DEFAULT_INCIDENTS_CEL,
