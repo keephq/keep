@@ -226,7 +226,7 @@ def __build_base_incident_query(
         "involved_fields": involved_fields,
         "fetch_alerts": fetch_alerts,
     }
-
+print()
 
 def __build_last_incidents_total_count_query(
     tenant_id: str,
