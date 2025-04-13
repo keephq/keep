@@ -129,8 +129,8 @@ export const useIncidentsTableData = (
 
   useEffect(() => {
     setIncidentsQueryState({
-      candidate: false,
-      predicted: false,
+      candidate: null,
+      predicted: null,
       limit: query.limit,
       offset: query.offset,
       sorting: query.sorting,
@@ -150,35 +150,31 @@ export const useIncidentsTableData = (
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
       onSuccess: () => {
-        // refreshDefaultIncidents();
+        refreshDefaultIncidents();
       },
     },
     true
   );
 
-  // useEffect(() => {
-  //   console.log("Ihor", incidentsQueryState?.cel);
-  // }, [incidentsQueryState]);
+  const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
+    useIncidents(
+      {
+        candidate: null,
+        predicted: null,
+        limit: 0,
+        offset: 0,
+        sorting: DEFAULT_INCIDENTS_SORTING,
+        cel: DEFAULT_INCIDENTS_CEL,
+      },
+      {
+        revalidateOnFocus: false,
+        revalidateOnMount: false,
+        fallbackData: initialData,
+      }
+    );
 
-  // const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
-  //   useIncidents(
-  //     {
-  //       candidate: null,
-  //       predicted: null,
-  //       limit: 0,
-  //       offset: 0,
-  //       sorting: DEFAULT_INCIDENTS_SORTING,
-  //       cel: DEFAULT_INCIDENTS_CEL,
-  //     },
-  //     {
-  //       revalidateOnFocus: false,
-  //       revalidateOnMount: false,
-  //       fallbackData: initialData,
-  //     }
-  //   );
-
-  // const { data: predictedIncidents, isLoading: isPredictedLoading } =
-  //   useIncidents({ candidate: true, predicted: true });
+  const { data: predictedIncidents, isLoading: isPredictedLoading } =
+    useIncidents({ candidate: true, predicted: true });
 
   const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
     PaginatedIncidentsDto | undefined
@@ -204,9 +200,9 @@ export const useIncidentsTableData = (
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
-    isEmptyState: false,
-    predictedIncidents: { items: [] },
-    isPredictedLoading: false,
+    isEmptyState: defaultIncidents.count === 0,
+    predictedIncidents,
+    isPredictedLoading,
     facetsCel: mainCelQuery,
     incidentChangeToken,
     incidentsError,
