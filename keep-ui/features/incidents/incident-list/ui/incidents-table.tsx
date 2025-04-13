@@ -166,14 +166,24 @@ export default function IncidentsTable({
       id: "selected",
       minSize: 32,
       maxSize: 32,
-      header: (context) => (
-        <TableIndeterminateCheckbox
-          checked={context.table.getIsAllRowsSelected()}
-          indeterminate={context.table.getIsSomeRowsSelected()}
-          onChange={context.table.getToggleAllRowsSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
+      header: (context) => {
+        const selectedRows = Object.entries(
+          context.table.getSelectedRowModel().rowsById
+        ).map(([alertId]) => {
+          return alertId;
+        });
+
+        return (
+          <TableIndeterminateCheckbox
+            checked={context.table.getIsAllRowsSelected()}
+            indeterminate={
+              context.table.getIsSomeRowsSelected() && selectedRows.length > 0
+            }
+            onChange={context.table.getToggleAllRowsSelectedHandler()}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      },
       cell: (context) => (
         <TableIndeterminateCheckbox
           checked={context.row.getIsSelected()}
@@ -326,21 +336,6 @@ export default function IncidentsTable({
   ).reduce<string[]>((acc, [alertId]) => {
     return acc.concat(alertId);
   }, []);
-
-  // Sometimes the table doesn't clear the selection when the data changes.
-  // For example, when the user selects some row via checkbox and delets it,
-  // the checkbox selecting all rows show state as if a row is still selected but
-  // the row is not in the table anymore.
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (!selectedRowIds.length && table.getIsSomeRowsSelected()) {
-        // clear selection if selectedRowIds is empty but table.getIsSomeRowsSelected is still true
-        table.setRowSelection({}); // clear selection
-      }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [selectedRowIds, incidents.items, table.getIsSomeRowsSelected()]);
 
   type MergeOptions = {
     incidents: IncidentDto[];
