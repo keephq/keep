@@ -28,48 +28,90 @@ export interface Filters {
   affected_services?: string[];
 }
 
+export interface IncidentsQuery {
+  candidate?: boolean | null;
+  predicted?: boolean | null;
+  limit?: number;
+  offset?: number;
+  sorting?: { id: string; desc: boolean };
+  incidentsCelQuery?: string;
+}
+
+function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
+  if (!query) {
+    return null;
+  }
+
+  if (query.candidate === undefined) {
+    query.candidate = true;
+  }
+
+  if (query.limit === undefined) {
+    query.limit = DEFAULT_INCIDENTS_PAGE_SIZE;
+  }
+
+  if (query.offset === undefined) {
+    query.offset = 0;
+  }
+
+  if (query.sorting === undefined) {
+    query.sorting = DEFAULT_INCIDENTS_SORTING;
+  }
+
+  if (query.incidentsCelQuery === undefined) {
+    query.incidentsCelQuery = "";
+  }
+
+  const filtersParams = new URLSearchParams();
+
+  if (typeof query.candidate === "boolean") {
+    filtersParams.set("candidate", query.candidate.toString());
+  }
+
+  if (query.predicted !== undefined && query.predicted !== null) {
+    filtersParams.set("predicted", query.predicted.toString());
+  }
+
+  if (query.limit !== undefined) {
+    filtersParams.set("limit", query.limit.toString());
+  }
+
+  if (query.offset !== undefined) {
+    filtersParams.set("offset", query.offset.toString());
+  }
+
+  if (query.sorting) {
+    filtersParams.set(
+      "sorting",
+      query.sorting.desc ? `-${query.sorting.id}` : query.sorting.id
+    );
+  }
+
+  if (query.incidentsCelQuery) {
+    filtersParams.set("cel", query.incidentsCelQuery);
+  }
+
+  return filtersParams;
+}
+
 export const useIncidents = (
-  candidate: boolean | null = true,
-  predicted: boolean | null = null,
-  limit: number = DEFAULT_INCIDENTS_PAGE_SIZE,
-  offset: number = 0,
-  sorting: { id: string; desc: boolean } = DEFAULT_INCIDENTS_SORTING,
-  cel: string = "",
+  // candidate: boolean | null = true,
+  // predicted: boolean | null = null,
+  // limit: number = DEFAULT_INCIDENTS_PAGE_SIZE,
+  // offset: number = 0,
+  // sorting: { id: string; desc: boolean } = DEFAULT_INCIDENTS_SORTING,
+  // cel: string = "",
+  query: IncidentsQuery | null,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
+  const filtersParams = getQueryParams(query);
   const api = useApi();
-
-  const filtersParams = new URLSearchParams();
-
-  if (typeof candidate === "boolean") {
-    filtersParams.set("candidate", candidate.toString());
-  }
-
-  if (predicted !== undefined && predicted !== null) {
-    filtersParams.set("predicted", predicted.toString());
-  }
-
-  if (limit !== undefined) {
-    filtersParams.set("limit", limit.toString());
-  }
-
-  if (offset !== undefined) {
-    filtersParams.set("offset", offset.toString());
-  }
-
-  if (sorting) {
-    filtersParams.set("sorting", sorting.desc ? `-${sorting.id}` : sorting.id);
-  }
-
-  if (cel) {
-    filtersParams.set("cel", cel);
-  }
 
   const swrValue = useSWR(
     () =>
-      api.isReady()
+      api.isReady() && filtersParams
         ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
         : null,
     async (url) => {

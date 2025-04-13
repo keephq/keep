@@ -451,7 +451,7 @@ export function TopologyMap({
 
   const previousNodesIds = useRef<Set<string>>(new Set());
 
-  const { data: allIncidents } = useIncidents();
+  const { data: allIncidents } = useIncidents({});
 
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {

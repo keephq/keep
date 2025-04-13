@@ -61,12 +61,14 @@ export const CreateIncidentWithAIModal = ({
   const api = useApi();
   const router = useRouter();
   const { mutate: mutateIncidents } = useIncidents(
-    false,
-    null,
-    20,
-    0,
-    { id: "creation_time", desc: true },
-    "",
+    {
+      candidate: false,
+      predicted: null,
+      limit: 20,
+      offset: 0,
+      sorting: { id: "creation_time", desc: true },
+      incidentsCelQuery: "",
+    },
     {}
   );
   const [activeAlert, setActiveAlert] = useState<AlertDto | null>(null);

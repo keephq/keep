@@ -220,7 +220,7 @@ export const useAlertTableCols = (
     `column-time-formats-${presetName}`,
     {}
   );
-  const { data: incidents } = useIncidents();
+  const { data: incidents } = useIncidents({});
   const { isRowExpanded } = useExpandedRows(presetName);
   const [columnListFormats, setColumnListFormats] = useLocalStorage<
     Record<string, ListFormatOption>

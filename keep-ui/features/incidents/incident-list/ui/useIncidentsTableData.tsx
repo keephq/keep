@@ -5,7 +5,11 @@ import {
   DEFAULT_INCIDENTS_SORTING,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model/models";
-import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
+import {
+  IncidentsQuery,
+  useIncidents,
+  usePollIncidents,
+} from "@/utils/hooks/useIncidents";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface IncidentsTableDataQuery {
@@ -28,12 +32,8 @@ export const useIncidentsTableData = (
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
   const [isPolling, setIsPolling] = useState<boolean>(false);
-  const [incidentsQueryState, setIncidentsQueryState] = useState<{
-    limit: number;
-    offset: number;
-    sorting: { id: string; desc: boolean };
-    incidentsCelQuery: string;
-  } | null>(null);
+  const [incidentsQueryState, setIncidentsQueryState] =
+    useState<IncidentsQuery | null>(null);
   const incidentsQueryStateRef = useRef(incidentsQueryState);
   incidentsQueryStateRef.current = incidentsQueryState;
   const timeframeDeltaRef = useRef<number>(0);
@@ -129,6 +129,8 @@ export const useIncidentsTableData = (
 
   useEffect(() => {
     setIncidentsQueryState({
+      candidate: false,
+      predicted: false,
       limit: query.limit,
       offset: query.offset,
       sorting: query.sorting,
@@ -144,30 +146,24 @@ export const useIncidentsTableData = (
     mutate: mutateIncidents,
     error: incidentsError,
     responseTimeMs,
-  } = useIncidents(
-    null,
-    null,
-    incidentsQueryState?.limit,
-    incidentsQueryState?.offset,
-    incidentsQueryState?.sorting,
-    incidentsQueryState?.incidentsCelQuery,
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount: !initialData,
-      onSuccess: () => {
-        refreshDefaultIncidents();
-      },
-    }
-  );
+  } = useIncidents(incidentsQueryState, {
+    revalidateOnFocus: false,
+    revalidateOnMount: !initialData,
+    onSuccess: () => {
+      refreshDefaultIncidents();
+    },
+  });
 
   const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
     useIncidents(
-      null,
-      null,
-      0,
-      0,
-      DEFAULT_INCIDENTS_SORTING,
-      DEFAULT_INCIDENTS_CEL,
+      {
+        candidate: null,
+        predicted: null,
+        limit: 0,
+        offset: 0,
+        sorting: DEFAULT_INCIDENTS_SORTING,
+        incidentsCelQuery: DEFAULT_INCIDENTS_CEL,
+      },
       {
         revalidateOnFocus: false,
         revalidateOnMount: false,
@@ -176,7 +172,7 @@ export const useIncidentsTableData = (
     );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(true, true);
+    useIncidents({ candidate: true, predicted: true });
 
   const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
     PaginatedIncidentsDto | undefined
