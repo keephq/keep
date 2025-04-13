@@ -28,12 +28,14 @@ export const useIncidentsTableData = (
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
   const [isPolling, setIsPolling] = useState<boolean>(false);
-  const incidentsQueryRef = useRef<{
+  const [incidentsQueryState, setIncidentsQueryState] = useState<{
     limit: number;
     offset: number;
     sorting: { id: string; desc: boolean };
     incidentsCelQuery: string;
   } | null>(null);
+  const incidentsQueryStateRef = useRef(incidentsQueryState);
+  incidentsQueryStateRef.current = incidentsQueryState;
   const timeframeDeltaRef = useRef<number>(0);
   timeframeDeltaRef.current = timeframeDelta;
 
@@ -126,15 +128,17 @@ export const useIncidentsTableData = (
   }, [dateRangeCel]);
 
   useEffect(() => {
-    incidentsQueryRef.current = {
+    setIncidentsQueryState({
       limit: query.limit,
       offset: query.offset,
       sorting: query.sorting,
       incidentsCelQuery: [mainCelQuery, query.filterCel]
         .filter(Boolean)
         .join(" && "),
-    };
+    });
   }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
+
+  console.log("Ihor", incidentsQueryState);
 
   const {
     data: paginatedIncidentsFromHook,
@@ -145,10 +149,10 @@ export const useIncidentsTableData = (
   } = useIncidents(
     null,
     null,
-    incidentsQueryRef.current?.limit,
-    incidentsQueryRef.current?.offset,
-    incidentsQueryRef.current?.sorting,
-    incidentsQueryRef.current?.incidentsCelQuery,
+    incidentsQueryState?.limit,
+    incidentsQueryState?.offset,
+    incidentsQueryState?.sorting,
+    incidentsQueryState?.incidentsCelQuery,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,

@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -81,6 +81,10 @@ export function IncidentList({
     end: null,
     paused: false,
   });
+
+  // useEffect(() => {
+  //   console.log("Ihor filterCel", filterCel);
+  // }, [filterCel]);
 
   const {
     defaultIncidents,
