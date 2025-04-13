@@ -223,7 +223,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       );
     });
     setFacetOptionQueries(facetOptionQueries);
-    console.log("Ihor", { facetOptionQueries });
     onCelChangeRef.current && onCelChangeRef.current(celState);
   }, [celState, setFacetOptionQueries]);
 
@@ -236,11 +235,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     } else {
       facetState.delete(value);
     }
-
-    console.log("Ihor", {
-      before: facetsState,
-      after: { ...facetsState, [facetId]: facetState },
-    });
 
     setFacetsState({ ...facetsState, [facetId]: facetState });
   }
