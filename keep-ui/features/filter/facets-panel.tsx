@@ -21,10 +21,27 @@ type FacetState = {
 function buildCel(
   facets: FacetDto[],
   facetOptions: { [key: string]: FacetOptionDto[] },
-  facetsState: FacetState
+  facetsState: FacetState,
+  facetsConfigIdBased: FacetsConfig
 ): string {
+  // In case facetOptions are not loaded yet, we need to create placeholder wich will be
+  // populated based on uncheckedByDefaultOptionValues
   if (facetOptions == null) {
-    return "";
+    facetOptions = {};
+
+    facets.forEach((facet) => {
+      facetOptions[facet.id] = [];
+      const facetConfig = facetsConfigIdBased?.[facet.id];
+      if (facetConfig?.uncheckedByDefaultOptionValues) {
+        facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
+          facetOptions[facet.id].push({
+            display_name: optionValue,
+            value: optionValue,
+            matches_count: 0,
+          });
+        });
+      }
+    });
   }
 
   const cel = Object.values(facets)
@@ -173,7 +190,12 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   };
 
   useEffect(() => {
-    var cel = buildCel(facets, facetOptionsRef.current, facetsState);
+    var cel = buildCel(
+      facets,
+      facetOptionsRef.current,
+      facetsState,
+      facetsConfigIdBasedRef.current
+    );
     setCelState(cel);
   }, [facetsState, facets, setCelState]);
 
@@ -190,34 +212,18 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       return;
     }
 
-    if (!facetOptions) {
-      facetOptions = {};
-
-      facets.forEach((facet) => {
-        facetOptions[facet.id] = [];
-        const facetConfig = facetsConfigIdBasedRef.current?.[facet.id];
-        if (facetConfig?.uncheckedByDefaultOptionValues) {
-          facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
-            facetOptions[facet.id].push({
-              display_name: optionValue,
-              value: optionValue,
-              matches_count: 0,
-            });
-          });
-        }
-      });
-    }
-
     facets.forEach((facet) => {
       const otherFacets = facets.filter((f) => f.id !== facet.id);
 
       facetOptionQueries[facet.id] = buildCel(
         otherFacets,
         facetOptions,
-        facetsState
+        facetsState,
+        facetsConfigIdBasedRef.current
       );
     });
     setFacetOptionQueries(facetOptionQueries);
+    console.log("Ihor", { facetOptionQueries });
     onCelChangeRef.current && onCelChangeRef.current(celState);
   }, [celState, setFacetOptionQueries]);
 
@@ -230,6 +236,11 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     } else {
       facetState.delete(value);
     }
+
+    console.log("Ihor", {
+      before: facetsState,
+      after: { ...facetsState, [facetId]: facetState },
+    });
 
     setFacetsState({ ...facetsState, [facetId]: facetState });
   }
