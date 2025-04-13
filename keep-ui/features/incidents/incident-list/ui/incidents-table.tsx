@@ -327,6 +327,21 @@ export default function IncidentsTable({
     return acc.concat(alertId);
   }, []);
 
+  // Sometimes the table doesn't clear the selection when the data changes.
+  // For example, when the user selects some row via checkbox and delets it,
+  // the checkbox selecting all rows show state as if a row is still selected but
+  // the row is not in the table anymore.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!selectedRowIds.length && table.getIsSomeRowsSelected()) {
+        // clear selection if selectedRowIds is empty but table.getIsSomeRowsSelected is true
+        table.setRowSelection({}); // clear selection
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedRowIds, incidents.items, table.getIsSomeRowsSelected()]);
+
   type MergeOptions = {
     incidents: IncidentDto[];
   };
