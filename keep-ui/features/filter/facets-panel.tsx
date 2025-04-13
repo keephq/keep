@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Facet } from "./facet";
 import {
   FacetDto,
@@ -82,7 +82,7 @@ export interface FacetsPanelProps {
     facetName: string,
     optionDisplayName: string
   ) => JSX.Element | undefined;
-  onCelChange: (cel: string) => void;
+  onCelChange?: (cel: string) => void;
   onAddFacet: () => void;
   onDeleteFacet: (facetId: string) => void;
   onLoadFacetOptions: (facetId: string) => void;
@@ -109,6 +109,10 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const [celState, setCelState] = useState("");
   const [facetOptionQueries, setFacetOptionQueries] =
     useState<FacetOptionsQueries | null>(null);
+  const facetOptionsRef = useRef<any>(facetOptions);
+  facetOptionsRef.current = facetOptions;
+  const onCelChangeRef = useRef(onCelChange);
+  onCelChangeRef.current = onCelChange;
 
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
@@ -140,6 +144,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
     return result;
   }, [facetsConfig, facets]);
+  const facetsConfigIdBasedRef = useRef(facetsConfigIdBased);
+  facetsConfigIdBasedRef.current = facetsConfigIdBased;
 
   function getFacetState(facetId: string): Set<string> {
     if (
@@ -167,9 +173,9 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   };
 
   useEffect(() => {
-    var cel = buildCel(facets, facetOptions, facetsState);
+    var cel = buildCel(facets, facetOptionsRef.current, facetsState);
     setCelState(cel);
-  }, [facetsState, facetOptions, facets, celState, onCelChange]);
+  }, [facetsState, facets, setCelState]);
 
   useEffect(() => {
     if (facetOptionQueries) {
@@ -184,6 +190,24 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       return;
     }
 
+    if (!facetOptions) {
+      facetOptions = {};
+
+      facets.forEach((facet) => {
+        facetOptions[facet.id] = [];
+        const facetConfig = facetsConfigIdBasedRef.current?.[facet.id];
+        if (facetConfig?.uncheckedByDefaultOptionValues) {
+          facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
+            facetOptions[facet.id].push({
+              display_name: optionValue,
+              value: optionValue,
+              matches_count: 0,
+            });
+          });
+        }
+      });
+    }
+
     facets.forEach((facet) => {
       const otherFacets = facets.filter((f) => f.id !== facet.id);
 
@@ -193,10 +217,9 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
         facetsState
       );
     });
-
     setFacetOptionQueries(facetOptionQueries);
-    onCelChange && onCelChange(celState);
-  }, [celState, onCelChange, setFacetOptionQueries]);
+    onCelChangeRef.current && onCelChangeRef.current(celState);
+  }, [celState, setFacetOptionQueries]);
 
   function toggleFacetOption(facetId: string, value: string) {
     setClickedFacetId(facetId);
@@ -223,7 +246,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
       facetState.add(facetOption.display_name);
     });
-
     setFacetsState({
       ...facetsState,
       [facetId]: facetState,
@@ -253,7 +275,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     facets.forEach((facet) => {
       newFacetsState[facet.id] = getFacetState(facet.id);
     });
-
     setFacetsState(newFacetsState);
   }
 

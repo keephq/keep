@@ -337,7 +337,7 @@ export function IncidentList({
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
-                  onCelChange={(cel) => setFilterCel(cel)}
+                  onCelChange={setFilterCel}
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
