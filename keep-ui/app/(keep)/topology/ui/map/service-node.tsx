@@ -99,11 +99,17 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
     setIsTooltipReady(true);
   }, [showDetails]);
 
-  const handleClick = () => {
+  const handleIncidentClick = () => {
     router.push(`/incidents?services=${encodeURIComponent(data.display_name)}`);
   };
 
+  const handleAlertClick = () => {
+    const cel = `service=="${data.display_name}"`;
+    router.push(`/alerts/feed?cel=${encodeURIComponent(cel)}`);
+  };
+
   const incidentsCount = data.incidents ?? 0;
+  const alertsCount = data.alerts ?? 0;
   const badgeColor =
     incidentsCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
 
@@ -130,13 +136,22 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
           </div>
         )}
         <strong className="text-lg">{data.display_name || data.service}</strong>
-        {incidentsCount > 0 && (
+        {incidentsCount > 0 ? (
           <span
-            className={`absolute top-[-20px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-xs font-bold rounded-full ${badgeColor} hover:cursor-pointer`}
-            onClick={handleClick}
+            className={`absolute top-[-17px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-[7px] leading-[7px] font-bold rounded-full ${badgeColor} hover:cursor-pointer`}
+            onClick={handleIncidentClick}
           >
-            {incidentsCount}
+            {incidentsCount} incidents
           </span>
+        ) : alertsCount > 0 ? (
+          <span
+            className={`absolute top-[-17px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-[7px] leading-[7px] font-bold rounded-full ${badgeColor} hover:cursor-pointer`}
+            onClick={handleAlertClick}
+          >
+            {alertsCount} alerts
+          </span>
+        ) : (
+          <></>
         )}
         <div className="flex flex-wrap gap-1">
           {data?.applications?.map((app) => {

@@ -34,6 +34,7 @@ export const V2StepAlertTriggerSchema = z.object({
     alert: AlertTriggerValueSchema,
     source: z.string().optional(),
   }),
+  only_on_change: z.array(z.string()).optional(),
 });
 
 export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);

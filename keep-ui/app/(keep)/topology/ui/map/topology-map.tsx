@@ -72,6 +72,7 @@ import {
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { TbTopologyRing } from "react-icons/tb";
+import { useAlerts } from "@/entities/alerts/model";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -451,7 +452,10 @@ export function TopologyMap({
 
   const previousNodesIds = useRef<Set<string>>(new Set());
 
+  const { useLastAlerts } = useAlerts();
+
   const { data: allIncidents } = useIncidents();
+  const { data: allAlerts } = useLastAlerts(undefined);
 
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
@@ -463,6 +467,7 @@ export function TopologyMap({
         topologyData,
         applicationMap,
         allIncidents?.items ?? [],
+        allAlerts ?? [],
         mutateTopologyData
       );
 
