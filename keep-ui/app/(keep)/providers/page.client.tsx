@@ -226,7 +226,7 @@ export default function ProvidersPage({
       )}
       {!isFilteringActive && (
         <ProvidersTiles
-          title="All Available Providers"
+          title="Available Providers"
           providers={filteredProviders}
           isLocalhost={isLocalhost}
           mutate={mutate}
