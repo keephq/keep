@@ -2,7 +2,7 @@ import { FacetDto, FacetOptionDto, FacetState } from "./models";
 
 export function buildCel(
   facets: FacetDto[],
-  facetOptions: { [key: string]: FacetOptionDto[] },
+  facetOptions: { [key: string]: FacetOptionDto[] } | null,
   facetsState: FacetState
 ): string {
   if (facetOptions == null) {
