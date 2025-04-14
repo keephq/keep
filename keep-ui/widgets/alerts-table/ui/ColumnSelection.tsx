@@ -40,10 +40,6 @@ export default function ColumnSelection({
     .filter((col) => col.getIsPinned() === false)
     .map((col) => col.id);
 
-  const selectedColumns = tableColumns
-    .filter((col) => col.getIsVisible() && col.getIsPinned() === false)
-    .map((col) => col.id);
-
   const filteredColumns = columnsOptions.filter((column) =>
     column.toLowerCase().includes(searchTerm.toLowerCase())
   );

@@ -50,6 +50,7 @@ import {
   ColumnRenameMapping,
   getColumnDisplayName,
 } from "@/widgets/alerts-table/ui/alert-table-column-rename";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -221,6 +222,7 @@ export const useAlertTableCols = (
     {}
   );
   const { data: incidents } = useIncidents({});
+  const { data: providersData } = useProviders();
   const { isRowExpanded } = useExpandedRows(presetName);
   const [columnListFormats, setColumnListFormats] = useLocalStorage<
     Record<string, ListFormatOption>
@@ -311,7 +313,12 @@ export const useAlertTableCols = (
               </span>
             );
           }
-
+          if (context.column.id === "providerId") {
+            const provider = providersData?.installed_providers?.find(
+              (provider) => provider.id === value
+            );
+            return provider?.details?.name || value;
+          }
           if (context.column.id === "incident") {
             const incidentString = String(value || "");
             const incidentSplit = incidentString.split(",");

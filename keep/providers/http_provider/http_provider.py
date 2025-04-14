@@ -56,6 +56,7 @@ class HttpProvider(BaseProvider):
         body: dict = None,
         params: dict = None,
         proxies: dict = None,
+        verify: bool = True,
         **kwargs,
     ):
         """
@@ -68,6 +69,7 @@ class HttpProvider(BaseProvider):
             body=body,
             params=params,
             proxies=proxies,
+            verify=verify,
             **kwargs,
         )
 
@@ -80,6 +82,7 @@ class HttpProvider(BaseProvider):
         params: dict = None,
         proxies: dict = None,
         fail_on_error: bool = True,
+        verify: bool = True,
         **kwargs: dict,
     ) -> dict:
         """
@@ -107,19 +110,39 @@ class HttpProvider(BaseProvider):
         )
         if method == "GET":
             response = requests.get(
-                url, headers=headers, params=params, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                params=params,
+                proxies=proxies,
+                verify=verify,
+                **kwargs,
             )
         elif method == "POST":
             response = requests.post(
-                url, headers=headers, json=body, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                json=body,
+                proxies=proxies,
+                verify=verify,
+                **kwargs,
             )
         elif method == "PUT":
             response = requests.put(
-                url, headers=headers, json=body, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                json=body,
+                proxies=proxies,
+                verify=verify,
+                **kwargs,
             )
         elif method == "DELETE":
             response = requests.delete(
-                url, headers=headers, json=body, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                json=body,
+                proxies=proxies,
+                verify=verify,
+                **kwargs,
             )
         else:
             raise Exception(f"Unsupported HTTP method: {method}")
