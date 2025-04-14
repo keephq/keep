@@ -166,14 +166,24 @@ export default function IncidentsTable({
       id: "selected",
       minSize: 32,
       maxSize: 32,
-      header: (context) => (
-        <TableIndeterminateCheckbox
-          checked={context.table.getIsAllRowsSelected()}
-          indeterminate={context.table.getIsSomeRowsSelected()}
-          onChange={context.table.getToggleAllRowsSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
+      header: (context) => {
+        const selectedRows = Object.entries(
+          context.table.getSelectedRowModel().rowsById
+        ).map(([alertId]) => {
+          return alertId;
+        });
+
+        return (
+          <TableIndeterminateCheckbox
+            checked={context.table.getIsAllRowsSelected()}
+            indeterminate={
+              context.table.getIsSomeRowsSelected() && selectedRows.length > 0
+            }
+            onChange={context.table.getToggleAllRowsSelectedHandler()}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      },
       cell: (context) => (
         <TableIndeterminateCheckbox
           checked={context.row.getIsSelected()}

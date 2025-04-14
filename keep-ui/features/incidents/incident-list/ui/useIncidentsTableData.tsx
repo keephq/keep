@@ -5,7 +5,11 @@ import {
   DEFAULT_INCIDENTS_SORTING,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model/models";
-import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
+import {
+  IncidentsQuery,
+  useIncidents,
+  usePollIncidents,
+} from "@/utils/hooks/useIncidents";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface IncidentsTableDataQuery {
@@ -28,12 +32,10 @@ export const useIncidentsTableData = (
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
   const [isPolling, setIsPolling] = useState<boolean>(false);
-  const incidentsQueryRef = useRef<{
-    limit: number;
-    offset: number;
-    sorting: { id: string; desc: boolean };
-    incidentsCelQuery: string;
-  } | null>(null);
+  const [incidentsQueryState, setIncidentsQueryState] =
+    useState<IncidentsQuery | null>(null);
+  const incidentsQueryStateRef = useRef(incidentsQueryState);
+  incidentsQueryStateRef.current = incidentsQueryState;
   const timeframeDeltaRef = useRef<number>(0);
   timeframeDeltaRef.current = timeframeDelta;
 
@@ -126,14 +128,14 @@ export const useIncidentsTableData = (
   }, [dateRangeCel]);
 
   useEffect(() => {
-    incidentsQueryRef.current = {
+    setIncidentsQueryState({
+      candidate: null,
+      predicted: null,
       limit: query.limit,
       offset: query.offset,
       sorting: query.sorting,
-      incidentsCelQuery: [mainCelQuery, query.filterCel]
-        .filter(Boolean)
-        .join(" && "),
-    };
+      cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
+    });
   }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
 
   const {
@@ -143,29 +145,27 @@ export const useIncidentsTableData = (
     error: incidentsError,
     responseTimeMs,
   } = useIncidents(
-    null,
-    null,
-    incidentsQueryRef.current?.limit,
-    incidentsQueryRef.current?.offset,
-    incidentsQueryRef.current?.sorting,
-    incidentsQueryRef.current?.incidentsCelQuery,
+    incidentsQueryState,
     {
       revalidateOnFocus: false,
       revalidateOnMount: !initialData,
       onSuccess: () => {
         refreshDefaultIncidents();
       },
-    }
+    },
+    true
   );
 
   const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
     useIncidents(
-      null,
-      null,
-      DEFAULT_INCIDENTS_PAGE_SIZE,
-      0,
-      DEFAULT_INCIDENTS_SORTING,
-      DEFAULT_INCIDENTS_CEL,
+      {
+        candidate: null,
+        predicted: null,
+        limit: 0,
+        offset: 0,
+        sorting: DEFAULT_INCIDENTS_SORTING,
+        cel: DEFAULT_INCIDENTS_CEL,
+      },
       {
         revalidateOnFocus: false,
         revalidateOnMount: false,
@@ -174,7 +174,7 @@ export const useIncidentsTableData = (
     );
 
   const { data: predictedIncidents, isLoading: isPredictedLoading } =
-    useIncidents(true, true);
+    useIncidents({ candidate: true, predicted: true });
 
   const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
     PaginatedIncidentsDto | undefined
@@ -200,7 +200,7 @@ export const useIncidentsTableData = (
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
-    defaultIncidents,
+    isEmptyState: defaultIncidents.count === 0,
     predictedIncidents,
     isPredictedLoading,
     facetsCel: mainCelQuery,
