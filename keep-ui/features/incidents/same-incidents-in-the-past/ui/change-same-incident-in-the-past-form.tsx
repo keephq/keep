@@ -19,7 +19,11 @@ export function ChangeSameIncidentInThePastForm({
   handleClose,
   linkedIncident,
 }: ChangeSameIncidentInThePastFormProps) {
-  const { data: incidents, isLoading } = useIncidents(false, null, 100);
+  const { data: incidents, isLoading } = useIncidents({
+    candidate: false,
+    predicted: null,
+    limit: 100,
+  });
 
   const [selectedIncident, setSelectedIncident] = useState<string | undefined>(
     linkedIncident?.id
