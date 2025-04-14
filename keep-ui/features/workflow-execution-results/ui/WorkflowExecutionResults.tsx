@@ -81,6 +81,8 @@ export function WorkflowExecutionResults({
     ? executionData.workflow_revision
     : undefined;
 
+  const { workflow: latestWorkflowData } = useWorkflowDetail(workflowId, null);
+
   const { workflow: workflowData, error: workflowError } = useWorkflowDetail(
     !workflowYaml ? workflowId : null,
     workflowRevision ?? null
@@ -136,39 +138,17 @@ export function WorkflowExecutionResults({
     };
   }, []);
 
-  if (!executionData || !finalYaml) {
-    return <Loading />;
-  }
-
-  if (executionError) {
-    return (
-      <Callout
-        className="mt-4"
-        title="Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        Failed to load workflow execution
-      </Callout>
-    );
-  }
-
-  if (workflowError) {
-    return (
-      <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
-        Failed to load workflow definition
-      </Callout>
-    );
-  }
-
-  if (!executionData || !workflowData || !finalYaml) {
+  if (!finalYaml && !workflowError && !executionError) {
     return <Loading />;
   }
 
   return (
     <WorkflowExecutionResultsInternal
-      workflow={workflowData}
-      executionData={executionData}
+      workflow={workflowData ?? null}
+      workflowError={workflowError ?? null}
+      executionError={executionError ?? null}
+      isLatestRevision={workflowData?.revision === latestWorkflowData?.revision}
+      executionData={executionData ?? null}
       workflowRaw={finalYaml}
       checks={checks}
       isLoading={refreshInterval > 0}
@@ -181,18 +161,24 @@ const editorHeightClassName = "h-[calc(100vh-220px)]";
 
 export function WorkflowExecutionResultsInternal({
   workflow,
+  workflowError,
   executionData,
+  executionError,
   workflowRaw,
+  isLatestRevision,
   checks,
   isLoading,
   isRevalidating,
 }: {
-  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
-  workflow: Workflow;
+  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
+  workflow: Workflow | null;
+  workflowError: Error | null;
+  executionError: Error | null;
   isRevalidating: boolean;
   workflowRaw: string | undefined;
   checks: number;
   isLoading: boolean;
+  isLatestRevision: boolean;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
@@ -218,7 +204,7 @@ export function WorkflowExecutionResultsInternal({
     : null;
 
   const refreshExecutionData = () => {
-    if (executionId) {
+    if (executionId && workflow) {
       revalidateForWorkflowExecution(workflow.id, executionId);
     }
   };
@@ -250,26 +236,49 @@ export function WorkflowExecutionResultsInternal({
       id: "workflow-definition",
       name: (
         <span className="flex items-center gap-2">
-          Workflow Definition{" "}
-          <Badge color="gray" size="xs">
-            Revision {workflow.revision}
-          </Badge>
+          Workflow Definition
+          {isLatestRevision ? (
+            <Badge color="green" size="xs">
+              Current
+            </Badge>
+          ) : (
+            <Badge color="gray" size="xs">
+              Rev.{" "}
+              {isWorkflowExecution(executionData)
+                ? executionData.workflow_revision
+                : "unknown"}
+            </Badge>
+          )}
         </span>
       ),
       content: (
         <div className={editorHeightClassName}>
-          <WorkflowYAMLEditorWithLogs
-            value={workflowRaw ?? ""}
-            workflowId={workflow.id}
-            executionLogs={logs}
-            executionStatus={status}
-            hoveredStep={hoveredStep}
-            setHoveredStep={setHoveredStep}
-            selectedStep={selectedStep}
-            setSelectedStep={setSelectedStep}
-            readOnly={true}
-            filename={workflow.id}
-          />
+          {workflow && !workflowError ? (
+            <WorkflowYAMLEditorWithLogs
+              value={workflowRaw ?? ""}
+              workflowId={workflow.id}
+              executionLogs={logs}
+              executionStatus={status}
+              hoveredStep={hoveredStep}
+              setHoveredStep={setHoveredStep}
+              selectedStep={selectedStep}
+              setSelectedStep={setSelectedStep}
+              readOnly={true}
+              filename={workflow.id}
+            />
+          ) : (
+            <Callout
+              title="Error"
+              icon={ExclamationCircleIcon}
+              color="rose"
+              className="mx-4"
+            >
+              Failed to load workflow definition for revision{" "}
+              {isWorkflowExecution(executionData)
+                ? executionData.workflow_revision
+                : "unknown"}
+            </Callout>
+          )}
         </div>
       ),
     },
@@ -317,18 +326,32 @@ export function WorkflowExecutionResultsInternal({
     />
   );
 
+  console.log("executionData", executionData);
+
   return (
     <div className="flex flex-col gap-4">
-      {executionData.error && (
-        <WorkflowExecutionError
-          error={executionData.error}
-          workflowId={workflow.id}
-          eventId={eventId}
-          eventType={eventType}
-        />
-      )}
       <ResizableColumns initialLeftWidth={50}>
         <div className="pr-2">
+          {executionError && (
+            <Callout
+              className="mb-4"
+              title="Error"
+              icon={ExclamationCircleIcon}
+              color="rose"
+            >
+              Failed to load workflow execution
+            </Callout>
+          )}
+          {isWorkflowFailure(executionData) && (
+            <div className="mb-4">
+              <WorkflowExecutionError
+                error={executionData.error}
+                workflowId={workflow?.id}
+                eventId={eventId}
+                eventType={eventType}
+              />
+            </div>
+          )}
           {logs ? (
             <div className="flex flex-col gap-4 items-center">
               <Card className="p-0 overflow-hidden">

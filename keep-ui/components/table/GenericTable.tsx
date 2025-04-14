@@ -16,6 +16,7 @@ import {
 } from "@tanstack/react-table";
 import React, { useEffect, useState } from "react";
 import Pagination from "./Pagination";
+import clsx from "clsx";
 
 interface GenericTableProps<T> {
   data: T[];
@@ -113,7 +114,9 @@ export function GenericTable<T>({
           <TableBody className="bg-gray-20">
             {table.getRowModel().rows.map((row) => (
               <TableRow
-                className=" hover:bg-slate-100 cursor-pointer"
+                className={clsx(
+                  onRowClick && "hover:bg-slate-100 cursor-pointer"
+                )}
                 key={row.id}
                 onClick={() => onRowClick?.(row.original)}
               >

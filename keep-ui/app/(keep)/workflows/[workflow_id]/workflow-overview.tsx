@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
 import { TableFilters } from "./table-filters";
-import { ExecutionTable } from "./workflow-execution-table";
+import { WorkflowExecutionsTable } from "./workflow-executions-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 import { WorkflowProviders } from "./workflow-providers";
 import { WorkflowSteps } from "../workflows-templates";
@@ -150,8 +150,10 @@ export default function WorkflowOverview({
           </Card>
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
           <TableFilters workflowId={data.workflow.id} />
-          <ExecutionTable
+          <WorkflowExecutionsTable
+            workflowName={data.workflow.name}
             executions={data}
+            currentRevision={data.workflow.revision ?? 0}
             setPagination={setExecutionPagination}
           />
         </div>

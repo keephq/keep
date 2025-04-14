@@ -39,9 +39,14 @@ export type WorkflowExecutionFailure = Pick<WorkflowExecutionDetail, "error">;
 export function isWorkflowExecution(
   data: any
 ): data is WorkflowExecutionDetail {
-  return typeof data === "object" && "id" in data;
+  return data !== null && typeof data === "object" && "id" in data;
 }
 
 export function isWorkflowFailure(data: any): data is WorkflowExecutionFailure {
-  return typeof data === "object" && "error" in data;
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    "error" in data &&
+    data.error !== null
+  );
 }

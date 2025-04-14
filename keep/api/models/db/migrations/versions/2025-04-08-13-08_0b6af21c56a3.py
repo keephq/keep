@@ -21,25 +21,39 @@ def upgrade() -> None:
     # Get the constraint name (this varies by database)
     connection = op.get_bind()
     inspector = sa.inspect(connection)
+    dialect_name = connection.dialect.name
+
     for fk in inspector.get_foreign_keys("workflowexecution"):
         if (
             fk["referred_table"] == "workflow"
             and "workflow_id" in fk["constrained_columns"]
+            and fk["name"] is not None
         ):
             op.drop_constraint(fk["name"], "workflowexecution", type_="foreignkey")
 
     # First drop the primary key constraint from the workflow table
-    if op.get_bind().dialect.name == "mysql":
-        # For MySQL
-        op.execute("ALTER TABLE workflow DROP PRIMARY KEY")
-    elif op.get_bind().dialect.name == "postgresql":
-        # For PostgreSQL
-        op.execute("ALTER TABLE workflow DROP CONSTRAINT workflow_pkey")
-    elif op.get_bind().dialect.name == "sqlite":
-        # For SQLite, you'll need to recreate the table without the primary key
-        # This is a bit more complex, consider using batch_alter_table
-        with op.batch_alter_table("workflow") as batch_op:
-            batch_op.drop_constraint("pk_workflow", type_="primary")
+
+    # Check for existing primary key before dropping
+    pk_constraint = inspector.get_pk_constraint("workflow")
+
+    if pk_constraint:
+        # PK constraint doesn't have a name, so we need to drop it via SQL
+        if dialect_name == "mysql":
+            # For MySQL
+            op.execute("ALTER TABLE workflow DROP PRIMARY KEY")
+        elif dialect_name == "postgresql":
+            # For PostgreSQL
+            op.execute("ALTER TABLE workflow DROP CONSTRAINT workflow_pkey")
+        elif dialect_name == "sqlite":
+            # For SQLite, you'll need to recreate the table without the primary key
+            with op.batch_alter_table("workflow") as batch_op:
+                batch_op.drop_constraint("pk_workflow", type_="primary")
+
+    # Ensure the workflowexecution table has no orphaned records
+    # Delete all workflowexecution records that reference a workflow that doesn't exist
+    op.execute(
+        "DELETE FROM workflowexecution WHERE workflow_id NOT IN (SELECT id FROM workflow)"
+    )
 
     # First update the workflow table
     with op.batch_alter_table("workflow", schema=None) as batch_op:
