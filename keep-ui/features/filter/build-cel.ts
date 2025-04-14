@@ -1,12 +1,29 @@
-import { FacetDto, FacetOptionDto, FacetState } from "./models";
+import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "./models";
 
 export function buildCel(
   facets: FacetDto[],
   facetOptions: { [key: string]: FacetOptionDto[] } | null,
-  facetsState: FacetState
+  facetsState: FacetState,
+  facetsConfigIdBased: FacetsConfig
 ): string {
+  // In case facetOptions are not loaded yet, we need to create placeholder wich will be
+  // populated based on uncheckedByDefaultOptionValues
   if (facetOptions == null) {
-    return "";
+    facetOptions = {};
+
+    facets.forEach((facet) => {
+      facetOptions[facet.id] = [];
+      const facetConfig = facetsConfigIdBased?.[facet.id];
+      if (facetConfig?.uncheckedByDefaultOptionValues) {
+        facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
+          facetOptions[facet.id].push({
+            display_name: optionValue,
+            value: optionValue,
+            matches_count: 0,
+          });
+        });
+      }
+    });
   }
 
   const cel = Object.values(facets)

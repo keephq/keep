@@ -1,13 +1,24 @@
 import { buildCel } from "./build-cel";
-import { FacetDto, FacetOptionDto, FacetState } from "./models";
+import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "./models";
 
 describe("buildCel", () => {
+  const facetsConfigIdBased: FacetsConfig = {
+    facet3: {
+      uncheckedByDefaultOptionValues: ["uncheckedOption5", "uncheckedOption6"],
+    },
+  };
+
   it("should return an empty string if facetOptions is null", () => {
     const facets: FacetDto[] = [];
     const facetOptions = null;
     const facetsState: FacetState = {};
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("");
   });
@@ -23,7 +34,12 @@ describe("buildCel", () => {
     };
     const facetsState: FacetState = {};
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("");
   });
@@ -48,7 +64,12 @@ describe("buildCel", () => {
       facet2: new Set(["option3"]),
     };
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("(path1 in ['value1']) && (path2 in ['value4'])");
   });
@@ -74,7 +95,12 @@ describe("buildCel", () => {
       facet2: new Set(["option3"]),
     };
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("(path2 in ['value4'])");
   });
@@ -101,7 +127,12 @@ describe("buildCel", () => {
       facet1: new Set(["option2"]),
     };
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("(path1 in ['value\\'with\\'quotes'])");
   });
@@ -120,7 +151,12 @@ describe("buildCel", () => {
       facet1: new Set(["some option"]),
     };
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("(path1 in [null])");
   });
@@ -136,7 +172,12 @@ describe("buildCel", () => {
       facet1: new Set(),
     };
 
-    const result = buildCel(facets, facetOptions, facetsState);
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
 
     expect(result).toBe("");
   });
