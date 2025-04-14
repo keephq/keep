@@ -454,7 +454,7 @@ export function TopologyMap({
 
   const { useLastAlerts } = useAlerts();
 
-  const { data: allIncidents } = useIncidents();
+  const { data: allIncidents } = useIncidents(false, false);
   const { data: allAlerts } = useLastAlerts(undefined);
 
   useEffect(
