@@ -1,12 +1,13 @@
 import type { editor } from "monaco-editor";
 
-export type YamlValidationErrorSeverity = "error" | "warning" | "info";
+export type YamlValidationErrorSeverity = "error" | "warning" | "info" | "hint";
 
 export type YamlValidationError = {
   message: string;
   severity: YamlValidationErrorSeverity;
   lineNumber: number;
   column: number;
+  owner: string;
 };
 
 export interface BaseWorkflowYAMLEditorProps {
@@ -19,7 +20,9 @@ export interface BaseWorkflowYAMLEditorProps {
     monacoInstance: typeof import("monaco-editor")
   ) => void;
   onChange?: (value: string | undefined) => void;
-  onValidationErrors?: (errors: YamlValidationError[]) => void;
+  onValidationErrors?: React.Dispatch<
+    React.SetStateAction<YamlValidationError[]>
+  >;
   onSave?: (value: string) => void;
 }
 

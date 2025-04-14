@@ -20,6 +20,7 @@ type WorkflowYAMLEditorWithLogsProps = WorkflowYAMLEditorProps & {
   setSelectedStep: (step: string | null) => void;
 };
 
+// TODO: refactor this to use yaml AST instead of string manipulation
 export function WorkflowYAMLEditorWithLogs({
   executionLogs,
   executionStatus,

@@ -28,7 +28,7 @@ export function IncidentLayoutClient({
   return (
     <div className="flex flex-col h-fit overflow-hidden">
       <IncidentHeader incident={incident} />
-      <IncidentTabsNavigation incident={incident} />
+      <IncidentTabsNavigation />
       {AIEnabled ? (
         <ResizableColumns
           leftChild={

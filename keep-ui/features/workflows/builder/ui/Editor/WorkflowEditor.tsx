@@ -155,7 +155,7 @@ export function WorkflowEditorV2() {
                         onChange={(e: any) => handleChange(key, e.target.value)}
                         value={properties[key] || ("" as string)}
                         error={!!error}
-                        errorMessage={error}
+                        errorMessage={error?.[0]}
                       />
                     );
                 }

@@ -16,7 +16,7 @@ export const CorrelationSubmission = ({
     formState: { isValid },
   } = useFormContext<CorrelationFormType>();
 
-  const exceeds14Days = Math.floor(timeframeInSeconds / 86400) > 13;
+  const exceeds90Days = Math.floor(timeframeInSeconds / 86400) >= 90;
 
   const searchParams = useSearchParams();
   const isRuleBeingEdited = searchParams ? searchParams.get("id") : null;
@@ -27,7 +27,7 @@ export const CorrelationSubmission = ({
         <Button type="button" variant="light" color="orange" onClick={toggle}>
           Cancel
         </Button>
-        <Button color="orange" disabled={!isValid || exceeds14Days}>
+        <Button color="orange" disabled={!isValid || exceeds90Days}>
           {isRuleBeingEdited ? "Save correlation" : "Create correlation"}
         </Button>
       </div>

@@ -12,19 +12,20 @@ export enum MarkerSeverity {
   Error = 8,
 }
 
-function getSeverityString(
+export function getSeverityString(
   severity: MarkerSeverity
 ): YamlValidationErrorSeverity {
-  if (severity === MarkerSeverity.Error) {
-    return "error";
+  switch (severity) {
+    case MarkerSeverity.Error:
+      return "error";
+    case MarkerSeverity.Warning:
+      return "warning";
+    case MarkerSeverity.Hint:
+      return "hint";
+    case MarkerSeverity.Info:
+    default:
+      return "info";
   }
-  if (severity === MarkerSeverity.Warning) {
-    return "warning";
-  }
-  if (severity === MarkerSeverity.Info) {
-    return "info";
-  }
-  return "info";
 }
 
 export function isDiffEditorProps(
@@ -33,4 +34,15 @@ export function isDiffEditorProps(
   return "original" in props && "modified" in props;
 }
 
-export { getSeverityString };
+export function navigateToErrorPosition(
+  editor: import("monaco-editor").editor.IStandaloneCodeEditor,
+  lineNumber: number,
+  column: number
+): void {
+  editor.setPosition({
+    lineNumber,
+    column,
+  });
+  editor.focus();
+  editor.revealLineInCenter(lineNumber);
+}
