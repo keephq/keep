@@ -4,16 +4,13 @@ import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
 import { FireIcon } from "@heroicons/react/24/outline";
-import { DynamicImageProviderIcon } from "@/components/ui";
-import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
-import { severityMapping } from "@/entities/alerts/model";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import TimeAgo from "react-timeago";
 import { useSearchParams } from "next/navigation";
+import WidgetAlertsTable from "./widget-alerts-table";
 
 interface GridItemProps {
   item: WidgetData;
@@ -43,6 +40,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     () => [timeRangeCel, presetCel].filter(Boolean).join(" && "),
     [presetCel, timeRangeCel]
   );
+
   const {
     alerts,
     totalCount: presetAlertsCount,
@@ -96,82 +94,6 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     const b = bigint & 255;
 
     return `rgb(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  function renderLastAlertsGrid() {
-    if (isLoading) {
-      return (
-        <>
-          {Array.from({ length: countOfLastAlerts }).map((_, index) => (
-            <div
-              key={index}
-              className="flex flex-row min-h-7 h-7 items-center gap-2"
-            >
-              <Skeleton containerClassName="h-4 w-1" />
-              <Skeleton containerClassName="h-4 w-4" />
-              <Skeleton containerClassName="h-4 w-4" />
-              <Skeleton containerClassName="h-4 flex-1" />
-              <Skeleton containerClassName="h-4 flex-1" />
-            </div>
-          ))}
-        </>
-      );
-    }
-
-    if (presetAlertsCount === 0) {
-      let emptyStateText = "No alerts matching this preset";
-
-      if (timeRangeCel) {
-        emptyStateText = "No alerts matching this preset and time range";
-      }
-
-      return (
-        <div className="flex items-center justify-center h-10">
-          {emptyStateText}
-        </div>
-      );
-    }
-
-    return (
-      <>
-        {alerts?.map((alert) => (
-          <div
-            key={alert.fingerprint}
-            className="flex flex-row min-h-7 h-7 items-center gap-2"
-          >
-            <SeverityBorderIcon
-              severity={
-                (severityMapping[Number(alert.severity)] ||
-                  alert.severity) as UISeverity
-              }
-            />
-            <Icon
-              icon={getStatusIcon(alert.status)}
-              size="sm"
-              color={getStatusColor(alert.status)}
-              className="!p-0"
-            />
-            <div>
-              <DynamicImageProviderIcon
-                className="inline-block"
-                alt={(alert as any).providerType}
-                height={16}
-                width={16}
-                title={(alert as any).providerType}
-                providerType={(alert as any).providerType}
-                src={`/icons/${(alert as any).providerType}-icon.png`}
-              />
-            </div>
-            <div className="flex-1 truncate text-xs" title={alert.name}>
-              {alert.name} (<TimeAgo date={alert.lastReceived} />)
-            </div>
-            <div className="flex-1 truncate text-xs" title={alert.description}>
-              {alert.description}
-            </div>
-          </div>
-        ))}
-      </>
-    );
   }
 
   function renderCEL() {
@@ -279,14 +201,12 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
         </div>
       </div>
       {countOfLastAlerts > 0 && (
-        <div
-          style={{
-            background: isLoading ? undefined : hexToRgb(getColor(), 0.1),
-          }}
-          className="bg-opacity-25 flex flex-col overflow-y-auto overflow-x-hidden auto-rows-auto border rounded-md p-2"
-        >
-          {renderLastAlertsGrid()}
-        </div>
+        <WidgetAlertsTable
+          presetName={preset?.name as string}
+          alerts={isLoading ? undefined : alerts}
+          columns={(item as any)?.presetColumns}
+          background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
+        />
       )}
     </div>
   );
