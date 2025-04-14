@@ -141,14 +141,14 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
             className={`absolute top-[-17px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-[7px] leading-[7px] font-bold rounded-full ${badgeColor} hover:cursor-pointer`}
             onClick={handleIncidentClick}
           >
-            {incidentsCount} incidents
+            {incidentsCount} {incidentsCount === 1 ? "incident" : "incidents"}
           </span>
         ) : alertsCount > 0 ? (
           <span
             className={`absolute top-[-17px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-[7px] leading-[7px] font-bold rounded-full ${badgeColor} hover:cursor-pointer`}
             onClick={handleAlertClick}
           >
-            {alertsCount} alerts
+            {alertsCount} {alertsCount === 1 ? "alert" : "alerts"}
           </span>
         ) : (
           <></>
