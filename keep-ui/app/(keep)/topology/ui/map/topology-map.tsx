@@ -29,7 +29,7 @@ import {
   ArrowUpRightIcon,
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
-  EllipsisHorizontalIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
@@ -63,15 +63,14 @@ import { EdgeBase, Connection } from "@xyflow/system";
 import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import {
-  DropdownMenu,
   EmptyStateCard,
   ErrorComponent,
   showErrorToast,
   showSuccessToast,
 } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
-import { PlusIcon } from "@heroicons/react/20/solid";
 import { TbTopologyRing } from "react-icons/tb";
+import { ImportTopologyModal } from "./ImportTopologyModal";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -89,12 +88,6 @@ type TopologyMapProps = {
   standalone?: boolean;
 };
 
-interface MenuItem {
-  icon: ElementType;
-  label: string;
-  onClick: () => void;
-}
-
 export function TopologyMap({
   topologyServices: initialTopologyServices,
   topologyApplications: initialTopologyApplications,
@@ -106,6 +99,7 @@ export function TopologyMap({
   standalone = false,
 }: TopologyMapProps) {
   const [initiallyFitted, setInitiallyFitted] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const {
     topologyData,
@@ -164,67 +158,28 @@ export function TopologyMap({
     );
   }, []);
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (!event.target.files) {
-      return;
-    }
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.set("file", file);
-
-    try {
-      const response = await api.request("/topology/import", {
-        method: "POST",
-        body: formData,
-      });
-      showSuccessToast("Topology imported Successfully!");
-      mutateApplications();
-      mutateTopologyData();
-    } catch (error) {
-      showErrorToast(error, "Error uploading file");
-    }
-  };
-
   const handleImportTopology = () => {
-    const confirm = window.confirm(
-      "Current topology will be completely replaced. Do you want to continue?"
-    );
-    if (confirm) {
-      document.getElementById("fileInput")?.click();
-    }
+    setIsImportModalOpen(true);
   };
 
-  const menuItems: MenuItem[] = [
-    {
-      label: "Import",
-      icon: ArrowUpTrayIcon,
-      onClick: handleImportTopology,
-    },
-    {
-      label: "Export",
-      icon: ArrowDownTrayIcon,
-      onClick: async () => {
-        try {
-          const response = await api.get("/topology/export", {
-            headers: {
-              Accept: "application/x-yaml",
-            },
-          });
-          downloadFileFromString({
-            data: response,
-            filename: "topology-export.yaml",
-            contentType: "application/x-yaml",
-          });
-        } catch (error) {
-          showErrorToast(error, "Error exporting topology");
-        }
-      },
-    },
-  ];
+  const api = useApi();
+
+  const handleExportTopology = async () => {
+    try {
+      const response = await api.get("/topology/export", {
+        headers: {
+          Accept: "application/x-yaml",
+        },
+      });
+      downloadFileFromString({
+        data: response,
+        filename: "topology-export.yaml",
+        contentType: "application/x-yaml",
+      });
+    } catch (error) {
+      showErrorToast(error, "Error exporting topology");
+    }
+  };
 
   const fitViewToServices = useCallback((serviceIds: string[]) => {
     const nodesToFit: TopologyNode[] = [];
@@ -258,7 +213,6 @@ export function TopologyMap({
     [topologyData]
   );
 
-  const api = useApi();
   const edgeReconnectSuccessful = useRef(true);
 
   const onConnect = useCallback(
@@ -605,25 +559,25 @@ export function TopologyMap({
             >
               Add Node
             </Button>
-            <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
-              {menuItems.map((item, index) => (
-                <DropdownMenu.Item
-                  key={item.label + index}
-                  icon={item.icon}
-                  label={item.label}
-                  onClick={item.onClick}
-                />
-              ))}
-            </DropdownMenu.Menu>
+            <Button
+              onClick={handleImportTopology}
+              color="orange"
+              variant="secondary"
+              size="md"
+              icon={ArrowUpTrayIcon}
+            >
+              Import
+            </Button>
+            <Button
+              onClick={handleExportTopology}
+              color="orange"
+              variant="secondary"
+              size="md"
+              icon={ArrowDownTrayIcon}
+            >
+              Export
+            </Button>
           </div>
-
-          <input
-            type="file"
-            id="fileInput"
-            className="hidden"
-            onChange={handleFileUpload}
-            accept=".yaml,.json,.csv"
-          />
 
           {!standalone ? (
             <div>
@@ -711,6 +665,18 @@ export function TopologyMap({
             ))}
         </Card>
       </div>
+
+      {/* Import Modal */}
+      <ImportTopologyModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          mutateApplications();
+          mutateTopologyData();
+        }}
+      />
+
+      {/* Add Node Side Panel */}
       <AddEditNodeSidePanel
         isOpen={isSidePanelOpen}
         topologyMutator={mutateTopologyData}
