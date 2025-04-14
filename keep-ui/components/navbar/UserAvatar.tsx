@@ -13,6 +13,13 @@ export const getInitials = (name: string) =>
     .join("")
     .toUpperCase();
 
+const getBackgroundColor = (name: string) => {
+  const hash = name.split("").reduce((acc, char) => {
+    return acc + char.charCodeAt(0);
+  }, 0);
+  return `#${hash.toString(16).padStart(6, "0")}`;
+};
+
 export default function UserAvatar({ image, name, size = "sm", email }: Props) {
   const sizeClass = (function (size: "sm" | "xs") {
     if (size === "sm") return "w-7 h-7";
@@ -34,9 +41,10 @@ export default function UserAvatar({ image, name, size = "sm", email }: Props) {
   ) : (
     <span
       className={clsx(
-        "relative inline-flex items-center justify-center overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600",
+        "relative inline-flex items-center justify-center overflow-hidden rounded-full dark:bg-gray-600",
         sizeClass
       )}
+      style={{ backgroundColor: getBackgroundColor(name) }}
       title={email ?? name}
     >
       <span

@@ -56,17 +56,6 @@ export function WorkflowVersions({
     formatString = "MMM d, HH:mm:ss";
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <KeepLoader
-          includeMinHeight={false}
-          loadingText="Loading workflow revisions"
-        />
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="p-4">
@@ -75,10 +64,22 @@ export function WorkflowVersions({
     );
   }
 
-  if (!data || data.versions.length === 0) {
+  if (data?.versions.length === 0) {
     return (
       <div className="p-4">
         <Text>No revisions found for this workflow</Text>
+      </div>
+    );
+  }
+
+  // showing loader if loading is not yet started to avoid flash of content
+  if (isLoading || !data) {
+    return (
+      <div className="flex justify-center items-center h-48">
+        <KeepLoader
+          includeMinHeight={false}
+          loadingText="Loading workflow revisions"
+        />
       </div>
     );
   }
