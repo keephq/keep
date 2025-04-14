@@ -5,78 +5,12 @@ import {
   FacetOptionDto,
   FacetOptionsQueries,
   FacetsConfig,
+  FacetState,
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
-
-/**
- * It's facets state. Key is the facet id, and value is Set<string> of unselected options.
- * If facet option value is selected, the set will contain it's display value, otherwise it will not.
- */
-type FacetState = {
-  [facetId: string]: Set<string>;
-};
-
-function buildCel(
-  facets: FacetDto[],
-  facetOptions: { [key: string]: FacetOptionDto[] },
-  facetsState: FacetState,
-  facetsConfigIdBased: FacetsConfig
-): string {
-  // In case facetOptions are not loaded yet, we need to create placeholder wich will be
-  // populated based on uncheckedByDefaultOptionValues
-  if (facetOptions == null) {
-    facetOptions = {};
-
-    facets.forEach((facet) => {
-      facetOptions[facet.id] = [];
-      const facetConfig = facetsConfigIdBased?.[facet.id];
-      if (facetConfig?.uncheckedByDefaultOptionValues) {
-        facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
-          facetOptions[facet.id].push({
-            display_name: optionValue,
-            value: optionValue,
-            matches_count: 0,
-          });
-        });
-      }
-    });
-  }
-
-  const cel = Object.values(facets)
-    .filter((facet) => facet.id in facetsState)
-    .filter((facet) => facetOptions[facet.id])
-    .map((facet) => {
-      const notSelectedOptions = Object.values(facetOptions[facet.id])
-        .filter((facetOption) =>
-          facetsState[facet.id]?.has(facetOption.display_name)
-        )
-        .map((option) => {
-          if (typeof option.value === "string") {
-            /* Escape single-quote because single-quote is used for string literal mark*/
-            const optionValue = option.value.replace(/'/g, "\\'");
-            return `'${optionValue}'`;
-          } else if (option.value == null) {
-            return "null";
-          }
-
-          return option.value;
-        });
-
-      if (!notSelectedOptions.length) {
-        return;
-      }
-
-      return `!(${facet.property_path} in [${notSelectedOptions.join(", ")}])`;
-    })
-    .filter((query) => query)
-    .map((facetCel) => `${facetCel}`)
-    .map((query) => query)
-    .join(" && ");
-
-  return cel;
-}
+import { buildCel } from "./build-cel";
 
 export interface FacetsPanelProps {
   panelId: string;
