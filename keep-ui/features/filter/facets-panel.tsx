@@ -31,9 +31,20 @@ function buildCel(
     .filter((facet) => facet.id in facetsState)
     .filter((facet) => facetOptions[facet.id])
     .map((facet) => {
-      const notSelectedOptions = Object.values(facetOptions[facet.id])
-        .filter((facetOption) =>
-          facetsState[facet.id]?.has(facetOption.display_name)
+      const allFacetOptions = Object.values(facetOptions[facet.id]);
+      const atLeastOneUnselected = allFacetOptions.some((facetOption) =>
+        facetsState[facet.id]?.has(facetOption.display_name)
+      );
+
+      if (!atLeastOneUnselected) {
+        return null;
+      }
+
+      const selectedOptions = Object.values(facetOptions[facet.id])
+        .filter(
+          (facetOption) =>
+            !facetsState[facet.id]?.has(facetOption.display_name) &&
+            facetOption.matches_count > 0
         )
         .map((option) => {
           if (typeof option.value === "string") {
@@ -47,11 +58,11 @@ function buildCel(
           return option.value;
         });
 
-      if (!notSelectedOptions.length) {
+      if (!selectedOptions.length) {
         return;
       }
 
-      return `!(${facet.property_path} in [${notSelectedOptions.join(", ")}])`;
+      return `(${facet.property_path} in [${selectedOptions.join(", ")}])`;
     })
     .filter((query) => query)
     .map((facetCel) => `${facetCel}`)
