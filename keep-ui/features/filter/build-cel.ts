@@ -9,14 +9,15 @@ export function buildCel(
   // In case facetOptions are not loaded yet, we need to create placeholder wich will be
   // populated based on uncheckedByDefaultOptionValues
   if (facetOptions == null) {
-    facetOptions = {};
+    const _facetOptions: { [key: string]: FacetOptionDto[] } = {};
+    facetOptions = _facetOptions;
 
     facets.forEach((facet) => {
-      facetOptions[facet.id] = [];
+      _facetOptions[facet.id] = [];
       const facetConfig = facetsConfigIdBased?.[facet.id];
       if (facetConfig?.uncheckedByDefaultOptionValues) {
         facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
-          facetOptions[facet.id].push({
+          _facetOptions[facet.id].push({
             display_name: optionValue,
             value: optionValue,
             matches_count: 0,
