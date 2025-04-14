@@ -31,7 +31,7 @@ export function SplitIncidentAlertsModal({
     isLoading,
     mutate,
     error,
-  } = useIncidents(false, null, 100);
+  } = useIncidents({ candidate: false, predicted: null, limit: 100 });
   usePollIncidents(mutate);
 
   const [destinationIncidentId, setDestinationIncidentId] = useState<string>();

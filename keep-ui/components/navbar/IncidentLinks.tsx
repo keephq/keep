@@ -19,12 +19,14 @@ type IncidentsLinksProps = { session: Session | null };
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
   const { data: incidents, mutate } = useIncidents(
-    false,
-    null,
-    DEFAULT_INCIDENTS_PAGE_SIZE,
-    0,
-    DEFAULT_INCIDENTS_SORTING,
-    DEFAULT_INCIDENTS_CEL,
+    {
+      candidate: false,
+      predicted: null,
+      limit: 0,
+      offset: 0,
+      sorting: DEFAULT_INCIDENTS_SORTING,
+      cel: DEFAULT_INCIDENTS_CEL,
+    },
     {}
   );
   usePollIncidents(mutate);
