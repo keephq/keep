@@ -18,6 +18,7 @@ import { YamlValidationError } from "../model/types";
 import { useYamlValidation } from "../lib/useYamlValidation";
 import { WorkflowYAMLEditorToolbar } from "./WorkflowYAMLEditorToolbar";
 import { navigateToErrorPosition } from "../lib/utils";
+import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
@@ -51,6 +52,8 @@ export const WorkflowYAMLEditor = ({
 }: WorkflowYAMLEditorProps) => {
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const { getSecrets } = useWorkflowSecrets(workflowId);
+  const { data: secrets } = getSecrets;
 
   const {
     validationErrors,
@@ -81,7 +84,8 @@ export const WorkflowYAMLEditor = ({
       if (editorRef.current && monacoRef.current) {
         validateMustacheExpressions(
           editorRef.current.getModel(),
-          monacoRef.current
+          monacoRef.current,
+          secrets ?? {}
         );
       }
     },
@@ -117,7 +121,8 @@ export const WorkflowYAMLEditor = ({
     if (isEditorMounted && editorRef.current && monacoRef.current) {
       validateMustacheExpressions(
         editorRef.current.getModel(),
-        monacoRef.current
+        monacoRef.current,
+        secrets ?? {}
       );
     }
   }, [validateMustacheExpressions, isEditorMounted]);
