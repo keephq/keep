@@ -20,7 +20,8 @@ export interface UseYamlValidationResult {
   validationErrors: YamlValidationError[] | null;
   validateMustacheExpressions: (
     model: editor.ITextModel | null,
-    monaco: typeof import("monaco-editor") | null
+    monaco: typeof import("monaco-editor") | null,
+    secrets: Record<string, string>
   ) => void;
   handleMarkersChanged: (
     editor: editor.IStandaloneCodeEditor,
@@ -92,7 +93,8 @@ export function useYamlValidation({
   const validateMustacheExpressions = useCallback(
     (
       model: editor.ITextModel | null,
-      monaco: typeof import("monaco-editor") | null
+      monaco: typeof import("monaco-editor") | null,
+      secrets: Record<string, string> = {}
     ) => {
       if (!model || !monaco) {
         return;
@@ -113,8 +115,6 @@ export function useYamlValidation({
         const mustacheRegex = /\{\{([^}]+)\}\}/g;
         // Collect markers to add to the model
         const markers: editor.IMarkerData[] = [];
-        // Use an empty secrets object for now - could be passed as a prop in the future
-        const secrets: Record<string, string> = {};
 
         let match;
         while ((match = mustacheRegex.exec(text)) !== null) {
@@ -159,7 +159,7 @@ export function useYamlValidation({
                 currentStep,
                 currentStepType,
                 workflowDefinition.workflow,
-                secrets,
+                secrets ?? {},
                 providers ?? null,
                 installedProviders ?? null
               );
