@@ -30,7 +30,7 @@ from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.models.incident import IncidentSorting
 from keep.api.models.query import SortOptionsDto
-
+print()
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
