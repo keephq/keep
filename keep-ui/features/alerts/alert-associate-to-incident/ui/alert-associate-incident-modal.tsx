@@ -29,7 +29,11 @@ export const AlertAssociateIncidentModal = ({
 }: AlertAssociateIncidentModalProps) => {
   const [createIncident, setCreateIncident] = useState(false);
 
-  const { data: incidents, isLoading, mutate } = useIncidents(false, null, 100);
+  const {
+    data: incidents,
+    isLoading,
+    mutate,
+  } = useIncidents({ candidate: false, predicted: null, limit: 100 });
   usePollIncidents(mutate);
 
   const [selectedIncident, setSelectedIncident] = useState<

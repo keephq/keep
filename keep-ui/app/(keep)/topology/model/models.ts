@@ -29,6 +29,7 @@ export interface TopologyService {
   // Added on client to optimize rendering
   applications: TopologyApplicationMinimal[];
   incidents?: number;
+  alerts?: number;
   is_manual: boolean;
 }
 
@@ -38,7 +39,10 @@ export interface TopologyServiceWithMutator extends TopologyService {
 
 // We need to convert interface to type because only types are allowed in @xyflow/react
 // https://github.com/xyflow/web/issues/486
-export type ServiceNodeType = Node<InterfaceToType<TopologyServiceWithMutator>, string>;
+export type ServiceNodeType = Node<
+  InterfaceToType<TopologyServiceWithMutator>,
+  string
+>;
 
 export type TopologyNode = ServiceNodeType | Node;
 
