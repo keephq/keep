@@ -11,7 +11,6 @@ import React, {
 import type { editor } from "monaco-editor";
 import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
 import { WorkflowYAMLEditorProps } from "../model/types";
-
 // NOTE: IT IS IMPORTANT TO IMPORT MonacoYAMLEditor FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor, KeepLoader } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
@@ -34,7 +33,9 @@ export const WorkflowYAMLEditor = ({
   ...props
 }: WorkflowYAMLEditorProps) => {
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<
+    editor.IStandaloneCodeEditor | editor.IDiffEditor | null
+  >(null);
 
   const {
     validationErrors,
@@ -57,16 +58,36 @@ export const WorkflowYAMLEditor = ({
 
   const [isEditorMounted, setIsEditorMounted] = useState(false);
 
+  const getEditorValue = useCallback(() => {
+    if (!editorRef.current) {
+      return;
+    }
+    const model = editorRef.current.getModel();
+    if (!model) {
+      return;
+    }
+    if ("original" in model) {
+      return model.modified.getValue();
+    }
+    return model.getValue();
+  }, []);
+
   const handleChange = useCallback(
     (value: string | undefined) => {
       if (onChange) {
         onChange(value);
       }
       if (editorRef.current && monacoRef.current) {
-        validateMustacheExpressions(
-          editorRef.current.getModel(),
-          monacoRef.current
-        );
+        const model = editorRef.current.getModel();
+        if (!model) {
+          return;
+        }
+        if ("original" in model) {
+          validateMustacheExpressions(model.original, monacoRef.current);
+          validateMustacheExpressions(model.modified, monacoRef.current);
+        } else {
+          validateMustacheExpressions(model, monacoRef.current);
+        }
       }
     },
     [onChange, validateMustacheExpressions]
@@ -99,39 +120,49 @@ export const WorkflowYAMLEditor = ({
   useEffect(() => {
     // After editor is mounted, validate the initial content
     if (isEditorMounted && editorRef.current && monacoRef.current) {
-      validateMustacheExpressions(
-        editorRef.current.getModel(),
-        monacoRef.current
-      );
+      const model = editorRef.current.getModel();
+      if (!model) {
+        return;
+      }
+      if ("original" in model) {
+        validateMustacheExpressions(model.original, monacoRef.current);
+        validateMustacheExpressions(model.modified, monacoRef.current);
+      } else {
+        validateMustacheExpressions(model, monacoRef.current);
+      }
     }
   }, [validateMustacheExpressions, isEditorMounted]);
 
   const downloadYaml = useCallback(() => {
-    if (!editorRef.current) {
+    const value = getEditorValue();
+    if (!value) {
       return;
     }
     downloadFileFromString({
-      data: editorRef.current.getValue(),
+      data: value,
       filename: `${filename}.yaml`,
       contentType: "text/yaml",
     });
   }, [filename]);
 
   const copyToClipboard = useCallback(async () => {
-    if (!editorRef.current) {
+    const value = getEditorValue();
+    if (!value) {
       return;
     }
-    const content = editorRef.current.getValue();
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(value);
     } catch (err) {
       console.error("Failed to copy text:", err);
     }
   }, []);
 
   const handleSave = useCallback(() => {
-    if (!editorRef.current || !onSave) return;
-    onSave(editorRef.current.getValue());
+    const value = getEditorValue();
+    if (!onSave || !value) {
+      return;
+    }
+    onSave(value);
   }, [onSave]);
 
   const editorOptions = useMemo<editor.IStandaloneEditorConstructionOptions>(
@@ -143,6 +174,7 @@ export const WorkflowYAMLEditor = ({
       scrollBeyondLastLine: false,
       automaticLayout: true,
       tabSize: 2,
+      lineNumbersMinChars: 2,
       insertSpaces: true,
       fontSize: 14,
       renderWhitespace: "all",

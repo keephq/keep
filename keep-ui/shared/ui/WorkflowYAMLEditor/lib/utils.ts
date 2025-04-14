@@ -35,7 +35,9 @@ export function isDiffEditorProps(
 }
 
 export function navigateToErrorPosition(
-  editor: import("monaco-editor").editor.IStandaloneCodeEditor,
+  editor:
+    | import("monaco-editor").editor.IStandaloneCodeEditor
+    | import("monaco-editor").editor.IDiffEditor,
   lineNumber: number,
   column: number
 ): void {

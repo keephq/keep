@@ -28,7 +28,7 @@ import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail"
 import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorStandalone";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { PiClockCounterClockwise } from "react-icons/pi";
-import { WorkflowRevisions } from "./workflow-revisions";
+import { WorkflowVersions } from "./workflow-versions";
 
 const TABS_KEYS = ["overview", "builder", "yaml", "versions", "secrets"];
 
@@ -142,7 +142,7 @@ export default function WorkflowDetailPage({
             )}
           </TabPanel>
           <TabPanel id="versions">
-            <WorkflowRevisions
+            <WorkflowVersions
               workflowId={params.workflow_id}
               currentRevision={workflow?.revision ?? null}
             />

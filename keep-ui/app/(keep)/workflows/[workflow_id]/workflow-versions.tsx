@@ -2,13 +2,15 @@ import {
   useWorkflowDetail,
   useWorkflowRevisions,
 } from "@/entities/workflows/model";
-import { Card, Switch, Text } from "@tremor/react";
+import { Badge, Card, Subtitle, Switch, Text } from "@tremor/react";
 import { format } from "date-fns";
 import { KeepLoader, WorkflowYAMLEditor } from "@/shared/ui";
 import { useMemo, useState } from "react";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
+import UserAvatar from "@/components/navbar/UserAvatar";
+import clsx from "clsx";
 
-export function WorkflowRevisions({
+export function WorkflowVersions({
   workflowId,
   currentRevision,
 }: {
@@ -38,6 +40,21 @@ export function WorkflowRevisions({
     previousRevision !== null && showDiff ? workflowId : null,
     previousRevision
   );
+
+  const uniqueYears = useMemo(() => {
+    return [
+      ...new Set(
+        (data?.versions ?? []).map((revision) => {
+          return format(new Date(revision.last_updated), "yyyy");
+        })
+      ),
+    ];
+  }, [data?.versions]);
+
+  let formatString = "MMM d, yyyy HH:mm:ss";
+  if (uniqueYears?.length === 1) {
+    formatString = "MMM d, HH:mm:ss";
+  }
 
   if (isLoading) {
     return (
@@ -91,37 +108,48 @@ export function WorkflowRevisions({
       </div>
       <div className="flex flex-col basis-1/4 min-w-0 justify-between">
         <div className="flex flex-col overflow-y-auto">
-          {data.versions.map((revision) => (
-            <button
-              key={revision.revision}
-              className={`flex flex-col border-b border-gray-200 p-2 text-left ${
-                selectedRevision === revision.revision
-                  ? "bg-orange-500 text-white"
-                  : " text-gray-800"
-              }`}
-              onClick={() => setSelectedRevision(revision.revision)}
-            >
-              <span className="text-sm font-bold">
-                Revision {revision.revision}{" "}
-                {currentRevision === revision.revision ? "(Current)" : ""}
-              </span>
-              <span className="text-xs">
-                {format(
-                  new Date(revision.last_updated),
-                  "MMM d, yyyy HH:mm:ss"
+          {data.versions.map((revision) => {
+            let userName = revision.updated_by;
+            if (!userName && revision.revision === 1) {
+              userName = workflow?.created_by ?? "";
+            }
+            return (
+              <button
+                key={revision.revision}
+                className={clsx(
+                  "flex flex-col gap-1 border-b border-gray-200 p-2 text-left text-gray-800 text-sm",
+                  selectedRevision === revision.revision
+                    ? "bg-slate-200/70"
+                    : "hover:bg-slate-50"
                 )}
-              </span>
-              <span className="text-xs">{revision.updated_by}</span>
-            </button>
-          ))}
+                onClick={() => setSelectedRevision(revision.revision)}
+              >
+                <span className="font-bold flex items-center gap-1 leading-none">
+                  Revision {revision.revision}
+                  {currentRevision === revision.revision ? (
+                    <Badge color="green" size="xs" className="text-xs">
+                      Current
+                    </Badge>
+                  ) : null}
+                </span>
+                <span>
+                  {format(new Date(revision.last_updated), formatString)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <UserAvatar size="xs" image={null} name={userName ?? ""} />{" "}
+                  <Subtitle className="truncate">{userName ?? ""}</Subtitle>
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <div className="flex items-center gap-2 min-h-0 p-2">
+        <div className="flex items-center gap-2 min-h-0 p-2 text-sm">
           <Switch
             id="show-diff"
             checked={showDiff}
             onChange={() => setShowDiff(!showDiff)}
           />
-          <label htmlFor="show-diff">Show diff </label>
+          <label htmlFor="show-diff">Show diff from previous revision</label>
         </div>
       </div>
     </Card>

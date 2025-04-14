@@ -39,7 +39,12 @@ export default function UserAvatar({ image, name, size = "sm", email }: Props) {
       )}
       title={email ?? name}
     >
-      <span className="font-medium text-white text-xs">
+      <span
+        className={clsx(
+          "font-medium text-white text-xs",
+          size === "xs" ? "text-[0.6rem]" : "text-xs"
+        )}
+      >
         {getInitials(name)}
       </span>
     </span>
