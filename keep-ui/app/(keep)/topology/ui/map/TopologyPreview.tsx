@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -8,54 +8,113 @@ import {
   useEdgesState,
   ReactFlowProvider,
   Panel,
-  FitViewOptions,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Text } from "@tremor/react";
+import dagre from "@dagrejs/dagre";
 
-// Refined node styling - optimized for better performance
+// Node styling with better visual hierarchy
 const serviceNodeStyle = {
-  padding: 5,
+  padding: 10,
   borderRadius: 5,
   border: "1px solid #ddd",
   background: "#f5f5f5",
   color: "#333",
   textAlign: "center",
-  width: 120,
-  fontSize: "10px",
+  width: 150,
+  fontSize: "11px",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
 };
 
-// Improved layout function with node limiting and pagination
-const layoutNodes = (nodes, edges, maxNodes = 200) => {
-  // If no nodes, return empty array
-  if (!nodes || nodes.length === 0) return [];
+// Advanced layout function with better space utilization
+const getLayoutedElements = (
+  nodes,
+  edges,
+  direction = "LR",
+  nodeWidth = 150,
+  nodeHeight = 50
+) => {
+  if (!nodes || nodes.length === 0) return { nodes: [], edges: [] };
 
-  // Limit the number of nodes for display
-  const limitedNodes =
-    nodes.length > maxNodes ? nodes.slice(0, maxNodes) : nodes;
+  // Create a copy of the nodes and edges to avoid modifying the originals
+  const nodesCopy = [...nodes];
+  const edgesCopy = [...edges];
 
-  // Set initial positions in a grid layout for better starting point
-  const GRID_SIZE = Math.ceil(Math.sqrt(limitedNodes.length));
-  const SPACING = 150;
+  // Phase 1: Use dagre for initial layout (helps establish hierarchy)
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-  const positionedNodes = limitedNodes.map((node, i) => {
-    const col = i % GRID_SIZE;
-    const row = Math.floor(i / GRID_SIZE);
-
-    return {
-      ...node,
-      position: {
-        x: col * SPACING,
-        y: row * SPACING,
-      },
-    };
+  // Use larger spacing parameters to spread things out horizontally
+  dagreGraph.setGraph({
+    rankdir: direction,
+    nodesep: 120, // Increased horizontal spacing between nodes on same rank
+    ranksep: 100, // Increased vertical spacing between ranks
+    marginx: 50,
+    marginy: 50,
+    acyclicer: "greedy", // Help with any cycles in the graph
+    ranker: "network-simplex", // Better for complex graphs
   });
 
-  return positionedNodes;
+  // Add nodes to dagre
+  nodesCopy.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  // Add edges to dagre
+  edgesCopy.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  // Calculate layout
+  dagre.layout(dagreGraph);
+
+  // Get layout bounds to help with node distribution
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  nodesCopy.forEach((node) => {
+    const dagreNode = dagreGraph.node(node.id);
+    if (dagreNode) {
+      minX = Math.min(minX, dagreNode.x);
+      maxX = Math.max(maxX, dagreNode.x);
+      minY = Math.min(minY, dagreNode.y);
+      maxY = Math.max(maxY, dagreNode.y);
+    }
+  });
+
+  // Phase 2: Apply layout with some additional spacing adjustments
+  // to better use the horizontal space
+  const layoutedNodes = nodesCopy.map((node) => {
+    const dagreNode = dagreGraph.node(node.id);
+
+    if (dagreNode) {
+      // Calculate how far along the x-axis this node is (0-1)
+      const xProgress = (dagreNode.x - minX) / (maxX - minX || 1);
+
+      // Apply a slight horizontal spreading factor to use more width
+      // This pushes nodes that are at the extremes further out
+      const spreadFactor = 1.3;
+      const adjustedX = minX + (maxX - minX) * xProgress * spreadFactor;
+
+      return {
+        ...node,
+        position: {
+          x: adjustedX - nodeWidth / 2,
+          y: dagreNode.y - nodeHeight / 2,
+        },
+      };
+    }
+    return node;
+  });
+
+  return { nodes: layoutedNodes, edges: edgesCopy };
 };
 
 // Filter edges to only include those between displayed nodes
 const filterEdges = (edges, visibleNodeIds) => {
+  if (!edges) return [];
+
   const visibleNodeIdSet = new Set(visibleNodeIds);
   return edges.filter(
     (edge) =>
@@ -63,12 +122,90 @@ const filterEdges = (edges, visibleNodeIds) => {
   );
 };
 
+// Function to find disconnected components in the graph
+const findDisconnectedComponents = (nodes, edges) => {
+  // Create an adjacency map
+  const adjacencyMap = {};
+  nodes.forEach((node) => {
+    adjacencyMap[node.id] = [];
+  });
+
+  edges.forEach((edge) => {
+    if (adjacencyMap[edge.source]) {
+      adjacencyMap[edge.source].push(edge.target);
+    }
+    if (adjacencyMap[edge.target]) {
+      adjacencyMap[edge.target].push(edge.source);
+    }
+  });
+
+  // Track visited nodes
+  const visited = new Set();
+  const components = [];
+
+  // DFS to find connected components
+  const dfs = (nodeId, component) => {
+    visited.add(nodeId);
+    component.nodeIds.add(nodeId);
+
+    (adjacencyMap[nodeId] || []).forEach((neighbor) => {
+      if (!visited.has(neighbor)) {
+        dfs(neighbor, component);
+      }
+    });
+  };
+
+  // Find all components
+  nodes.forEach((node) => {
+    if (!visited.has(node.id)) {
+      const component = { nodeIds: new Set(), nodes: [], edges: [] };
+      dfs(node.id, component);
+
+      // Fill in the nodes and edges for this component
+      component.nodes = nodes.filter((n) => component.nodeIds.has(n.id));
+      component.edges = edges.filter(
+        (e) =>
+          component.nodeIds.has(e.source) && component.nodeIds.has(e.target)
+      );
+
+      components.push(component);
+    }
+  });
+
+  return components;
+};
+
+// Limit nodes to the most important ones based on connections
+const limitNodesByConnections = (nodes, edges, maxNodes) => {
+  if (nodes.length <= maxNodes) return nodes;
+
+  // Count connections for each node
+  const connectionCounts = {};
+  edges.forEach((edge) => {
+    connectionCounts[edge.source] = (connectionCounts[edge.source] || 0) + 1;
+    connectionCounts[edge.target] = (connectionCounts[edge.target] || 0) + 1;
+  });
+
+  // Sort nodes by connection count (most connected first)
+  const sortedNodes = [...nodes].sort((a, b) => {
+    const aCount = connectionCounts[a.id] || 0;
+    const bCount = connectionCounts[b.id] || 0;
+    return bCount - aCount;
+  });
+
+  // Take only the top maxNodes
+  return sortedNodes.slice(0, maxNodes);
+};
+
 const TopologyPreviewInner = ({
   services,
   dependencies,
-  className = "h-64",
-  height = "100%",
-  maxNodes = 200, // Default limit of 200 nodes for preview
+  className = "",
+  height = "500px", // Increased default height for better visibility
+  maxNodes = 200,
+  direction = "LR", // Default to left-to-right for better visualization of dependencies
+  rankSeparation = 100, // Controls vertical spacing
+  nodeSeparation = 120, // Controls horizontal spacing
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -78,63 +215,137 @@ const TopologyPreviewInner = ({
   const [nodesRendered, setNodesRendered] = useState(0);
   const [edgesRendered, setEdgesRendered] = useState(0);
 
-  const defaultFitViewOptions = {
-    padding: 0.2,
-    minZoom: 0.1,
-    maxZoom: 1.5,
-  };
+  // Function to fit view after nodes are loaded
+  const onInit = useCallback((reactFlowInstance) => {
+    reactFlowInstance.fitView({ padding: 0.2 });
+  }, []);
 
-  // Memory-optimized conversion of services and dependencies to ReactFlow nodes and edges
+  // Process nodes and edges when data changes
   useEffect(() => {
     if (!services || !dependencies) return;
+
+    console.log("Processing topology data:", {
+      servicesCount: services.length,
+      dependenciesCount: dependencies.length,
+    });
 
     setTotalNodes(services.length);
     setTotalEdges(dependencies.length);
     setIsLimited(services.length > maxNodes);
 
-    // Create a more efficient node representation - avoid complex nested objects
-    const flowNodes = services.map((service, index) => ({
-      id: service.id?.toString() || `svc-${index}`,
-      data: {
-        label: `${service.display_name || service.service}${
-          service.environment ? `\n${service.environment}` : ""
-        }`,
-      },
-      position: { x: 0, y: index * 50 }, // Initial positions - will be arranged by layout
-      style: serviceNodeStyle,
-    }));
+    // Create nodes with unique IDs and compact labels
+    const flowNodes = services.map((service, index) => {
+      const displayName = service.display_name || service.service;
+      // Truncate long names for better layout
+      const truncatedName =
+        displayName.length > 25
+          ? displayName.substring(0, 22) + "..."
+          : displayName;
 
-    // Get the visible node IDs after limiting
-    const visibleNodes = layoutNodes(flowNodes, [], maxNodes);
-    const visibleNodeIds = visibleNodes.map((node) => node.id);
+      return {
+        id: (service.id || `svc-${index}`).toString(),
+        data: {
+          label: `${truncatedName}${
+            service.environment ? `\n${service.environment}` : ""
+          }`,
+          fullName: displayName, // Store full name for tooltips if needed
+        },
+        position: { x: 0, y: 0 }, // Initial position - will be arranged by layout
+        style: serviceNodeStyle,
+      };
+    });
 
-    // Filter dependencies to only include connections between visible nodes
-    const visibleEdges = filterEdges(
-      dependencies.map((dep, index) => ({
+    // Create edges with valid source/target IDs
+    const flowEdges = dependencies.map((dep, index) => {
+      const sourceId = (dep.service_id || dep.source || "").toString();
+      const targetId = (
+        dep.depends_on_service_id ||
+        dep.target ||
+        ""
+      ).toString();
+
+      return {
         id: `e-${index}`,
-        source: (dep.service_id || dep.source)?.toString(),
-        target: (dep.depends_on_service_id || dep.target)?.toString(),
-        type: "default",
+        source: sourceId,
+        target: targetId,
+        type: "smoothstep", // Improved edge type for better visualization
         animated: false,
-        style: { stroke: "#888" },
+        style: { stroke: "#888", strokeWidth: 1.5 },
         label: dep.protocol || "",
-        labelStyle: { fill: "#888", fontSize: 8 },
+        labelStyle: { fill: "#666", fontSize: 9 },
         labelBgStyle: { fill: "rgba(255, 255, 255, 0.7)" },
-      })),
-      visibleNodeIds
+      };
+    });
+
+    // Apply node limiting if needed - prioritize connected nodes
+    let limitedNodes = flowNodes;
+    if (services.length > maxNodes) {
+      limitedNodes = limitNodesByConnections(flowNodes, flowEdges, maxNodes);
+    }
+
+    const visibleNodeIds = limitedNodes.map((node) => node.id);
+    const validEdges = filterEdges(flowEdges, visibleNodeIds);
+
+    // Sometimes with large graphs, separation into disconnected subgraphs works better
+    // Identify disconnected components and lay them out separately
+    const components = findDisconnectedComponents(limitedNodes, validEdges);
+    let finalNodes = [];
+    let horizontalOffset = 0;
+
+    if (components.length > 1 && components.length <= 5) {
+      // We have multiple components, lay them out side by side
+      components.forEach((component) => {
+        const { nodes: layoutedComponentNodes } = getLayoutedElements(
+          component.nodes,
+          component.edges,
+          direction,
+          130, // slightly smaller nodes for multiple components
+          50
+        );
+
+        // Offset this component horizontally
+        const offsetNodes = layoutedComponentNodes.map((node) => ({
+          ...node,
+          position: {
+            x: node.position.x + horizontalOffset,
+            y: node.position.y,
+          },
+        }));
+
+        finalNodes = [...finalNodes, ...offsetNodes];
+
+        // Calculate width of this component for next offset
+        const componentWidth =
+          Math.max(...layoutedComponentNodes.map((n) => n.position.x)) + 200;
+        horizontalOffset += componentWidth;
+      });
+    } else {
+      // Single layout for connected graph or too many components
+      const { nodes: layoutedNodes } = getLayoutedElements(
+        limitedNodes,
+        validEdges,
+        direction,
+        140, // nodeWidth
+        55 // nodeHeight
+      );
+
+      finalNodes = layoutedNodes;
+    }
+
+    console.log(
+      `Positioned ${finalNodes.length} nodes with ${validEdges.length} edges`
     );
 
-    // Update state with memory-efficient data
-    setNodes(visibleNodes);
-    setEdges(visibleEdges);
-    setNodesRendered(visibleNodes.length);
-    setEdgesRendered(visibleEdges.length);
-  }, [services, dependencies, maxNodes, setNodes, setEdges]);
+    setNodes(finalNodes);
+    setEdges(validEdges);
+    setNodesRendered(finalNodes.length);
+    setEdgesRendered(validEdges.length);
+  }, [services, dependencies, maxNodes, direction, setNodes, setEdges]);
 
   if (!services || !dependencies || services.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center ${className}`}
+        className={`flex items-center justify-center border border-gray-200 rounded ${className}`}
         style={{ height }}
       >
         <Text>No preview data available</Text>
@@ -143,20 +354,23 @@ const TopologyPreviewInner = ({
   }
 
   return (
-    <div className={className} style={{ height }}>
+    <div
+      className={`border border-gray-200 rounded ${className}`}
+      style={{ height, width: "100%" }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onInit={onInit}
         fitView
-        fitViewOptions={defaultFitViewOptions}
+        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
         defaultViewport={{ x: 0, y: 0, zoom: 0.5 }}
         attributionPosition="bottom-right"
-        style={{ background: "#ffffff" }}
-        nodesDraggable={false} // Disable node dragging for better performance
+        nodesDraggable={false}
       >
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Controls />
@@ -173,7 +387,7 @@ const TopologyPreviewInner = ({
           </div>
           {isLimited && (
             <div className="text-amber-600 font-medium mt-1">
-              Preview limited to {maxNodes} nodes for performance
+              Preview limited to {maxNodes} most connected nodes
             </div>
           )}
         </Panel>

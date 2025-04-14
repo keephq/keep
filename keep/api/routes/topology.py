@@ -1,26 +1,28 @@
+import json
 import logging
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from keep.api.core.db import get_session, get_session_sync
 from keep.api.models.db.topology import (
+    DeleteServicesRequest,
     TopologyApplicationDtoIn,
     TopologyApplicationDtoOut,
+    TopologyService,
+    TopologyServiceCreateRequestDTO,
+    TopologyServiceDependencyCreateRequestDto,
+    TopologyServiceDependencyDto,
+    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDtoIn,
     TopologyServiceDtoOut,
-    TopologyServiceCreateRequestDTO,
     TopologyServiceUpdateRequestDTO,
-    TopologyServiceDependencyCreateRequestDto,
-    TopologyServiceDependencyUpdateRequestDto,
-    TopologyServiceDependencyDto,
-    TopologyService,
-    DeleteServicesRequest,
 )
 from keep.api.tasks.process_topology_task import process_topology
+from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
@@ -28,13 +30,12 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import (
     ApplicationNotFoundException,
     ApplicationParseException,
+    DependencyNotFoundException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
-    TopologiesService,
-    DependencyNotFoundException,
     ServiceNotManualException,
+    TopologiesService,
 )
-from keep.functions import cyaml
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -475,14 +476,18 @@ async def export_topology_yaml(
         services_dict = data.model_dump()
         del services_dict["updated_at"]
         del services_dict["tenant_id"]
-        services_dict["is_manual"] = True if services_dict["is_manual"] is True else False
+        services_dict["is_manual"] = (
+            True if services_dict["is_manual"] is True else False
+        )
         full_data["services"].append(services_dict)
         for application in data.applications:
             application_dict = application.model_dump()
             del application_dict["tenant_id"]
             application_dict["id"] = str(application_dict["id"])
             if application_dict["id"] in full_data["applications"]:
-                full_data["applications"][application_dict["id"]]["services"].append(data.id)
+                full_data["applications"][application_dict["id"]]["services"].append(
+                    data.id
+                )
             else:
                 application_dict["services"] = [data.id]
                 full_data["applications"][application_dict["id"]] = application_dict
@@ -498,10 +503,13 @@ async def export_topology_yaml(
 
 @router.post(
     "/import",
-    description="Import the topology map from YAML",
+    description="Import topology data from YAML or CSV file",
 )
-async def import_topology_yaml(
+async def import_topology(
     file: UploadFile,
+    format: str = Form("yaml"),  # Default format is yaml
+    name: Optional[str] = Form(None),  # Optional topology name
+    mapping: Optional[str] = Form(None),  # Field mapping for CSV
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
     ),
@@ -509,18 +517,53 @@ async def import_topology_yaml(
 ):
     try:
         tenant_id = authenticated_entity.tenant_id
-        topology_yaml = await file.read()
-        topology_data: dict = cyaml.safe_load(topology_yaml)
-        TopologiesService.import_to_db(topology_data, session, tenant_id)
-        return JSONResponse(
-            status_code=200, content={"message": "Topology imported successfully"}
-        )
+        file_content = await file.read()
+
+        if format.lower() == "yaml":
+            # Process YAML file
+            topology_data: dict = cyaml.safe_load(file_content)
+            TopologiesService.import_to_db(topology_data, session, tenant_id)
+            return JSONResponse(
+                status_code=200, content={"message": "Topology imported successfully"}
+            )
+
+        elif format.lower() == "csv":
+            # Process CSV file
+            if not mapping:
+                raise HTTPException(
+                    status_code=400, detail="Field mapping is required for CSV import"
+                )
+
+            field_mapping = json.loads(mapping)
+            TopologiesService.import_from_csv(
+                csv_content=file_content,
+                field_mapping=field_mapping,
+                tenant_id=tenant_id,
+                session=session,
+                topology_name=name,
+            )
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Topology imported successfully from CSV"},
+            )
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
 
     except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
 
+    except json.JSONDecodeError:
+        logger.exception("Invalid JSON mapping format")
+        raise HTTPException(status_code=400, detail="Invalid JSON mapping format")
+
+    except ValueError as e:
+        logger.exception(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
     except Exception as e:
+        logger.exception(f"Failed to import topology: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to import topology: {str(e)}"
         )

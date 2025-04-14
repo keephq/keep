@@ -71,6 +71,8 @@ import {
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { TbTopologyRing } from "react-icons/tb";
 import { ImportTopologyModal } from "./ImportTopologyModal";
+import { NodeLimitWarning } from "./NodeLimitWarning";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -145,7 +147,56 @@ export function TopologyMap({
   const [nodes, setNodes] = useState<TopologyNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
+  // Refs for storing data - all declared at component level
   const reactFlowInstanceRef = useRef<ReactFlowInstance<TopologyNode, Edge>>();
+  const edgeReconnectSuccessful = useRef(true);
+  const previousNodesIds = useRef<Set<string>>(new Set());
+  // Refs for storing the complete node data
+  const allNodesRef = useRef<TopologyNode[]>([]);
+  const allEdgesRef = useRef<Edge[]>([]);
+
+  // Warning state
+  const [limitWarning, setLimitWarning] = useState<{
+    show: boolean;
+    totalNodes?: number;
+    displayedNodes?: number;
+  }>({ show: false });
+
+  // Statistics about the topology
+  const [topologyStats, setTopologyStats] = useState<{
+    totalNodes: number;
+    displayedNodes: number;
+    totalEdges: number;
+    displayedEdges: number;
+  }>({
+    totalNodes: 0,
+    displayedNodes: 0,
+    totalEdges: 0,
+    displayedEdges: 0,
+  });
+
+  // Optional: "Show All" handler
+  const handleShowAll = useCallback(() => {
+    if (allNodesRef.current.length > 0) {
+      // This might cause performance issues, warn the user
+      const confirmShowAll = window.confirm(
+        `Showing all ${allNodesRef.current.length} nodes may cause performance issues. Continue?`
+      );
+
+      if (confirmShowAll) {
+        // Apply layout to all nodes - this will be slow for large graphs
+        const fullLayoutedElements = getLayoutedElements(
+          allNodesRef.current,
+          allEdgesRef.current,
+          true // Bypass the limit
+        );
+
+        setNodes(fullLayoutedElements.nodes);
+        setEdges(fullLayoutedElements.edges);
+        setLimitWarning({ show: false });
+      }
+    }
+  }, []);
 
   const highlightNodes = useCallback((nodeIds: string[]) => {
     setNodes((nds) =>
@@ -212,8 +263,6 @@ export function TopologyMap({
     },
     [topologyData]
   );
-
-  const edgeReconnectSuccessful = useRef(true);
 
   const onConnect = useCallback(
     async (params: EdgeBase | Connection) => {
@@ -403,10 +452,9 @@ export function TopologyMap({
     setSelectedObjectId,
   ]);
 
-  const previousNodesIds = useRef<Set<string>>(new Set());
-
   const { data: allIncidents } = useIncidents();
 
+  // Fixed useEffect with properly organized refs
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
       if (!topologyData) {
@@ -423,30 +471,44 @@ export function TopologyMap({
       const newNodes = Array.from(nodeMap.values());
       const newEdges = Array.from(edgeMap.values());
 
+      // Store the complete set of nodes and edges in refs for potential use later
+      allNodesRef.current = newNodes;
+      allEdgesRef.current = newEdges;
+
       if (
         previousNodesIds.current.size > 0 &&
         areSetsEqual(previousNodesIds.current, new Set(nodeMap.keys()))
       ) {
-        setEdges(newEdges);
-        setNodes((prevNodes) =>
-          prevNodes.map((n) => {
-            const newNode = newNodes.find((nn) => nn.id === n.id);
-            if (newNode) {
-              // Update node, but keep the position
-              return { ...newNode, position: n.position };
-            }
-            return n;
-          })
-        );
+        // No need to update positions here since getLayoutedElements will return a new set of nodes
+        previousNodesIds.current = new Set(nodeMap.keys());
       } else {
         previousNodesIds.current = new Set(nodeMap.keys());
       }
 
       const layoutedElements = getLayoutedElements(newNodes, newEdges);
 
-      // Adjust group node sizes and positions
+      // Set state for nodes and edges - now only using the limited set
       setNodes(layoutedElements.nodes);
       setEdges(layoutedElements.edges);
+
+      // Store the total counts for potential use
+      setTopologyStats({
+        totalNodes: newNodes.length,
+        displayedNodes: layoutedElements.nodes.length,
+        totalEdges: newEdges.length,
+        displayedEdges: layoutedElements.edges.length,
+      });
+
+      // Show warning banner if node limit was applied
+      if (layoutedElements.metadata?.limitApplied) {
+        setLimitWarning({
+          show: true,
+          totalNodes: layoutedElements.metadata.totalNodes,
+          displayedNodes: layoutedElements.metadata.displayedNodes,
+        });
+      } else {
+        setLimitWarning({ show: false });
+      }
     },
     [topologyData, applicationMap, allIncidents, mutateTopologyData]
   );
@@ -524,6 +586,37 @@ export function TopologyMap({
   return (
     <>
       <div className="flex flex-col gap-4 h-full">
+        {/* Banner placed outside the flex layout for the controls */}
+        {limitWarning.show && (
+          <div className="bg-amber-50 w-full py-2 px-4 mb-2 flex justify-between items-center border-y border-amber-200">
+            <div className="flex items-center">
+              <span className="font-medium text-amber-800 mr-2">
+                Limited View
+              </span>
+              <span className="text-amber-700">
+                For performance reasons, only {limitWarning.displayedNodes} out
+                of {limitWarning.totalNodes} nodes are displayed.
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                size="xs"
+                color="amber"
+                variant="secondary"
+                onClick={handleShowAll}
+                className="whitespace-nowrap"
+              >
+                Show All (May Affect Performance)
+              </Button>
+              <button
+                className="text-amber-400 hover:text-amber-500"
+                onClick={() => setLimitWarning({ show: false })}
+              >
+                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between gap-4 items-center">
           <TopologySearchAutocomplete
             wrapperClassName="w-full flex-1"
@@ -593,6 +686,10 @@ export function TopologyMap({
           ) : null}
         </div>
         <Card className="p-0 h-full mx-auto relative overflow-hidden flex flex-col">
+          <div className="absolute bottom-4 left-4 z-30 bg-white bg-opacity-80 rounded-md px-2 py-1 text-xs text-gray-600">
+            Displaying {topologyStats.displayedNodes} of{" "}
+            {topologyStats.totalNodes} nodes
+          </div>
           <ReactFlowProvider>
             <ManageSelection
               topologyMutator={mutateTopologyData}

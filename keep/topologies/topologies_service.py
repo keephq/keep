@@ -1,10 +1,13 @@
+import csv
+import io
 import json
 import logging
-from typing import List, Optional
+import uuid
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import and_, or_, exists
+from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
@@ -15,13 +18,13 @@ from keep.api.models.db.topology import (
     TopologyApplicationDtoOut,
     TopologyService,
     TopologyServiceApplication,
-    TopologyServiceDependency,
-    TopologyServiceDtoOut,
     TopologyServiceCreateRequestDTO,
-    TopologyServiceUpdateRequestDTO,
+    TopologyServiceDependency,
     TopologyServiceDependencyCreateRequestDto,
-    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDependencyDto,
+    TopologyServiceDependencyUpdateRequestDto,
+    TopologyServiceDtoOut,
+    TopologyServiceUpdateRequestDTO,
     TopologyServiceYAML,
 )
 
@@ -171,14 +174,27 @@ class TopologiesService:
         service_to_app_ids = get_service_application_ids_dict(session, service_ids)
 
         logger.info(f"Service to app ids: {service_to_app_ids}")
-
-        service_dtos = [
-            TopologyServiceDtoOut.from_orm(
-                service, application_ids=service_to_app_ids.get(service.id, [])
-            )
-            for service in services
-            if service.dependencies or include_empty_deps
-        ]
+        service_dtos = []
+        for service in services:
+            if include_empty_deps or service.dependencies:
+                try:
+                    service_dto = [
+                        TopologyServiceDtoOut.from_orm(
+                            service,
+                            application_ids=service_to_app_ids.get(service.id, []),
+                        )
+                    ]
+                    service_dtos.extend(service_dto)
+                except Exception:
+                    logger.exception(
+                        "Failed to parse service with id",
+                        extra={
+                            "service_id": service.id,
+                        },
+                    )
+                    raise ApplicationParseException(
+                        f"Failed to parse service with id {service.id}"
+                    )
 
         return service_dtos
 
@@ -715,30 +731,29 @@ class TopologiesService:
                     TopologyService.tenant_id == tenant_id
                 )
             ).delete(synchronize_session=False)
-    
+
             # Delete all service-application links for this tenant
             session.query(TopologyServiceApplication).filter(
                 TopologyServiceApplication.service.has(
                     TopologyService.tenant_id == tenant_id
                 )
             ).delete(synchronize_session=False)
-    
+
             # Delete all applications for this tenant
             session.query(TopologyApplication).filter(
                 TopologyApplication.tenant_id == tenant_id
             ).delete(synchronize_session=False)
-    
+
             # Delete all services for this tenant
             session.query(TopologyService).filter(
                 TopologyService.tenant_id == tenant_id
             ).delete(synchronize_session=False)
-    
+
             session.commit()
         except Exception as e:
             session.rollback()
             logger.error(f"Error during cleanup before import: {e}")
             raise e
-        
 
     @staticmethod
     def import_to_db(topology_data: dict, session: Session, tenant_id: str):
@@ -786,3 +801,190 @@ class TopologiesService:
             logger.error(f"Error while importing topology: {e}")
             session.rollback()
             raise e
+
+    @staticmethod
+    def import_from_csv(
+        csv_content: bytes,
+        field_mapping: Dict,
+        tenant_id: str,
+        session: Session,
+        topology_name: Optional[str] = None,
+    ):
+        """
+        Import topology data from CSV content.
+
+        Args:
+            csv_content: Raw CSV file content
+            field_mapping: Mapping between CSV columns and topology fields
+            tenant_id: Tenant ID for which to import the topology
+            session: Database session
+            topology_name: Optional name for the topology
+        """
+        try:
+            # Process CSV to topology data structure
+            topology_data = TopologiesService._process_csv_to_topology(
+                csv_content, field_mapping, topology_name
+            )
+
+            # Import processed data to the database
+            TopologiesService.import_to_db(topology_data, session, tenant_id)
+
+        except Exception as e:
+            logger.error(f"Error during CSV import: {e}")
+            session.rollback()
+            raise e
+
+    @staticmethod
+    def _process_csv_to_topology(
+        csv_content: bytes, field_mapping: Dict, topology_name: Optional[str] = None
+    ) -> Dict:
+        """
+        Process CSV content into topology data structure.
+
+        Args:
+            csv_content: CSV file content
+            field_mapping: Mapping of CSV columns to topology fields
+            topology_name: Optional name for the topology
+
+        Returns:
+            Dictionary with services, applications, and dependencies
+        """
+        # Convert bytes to string and parse CSV
+        csv_text = csv_content.decode("utf-8")
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+
+        # Create data structures for topology
+        services_map = {}  # Maps service name to service id
+        services = []
+        applications_map = {}  # Maps application name to set of service ids
+        dependencies = []
+
+        # Extract required field names from mapping
+        service_field = field_mapping.get("service")
+        depends_on_field = field_mapping.get("dependsOn")
+        display_name_field = field_mapping.get("displayName")
+        environment_field = field_mapping.get("environment")
+        description_field = field_mapping.get("description")
+        application_field = field_mapping.get("application")
+        protocol_field = field_mapping.get("protocol")
+        team_field = field_mapping.get("team")
+        email_field = field_mapping.get("email")
+        slack_field = field_mapping.get("slack")
+        category_field = field_mapping.get("category")
+
+        # Validate required fields
+        if not service_field or not depends_on_field:
+            raise ValueError("Service and Dependencies fields must be mapped")
+
+        # Process CSV rows
+        for row_index, row in enumerate(csv_reader):
+            source_service = row.get(service_field, "").strip()
+            target_service = row.get(depends_on_field, "").strip()
+
+            if not source_service or not target_service:
+                continue  # Skip rows with missing service data
+
+            # Process source service
+            if source_service not in services_map:
+                service_id = len(services) + 1  # Generate simple sequential ID
+                services_map[source_service] = service_id
+
+                # Create service object
+                service = {
+                    "id": service_id,
+                    "service": source_service,
+                    "display_name": (
+                        row.get(display_name_field, source_service).strip()
+                        if display_name_field
+                        else source_service
+                    ),
+                    "environment": (
+                        row.get(environment_field, "production").strip()
+                        if environment_field
+                        else "production"
+                    ),
+                    "description": (
+                        row.get(description_field, "").strip()
+                        if description_field
+                        else ""
+                    ),
+                    "is_manual": True,
+                }
+
+                # Add optional fields if they exist in the mapping
+                if team_field and row.get(team_field):
+                    service["team"] = row.get(team_field).strip()
+                if email_field and row.get(email_field):
+                    service["email"] = row.get(email_field).strip()
+                if slack_field and row.get(slack_field):
+                    service["slack"] = row.get(slack_field).strip()
+                if category_field and row.get(category_field):
+                    service["category"] = row.get(category_field).strip()
+
+                services.append(service)
+
+            # Process target service
+            if target_service not in services_map:
+                service_id = len(services) + 1  # Generate simple sequential ID
+                services_map[target_service] = service_id
+
+                # Create service object with minimal information
+                service = {
+                    "id": service_id,
+                    "service": target_service,
+                    "display_name": target_service,
+                    "environment": "production",
+                    "description": "",
+                    "is_manual": True,
+                }
+                services.append(service)
+
+            # Create dependency
+            dependency = {
+                "service_id": services_map[source_service],
+                "depends_on_service_id": services_map[target_service],
+                "protocol": (
+                    row.get(protocol_field, "HTTP").strip()
+                    if protocol_field
+                    else "HTTP"
+                ),
+            }
+            dependencies.append(dependency)
+
+            # Process applications if field is mapped
+            if application_field and row.get(application_field):
+                apps = [
+                    app.strip()
+                    for app in row.get(application_field, "").split(",")
+                    if app.strip()
+                ]
+                for app_name in apps:
+                    if app_name not in applications_map:
+                        applications_map[app_name] = set()
+                    # Add both source and target services to the application
+                    applications_map[app_name].add(services_map[source_service])
+                    applications_map[app_name].add(services_map[target_service])
+
+        # Create applications list with proper UUID IDs
+        applications = []
+        for app_name, service_ids in applications_map.items():
+            # Generate proper UUID for application
+            application_id = uuid.uuid4()
+
+            application = {
+                "id": str(application_id),  # Use UUID as string
+                "name": app_name,
+                "description": f"Application: {app_name}",
+                "services": list(service_ids),
+            }
+            applications.append(application)
+
+        # Create the final topology data
+        topology_data = {
+            "name": topology_name or "Imported Topology",
+            "services": services,
+            "applications": applications,
+            "dependencies": dependencies,
+        }
+
+        return topology_data
