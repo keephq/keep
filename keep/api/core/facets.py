@@ -119,12 +119,15 @@ def build_facets_data_query(
         sub_query = (
             select(
                 literal(facet.id).label("facet_id"),
-                text(f"{casted} AS facet_value"),
-                func.count(func.distinct(literal_column("entity_id"))).label(
-                    "matches_count"
-                ),
+                literal_column("facet_value"),
+                func.count().label("matches_count"),
             )
-            .select_from(base_query)
+            .select_from(
+                select(
+                    func.distinct(literal_column("entity_id")),
+                    literal_column(casted).label("facet_value"),
+                ).select_from(base_query)
+            )
             .filter(
                 text(
                     facets_cel_to_sql_instance.convert_to_sql_str(
