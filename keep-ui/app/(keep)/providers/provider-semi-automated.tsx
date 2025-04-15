@@ -84,11 +84,11 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
           </Text>
         ))
       ) : (
-        <Text className="my-2.5">{data!.webhookDescription}</Text>
+        <Text className="my-2.5 text-wrap">{data!.webhookDescription}</Text>
       )}
       {settingsNotEmpty && <CopyBlock {...settings} />}
       {webhookMarkdown && (
-        <div className="prose whitespace-nowrap">
+        <div className="prose text-wrap">
           <Markdown remarkPlugins={[remarkGfm]}>{webhookMarkdown}</Markdown>
         </div>
       )}
