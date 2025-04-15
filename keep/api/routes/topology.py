@@ -5,8 +5,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import get_session, get_session_sync
 from keep.api.models.db.topology import (
     DeleteServicesRequest,
@@ -39,6 +41,75 @@ from keep.topologies.topologies_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# Add new model for topology processor settings
+class TopologyProcessorSettings(BaseModel):
+    enabled: bool
+    lookBackWindow: int
+
+
+# GET topology processor settings
+@router.get(
+    "/processor/settings",
+    description="Get the topology processor settings",
+    response_model=TopologyProcessorSettings,
+)
+def get_topology_processor_settings(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:topology"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting topology processor settings", extra={"tenant_id": tenant_id})
+
+    # Get default values from environment variables
+    default_enabled = (
+        config("KEEP_TOPOLOGY_PROCESSOR", default="false").lower() == "true"
+    )
+    default_look_back_window = config(
+        "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
+    )
+
+    # TODO: In the future, retrieve these settings from the tenant configuration
+    # For now, return the default values
+    return TopologyProcessorSettings(
+        enabled=default_enabled,
+        lookBackWindow=default_look_back_window,
+    )
+
+
+# PUT topology processor settings
+@router.put(
+    "/processor/settings",
+    description="Update the topology processor settings",
+    response_model=TopologyProcessorSettings,
+)
+def update_topology_processor_settings(
+    settings: TopologyProcessorSettings,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Updating topology processor settings",
+        extra={
+            "tenant_id": tenant_id,
+            "settings": settings.model_dump(),
+        },
+    )
+
+    # Validate settings
+    if settings.lookBackWindow < 1:
+        raise HTTPException(
+            status_code=400, detail="Look back window must be a positive number"
+        )
+
+    # TODO: In the future, persist these settings in the tenant configuration
+    # For now, we'll just return the settings as they are
+
+    return settings
 
 
 # GET all topology data

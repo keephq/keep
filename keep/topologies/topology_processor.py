@@ -36,6 +36,7 @@ class TopologyProcessor:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.logger.info("Starting topology processor")
         self.started = False
         self.thread = None
         self._stop_event = threading.Event()
@@ -61,6 +62,11 @@ class TopologyProcessor:
         self.look_back_window = config(
             "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
         )  # minutes
+        self.logger.info(
+            "Topology processor enabled for tenants: {}".format(
+                ", ".join(self.enabled_tenants.keys())
+            )
+        )
 
     async def start(self):
         """Runs the topology processor in server mode"""

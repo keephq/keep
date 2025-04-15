@@ -30,6 +30,8 @@ import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   PlusIcon,
+  ArrowPathIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
@@ -72,7 +74,6 @@ import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { TbTopologyRing } from "react-icons/tb";
 import { ImportTopologyModal } from "./ImportTopologyModal";
 import { NodeLimitWarning } from "./NodeLimitWarning";
-import { XMarkIcon } from "@heroicons/react/24/outline";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -88,6 +89,7 @@ type TopologyMapProps = {
   environment?: string;
   isVisible?: boolean;
   standalone?: boolean;
+  onPullTopology?: (e: React.MouseEvent) => Promise<void>;
 };
 
 export function TopologyMap({
@@ -99,6 +101,7 @@ export function TopologyMap({
   environment,
   isVisible = true,
   standalone = false,
+  onPullTopology,
 }: TopologyMapProps) {
   const [initiallyFitted, setInitiallyFitted] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -670,6 +673,17 @@ export function TopologyMap({
             >
               Export
             </Button>
+            {onPullTopology && (
+              <Button
+                onClick={onPullTopology}
+                color="orange"
+                variant="secondary"
+                size="md"
+                icon={ArrowPathIcon}
+              >
+                Pull from providers
+              </Button>
+            )}
           </div>
 
           {!standalone ? (

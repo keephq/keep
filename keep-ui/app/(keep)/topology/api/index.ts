@@ -51,3 +51,25 @@ export async function getTopology(
 export async function pullTopology(api: ApiClient) {
   return await api.post("/topology/pull");
 }
+
+// Add processor settings API functions
+export interface TopologyProcessorSettings {
+  enabled: boolean;
+  lookBackWindow: number;
+}
+
+export async function getTopologyProcessorSettings(api: ApiClient) {
+  return await api.get<TopologyProcessorSettings>(
+    "/topology/processor/settings"
+  );
+}
+
+export async function updateTopologyProcessorSettings(
+  api: ApiClient,
+  settings: TopologyProcessorSettings
+) {
+  return await api.put<TopologyProcessorSettings>(
+    "/topology/processor/settings",
+    settings
+  );
+}

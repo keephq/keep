@@ -13,10 +13,16 @@ import { ApplicationsList } from "./ui/applications/applications-list";
 import React, { useContext, useEffect, useState } from "react";
 import { TopologySearchContext } from "./TopologySearchContext";
 import { TopologyApplication, TopologyService } from "./model";
-import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowPathIcon,
+  Cog6ToothIcon,
+  GlobeAltIcon,
+  SquaresPlusIcon,
+} from "@heroicons/react/24/outline";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { pullTopology } from "./api";
 import { toast } from "react-toastify";
+import { TopologySettings } from "./ui/settings/topology-settings";
 
 export function TopologyPageClient({
   applications,
@@ -56,18 +62,15 @@ export function TopologyPageClient({
       onIndexChange={setTabIndex}
     >
       <TabList className="mb-2">
-        <Tab
-          className="items-center"
-        >
+        <Tab className="items-center" icon={GlobeAltIcon}>
           Topology Map
         </Tab>
-        <Tab className="items-center">Applications</Tab>
-        <Tab
-          className="items-center"
-          icon={ArrowPathIcon}
-          onClick={handlePullTopology}
-        >
-          Pull from providers</Tab>
+        <Tab className="items-center" icon={SquaresPlusIcon}>
+          Applications
+        </Tab>
+        <Tab className="items-center" icon={Cog6ToothIcon}>
+          Settings
+        </Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
         <TabPanel className="h-[calc(100vh-10rem)]">
@@ -76,10 +79,14 @@ export function TopologyPageClient({
             topologyApplications={applications}
             topologyServices={topologyServices}
             isVisible={tabIndex === 0}
+            onPullTopology={handlePullTopology}
           />
         </TabPanel>
         <TabPanel className="flex-1">
           <ApplicationsList applications={applications} />
+        </TabPanel>
+        <TabPanel className="flex-1">
+          <TopologySettings />
         </TabPanel>
       </TabPanels>
     </TabGroup>
