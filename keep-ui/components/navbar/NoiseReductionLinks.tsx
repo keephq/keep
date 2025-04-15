@@ -13,15 +13,58 @@ import { useTopology } from "@/app/(keep)/topology/model/useTopology";
 import clsx from "clsx";
 import { AILink } from "./AILink";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
+import { ReactNode } from "react";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 type NoiseReductionLinksProps = { session: Session | null };
+
+type TogglableLinkProps = {
+  disabledConfigKey: string;
+  children: ReactNode;
+};
+
+const TogglableLink = ({ children, disabledConfigKey }: TogglableLinkProps) => {
+  const { data: tenantConfig, isLoading } = useTenantConfiguration();
+
+  if (isLoading || !tenantConfig) {
+    return (
+      <div className="flex gap-2 items-center h-7 pl-3">
+        <Skeleton className="min-h-5 min-w-5" />
+        <Skeleton
+          className="min-h-5 min-w-24"
+          containerClassName="min-h-5 min-w-24"
+        />
+      </div>
+    );
+  }
+
+  if (!tenantConfig?.[disabledConfigKey]) {
+    return <>{children}</>;
+  }
+};
 
 export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
   const { topologyData } = useTopology();
-  const config = useConfig();
+  const { data: tenantConfig, isLoading } = useTenantConfiguration();
+  const noiseReductionKeys = {
+    DISABLE_DEDUPLICATION: "DISABLE_DEDUPLICATION",
+    DISABLE_CORRELATION: "DISABLE_CORRELATION",
+    DISABLE_WORKFLOWS: "DISABLE_WORKFLOWS",
+    DISABLE_SERVICE_TOPOLOGY: "DISABLE_SERVICE_TOPOLOGY",
+    DISABLE_MAPPING: "DISABLE_MAPPING",
+    DISABLE_EXTRACTION: "DISABLE_EXTRACTION",
+    DISABLE_MAINTENANCE_WINDOW: "DISABLE_MAINTENANCE_WINDOW",
+    DISABLE_AI_PLUGINS: "DISABLE_AI_PLUGINS",
+  };
 
   if (isNOCRole) {
+    return null;
+  }
+
+  if (!Object.values(noiseReductionKeys).some((key) => !tenantConfig?.[key])) {
     return null;
   }
 
@@ -30,39 +73,56 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
       <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
-            <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-              NOISE REDUCTION
-            </Subtitle>
-            <IoChevronUp
-              className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
-            />
+            {tenantConfig && (
+              <>
+                <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
+                  NOISE REDUCTION
+                </Subtitle>
+                <IoChevronUp
+                  className={clsx(
+                    { "rotate-180": open },
+                    "mr-2 text-slate-400"
+                  )}
+                />
+              </>
+            )}
+            {!tenantConfig && (
+              <div className="flex items-center h-7 pl-2">
+                <Skeleton className="min-h-5 min-w-36" />
+              </div>
+            )}
           </>
         )}
       </Disclosure.Button>
 
       <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
-        {!config.data?.DISABLE_DEDUPLICATION && (
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.DISABLE_DEDUPLICATION}
+        >
           <li>
             <LinkWithIcon href="/deduplication" icon={IoMdGitMerge}>
               <Subtitle className="text-xs">Deduplication</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_CORRELATION && (
+        </TogglableLink>
+        <TogglableLink disabledConfigKey="DISABLE_CORRELATION">
           <li>
             <LinkWithIcon href="/rules" icon={Rules}>
               <Subtitle className="text-xs">Correlations</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_WORKFLOWS && (
+        </TogglableLink>
+        <TogglableLink disabledConfigKey={noiseReductionKeys.DISABLE_WORKFLOWS}>
           <li>
             <LinkWithIcon href="/workflows" icon={Workflows}>
               <Subtitle className="text-xs">Workflows</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_SERVICE_TOPOLOGY && (
+        </TogglableLink>
+
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.DISABLE_SERVICE_TOPOLOGY}
+        >
           <li>
             <LinkWithIcon
               href="/topology"
@@ -75,33 +135,39 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               <Subtitle className="text-xs">Service Topology</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_MAPPING && (
+        </TogglableLink>
+        <TogglableLink disabledConfigKey={noiseReductionKeys.DISABLE_MAPPING}>
           <li>
             <LinkWithIcon href="/mapping" icon={Mapping}>
               <Subtitle className="text-xs">Mapping</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_EXTRACTION && (
+        </TogglableLink>
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.DISABLE_EXTRACTION}
+        >
           <li>
             <LinkWithIcon href="/extraction" icon={ExportIcon}>
               <Subtitle className="text-xs">Extraction</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_MAINTENANCE_WINDOW && (
+        </TogglableLink>
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.DISABLE_MAINTENANCE_WINDOW}
+        >
           <li>
             <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
               <Subtitle className="text-xs">Maintenance Windows</Subtitle>
             </LinkWithIcon>
           </li>
-        )}
-        {!config.data?.DISABLE_AI_PLUGINS && (
+        </TogglableLink>
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.DISABLE_AI_PLUGINS}
+        >
           <li>
             <AILink></AILink>
           </li>
-        )}
+        </TogglableLink>
       </Disclosure.Panel>
     </Disclosure>
   );
