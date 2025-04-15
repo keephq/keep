@@ -65,6 +65,16 @@ export function getConfig(): InternalConfig {
     KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
     KEEP_CONTACT_US_URL:
       process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
-    KEEP_HIDE_SENSITIVE_FIELDS: process.env.KEEP_HIDE_SENSITIVE_FIELDS === "true",
+    KEEP_HIDE_SENSITIVE_FIELDS:
+      process.env.KEEP_HIDE_SENSITIVE_FIELDS === "true",
+    DISABLE_DEDUPLICATION: process.env.DISABLE_DEDUPLICATION === "true",
+    DISABLE_CORRELATION: process.env.DISABLE_CORRELATION === "true",
+    DISABLE_WORKFLOWS: process.env.DISABLE_WORKFLOWS === "true",
+    DISABLE_SERVICE_TOPOLOGY: process.env.DISABLE_SERVICE_TOPOLOGY === "true",
+    DISABLE_MAPPING: process.env.DISABLE_MAPPING === "true",
+    DISABLE_EXTRACTION: process.env.DISABLE_EXTRACTION === "true",
+    DISABLE_MAINTENANCE_WINDOW:
+      process.env.DISABLE_MAINTENANCE_WINDOW === "true",
+    DISABLE_AI_PLUGINS: process.env.DISABLE_AI_PLUGINS === "true",
   };
 }

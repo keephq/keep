@@ -29,4 +29,14 @@ export interface InternalConfig {
   KEEP_CONTACT_US_URL: string;
   // Hide sensitive fields
   KEEP_HIDE_SENSITIVE_FIELDS: boolean;
+
+  // DISABLE NOISE REDUCTION FEATURES
+  DISABLE_DEDUPLICATION: boolean;
+  DISABLE_CORRELATION: boolean;
+  DISABLE_WORKFLOWS: boolean;
+  DISABLE_SERVICE_TOPOLOGY: boolean;
+  DISABLE_MAPPING: boolean;
+  DISABLE_EXTRACTION: boolean;
+  DISABLE_MAINTENANCE_WINDOW: boolean;
+  DISABLE_AI_PLUGINS: boolean;
 }
