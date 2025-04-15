@@ -16,7 +16,6 @@ from keep.api.core.db import (
     get_all_provisioned_workflows,
     get_all_workflows,
     get_all_workflows_yamls,
-    get_raw_workflow,
     get_workflow,
     get_workflow_execution,
 )
@@ -100,15 +99,18 @@ class WorkflowStore:
                 return self._read_workflow_from_stream(file)
 
     def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
-        raw_workflow = get_raw_workflow(tenant_id, workflow_id)
-        workflow_yaml = cyaml.safe_load(raw_workflow)
+        workflow = get_workflow(tenant_id, workflow_id)
+        if not workflow:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow {workflow_id} not found",
+            )
+        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
         return cyaml.dump(valid_workflow_yaml, width=99999)
 
-    def get_workflow(
-        self, tenant_id: str, workflow_id: str, revision: int = None
-    ) -> Workflow:
-        workflow = get_workflow(tenant_id, workflow_id, revision)
+    def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
+        workflow = get_workflow(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404,

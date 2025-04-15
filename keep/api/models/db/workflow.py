@@ -8,9 +8,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstrai
 
 
 class Workflow(SQLModel, table=True):
-    __table_args__ = (PrimaryKeyConstraint("id", "revision"),)
-
-    id: str = Field(index=True)
+    id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str = Field(sa_column=Column(TEXT))
     description: Optional[str]
@@ -25,11 +23,30 @@ class Workflow(SQLModel, table=True):
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
-    # Flag to identify latest version
-    is_latest: bool = Field(default=True)
 
     class Config:
         orm_mode = True
+
+
+class WorkflowVersion(SQLModel, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("workflow_id", "revision"),
+        # Add unique constraint to ensure only one current version per workflow
+        UniqueConstraint(
+            "workflow_id", "is_current", name="uq_workflow_current_version"
+        ),
+    )
+
+    workflow_id: str = Field(primary_key=True, foreign_key="workflow.id")
+    revision: int = Field(primary_key=True)
+    workflow_raw: str = Field(sa_column=Column(TEXT))
+    updated_by: str
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    is_valid: bool = Field(default=False)
+    is_current: bool = Field(default=False)
+    comment: Optional[str] = None
+
+    workflow: "Workflow" = Relationship(back_populates="versions")
 
 
 def get_status_column():
@@ -58,18 +75,22 @@ class WorkflowExecution(SQLModel, table=True):
             "idx_workflowexecution_tenant_workflow_id_timestamp",
             "tenant_id",
             "workflow_id",
-            "workflow_revision",  # Add revision to this index
+            "workflow_revision",
             "started",
         ),
         Index(
             "idx_workflowexecution_workflow_tenant_started_status",
             "workflow_id",
-            "workflow_revision",  # Add revision to this index
+            "workflow_revision",
             "tenant_id",
             "started",
             get_status_column(),
         ),
-        # Consider adding a new index specifically for version queries
+        Index(
+            "idx_status_started",
+            "status",
+            "started",
+        ),
         Index(
             "idx_workflowexecution_workflow_revision",
             "workflow_id",
@@ -96,6 +117,13 @@ class WorkflowExecution(SQLModel, table=True):
     error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
+
+    version: "WorkflowVersion" = Relationship(
+        back_populates="workflow_execution",
+        sa_relationship_kwargs={
+            "foreign_keys": "[WorkflowExecution.workflow_id, WorkflowExecution.workflow_revision]"
+        },
+    )
 
     logs: List["WorkflowExecutionLog"] = Relationship(
         back_populates="workflowexecution"

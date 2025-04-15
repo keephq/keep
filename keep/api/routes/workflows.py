@@ -27,6 +27,7 @@ from keep.api.core.db import (
     get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
+    get_workflow_version,
     get_workflow_versions,
     update_workflow_by_id as update_workflow_by_id_db,
 )
@@ -744,7 +745,7 @@ async def update_workflow_by_id(
     )
 
 
-@router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
+@router.get("/{workflow_id}/raw", description="Get raw workflow by ID")
 def get_raw_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -773,15 +774,27 @@ def get_workflow_by_id(
 ):
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
-    workflow = get_workflow(
-        tenant_id=tenant_id, workflow_id=workflow_id, revision=revision
-    )
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
             extra={"tenant_id": tenant_id},
         )
         raise HTTPException(404, "Workflow not found")
+
+    updated_at = workflow.last_updated
+    updated_by = workflow.updated_by or "unknown"
+    workflow_raw = workflow.workflow_raw
+
+    if revision:
+        workflow_version = get_workflow_version(
+            tenant_id=tenant_id, workflow_id=workflow_id, revision=revision
+        )
+        if not workflow_version:
+            raise HTTPException(404, "Workflow version not found")
+        updated_at = workflow_version.last_updated
+        updated_by = workflow_version.updated_by or "unknown"
+        workflow_raw = workflow_version.workflow_raw
 
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
@@ -807,27 +820,29 @@ def get_workflow_by_id(
         providers_dto, triggers = [], []  # Default in case of failure
 
     try:
-        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
+        workflow_yaml = cyaml.safe_load(workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
         final_workflow_raw = cyaml.dump(valid_workflow_yaml, width=99999)
-        workflow_dto = WorkflowDTO(
-            id=workflow.id,
-            name=workflow.name,
-            description=workflow.description or "[This workflow has no description]",
-            created_by=workflow.created_by,
-            creation_time=workflow.creation_time,
-            interval=workflow.interval,
-            providers=providers_dto,
-            triggers=triggers,
-            workflow_raw=final_workflow_raw,
-            last_updated=workflow.last_updated,
-            disabled=workflow.is_disabled,
-            revision=workflow.revision,
-        )
-        return workflow_dto
+
     except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
+
+    return WorkflowDTO(
+        id=workflow.id,
+        name=workflow.name,
+        description=workflow.description or "[This workflow has no description]",
+        created_by=workflow.created_by,
+        creation_time=workflow.creation_time,
+        interval=workflow.interval,
+        providers=providers_dto,
+        triggers=triggers,
+        workflow_raw=final_workflow_raw,
+        last_updated=updated_at,
+        disabled=workflow.is_disabled,
+        revision=workflow.revision,
+        last_updated_by=updated_by,
+    )
 
 
 @router.get("/{workflow_id}/versions")

@@ -37,6 +37,7 @@ class WorkflowDTO(BaseModel):
     workflow_raw: str
     revision: int = 1
     last_updated: datetime = None
+    last_updated_by: str = None
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
     last_executions: List[dict] = None
     last_execution_started: datetime = None

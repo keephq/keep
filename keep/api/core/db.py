@@ -481,29 +481,46 @@ def update_workflow_by_workflow(
     else:
         name = existing_workflow.name
     with Session(engine, expire_on_commit=False) as session:
-        # tb: no need to override the id field here because it has foreign key constraints.
-        new_version = Workflow(
-            **existing_workflow.dict(exclude={"revision", "is_latest", "id"})
+        # TODO: ensure that id is unique to workflow_id, like if rolled back and now updating from this version it should be bigger than latest version
+        next_revision = existing_workflow.revision + 1
+        updated_by_str = updated_by or existing_workflow.updated_by or "unknown"
+        # update version
+        version = WorkflowVersion(
+            workflow_id=existing_workflow.id,
+            revision=next_revision,
+            workflow_raw=workflow_raw,
+            updated_by=updated_by_str,
+            comment=f"Updated by {updated_by_str}",
+            # TODO: check if valid
+            is_valid=True,
+            is_current=True,
         )
-        new_version.id = existing_workflow.id
-        new_version.name = name
-        new_version.description = description
-        new_version.updated_by = (
-            updated_by or existing_workflow.updated_by
-        )  # Update the updated_by field if provided
-        new_version.interval = interval
-        new_version.workflow_raw = workflow_raw
-        new_version.revision = existing_workflow.revision + 1  # Increment the revision
-        new_version.last_updated = datetime.now()  # Update last_updated
-        new_version.is_deleted = False
-        new_version.is_disabled = is_disabled
-        new_version.provisioned = provisioned
-        new_version.provisioned_file = provisioned_file
-        existing_workflow.is_latest = False
+        session.add(version)
+
+        existing_version = session.exec(
+            select(WorkflowVersion)
+            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .where(WorkflowVersion.revision == existing_workflow.revision)
+        ).first()
+        if existing_version:
+            existing_version.is_current = False
+            session.add(existing_version)
+
+        # tb: no need to override the id field here because it has foreign key constraints.
+        existing_workflow.name = name
+        existing_workflow.description = description
+        existing_workflow.updated_by = updated_by_str
+        existing_workflow.interval = interval
+        existing_workflow.workflow_raw = workflow_raw
+        existing_workflow.revision = next_revision
+        existing_workflow.last_updated = datetime.now()  # Update last_updated
+        existing_workflow.is_deleted = False
+        existing_workflow.is_disabled = is_disabled
+        existing_workflow.provisioned = provisioned
+        existing_workflow.provisioned_file = provisioned_file
         session.add(existing_workflow)
-        session.add(new_version)
         session.commit()
-        return new_version
+        return existing_workflow
 
 
 def add_or_update_workflow(
@@ -734,18 +751,13 @@ def get_all_workflows_yamls(tenant_id: str):
     return list(workflows)
 
 
-def get_workflow(tenant_id: str, workflow_id: str, revision: int | None = None):
+def get_workflow(tenant_id: str, workflow_id: str):
     with Session(engine) as session:
         query = (
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
         )
-        if revision:
-            query = query.where(Workflow.revision == revision)
-        else:
-            query = query.where(Workflow.is_latest == True)
-
         if validators.uuid(workflow_id):
             query = query.where(Workflow.id == workflow_id)
         else:
@@ -760,16 +772,22 @@ def get_workflow_versions(tenant_id: str, workflow_id: str):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
             .order_by(Workflow.revision.desc())
         ).all()
     return versions
 
 
-def get_raw_workflow(tenant_id: str, workflow_id: str):
-    workflow = get_workflow(tenant_id, workflow_id)
-    if not workflow:
-        return None
-    return workflow.workflow_raw
+def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
+    with Session(engine) as session:
+        version = session.exec(
+            select(WorkflowVersion)
+            .where(WorkflowVersion.workflow_id == workflow_id)
+            .where(WorkflowVersion.revision == revision)
+            .where(WorkflowVersion.workflow.tenant_id == tenant_id)
+            .where(WorkflowVersion.workflow.is_deleted == False)
+        ).first()
+    return version
 
 
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
@@ -3763,18 +3781,23 @@ def get_incident_by_id(
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id, should_raise=True)
     with existed_or_new_session(session) as session:
-        query = session.query(
-            Incident,
-            AlertEnrichment,
-        ).outerjoin(
-            AlertEnrichment,
-            and_(
-                Incident.tenant_id == AlertEnrichment.tenant_id,
-                cast(col(Incident.id), String) == foreign(AlertEnrichment.alert_fingerprint),
-            ),
-        ).filter(
-            Incident.tenant_id == tenant_id,
-            Incident.id == incident_id,
+        query = (
+            session.query(
+                Incident,
+                AlertEnrichment,
+            )
+            .outerjoin(
+                AlertEnrichment,
+                and_(
+                    Incident.tenant_id == AlertEnrichment.tenant_id,
+                    cast(col(Incident.id), String)
+                    == foreign(AlertEnrichment.alert_fingerprint),
+                ),
+            )
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
         )
         incident_with_enrichments = query.first()
         if incident_with_enrichments:
