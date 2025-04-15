@@ -115,7 +115,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
-    if (fingerprint && enrich) {
+    if (fingerprint && enrich && alerts) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
         setEnrichAlertModal(alert);
@@ -124,7 +124,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
-    } else if (fingerprint) {
+    } else if (fingerprint && alerts) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
         setViewAlertModal(alert);
