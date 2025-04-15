@@ -1,5 +1,6 @@
-import { MonacoEditor } from "@/shared/ui";
-import React, { ChangeEvent, FC, useState } from "react";
+import React, { ChangeEvent, FC, useRef, useState } from "react";
+import type { editor } from "monaco-editor";
+import { MonacoCelCDN } from "@/shared/ui/MonacoCELEditor/MonacoCelCDN";
 
 interface CelInputProps {
   value?: string;
@@ -14,7 +15,27 @@ const CelInput: FC<CelInputProps> = ({
   placeholder = "Enter value",
   disabled = false,
 }) => {
+  const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [inputValue, setInputValue] = useState(value);
+  const [isEditorMounted, setIsEditorMounted] = useState(false);
+
+  const handleEditorDidMount = (
+    editor: editor.IStandaloneCodeEditor,
+    monacoInstance: typeof import("monaco-editor")
+  ) => {
+    editorRef.current = editor;
+    monacoRef.current = monacoInstance;
+    editor.onDidChangeModelContent(() => {
+      const model = editor.getModel();
+      if (!model) return;
+
+      const tokens = monacoInstance.editor.tokenize(model.getValue(), "cel");
+      console.log("Ihor TOKENS:", tokens);
+    });
+
+    setIsEditorMounted(true);
+  };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.value;
@@ -34,21 +55,22 @@ const CelInput: FC<CelInputProps> = ({
     //   className="cel-input"
     // />
 
-    <MonacoEditor
+    <MonacoCelCDN
       // value={JSON.stringify(eventData, null, 2)}
-      language="cel"
-      defaultLanguage="cel"
-      theme="vs-light"
-      className="h-10"
-      options={{
-        readOnly: false,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        fontSize: 12,
-        lineNumbers: "off",
-        folding: false,
-        wordWrap: "off",
-      }}
+      //   language="celavito"
+      //   defaultLanguage="celavito"
+      //   theme="cel-dark"
+      className="h-20"
+      //   onMount={handleEditorDidMount}
+      //   options={{
+      //     readOnly: false,
+      //     minimap: { enabled: false },
+      //     scrollBeyondLastLine: false,
+      //     fontSize: 12,
+      //     lineNumbers: "off",
+      //     folding: false,
+      //     wordWrap: "off",
+      //   }}
     />
   );
 };

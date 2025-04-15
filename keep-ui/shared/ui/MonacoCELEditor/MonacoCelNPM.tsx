@@ -1,0 +1,49 @@
+"use client";
+
+import { Editor, EditorProps, loader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+import { KeepLoader } from "../KeepLoader/KeepLoader";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { useEffect, useState } from "react";
+import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
+// import { setupCustomCellanguage } from "./cel-support";
+
+// Monaco Editor - imported as an npm package instead of loading from the CDN to support air-gapped environments
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+loader.config({ monaco });
+
+const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
+
+export function MonacoCelNPM(props: EditorProps) {
+  const { data: config } = useConfig();
+  const [error, setError] = useState<Error | null>(null);
+  console.log("Ihor MonacoCelNPM");
+  useEffect(() => {
+    loader.init().catch((error: Error) => {
+      setError(error);
+    });
+  }, []);
+
+  if (error) {
+    return (
+      <ErrorComponent
+        error={error}
+        defaultMessage="Error loading Monaco Editor from NPM"
+        description={
+          <>
+            This should not happen. Please contact us on Slack
+            <a
+              href={config?.KEEP_CONTACT_US_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {config?.KEEP_CONTACT_US_URL}
+            </a>
+          </>
+        }
+      />
+    );
+  }
+
+  return <Editor {...props} loading={Loader} />;
+}
