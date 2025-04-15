@@ -754,43 +754,45 @@ export function TopologyMap({
             </MultiSelect>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => setIsSidePanelOpen(true)}
-              color="orange"
-              variant="primary"
-              size="md"
-              icon={PlusIcon}
-            >
-              Add Node
-            </Button>
-            <Button
-              onClick={handleImportTopology}
-              color="orange"
-              variant="secondary"
-              size="md"
-              icon={ArrowUpTrayIcon}
-            >
-              Import
-            </Button>
-            <Button
-              onClick={handleExportTopology}
-              color="orange"
-              variant="secondary"
-              size="md"
-              icon={ArrowDownTrayIcon}
-            >
-              Export
-            </Button>
             {onPullTopology && (
-              <Button
-                onClick={onPullTopology}
-                color="orange"
-                variant="secondary"
-                size="md"
-                icon={ArrowPathIcon}
-              >
-                Pull from providers
-              </Button>
+              <>
+                <Button
+                  onClick={() => setIsSidePanelOpen(true)}
+                  color="orange"
+                  variant="primary"
+                  size="md"
+                  icon={PlusIcon}
+                >
+                  Add Node
+                </Button>
+                <Button
+                  onClick={handleImportTopology}
+                  color="orange"
+                  variant="secondary"
+                  size="md"
+                  icon={ArrowUpTrayIcon}
+                >
+                  Import
+                </Button>
+                <Button
+                  onClick={handleExportTopology}
+                  color="orange"
+                  variant="secondary"
+                  size="md"
+                  icon={ArrowDownTrayIcon}
+                >
+                  Export
+                </Button>
+                <Button
+                  onClick={onPullTopology}
+                  color="orange"
+                  variant="secondary"
+                  size="md"
+                  icon={ArrowPathIcon}
+                >
+                  Pull from providers
+                </Button>
+              </>
             )}
           </div>
 
