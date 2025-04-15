@@ -295,6 +295,20 @@ export const validateMustacheVariableNameForYAML = (
     }
     return null;
   }
+  if (parts[0] === "consts") {
+    const constName = parts[1];
+    if (!constName) {
+      return [
+        `Variable: ${cleanedVariableName} - To access a constant, you need to specify the constant name.`,
+      ];
+    }
+    if (!definition.consts?.[constName]) {
+      return [
+        `Variable: ${cleanedVariableName} - Constant "${constName}" not found.`,
+        "error",
+      ];
+    }
+  }
   if (parts[0] === "steps") {
     const stepName = parts[1];
     if (!stepName) {

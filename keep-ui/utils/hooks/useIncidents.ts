@@ -7,7 +7,7 @@ import {
 import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
 import { useWebsocket } from "./usePusher";
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { v4 as uuidv4 } from "uuid";
@@ -28,48 +28,86 @@ export interface Filters {
   affected_services?: string[];
 }
 
-export const useIncidents = (
-  candidate: boolean | null = true,
-  predicted: boolean | null = null,
-  limit: number = DEFAULT_INCIDENTS_PAGE_SIZE,
-  offset: number = 0,
-  sorting: { id: string; desc: boolean } = DEFAULT_INCIDENTS_SORTING,
-  cel: string = "",
-  options: SWRConfiguration = {
-    revalidateOnFocus: false,
+export interface IncidentsQuery {
+  candidate?: boolean | null;
+  predicted?: boolean | null;
+  limit?: number;
+  offset?: number;
+  sorting?: { id: string; desc: boolean };
+  cel?: string;
+}
+
+function getQueryParams(query: IncidentsQuery | null): URLSearchParams | null {
+  if (!query) {
+    return null;
   }
-) => {
-  const api = useApi();
+
+  if (query.candidate === undefined) {
+    // TODO: To verify if this is the correct default value
+    query.candidate = true;
+  }
+
+  if (query.limit === undefined) {
+    query.limit = DEFAULT_INCIDENTS_PAGE_SIZE;
+  }
+
+  if (query.offset === undefined) {
+    query.offset = 0;
+  }
+
+  if (query.sorting === undefined) {
+    query.sorting = DEFAULT_INCIDENTS_SORTING;
+  }
+
+  if (query.cel === undefined) {
+    query.cel = "";
+  }
 
   const filtersParams = new URLSearchParams();
 
-  if (typeof candidate === "boolean") {
-    filtersParams.set("candidate", candidate.toString());
+  if (typeof query.candidate === "boolean") {
+    filtersParams.set("candidate", query.candidate.toString());
   }
 
-  if (predicted !== undefined && predicted !== null) {
-    filtersParams.set("predicted", predicted.toString());
+  if (query.predicted !== undefined && query.predicted !== null) {
+    filtersParams.set("predicted", query.predicted.toString());
   }
 
-  if (limit !== undefined) {
-    filtersParams.set("limit", limit.toString());
+  if (query.limit !== undefined) {
+    filtersParams.set("limit", query.limit.toString());
   }
 
-  if (offset !== undefined) {
-    filtersParams.set("offset", offset.toString());
+  if (query.offset !== undefined) {
+    filtersParams.set("offset", query.offset.toString());
   }
 
-  if (sorting) {
-    filtersParams.set("sorting", sorting.desc ? `-${sorting.id}` : sorting.id);
+  if (query.sorting) {
+    filtersParams.set(
+      "sorting",
+      query.sorting.desc ? `-${query.sorting.id}` : query.sorting.id
+    );
   }
 
-  if (cel) {
-    filtersParams.set("cel", cel);
+  if (query.cel) {
+    filtersParams.set("cel", query.cel);
   }
+
+  return filtersParams;
+}
+
+export const useIncidents = (
+  query: IncidentsQuery | null,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  },
+  trusk: boolean = false
+) => {
+  const filtersParams = getQueryParams(query);
+  const api = useApi();
 
   const swrValue = useSWR(
     () =>
-      api.isReady()
+      api.isReady() && filtersParams
         ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
         : null,
     async (url) => {

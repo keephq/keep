@@ -54,6 +54,7 @@ export default function ProviderHealthPage() {
     <>
       <HealthPageBanner />
       <ProvidersTiles
+        title="Providers"
         providers={providers}
         isLocalhost={isLocalhost}
         isHealthCheck={true}

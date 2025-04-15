@@ -39,7 +39,7 @@ export default function SettingsSelection({
   });
 
   return (
-    <Popover>
+    <Popover as="div" className="flex items-center">
       {({ close }) => (
         <>
           <Popover.Button

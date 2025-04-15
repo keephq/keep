@@ -18,6 +18,7 @@ import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
 import { useYamlValidation } from "../lib/useYamlValidation";
 import { WorkflowYAMLEditorToolbar } from "./WorkflowYAMLEditorToolbar";
 import { navigateToErrorPosition } from "../lib/utils";
+import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
@@ -36,6 +37,8 @@ export const WorkflowYAMLEditor = ({
   const editorRef = useRef<
     editor.IStandaloneCodeEditor | editor.IDiffEditor | null
   >(null);
+  const { getSecrets } = useWorkflowSecrets(workflowId);
+  const { data: secrets } = getSecrets;
 
   const {
     validationErrors,
@@ -72,23 +75,35 @@ export const WorkflowYAMLEditor = ({
     return model.getValue();
   }, []);
 
+  const validateMustacheExpressionsEverywhere = useCallback(() => {
+    if (editorRef.current && monacoRef.current) {
+      const model = editorRef.current.getModel();
+      if (!model) {
+        return;
+      }
+      if ("original" in model) {
+        validateMustacheExpressions(
+          model.original,
+          monacoRef.current,
+          secrets ?? {}
+        );
+        validateMustacheExpressions(
+          model.modified,
+          monacoRef.current,
+          secrets ?? {}
+        );
+      } else {
+        validateMustacheExpressions(model, monacoRef.current, secrets ?? {});
+      }
+    }
+  }, [validateMustacheExpressions, secrets]);
+
   const handleChange = useCallback(
     (value: string | undefined) => {
       if (onChange) {
         onChange(value);
       }
-      if (editorRef.current && monacoRef.current) {
-        const model = editorRef.current.getModel();
-        if (!model) {
-          return;
-        }
-        if ("original" in model) {
-          validateMustacheExpressions(model.original, monacoRef.current);
-          validateMustacheExpressions(model.modified, monacoRef.current);
-        } else {
-          validateMustacheExpressions(model, monacoRef.current);
-        }
-      }
+      validateMustacheExpressionsEverywhere();
     },
     [onChange, validateMustacheExpressions]
   );
@@ -120,18 +135,9 @@ export const WorkflowYAMLEditor = ({
   useEffect(() => {
     // After editor is mounted, validate the initial content
     if (isEditorMounted && editorRef.current && monacoRef.current) {
-      const model = editorRef.current.getModel();
-      if (!model) {
-        return;
-      }
-      if ("original" in model) {
-        validateMustacheExpressions(model.original, monacoRef.current);
-        validateMustacheExpressions(model.modified, monacoRef.current);
-      } else {
-        validateMustacheExpressions(model, monacoRef.current);
-      }
+      validateMustacheExpressionsEverywhere();
     }
-  }, [validateMustacheExpressions, isEditorMounted]);
+  }, [validateMustacheExpressionsEverywhere, isEditorMounted]);
 
   const downloadYaml = useCallback(() => {
     const value = getEditorValue();

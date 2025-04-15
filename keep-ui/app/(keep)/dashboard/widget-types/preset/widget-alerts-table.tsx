@@ -19,6 +19,7 @@ import { ColumnRenameMapping } from "@/widgets/alerts-table/ui/alert-table-colum
 import { DEFAULT_COLS } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { ColumnOrderState } from "@tanstack/table-core";
 import { startCase } from "lodash";
+import { defaultColumns } from "./constants";
 
 interface WidgetAlertsTableProps {
   presetName: string;
@@ -112,13 +113,12 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
   );
 
   const orderedColumns = useMemo(() => {
-    const presetColumns: string[] = columns || [];
-    const indexed: { [key: string]: number } = presetOrderedColumns.reduce(
-      (prev, curr, index) => ({ ...prev, [curr]: index }),
-      {}
-    );
+    const presetColumns: string[] = columns || defaultColumns;
+    const indexed: { [key: string]: number } = (
+      presetOrderedColumns || defaultColumns
+    ).reduce((prev, curr, index) => ({ ...prev, [curr]: index }), {});
 
-    return presetColumns.toSorted((firstColum, secondColumn) => {
+    return presetColumns.slice().sort((firstColum, secondColumn) => {
       const indexOfFirst = indexed[firstColum] || 0;
       const indexOfSecond = indexed[secondColumn] || 0;
       return indexOfFirst - indexOfSecond;

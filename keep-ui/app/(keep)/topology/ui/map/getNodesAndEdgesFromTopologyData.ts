@@ -13,11 +13,13 @@ import {
 } from "@/app/(keep)/topology/ui/map/styles";
 import { IncidentDto } from "@/entities/incidents/model";
 import { KeyedMutator } from "swr";
+import { AlertDto } from "@/entities/alerts/model";
 
 export function getNodesAndEdgesFromTopologyData(
   topologyData: TopologyService[],
   applicationsMap: Map<string, TopologyApplication>,
   allIncidents: IncidentDto[],
+  allAlerts: AlertDto[],
   topologyMutator: KeyedMutator<TopologyService[]>
 ) {
   const nodeMap = new Map<string, TopologyNode>();
@@ -36,6 +38,8 @@ export function getNodesAndEdgesFromTopologyData(
       data: {
         ...service,
         incidents: numIncidentsToService.length,
+        alerts: allAlerts.filter((alert) => alert.service === service.service)
+          .length,
         topologyMutator,
       },
       position: { x: 0, y: 0 }, // Dagre will handle the actual positioning
