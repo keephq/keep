@@ -72,6 +72,21 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
     FINGERPRINT_FIELDS = ["fingerprint"]
 
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """If your Grafana is unreachable from Keep, you can use the following webhook url to configure Grafana to send alerts to Keep:
+    
+    1. In Grafana, go to the Alerting tab in the Grafana dashboard.
+    2. Click on Contact points in the left sidebar and create a new one.
+    3. Give it a name and select Webhook as kind of contact point with webhook url as {keep_webhook_api_url}.
+    4. Add 'X-API-KEY' as the request header {api_key}.
+    5. Save the webhook.
+    6. Click on Notification policies in the left sidebar
+    7. Click on "New child policy" under the "Default policy"
+    8. Remove all matchers until you see the following: "If no matchers are specified, this notification policy will handle all alert instances."
+    9. Chose the webhook contact point you have just created under Contact point and click "Save Policy"
+    """
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="alert.rules:read",
