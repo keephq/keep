@@ -345,3 +345,15 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 |   **PUSHER_PORT**   |   Port of the Pusher server   |           No            |     6001      |      Valid port number       |
 | **PUSHER_APP_KEY**  |    Pusher application key     | Yes (if Pusher enabled) | "keepappkey"  |     Valid Pusher App Key     |
 | **PUSHER_CLUSTER**  |        Pusher cluster         |           No            |     None      |  Valid Pusher cluster name   |
+
+### Noise reduction features disabling
+|           Env var              |                  Purpose                   | Required | Default Value |   Valid options   |
+| :--------------------------:   | :----------------------------------------: | :------: | :-----------: | :---------------: |
+|  **DISABLE_DEDUPLICATION**     | Disables deduplication of incoming alerts  |    No    |    "false"    | "true" or "false" |
+|  **DISABLE_CORRELATION**       | Disables correlation of related alerts     |    No    |    "false"    | "true" or "false" |
+|    **DISABLE_WORKFLOWS**       | Disables execution of workflows            |    No    |    "false"    | "true" or "false" |
+| **DISABLE_SERVICE_TOPOLOGY**   | Disables service topology visualization    |    No    |    "false"    | "true" or "false" |
+|     **DISABLE_MAPPING**        | Disables mapping of alert fields           |    No    |    "false"    | "true" or "false" |
+|   **DISABLE_EXTRACTION**       | Disables extraction of alert details       |    No    |    "false"    | "true" or "false" |
+| **DISABLE_MAINTENANCE_WINDOW** | Disables maintenance window functionality  |    No    |    "false"    | "true" or "false" |
+|    **DISABLE_AI_PLUGINS**      | Disables AI plugin integrations            |    No    |    "false"    | "true" or "false" |
