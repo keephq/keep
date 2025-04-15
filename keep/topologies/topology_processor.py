@@ -56,7 +56,7 @@ class TopologyProcessor:
             "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
         )  # minutes
         self.default_depth = config(
-            "KEEP_TOPOLOGY_PROCESSOR_DEPTH", cast=int, default=5
+            "KEEP_TOPOLOGY_PROCESSOR_DEPTH", cast=int, default=10
         )  # depth of service dependencies to check
         self.default_minimum_services = config(
             "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
