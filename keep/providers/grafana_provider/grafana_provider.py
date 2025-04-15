@@ -81,7 +81,10 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     3. Give it a name and select Webhook as kind of contact point with webhook url as {keep_webhook_api_url}.
     4. Add 'X-API-KEY' as the request header {api_key}.
     5. Save the webhook.
-    6. Use the Contact Point in the Notification policies.
+    6. Click on Notification policies in the left sidebar
+    7. Click on "New child policy" under the "Default policy"
+    8. Remove all matchers until you see the following: "If no matchers are specified, this notification policy will handle all alert instances."
+    9. Chose the webhook contact point you have just created under Contact point and click "Save Policy"
     """
 
     PROVIDER_SCOPES = [
