@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import hashlib
 import json
+import logging
 import os
 import time
 import typing
@@ -27,6 +28,8 @@ from keep.providers.providers_factory import ProvidersFactory
 
 # Todo: think about splitting in to PagerdutyIncidentsProvider and PagerdutyAlertsProvider
 # Read this: https://community.pagerduty.com/forum/t/create-incident-using-python/3596/3
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -248,16 +251,25 @@ class PagerdutyProvider(
             "grant_type": "authorization_code",
         }
 
+        access_token_response = requests.post(
+            url=f"{PagerdutyProvider.BASE_OAUTH_URL}/oauth/token",
+            data=access_token_params,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
         try:
-            access_token_response = requests.post(
-                url=f"{PagerdutyProvider.BASE_OAUTH_URL}/oauth/token",
-                data=access_token_params,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
             access_token_response.raise_for_status()
             access_token_response = access_token_response.json()
-        except Exception as e:
-            raise Exception(e)
+        except Exception:
+            response_text = access_token_response.text
+            response_status = access_token_response.status_code
+            logger.exception(
+                "Failed to get access token",
+                extra={
+                    "response_text": response_text,
+                    "response_status": response_status,
+                },
+            )
+            raise
 
         access_token = access_token_response.get("access_token")
         if not access_token:
@@ -849,7 +861,11 @@ class PagerdutyProvider(
 
     def __get_all_incidents_or_alerts(self, incident_id: str = None):
         self.logger.info(
-            "Getting incidents or alerts", extra={"incident_id": incident_id}
+            "Getting incidents or alerts",
+            extra={
+                "incident_id": incident_id,
+                "tenant_id": self.context_manager.tenant_id,
+            },
         )
         paginated_response = []
         offset = 0
@@ -879,7 +895,13 @@ class PagerdutyProvider(
                 response.raise_for_status()
                 response = response.json()
             except Exception:
-                self.logger.exception("Failed to get incidents or alerts")
+                self.logger.exception(
+                    "Failed to get incidents or alerts",
+                    extra={
+                        "incident_id": incident_id,
+                        "tenant_id": self.context_manager.tenant_id,
+                    },
+                )
                 raise
             offset = response.get("offset", 0)
             paginated_response.extend(response.get(resource, []))
@@ -903,6 +925,7 @@ class PagerdutyProvider(
             "Fetched all incidents or alerts",
             extra={
                 "count": len(paginated_response),
+                "incident_id": incident_id,
                 "tenant_id": self.context_manager.tenant_id,
             },
         )

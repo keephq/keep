@@ -89,9 +89,25 @@ export function getLayoutedElements(
 
   dagre.layout(dagreGraph);
 
+  var nodesWithCorruptedY: number = 0;
+
   // Apply the layout to the nodes
   limitedNodes.forEach((node) => {
     const gNode = dagreGraph.node(node.id);
+
+    // Dagre has a bug returning NaN for y positions,
+    // which causes the nodes to be positioned incorrectly
+    // I didn't manage to find the root cause, so here is a "dirty" fix.
+    // Fix for https://github.com/keephq/keep/issues/4455
+    if (Number.isNaN(gNode.y)) {
+      if (gNode.rank) {
+        gNode.y = (gNode.rank + nodesWithCorruptedY) * nodeHeight * 1.5;
+      } else {
+        gNode.y = nodesWithCorruptedY * nodeHeight * 1.5;
+      }
+      nodesWithCorruptedY++;
+    }
+
     node.position = {
       x: gNode.x - gNode.width / 2,
       y: gNode.y - gNode.height / 2,

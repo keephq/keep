@@ -73,6 +73,7 @@ import {
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { TbTopologyRing } from "react-icons/tb";
 import { ImportTopologyModal } from "./ImportTopologyModal";
+import { useAlerts } from "@/entities/alerts/model";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -473,7 +474,9 @@ export function TopologyMap({
     setSelectedObjectId,
   ]);
 
-  const { data: allIncidents } = useIncidents();
+  const { data: allIncidents } = useIncidents({});
+  const { useLastAlerts } = useAlerts();
+  const { data: allAlerts } = useLastAlerts(undefined);
 
   // Fixed useEffect with properly organized refs
   useEffect(
@@ -486,6 +489,7 @@ export function TopologyMap({
         topologyData,
         applicationMap,
         allIncidents?.items ?? [],
+        allAlerts ?? [],
         mutateTopologyData
       );
 

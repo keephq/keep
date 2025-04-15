@@ -48,6 +48,15 @@ export const validateMustacheVariableName = (
     }
     return null;
   }
+  if (parts[0] === "consts") {
+    const constName = parts[1];
+    if (!constName) {
+      return `Variable: '${variableName}' - To access a constant, you need to specify the constant name.`;
+    }
+    if (!definition.properties.consts?.[constName]) {
+      return `Variable: '${variableName}' - Constant '${constName}' not found.`;
+    }
+  }
   if (parts[0] === "steps") {
     const stepName = parts[1];
     if (!stepName) {
