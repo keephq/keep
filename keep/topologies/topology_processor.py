@@ -43,14 +43,14 @@ class TopologyProcessor:
         self._topology_cache = {}
         self._cache_lock = threading.Lock()
         self.enabled = (
-            os.environ.get("KEEP_TOPOLOGY_PROCESSOR", "false").lower() == "true"
+            os.environ.get("KEEP_TOPOLOGY_PROCESSOR", "true").lower() == "true"
         )
         # get enabled tenants
         self.tenant_configuration = TenantConfiguration()
 
         # Global Configuration
         self.process_interval = config(
-            "KEEP_TOPOLOGY_PROCESSOR_INTERVAL", cast=int, default=10
+            "KEEP_TOPOLOGY_PROCESSOR_INTERVAL", cast=int, default=60
         )  # seconds
         self.look_back_window = config(
             "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
