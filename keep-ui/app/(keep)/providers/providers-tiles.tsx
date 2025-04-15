@@ -11,6 +11,7 @@ import ProviderHealthResultsModal from "@/app/(health)/health/modal";
 import { Drawer } from "@/shared/ui/Drawer";
 
 const ProvidersTiles = ({
+  title,
   providers,
   installedProvidersMode = false,
   linkedProvidersMode = false,
@@ -18,6 +19,7 @@ const ProvidersTiles = ({
   isHealthCheck = false,
   mutate,
 }: {
+  title: string;
   providers: Providers;
   installedProvidersMode?: boolean;
   linkedProvidersMode?: boolean;
@@ -82,18 +84,6 @@ const ProvidersTiles = ({
     }
   };
 
-  const getSectionTitle = () => {
-    if (installedProvidersMode) {
-      return "Installed Providers";
-    }
-
-    if (linkedProvidersMode) {
-      return "Linked Providers";
-    }
-
-    return "Available Providers";
-  };
-
   const sortedProviders = providers
     .filter(
       (provider) =>
@@ -114,7 +104,7 @@ const ProvidersTiles = ({
   return (
     <div>
       <div className="flex items-center mb-2.5">
-        <Title>{getSectionTitle()}</Title>
+        <Title>{title}</Title>
         {linkedProvidersMode && (
           <div className="relative">
             <Tooltip
