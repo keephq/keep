@@ -73,7 +73,6 @@ import {
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { TbTopologyRing } from "react-icons/tb";
 import { ImportTopologyModal } from "./ImportTopologyModal";
-import { NodeLimitWarning } from "./NodeLimitWarning";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
