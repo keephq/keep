@@ -13,7 +13,7 @@ import { useConfig } from "@/utils/hooks/useConfig";
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
-  const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
+  const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]);
   const { data: config } = useConfig();
   const { data, error, mutate } = useProviders();
 
@@ -54,8 +54,8 @@ export const useFetchProviders = () => {
             "_blank"
           ),
         style: {
-          width: "250%", // Set width
-          marginLeft: "-75%", // Adjust starting position to left
+          width: "250%",
+          marginLeft: "-75%",
         },
       });
       localStorage.setItem(toastShownKey, "true");
@@ -91,14 +91,14 @@ export const useFetchProviders = () => {
 
       setInstalledProviders(fetchedInstalledProviders);
       setProviders(fetchedProviders);
-      setLinkedProviders(fetchedLinkedProviders); // Update state with linked providers
+      setLinkedProviders(fetchedLinkedProviders);
     }
   }, [data]);
 
   return {
     providers,
     installedProviders,
-    linkedProviders, // Include linkedProviders in the returned object
+    linkedProviders,
     setInstalledProviders,
     error,
     isLocalhost,
@@ -124,6 +124,11 @@ export default function ProvidersPage({
     providersSelectedTags,
     providersSelectedCategories,
   } = useFilterContext();
+
+  const isFilteringActive =
+    providersSearchString ||
+    providersSelectedTags.length > 0 ||
+    providersSelectedCategories.length > 0;
 
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
@@ -178,10 +183,39 @@ export default function ProvidersPage({
     );
   };
 
+  const filteredProviders = providers.filter(
+    (provider) =>
+      searchProviders(provider) &&
+      searchTags(provider) &&
+      searchCategories(provider)
+  );
+
   return (
     <>
+      {isFilteringActive && (
+        <div className="mb-4">
+          <ProvidersTiles
+            title="Available Providers"
+            providers={filteredProviders}
+            isLocalhost={isLocalhost}
+            mutate={mutate}
+          />
+          {filteredProviders.length > 0 && (
+            <p className="text-m text-gray-500">
+              {filteredProviders.length} provider
+              {filteredProviders.length > 1 ? "s" : ""} found
+            </p>
+          )}
+          {filteredProviders.length === 0 && (
+            <p className="text-m text-gray-500">
+              No providers found matching your filters.
+            </p>
+          )}
+        </div>
+      )}
       {installedProviders.length > 0 && (
         <ProvidersTiles
+          title="Installed Providers"
           providers={installedProviders}
           installedProvidersMode={true}
           mutate={mutate}
@@ -189,22 +223,21 @@ export default function ProvidersPage({
       )}
       {linkedProviders?.length > 0 && (
         <ProvidersTiles
+          title="Linked Providers"
           providers={linkedProviders}
           linkedProvidersMode={true}
           isLocalhost={isLocalhost}
           mutate={mutate}
         />
       )}
-      <ProvidersTiles
-        providers={providers.filter(
-          (provider) =>
-            searchProviders(provider) &&
-            searchTags(provider) &&
-            searchCategories(provider)
-        )}
-        isLocalhost={isLocalhost}
-        mutate={mutate}
-      />
+      {!isFilteringActive && (
+        <ProvidersTiles
+          title="Available Providers"
+          providers={filteredProviders}
+          isLocalhost={isLocalhost}
+          mutate={mutate}
+        />
+      )}
     </>
   );
 }

@@ -452,9 +452,8 @@ export function TopologyMap({
 
   const previousNodesIds = useRef<Set<string>>(new Set());
 
+  const { data: allIncidents } = useIncidents({});
   const { useLastAlerts } = useAlerts();
-
-  const { data: allIncidents } = useIncidents(false, false);
   const { data: allAlerts } = useLastAlerts(undefined);
 
   useEffect(
