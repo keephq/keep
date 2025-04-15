@@ -195,11 +195,17 @@ export default function ProvidersPage({
       {isFilteringActive && (
         <div className="mb-4">
           <ProvidersTiles
-            title={"Found " + filteredProviders.length + " Providers"}
+            title="Available Providers"
             providers={filteredProviders}
             isLocalhost={isLocalhost}
             mutate={mutate}
           />
+          {filteredProviders.length > 0 && (
+            <p className="text-m text-gray-500">
+              {filteredProviders.length} provider
+              {filteredProviders.length > 1 ? "s" : ""} found
+            </p>
+          )}
           {filteredProviders.length === 0 && (
             <p className="text-m text-gray-500">
               No providers found matching your filters.
