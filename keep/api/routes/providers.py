@@ -610,6 +610,14 @@ async def install_provider_oauth2(
             },
         )
     except Exception as e:
+        logger.exception(
+            "Failed to install provider",
+            extra={
+                "provider_id": provider_unique_id,
+                "provider_type": provider_type,
+                "tenant_id": tenant_id,
+            },
+        )
         raise HTTPException(status_code=400, detail=str(e))
 
 

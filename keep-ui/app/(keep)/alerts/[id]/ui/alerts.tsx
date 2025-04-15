@@ -132,7 +132,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
-    } else {
+    } else if (alerts) {
       setViewAlertModal(null);
       setEnrichAlertModal(null);
       setIsEnrichSidebarOpen(false);
