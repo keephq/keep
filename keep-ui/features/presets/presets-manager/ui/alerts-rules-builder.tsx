@@ -17,7 +17,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import { components, GroupBase, MenuListProps } from "react-select";
-import { Select } from "@/shared/ui";
+import { MonacoEditor, Select } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { IoSearchOutline } from "react-icons/io5";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -26,6 +26,8 @@ import { CornerDownLeft } from "lucide-react";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
+import { setupCustomCellanguage } from "@/shared/ui/MonacoEditor/cel-support";
+import CelInput from "@/features/cel-input/cel-input";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -454,7 +456,7 @@ export const AlertsRulesBuilder = ({
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
                 <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Textarea
+                {/* <Textarea
                   ref={textAreaRef}
                   rows={1}
                   className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-10" // Added pl-9 for left padding to accommodate icon
@@ -464,7 +466,10 @@ export const AlertsRulesBuilder = ({
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   error={!isValidCEL}
                   onFocus={() => setShowSuggestions(true)}
-                />
+                /> */}
+
+                <CelInput />
+
                 {celRules && (
                   <button
                     onClick={handleClearInput}
