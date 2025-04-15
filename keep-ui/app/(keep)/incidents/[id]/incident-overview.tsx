@@ -39,18 +39,18 @@ import remarkGfm from "remark-gfm";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { startCase, xor, map, some } from "lodash";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { MdModeEdit } from "react-icons/md";
-import { FiSave, FiX, FiTrash2 } from "react-icons/fi";
-import {EnrichmentEditableField} from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
-import {EnrichmentEditableForm} from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
+import { EnrichmentEditableField } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
+import { EnrichmentEditableForm } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
 
 const PROVISIONED_ENRICHMENTS = [
   "services",
   "incident_id",
   "incident_url",
   "incident_provider",
-  "incident_title"
-]
+  "incident_title",
+  "environments",
+  "repositories",
+];
 
 interface Props {
   incident: IncidentDto;
@@ -203,10 +203,13 @@ function MergedCallout({
 
 export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const router = useRouter();
-  const { data: fetchedIncident, mutate } = useIncident(initialIncidentData.id, {
-    fallbackData: initialIncidentData,
-    revalidateOnMount: false,
-  });
+  const { data: fetchedIncident, mutate } = useIncident(
+    initialIncidentData.id,
+    {
+      fallbackData: initialIncidentData,
+      revalidateOnMount: false,
+    }
+  );
   const incident = fetchedIncident || initialIncidentData;
   const summary = incident.user_summary || incident.generated_summary;
   // Why do we have "null" in services?
@@ -219,25 +222,29 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
     isLoading: _alertsLoading,
     error: alertsError,
   } = useIncidentAlerts(incident.id, 20, 0);
-  const environments = Array.from(
-    new Set(
-      alerts?.items
-        .filter(
-          (alert) =>
-            alert.environment &&
-            alert.environment !== "undefined" &&
-            alert.environment !== "default"
-        )
-        .map((alert) => alert.environment)
-    )
-  );
-  const repositories = Array.from(
-    new Set(
-      alerts?.items
-        .filter((alert) => (alert as any).repository)
-        .map((alert) => (alert as any).repository as string)
-    )
-  );
+  const environments =
+    incident.enrichments.environments ||
+    (Array.from(
+      new Set(
+        alerts?.items
+          .filter(
+            (alert) =>
+              alert.environment &&
+              alert.environment !== "undefined" &&
+              alert.environment !== "default"
+          )
+          .map((alert) => alert.environment)
+      )
+    ) as Array<string>);
+  const repositories =
+    incident.enrichments.repositories ||
+    (Array.from(
+      new Set(
+        alerts?.items
+          .filter((alert) => (alert as any).repository)
+          .map((alert) => (alert as any).repository as string)
+      )
+    ) as Array<string>);
 
   const filterBy = (key: string, value: string) => {
     router.push(
@@ -247,7 +254,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   const api = useApi();
 
-  const handleBulkEnrichmentChange = async (fields: Record<string, string | string[]>) => {
+  const handleBulkEnrichmentChange = async (
+    fields: Record<string, string | string[]>
+  ) => {
     try {
       const requestData = {
         enrichments: fields,
@@ -259,10 +268,10 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       // Handle unexpected error
       console.error("An unexpected error occurred");
     }
-  }
+  };
 
   const handleBulkUnEnrichment = async (fields: string[]) => {
-        try {
+    try {
       const requestData = {
         enrichments: fields,
         fingerprint: incident.id,
@@ -273,15 +282,18 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       // Handle unexpected error
       console.error("An unexpected error occurred");
     }
-  }
+  };
 
-  const handleEnrichmentChange = async (fieldName: string, fieldValue: string | string[]) => {
-    await handleBulkEnrichmentChange({[fieldName]: fieldValue});
-  }
+  const handleEnrichmentChange = async (
+    fieldName: string,
+    fieldValue: string | string[]
+  ) => {
+    await handleBulkEnrichmentChange({ [fieldName]: fieldValue });
+  };
 
   const handleUnEnrichment = async (fieldName: string) => {
     await handleBulkUnEnrichment([fieldName]);
-  }
+  };
 
   if (!alerts || _alertsLoading) {
     return <IncidentOverviewSkeleton />;
@@ -323,28 +335,30 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <FieldHeader>Services</FieldHeader>
-                <EnrichmentEditableField name="services" value={notNullServices} onUpdate={handleEnrichmentChange} onDelete={handleUnEnrichment}/>
+                <EnrichmentEditableField
+                  name="services"
+                  value={notNullServices}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={
+                    incident.enrichments?.services
+                      ? handleUnEnrichment
+                      : undefined
+                  }
+                />
               </div>
 
               <div>
                 <FieldHeader>Environments</FieldHeader>
-                {environments.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {environments.map((env) => (
-                      <Badge
-                        key={env}
-                        size="sm"
-                        color="orange"
-                        className="cursor-pointer"
-                        onClick={() => filterBy("environment", env)}
-                      >
-                        {env}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  "No environments involved"
-                )}
+                <EnrichmentEditableField
+                  name="environments"
+                  value={environments}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={
+                    incident.enrichments?.environments
+                      ? handleUnEnrichment
+                      : undefined
+                  }
+                />
               </div>
 
               <div>
@@ -362,75 +376,89 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                   onDelete={handleBulkUnEnrichment}
                 >
                   <>
-                  {incident.enrichments?.incident_id &&
-                  incident.enrichments?.incident_url ? (
-                    <div className="flex flex-wrap gap-1 truncate">
-                      <Badge
-                        size="sm"
-                        color="orange"
-                        icon={
-                          incident.enrichments?.incident_provider
-                            ? (props: any) => (
-                                <DynamicImageProviderIcon
-                                  providerType={
-                                    incident.enrichments?.incident_provider
-                                  }
-                                  src={`/icons/${incident.enrichments?.incident_provider}-icon.png`}
-                                  height="24"
-                                  width="24"
-                                  {...props}
-                                />
-                              )
-                            : undefined
-                        }
-                        className="cursor-pointer text-ellipsis"
-                        onClick={() =>
-                          window.open(incident.enrichments.incident_url, "_blank")
-                        }
-                      >
-                        {incident.enrichments?.incident_title ??
-                          incident.user_generated_name}
-                      </Badge>
-                    </div>
-                  ) : (
-                    "No external incidents"
-                  )}
+                    {incident.enrichments?.incident_id &&
+                    incident.enrichments?.incident_url ? (
+                      <div className="flex flex-wrap gap-1 truncate">
+                        <Badge
+                          size="sm"
+                          color="orange"
+                          icon={
+                            incident.enrichments?.incident_provider
+                              ? (props: any) => (
+                                  <DynamicImageProviderIcon
+                                    providerType={
+                                      incident.enrichments?.incident_provider
+                                    }
+                                    src={`/icons/${incident.enrichments?.incident_provider}-icon.png`}
+                                    height="24"
+                                    width="24"
+                                    {...props}
+                                  />
+                                )
+                              : undefined
+                          }
+                          className="cursor-pointer text-ellipsis"
+                          onClick={() =>
+                            window.open(
+                              incident.enrichments.incident_url,
+                              "_blank"
+                            )
+                          }
+                        >
+                          {incident.enrichments?.incident_title ??
+                            incident.user_generated_name}
+                        </Badge>
+                      </div>
+                    ) : (
+                      "No external incidents"
+                    )}
                   </>
                 </EnrichmentEditableForm>
-
               </div>
 
               <div>
                 <FieldHeader>Repositories</FieldHeader>
-                {repositories?.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {repositories.map((repo) => {
-                      const repoName = repo.split("/").pop();
-                      return (
-                        <Badge
-                          key={repo}
-                          color="orange"
-                          size="sm"
-                          icon={(props: any) => (
-                            <DynamicImageProviderIcon
-                              providerType="github"
-                              src={`/icons/github-icon.png`}
-                              height="24"
-                              width="24"
-                              {...props}
-                            />
-                          )}
-                          className="cursor-pointer"
-                          onClick={() => window.open(repo, "_blank")}
-                        >
-                          {repoName}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  "No environments involved"
-                )}
+
+                <EnrichmentEditableField
+                  name="repositories"
+                  value={repositories}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={
+                    incident.enrichments?.repositories
+                      ? handleUnEnrichment
+                      : undefined
+                  }
+                >
+                  {repositories?.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {repositories.map((repo: any) => {
+                        const repoName = repo.split("/").pop();
+                        return (
+                          <Badge
+                            key={repo}
+                            color="orange"
+                            size="sm"
+                            icon={(props: any) => (
+                              <DynamicImageProviderIcon
+                                providerType="github"
+                                src={`/icons/github-icon.png`}
+                                height="24"
+                                width="24"
+                                {...props}
+                              />
+                            )}
+                            className="cursor-pointer"
+                            onClick={() => window.open(repo, "_blank")}
+                          >
+                            {repoName}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    "No environments involved"
+                  )}
+                </EnrichmentEditableField>
               </div>
               <div>
                 <FieldHeader>Assignee</FieldHeader>
@@ -478,15 +506,24 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 )}
               {map(incident.enrichments, (value: any, key: string) => {
                 if (PROVISIONED_ENRICHMENTS.indexOf(key) > -1) return;
-                return <div key={`incident-enrichment-${key}`}>
-                  <FieldHeader>{startCase(key)}</FieldHeader>
-                  <EnrichmentEditableField name={key} value={value} onUpdate={handleEnrichmentChange} onDelete={handleUnEnrichment}/>
-                </div>
+                return (
+                  <div key={`incident-enrichment-${key}`}>
+                    <FieldHeader>{startCase(key)}</FieldHeader>
+                    <EnrichmentEditableField
+                      name={key}
+                      value={value}
+                      onUpdate={handleEnrichmentChange}
+                      onDelete={handleUnEnrichment}
+                    />
+                  </div>
+                );
               })}
               <div>
-                <EnrichmentEditableField value={""} onUpdate={handleEnrichmentChange} />
+                <EnrichmentEditableField
+                  value={""}
+                  onUpdate={handleEnrichmentChange}
+                />
               </div>
-
             </div>
           </div>
           <div>
