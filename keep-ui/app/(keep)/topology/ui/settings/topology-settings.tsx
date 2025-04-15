@@ -22,6 +22,9 @@ import {
 const DEFAULT_SETTINGS: TopologyProcessorSettings = {
   enabled: false,
   lookBackWindow: 15,
+  global_enabled: false,
+  depth: 5,
+  minimum_services: 2,
 };
 
 export function TopologySettings() {
@@ -31,6 +34,7 @@ export function TopologySettings() {
   const [initialSettings, setInitialSettings] =
     useState<TopologyProcessorSettings>(DEFAULT_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [errorShown, setErrorShown] = useState(false);
 
   const {
     settings: fetchedSettings,
@@ -47,6 +51,9 @@ export function TopologySettings() {
       const settingsData = {
         enabled: Boolean(fetchedSettings.enabled),
         lookBackWindow: Number(fetchedSettings.lookBackWindow),
+        global_enabled: Boolean(fetchedSettings.global_enabled),
+        depth: Number(fetchedSettings.depth),
+        minimum_services: Number(fetchedSettings.minimum_services),
       };
 
       setSettings(settingsData);
@@ -54,6 +61,14 @@ export function TopologySettings() {
       setSettingsLoaded(true);
     }
   }, [fetchedSettings, isLoading]);
+
+  // Handle error in useEffect to show toast only once
+  useEffect(() => {
+    if (error && !errorShown) {
+      showErrorToast(error, "Failed to fetch topology processor settings");
+      setErrorShown(true);
+    }
+  }, [error, errorShown]);
 
   const handleSettingsChange = (
     newSettings: Partial<TopologyProcessorSettings>
@@ -67,6 +82,8 @@ export function TopologySettings() {
       await updateSettings(settings);
       // Update initialSettings with a new object to avoid reference issues
       setInitialSettings({ ...settings });
+      // Reset error state on successful save
+      setErrorShown(false);
       showSuccessToast("Topology processor settings updated successfully");
     } catch (error) {
       showErrorToast(error, "Failed to update topology processor settings");
@@ -79,7 +96,9 @@ export function TopologySettings() {
   const hasChanges =
     settingsLoaded &&
     (initialSettings.enabled !== settings.enabled ||
-      initialSettings.lookBackWindow !== settings.lookBackWindow);
+      initialSettings.lookBackWindow !== settings.lookBackWindow ||
+      initialSettings.depth !== settings.depth ||
+      initialSettings.minimum_services !== settings.minimum_services);
 
   // Get reason why button is disabled
   const getDisabledReason = () => {
@@ -100,15 +119,24 @@ export function TopologySettings() {
     );
   }
 
-  if (error) {
-    showErrorToast(error, "Failed to fetch topology processor settings");
-  }
-
   return (
     <div className="space-y-6 w-full">
       <Card className="p-6">
         <div className="space-y-6">
           <Title>Topology Correlation Settings</Title>
+
+          {!settings.global_enabled && (
+            <Callout
+              title="Topology Processor Globally Disabled"
+              icon={InformationCircleIcon}
+              color="red"
+              className="mt-4"
+            >
+              The Topology Processor is currently disabled at the system level.
+              To enabled it, start Keep backend with
+              KEEP_TOPOLOGY_PROCESSOR=true.
+            </Callout>
+          )}
 
           <Callout
             title="About Topology Correlation"
@@ -141,13 +169,19 @@ export function TopologySettings() {
                   onChange={(checked) =>
                     handleSettingsChange({ enabled: checked })
                   }
-                  disabled={isLoading}
+                  disabled={isLoading || !settings.global_enabled}
                   color="orange"
                 />
               </div>
             </div>
 
-            <div className={!settings.enabled ? "opacity-60" : ""}>
+            <div
+              className={
+                !settings.enabled || !settings.global_enabled
+                  ? "opacity-60"
+                  : ""
+              }
+            >
               <Text className="font-medium text-base">Look Back Window</Text>
               <Text className="text-sm text-gray-500 mt-1 mb-3">
                 The time window in minutes during which alerts are considered
@@ -164,7 +198,69 @@ export function TopologySettings() {
                 }}
                 min={1}
                 className="max-w-xs"
-                disabled={isLoading || !settings.enabled}
+                disabled={
+                  isLoading || !settings.enabled || !settings.global_enabled
+                }
+              />
+            </div>
+
+            <div
+              className={
+                !settings.enabled || !settings.global_enabled
+                  ? "opacity-60"
+                  : ""
+              }
+            >
+              <Text className="font-medium text-base">Correlation Depth</Text>
+              <Text className="text-sm text-gray-500 mt-1 mb-3">
+                The maximum number of connected services to check when
+                correlating alerts. Higher values enable broader correlation but
+                may impact performance.
+              </Text>
+              <NumberInput
+                placeholder="Enter depth"
+                value={settings.depth}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  if (!isNaN(value) && value > 0) {
+                    handleSettingsChange({ depth: value });
+                  }
+                }}
+                min={1}
+                className="max-w-xs"
+                disabled={
+                  isLoading || !settings.enabled || !settings.global_enabled
+                }
+              />
+            </div>
+
+            <div
+              className={
+                !settings.enabled || !settings.global_enabled
+                  ? "opacity-60"
+                  : ""
+              }
+            >
+              <Text className="font-medium text-base">Minimum Services</Text>
+              <Text className="text-sm text-gray-500 mt-1 mb-3">
+                The minimum number of services with alerts required to create a
+                correlation incident. At least this many connected services must
+                have alerts for correlation to occur.
+              </Text>
+              <NumberInput
+                placeholder="Enter minimum services"
+                value={settings.minimum_services}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  if (!isNaN(value) && value > 0) {
+                    handleSettingsChange({ minimum_services: value });
+                  }
+                }}
+                min={1}
+                className="max-w-xs"
+                disabled={
+                  isLoading || !settings.enabled || !settings.global_enabled
+                }
               />
             </div>
           </div>

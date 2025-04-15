@@ -5,11 +5,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from sqlmodel import Session
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session, get_session_sync
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.db.topology import (
     DeleteServicesRequest,
     TopologyApplicationDtoIn,
@@ -47,11 +48,14 @@ router = APIRouter()
 class TopologyProcessorSettings(BaseModel):
     enabled: bool
     lookBackWindow: int
+    global_enabled: bool
+    depth: int
+    minimum_services: int
 
 
 # GET topology processor settings
 @router.get(
-    "/processor/settings",
+    "/settings",
     description="Get the topology processor settings",
     response_model=TopologyProcessorSettings,
 )
@@ -64,24 +68,49 @@ def get_topology_processor_settings(
     logger.info("Getting topology processor settings", extra={"tenant_id": tenant_id})
 
     # Get default values from environment variables
-    default_enabled = (
+    global_enabled = (
         config("KEEP_TOPOLOGY_PROCESSOR", default="false").lower() == "true"
     )
     default_look_back_window = config(
         "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
     )
+    default_depth = config("KEEP_TOPOLOGY_PROCESSOR_DEPTH", cast=int, default=5)
+    default_minimum_services = config(
+        "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
+    )
 
-    # TODO: In the future, retrieve these settings from the tenant configuration
+    tenant_config_client = TenantConfiguration()
+    tenant_config = tenant_config_client.get_configuration(
+        tenant_id, "topology_processor"
+    )
+    if tenant_config:
+        enabled = tenant_config.get("enabled", global_enabled)
+        look_back_window = tenant_config.get("lookBackWindow", default_look_back_window)
+        depth = tenant_config.get("depth", default_depth)
+        minimum_services = tenant_config.get(
+            "minimum_services", default_minimum_services
+        )
+        return TopologyProcessorSettings(
+            enabled=enabled,
+            lookBackWindow=look_back_window,
+            global_enabled=global_enabled,
+            depth=depth,
+            minimum_services=minimum_services,
+        )
+
     # For now, return the default values
     return TopologyProcessorSettings(
-        enabled=default_enabled,
+        enabled=False,  # if no tenant config, default to false
         lookBackWindow=default_look_back_window,
+        global_enabled=global_enabled,
+        depth=default_depth,
+        minimum_services=default_minimum_services,
     )
 
 
 # PUT topology processor settings
 @router.put(
-    "/processor/settings",
+    "/settings",
     description="Update the topology processor settings",
     response_model=TopologyProcessorSettings,
 )
@@ -96,7 +125,7 @@ def update_topology_processor_settings(
         "Updating topology processor settings",
         extra={
             "tenant_id": tenant_id,
-            "settings": settings.model_dump(),
+            "settings": settings.dict(),
         },
     )
 
@@ -106,10 +135,43 @@ def update_topology_processor_settings(
             status_code=400, detail="Look back window must be a positive number"
         )
 
-    # TODO: In the future, persist these settings in the tenant configuration
-    # For now, we'll just return the settings as they are
+    if settings.depth < 1:
+        raise HTTPException(status_code=400, detail="Depth must be a positive number")
 
-    return settings
+    if settings.minimum_services < 1:
+        raise HTTPException(
+            status_code=400, detail="Minimum services must be a positive number"
+        )
+
+    # Get global enabled status
+    global_enabled = (
+        config("KEEP_TOPOLOGY_PROCESSOR", default="false").lower() == "true"
+    )
+
+    tenant_config_client = TenantConfiguration()
+    tenant_config = tenant_config_client.get_configuration(tenant_id)
+    if not tenant_config:
+        tenant_config = {}
+    # Update the settings in the tenant configuration
+    tenant_config["topology_processor"] = {
+        "enabled": settings.enabled,
+        "lookBackWindow": settings.lookBackWindow,
+        "depth": settings.depth,
+        "minimum_services": settings.minimum_services,
+    }
+    tenant_config_client.update_configuration(
+        tenant_id=tenant_id,
+        configuration=tenant_config,
+    )
+
+    # Return settings with current global_enabled status
+    return TopologyProcessorSettings(
+        enabled=settings.enabled,
+        lookBackWindow=settings.lookBackWindow,
+        global_enabled=global_enabled,
+        depth=settings.depth,
+        minimum_services=settings.minimum_services,
+    )
 
 
 # GET all topology data

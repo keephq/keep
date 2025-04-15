@@ -4,6 +4,9 @@ import useSWR, { SWRConfiguration } from "swr";
 export interface TopologyProcessorSettings {
   enabled: boolean;
   lookBackWindow: number;
+  global_enabled: boolean;
+  depth: number;
+  minimum_services: number;
 }
 
 type UseTopologySettingsOptions = {
@@ -11,7 +14,7 @@ type UseTopologySettingsOptions = {
   options?: SWRConfiguration;
 };
 
-const TOPOLOGY_PROCESSOR_URL = `/topology/processor/settings`;
+const TOPOLOGY_PROCESSOR_URL = `/topology/settings`;
 
 export const useTopologySettings = ({
   initialData,

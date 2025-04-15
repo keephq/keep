@@ -949,7 +949,10 @@ class TopologiesService:
                     else "HTTP"
                 ),
             }
-            dependencies.append(dependency)
+            if dependency not in dependencies:
+                dependencies.append(dependency)
+            else:
+                logger.debug(f"Duplicate dependency found: {dependency}, skipping it.")
 
             # Process applications if field is mapped
             if application_field and row.get(application_field):
