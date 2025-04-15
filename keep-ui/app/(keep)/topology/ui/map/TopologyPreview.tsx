@@ -8,13 +8,41 @@ import {
   useEdgesState,
   ReactFlowProvider,
   Panel,
+  Node,
+  Edge,
+  NodeChange,
+  EdgeChange,
+  ReactFlowInstance,
+  OnInit,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Text } from "@tremor/react";
 import dagre from "@dagrejs/dagre";
 
+// Define types for services and dependencies
+interface TopologyService {
+  id?: string;
+  service?: string;
+  display_name?: string;
+  environment?: string;
+}
+
+interface TopologyDependency {
+  service_id?: string;
+  depends_on_service_id?: string;
+  source?: string;
+  target?: string;
+  protocol?: string;
+}
+
+interface Component {
+  nodeIds: Set<string>;
+  nodes: Node[];
+  edges: Edge[];
+}
+
 // Node styling with better visual hierarchy
-const serviceNodeStyle = {
+const serviceNodeStyle: React.CSSProperties = {
   padding: 10,
   borderRadius: 5,
   border: "1px solid #ddd",
@@ -28,12 +56,12 @@ const serviceNodeStyle = {
 
 // Advanced layout function with better space utilization
 const getLayoutedElements = (
-  nodes,
-  edges,
+  nodes: Node[],
+  edges: Edge[],
   direction = "LR",
   nodeWidth = 150,
   nodeHeight = 50
-) => {
+): { nodes: Node[]; edges: Edge[] } => {
   if (!nodes || nodes.length === 0) return { nodes: [], edges: [] };
 
   // Create a copy of the nodes and edges to avoid modifying the originals
@@ -112,7 +140,10 @@ const getLayoutedElements = (
 };
 
 // Filter edges to only include those between displayed nodes
-const filterEdges = (edges, visibleNodeIds) => {
+const filterEdges = (
+  edges: Edge[] | undefined,
+  visibleNodeIds: string[]
+): Edge[] => {
   if (!edges) return [];
 
   const visibleNodeIdSet = new Set(visibleNodeIds);
@@ -123,9 +154,12 @@ const filterEdges = (edges, visibleNodeIds) => {
 };
 
 // Function to find disconnected components in the graph
-const findDisconnectedComponents = (nodes, edges) => {
+const findDisconnectedComponents = (
+  nodes: Node[],
+  edges: Edge[]
+): Component[] => {
   // Create an adjacency map
-  const adjacencyMap = {};
+  const adjacencyMap: Record<string, string[]> = {};
   nodes.forEach((node) => {
     adjacencyMap[node.id] = [];
   });
@@ -140,11 +174,11 @@ const findDisconnectedComponents = (nodes, edges) => {
   });
 
   // Track visited nodes
-  const visited = new Set();
-  const components = [];
+  const visited = new Set<string>();
+  const components: Component[] = [];
 
   // DFS to find connected components
-  const dfs = (nodeId, component) => {
+  const dfs = (nodeId: string, component: Component): void => {
     visited.add(nodeId);
     component.nodeIds.add(nodeId);
 
@@ -158,7 +192,7 @@ const findDisconnectedComponents = (nodes, edges) => {
   // Find all components
   nodes.forEach((node) => {
     if (!visited.has(node.id)) {
-      const component = { nodeIds: new Set(), nodes: [], edges: [] };
+      const component: Component = { nodeIds: new Set(), nodes: [], edges: [] };
       dfs(node.id, component);
 
       // Fill in the nodes and edges for this component
@@ -176,11 +210,15 @@ const findDisconnectedComponents = (nodes, edges) => {
 };
 
 // Limit nodes to the most important ones based on connections
-const limitNodesByConnections = (nodes, edges, maxNodes) => {
+const limitNodesByConnections = (
+  nodes: Node[],
+  edges: Edge[],
+  maxNodes: number
+): Node[] => {
   if (nodes.length <= maxNodes) return nodes;
 
   // Count connections for each node
-  const connectionCounts = {};
+  const connectionCounts: Record<string, number> = {};
   edges.forEach((edge) => {
     connectionCounts[edge.source] = (connectionCounts[edge.source] || 0) + 1;
     connectionCounts[edge.target] = (connectionCounts[edge.target] || 0) + 1;
@@ -197,7 +235,18 @@ const limitNodesByConnections = (nodes, edges, maxNodes) => {
   return sortedNodes.slice(0, maxNodes);
 };
 
-const TopologyPreviewInner = ({
+interface TopologyPreviewProps {
+  services?: TopologyService[];
+  dependencies?: TopologyDependency[];
+  className?: string;
+  height?: string;
+  maxNodes?: number;
+  direction?: string;
+  rankSeparation?: number;
+  nodeSeparation?: number;
+}
+
+const TopologyPreviewInner: React.FC<TopologyPreviewProps> = ({
   services,
   dependencies,
   className = "",
@@ -207,16 +256,16 @@ const TopologyPreviewInner = ({
   rankSeparation = 100, // Controls vertical spacing
   nodeSeparation = 120, // Controls horizontal spacing
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [isLimited, setIsLimited] = useState(false);
-  const [totalNodes, setTotalNodes] = useState(0);
-  const [totalEdges, setTotalEdges] = useState(0);
-  const [nodesRendered, setNodesRendered] = useState(0);
-  const [edgesRendered, setEdgesRendered] = useState(0);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [isLimited, setIsLimited] = useState<boolean>(false);
+  const [totalNodes, setTotalNodes] = useState<number>(0);
+  const [totalEdges, setTotalEdges] = useState<number>(0);
+  const [nodesRendered, setNodesRendered] = useState<number>(0);
+  const [edgesRendered, setEdgesRendered] = useState<number>(0);
 
   // Function to fit view after nodes are loaded
-  const onInit = useCallback((reactFlowInstance) => {
+  const onInit: OnInit = useCallback((reactFlowInstance: ReactFlowInstance) => {
     reactFlowInstance.fitView({ padding: 0.2 });
   }, []);
 
@@ -224,18 +273,14 @@ const TopologyPreviewInner = ({
   useEffect(() => {
     if (!services || !dependencies) return;
 
-    console.log("Processing topology data:", {
-      servicesCount: services.length,
-      dependenciesCount: dependencies.length,
-    });
-
+    // Using proper state setters instead of console.log for debugging
     setTotalNodes(services.length);
     setTotalEdges(dependencies.length);
     setIsLimited(services.length > maxNodes);
 
     // Create nodes with unique IDs and compact labels
-    const flowNodes = services.map((service, index) => {
-      const displayName = service.display_name || service.service;
+    const flowNodes: Node[] = services.map((service, index) => {
+      const displayName = service.display_name || service.service || "";
       // Truncate long names for better layout
       const truncatedName =
         displayName.length > 25
@@ -256,7 +301,7 @@ const TopologyPreviewInner = ({
     });
 
     // Create edges with valid source/target IDs
-    const flowEdges = dependencies.map((dep, index) => {
+    const flowEdges: Edge[] = dependencies.map((dep, index) => {
       const sourceId = (dep.service_id || dep.source || "").toString();
       const targetId = (
         dep.depends_on_service_id ||
@@ -278,7 +323,7 @@ const TopologyPreviewInner = ({
     });
 
     // Apply node limiting if needed - prioritize connected nodes
-    let limitedNodes = flowNodes;
+    let limitedNodes: Node[] = flowNodes;
     if (services.length > maxNodes) {
       limitedNodes = limitNodesByConnections(flowNodes, flowEdges, maxNodes);
     }
@@ -289,7 +334,7 @@ const TopologyPreviewInner = ({
     // Sometimes with large graphs, separation into disconnected subgraphs works better
     // Identify disconnected components and lay them out separately
     const components = findDisconnectedComponents(limitedNodes, validEdges);
-    let finalNodes = [];
+    let finalNodes: Node[] = [];
     let horizontalOffset = 0;
 
     if (components.length > 1 && components.length <= 5) {
@@ -331,10 +376,6 @@ const TopologyPreviewInner = ({
 
       finalNodes = layoutedNodes;
     }
-
-    console.log(
-      `Positioned ${finalNodes.length} nodes with ${validEdges.length} edges`
-    );
 
     setNodes(finalNodes);
     setEdges(validEdges);
@@ -397,7 +438,7 @@ const TopologyPreviewInner = ({
 };
 
 // Wrap with Provider to ensure it works standalone
-export const TopologyPreview = (props) => (
+export const TopologyPreview: React.FC<TopologyPreviewProps> = (props) => (
   <ReactFlowProvider>
     <TopologyPreviewInner {...props} />
   </ReactFlowProvider>
