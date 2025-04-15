@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Set
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import and_, exists, or_
+from sqlalchemy import and_, exists, insert, or_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
@@ -490,18 +490,28 @@ class TopologiesService:
         tenant_id: str,
         session: Session,
     ) -> None:
-        """Creates multiple services in a single transaction without returning them."""
+        """Creates multiple services in a single transaction using modern bulk insert."""
 
         try:
-            for service in services:
-                db_service = TopologyService(**service.dict(), tenant_id=tenant_id)
-                session.add(db_service)
+            # Convert all services to dictionaries at once
+            service_dicts = [
+                {**service.dict(), "tenant_id": tenant_id} for service in services
+            ]
+
+            # Use modern SQLAlchemy 2.0 bulk insert approach
+            logger.info(f"Bulk inserting {len(service_dicts)} services")
+            import logging
+
+            logging.basicConfig()
+            logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
+            session.execute(insert(TopologyService), service_dicts)
 
             session.commit()
+            logger.info(f"Successfully inserted {len(service_dicts)} services")
 
         except Exception as e:
             session.rollback()
-            logger.error(f"Error while creating services: {e}")
+            logger.error(f"Error while bulk creating services: {e}")
             raise e
         finally:
             session.close()
@@ -786,6 +796,7 @@ class TopologiesService:
                 )
 
             # First create services
+            logger.info(f"Creating {len(all_services)} services")
             TopologiesService.create_services(
                 services=all_services,
                 tenant_id=tenant_id,
@@ -793,6 +804,7 @@ class TopologiesService:
             )
 
             # Then create specified applications
+            logger.info(f"Creating {len(all_applications)} applications")
             TopologiesService.create_applications_by_tenant_id(
                 tenant_id=tenant_id,
                 applications=all_applications,
@@ -800,6 +812,7 @@ class TopologiesService:
             )
 
             # And dependencies
+            logger.info(f"Creating {len(all_dependencies)} dependencies")
             TopologiesService.create_dependencies(
                 dependencies=all_dependencies,
                 tenant_id=tenant_id,
@@ -807,8 +820,7 @@ class TopologiesService:
                 enforce_manual=False,
             )
 
-            # We no longer generate auto-correlated applications here as it's done in _process_csv_to_topology
-            # for imported CSV files without application mapping
+            logger.info(f"Successfully imported topology for tenant {tenant_id}")
 
         except Exception as e:
             logger.error(f"Error while importing topology: {e}")
