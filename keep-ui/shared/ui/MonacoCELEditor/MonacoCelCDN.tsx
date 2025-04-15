@@ -72,12 +72,17 @@ export function MonacoCelCDN(props: EditorProps) {
   return (
     <Editor
       beforeMount={handleEditorBeforeMount}
-      className="h-20"
+      className="h-20 bg-transparent"
       language="cel"
       defaultLanguage="cel"
       theme="cel-dark"
       loading={Loader}
       onMount={handleEditorDidMount}
+      wrapperProps={{
+        style: {
+          backgroundColor: "transparent", // ✅ wrapper transparency
+        },
+      }}
       options={{
         readOnly: false,
         minimap: { enabled: false },

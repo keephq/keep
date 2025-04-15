@@ -32,6 +32,8 @@ export const setupCustomCellanguage = (monaco: any) => {
 
         // Keywords
         [/\b(true|false|null)\b/, "keyword"],
+        // Functions — identifier followed by (
+        [/[a-zA-Z_][\w$]*(?=\s*\()/, "function"],
 
         // Identifiers
         [/[a-zA-Z_][\w$]*/, "identifier"],
@@ -64,9 +66,10 @@ export const setupCustomCellanguage = (monaco: any) => {
       { token: "string", foreground: "CE9178" }, // salmon
       { token: "operator", foreground: "FFFF00" }, // yellow
       { token: "delimiter", foreground: "D4D4D4" }, // same as operator
+      { token: "function", foreground: "C586C0" }, // purple
     ],
     colors: {
-      "editor.background": "#1E1E1E",
+      "editor.background": "#00000000", // Transparent background
     },
   });
 
