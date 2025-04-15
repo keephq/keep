@@ -23,7 +23,6 @@ const DEFAULT_SETTINGS: TopologyProcessorSettings = {
   enabled: false,
   lookBackWindow: 15,
   global_enabled: false,
-  depth: 5,
   minimum_services: 2,
 };
 
@@ -52,7 +51,6 @@ export function TopologySettings() {
         enabled: Boolean(fetchedSettings.enabled),
         lookBackWindow: Number(fetchedSettings.lookBackWindow),
         global_enabled: Boolean(fetchedSettings.global_enabled),
-        depth: Number(fetchedSettings.depth),
         minimum_services: Number(fetchedSettings.minimum_services),
       };
 
@@ -97,7 +95,6 @@ export function TopologySettings() {
     settingsLoaded &&
     (initialSettings.enabled !== settings.enabled ||
       initialSettings.lookBackWindow !== settings.lookBackWindow ||
-      initialSettings.depth !== settings.depth ||
       initialSettings.minimum_services !== settings.minimum_services);
 
   // Get reason why button is disabled
@@ -211,36 +208,6 @@ export function TopologySettings() {
                   : ""
               }
             >
-              <Text className="font-medium text-base">Correlation Depth</Text>
-              <Text className="text-sm text-gray-500 mt-1 mb-3">
-                The maximum number of connected services to check when
-                correlating alerts. Higher values enable broader correlation but
-                may impact performance.
-              </Text>
-              <NumberInput
-                placeholder="Enter depth"
-                value={settings.depth}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value, 10);
-                  if (!isNaN(value) && value > 0) {
-                    handleSettingsChange({ depth: value });
-                  }
-                }}
-                min={1}
-                className="max-w-xs"
-                disabled={
-                  isLoading || !settings.enabled || !settings.global_enabled
-                }
-              />
-            </div>
-
-            <div
-              className={
-                !settings.enabled || !settings.global_enabled
-                  ? "opacity-60"
-                  : ""
-              }
-            >
               <Text className="font-medium text-base">Minimum Services</Text>
               <Text className="text-sm text-gray-500 mt-1 mb-3">
                 The minimum number of services with alerts required to create a
@@ -256,13 +223,21 @@ export function TopologySettings() {
                     handleSettingsChange({ minimum_services: value });
                   }
                 }}
-                min={1}
+                min={2}
                 className="max-w-xs"
                 disabled={
                   isLoading || !settings.enabled || !settings.global_enabled
                 }
               />
             </div>
+
+            <div
+              className={
+                !settings.enabled || !settings.global_enabled
+                  ? "opacity-60"
+                  : ""
+              }
+            ></div>
           </div>
 
           <Divider />

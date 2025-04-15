@@ -25,12 +25,19 @@ export default async function IncidentTopologyPage(props: PageProps) {
       (app) => app.id === incident.incident_application
     );
 
+    // Only pass valid application IDs, not empty strings
+    const selectedAppIds = relevantApplication?.id
+      ? [relevantApplication.id]
+      : [];
+
     return (
       <main className="h-[calc(100vh-28rem)]">
-        <TopologySearchProvider>
+        <TopologySearchProvider initialSelectedApplicationIds={selectedAppIds}>
           <TopologyMap
-            selectedApplicationIds={[relevantApplication?.id || ""]}
             topologyApplications={applications}
+            selectedApplicationIds={selectedAppIds}
+            // If incident is topology-based, we need to ensure services data is also passed
+            services={incident.services}
           />
         </TopologySearchProvider>
       </main>

@@ -49,7 +49,6 @@ class TopologyProcessorSettings(BaseModel):
     enabled: bool
     lookBackWindow: int
     global_enabled: bool
-    depth: int
     minimum_services: int
 
 
@@ -74,7 +73,6 @@ def get_topology_processor_settings(
     default_look_back_window = config(
         "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
     )
-    default_depth = config("KEEP_TOPOLOGY_PROCESSOR_DEPTH", cast=int, default=5)
     default_minimum_services = config(
         "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
     )
@@ -86,7 +84,6 @@ def get_topology_processor_settings(
     if tenant_config:
         enabled = tenant_config.get("enabled", global_enabled)
         look_back_window = tenant_config.get("lookBackWindow", default_look_back_window)
-        depth = tenant_config.get("depth", default_depth)
         minimum_services = tenant_config.get(
             "minimum_services", default_minimum_services
         )
@@ -94,7 +91,6 @@ def get_topology_processor_settings(
             enabled=enabled,
             lookBackWindow=look_back_window,
             global_enabled=global_enabled,
-            depth=depth,
             minimum_services=minimum_services,
         )
 
@@ -103,7 +99,6 @@ def get_topology_processor_settings(
         enabled=False,  # if no tenant config, default to false
         lookBackWindow=default_look_back_window,
         global_enabled=global_enabled,
-        depth=default_depth,
         minimum_services=default_minimum_services,
     )
 
@@ -135,12 +130,9 @@ def update_topology_processor_settings(
             status_code=400, detail="Look back window must be a positive number"
         )
 
-    if settings.depth < 1:
-        raise HTTPException(status_code=400, detail="Depth must be a positive number")
-
-    if settings.minimum_services < 1:
+    if settings.minimum_services < 2:
         raise HTTPException(
-            status_code=400, detail="Minimum services must be a positive number"
+            status_code=400, detail="Minimum services must be at least 2"
         )
 
     # Get global enabled status
@@ -156,7 +148,6 @@ def update_topology_processor_settings(
     tenant_config["topology_processor"] = {
         "enabled": settings.enabled,
         "lookBackWindow": settings.lookBackWindow,
-        "depth": settings.depth,
         "minimum_services": settings.minimum_services,
     }
     tenant_config_client.update_configuration(
@@ -169,7 +160,6 @@ def update_topology_processor_settings(
         enabled=settings.enabled,
         lookBackWindow=settings.lookBackWindow,
         global_enabled=global_enabled,
-        depth=settings.depth,
         minimum_services=settings.minimum_services,
     )
 
@@ -643,6 +633,7 @@ async def import_topology(
     format: str = Form("yaml"),  # Default format is yaml
     name: Optional[str] = Form(None),  # Optional topology name
     mapping: Optional[str] = Form(None),  # Field mapping for CSV
+    correlation_settings: Optional[str] = Form(None),  # Correlation settings
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
     ),
@@ -652,10 +643,48 @@ async def import_topology(
         tenant_id = authenticated_entity.tenant_id
         file_content = await file.read()
 
+        # Parse correlation settings if provided
+        corr_settings = {}
+        if correlation_settings:
+            try:
+                corr_settings = json.loads(correlation_settings)
+                # Validate depth setting
+                if "depth" in corr_settings and (
+                    not isinstance(corr_settings["depth"], int)
+                    or corr_settings["depth"] < 1
+                ):
+                    raise ValueError("Correlation depth must be a positive integer")
+            except json.JSONDecodeError:
+                logger.warning("Invalid correlation settings format, using defaults")
+                corr_settings = {}
+
+        # Get the tenant's minimum_services setting to include it in correlation settings
+        tenant_config_client = TenantConfiguration()
+        tenant_config = tenant_config_client.get_configuration(
+            tenant_id, "topology_processor"
+        )
+        default_minimum_services = config(
+            "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
+        )
+        minimum_services = default_minimum_services
+        if tenant_config:
+            minimum_services = tenant_config.get(
+                "minimum_services", default_minimum_services
+            )
+
+        # Add minimum_services to correlation settings
+        corr_settings["minimum_services"] = minimum_services
+
         if format.lower() == "yaml":
             # Process YAML file
             topology_data: dict = cyaml.safe_load(file_content)
-            TopologiesService.import_to_db(topology_data, session, tenant_id)
+            # For YAML imports, only pass the correlation_settings if it's a direct file import without applications
+            if not topology_data.get("applications") and "depth" in corr_settings:
+                TopologiesService.import_to_db(
+                    topology_data, session, tenant_id, corr_settings
+                )
+            else:
+                TopologiesService.import_to_db(topology_data, session, tenant_id, None)
             return JSONResponse(
                 status_code=200, content={"message": "Topology imported successfully"}
             )
@@ -674,6 +703,7 @@ async def import_topology(
                 tenant_id=tenant_id,
                 session=session,
                 topology_name=name,
+                correlation_settings=corr_settings,
             )
             return JSONResponse(
                 status_code=200,

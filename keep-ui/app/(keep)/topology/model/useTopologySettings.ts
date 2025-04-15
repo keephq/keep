@@ -5,7 +5,6 @@ export interface TopologyProcessorSettings {
   enabled: boolean;
   lookBackWindow: number;
   global_enabled: boolean;
-  depth: number;
   minimum_services: number;
 }
 

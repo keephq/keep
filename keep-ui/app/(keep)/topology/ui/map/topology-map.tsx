@@ -105,6 +105,11 @@ export function TopologyMap({
   const [initiallyFitted, setInitiallyFitted] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
+  // Track if we're in incident view mode (fixed application selection)
+  const isIncidentView = Boolean(
+    initialSelectedApplicationIds && initialSelectedApplicationIds.length > 0
+  );
+
   const {
     topologyData,
     isLoading,
@@ -130,10 +135,24 @@ export function TopologyMap({
 
   // if initialSelectedApplicationIds is provided, set it as selectedApplicationIds
   useEffect(() => {
-    if (initialSelectedApplicationIds) {
+    // Only update when there are valid initial IDs provided as props
+    if (
+      initialSelectedApplicationIds &&
+      initialSelectedApplicationIds.length > 0
+    ) {
       setSelectedApplicationIds(initialSelectedApplicationIds);
     }
-  }, [initialSelectedApplicationIds, setSelectedApplicationIds]);
+    // We only want this effect to run once on initial render or when prop changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedApplicationIds]);
+
+  // Separate effect to check for application changes
+  useEffect(() => {
+    // This is only needed for debugging
+    if (selectedApplicationIds.length > 0) {
+      console.log("Active application filters:", selectedApplicationIds);
+    }
+  }, [selectedApplicationIds]);
 
   const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
 
@@ -487,6 +506,16 @@ export function TopologyMap({
         previousNodesIds.current = new Set(nodeMap.keys());
       }
 
+      // If we have initial selected applications, immediately apply those filters
+      // instead of showing the default limited view
+      if (
+        initialSelectedApplicationIds &&
+        initialSelectedApplicationIds.length > 0
+      ) {
+        // The watchSelectedApplications effect will handle this after state updates
+        return;
+      }
+
       const layoutedElements = getLayoutedElements(newNodes, newEdges);
 
       // Set state for nodes and edges - now only using the limited set
@@ -512,16 +541,58 @@ export function TopologyMap({
         setLimitWarning({ show: false });
       }
     },
-    [topologyData, applicationMap, allIncidents, mutateTopologyData]
+    [
+      topologyData,
+      applicationMap,
+      allIncidents,
+      mutateTopologyData,
+      initialSelectedApplicationIds,
+    ]
   );
 
   useEffect(
     function watchSelectedApplications() {
       if (selectedApplicationIds.length === 0) {
-        setNodes((prev) => prev.map((n) => ({ ...n, hidden: false })));
-        setEdges((prev) => prev.map((e) => ({ ...e, hidden: false })));
+        // When no applications are selected, we need to go back to the
+        // limited view to avoid performance issues with large topologies
+
+        // Re-apply the original layout with limits (don't bypass)
+        const layoutedElements = getLayoutedElements(
+          allNodesRef.current,
+          allEdgesRef.current,
+          false, // Don't bypass limit
+          false // Not in application mode
+        );
+
+        // Update nodes and edges with the original limited layout
+        setNodes(layoutedElements.nodes);
+        setEdges(layoutedElements.edges);
+
+        // Restore the original topology stats
+        setTopologyStats({
+          totalNodes: allNodesRef.current.length,
+          displayedNodes: layoutedElements.nodes.length,
+          totalEdges: allEdgesRef.current.length,
+          displayedEdges: layoutedElements.edges.length,
+        });
+
+        // Show the warning banner if node limit was applied
+        if (layoutedElements.metadata?.limitApplied) {
+          setLimitWarning({
+            show: true,
+            totalNodes: layoutedElements.metadata.totalNodes,
+            displayedNodes: layoutedElements.metadata.displayedNodes,
+          });
+        }
+
+        // Fit view to the visible nodes
+        setTimeout(() => {
+          reactFlowInstanceRef.current?.fitView(defaultFitViewOptions);
+        }, 0);
+
         return;
       }
+
       // Get all service nodes that are part of selected applications
       const selectedServiceNodesIds = new Set(
         applications.flatMap((app) =>
@@ -530,42 +601,66 @@ export function TopologyMap({
             : []
         )
       );
-      // Hide all nodes and edges that are not part of selected applications
-      setNodes((prev) =>
-        prev.map((n) => {
-          const isSelectedService = selectedServiceNodesIds.has(n.id);
-          return {
-            ...n,
-            hidden: n.type === "service" && !isSelectedService,
-          };
-        })
-      );
-      setEdges((prev) =>
-        prev.map((e) => {
-          const isSelectedService =
-            selectedServiceNodesIds.has(e.source) &&
-            selectedServiceNodesIds.has(e.target);
-          return {
-            ...e,
-            hidden: !isSelectedService,
-          };
-        })
+
+      // When applications are selected, let's use only the nodes and edges
+      // that are part of the selected applications, but bypass the limit
+      const filteredNodes = allNodesRef.current.filter(
+        (n) => n.type !== "service" || selectedServiceNodesIds.has(n.id)
       );
 
-      const nodesToFit: TopologyNode[] = Array.from(
-        selectedServiceNodesIds.values()
-      )
-        .map((id) => reactFlowInstanceRef.current?.getNode(id))
-        .filter((node) => !!node);
-      // Then fit view to selected nodes
-      reactFlowInstanceRef.current?.fitView({
-        padding: 10,
-        minZoom: 0.5,
-        nodes: nodesToFit,
-        duration: 300,
-      });
+      const filteredEdges = allEdgesRef.current.filter(
+        (e) =>
+          selectedServiceNodesIds.has(e.source) &&
+          selectedServiceNodesIds.has(e.target)
+      );
+
+      // Apply layout with application mode to handle larger sets with a higher limit
+      const layoutedElements = getLayoutedElements(
+        filteredNodes,
+        filteredEdges,
+        false, // Don't bypass the limit completely
+        true // Use application mode with higher limits
+      );
+
+      // Update nodes and edges with the newly layouted elements
+      setNodes(layoutedElements.nodes);
+      setEdges(layoutedElements.edges);
+
+      // Update stats to reflect what we're displaying
+      setTopologyStats((prev) => ({
+        ...prev,
+        displayedNodes: layoutedElements.nodes.length,
+        displayedEdges: layoutedElements.edges.length,
+      }));
+
+      // Show warning if we had to limit application nodes
+      if (layoutedElements.metadata?.limitApplied) {
+        setLimitWarning({
+          show: true,
+          totalNodes: layoutedElements.metadata.totalNodes,
+          displayedNodes: layoutedElements.metadata.displayedNodes,
+        });
+      } else {
+        // Hide the limit warning if there's no limit applied
+        setLimitWarning({ show: false });
+      }
+
+      // Then fit view to the nodes
+      setTimeout(() => {
+        reactFlowInstanceRef.current?.fitView({
+          padding: 0.2,
+          minZoom: 0.5,
+          nodes: layoutedElements.nodes,
+          duration: 300,
+        });
+      }, 0);
     },
-    [applications, selectedApplicationIds]
+    [
+      applications,
+      selectedApplicationIds,
+      getLayoutedElements,
+      defaultFitViewOptions,
+    ]
   );
 
   if (isLoading) {
@@ -632,10 +727,20 @@ export function TopologyMap({
           {/* Using z-index to overflow the manage selection component */}
           <div className="basis-1/3 relative z-30">
             <MultiSelect
-              placeholder="Show application"
+              placeholder={
+                isIncidentView
+                  ? "Application filter locked"
+                  : "Show application"
+              }
               value={selectedApplicationIds}
-              onValueChange={setSelectedApplicationIds}
-              disabled={!applications.length}
+              onValueChange={(newValues) => {
+                // Prevent changes if we're in incident view
+                if (isIncidentView) {
+                  return;
+                }
+                setSelectedApplicationIds(newValues);
+              }}
+              disabled={!applications.length || isIncidentView}
             >
               {applications.map((app) => (
                 <MultiSelectItem key={app.id} value={app.id}>

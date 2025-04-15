@@ -34,6 +34,11 @@ interface CSVFieldMapping {
   protocol: string;
 }
 
+// Add interface for correlation settings
+interface CorrelationSettings {
+  depth: number;
+}
+
 // Default CSV mappings
 const DEFAULT_CSV_MAPPING: CSVFieldMapping = {
   service: "service",
@@ -43,6 +48,11 @@ const DEFAULT_CSV_MAPPING: CSVFieldMapping = {
   dependsOn: "depends_on",
   application: "application",
   protocol: "protocol",
+};
+
+// Default correlation settings
+const DEFAULT_CORRELATION_SETTINGS: CorrelationSettings = {
+  depth: 10,
 };
 
 export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
@@ -61,6 +71,8 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [previewTab, setPreviewTab] = useState(0);
+  const [correlationSettings, setCorrelationSettings] =
+    useState<CorrelationSettings>(DEFAULT_CORRELATION_SETTINGS);
 
   const api = useApi();
 
@@ -76,6 +88,7 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
       setShowPreview(false);
       setPreviewData(null);
       setPreviewTab(0);
+      setCorrelationSettings(DEFAULT_CORRELATION_SETTINGS);
     }
   }, [isOpen]);
 
@@ -102,6 +115,9 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
       } else {
         setFileType("yaml");
       }
+
+      // Automatically generate preview after file selection
+      setTimeout(() => generatePreview(), 100);
     }
   };
 
@@ -371,8 +387,12 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
     if (fileType === "csv") {
       formData.set("format", "csv");
       formData.set("mapping", JSON.stringify(csvFieldMapping));
+      // Add correlation settings
+      formData.set("correlation_settings", JSON.stringify(correlationSettings));
     } else {
       formData.set("format", "yaml");
+      // Also add correlation settings for YAML files
+      formData.set("correlation_settings", JSON.stringify(correlationSettings));
     }
 
     try {
@@ -413,9 +433,7 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
             }
             required={true}
             placeholder="Select a field"
-            error={
-              !csvFieldMapping.service ? "This field is required" : undefined
-            }
+            error={!csvFieldMapping.service}
           >
             {csvHeaders.map((header) => (
               <SelectItem key={header} value={header}>
@@ -443,9 +461,7 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
             }
             required={true}
             placeholder="Select a field"
-            error={
-              !csvFieldMapping.dependsOn ? "This field is required" : undefined
-            }
+            error={!csvFieldMapping.dependsOn}
           >
             {csvHeaders.map((header) => (
               <SelectItem key={header} value={header}>
@@ -612,15 +628,6 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
           <div className="flex justify-end mb-3">
             <div className="flex space-x-3">
               <Button
-                color="gray"
-                variant="secondary"
-                onClick={onClose}
-                disabled={isUploading}
-                size="sm"
-              >
-                Cancel
-              </Button>
-              <Button
                 type="submit"
                 color="orange"
                 variant="primary"
@@ -708,6 +715,38 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
                     </Text>
                   )}
                 </div>
+
+                {/* Correlation settings - only show after file is selected */}
+                {file && (
+                  <div>
+                    <label
+                      htmlFor="correlationDepth"
+                      className="block text-xs font-medium text-gray-700 mb-1"
+                    >
+                      Correlation Depth
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="number"
+                        id="correlationDepth"
+                        min="1"
+                        max="50"
+                        value={correlationSettings.depth}
+                        onChange={(e) =>
+                          setCorrelationSettings((prev) => ({
+                            ...prev,
+                            depth: Math.max(1, parseInt(e.target.value) || 1),
+                          }))
+                        }
+                        className="w-24 px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <Text className="text-xs text-gray-500 mt-1">
+                      How many levels deep to check when identifying service
+                      relationships for auto-generating applications (1-10)
+                    </Text>
+                  </div>
+                )}
               </div>
 
               {/* CSV field mapping */}
@@ -723,18 +762,21 @@ export const ImportTopologyModal: React.FC<ImportTopologyModalProps> = ({
             <div className="lg:col-span-7">
               {/* Preview heading and Refresh Preview button side by side */}
               <div className="flex justify-between items-center mb-2">
-                <Title className="text-xs">Preview</Title>
-                {file && (
-                  <Button
-                    color="gray"
-                    variant="secondary"
-                    onClick={generatePreview}
-                    disabled={isUploading}
-                    size="xs"
-                  >
-                    {showPreview ? "Refresh Preview" : "Generate Preview"}
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <Title className="text-xs">Preview</Title>
+                  {file && (
+                    <Button
+                      color="gray"
+                      variant="secondary"
+                      onClick={generatePreview}
+                      disabled={isUploading}
+                      size="xs"
+                      className="h-6 px-2 py-0 text-xs"
+                    >
+                      Regenerate
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Preview metadata */}

@@ -10,25 +10,35 @@ let hasShownLimitWarning = false;
 export function getLayoutedElements(
   nodes: TopologyNode[],
   edges: Edge[],
-  bypassLimit = false
+  bypassLimit = false,
+  applicationMode = false
 ) {
   const MAX_NODES = 100;
+  const MAX_APPLICATION_NODES = 300; // Higher limit for application view
   const totalNodes = nodes.length;
   let limitedNodes = nodes;
   let limitedEdges = edges;
   let limitApplied = false;
+  let maxNodesToShow = applicationMode ? MAX_APPLICATION_NODES : MAX_NODES;
 
-  // Check if we need to limit the nodes (unless bypassing limit is requested)
-  if (!bypassLimit && totalNodes > MAX_NODES) {
-    limitedNodes = nodes.slice(0, MAX_NODES);
+  // Check if we need to limit the nodes
+  if (
+    (!bypassLimit || (applicationMode && totalNodes > MAX_APPLICATION_NODES)) &&
+    totalNodes > maxNodesToShow
+  ) {
+    limitedNodes = nodes.slice(0, maxNodesToShow);
     limitApplied = true;
 
-    // Show warning message only once
-    if (!hasShownLimitWarning) {
+    // Show warning message only once (if not in application mode)
+    if (!applicationMode && !hasShownLimitWarning) {
       console.warn(
-        `Topology display limited to ${MAX_NODES} nodes (total: ${totalNodes})`
+        `Topology display limited to ${maxNodesToShow} nodes (total: ${totalNodes})`
       );
       hasShownLimitWarning = true;
+    } else if (applicationMode) {
+      console.warn(
+        `Application view limited to ${MAX_APPLICATION_NODES} nodes (total: ${totalNodes})`
+      );
     }
 
     // Only keep edges that connect the limited nodes
@@ -37,14 +47,34 @@ export function getLayoutedElements(
       (edge) =>
         limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target)
     );
+  } else if (bypassLimit && !applicationMode && totalNodes > MAX_NODES) {
+    // Log when we're bypassing the limit for debugging
+    console.info(
+      `Bypassing node limit for ${totalNodes} nodes (e.g., for selected application view)`
+    );
   }
 
   const dagreGraph = new graphlib.Graph({});
   dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  // Adjust node spacing based on the number of nodes
+  // Use tighter spacing for larger graphs to fit more nodes in the view
+  let nodeSep = 50;
+  let rankSep = 200;
+
+  if (limitedNodes.length > 100) {
+    nodeSep = 30;
+    rankSep = 120;
+  }
+  if (limitedNodes.length > 200) {
+    nodeSep = 20;
+    rankSep = 80;
+  }
+
   dagreGraph.setGraph({
     rankdir: "LR",
-    nodesep: 50,
-    ranksep: 200,
+    nodesep: nodeSep,
+    ranksep: rankSep,
   });
 
   // Add only the limited nodes to the dagre graph
@@ -83,7 +113,7 @@ export function getLayoutedElements(
       ? {
           limitApplied: true,
           totalNodes,
-          displayedNodes: MAX_NODES,
+          displayedNodes: limitedNodes.length,
         }
       : undefined,
   };
