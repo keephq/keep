@@ -105,7 +105,7 @@ export const WorkflowYAMLEditor = ({
       }
       validateMustacheExpressionsEverywhere();
     },
-    [onChange, validateMustacheExpressions]
+    [onChange, validateMustacheExpressionsEverywhere]
   );
 
   const handleEditorDidMount = (
