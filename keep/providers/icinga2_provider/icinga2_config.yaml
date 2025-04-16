@@ -1,0 +1,15 @@
+name: icinga2-prod
+type: icinga2
+authentication:
+  api_url: https://icinga.example.com:5665
+  username: keep-api-user
+  password: ${ICINGA2_PASSWORD} # Environment variable
+  verify_ssl: true
+
+deduplication_rules:
+  #Deduplication Rules (Optional)
+  icinga2_host_service:
+    match_fields:
+      - labels.host
+      - labels.service
+    time window: 3600 # 60 Minutes
