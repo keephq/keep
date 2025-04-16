@@ -481,7 +481,7 @@ def update_workflow_with_values(
         # TODO: ensure that id is unique to workflow_id, like if rolled back and now updating from this version it should be bigger than latest version
         next_revision = existing_workflow.revision + 1
         updated_by_str = updated_by or existing_workflow.updated_by or "unknown"
-        # update version
+        # creating a new version
         version = WorkflowVersion(
             workflow_id=existing_workflow.id,
             revision=next_revision,
@@ -494,6 +494,7 @@ def update_workflow_with_values(
         )
         session.add(version)
 
+        # updating the existing version to be not current
         existing_version = session.exec(
             select(WorkflowVersion)
             .where(WorkflowVersion.workflow_id == existing_workflow.id)
