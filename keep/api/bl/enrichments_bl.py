@@ -9,22 +9,25 @@ from uuid import UUID
 import celpy
 import chevron
 import json5
+from elasticsearch import NotFoundError
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
-from keep.api.core.db import batch_enrich, get_incidents_by_alert_fingerprint
-from keep.api.core.db import enrich_entity as enrich_alert_db, get_last_alert_by_fingerprint, \
-    is_all_alerts_resolved
+from keep.api.core.db import batch_enrich
+from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
     get_alert_by_event_id,
     get_enrichment_with_session,
     get_extraction_rule_by_id,
+    get_incidents_by_alert_fingerprint,
+    get_last_alert_by_fingerprint,
     get_mapping_rule_by_id,
     get_session_sync,
     get_topology_data_by_dynamic_matcher,
+    is_all_alerts_resolved,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.action_type import ActionType
@@ -39,8 +42,8 @@ from keep.api.models.db.enrichment_event import (
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.mapping import MappingRule
-from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.api.models.db.rule import ResolveOn
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 
 
 def is_valid_uuid(uuid_str):
@@ -674,7 +677,7 @@ class EnrichmentsBl:
             action_callee,
             action_description,
             audit_enabled=audit_enabled,
-            session=self.db_session
+            session=self.db_session,
         )
 
     def disposable_enrich_entity(
@@ -698,7 +701,12 @@ class EnrichmentsBl:
             "force": force,
         }
 
-        self.enrich_entity(fingerprint=fingerprint, dispose_on_new_alert=True, audit_enabled=audit_enabled, **common_kwargs)
+        self.enrich_entity(
+            fingerprint=fingerprint,
+            dispose_on_new_alert=True,
+            audit_enabled=audit_enabled,
+            **common_kwargs,
+        )
 
         last_alert = get_last_alert_by_fingerprint(
             self.tenant_id, fingerprint, session=self.db_session
@@ -709,7 +717,6 @@ class EnrichmentsBl:
             last_alert.alert_id, self.db_session.bind.dialect
         )
         self.enrich_entity(fingerprint=alert_id, audit_enabled=False, **common_kwargs)
-
 
     def enrich_entity(
         self,
@@ -773,10 +780,16 @@ class EnrichmentsBl:
         # so for example, in mapping, the enrichment happens before the alert is indexed in elastic
         #
         if should_exist:
-            self.elastic_client.enrich_alert(
-                alert_fingerprint=fingerprint,
-                alert_enrichments=enrichments,
-            )
+            try:
+                self.elastic_client.enrich_alert(
+                    alert_fingerprint=fingerprint,
+                    alert_enrichments=enrichments,
+                )
+            except NotFoundError:
+                self.logger.exception(
+                    "Failed to enrich alert in Elastic",
+                    extra={"fingerprint": fingerprint, "tenant_id": self.tenant_id},
+                )
         self.logger.debug(
             "alert enriched in elastic", extra={"fingerprint": fingerprint}
         )
@@ -951,13 +964,14 @@ class EnrichmentsBl:
             )
 
     def check_incident_resolution(self, alert: Alert | AlertDto):
-        incidents = get_incidents_by_alert_fingerprint(self.tenant_id, alert.fingerprint, self.db_session)
+        incidents = get_incidents_by_alert_fingerprint(
+            self.tenant_id, alert.fingerprint, self.db_session
+        )
 
         self.db_session.expire_on_commit = False
         for incident in incidents:
-            if (
-                incident.resolve_on == ResolveOn.ALL.value
-                and is_all_alerts_resolved(incident=incident, session=self.db_session)
+            if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+                incident=incident, session=self.db_session
             ):
                 incident.status = IncidentStatus.RESOLVED.value
                 self.db_session.add(incident)

@@ -4,16 +4,16 @@ OpensearchProvider is a class that provides a way to read/add data from AWS Open
 
 import dataclasses
 from typing import List
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urlencode, urljoin
 
 import boto3
 import pydantic
 import requests
+from requests_aws4auth import AWS4Auth
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from requests_aws4auth import AWS4Auth
 
 
 @pydantic.dataclasses.dataclass
@@ -35,7 +35,7 @@ class OpensearchserverlessProviderAuthConfig:
     access_key: str = dataclasses.field(
         default=None,
         metadata={
-            "required": True,
+            "required": False,
             "description": "AWS access key",
             "sensitive": True,
         },
@@ -43,7 +43,7 @@ class OpensearchserverlessProviderAuthConfig:
     access_key_secret: str = dataclasses.field(
         default=None,
         metadata={
-            "required": True,
+            "required": False,
             "description": "AWS access key secret",
             "sensitive": True,
         },
@@ -177,7 +177,11 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             )
             return scopes
 
-        left_to_validate = ["aoss:CreateIndex", "aoss:ReadDocument", "aoss:WriteDocument"]
+        left_to_validate = [
+            "aoss:CreateIndex",
+            "aoss:ReadDocument",
+            "aoss:WriteDocument",
+        ]
         try:
             aoss_client = self.__generate_client("opensearchserverless")
             all_policies = aoss_client.list_access_policies(type="data")
@@ -228,19 +232,6 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             )
         return self.auth
 
-    def __get_doc(self, index, doc_id):
-        url = self.__get_url([index, "_doc", doc_id])
-        try:
-            response = requests.get(
-                url, headers=self.__get_headers, auth=self.__get_auth
-            )
-            return response
-        except Exception as e:
-            self.logger.error(
-                "Error while getting document", extra={"exception": str(e)}
-            )
-            raise
-
     def __create_doc(self, index, doc_id, doc):
         url = self.__get_url([index, "_doc", doc_id])
         try:
@@ -251,19 +242,6 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
         except Exception as e:
             self.logger.error(
                 "Error while creating document", extra={"exception": str(e)}
-            )
-            raise
-
-    def __delete_doc(self, index, doc_id):
-        url = self.__get_url([index, "_doc", doc_id])
-        try:
-            response = requests.delete(
-                url, headers=self.__get_headers, auth=self.__get_auth
-            )
-            return response
-        except Exception as e:
-            self.logger.error(
-                "Error while deleting document", extra={"exception": str(e)}
             )
             raise
 
