@@ -24,6 +24,9 @@ class Workflow(SQLModel, table=True):
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
 
+    executions: List["WorkflowExecution"] = Relationship(back_populates="workflow")
+    versions: List["WorkflowVersion"] = Relationship(back_populates="workflow")
+
     class Config:
         orm_mode = True
 
@@ -47,6 +50,7 @@ class WorkflowVersion(SQLModel, table=True):
     comment: Optional[str] = None
 
     workflow: "Workflow" = Relationship(back_populates="versions")
+    executions: List["WorkflowExecution"] = Relationship(back_populates="version")
 
 
 def get_status_column():
