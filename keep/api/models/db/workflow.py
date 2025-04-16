@@ -74,9 +74,8 @@ def get_status_column():
     )
 
 
-class WorkflowExecution(SQLModel, table=True):
-    __table_args__ = (
-        UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
+def get_workflow_execution_table_indexes():
+    return (
         Index(
             "idx_workflowexecution_tenant_workflow_id_timestamp",
             "tenant_id",
@@ -115,6 +114,15 @@ class WorkflowExecution(SQLModel, table=True):
             "workflow_id",
             "workflow_revision",
         ),
+    )
+
+
+class WorkflowExecution(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
+        # indexes are defined in get_workflow_execution_table_indexes to be able to call it
+        # from tests/conftest.py
+        *get_workflow_execution_table_indexes(),
     )
 
     id: str = Field(default=None, primary_key=True)
