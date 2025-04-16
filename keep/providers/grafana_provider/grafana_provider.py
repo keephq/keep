@@ -75,7 +75,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """If your Grafana is unreachable from Keep, you can use the following webhook url to configure Grafana to send alerts to Keep:
-    
+
     1. In Grafana, go to the Alerting tab in the Grafana dashboard.
     2. Click on Contact points in the left sidebar and create a new one.
     3. Give it a name and select Webhook as kind of contact point with webhook url as {keep_webhook_api_url}.
@@ -832,31 +832,103 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         return alert_dtos
 
     def _get_alerts(self) -> list[AlertDto]:
+        self.logger.info("Starting to fetch alerts from Grafana")
+
+        # Calculate time range (7 days ago to now)
         week_ago = int(
             (datetime.datetime.now() - datetime.timedelta(days=7)).timestamp()
         )
         now = int(datetime.datetime.now().timestamp())
+        self.logger.info(
+            f"Using time range for alerts: from={week_ago} to={now}",
+            extra={"from_timestamp": week_ago, "to_timestamp": now},
+        )
+
+        # Construct API endpoint and headers
         api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=0"
+        self.logger.info(f"Querying Grafana API endpoint: {api_endpoint}")
+
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = requests.get(api_endpoint, verify=False, headers=headers, timeout=3)
-        if not response.ok:
-            raise ProviderException("Failed to get alerts from Grafana")
-        events_history = response.json()
-        events_data = events_history.get("data", [])
-        if events_data:
+
+        try:
+            # Make the request to Grafana
+            self.logger.info("Sending request to Grafana API")
+            response = requests.get(
+                api_endpoint, verify=False, headers=headers, timeout=3
+            )
+
+            # Log the response status
+            self.logger.info(
+                f"Received response from Grafana with status code: {response.status_code}"
+            )
+
+            if not response.ok:
+                self.logger.error(
+                    "Failed to get alerts from Grafana",
+                    extra={
+                        "status_code": response.status_code,
+                        "response_text": response.text,
+                        "api_endpoint": api_endpoint,
+                    },
+                )
+                raise ProviderException(
+                    f"Failed to get alerts from Grafana: Status Code: {response.status_code}, Response: {response.text}"
+                )
+
+            # Process the response
+            self.logger.info("Successfully received response, parsing JSON")
+            events_history = response.json()
+            self.logger.info("Parsed JSON response")
+
+            events_data = events_history.get("data", [])
+            self.logger.info(
+                f"Found events_data with {len(events_data) if isinstance(events_data, list) else 'non-list'} items"
+            )
+
+            if not events_data:
+                self.logger.info("No events data found in Grafana response")
+                return []
+
             events_data_values = events_data.get("values")
-            if events_data_values:
-                events = events_data_values[1]
-                events_time = events_data_values[0]
-                alerts = []
-                for i in range(0, len(events)):
-                    event = events[i]
+            if not events_data_values:
+                self.logger.info("No values found in events data")
+                return []
+
+            self.logger.debug(
+                f"Processing events data values with {len(events_data_values[0]) if len(events_data_values) > 0 else 0} events"
+            )
+
+            # If we have values, extract the events and timestamps
+            events = events_data_values[1]
+            events_time = events_data_values[0]
+
+            self.logger.info(f"Found {len(events)} events to process")
+
+            alerts = []
+            for i in range(0, len(events)):
+                event = events[i]
+                self.logger.debug(f"Processing event {i+1}/{len(events)}")
+
+                try:
                     event_labels = event.get("labels", {})
                     alert_name = event_labels.get("alertname")
                     alert_status = event_labels.get("alertstate", event.get("current"))
+
+                    self.logger.debug(
+                        f"Event {i+1} details",
+                        extra={
+                            "name": alert_name,
+                            "status": alert_status,
+                            "has_labels": bool(event_labels),
+                        },
+                    )
+
+                    # Map status to Keep format
                     alert_status = GrafanaProvider.STATUS_MAP.get(
                         alert_status, AlertStatus.FIRING
                     )
+
+                    # Extract other fields
                     alert_severity = event_labels.get("severity")
                     alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
                         alert_severity, AlertSeverity.INFO
@@ -866,26 +938,73 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                     description = event.get("error", "")
                     rule_id = event.get("ruleUID")
                     condition = event.get("condition")
+
+                    # Convert timestamp
                     timestamp = datetime.datetime.fromtimestamp(
                         events_time[i] / 1000
                     ).isoformat()
-                    alerts.append(
-                        AlertDto(
-                            id=str(i),
-                            fingerprint=fingerprint,
-                            name=alert_name,
-                            status=alert_status,
-                            severity=alert_severity,
-                            environment=environment,
-                            description=description,
-                            lastReceived=timestamp,
-                            rule_id=rule_id,
-                            condition=condition,
-                            labels=event_labels,
-                            source=["grafana"],
-                        )
+
+                    # Create AlertDto
+                    alert_dto = AlertDto(
+                        id=str(i),
+                        fingerprint=fingerprint,
+                        name=alert_name,
+                        status=alert_status,
+                        severity=alert_severity,
+                        environment=environment,
+                        description=description,
+                        lastReceived=timestamp,
+                        rule_id=rule_id,
+                        condition=condition,
+                        labels=event_labels,
+                        source=["grafana"],
                     )
-                return alerts
+                    alerts.append(alert_dto)
+                    self.logger.debug(f"Successfully processed event {i+1} into alert")
+                except Exception as e:
+                    self.logger.error(
+                        f"Error processing event {i+1}",
+                        extra={"event": event, "error": str(e)},
+                    )
+                    continue
+
+            self.logger.info(
+                f"Successfully processed {len(alerts)} alerts from Grafana"
+            )
+            return alerts
+        except requests.RequestException as e:
+            self.logger.error(
+                "Network error while getting alerts from Grafana",
+                extra={"error": str(e), "api_endpoint": api_endpoint},
+            )
+            raise ProviderException(
+                f"Network error while getting alerts from Grafana: {str(e)}"
+            )
+        except json.JSONDecodeError as e:
+            self.logger.error(
+                "Failed to parse JSON response from Grafana",
+                extra={
+                    "error": str(e),
+                    "response_text": (
+                        response.text if "response" in locals() else "No response"
+                    ),
+                },
+            )
+            raise ProviderException(
+                f"Failed to parse JSON response from Grafana: {str(e)}"
+            )
+        except Exception as e:
+            self.logger.error(
+                "Unexpected error while getting alerts from Grafana",
+                extra={"error": str(e), "error_type": type(e).__name__},
+            )
+            raise ProviderException(
+                f"Unexpected error while getting alerts from Grafana: {str(e)}"
+            )
+
+        self.logger.info(
+            "No alerts data found in Grafana response, returning empty list"
+        )
         return []
 
     @classmethod
