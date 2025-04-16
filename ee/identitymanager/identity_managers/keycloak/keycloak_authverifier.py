@@ -33,6 +33,9 @@ def patched_init(
             "Using KEYCLOAK_VERIFY_CERT environment variable to set verify. ",
             extra={"KEYCLOAK_VERIFY_CERT": verify},
         )
+
+    if headers is None:
+        headers = {}
     original_init(self, base_url, headers, timeout, verify, proxies)
 
 
