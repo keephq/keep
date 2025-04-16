@@ -107,7 +107,7 @@ class WorkflowExecution(SQLModel, table=True):
         ),
         Index(
             "idx_status_started",
-            "status",
+            get_status_column(),
             "started",
         ),
         Index(
