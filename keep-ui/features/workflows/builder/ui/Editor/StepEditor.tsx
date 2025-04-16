@@ -40,7 +40,6 @@ import { EditorField } from "./EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
 import { Drawer } from "@/shared/ui/Drawer";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 export function EditorLayout({
   children,
@@ -131,8 +130,7 @@ export interface KeepEditorProps {
 }
 
 function InstallProviderButton({ providerType }: { providerType: string }) {
-  const { data: { providers } = {} } = useProviders();
-  const revalidateMultiple = useRevalidateMultiple();
+  const { data: { providers } = {}, mutate: mutateProviders } = useProviders();
   const providerObject = providers?.find((p) => p.type === providerType);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -177,7 +175,7 @@ function InstallProviderButton({ providerType }: { providerType: string }) {
           provider={{ ...providerObject, id: providerObject.type }}
           installedProvidersMode={false}
           mutate={() => {
-            revalidateMultiple(["providers"], { isExact: true });
+            mutateProviders();
           }}
           closeModal={() => setIsFormOpen(false)}
           isProviderNameDisabled={false}
