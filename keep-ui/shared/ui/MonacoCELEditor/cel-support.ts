@@ -56,15 +56,32 @@ export const setupCustomCellanguage = (monaco: any) => {
     },
   });
 
+  // monaco.editor.defineTheme("cel-dark", {
+  //   base: "vs-dark",
+  //   inherit: true,
+  //   rules: [
+  //     { token: "keyword", foreground: "C586C0" }, // purple
+  //     { token: "identifier", foreground: "9CDCFE" }, // light blue
+  //     { token: "number", foreground: "B5CEA8" }, // light green
+  //     { token: "string", foreground: "CE9178" }, // salmon
+  //     { token: "operator", foreground: "FFFF00" }, // yellow
+  //     { token: "delimiter", foreground: "D4D4D4" }, // same as operator
+  //     { token: "function", foreground: "C586C0" }, // purple
+  //   ],
+  //   colors: {
+  //     "editor.background": "#00000000", // Transparent background
+  //   },
+  // });
+
   monaco.editor.defineTheme("cel-dark", {
     base: "vs-dark",
     inherit: true,
     rules: [
       { token: "keyword", foreground: "C586C0" }, // purple
-      { token: "identifier", foreground: "9CDCFE" }, // light blue
+      { token: "identifier", foreground: "000000" }, // black
       { token: "number", foreground: "B5CEA8" }, // light green
       { token: "string", foreground: "CE9178" }, // salmon
-      { token: "operator", foreground: "FFFF00" }, // yellow
+      { token: "operator", foreground: "9CDCFE" }, // yellow
       { token: "delimiter", foreground: "D4D4D4" }, // same as operator
       { token: "function", foreground: "C586C0" }, // purple
     ],

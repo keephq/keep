@@ -1,6 +1,6 @@
 import React, { ChangeEvent, FC, useRef, useState } from "react";
 import type { editor } from "monaco-editor";
-import { MonacoCelCDN } from "@/shared/ui/MonacoCELEditor/MonacoCelCDN";
+import { MonacoCelEditor } from "@/shared/ui/MonacoCELEditor";
 
 interface CelInputProps {
   value?: string;
@@ -26,12 +26,10 @@ const CelInput: FC<CelInputProps> = ({
   ) => {
     editorRef.current = editor;
     monacoRef.current = monacoInstance;
-    editor.onDidChangeModelContent(() => {
-      const model = editor.getModel();
-      if (!model) return;
-
-      const tokens = monacoInstance.editor.tokenize(model.getValue(), "cel");
-      console.log("Ihor TOKENS:", tokens);
+    editor.onKeyDown((e) => {
+      if (e.keyCode === monacoInstance.KeyCode.Enter) {
+        e.preventDefault();
+      }
     });
 
     setIsEditorMounted(true);
@@ -46,32 +44,9 @@ const CelInput: FC<CelInputProps> = ({
   };
 
   return (
-    // <input
-    //   type="text"
-    //   value={inputValue}
-    //   onChange={handleChange}
-    //   placeholder={placeholder}
-    //   disabled={disabled}
-    //   className="cel-input"
-    // />
-
-    <MonacoCelCDN
-      // value={JSON.stringify(eventData, null, 2)}
-      //   language="celavito"
-      //   defaultLanguage="celavito"
-      //   theme="cel-dark"
-      className="h-20"
-      //   onMount={handleEditorDidMount}
-      //   options={{
-      //     readOnly: false,
-      //     minimap: { enabled: false },
-      //     scrollBeyondLastLine: false,
-      //     fontSize: 12,
-      //     lineNumbers: "off",
-      //     folding: false,
-      //     wordWrap: "off",
-      //   }}
-    />
+    <div className="flex-1 overflow-hidden h-9 border rounded-md pl-9">
+      <MonacoCelEditor className="h-20 relative top-1" />
+    </div>
   );
 };
 

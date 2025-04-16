@@ -26,7 +26,6 @@ import { CornerDownLeft } from "lucide-react";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
-import { setupCustomCellanguage } from "@/shared/ui/MonacoEditor/cel-support";
 import CelInput from "@/features/cel-input/cel-input";
 
 const staticOptions = [
