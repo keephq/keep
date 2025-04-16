@@ -78,11 +78,24 @@ class WorkflowExecution(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
         Index(
+            "idx_workflowexecution_tenant_workflow_id_timestamp",
+            "tenant_id",
+            "workflow_id",
+            "started",
+        ),
+        Index(
             "idx_workflowexecution_tenant_workflow_id_revision_timestamp",
             "tenant_id",
             "workflow_id",
             "workflow_revision",
             "started",
+        ),
+        Index(
+            "idx_workflowexecution_workflow_tenant_started_status",
+            "workflow_id",
+            "tenant_id",
+            "started",
+            get_status_column(),
         ),
         Index(
             "idx_workflowexecution_workflow_revision_tenant_started_status",

@@ -22,6 +22,7 @@ def upgrade() -> None:
 
     connection = op.get_bind()
     dialect = connection.dialect.name
+
     op.create_table(
         "workflowversion",
         sa.Column("workflow_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -39,37 +40,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("workflow_id", "revision"),
     )
 
-    # First drop foreign key constraints because they prevent dropping indexes (at least in mysql)
-    inspector = sa.inspect(connection)
-    foreign_keys = inspector.get_foreign_keys("workflowexecution")
-    for foreign_key in foreign_keys:
-        if foreign_key["name"]:
-            op.drop_constraint(
-                foreign_key["name"], "workflowexecution", type_="foreignkey"
-            )
-        else:
-            print(f"foreign_key {foreign_key} has no name, skipping")
-
     # Then handle column and index changes
     with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
-
         batch_op.add_column(
             sa.Column(
                 "workflow_revision", sa.Integer(), nullable=False, server_default="1"
             )
         )
-        batch_op.drop_index("idx_workflowexecution_tenant_workflow_id_timestamp")
         batch_op.create_index(
-            "idx_workflowexecution_tenant_workflow_id_timestamp",
+            "idx_workflowexecution_tenant_workflow_id_revision_timestamp",
             ["tenant_id", "workflow_id", "workflow_revision", "started"],
             unique=False,
         )
-        batch_op.drop_index(
-            "idx_workflowexecution_workflow_tenant_started_status",
-            mysql_length={"status": 255},
-        )
         batch_op.create_index(
-            "idx_workflowexecution_workflow_tenant_started_status",
+            "idx_workflowexecution_workflow_revision_tenant_started_status",
             [
                 "workflow_id",
                 "workflow_revision",
@@ -83,22 +67,6 @@ def upgrade() -> None:
             "idx_workflowexecution_workflow_revision",
             ["workflow_id", "workflow_revision"],
             unique=False,
-        )
-
-    # Finally recreate foreign key constraints
-    with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
-        batch_op.create_foreign_key(
-            "workflowexecution_ibfk_1",
-            "tenant",
-            ["tenant_id"],
-            ["id"],
-        )
-        batch_op.create_foreign_key(
-            "workflowexecution_ibfk_2",
-            "workflow",
-            ["workflow_id"],
-            ["id"],
-            ondelete="SET DEFAULT",
         )
 
     # Update existing records with their corresponding workflow revision
@@ -130,18 +98,11 @@ def downgrade() -> None:
     # Then handle column and index changes
     with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
         batch_op.drop_index("idx_workflowexecution_workflow_revision")
-        batch_op.drop_index("idx_workflowexecution_workflow_tenant_started_status")
-        batch_op.create_index(
-            "idx_workflowexecution_workflow_tenant_started_status",
-            ["workflow_id", "tenant_id", "started", "status"],
-            unique=False,
-            mysql_length={"status": 255},
+        batch_op.drop_index(
+            "idx_workflowexecution_tenant_workflow_id_revision_timestamp"
         )
-        batch_op.drop_index("idx_workflowexecution_tenant_workflow_id_timestamp")
-        batch_op.create_index(
-            "idx_workflowexecution_tenant_workflow_id_timestamp",
-            ["tenant_id", "workflow_id", "started"],
-            unique=False,
+        batch_op.drop_index(
+            "idx_workflowexecution_workflow_revision_tenant_started_status"
         )
         batch_op.drop_column("workflow_revision")
 
