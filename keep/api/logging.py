@@ -524,7 +524,7 @@ def setup_logging():
             "class": "logging.handlers.RotatingFileHandler",
             "filename": KEEP_LOG_FILE,
             "mode": "a",
-            "maxBytes": 1024 * 1024 * 1024,  # 1GB
+            "maxBytes": 1024 * 1024 * 1024,   # 1GB
             "backupCount": 5,
         }
         # Add file handler to root logger
