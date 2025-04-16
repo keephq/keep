@@ -55,27 +55,9 @@ class WorkflowVersion(SQLModel, table=True):
     )
 
 
-def get_status_column():
-    try:
-        db_connection_string = os.environ.get(
-            "DATABASE_CONNECTION_STRING", os.environ.get("DB_CONNECTION_NAME")
-        )
-        backend = (
-            sqlalchemy.engine.url.make_url(db_connection_string).get_backend_name()
-            if db_connection_string
-            else None
-        )
-    except Exception:
-        return sqlalchemy.text("status(255)")
-    return (
-        sqlalchemy.text("status(255)")
-        if backend == "mysql"
-        else sqlalchemy.text("status")
-    )
-
-
-def get_workflow_execution_table_indexes():
-    return (
+class WorkflowExecution(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
         Index(
             "idx_workflowexecution_tenant_workflow_id_timestamp",
             "tenant_id",
@@ -94,7 +76,8 @@ def get_workflow_execution_table_indexes():
             "workflow_id",
             "tenant_id",
             "started",
-            get_status_column(),
+            "status",
+            mysql_length={"status": 255},
         ),
         Index(
             "idx_workflowexecution_workflow_revision_tenant_started_status",
@@ -102,27 +85,20 @@ def get_workflow_execution_table_indexes():
             "workflow_revision",
             "tenant_id",
             "started",
-            get_status_column(),
+            "status",
+            mysql_length={"status": 255},
         ),
         Index(
             "idx_status_started",
-            get_status_column(),
+            "status",
             "started",
+            mysql_length={"status": 255},
         ),
         Index(
             "idx_workflowexecution_workflow_revision",
             "workflow_id",
             "workflow_revision",
         ),
-    )
-
-
-class WorkflowExecution(SQLModel, table=True):
-    __table_args__ = (
-        UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
-        # indexes are defined in get_workflow_execution_table_indexes to be able to call it
-        # from tests/conftest.py
-        *get_workflow_execution_table_indexes(),
     )
 
     id: str = Field(default=None, primary_key=True)

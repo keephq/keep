@@ -208,13 +208,6 @@ def db_session(request, monkeypatch):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
         monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
-        # hack: workflowexecution indexes contains get_status_column which uses os.environ,
-        # but at the time of model class initialization, the env is not set
-        # so we need to clear the indexes and add them again, this time the env is set
-        t = SQLModel.metadata.tables["workflowexecution"]
-        t.indexes.clear()
-        for index in get_workflow_execution_table_indexes():
-            t.append_constraint(index)
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
