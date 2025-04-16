@@ -5,7 +5,7 @@ import {
 import { Badge, Card, Subtitle, Switch, Text } from "@tremor/react";
 import { format } from "date-fns";
 import { KeepLoader, WorkflowYAMLEditor } from "@/shared/ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import UserAvatar from "@/components/navbar/UserAvatar";
 import clsx from "clsx";
@@ -40,6 +40,12 @@ export function WorkflowVersions({
     showDiff && previousRevision !== null ? workflowId : null,
     previousRevision
   );
+
+  useEffect(() => {
+    if (currentRevision) {
+      setSelectedRevision(currentRevision);
+    }
+  }, [currentRevision]);
 
   const uniqueYears = useMemo(() => {
     return [
