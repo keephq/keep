@@ -6,10 +6,37 @@ from fastapi import Depends, HTTPException
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
 from keycloak import KeycloakOpenID, KeycloakOpenIDConnection
+from keycloak.connection import ConnectionManager
 from keycloak.keycloak_uma import KeycloakUMA
 from keycloak.uma_permissions import UMAPermission
 
 logger = logging.getLogger(__name__)
+
+
+# PATCH TO MONKEYPATCH KEYCLOAK VERIFY BUG
+# https://github.com/marcospereirampj/python-keycloak/issues/645
+
+original_init = ConnectionManager.__init__
+
+
+def patched_init(
+    self,
+    base_url: str,
+    headers: dict = None,
+    timeout: int = 60,
+    verify: bool = None,
+    proxies: dict = None,
+):
+    if verify is None:
+        verify = os.environ.get("KEYCLOAK_VERIFY_CERT", "true").lower() == "true"
+        logger.warning(
+            "Using KEYCLOAK_VERIFY_CERT environment variable to set verify. ",
+            extra={"KEYCLOAK_VERIFY_CERT": verify},
+        )
+    original_init(self, base_url, headers, timeout, verify, proxies)
+
+
+ConnectionManager.__init__ = patched_init
 
 
 class KeycloakAuthVerifier(AuthVerifierBase):
@@ -99,9 +126,11 @@ class KeycloakAuthVerifier(AuthVerifierBase):
                 resource=self.protected_resource,
                 scope=self.scopes[0],  # todo: handle multiple scopes per resource
             )
+            self.logger.info(f"Checking permission {permission}")
             allowed = self.keycloak_uma.permissions_check(
                 token=authenticated_entity.token, permissions=[permission]
             )
+            self.logger.info(f"Permission check result: {allowed}")
             if not allowed:
                 raise HTTPException(status_code=401, detail="Permission check failed")
         # secure fallback
