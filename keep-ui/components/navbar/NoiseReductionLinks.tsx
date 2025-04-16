@@ -105,7 +105,9 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             </LinkWithIcon>
           </li>
         </TogglableLink>
-        <TogglableLink disabledConfigKey="HIDE_NAVBAR_CORRELATION">
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_CORRELATION}
+        >
           <li>
             <LinkWithIcon href="/rules" icon={Rules}>
               <Subtitle className="text-xs">Correlations</Subtitle>
