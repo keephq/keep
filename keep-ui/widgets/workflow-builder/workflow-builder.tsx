@@ -153,7 +153,7 @@ export function WorkflowBuilder({
       }
       setIsLoading(false);
     },
-    [loadedYamlFileContents, workflowRaw, searchParams, providers]
+    [loadedYamlFileContents, workflowRaw, searchParams]
   );
 
   const workflowYaml = useMemo(() => {

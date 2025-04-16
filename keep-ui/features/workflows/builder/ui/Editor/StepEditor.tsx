@@ -129,7 +129,13 @@ export interface KeepEditorProps {
   isV2?: boolean;
 }
 
-function InstallProviderButton({ providerType }: { providerType: string }) {
+function InstallProviderButton({
+  providerType,
+  onConnect,
+}: {
+  providerType: string;
+  onConnect: (result: any) => void;
+}) {
   const { data: { providers } = {}, mutate: mutateProviders } = useProviders();
   const providerObject = providers?.find((p) => p.type === providerType);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -138,8 +144,23 @@ function InstallProviderButton({ providerType }: { providerType: string }) {
     return null;
   }
 
+  const closeModal = () => {
+    setIsFormOpen(false);
+  };
+
   const onConnectClick = () => {
     setIsFormOpen(true);
+  };
+
+  const onConnectChange = (
+    isConnecting: boolean,
+    isConnected: boolean,
+    result: any
+  ) => {
+    if (isConnected) {
+      closeModal();
+      onConnect(result);
+    }
   };
 
   return (
@@ -169,7 +190,7 @@ function InstallProviderButton({ providerType }: { providerType: string }) {
       <Drawer
         title={`Connect to ${providerObject.display_name}`}
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={closeModal}
       >
         <ProviderForm
           provider={{ ...providerObject, id: providerObject.type }}
@@ -177,7 +198,8 @@ function InstallProviderButton({ providerType }: { providerType: string }) {
           mutate={() => {
             mutateProviders();
           }}
-          closeModal={() => setIsFormOpen(false)}
+          onConnectChange={onConnectChange}
+          closeModal={closeModal}
           isProviderNameDisabled={false}
           isLocalhost={false}
           isHealthCheck={false}
@@ -230,6 +252,14 @@ function KeepSetupProviderEditor({
       return;
     }
     updateProperty("config", value);
+  };
+
+  const handleProviderConnect = (result: any) => {
+    if (!result.details?.name) {
+      return;
+    }
+    setSelectValue(result.details?.name);
+    updateProperty("config", result.details?.name);
   };
 
   const getSelectIcon = () => {
@@ -331,7 +361,10 @@ function KeepSetupProviderEditor({
         </>
       )}
       {selectValue === "add-new" && providerType && (
-        <InstallProviderButton providerType={providerType} />
+        <InstallProviderButton
+          providerType={providerType}
+          onConnect={handleProviderConnect}
+        />
       )}
     </section>
   );
