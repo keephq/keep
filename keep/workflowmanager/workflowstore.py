@@ -151,8 +151,12 @@ class WorkflowStore:
                 detail="Unable to parse workflow from dict",
             )
 
-    def get_all_workflows(self, tenant_id: str) -> list[WorkflowModel]:
-        return list(get_all_workflows(tenant_id))
+    def get_all_workflows(
+        self, tenant_id: str, exclude_disabled: bool = False
+    ) -> list[WorkflowModel]:
+        # list all tenant's workflows
+        workflows = get_all_workflows(tenant_id, exclude_disabled)
+        return workflows
 
     def get_all_workflows_with_last_execution(
         self,
