@@ -436,18 +436,18 @@ def get_workflows_that_should_run():
 
 
 def update_workflow_by_id(
-    id,
-    name,
-    tenant_id,
-    description,
-    interval,
-    workflow_raw,
-    is_disabled,
-    provisioned=False,
-    provisioned_file=None,
-    updated_by=None,
+    id: str,
+    name: str,
+    tenant_id: str,
+    description: str | None,
+    interval: int,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
 ):
-    with Session(engine, expire_on_commit=False):
+    with Session(engine, expire_on_commit=False) as session:
         existing_workflow = get_workflow(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
@@ -461,33 +461,34 @@ def update_workflow_by_id(
             provisioned=provisioned,
             provisioned_file=provisioned_file,
             updated_by=updated_by,
+            session=session,
         )
 
 
 def update_workflow_with_values(
     existing_workflow: Workflow,
-    name,
-    description,
-    interval,
-    workflow_raw,
-    is_disabled,
-    provisioned=False,
-    provisioned_file=None,
-    updated_by=None,
+    name: str,
+    description: str | None,
+    interval: int,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
+    session: Session | None = None,
 ):
     # In case the workflow name changed to empty string, keep the old name
     name = name or existing_workflow.name
-    with Session(engine, expire_on_commit=False) as session:
+    with existed_or_new_session(session) as session:
         # TODO: ensure that id is unique to workflow_id, like if rolled back and now updating from this version it should be bigger than latest version
         next_revision = existing_workflow.revision + 1
-        updated_by_str = updated_by or existing_workflow.updated_by or "unknown"
         # creating a new version
         version = WorkflowVersion(
             workflow_id=existing_workflow.id,
             revision=next_revision,
             workflow_raw=workflow_raw,
-            updated_by=updated_by_str,
-            comment=f"Updated by {updated_by_str}",
+            updated_by=updated_by,
+            comment=f"Updated by {updated_by}",
             # TODO: check if valid
             is_valid=True,
             is_current=True,
@@ -506,11 +507,11 @@ def update_workflow_with_values(
 
         existing_workflow.name = name
         existing_workflow.description = description
-        existing_workflow.updated_by = updated_by_str
+        existing_workflow.updated_by = updated_by
         existing_workflow.interval = interval
         existing_workflow.workflow_raw = workflow_raw
         existing_workflow.revision = next_revision
-        existing_workflow.last_updated = datetime.now()  # Update last_updated
+        existing_workflow.last_updated = datetime.now()
         existing_workflow.is_deleted = False
         existing_workflow.is_disabled = is_disabled
         existing_workflow.provisioned = provisioned
@@ -521,17 +522,17 @@ def update_workflow_with_values(
 
 
 def add_or_update_workflow(
-    id,
-    name,
-    tenant_id,
-    description,
-    created_by,
-    interval,
-    workflow_raw,
-    is_disabled,
-    provisioned=False,
-    provisioned_file=None,
-    updated_by=None,
+    id: str,
+    name: str,
+    tenant_id: str,
+    description: str | None,
+    created_by: str,
+    interval: int,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
@@ -548,6 +549,7 @@ def add_or_update_workflow(
                 provisioned=provisioned,
                 provisioned_file=provisioned_file,
                 updated_by=updated_by,
+                session=session,
             )
 
         else:
@@ -559,14 +561,22 @@ def add_or_update_workflow(
                 tenant_id=tenant_id,
                 description=description,
                 created_by=created_by,
-                updated_by=updated_by,  # Set updated_by to the provided value
+                updated_by=updated_by,
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
                 provisioned=provisioned,
                 provisioned_file=provisioned_file,
             )
+            version = WorkflowVersion(
+                workflow_id=workflow.id,
+                revision=1,
+                workflow_raw=workflow_raw,
+                updated_by=updated_by,
+                comment=f"Created by {created_by}",
+            )
             session.add(workflow)
+            session.add(version)
             session.commit()
             return workflow
 
