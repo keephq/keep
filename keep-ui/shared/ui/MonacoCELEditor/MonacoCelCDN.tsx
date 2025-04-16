@@ -9,12 +9,20 @@ import type { editor } from "monaco-editor";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
-export function MonacoCelCDN(props: EditorProps) {
+interface MonacoCelProps extends EditorProps {
+  onMonacoLoaded?: (monacoInstance: typeof import("monaco-editor")) => void;
+}
+
+export function MonacoCelCDN(props: MonacoCelProps) {
   const [error, setError] = useState<Error | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [isEditorMounted, setIsEditorMounted] = useState(false);
+  const onMonacoLoadedRef = useRef<MonacoCelProps["onMonacoLoaded"] | null>(
+    null
+  );
+  onMonacoLoadedRef.current = props.onMonacoLoaded;
 
   useEffect(() => {
     loader
@@ -34,6 +42,7 @@ export function MonacoCelCDN(props: EditorProps) {
   ) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    onMonacoLoadedRef.current?.(monaco);
     // editor.onDidChangeModelContent(() => {
     //   const model = editor.getModel();
     //   if (!model) return;
@@ -92,6 +101,7 @@ export function MonacoCelCDN(props: EditorProps) {
         folding: false,
         wordWrap: "off",
       }}
+      {...props}
     />
   );
 }
