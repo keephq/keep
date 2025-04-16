@@ -50,14 +50,14 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
   const { topologyData } = useTopology();
   const { data: tenantConfig, isLoading } = useTenantConfiguration();
   const noiseReductionKeys = {
-    DISABLE_DEDUPLICATION: "DISABLE_DEDUPLICATION",
-    DISABLE_CORRELATION: "DISABLE_CORRELATION",
-    DISABLE_WORKFLOWS: "DISABLE_WORKFLOWS",
-    DISABLE_SERVICE_TOPOLOGY: "DISABLE_SERVICE_TOPOLOGY",
-    DISABLE_MAPPING: "DISABLE_MAPPING",
-    DISABLE_EXTRACTION: "DISABLE_EXTRACTION",
-    DISABLE_MAINTENANCE_WINDOW: "DISABLE_MAINTENANCE_WINDOW",
-    DISABLE_AI_PLUGINS: "DISABLE_AI_PLUGINS",
+    HIDE_NAVBAR_DEDUPLICATION: "HIDE_NAVBAR_DEDUPLICATION",
+    HIDE_NAVBAR_CORRELATION: "HIDE_NAVBAR_CORRELATION",
+    HIDE_NAVBAR_WORKFLOWS: "HIDE_NAVBAR_WORKFLOWS",
+    HIDE_NAVBAR_SERVICE_TOPOLOGY: "HIDE_NAVBAR_SERVICE_TOPOLOGY",
+    HIDE_NAVBAR_MAPPING: "HIDE_NAVBAR_MAPPING",
+    HIDE_NAVBAR_EXTRACTION: "HIDE_NAVBAR_EXTRACTION",
+    HIDE_NAVBAR_MAINTENANCE_WINDOW: "HIDE_NAVBAR_MAINTENANCE_WINDOW",
+    HIDE_NAVBAR_AI_PLUGINS: "HIDE_NAVBAR_AI_PLUGINS",
   };
 
   if (isNOCRole) {
@@ -97,7 +97,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
 
       <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
         <TogglableLink
-          disabledConfigKey={noiseReductionKeys.DISABLE_DEDUPLICATION}
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_DEDUPLICATION}
         >
           <li>
             <LinkWithIcon href="/deduplication" icon={IoMdGitMerge}>
@@ -105,14 +105,16 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             </LinkWithIcon>
           </li>
         </TogglableLink>
-        <TogglableLink disabledConfigKey="DISABLE_CORRELATION">
+        <TogglableLink disabledConfigKey="HIDE_NAVBAR_CORRELATION">
           <li>
             <LinkWithIcon href="/rules" icon={Rules}>
               <Subtitle className="text-xs">Correlations</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
-        <TogglableLink disabledConfigKey={noiseReductionKeys.DISABLE_WORKFLOWS}>
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_WORKFLOWS}
+        >
           <li>
             <LinkWithIcon href="/workflows" icon={Workflows}>
               <Subtitle className="text-xs">Workflows</Subtitle>
@@ -121,7 +123,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         </TogglableLink>
 
         <TogglableLink
-          disabledConfigKey={noiseReductionKeys.DISABLE_SERVICE_TOPOLOGY}
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_SERVICE_TOPOLOGY}
         >
           <li>
             <LinkWithIcon
@@ -136,7 +138,9 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             </LinkWithIcon>
           </li>
         </TogglableLink>
-        <TogglableLink disabledConfigKey={noiseReductionKeys.DISABLE_MAPPING}>
+        <TogglableLink
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_MAPPING}
+        >
           <li>
             <LinkWithIcon href="/mapping" icon={Mapping}>
               <Subtitle className="text-xs">Mapping</Subtitle>
@@ -144,7 +148,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </li>
         </TogglableLink>
         <TogglableLink
-          disabledConfigKey={noiseReductionKeys.DISABLE_EXTRACTION}
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_EXTRACTION}
         >
           <li>
             <LinkWithIcon href="/extraction" icon={ExportIcon}>
@@ -153,7 +157,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </li>
         </TogglableLink>
         <TogglableLink
-          disabledConfigKey={noiseReductionKeys.DISABLE_MAINTENANCE_WINDOW}
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_MAINTENANCE_WINDOW}
         >
           <li>
             <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
@@ -162,7 +166,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </li>
         </TogglableLink>
         <TogglableLink
-          disabledConfigKey={noiseReductionKeys.DISABLE_AI_PLUGINS}
+          disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_AI_PLUGINS}
         >
           <li>
             <AILink></AILink>
