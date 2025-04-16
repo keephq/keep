@@ -32,13 +32,7 @@ class Workflow(SQLModel, table=True):
 
 
 class WorkflowVersion(SQLModel, table=True):
-    __table_args__ = (
-        PrimaryKeyConstraint("workflow_id", "revision"),
-        # Add unique constraint to ensure only one current version per workflow
-        UniqueConstraint(
-            "workflow_id", "is_current", name="uq_workflow_current_version"
-        ),
-    )
+    __table_args__ = (PrimaryKeyConstraint("workflow_id", "revision"),)
 
     workflow_id: str = Field(primary_key=True, foreign_key="workflow.id")
     revision: int = Field(primary_key=True)
@@ -50,7 +44,15 @@ class WorkflowVersion(SQLModel, table=True):
     comment: Optional[str] = None
 
     workflow: "Workflow" = Relationship(back_populates="versions")
-    executions: List["WorkflowExecution"] = Relationship(back_populates="version")
+    executions: List["WorkflowExecution"] = Relationship(
+        back_populates="version",
+        sa_relationship_kwargs={
+            "primaryjoin": "and_(WorkflowVersion.workflow_id == WorkflowExecution.workflow_id, "
+            "WorkflowVersion.revision == WorkflowExecution.workflow_revision)",
+            "foreign_keys": "[WorkflowExecution.workflow_id, WorkflowExecution.workflow_revision]",
+            "viewonly": True,
+        },
+    )
 
 
 def get_status_column():
@@ -76,14 +78,14 @@ class WorkflowExecution(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
         Index(
-            "idx_workflowexecution_tenant_workflow_id_timestamp",
+            "idx_workflowexecution_tenant_workflow_id_revision_timestamp",
             "tenant_id",
             "workflow_id",
             "workflow_revision",
             "started",
         ),
         Index(
-            "idx_workflowexecution_workflow_tenant_started_status",
+            "idx_workflowexecution_workflow_revision_tenant_started_status",
             "workflow_id",
             "workflow_revision",
             "tenant_id",
@@ -122,10 +124,17 @@ class WorkflowExecution(SQLModel, table=True):
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
 
+    workflow: "Workflow" = Relationship(
+        back_populates="executions",
+        sa_relationship_kwargs={"foreign_keys": "[WorkflowExecution.workflow_id]"},
+    )
+
     version: "WorkflowVersion" = Relationship(
-        back_populates="workflow_execution",
+        back_populates="executions",
         sa_relationship_kwargs={
-            "foreign_keys": "[WorkflowExecution.workflow_id, WorkflowExecution.workflow_revision]"
+            "primaryjoin": "and_(WorkflowVersion.workflow_id == WorkflowExecution.workflow_id, WorkflowVersion.revision == WorkflowExecution.workflow_revision)",
+            "foreign_keys": "[WorkflowExecution.workflow_id, WorkflowExecution.workflow_revision]",
+            "viewonly": True,
         },
     )
 

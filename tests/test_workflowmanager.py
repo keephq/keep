@@ -27,7 +27,7 @@ def test_get_workflow_from_dict():
     workflow_path = str(path_to_test_resources / "db_disk_space_for_testing.yml")
     workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path)
     result = workflow_store.get_workflow_from_dict(
-        tenant_id=tenant_id, workflow=workflow_dict
+        tenant_id=tenant_id, workflow_dict=workflow_dict
     )
     mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict)
     assert result.workflow_id == "workflow1"
@@ -46,7 +46,7 @@ def test_get_workflow_from_dict_raises_exception():
 
     with pytest.raises(HTTPException) as exc_info:
         workflow_store.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow_dict
+            tenant_id=tenant_id, workflow_dict=workflow_dict
         )
 
     assert exc_info.value.status_code == 500

@@ -479,6 +479,15 @@ def update_workflow_with_values(
     # In case the workflow name changed to empty string, keep the old name
     name = name or existing_workflow.name
     with existed_or_new_session(session) as session:
+        # updating the existing version to be not current
+        existing_version = session.exec(
+            select(WorkflowVersion)
+            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .where(WorkflowVersion.revision == existing_workflow.revision)
+        ).first()
+        if existing_version:
+            existing_version.is_current = False
+            session.add(existing_version)
         # TODO: ensure that id is unique to workflow_id, like if rolled back and now updating from this version it should be bigger than latest version
         next_revision = existing_workflow.revision + 1
         # creating a new version
@@ -493,16 +502,6 @@ def update_workflow_with_values(
             is_current=True,
         )
         session.add(version)
-
-        # updating the existing version to be not current
-        existing_version = session.exec(
-            select(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
-            .where(WorkflowVersion.revision == existing_workflow.revision)
-        ).first()
-        if existing_version:
-            existing_version.is_current = False
-            session.add(existing_version)
 
         existing_workflow.name = name
         existing_workflow.description = description

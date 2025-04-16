@@ -478,7 +478,7 @@ async def run_workflow_from_definition(
     workflowmanager = WorkflowManager.get_instance()
     try:
         workflow = workflowstore.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow_dict
+            tenant_id=tenant_id, workflow_dict=workflow_dict
         )
     except Exception as e:
         logger.exception(
@@ -494,7 +494,7 @@ async def run_workflow_from_definition(
         event, inputs = get_event_from_body(body, tenant_id)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow.workflow_id,
-            workflow.revision,
+            workflow.workflow_revision,
             tenant_id,
             created_by,
             event,
@@ -792,7 +792,7 @@ def get_workflow_by_id(
         )
         if not workflow_version:
             raise HTTPException(404, "Workflow version not found")
-        updated_at = workflow_version.last_updated
+        updated_at = workflow_version.updated_at
         updated_by = workflow_version.updated_by or "unknown"
         workflow_raw = workflow_version.workflow_raw
 
@@ -860,7 +860,7 @@ def list_workflow_versions(
             WorkflowVersionDTO(
                 revision=version.revision,
                 updated_by=version.updated_by,
-                last_updated=version.last_updated,
+                updated_at=version.updated_at,
             )
             for version in versions
         ]
@@ -1006,7 +1006,6 @@ def get_workflow_execution_status(
     workflow = get_workflow(
         tenant_id=tenant_id,
         workflow_id=workflow_execution.workflow_id,
-        revision=workflow_execution.workflow_revision,
     )
 
     event_id = None
