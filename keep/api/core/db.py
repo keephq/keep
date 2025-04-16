@@ -789,10 +789,13 @@ def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
     with Session(engine) as session:
         version = session.exec(
             select(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == workflow_id)
+            # starting from the 'workflow' table since it's smaller
+            .select_from(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
+            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
             .where(WorkflowVersion.revision == revision)
-            .where(WorkflowVersion.workflow.tenant_id == tenant_id)
-            .where(WorkflowVersion.workflow.is_deleted == False)
         ).first()
     return version
 
