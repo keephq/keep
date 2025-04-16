@@ -37,7 +37,7 @@ export function WorkflowVersions({
     return data.versions[previousIndex]?.revision;
   }, [selectedRevision, data]);
   const { workflow: previousWorkflow } = useWorkflowDetail(
-    previousRevision !== null && showDiff ? workflowId : null,
+    showDiff && previousRevision !== null ? workflowId : null,
     previousRevision
   );
 

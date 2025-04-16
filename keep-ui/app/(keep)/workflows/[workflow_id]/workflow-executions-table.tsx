@@ -24,6 +24,7 @@ import {
   extractTriggerDetailsV2,
   getTriggerIcon,
 } from "@/entities/workflows/lib/ui-utils";
+import { TableFilters } from "./table-filters";
 
 interface Pagination {
   limit: number;
@@ -32,6 +33,7 @@ interface Pagination {
 
 interface WorkflowExecutionsTableProps {
   workflowName: string;
+  workflowId: string;
   executions: PaginatedWorkflowExecutionDto;
   setPagination: Dispatch<SetStateAction<Pagination>>;
   currentRevision: number;
@@ -75,6 +77,7 @@ function WorkflowExecutionRowMenu({
 
 export function WorkflowExecutionsTable({
   workflowName,
+  workflowId,
   executions,
   setPagination,
   currentRevision,
@@ -234,17 +237,20 @@ export function WorkflowExecutionsTable({
     }),
   ] as DisplayColumnDef<WorkflowExecutionDetail>[];
 
-  //To DO pagiantion limit and offest can also be added to url searchparams
+  // TODO: add pagination state to the url search params
   return (
-    <GenericTable<WorkflowExecutionDetail>
-      data={executions.items}
-      columns={columns}
-      rowCount={executions.count ?? 0} // Assuming pagination is not needed, you can adjust this if you have pagination
-      offset={executions.offset} // Customize as needed
-      limit={executions.limit} // Customize as needed
-      onPaginationChange={(newLimit: number, newOffset: number) =>
-        setPagination({ limit: newLimit, offset: newOffset })
-      }
-    />
+    <>
+      <TableFilters workflowId={workflowId} />
+      <GenericTable<WorkflowExecutionDetail>
+        data={executions.items}
+        columns={columns}
+        rowCount={executions.count ?? 0} // Assuming pagination is not needed, you can adjust this if you have pagination
+        offset={executions.offset} // Customize as needed
+        limit={executions.limit} // Customize as needed
+        onPaginationChange={(newLimit: number, newOffset: number) =>
+          setPagination({ limit: newLimit, offset: newOffset })
+        }
+      />
+    </>
   );
 }

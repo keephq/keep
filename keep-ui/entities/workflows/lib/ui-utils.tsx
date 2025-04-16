@@ -39,21 +39,6 @@ export function getTriggerIcon(triggered_by: string) {
   }
 }
 
-export function getTriggerIconV2(type: string, details: string) {
-  switch (type) {
-    case "manual":
-      return CursorArrowRaysIcon;
-    case "interval":
-      return ClockIcon;
-    case "alert":
-      return KeepAlertIcon;
-    case "incident":
-      return KeepIncidentIcon;
-    default:
-      return QuestionMarkCircleIcon;
-  }
-}
-
 export function extractTriggerValue(triggered_by: string | undefined): string {
   if (!triggered_by) return "others";
 

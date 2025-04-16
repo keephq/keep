@@ -15,7 +15,7 @@ export const getInitials = (name: string) =>
 
 const getBackgroundColor = (name: string) => {
   const hash = name.split("").reduce((acc, char) => {
-    return acc + char.charCodeAt(0);
+    return (acc + char.charCodeAt(0)) % 0xffffff;
   }, 0);
   return `#${hash.toString(16).padStart(6, "0")}`;
 };
@@ -49,7 +49,7 @@ export default function UserAvatar({ image, name, size = "sm", email }: Props) {
     >
       <span
         className={clsx(
-          "font-medium text-white text-xs",
+          "font-medium text-white",
           size === "xs" ? "text-[0.6rem]" : "text-xs"
         )}
       >

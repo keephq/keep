@@ -326,8 +326,6 @@ export function WorkflowExecutionResultsInternal({
     />
   );
 
-  console.log("executionData", executionData);
-
   return (
     <div className="flex flex-col gap-4">
       <ResizableColumns initialLeftWidth={50}>
