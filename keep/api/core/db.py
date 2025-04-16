@@ -451,7 +451,7 @@ def update_workflow_by_id(
         existing_workflow = get_workflow(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
-        return update_workflow_by_workflow(
+        return update_workflow_with_values(
             existing_workflow,
             name=name,
             description=description,
@@ -464,7 +464,7 @@ def update_workflow_by_id(
         )
 
 
-def update_workflow_by_workflow(
+def update_workflow_with_values(
     existing_workflow: Workflow,
     name,
     description,
@@ -476,10 +476,7 @@ def update_workflow_by_workflow(
     updated_by=None,
 ):
     # In case the workflow name changed to empty string, keep the old name
-    if name != "":
-        name = name
-    else:
-        name = existing_workflow.name
+    name = name or existing_workflow.name
     with Session(engine, expire_on_commit=False) as session:
         # TODO: ensure that id is unique to workflow_id, like if rolled back and now updating from this version it should be bigger than latest version
         next_revision = existing_workflow.revision + 1
@@ -506,7 +503,6 @@ def update_workflow_by_workflow(
             existing_version.is_current = False
             session.add(existing_version)
 
-        # tb: no need to override the id field here because it has foreign key constraints.
         existing_workflow.name = name
         existing_workflow.description = description
         existing_workflow.updated_by = updated_by_str
@@ -541,7 +537,7 @@ def add_or_update_workflow(
         existing_workflow = get_workflow(tenant_id, id)
 
         if existing_workflow:
-            return update_workflow_by_workflow(
+            return update_workflow_with_values(
                 existing_workflow,
                 name=name,
                 description=description,
