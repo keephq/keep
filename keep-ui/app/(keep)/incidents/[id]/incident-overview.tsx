@@ -5,15 +5,18 @@ import {
   type IncidentDto,
 } from "@/entities/incidents/model";
 import React, { useState } from "react";
-import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
+import {
+  useIncident,
+  useIncidentAlerts,
+  useIncidentsByIds,
+} from "@/utils/hooks/useIncidents";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronDown } from "react-icons/io5";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
-import { Badge, Callout, Icon, TextInput } from "@tremor/react";
+import { Badge, Callout } from "@tremor/react";
 import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
-import Modal from "@/components/ui/Modal";
 import { IncidentChangeStatusSelect } from "features/incidents/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -39,18 +42,16 @@ import remarkGfm from "remark-gfm";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { startCase, xor, map, some } from "lodash";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { MdModeEdit } from "react-icons/md";
-import { FiSave, FiX, FiTrash2 } from "react-icons/fi";
-import {EnrichmentEditableField} from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
-import {EnrichmentEditableForm} from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
+import { EnrichmentEditableField } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
+import { EnrichmentEditableForm } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
 
 const PROVISIONED_ENRICHMENTS = [
   "services",
   "incident_id",
   "incident_url",
   "incident_provider",
-  "incident_title"
-]
+  "incident_title",
+];
 
 interface Props {
   incident: IncidentDto;
@@ -166,7 +167,7 @@ function Summary({
   );
 }
 
-function MergedCallout({
+function ThisIncidentMergedToCallout({
   merged_into_incident_id,
   className,
 }: {
@@ -201,12 +202,57 @@ function MergedCallout({
   );
 }
 
+function IncidentsMergedIntoThisOneCallout({
+  merged_incidents,
+  className,
+}: {
+  merged_incidents: string[];
+  className?: string;
+}) {
+  const incidents = useIncidentsByIds(merged_incidents);
+
+  if (!incidents) {
+    return null;
+  }
+
+  return (
+    <Callout
+      // @ts-ignore
+      title={
+        <div>
+          <p>Those incidents merged into this one:</p>
+          {incidents?.data?.map((incident: IncidentDto) => (
+            <Link
+              key={incident.id}
+              icon={() => (
+                <StatusIcon
+                  className="!p-0"
+                  status={incident.status}
+                  size="xs"
+                />
+              )}
+              href={`/incidents/${incident?.id}`}
+            >
+              {getIncidentName(incident)}
+            </Link>
+          )) || null}
+        </div>
+      }
+      color="purple"
+      className={className}
+    />
+  );
+}
+
 export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const router = useRouter();
-  const { data: fetchedIncident, mutate } = useIncident(initialIncidentData.id, {
-    fallbackData: initialIncidentData,
-    revalidateOnMount: false,
-  });
+  const { data: fetchedIncident, mutate } = useIncident(
+    initialIncidentData.id,
+    {
+      fallbackData: initialIncidentData,
+      revalidateOnMount: false,
+    }
+  );
   const incident = fetchedIncident || initialIncidentData;
   const summary = incident.user_summary || incident.generated_summary;
   // Why do we have "null" in services?
@@ -247,7 +293,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   const api = useApi();
 
-  const handleBulkEnrichmentChange = async (fields: Record<string, string | string[]>) => {
+  const handleBulkEnrichmentChange = async (
+    fields: Record<string, string | string[]>
+  ) => {
     try {
       const requestData = {
         enrichments: fields,
@@ -259,10 +307,10 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       // Handle unexpected error
       console.error("An unexpected error occurred");
     }
-  }
+  };
 
   const handleBulkUnEnrichment = async (fields: string[]) => {
-        try {
+    try {
       const requestData = {
         enrichments: fields,
         fingerprint: incident.id,
@@ -273,15 +321,18 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       // Handle unexpected error
       console.error("An unexpected error occurred");
     }
-  }
+  };
 
-  const handleEnrichmentChange = async (fieldName: string, fieldValue: string | string[]) => {
-    await handleBulkEnrichmentChange({[fieldName]: fieldValue});
-  }
+  const handleEnrichmentChange = async (
+    fieldName: string,
+    fieldValue: string | string[]
+  ) => {
+    await handleBulkEnrichmentChange({ [fieldName]: fieldValue });
+  };
 
   const handleUnEnrichment = async (fieldName: string) => {
     await handleBulkUnEnrichment([fieldName]);
-  }
+  };
 
   if (!alerts || _alertsLoading) {
     return <IncidentOverviewSkeleton />;
@@ -299,20 +350,16 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               alerts={alerts.items}
               incident={incident}
             />
-            {/* @tb: not sure how we use this, but leaving it here for now
-            {incident.user_summary && incident.generated_summary ? (
-              <Summary
-                title="AI version"
-                summary={incident.generated_summary}
-                collapsable={true}
-                alerts={alerts.items}
-                incident={incident}
-              />
-            ) : null} */}
             {incident.merged_into_incident_id && (
-              <MergedCallout
+              <ThisIncidentMergedToCallout
                 className="inline-block mt-2"
                 merged_into_incident_id={incident.merged_into_incident_id}
+              />
+            )}
+            {incident.merged_incidents?.length > 0 && (
+              <IncidentsMergedIntoThisOneCallout
+                className="inline-block mt-2"
+                merged_incidents={incident.merged_incidents}
               />
             )}
             <div className="mt-2">
@@ -323,7 +370,12 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <FieldHeader>Services</FieldHeader>
-                <EnrichmentEditableField name="services" value={notNullServices} onUpdate={handleEnrichmentChange} onDelete={handleUnEnrichment}/>
+                <EnrichmentEditableField
+                  name="services"
+                  value={notNullServices}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={handleUnEnrichment}
+                />
               </div>
 
               <div>
@@ -362,42 +414,44 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                   onDelete={handleBulkUnEnrichment}
                 >
                   <>
-                  {incident.enrichments?.incident_id &&
-                  incident.enrichments?.incident_url ? (
-                    <div className="flex flex-wrap gap-1 truncate">
-                      <Badge
-                        size="sm"
-                        color="orange"
-                        icon={
-                          incident.enrichments?.incident_provider
-                            ? (props: any) => (
-                                <DynamicImageProviderIcon
-                                  providerType={
-                                    incident.enrichments?.incident_provider
-                                  }
-                                  src={`/icons/${incident.enrichments?.incident_provider}-icon.png`}
-                                  height="24"
-                                  width="24"
-                                  {...props}
-                                />
-                              )
-                            : undefined
-                        }
-                        className="cursor-pointer text-ellipsis"
-                        onClick={() =>
-                          window.open(incident.enrichments.incident_url, "_blank")
-                        }
-                      >
-                        {incident.enrichments?.incident_title ??
-                          incident.user_generated_name}
-                      </Badge>
-                    </div>
-                  ) : (
-                    "No external incidents"
-                  )}
+                    {incident.enrichments?.incident_id &&
+                    incident.enrichments?.incident_url ? (
+                      <div className="flex flex-wrap gap-1 truncate">
+                        <Badge
+                          size="sm"
+                          color="orange"
+                          icon={
+                            incident.enrichments?.incident_provider
+                              ? (props: any) => (
+                                  <DynamicImageProviderIcon
+                                    providerType={
+                                      incident.enrichments?.incident_provider
+                                    }
+                                    src={`/icons/${incident.enrichments?.incident_provider}-icon.png`}
+                                    height="24"
+                                    width="24"
+                                    {...props}
+                                  />
+                                )
+                              : undefined
+                          }
+                          className="cursor-pointer text-ellipsis"
+                          onClick={() =>
+                            window.open(
+                              incident.enrichments.incident_url,
+                              "_blank"
+                            )
+                          }
+                        >
+                          {incident.enrichments?.incident_title ??
+                            incident.user_generated_name}
+                        </Badge>
+                      </div>
+                    ) : (
+                      "No external incidents"
+                    )}
                   </>
                 </EnrichmentEditableForm>
-
               </div>
 
               <div>
@@ -478,15 +532,24 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 )}
               {map(incident.enrichments, (value: any, key: string) => {
                 if (PROVISIONED_ENRICHMENTS.indexOf(key) > -1) return;
-                return <div key={`incident-enrichment-${key}`}>
-                  <FieldHeader>{startCase(key)}</FieldHeader>
-                  <EnrichmentEditableField name={key} value={value} onUpdate={handleEnrichmentChange} onDelete={handleUnEnrichment}/>
-                </div>
+                return (
+                  <div key={`incident-enrichment-${key}`}>
+                    <FieldHeader>{startCase(key)}</FieldHeader>
+                    <EnrichmentEditableField
+                      name={key}
+                      value={value}
+                      onUpdate={handleEnrichmentChange}
+                      onDelete={handleUnEnrichment}
+                    />
+                  </div>
+                );
               })}
               <div>
-                <EnrichmentEditableField value={""} onUpdate={handleEnrichmentChange} />
+                <EnrichmentEditableField
+                  value={""}
+                  onUpdate={handleEnrichmentChange}
+                />
               </div>
-
             </div>
           </div>
           <div>

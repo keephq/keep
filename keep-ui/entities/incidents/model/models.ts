@@ -66,6 +66,7 @@ export interface IncidentDto {
   merged_into_incident_id: string;
   merged_by: string;
   merged_at: Date;
+  merged_incidents: string[];
   fingerprint: string;
   enrichments: { [key: string]: any };
   incident_type?: string;
