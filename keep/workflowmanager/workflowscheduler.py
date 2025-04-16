@@ -505,7 +505,7 @@ class WorkflowScheduler:
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
-                        workflow_revision=workflow.revision,
+                        workflow_revision=workflow.workflow_revision,
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
