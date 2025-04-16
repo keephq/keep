@@ -43,7 +43,9 @@ def upgrade() -> None:
     )
     with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("workflow_revision", sa.Integer(), nullable=False)
+            sa.Column(
+                "workflow_revision", sa.Integer(), nullable=False, server_default="1"
+            )
         )
         batch_op.drop_index("idx_workflowexecution_tenant_workflow_id_timestamp")
         batch_op.create_index(
@@ -72,7 +74,22 @@ def upgrade() -> None:
             unique=False,
         )
         batch_op.drop_constraint("workflowexecution_ibfk_2", type_="foreignkey")
-        batch_op.create_foreign_key(None, "workflow", ["workflow_id"], ["id"])
+        batch_op.create_foreign_key(
+            None,
+            "workflow",
+            ["workflow_id"],
+            ["id"],
+            ondelete="SET DEFAULT",
+        )
+
+    # Update existing records with their corresponding workflow revision
+    connection = op.get_bind()
+    connection.execute(
+        sa.text(
+            "UPDATE workflowexecution SET workflow_revision = "
+            "(SELECT revision FROM workflow WHERE workflow.id = workflowexecution.workflow_id)"
+        )
+    )
 
     # ### end Alembic commands ###
 
