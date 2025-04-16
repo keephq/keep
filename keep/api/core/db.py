@@ -312,7 +312,6 @@ def get_workflows_that_should_run():
         try:
             result = session.exec(
                 select(Workflow)
-                .filter(Workflow.is_latest == True)
                 .filter(Workflow.is_deleted == False)
                 .filter(Workflow.is_disabled == False)
                 .filter(Workflow.interval != None)
@@ -705,7 +704,6 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                     == latest_execution_cte.c.last_execution_time,
                 ),
             )
-            .where(Workflow.is_latest == True)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
         ).distinct()
@@ -719,7 +717,6 @@ def get_all_workflows(tenant_id: str):
         workflows = session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.is_latest == True)
             .where(Workflow.is_deleted == False)
         ).all()
     return workflows
@@ -729,7 +726,6 @@ def get_all_provisioned_workflows(tenant_id: str):
     with Session(engine) as session:
         workflows = session.exec(
             select(Workflow)
-            .where(Workflow.is_latest == True)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.provisioned == True)
             .where(Workflow.is_deleted == False)
@@ -752,7 +748,6 @@ def get_all_workflows_yamls(tenant_id: str):
         workflows = session.exec(
             select(Workflow.workflow_raw)
             .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.is_latest == True)
             .where(Workflow.is_deleted == False)
         ).all()
     return list(workflows)
@@ -776,11 +771,14 @@ def get_workflow(tenant_id: str, workflow_id: str):
 def get_workflow_versions(tenant_id: str, workflow_id: str):
     with Session(engine) as session:
         versions = session.exec(
-            select(Workflow)
+            select(WorkflowVersion)
+            # starting from the 'workflow' table since it's smaller
+            .select_from(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
-            .order_by(Workflow.revision.desc())
+            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
+            .order_by(WorkflowVersion.revision.desc())
         ).all()
     return versions
 
@@ -966,7 +964,6 @@ def delete_workflow(tenant_id, workflow_id):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
-            .where(Workflow.is_latest == True)
         ).first()
 
         if workflow:
@@ -993,7 +990,6 @@ def get_workflow_id(tenant_id, workflow_name):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
-            .where(Workflow.is_latest == True)
             .where(Workflow.is_deleted == False)
         ).first()
 
@@ -1996,7 +1992,6 @@ def get_workflow_by_name(tenant_id, workflow_name):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
-            .where(Workflow.is_latest == True)
             .where(Workflow.is_deleted == False)
         ).first()
 

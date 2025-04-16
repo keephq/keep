@@ -131,7 +131,7 @@ export type PaginatedWorkflowsResults = {
 export type WorkflowRevision = {
   revision: number;
   updated_by: string;
-  last_updated: string;
+  updated_at: string;
 };
 
 export type WorkflowRevisionList = {

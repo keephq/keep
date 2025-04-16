@@ -142,7 +142,6 @@ def __build_base_query(tenant_id: str):
             ),
         )
         .where(Workflow.tenant_id == tenant_id)
-        .where(Workflow.is_latest == True)
         .where(Workflow.is_deleted == False)
     )
 

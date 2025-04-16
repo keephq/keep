@@ -45,7 +45,7 @@ export function WorkflowVersions({
     return [
       ...new Set(
         (data?.versions ?? []).map((revision) => {
-          return format(new Date(revision.last_updated), "yyyy");
+          return format(new Date(revision.updated_at), "yyyy");
         })
       ),
     ];
@@ -134,7 +134,7 @@ export function WorkflowVersions({
                   ) : null}
                 </span>
                 <span>
-                  {format(new Date(revision.last_updated), formatString)}
+                  {format(new Date(revision.updated_at), formatString)}
                 </span>
                 <span className="flex items-center gap-1">
                   <UserAvatar size="xs" image={null} name={userName ?? ""} />{" "}

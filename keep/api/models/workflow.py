@@ -141,7 +141,7 @@ class WorkflowRawDto(BaseModel):
 class WorkflowVersionDTO(BaseModel):
     revision: int
     updated_by: str | None
-    last_updated: datetime
+    updated_at: datetime
 
 
 class WorkflowVersionListDTO(BaseModel):

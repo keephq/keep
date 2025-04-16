@@ -21,7 +21,6 @@ import { EmptyStateCard, MonacoEditor, ResizableColumns } from "@/shared/ui";
 import { WorkflowYAMLEditorWithLogs } from "@/shared/ui/WorkflowYAMLEditorWithLogs";
 import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
-import { Workflow } from "@/shared/api/workflows";
 import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
 import clsx from "clsx";
 
@@ -142,17 +141,22 @@ export function WorkflowExecutionResults({
     return <Loading />;
   }
 
+  const isLatestRevision =
+    isWorkflowExecution(executionData) &&
+    executionData.workflow_revision === latestWorkflowData?.revision;
+
   return (
     <WorkflowExecutionResultsInternal
-      workflow={workflowData ?? null}
+      workflowId={workflowId}
       workflowError={workflowError ?? null}
       executionError={executionError ?? null}
-      isLatestRevision={workflowData?.revision === latestWorkflowData?.revision}
       executionData={executionData ?? null}
       workflowRaw={finalYaml}
       checks={checks}
+      showRevision={workflowData !== undefined}
       isLoading={refreshInterval > 0}
       isRevalidating={isRevalidating}
+      isLatestRevision={isLatestRevision}
     />
   );
 }
@@ -160,25 +164,27 @@ export function WorkflowExecutionResults({
 const editorHeightClassName = "h-[calc(100vh-220px)]";
 
 export function WorkflowExecutionResultsInternal({
-  workflow,
+  workflowId,
   workflowError,
   executionData,
   executionError,
   workflowRaw,
   isLatestRevision,
+  showRevision,
   checks,
   isLoading,
   isRevalidating,
 }: {
-  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
-  workflow: Workflow | null;
+  workflowId: string;
   workflowError: Error | null;
+  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
   executionError: Error | null;
   isRevalidating: boolean;
   workflowRaw: string | undefined;
   checks: number;
   isLoading: boolean;
   isLatestRevision: boolean;
+  showRevision: boolean;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
@@ -204,8 +210,8 @@ export function WorkflowExecutionResultsInternal({
     : null;
 
   const refreshExecutionData = () => {
-    if (executionId && workflow) {
-      revalidateForWorkflowExecution(workflow.id, executionId);
+    if (executionId) {
+      revalidateForWorkflowExecution(workflowId, executionId);
     }
   };
 
@@ -237,7 +243,7 @@ export function WorkflowExecutionResultsInternal({
       name: (
         <span className="flex items-center gap-2">
           Workflow Definition
-          {isLatestRevision ? (
+          {!showRevision ? null : isLatestRevision ? (
             <Badge color="green" size="xs">
               Current
             </Badge>
@@ -253,10 +259,10 @@ export function WorkflowExecutionResultsInternal({
       ),
       content: (
         <div className={editorHeightClassName}>
-          {workflow && !workflowError ? (
+          {workflowRaw && !workflowError ? (
             <WorkflowYAMLEditorWithLogs
-              value={workflowRaw ?? ""}
-              workflowId={workflow.id}
+              value={workflowRaw}
+              workflowId={workflowId}
               executionLogs={logs}
               executionStatus={status}
               hoveredStep={hoveredStep}
@@ -264,7 +270,7 @@ export function WorkflowExecutionResultsInternal({
               selectedStep={selectedStep}
               setSelectedStep={setSelectedStep}
               readOnly={true}
-              filename={workflow.id}
+              filename={workflowId}
             />
           ) : (
             <Callout
@@ -344,7 +350,7 @@ export function WorkflowExecutionResultsInternal({
             <div className="mb-4">
               <WorkflowExecutionError
                 error={executionData.error}
-                workflowId={workflow?.id}
+                workflowId={workflowId}
                 eventId={eventId}
                 eventType={eventType}
               />
