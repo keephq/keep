@@ -3,15 +3,15 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Text, Button, TextInput, Badge, Title, Card } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import {
-  getIcon,
-  getTriggerIcon,
-  extractTriggerValue,
-} from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
-import {
   isWorkflowExecution,
   WorkflowExecutionDetail,
 } from "@/shared/api/workflow-executions";
 import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
+import {
+  extractTriggerValue,
+  getTriggerIcon,
+} from "@/entities/workflows/lib/ui-utils";
+import { getIconForStatusString } from "@/shared/ui";
 interface IncidentWorkflowSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
@@ -97,7 +97,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       Status
                     </Text>
                     <div className="flex items-center">
-                      {getIcon(selectedExecution.status)}
+                      {getIconForStatusString(selectedExecution.status)}
                       <span className="ml-2 capitalize">
                         {selectedExecution.status}
                       </span>

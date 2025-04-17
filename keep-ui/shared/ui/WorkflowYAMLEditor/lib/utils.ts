@@ -1,4 +1,8 @@
-import { YamlValidationErrorSeverity } from "../model/types";
+import {
+  WorkflowYAMLEditorDiffProps,
+  WorkflowYAMLEditorProps,
+  YamlValidationErrorSeverity,
+} from "../model/types";
 
 // Copied from monaco-editor/esm/vs/editor/editor.api.d.ts because we can't import with turbopack
 export enum MarkerSeverity {
@@ -24,9 +28,16 @@ export function getSeverityString(
   }
 }
 
-// New utility function to handle error click position
+export function isDiffEditorProps(
+  props: WorkflowYAMLEditorProps
+): props is WorkflowYAMLEditorDiffProps {
+  return "original" in props && "modified" in props;
+}
+
 export function navigateToErrorPosition(
-  editor: import("monaco-editor").editor.IStandaloneCodeEditor,
+  editor:
+    | import("monaco-editor").editor.IStandaloneCodeEditor
+    | import("monaco-editor").editor.IDiffEditor,
   lineNumber: number,
   column: number
 ): void {

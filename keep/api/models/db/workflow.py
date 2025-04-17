@@ -1,9 +1,7 @@
-import os
 from datetime import datetime
 from typing import List, Optional
 
-import sqlalchemy
-from sqlalchemy import TEXT, Index
+from sqlalchemy import TEXT, Index, PrimaryKeyConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
@@ -24,26 +22,34 @@ class Workflow(SQLModel, table=True):
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
 
+    executions: List["WorkflowExecution"] = Relationship(back_populates="workflow")
+    versions: List["WorkflowVersion"] = Relationship(back_populates="workflow")
+
     class Config:
         orm_mode = True
 
 
-def get_status_column():
-    try:
-        db_connection_string = os.environ.get(
-            "DATABASE_CONNECTION_STRING", os.environ.get("DB_CONNECTION_NAME")
-        )
-        backend = (
-            sqlalchemy.engine.url.make_url(db_connection_string).get_backend_name()
-            if db_connection_string
-            else None
-        )
-    except Exception:
-        return sqlalchemy.text("status(255)")
-    return (
-        sqlalchemy.text("status(255)")
-        if backend == "mysql"
-        else sqlalchemy.text("status")
+class WorkflowVersion(SQLModel, table=True):
+    __table_args__ = (PrimaryKeyConstraint("workflow_id", "revision"),)
+
+    workflow_id: str = Field(primary_key=True, foreign_key="workflow.id")
+    revision: int = Field(primary_key=True)
+    workflow_raw: str = Field(sa_column=Column(TEXT))
+    updated_by: str
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    is_valid: bool = Field(default=False)
+    is_current: bool = Field(default=False)
+    comment: Optional[str] = None
+
+    workflow: "Workflow" = Relationship(back_populates="versions")
+    executions: List["WorkflowExecution"] = Relationship(
+        back_populates="version",
+        sa_relationship_kwargs={
+            "primaryjoin": "and_(WorkflowVersion.workflow_id == WorkflowExecution.workflow_id, "
+            "WorkflowVersion.revision == WorkflowExecution.workflow_revision)",
+            "foreign_keys": "[WorkflowExecution.workflow_id, WorkflowExecution.workflow_revision]",
+            "viewonly": True,
+        },
     )
 
 
@@ -57,11 +63,39 @@ class WorkflowExecution(SQLModel, table=True):
             "started",
         ),
         Index(
+            "idx_workflowexecution_tenant_workflow_id_revision_timestamp",
+            "tenant_id",
+            "workflow_id",
+            "workflow_revision",
+            "started",
+        ),
+        Index(
             "idx_workflowexecution_workflow_tenant_started_status",
             "workflow_id",
             "tenant_id",
             "started",
-            get_status_column(),
+            "status",
+            mysql_length={"status": 255},
+        ),
+        Index(
+            "idx_workflowexecution_workflow_revision_tenant_started_status",
+            "workflow_id",
+            "workflow_revision",
+            "tenant_id",
+            "started",
+            "status",
+            mysql_length={"status": 255},
+        ),
+        Index(
+            "idx_status_started",
+            "status",
+            "started",
+            mysql_length={"status": 255},
+        ),
+        Index(
+            "idx_workflowexecution_workflow_revision",
+            "workflow_id",
+            "workflow_revision",
         ),
     )
 
@@ -69,6 +103,9 @@ class WorkflowExecution(SQLModel, table=True):
     workflow_id: str = Field(
         foreign_key="workflow.id", default="test"
     )  # default=test for test runs, which are not associated with a workflow
+    workflow_revision: int = Field(
+        default=1
+    )  # Add this to track which version was executed
     tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow, index=True)
     triggered_by: str = Field(sa_column=Column(TEXT))
@@ -81,6 +118,20 @@ class WorkflowExecution(SQLModel, table=True):
     error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
+
+    workflow: "Workflow" = Relationship(
+        back_populates="executions",
+        sa_relationship_kwargs={"foreign_keys": "[WorkflowExecution.workflow_id]"},
+    )
+
+    version: "WorkflowVersion" = Relationship(
+        back_populates="executions",
+        sa_relationship_kwargs={
+            "primaryjoin": "and_(WorkflowVersion.workflow_id == WorkflowExecution.workflow_id, WorkflowVersion.revision == WorkflowExecution.workflow_revision)",
+            "foreign_keys": "[WorkflowExecution.workflow_id, WorkflowExecution.workflow_revision]",
+            "viewonly": True,
+        },
+    )
 
     logs: List["WorkflowExecutionLog"] = Relationship(
         back_populates="workflowexecution"

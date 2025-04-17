@@ -171,6 +171,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
     }
   };
 
+  // TODO: maybe replace with facets?
   return (
     <div className="relative flex flex-col md:flex-row lg:flex-row gap-4 items-center mb-2">
       <div className="w-1/3 flex relative gap-2">

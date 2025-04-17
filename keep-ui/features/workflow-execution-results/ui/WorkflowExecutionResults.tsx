@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { Card, Callout, Button } from "@tremor/react";
+import { Card, Callout, Button, Badge } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import {
   ArrowPathIcon,
@@ -21,8 +21,8 @@ import { EmptyStateCard, MonacoEditor, ResizableColumns } from "@/shared/ui";
 import { WorkflowYAMLEditorWithLogs } from "@/shared/ui/WorkflowYAMLEditorWithLogs";
 import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
-import clsx from "clsx";
 import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
+import clsx from "clsx";
 
 const WAIT_AFTER_STATUS_CHANGED = 2000;
 
@@ -76,8 +76,15 @@ export function WorkflowExecutionResults({
       : undefined,
   });
 
+  const workflowRevision = isWorkflowExecution(executionData)
+    ? executionData.workflow_revision
+    : undefined;
+
+  const { workflow: latestWorkflowData } = useWorkflowDetail(workflowId, null);
+
   const { workflow: workflowData, error: workflowError } = useWorkflowDetail(
-    !workflowYaml ? workflowId : null
+    !workflowYaml ? workflowId : null,
+    workflowRevision ?? null
   );
 
   const finalYaml = workflowYaml ?? workflowData?.workflow_raw;
@@ -130,39 +137,26 @@ export function WorkflowExecutionResults({
     };
   }, []);
 
-  if (!executionData || !finalYaml) {
+  if (!finalYaml && !workflowError && !executionError) {
     return <Loading />;
   }
 
-  if (executionError) {
-    return (
-      <Callout
-        className="mt-4"
-        title="Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        Failed to load workflow execution
-      </Callout>
-    );
-  }
-
-  if (workflowError) {
-    return (
-      <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
-        Failed to load workflow definition
-      </Callout>
-    );
-  }
+  const isLatestRevision =
+    isWorkflowExecution(executionData) &&
+    executionData.workflow_revision === latestWorkflowData?.revision;
 
   return (
     <WorkflowExecutionResultsInternal
       workflowId={workflowId}
-      executionData={executionData}
+      workflowError={workflowError ?? null}
+      executionError={executionError ?? null}
+      executionData={executionData ?? null}
       workflowRaw={finalYaml}
       checks={checks}
+      showRevision={workflowData !== undefined}
       isLoading={refreshInterval > 0}
       isRevalidating={isRevalidating}
+      isLatestRevision={isLatestRevision}
     />
   );
 }
@@ -171,18 +165,26 @@ const editorHeightClassName = "h-[calc(100vh-220px)]";
 
 export function WorkflowExecutionResultsInternal({
   workflowId,
+  workflowError,
   executionData,
+  executionError,
   workflowRaw,
+  isLatestRevision,
+  showRevision,
   checks,
   isLoading,
   isRevalidating,
 }: {
-  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure;
-  isRevalidating: boolean;
   workflowId: string;
+  workflowError: Error | null;
+  executionData: WorkflowExecutionDetail | WorkflowExecutionFailure | null;
+  executionError: Error | null;
+  isRevalidating: boolean;
   workflowRaw: string | undefined;
   checks: number;
   isLoading: boolean;
+  isLatestRevision: boolean;
+  showRevision: boolean;
 }) {
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
@@ -237,27 +239,59 @@ export function WorkflowExecutionResultsInternal({
 
   const tabs = [
     {
-      name: "Workflow Definition",
+      id: "workflow-definition",
+      name: (
+        <span className="flex items-center gap-2">
+          Workflow Definition
+          {!showRevision ? null : isLatestRevision ? (
+            <Badge color="green" size="xs">
+              Current
+            </Badge>
+          ) : (
+            <Badge color="gray" size="xs">
+              Rev.{" "}
+              {isWorkflowExecution(executionData)
+                ? executionData.workflow_revision
+                : "unknown"}
+            </Badge>
+          )}
+        </span>
+      ),
       content: (
         <div className={editorHeightClassName}>
-          <WorkflowYAMLEditorWithLogs
-            workflowYamlString={workflowRaw ?? ""}
-            workflowId={workflowId}
-            executionLogs={logs}
-            executionStatus={status}
-            hoveredStep={hoveredStep}
-            setHoveredStep={setHoveredStep}
-            selectedStep={selectedStep}
-            setSelectedStep={setSelectedStep}
-            readOnly={true}
-            filename={workflowId}
-          />
+          {workflowRaw && !workflowError ? (
+            <WorkflowYAMLEditorWithLogs
+              value={workflowRaw}
+              workflowId={workflowId}
+              executionLogs={logs}
+              executionStatus={status}
+              hoveredStep={hoveredStep}
+              setHoveredStep={setHoveredStep}
+              selectedStep={selectedStep}
+              setSelectedStep={setSelectedStep}
+              readOnly={true}
+              filename={workflowId}
+            />
+          ) : (
+            <Callout
+              title="Error"
+              icon={ExclamationCircleIcon}
+              color="rose"
+              className="mx-4"
+            >
+              Failed to load workflow definition for revision{" "}
+              {isWorkflowExecution(executionData)
+                ? executionData.workflow_revision
+                : "unknown"}
+            </Callout>
+          )}
         </div>
       ),
     },
     ...(hasEvent
       ? [
           {
+            id: "event-trigger",
             name: "Event Trigger",
             content:
               typeof eventData === "object" ? (
@@ -300,16 +334,28 @@ export function WorkflowExecutionResultsInternal({
 
   return (
     <div className="flex flex-col gap-4">
-      {executionData.error && (
-        <WorkflowExecutionError
-          error={executionData.error}
-          workflowId={workflowId}
-          eventId={eventId}
-          eventType={eventType}
-        />
-      )}
       <ResizableColumns initialLeftWidth={50}>
         <div className="pr-2">
+          {executionError && (
+            <Callout
+              className="mb-4"
+              title="Error"
+              icon={ExclamationCircleIcon}
+              color="rose"
+            >
+              Failed to load workflow execution
+            </Callout>
+          )}
+          {isWorkflowFailure(executionData) && (
+            <div className="mb-4">
+              <WorkflowExecutionError
+                error={executionData.error}
+                workflowId={workflowId}
+                eventId={eventId}
+                eventType={eventType}
+              />
+            </div>
+          )}
           {logs ? (
             <div className="flex flex-col gap-4 items-center">
               <Card className="p-0 overflow-hidden">
@@ -353,12 +399,12 @@ export function WorkflowExecutionResultsInternal({
             <TabGroup>
               <TabList className="p-2">
                 {tabs.map((tab) => (
-                  <Tab key={tab.name}>{tab.name}</Tab>
+                  <Tab key={tab.id}>{tab.name}</Tab>
                 ))}
               </TabList>
               <TabPanels>
                 {tabs.map((tab) => (
-                  <TabPanel key={tab.name}>{tab.content}</TabPanel>
+                  <TabPanel key={tab.id}>{tab.content}</TabPanel>
                 ))}
               </TabPanels>
             </TabGroup>
