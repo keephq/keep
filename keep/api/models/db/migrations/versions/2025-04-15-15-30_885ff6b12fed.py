@@ -42,6 +42,14 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("workflow_id", "revision"),
     )
 
+    with op.batch_alter_table("workflow", schema=None) as batch_op:
+        batch_op.alter_column(
+            "last_updated",
+            existing_type=sa.DateTime(timezone=True),
+            server_default=sa.func.current_timestamp(),
+            nullable=False,
+        )
+
     # Then handle column and index changes
     with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
         batch_op.add_column(
