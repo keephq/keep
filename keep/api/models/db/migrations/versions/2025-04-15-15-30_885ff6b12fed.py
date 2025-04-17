@@ -119,7 +119,7 @@ def upgrade() -> None:
                 COALESCE(revision, 1) as revision,
                 workflow_raw,
                 COALESCE(updated_by, created_by) as updated_by,
-                last_updated as updated_at,
+                COALESCE(last_updated, CURRENT_DATE) as updated_at,
                 true as is_valid,
                 true as is_current,
                 'Initial version migration' as comment
