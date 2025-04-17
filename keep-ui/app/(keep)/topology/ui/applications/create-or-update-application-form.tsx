@@ -188,7 +188,9 @@ export function CreateOrUpdateApplicationForm({
                   key={service.service}
                   className="text-sm inline-flex justify-between bg-gray-100 rounded-md"
                 >
-                  <span className="text-gray-800 p-2 pr-0">{service.name}</span>
+                  <span className="text-gray-800 p-2 pr-0">
+                    {service.name || service.service}
+                  </span>
                   <Button
                     variant="light"
                     className="group"

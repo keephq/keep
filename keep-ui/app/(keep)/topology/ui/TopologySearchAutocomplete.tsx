@@ -54,7 +54,7 @@ export function TopologySearchAutocomplete({
             service.service && !excludeServiceIds?.includes(service.service)
         )
         .map((service) => ({
-          label: service.display_name,
+          label: service.display_name || service.service, // use display_name if available
           value: {
             id: service.id,
             name: service.display_name,
