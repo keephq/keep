@@ -128,6 +128,16 @@ export type PaginatedWorkflowsResults = {
   offset: number;
 };
 
+export type WorkflowRevision = {
+  revision: number;
+  updated_by: string;
+  updated_at: string;
+};
+
+export type WorkflowRevisionList = {
+  versions: WorkflowRevision[];
+};
+
 export async function getWorkflow(api: ApiClient, id: string) {
   return await api.get<Workflow>(`/workflows/${id}`);
 }

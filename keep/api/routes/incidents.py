@@ -14,6 +14,7 @@ from fastapi import (
 )
 from pusher import Pusher
 from pydantic.types import UUID
+from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -1034,6 +1035,7 @@ async def enrich_incident(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
+    db_session: Session = Depends(get_session),
 ) -> Response:
     """Enrich incident with additional data."""
     tenant_id = authenticated_entity.tenant_id
@@ -1044,9 +1046,13 @@ async def enrich_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Use the existing enrichment infrastructure
-    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl = EnrichmentsBl(tenant_id, db_session)
+    fingerprint = UUIDType(binary=False).process_bind_param(
+        incident_id, db_session.bind.dialect
+    )
+
     enrichment_bl.enrich_entity(
-        fingerprint=str(incident_id),  # Use incident_id as fingerprint
+        fingerprint=fingerprint,
         enrichments=enrichment.enrichments,
         action_type=ActionType.INCIDENT_ENRICH,
         action_callee=authenticated_entity.email,
@@ -1106,7 +1112,7 @@ async def unenrich_incident(
     # Use the existing enrichment infrastructure
     enrichment_bl = EnrichmentsBl(tenant_id)
     enrichment_bl.enrich_entity(
-        fingerprint=enrichment.fingerprint,  # Use incident_id as fingerprint
+        fingerprint=enrichment.fingerprint,
         enrichments=new_enrichments,
         action_type=ActionType.INCIDENT_UNENRICH,
         action_callee=authenticated_entity.email,

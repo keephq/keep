@@ -37,6 +37,7 @@ class WorkflowDTO(BaseModel):
     workflow_raw: str
     revision: int = 1
     last_updated: datetime = None
+    last_updated_by: str = None
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
     last_executions: List[dict] = None
     last_execution_started: datetime = None
@@ -110,6 +111,7 @@ class WorkflowToAlertExecutionDTO(BaseModel):
 class WorkflowExecutionDTO(BaseModel):
     id: str
     workflow_id: str | None  # None for test runs
+    workflow_revision: int | None
     started: datetime
     triggered_by: str
     status: str
@@ -136,4 +138,11 @@ class WorkflowRawDto(BaseModel):
     workflow_raw: str
 
 
-# trigger CI. TODO: remove this
+class WorkflowVersionDTO(BaseModel):
+    revision: int
+    updated_by: str | None
+    updated_at: datetime
+
+
+class WorkflowVersionListDTO(BaseModel):
+    versions: List[WorkflowVersionDTO]

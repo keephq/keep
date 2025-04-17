@@ -15,7 +15,7 @@ export default function WorkflowDetailHeader({
   workflowId: string;
   initialData?: Workflow;
 }) {
-  const { workflow, isLoading, error } = useWorkflowDetail(workflow_id, {
+  const { workflow, error } = useWorkflowDetail(workflow_id, null, {
     fallbackData: initialData,
   });
 
@@ -26,7 +26,6 @@ export default function WorkflowDetailHeader({
     getManualInputModalProps,
     isRunButtonDisabled,
     message,
-    hasInputs,
   } = useWorkflowRun(workflow as Workflow);
 
   if (error) {

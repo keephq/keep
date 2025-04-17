@@ -208,23 +208,6 @@ def db_session(request, monkeypatch):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
         monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
-        t = SQLModel.metadata.tables["workflowexecution"]
-        curr_index = next(
-            (
-                index
-                for index in t.indexes
-                if index.name == "idx_workflowexecution_workflow_tenant_started_status"
-            )
-        )
-        t.indexes.remove(curr_index)
-        status_index = Index(
-            "idx_workflowexecution_workflow_tenant_started_status",
-            "workflow_id",
-            "tenant_id",
-            "started",
-            sqlalchemy.text("status(255)"),
-        )
-        t.append_constraint(status_index)
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
@@ -446,7 +429,7 @@ def elastic_container(docker_ip, docker_services):
 @pytest.fixture
 def elastic_client(request):
 
-    if hasattr(request, 'param') and request.param is False:
+    if hasattr(request, "param") and request.param is False:
         yield None
     else:
         # this is so if any other module initialized Elasticsearch, it will be deleted

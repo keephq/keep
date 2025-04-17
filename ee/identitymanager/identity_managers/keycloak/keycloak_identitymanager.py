@@ -172,6 +172,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 (scope for scope in all_scopes if scope["name"] == scope_name),
                 None,
             )
+            if not scope:
+                self.logger.error(
+                    "Scope %s not found in Keycloak",
+                    scope_name,
+                    extra={"scopes": all_scopes},
+                )
+                return []
             return [scope["id"]]
 
     def get_permission_by_name(self, permission_name):

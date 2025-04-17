@@ -224,6 +224,7 @@
             "providers/documentation/pagertree-provider",
             "providers/documentation/parseable-provider",
             "providers/documentation/pingdom-provider",
+            "providers/documentation/posthog-provider",
             "providers/documentation/planner-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/prometheus-provider",
