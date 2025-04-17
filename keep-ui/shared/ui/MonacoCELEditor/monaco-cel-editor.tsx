@@ -11,6 +11,8 @@ const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
 interface MonacoCelProps {
   className: string;
+  value: string;
+  onValueChange: (value: string) => void;
 }
 
 export function MonacoCelEditor(props: MonacoCelProps) {
@@ -42,7 +44,16 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       if (value.includes("\n")) {
         model.setValue(value.replace(/\n/g, " "));
       }
+      const tokens = monaco.editor.tokenize(value, "cel");
+      console.log("Ihor CEL Tokens:", tokens);
     });
+
+    const model = editor.getModel();
+
+    if (!model) {
+      return;
+    }
+
     setEditor(editor);
   };
 
@@ -61,11 +72,13 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onMonacoLoaded={monacoLoadedCallback}
       onMonacoLoadFailure={setError}
       onMount={handleEditorDidMount}
+      onChange={(val) => props.onValueChange(val || "")}
       className={props.className}
       language="cel"
       defaultLanguage="cel"
       theme="cel-dark"
       loading={Loader}
+      value={props.value}
       wrapperProps={{
         style: {
           backgroundColor: "transparent", // ✅ wrapper transparency
