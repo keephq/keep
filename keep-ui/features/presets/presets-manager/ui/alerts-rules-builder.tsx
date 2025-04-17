@@ -468,6 +468,7 @@ export const AlertsRulesBuilder = ({
                 /> */}
 
                 <CelInput
+                  placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   onValueChange={onValueChange}
                   onKeyDown={handleKeyDown}

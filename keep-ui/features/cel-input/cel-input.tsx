@@ -20,9 +20,14 @@ const CelInput: FC<CelInputProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex-1 h-9 border rounded-md pl-9">
+    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white">
+      {placeholder && !value && (
+        <div className="absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50">
+          {placeholder}
+        </div>
+      )}
       <MonacoCelEditor
-        className="h-20 relative top-1"
+        className="h-20 relative top-1 {}"
         value={value}
         onValueChange={onValueChange || ((value: string) => {})}
         onKeyDown={onKeyDown}
