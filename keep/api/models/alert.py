@@ -370,6 +370,13 @@ class BatchEnrichAlertRequestBody(BaseModel):
     fingerprints: list[str]
 
 
+class BatchEnrichAlertByCelRequestBody(BaseModel):
+    enrichments: dict[str, str]
+    cel: str
+    limit: int = 1000
+    offset: int = 0
+
+
 class UnEnrichAlertRequestBody(BaseModel):
     enrichments: list[str]
     fingerprint: str
