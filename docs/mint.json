@@ -391,7 +391,8 @@
             "api-ref/alerts/search-alerts",
             "api-ref/alerts/get-alert-audit",
             "api-ref/alerts/get-alerts",
-            "api-ref/alerts/get-alert-quality"
+            "api-ref/alerts/get-alert-quality",
+            "api-ref/alerts/batch-enrich-alerts"
           ]
         },
         {

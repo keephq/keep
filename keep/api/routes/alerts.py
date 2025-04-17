@@ -811,7 +811,7 @@ def batch_enrich_alerts(
 
     if enrich_data.fingerprints and enrich_data.cel:
         raise HTTPException(
-            status_code=400, detail="Only one of fingerprints or cel can be provided"
+            status_code=400, detail="Either fingerprints or cel can be provided at once"
         )
 
     # If CEL is provided, use it to find matching alerts
@@ -841,7 +841,6 @@ def batch_enrich_alerts(
                 )
                 return {
                     "status": "ok",
-                    "affected_alerts": 0,
                     "message": "No alerts matched the query",
                 }
 
@@ -864,7 +863,7 @@ def batch_enrich_alerts(
             ) from e
         except Exception as e:
             logger.exception("Failed to process CEL query", extra={"error": str(e)})
-            return {"status": "failed", "affected_alerts": 0, "message": str(e)}
+            return {"status": "failed", "message": str(e)}
     else:
         # Use the provided fingerprints
         fingerprints = enrich_data.fingerprints

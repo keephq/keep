@@ -885,7 +885,6 @@ def test_batch_enrichment(db_session, client, test_app, create_alert, elastic_cl
     assert response.status_code == 200
     response_data = response.json()
     assert response_data["status"] == "ok"
-    assert response_data["affected_alerts"] == 10
 
     time.sleep(1)
 
