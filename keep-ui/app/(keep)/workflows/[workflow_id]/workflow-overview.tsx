@@ -2,11 +2,10 @@ import { useWorkflowExecutionsV2 } from "@/entities/workflow-executions/model/us
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Callout, Title, Card } from "@tremor/react";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Workflow } from "@/shared/api/workflows";
 import WorkflowGraph from "../workflow-graph";
-import { TableFilters } from "./table-filters";
-import { ExecutionTable } from "./workflow-execution-table";
+import { WorkflowExecutionsTable } from "./workflow-executions-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 import { WorkflowProviders } from "./workflow-providers";
 import { WorkflowSteps } from "../workflows-templates";
@@ -37,14 +36,15 @@ export default function WorkflowOverview({
   });
   const searchParams = useSearchParams();
 
+  // TODO: This is a hack to reset the pagination when the search params change, because the table filters state stored in the url
   useEffect(() => {
-    setExecutionPagination({
-      ...executionPagination,
+    setExecutionPagination((prev) => ({
+      ...prev,
       offset: 0,
-    });
+    }));
   }, [searchParams]);
 
-  const { data, isLoading, error, isValidating } = useWorkflowExecutionsV2(
+  const { data, isLoading, error } = useWorkflowExecutionsV2(
     workflow_id,
     executionPagination.limit,
     executionPagination.offset
@@ -148,9 +148,11 @@ export default function WorkflowOverview({
             )}
           </Card>
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
-          <TableFilters workflowId={data.workflow.id} />
-          <ExecutionTable
+          <WorkflowExecutionsTable
+            workflowId={data.workflow.id}
+            workflowName={data.workflow.name}
             executions={data}
+            currentRevision={data.workflow.revision ?? 0}
             setPagination={setExecutionPagination}
           />
         </div>

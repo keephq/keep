@@ -9,12 +9,12 @@ import React, {
   useEffect,
 } from "react";
 import type { editor } from "monaco-editor";
+import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
+import { WorkflowYAMLEditorProps } from "../model/types";
 // NOTE: IT IS IMPORTANT TO IMPORT MonacoYAMLEditor FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
 import { MonacoYAMLEditor, KeepLoader } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
-import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
-import { YamlValidationError } from "../model/types";
 import { useYamlValidation } from "../lib/useYamlValidation";
 import { WorkflowYAMLEditorToolbar } from "./WorkflowYAMLEditorToolbar";
 import { navigateToErrorPosition } from "../lib/utils";
@@ -22,26 +22,8 @@ import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
-export interface WorkflowYAMLEditorProps {
-  workflowYamlString: string;
-  workflowId?: string;
-  filename?: string;
-  readOnly?: boolean;
-  "data-testid"?: string;
-  onMount?: (
-    editor: editor.IStandaloneCodeEditor,
-    monacoInstance: typeof import("monaco-editor")
-  ) => void;
-  onChange?: (value: string | undefined) => void;
-  onValidationErrors?: React.Dispatch<
-    React.SetStateAction<YamlValidationError[]>
-  >;
-  onSave?: (value: string) => void;
-}
-
 export const WorkflowYAMLEditor = ({
   workflowId,
-  workflowYamlString,
   filename = "workflow",
   readOnly = false,
   "data-testid": dataTestId = "yaml-editor",
@@ -49,9 +31,12 @@ export const WorkflowYAMLEditor = ({
   onChange,
   onSave,
   onValidationErrors,
+  ...props
 }: WorkflowYAMLEditorProps) => {
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<
+    editor.IStandaloneCodeEditor | editor.IDiffEditor | null
+  >(null);
   const { getSecrets } = useWorkflowSecrets(workflowId);
   const { data: secrets } = getSecrets;
 
@@ -76,20 +61,51 @@ export const WorkflowYAMLEditor = ({
 
   const [isEditorMounted, setIsEditorMounted] = useState(false);
 
+  const getEditorValue = useCallback(() => {
+    if (!editorRef.current) {
+      return;
+    }
+    const model = editorRef.current.getModel();
+    if (!model) {
+      return;
+    }
+    if ("original" in model) {
+      return model.modified.getValue();
+    }
+    return model.getValue();
+  }, []);
+
+  const validateMustacheExpressionsEverywhere = useCallback(() => {
+    if (editorRef.current && monacoRef.current) {
+      const model = editorRef.current.getModel();
+      if (!model) {
+        return;
+      }
+      if ("original" in model) {
+        validateMustacheExpressions(
+          model.original,
+          monacoRef.current,
+          secrets ?? {}
+        );
+        validateMustacheExpressions(
+          model.modified,
+          monacoRef.current,
+          secrets ?? {}
+        );
+      } else {
+        validateMustacheExpressions(model, monacoRef.current, secrets ?? {});
+      }
+    }
+  }, [validateMustacheExpressions, secrets]);
+
   const handleChange = useCallback(
     (value: string | undefined) => {
       if (onChange) {
         onChange(value);
       }
-      if (editorRef.current && monacoRef.current) {
-        validateMustacheExpressions(
-          editorRef.current.getModel(),
-          monacoRef.current,
-          secrets ?? {}
-        );
-      }
+      validateMustacheExpressionsEverywhere();
     },
-    [onChange, validateMustacheExpressions]
+    [onChange, validateMustacheExpressionsEverywhere]
   );
 
   const handleEditorDidMount = (
@@ -119,40 +135,40 @@ export const WorkflowYAMLEditor = ({
   useEffect(() => {
     // After editor is mounted, validate the initial content
     if (isEditorMounted && editorRef.current && monacoRef.current) {
-      validateMustacheExpressions(
-        editorRef.current.getModel(),
-        monacoRef.current,
-        secrets ?? {}
-      );
+      validateMustacheExpressionsEverywhere();
     }
-  }, [validateMustacheExpressions, isEditorMounted]);
+  }, [validateMustacheExpressionsEverywhere, isEditorMounted]);
 
   const downloadYaml = useCallback(() => {
-    if (!editorRef.current) {
+    const value = getEditorValue();
+    if (!value) {
       return;
     }
     downloadFileFromString({
-      data: editorRef.current.getValue(),
+      data: value,
       filename: `${filename}.yaml`,
       contentType: "text/yaml",
     });
   }, [filename]);
 
   const copyToClipboard = useCallback(async () => {
-    if (!editorRef.current) {
+    const value = getEditorValue();
+    if (!value) {
       return;
     }
-    const content = editorRef.current.getValue();
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(value);
     } catch (err) {
       console.error("Failed to copy text:", err);
     }
   }, []);
 
   const handleSave = useCallback(() => {
-    if (!editorRef.current || !onSave) return;
-    onSave(editorRef.current.getValue());
+    const value = getEditorValue();
+    if (!onSave || !value) {
+      return;
+    }
+    onSave(value);
   }, [onSave]);
 
   const editorOptions = useMemo<editor.IStandaloneEditorConstructionOptions>(
@@ -164,6 +180,7 @@ export const WorkflowYAMLEditor = ({
       scrollBeyondLastLine: false,
       automaticLayout: true,
       tabSize: 2,
+      lineNumbersMinChars: 2,
       insertSpaces: true,
       fontSize: 14,
       renderWhitespace: "all",
@@ -201,13 +218,13 @@ export const WorkflowYAMLEditor = ({
             height="100%"
             className="[&_.monaco-editor]:outline-none [&_.decorationsOverviewRuler]:z-2"
             wrapperProps={{ "data-testid": dataTestId }}
-            value={workflowYamlString}
             onMount={handleEditorDidMount}
             onChange={handleChange}
             options={editorOptions}
             loading={<KeepLoader loadingText="Loading YAML editor..." />}
             theme="light"
             schemas={schemas}
+            {...props}
           />
         </Suspense>
       </div>
