@@ -300,38 +300,39 @@ class WorkflowManager:
                                 "tenant_id": tenant_id,
                             },
                         )
-                        continue
+                        should_run = True
+                    else:
 
-                    # By default, the workflow should not run. Only if the CEL evaluates to true, the workflow will run.
-                    should_run = False
+                        # By default, the workflow should not run. Only if the CEL evaluates to true, the workflow will run.
+                        should_run = False
 
-                    # backward compatibility for filter. should be removed in the future
-                    # if triggers and cel are set, we override the cel with filters.
-                    if "filters" in trigger:
-                        # this is old format, so let's convert it to CEL
-                        trigger["cel"] = self._convert_filters_to_cel(
-                            trigger["filters"]
-                        )
+                        # backward compatibility for filter. should be removed in the future
+                        # if triggers and cel are set, we override the cel with filters.
+                        if "filters" in trigger:
+                            # this is old format, so let's convert it to CEL
+                            trigger["cel"] = self._convert_filters_to_cel(
+                                trigger["filters"]
+                            )
 
-                    compiled_ast = self.cel_environment.compile(trigger["cel"])
-                    program = self.cel_environment.program(compiled_ast)
-                    activation = celpy.json_to_cel(event.dict())
-                    try:
-                        should_run = program.evaluate(activation)
-                    except celpy.evaluation.CELEvalError as e:
-                        self.logger.exception(
-                            "Error evaluating CEL for event in insert_events",
-                            extra={
-                                "exception": e,
-                                "event": event,
-                                "trigger": trigger,
-                                "workflow_id": workflow_model.id,
-                                "tenant_id": tenant_id,
-                                "cel": trigger["cel"],
-                                "deprecated_filters": trigger["filters"],
-                            },
-                        )
-                        continue
+                        compiled_ast = self.cel_environment.compile(trigger["cel"])
+                        program = self.cel_environment.program(compiled_ast)
+                        activation = celpy.json_to_cel(event.dict())
+                        try:
+                            should_run = program.evaluate(activation)
+                        except celpy.evaluation.CELEvalError as e:
+                            self.logger.exception(
+                                "Error evaluating CEL for event in insert_events",
+                                extra={
+                                    "exception": e,
+                                    "event": event,
+                                    "trigger": trigger,
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                    "cel": trigger["cel"],
+                                    "deprecated_filters": trigger["filters"],
+                                },
+                            )
+                            continue
 
                     if bool(should_run) is False:
                         self.logger.debug(
