@@ -27,7 +27,7 @@ def test_get_workflow_from_dict():
     workflow_path = str(path_to_test_resources / "db_disk_space_for_testing.yml")
     workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path)
     result = workflow_store.get_workflow_from_dict(
-        tenant_id=tenant_id, workflow=workflow_dict
+        tenant_id=tenant_id, workflow_dict=workflow_dict
     )
     mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict)
     assert result.workflow_id == "workflow1"
@@ -46,7 +46,7 @@ def test_get_workflow_from_dict_raises_exception():
 
     with pytest.raises(HTTPException) as exc_info:
         workflow_store.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow_dict
+            tenant_id=tenant_id, workflow_dict=workflow_dict
         )
 
     assert exc_info.value.status_code == 500
@@ -92,7 +92,7 @@ def test_get_workflow_results():
 def test_handle_manual_event_workflow():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
-
+    mock_workflow.workflow_revision = 1
     mock_workflow_manager = Mock()
 
     mock_logger = Mock()
@@ -119,6 +119,7 @@ def test_handle_manual_event_workflow():
 
         workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
             workflow_id=mock_workflow.workflow_id,
+            workflow_revision=mock_workflow.workflow_revision,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,
             event=event,
@@ -137,6 +138,7 @@ def test_handle_manual_event_workflow():
 def test_handle_manual_event_workflow_test_run():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_id = "workflow1"
+    mock_workflow.workflow_revision = 1
 
     mock_workflow_manager = Mock()
 
@@ -164,6 +166,7 @@ def test_handle_manual_event_workflow_test_run():
 
         workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
             workflow_id=mock_workflow.workflow_id,
+            workflow_revision=mock_workflow.workflow_revision,
             workflow=mock_workflow,
             tenant_id=tenant_id,
             triggered_by_user=triggered_by_user,

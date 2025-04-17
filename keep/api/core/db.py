@@ -188,6 +188,7 @@ def retry_on_deadlock(f):
 
 def create_workflow_execution(
     workflow_id: str,
+    workflow_revision: int,
     tenant_id: str,
     triggered_by: str,
     execution_number: int = 1,
@@ -207,6 +208,7 @@ def create_workflow_execution(
             workflow_execution = WorkflowExecution(
                 id=workflow_execution_id,
                 workflow_id=workflow_id if not test_run else "test",
+                workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
@@ -330,7 +332,7 @@ def get_workflows_that_should_run():
                 try:
                     # try to get the lock
                     workflow_execution_id = create_workflow_execution(
-                        workflow.id, workflow.tenant_id, "scheduler"
+                        workflow.id, workflow.revision, workflow.tenant_id, "scheduler"
                     )
                     # we succeed to get the lock on this execution number :)
                     # let's run it
@@ -353,6 +355,7 @@ def get_workflows_that_should_run():
                     # try to get the lock with execution_number + 1
                     workflow_execution_id = create_workflow_execution(
                         workflow.id,
+                        workflow.revision,
                         workflow.tenant_id,
                         "scheduler",
                         last_execution.execution_number + 1,
@@ -404,6 +407,7 @@ def get_workflows_that_should_run():
                     try:
                         workflow_execution_id = create_workflow_execution(
                             workflow.id,
+                            workflow.revision,
                             workflow.tenant_id,
                             "scheduler",
                             ongoing_execution.execution_number + 1,
@@ -430,63 +434,155 @@ def get_workflows_that_should_run():
         return workflows_to_run
 
 
+def update_workflow_by_id(
+    id: str,
+    name: str,
+    tenant_id: str,
+    description: str | None,
+    interval: int,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
+):
+    with Session(engine, expire_on_commit=False) as session:
+        existing_workflow = get_workflow(tenant_id, id)
+        if not existing_workflow:
+            raise ValueError("Workflow not found")
+        return update_workflow_with_values(
+            existing_workflow,
+            name=name,
+            description=description,
+            interval=interval,
+            workflow_raw=workflow_raw,
+            is_disabled=is_disabled,
+            provisioned=provisioned,
+            provisioned_file=provisioned_file,
+            updated_by=updated_by,
+            session=session,
+        )
+
+
+def update_workflow_with_values(
+    existing_workflow: Workflow,
+    name: str,
+    description: str | None,
+    interval: int,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
+    session: Session | None = None,
+):
+    # In case the workflow name changed to empty string, keep the old name
+    name = name or existing_workflow.name
+    with existed_or_new_session(session) as session:
+        # Get the latest revision number for this workflow
+        latest_version = session.exec(
+            select(WorkflowVersion)
+            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .order_by(WorkflowVersion.revision.desc())
+            .limit(1)
+        ).first()
+
+        next_revision = (latest_version.revision if latest_version else 0) + 1
+
+        # Update all existing versions to not be current
+        session.exec(
+            update(WorkflowVersion)
+            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .values(is_current=False)  # type: ignore[attr-defined]
+        )
+
+        # creating a new version
+        version = WorkflowVersion(
+            workflow_id=existing_workflow.id,
+            revision=next_revision,
+            workflow_raw=workflow_raw,
+            updated_by=updated_by,
+            comment=f"Updated by {updated_by}",
+            # TODO: check if valid
+            is_valid=True,
+            is_current=True,
+        )
+        session.add(version)
+
+        existing_workflow.name = name
+        existing_workflow.description = description
+        existing_workflow.updated_by = updated_by
+        existing_workflow.interval = interval
+        existing_workflow.workflow_raw = workflow_raw
+        existing_workflow.revision = next_revision
+        existing_workflow.last_updated = datetime.now()
+        existing_workflow.is_deleted = False
+        existing_workflow.is_disabled = is_disabled
+        existing_workflow.provisioned = provisioned
+        existing_workflow.provisioned_file = provisioned_file
+        session.add(existing_workflow)
+        session.commit()
+        return existing_workflow
+
+
 def add_or_update_workflow(
-    id,
-    name,
-    tenant_id,
-    description,
-    created_by,
-    interval,
-    workflow_raw,
-    is_disabled,
-    provisioned=False,
-    provisioned_file=None,
-    updated_by=None,
+    id: str,
+    name: str,
+    tenant_id: str,
+    description: str | None,
+    created_by: str,
+    interval: int,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
-        existing_workflow = (
-            session.query(Workflow)
-            .filter_by(name=name)
-            .filter_by(tenant_id=tenant_id)
-            .first()
-        )
+        existing_workflow = get_workflow(tenant_id, id)
 
         if existing_workflow:
-            # tb: no need to override the id field here because it has foreign key constraints.
-            existing_workflow.tenant_id = tenant_id
-            existing_workflow.description = description
-            existing_workflow.updated_by = (
-                updated_by or existing_workflow.updated_by
-            )  # Update the updated_by field if provided
-            existing_workflow.interval = interval
-            existing_workflow.workflow_raw = workflow_raw
-            existing_workflow.revision += 1  # Increment the revision
-            existing_workflow.last_updated = datetime.now()  # Update last_updated
-            existing_workflow.is_deleted = False
-            existing_workflow.is_disabled = is_disabled
-            existing_workflow.provisioned = provisioned
-            existing_workflow.provisioned_file = provisioned_file
+            return update_workflow_with_values(
+                existing_workflow,
+                name=name,
+                description=description,
+                interval=interval,
+                workflow_raw=workflow_raw,
+                is_disabled=is_disabled,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
+                updated_by=updated_by,
+                session=session,
+            )
 
         else:
             # Create a new workflow
             workflow = Workflow(
                 id=id,
+                revision=1,
                 name=name,
                 tenant_id=tenant_id,
                 description=description,
                 created_by=created_by,
-                updated_by=updated_by,  # Set updated_by to the provided value
+                updated_by=updated_by,
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
                 provisioned=provisioned,
                 provisioned_file=provisioned_file,
             )
+            version = WorkflowVersion(
+                workflow_id=workflow.id,
+                revision=1,
+                workflow_raw=workflow_raw,
+                updated_by=updated_by,
+                comment=f"Created by {created_by}",
+            )
             session.add(workflow)
-
-        session.commit()
-        return existing_workflow if existing_workflow else workflow
+            session.add(version)
+            session.commit()
+            return workflow
 
 
 def get_workflow_to_alert_execution_by_workflow_execution_id(
@@ -621,7 +717,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     return result
 
 
-def get_all_workflows(tenant_id: str) -> List[Workflow]:
+def get_all_workflows(tenant_id: str):
     with Session(engine) as session:
         workflows = session.exec(
             select(Workflow)
@@ -631,7 +727,7 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
     return workflows
 
 
-def get_all_provisioned_workflows(tenant_id: str) -> List[Workflow]:
+def get_all_provisioned_workflows(tenant_id: str):
     with Session(engine) as session:
         workflows = session.exec(
             select(Workflow)
@@ -639,7 +735,7 @@ def get_all_provisioned_workflows(tenant_id: str) -> List[Workflow]:
             .where(Workflow.provisioned == True)
             .where(Workflow.is_deleted == False)
         ).all()
-    return workflows
+    return list(workflows)
 
 
 def get_all_provisioned_providers(tenant_id: str) -> List[Provider]:
@@ -649,46 +745,62 @@ def get_all_provisioned_providers(tenant_id: str) -> List[Provider]:
             .where(Provider.tenant_id == tenant_id)
             .where(Provider.provisioned == True)
         ).all()
-    return providers
+    return list(providers)
 
 
-def get_all_workflows_yamls(tenant_id: str) -> List[str]:
+def get_all_workflows_yamls(tenant_id: str):
     with Session(engine) as session:
         workflows = session.exec(
             select(Workflow.workflow_raw)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
         ).all()
-    return workflows
+    return list(workflows)
 
 
-def get_workflow(tenant_id: str, workflow_id: str) -> Workflow | None:
+def get_workflow(tenant_id: str, workflow_id: str):
     with Session(engine) as session:
-        # if the workflow id is uuid:
+        query = (
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.is_deleted == False)
+        )
         if validators.uuid(workflow_id):
-            workflow = session.exec(
-                select(Workflow)
-                .where(Workflow.tenant_id == tenant_id)
-                .where(Workflow.id == workflow_id)
-                .where(Workflow.is_deleted == False)
-            ).first()
+            query = query.where(Workflow.id == workflow_id)
         else:
-            workflow = session.exec(
-                select(Workflow)
-                .where(Workflow.tenant_id == tenant_id)
-                .where(Workflow.name == workflow_id)
-                .where(Workflow.is_deleted == False)
-            ).first()
-    if not workflow:
-        return None
+            query = query.where(Workflow.name == workflow_id)
+        workflow = session.exec(query).first()
     return workflow
 
 
-def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
-    workflow = get_workflow(tenant_id, workflow_id)
-    if not workflow:
-        return None
-    return workflow.workflow_raw
+def get_workflow_versions(tenant_id: str, workflow_id: str):
+    with Session(engine) as session:
+        versions = session.exec(
+            select(WorkflowVersion)
+            # starting from the 'workflow' table since it's smaller
+            .select_from(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
+            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
+            .order_by(WorkflowVersion.revision.desc())
+        ).all()
+    return versions
+
+
+def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
+    with Session(engine) as session:
+        version = session.exec(
+            select(WorkflowVersion)
+            # starting from the 'workflow' table since it's smaller
+            .select_from(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
+            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
+            .where(WorkflowVersion.revision == revision)
+        ).first()
+    return version
 
 
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
@@ -3679,18 +3791,23 @@ def get_incident_by_id(
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id, should_raise=True)
     with existed_or_new_session(session) as session:
-        query = session.query(
-            Incident,
-            AlertEnrichment,
-        ).outerjoin(
-            AlertEnrichment,
-            and_(
-                Incident.tenant_id == AlertEnrichment.tenant_id,
-                cast(col(Incident.id), String) == foreign(AlertEnrichment.alert_fingerprint),
-            ),
-        ).filter(
-            Incident.tenant_id == tenant_id,
-            Incident.id == incident_id,
+        query = (
+            session.query(
+                Incident,
+                AlertEnrichment,
+            )
+            .outerjoin(
+                AlertEnrichment,
+                and_(
+                    Incident.tenant_id == AlertEnrichment.tenant_id,
+                    cast(col(Incident.id), String)
+                    == foreign(AlertEnrichment.alert_fingerprint),
+                ),
+            )
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
         )
         incident_with_enrichments = query.first()
         if incident_with_enrichments:
