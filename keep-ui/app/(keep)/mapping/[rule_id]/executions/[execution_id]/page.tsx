@@ -4,11 +4,11 @@ import { use } from "react";
 
 import { Card, Title, Badge, Icon, Subtitle } from "@tremor/react";
 import { LogViewer } from "@/components/LogViewer";
-import { getIcon } from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
 import { useEnrichmentEvent } from "@/utils/hooks/useEnrichmentEvents";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { useMappings } from "@/utils/hooks/useMappingRules";
+import { getIconForStatusString } from "@/shared/ui";
 
 export default function MappingExecutionDetailsPage(props: {
   params: Promise<{ rule_id: string; execution_id: string }>;
@@ -49,7 +49,7 @@ export default function MappingExecutionDetailsPage(props: {
           <Title>Execution Details</Title>
           <div className="flex items-center space-x-2">
             <span>Status:</span>
-            {getIcon(execution.enrichment_event.status)}
+            {getIconForStatusString(execution.enrichment_event.status)}
           </div>
         </div>
       </div>

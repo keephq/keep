@@ -133,7 +133,7 @@ export function WorkflowYAMLEditorStandalone({
         </Button>
       </WorkflowYamlEditorHeader>
       <WorkflowYAMLEditor
-        workflowYamlString={yamlString}
+        value={yamlString}
         filename={workflowId ?? "workflow"}
         workflowId={workflowId}
         onMount={handleEditorDidMount}

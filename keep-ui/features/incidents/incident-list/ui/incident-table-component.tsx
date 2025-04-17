@@ -7,11 +7,11 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
+import clsx from "clsx";
 import { flexRender, Header, Table as ReactTable } from "@tanstack/react-table";
 import React, { ReactNode } from "react";
 import { IncidentDto } from "@/entities/incidents/model";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
-import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 
 interface Props {
