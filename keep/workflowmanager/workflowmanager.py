@@ -231,8 +231,8 @@ class WorkflowManager:
                         )
                         continue
 
-                    # By default
-                    should_run = True
+                    # By default, the workflow should not run. Only if the CEL evaluates to true, the workflow will run.
+                    should_run = False
 
                     # backward compatibility for filter. should be removed in the future
                     # if triggers and cel are set, we override the cel with filters.
@@ -241,6 +241,24 @@ class WorkflowManager:
                         trigger["cel"] = self._convert_filters_to_cel(
                             trigger["filters"]
                         )
+
+                    compiled_ast = self.cel_environment.compile(trigger["cel"])
+                    program = self.cel_environment.program(compiled_ast)
+                    activation = celpy.json_to_cel(event.dict())
+                    try:
+                        should_run = program.evaluate(activation)
+                    except celpy.evaluation.CELEvalError as e:
+                        self.logger.exception(
+                            "Error evaluating CEL for event in insert_events",
+                            extra={
+                                "exception": e,
+                                "event": event,
+                                "trigger": trigger,
+                                "workflow_id": workflow_model.id,
+                                "tenant_id": tenant_id,
+                            },
+                        )
+                        continue
 
                     if should_run is False:
                         self.logger.debug(
