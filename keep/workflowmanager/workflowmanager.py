@@ -181,10 +181,34 @@ class WorkflowManager:
                 continue
 
             if value.startswith('r"'):
-                # handle regex
-                pass
+                # Try to parse regex in to CEL
+                cel_regex = []
+                value = value[2:-1]
+                if "|" in value:
+                    value_split = value.split("|")
+                    for value_ in value_split:
+                        value_ = value_.lstrip("(").rstrip(")").strip()
+                        if key == "source":
+                            cel_regex.append(f'{key}.contains("{value_}")')
+                        else:
+                            cel_regex.append(f'{key} == "{value_}"')
+                elif ".*" in value:
+                    cel_regex.append(f"has({key})")
+                else:
+                    raise Exception(f"Unsupported regex: {value}")
+                cel_filters.append(" || ".join(cel_regex))
             else:
-                cel_filters.append(f"{key} == {value}")
+                if key == "source":
+                    # handle source, which is a list of sources
+                    cel_filters.append(f'{key}.contains("{value}")')
+                else:
+                    cel_filters.append(f'{key} == "{value}"')
+
+        self.logger.info(
+            "Converted filters to CEL",
+            extra={"cel_filters": cel_filters, "original_filters": filters},
+        )
+
         return " && ".join(cel_filters)
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
@@ -260,7 +284,7 @@ class WorkflowManager:
                         )
                         continue
 
-                    if should_run is False:
+                    if bool(should_run) is False:
                         self.logger.debug(
                             "Workflow should not run, skipping",
                             extra={
