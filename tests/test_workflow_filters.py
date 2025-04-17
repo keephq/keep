@@ -1,3 +1,5 @@
+import pytest
+
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.workflow import Workflow as WorkflowDB
@@ -898,16 +900,12 @@ triggers:
         ),
     ]
 
-    workflow_manager.insert_events(
-        SINGLE_TENANT_UUID, matching_alerts + excluded_alerts
-    )
-    assert len(workflow_manager.scheduler.workflows_to_run) == 2
-
-    triggered_alerts = [
-        w.get("event") for w in workflow_manager.scheduler.workflows_to_run
-    ]
-    assert any(a.id == "alert-1" and "database" not in a.name for a in triggered_alerts)
-    assert any(a.id == "alert-2" and "database" not in a.name for a in triggered_alerts)
+    # Deprecated complex regex should raise an exception.
+    # We encourage users to use CEL instead.
+    with pytest.raises(Exception, match="Unsupported regex"):
+        workflow_manager.insert_events(
+            SINGLE_TENANT_UUID, matching_alerts + excluded_alerts
+        )
 
 
 def test_exclusion_with_source_list(db_session):
