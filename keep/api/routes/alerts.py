@@ -952,6 +952,11 @@ def batch_enrich_alerts(
                 logger.exception("Failed to tell client to poll alerts")
                 pass
 
+        logger.info(
+            "Alerts batch enriched successfully",
+            extra={"fingerprints": fingerprints, "tenant_id": tenant_id},
+        )
+
         if should_run_workflow:
             workflow_manager = WorkflowManager.get_instance()
             workflow_manager.insert_events(
