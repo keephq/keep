@@ -26,7 +26,12 @@ def upgrade() -> None:
         sa.Column("revision", sa.Integer(), nullable=False),
         sa.Column("workflow_raw", sa.TEXT(), nullable=True),
         sa.Column("updated_by", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.current_timestamp(),
+            nullable=False,
+        ),
         sa.Column("is_valid", sa.Boolean(), nullable=False),
         sa.Column("is_current", sa.Boolean(), nullable=False),
         sa.Column("comment", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
