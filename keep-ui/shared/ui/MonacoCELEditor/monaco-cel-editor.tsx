@@ -1,7 +1,7 @@
 "use client";
 
 import { KeepLoader } from "../KeepLoader/KeepLoader";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
 import { setupCustomCellanguage } from "./cel-support";
 import { MonacoCel } from "./monaco-cel-base.turbopack";
@@ -13,6 +13,8 @@ interface MonacoCelProps {
   className: string;
   value: string;
   onValueChange: (value: string) => void;
+  onKeyDown?: (e: KeyboardEvent) => void;
+  onFocus?: () => void;
 }
 
 export function MonacoCelEditor(props: MonacoCelProps) {
@@ -20,6 +22,10 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor | null>(
     null
   );
+  const onKeyDownRef = useRef<MonacoCelProps["onKeyDown"]>(props.onKeyDown);
+  onKeyDownRef.current = props.onKeyDown;
+  const onFocusRef = useRef<MonacoCelProps["onFocus"]>(props.onFocus);
+  onFocusRef.current = props.onFocus;
 
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")
@@ -32,10 +38,13 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     monaco: typeof import("monaco-editor")
   ) => {
     editor.onKeyDown((e) => {
+      onKeyDownRef.current?.(e.browserEvent);
+
       if (e.keyCode === monaco.KeyCode.Enter) {
         e.preventDefault(); // block typing Enter
       }
     });
+    editor.onDidFocusEditorText(() => onFocusRef.current?.());
     editor.onDidChangeModelContent(() => {
       const model = editor.getModel();
       if (!model) return;

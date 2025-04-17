@@ -4,29 +4,32 @@ import { MonacoCelEditor } from "@/shared/ui/MonacoCELEditor";
 
 interface CelInputProps {
   value?: string;
-  onChange?: (value: string) => void;
+  onValueChange?: (value: string) => void;
+  onKeyDown?: (e: KeyboardEvent) => void;
+  onFocus?: () => void;
   placeholder?: string;
   disabled?: boolean;
 }
 
 const CelInput: FC<CelInputProps> = ({
   value = "",
-  onChange,
+  onValueChange,
+  onKeyDown,
+  onFocus,
   placeholder = "Enter value",
   disabled = false,
 }) => {
-    const [currentValue, setCurrentValue] = useState<string>(value);
-    setCurrentValue(value);
-
-    return (
-      <div className="flex-1 overflow-hidden h-9 border rounded-md pl-9">
-        <MonacoCelEditor
-          className="h-20 relative top-1"
-          value={currentValue}
-          onValueChange={setCurrentValue}
-        />
-      </div>
-    );
+  return (
+    <div className="flex-1 h-9 border rounded-md pl-9">
+      <MonacoCelEditor
+        className="h-20 relative top-1"
+        value={value}
+        onValueChange={onValueChange || ((value: string) => {})}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+      />
+    </div>
+  );
 };
 
 export default CelInput;

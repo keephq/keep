@@ -313,7 +313,7 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // You can now use `target` which is asserted to be an HTMLTextAreaElement
@@ -467,7 +467,12 @@ export const AlertsRulesBuilder = ({
                   onFocus={() => setShowSuggestions(true)}
                 /> */}
 
-                <CelInput />
+                <CelInput
+                  value={celRules}
+                  onValueChange={onValueChange}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setShowSuggestions(true)}
+                />
 
                 {celRules && (
                   <button
