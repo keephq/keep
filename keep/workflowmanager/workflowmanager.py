@@ -187,7 +187,14 @@ class WorkflowManager:
                 # Try to parse regex in to CEL
                 cel_regex = []
                 value = value[2:-1]
-                if "|" in value:
+
+                # for example: value: r"error\\.[a-z]+\\..*" is to hard to convert to CEL
+                # so we'll just hit the last else and raise an exception, that it's deprecated
+                if "]^" in value or "]+" in value:
+                    raise Exception(
+                        f"Unsupported regex: {value}, move to new CEL filters"
+                    )
+                elif "|" in value:
                     value_split = value.split("|")
                     for value_ in value_split:
                         value_ = value_.lstrip("(").rstrip(")").strip()
@@ -216,7 +223,9 @@ class WorkflowManager:
                     else:
                         cel_regex.append(f'{key}.contains("{value[:-2]}")')
                 else:
-                    raise Exception(f"Unsupported regex: {value}")
+                    raise Exception(
+                        f"Unsupported regex: {value}, move to new CEL filters"
+                    )
                 # if we're talking about excluded, we need to do AND between the regexes
                 # for example:
                 #   filters: [{"key": "source", "value": 'r"prometheus|grafana"', "exclude": true}]
