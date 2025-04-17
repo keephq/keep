@@ -827,11 +827,7 @@ def batch_enrich_alerts(
         try:
             db_alerts, total_count = query_last_alerts(
                 tenant_id=tenant_id,
-                query=QueryDto(
-                    cel=enrich_data.cel,
-                    limit=enrich_data.limit,
-                    offset=enrich_data.offset,
-                ),
+                query=QueryDto(cel=enrich_data.cel),
             )
 
             if not db_alerts:
