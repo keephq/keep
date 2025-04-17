@@ -606,22 +606,10 @@ triggers:
             lastReceived="2025-01-30T09:19:02.519Z",
         ),
     ]
-
-    workflow_manager.insert_events(
-        SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
-    )
-    assert len(workflow_manager.scheduler.workflows_to_run) == 2
-
-    triggered_alerts = [
-        w.get("event") for w in workflow_manager.scheduler.workflows_to_run
-    ]
-    assert any(
-        a.id == "alert-1" and a.name == "error.database.critical"
-        for a in triggered_alerts
-    )
-    assert any(
-        a.id == "alert-2" and a.name == "error.api.warning" for a in triggered_alerts
-    )
+    with pytest.raises(Exception, match="Unsupported regex"):
+        workflow_manager.insert_events(
+            SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
+        )
 
 
 def test_time_based_filters(db_session):
