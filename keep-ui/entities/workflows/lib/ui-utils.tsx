@@ -125,40 +125,41 @@ export function extractTriggerDetailsV2(
   }
 
   let type: TriggerDetails["type"] = extractTriggerType(triggered_by);
-  let details: string;
+  let details: Record<string, string> = {};
+
   if (triggered_by.startsWith("scheduler")) {
-    // details = triggered_by.substring("scheduler".length).trim();
-    details = "scheduler";
+    details = { type: "scheduler" };
   } else if (triggered_by.startsWith("type:alert")) {
-    details = triggered_by.substring("type:alert".length).trim();
-  } else if (triggered_by.startsWith("manually by")) {
-    details = "user:" + triggered_by.substring("manually by".length).trim();
-  } else if (triggered_by.startsWith("type:incident:")) {
-    // Handle 'type:incident:{some operator}' by removing the operator
-    details = triggered_by.substring("type:incident:".length).trim();
-    const firstSpaceIndex = details.indexOf(" ");
-    if (firstSpaceIndex > -1) {
-      details = details.substring(firstSpaceIndex).trim();
+    // For alerts, extract ID and name using regex
+    const alertDetails = triggered_by.substring("type:alert ".length);
+    const idMatch = alertDetails.match(/id:([^\s]+?)(?=\s+name:|$)/);
+    const nameMatch = alertDetails.match(/name:"([^"]+)"/);
+
+    if (idMatch) {
+      details.id = idMatch[1];
+      details.name = nameMatch ? nameMatch[1] : idMatch[1];
     } else {
-      details = "";
+      // Fallback: use the entire alert details as both id and name
+      details = { id: alertDetails.trim(), name: alertDetails.trim() };
     }
-  } else {
-    details = triggered_by;
+  } else if (triggered_by.startsWith("manually by")) {
+    details = { user: triggered_by.substring("manually by".length).trim() };
+  } else if (triggered_by.startsWith("type:incident:")) {
+    // Handle 'type:incident:{some operator}'
+    const incidentDetails = triggered_by.substring("type:incident:".length);
+    const firstSpaceIndex = incidentDetails.indexOf(" ");
+    if (firstSpaceIndex > -1) {
+      const remainingDetails = incidentDetails
+        .substring(firstSpaceIndex)
+        .trim();
+      // Look for id: and name: in the remaining details
+      const idMatch = remainingDetails.match(/id:"?([^"\s]+)"?/);
+      const nameMatch = remainingDetails.match(/name:"([^"]+)"/);
+
+      if (idMatch) details.id = idMatch[1];
+      if (nameMatch) details.name = nameMatch[1];
+    }
   }
 
-  // Split the string into key-value pairs, where values may contain spaces
-  const regex = /\b(\w+:[^:]+?)(?=\s\w+:|$)/g;
-  const matches = details.match(regex);
-
-  return {
-    type,
-    details: matches
-      ? Object.fromEntries(
-          matches.map((match) => {
-            const [key, value] = match.split(":");
-            return [key, value];
-          })
-        )
-      : {},
-  };
+  return { type, details };
 }
