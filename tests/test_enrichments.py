@@ -431,7 +431,9 @@ def test_mapping_rule_with_elastic(mock_session, mock_alert_dto, setup_alerts):
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_enrichment_with_elastic(db_session, client, test_app, mock_alert_dto, elastic_client):
+def test_enrichment_with_elastic(
+    db_session, client, test_app, mock_alert_dto, elastic_client
+):
     # add some rule
     rule = MappingRule(
         id=1,
@@ -881,7 +883,9 @@ def test_batch_enrichment(db_session, client, test_app, create_alert, elastic_cl
     )
 
     assert response.status_code == 200
-    assert response.json() == {"status":"ok"}
+    response_data = response.json()
+    assert response_data["status"] == "ok"
+    assert response_data["affected_alerts"] == 10
 
     time.sleep(1)
 

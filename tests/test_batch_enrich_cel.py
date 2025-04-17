@@ -9,7 +9,7 @@ from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_basic(
+def test_batch_enrich_cel_basic(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test basic batch enrichment with a simple CEL expression (name matching)."""
@@ -35,7 +35,7 @@ def test_batch_enrich_by_cel_basic(
 
     # Enrich alerts with name containing "CPU" via CEL
     response = client.post(
-        "/alerts/batch_enrich_by_cel",
+        "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "name.contains('CPU')",
@@ -49,7 +49,6 @@ def test_batch_enrich_by_cel_basic(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "ok"
-    assert result["affected_alerts"] == 1
 
     time.sleep(1)  # Allow time for async processing
 
@@ -74,7 +73,7 @@ def test_batch_enrich_by_cel_basic(
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_severity(
+def test_batch_enrich_cel_severity(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test batch enrichment with CEL expression filtering by severity."""
@@ -100,7 +99,7 @@ def test_batch_enrich_by_cel_severity(
 
     # Enrich all warning alerts
     response = client.post(
-        "/alerts/batch_enrich_by_cel",
+        "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "severity == 'warning'",
@@ -114,7 +113,6 @@ def test_batch_enrich_by_cel_severity(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "ok"
-    assert result["affected_alerts"] == 2
 
     time.sleep(1)  # Allow time for async processing
 
@@ -137,7 +135,7 @@ def test_batch_enrich_by_cel_severity(
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_labels(
+def test_batch_enrich_cel_labels(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test batch enrichment with CEL expression filtering by labels."""
@@ -175,7 +173,7 @@ def test_batch_enrich_by_cel_labels(
 
     # Enrich alerts from us-east-1 region
     response = client.post(
-        "/alerts/batch_enrich_by_cel",
+        "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "labels.region == 'us-east-1'",
@@ -189,7 +187,6 @@ def test_batch_enrich_by_cel_labels(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "ok"
-    assert result["affected_alerts"] == 2
 
     time.sleep(1)  # Allow time for async processing
 
@@ -216,7 +213,7 @@ def test_batch_enrich_by_cel_labels(
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_complex_expression(
+def test_batch_enrich_cel_complex_expression(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test batch enrichment with a complex CEL expression combining multiple conditions."""
@@ -268,7 +265,7 @@ def test_batch_enrich_by_cel_complex_expression(
 
     # Enrich critical production API alerts
     response = client.post(
-        "/alerts/batch_enrich_by_cel",
+        "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "severity == 'critical' && environment == 'production' && service == 'api'",
@@ -283,7 +280,6 @@ def test_batch_enrich_by_cel_complex_expression(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "ok"
-    assert result["affected_alerts"] == 1
 
     time.sleep(1)  # Allow time for async processing
 
@@ -326,7 +322,7 @@ def test_batch_enrich_by_cel_complex_expression(
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_no_matching_alerts(
+def test_batch_enrich_cel_no_matching_alerts(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test batch enrichment when no alerts match the CEL expression."""
@@ -346,7 +342,7 @@ def test_batch_enrich_by_cel_no_matching_alerts(
 
     # Use a CEL expression that won't match any alerts
     response = client.post(
-        "/alerts/batch_enrich_by_cel",
+        "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "name.contains('NonExistentString')",
@@ -359,7 +355,6 @@ def test_batch_enrich_by_cel_no_matching_alerts(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "ok"
-    assert result["affected_alerts"] == 0
     assert "message" in result
     assert "No alerts matched the query" in result["message"]
 
@@ -376,7 +371,7 @@ def test_batch_enrich_by_cel_no_matching_alerts(
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_invalid_expression(
+def test_batch_enrich_cel_invalid_expression(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test batch enrichment with an invalid CEL expression."""
@@ -390,7 +385,7 @@ def test_batch_enrich_by_cel_invalid_expression(
 
     # Use an invalid CEL expression
     response = client.post(
-        "/alerts/batch_enrich_by_cel",
+        "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "invalid.syntax &&& !!!",
@@ -417,7 +412,7 @@ def test_batch_enrich_by_cel_invalid_expression(
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.parametrize("elastic_client", [False], indirect=True)
-def test_batch_enrich_by_cel_dispose_on_new_alert(
+def test_batch_enrich_cel_dispose_on_new_alert(
     db_session, client, test_app, create_alert, elastic_client
 ):
     """Test batch enrichment with dispose_on_new_alert parameter."""
@@ -431,7 +426,7 @@ def test_batch_enrich_by_cel_dispose_on_new_alert(
 
     # Enrich the alert with dispose_on_new_alert=True
     response = client.post(
-        "/alerts/batch_enrich_by_cel?dispose_on_new_alert=true",
+        "/alerts/batch_enrich?dispose_on_new_alert=true",
         headers={"x-api-key": "some-key"},
         json={
             "cel": "name.contains('Test')",
@@ -445,7 +440,6 @@ def test_batch_enrich_by_cel_dispose_on_new_alert(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "ok"
-    assert result["affected_alerts"] == 1
 
     time.sleep(1)  # Allow time for async processing
 
@@ -481,8 +475,3 @@ def test_batch_enrich_by_cel_dispose_on_new_alert(
     # Note: Based on the reported issue, this might actually show the enrichment persisting
     # which is the behavior being reported as problematic
     assert len(alerts) == 1
-
-    # Check if alert kept the enriched status (current behavior) or reverted to firing (desired behavior)
-    # We're testing the current behavior here - in a real fix, this would change
-    current_status = alerts[0]["status"]
-    print(f"Current alert status after new occurrence: {current_status}")

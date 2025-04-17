@@ -3,14 +3,26 @@
   "info": {
     "title": "Keep API",
     "description": "Rest API powering https://platform.keephq.dev and friends \ud83c\udfc4\u200d\u2640\ufe0f",
-    "version": "0.41.25"
+    "version": "0.24.5"
   },
   "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "App desctiption and version.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
     "/providers": {
       "get": {
         "tags": ["providers"],
         "summary": "Get Providers",
-        "description": "Get all providers",
         "operationId": "get_providers_providers_get",
         "responses": {
           "200": {
@@ -25,59 +37,16 @@
         ]
       }
     },
-    "/providers/{provider_id}/logs": {
-      "get": {
-        "tags": ["providers"],
-        "summary": "Get Provider Logs",
-        "description": "Get provider logs",
-        "operationId": "get_provider_logs_providers__provider_id__logs_get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Provider Id" },
-            "name": "provider_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
     "/providers/export": {
       "get": {
         "tags": ["providers"],
         "summary": "Get Installed Providers",
-        "description": "Export all installed providers",
+        "description": "export all installed providers",
         "operationId": "get_installed_providers_providers_export_get",
         "responses": {
           "200": {
             "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": { "$ref": "#/components/schemas/Provider" },
-                  "type": "array",
-                  "title": "Response Get Installed Providers Providers Export Get"
-                }
-              }
-            }
+            "content": { "application/json": { "schema": {} } }
           }
         },
         "security": [
@@ -389,7 +358,6 @@
       "delete": {
         "tags": ["providers"],
         "summary": "Delete Provider",
-        "description": "Delete provider",
         "operationId": "delete_provider_providers__provider_type___provider_id__delete",
         "parameters": [
           {
@@ -510,7 +478,6 @@
       "post": {
         "tags": ["providers"],
         "summary": "Install Provider",
-        "description": "Install provider",
         "operationId": "install_provider_providers_install_post",
         "responses": {
           "200": {
@@ -529,7 +496,6 @@
       "post": {
         "tags": ["providers"],
         "summary": "Install Provider Oauth2",
-        "description": "Install provider via oauth2.",
         "operationId": "install_provider_oauth2_providers_install_oauth2__provider_type__post",
         "parameters": [
           {
@@ -591,7 +557,7 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "type": "object", "title": "Body" }
+              "schema": { "type": "object", "title": "Method Params" }
             }
           },
           "required": true
@@ -621,7 +587,6 @@
       "post": {
         "tags": ["providers"],
         "summary": "Install Provider Webhook",
-        "description": "Install webhook for a provider.",
         "operationId": "install_provider_webhook_providers_install_webhook__provider_type___provider_id__post",
         "parameters": [
           {
@@ -662,7 +627,6 @@
       "get": {
         "tags": ["providers"],
         "summary": "Get Webhook Settings",
-        "description": "Get provider's webhook settings.",
         "operationId": "get_webhook_settings_providers__provider_type__webhook_get",
         "parameters": [
           {
@@ -670,12 +634,6 @@
             "schema": { "type": "string", "title": "Provider Type" },
             "name": "provider_type",
             "in": "path"
-          },
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Provider Id" },
-            "name": "provider_id",
-            "in": "query"
           }
         ],
         "responses": {
@@ -703,39 +661,6 @@
           { "HTTPBasic": [] },
           { "OAuth2PasswordBearer": [] }
         ]
-      }
-    },
-    "/providers/healthcheck": {
-      "get": {
-        "tags": ["providers"],
-        "summary": "Get Healthcheck Providers",
-        "description": "Get all providers for healthcheck",
-        "operationId": "get_healthcheck_providers_providers_healthcheck_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          }
-        }
-      },
-      "post": {
-        "tags": ["providers"],
-        "summary": "Healthcheck Provider",
-        "description": "Run healthcheck on a provider",
-        "operationId": "healthcheck_provider_providers_healthcheck_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Healthcheck Provider Providers Healthcheck Post"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/actions": {
@@ -888,137 +813,6 @@
             }
           }
         }
-      }
-    },
-    "/alerts/facets/options": {
-      "post": {
-        "tags": ["alerts"],
-        "summary": "Fetch Alert Facet Options",
-        "description": "Query alert facet options. Accepts dictionary where key is facet id and value is cel to query facet",
-        "operationId": "fetch_alert_facet_options_alerts_facets_options_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/FacetOptionsQueryDto" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Fetch Alert Facet Options Alerts Facets Options Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/facets": {
-      "get": {
-        "tags": ["alerts"],
-        "summary": "Fetch Alert Facets",
-        "description": "Get alert facets",
-        "operationId": "fetch_alert_facets_alerts_facets_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {},
-                  "type": "array",
-                  "title": "Response Fetch Alert Facets Alerts Facets Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/facets/fields": {
-      "get": {
-        "tags": ["alerts"],
-        "summary": "Fetch Alert Facet Fields",
-        "description": "Get potential fields for alert facets",
-        "operationId": "fetch_alert_facet_fields_alerts_facets_fields_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {},
-                  "type": "array",
-                  "title": "Response Fetch Alert Facet Fields Alerts Facets Fields Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/query": {
-      "post": {
-        "tags": ["alerts"],
-        "summary": "Query Alerts",
-        "description": "Get last alerts occurrence",
-        "operationId": "query_alerts_alerts_query_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/QueryDto" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
       }
     },
     "/alerts": {
@@ -1216,12 +1010,6 @@
         "parameters": [
           {
             "required": false,
-            "schema": { "type": "string", "title": "Provider Id" },
-            "name": "provider_id",
-            "in": "query"
-          },
-          {
-            "required": false,
             "schema": { "type": "string", "title": "Fingerprint" },
             "name": "fingerprint",
             "in": "query"
@@ -1314,12 +1102,6 @@
           },
           {
             "required": false,
-            "schema": { "type": "string", "title": "Provider Name" },
-            "name": "provider_name",
-            "in": "query"
-          },
-          {
-            "required": false,
             "schema": { "type": "string", "title": "Fingerprint" },
             "name": "fingerprint",
             "in": "query"
@@ -1376,153 +1158,6 @@
                 "schema": { "$ref": "#/components/schemas/AlertDto" }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/enrich/note": {
-      "post": {
-        "tags": ["alerts"],
-        "summary": "Enrich Alert Note",
-        "description": "Enrich an alert note",
-        "operationId": "enrich_alert_note_alerts_enrich_note_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnrichAlertNoteRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": { "type": "string" },
-                  "type": "object",
-                  "title": "Response Enrich Alert Note Alerts Enrich Note Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/batch_enrich": {
-      "post": {
-        "tags": ["alerts"],
-        "summary": "Batch Enrich Alerts",
-        "description": "Enrich an alerts",
-        "operationId": "batch_enrich_alerts_alerts_batch_enrich_post",
-        "parameters": [
-          {
-            "description": "Dispose on new alert",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "title": "Dispose On New Alert",
-              "description": "Dispose on new alert",
-              "default": false
-            },
-            "name": "dispose_on_new_alert",
-            "in": "query"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BatchEnrichAlertRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/batch_enrich_by_cel": {
-      "post": {
-        "tags": ["alerts"],
-        "summary": "Batch Enrich Alerts By Cel",
-        "description": "Enrich alerts that match a CEL expression query (e.g., by name or labels). Examples: \"name.contains('CPU')\", \"labels.severity == 'critical'\", \"name.contains('Memory') && labels.region == 'us-east-1'\"",
-        "operationId": "batch_enrich_alerts_by_cel_alerts_batch_enrich_by_cel_post",
-        "parameters": [
-          {
-            "description": "Dispose on new alert",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "title": "Dispose On New Alert",
-              "description": "Dispose on new alert",
-              "default": false
-            },
-            "name": "dispose_on_new_alert",
-            "in": "query"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BatchEnrichAlertByCelRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
           },
           "422": {
             "description": "Validation Error",
@@ -1823,90 +1458,6 @@
         ]
       }
     },
-    "/alerts/event/error": {
-      "get": {
-        "tags": ["alerts"],
-        "summary": "Get Error Alerts",
-        "description": "Get alerts that Keep failed to process",
-        "operationId": "get_error_alerts_alerts_event_error_get",
-        "parameters": [
-          {
-            "required": false,
-            "schema": { "type": "integer", "title": "Limit", "default": 1000 },
-            "name": "limit",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": { "$ref": "#/components/schemas/AlertErrorDto" },
-                  "type": "array",
-                  "title": "Response Get Error Alerts Alerts Event Error Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/alerts/event/error/dismiss": {
-      "post": {
-        "tags": ["alerts"],
-        "summary": "Dismiss Error Alerts",
-        "description": "Dismiss error alerts. If alert_id is provided, dismisses that specific alert. If no alert_id is provided, dismisses all alerts.",
-        "operationId": "dismiss_error_alerts_alerts_event_error_dismiss_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/DismissAlertRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Dismiss Error Alerts Alerts Event Error Dismiss Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
     "/incidents": {
       "get": {
         "tags": ["incidents"],
@@ -1918,16 +1469,10 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "title": "Candidate",
-              "default": false
+              "title": "Confirmed",
+              "default": true
             },
-            "name": "candidate",
-            "in": "query"
-          },
-          {
-            "required": false,
-            "schema": { "type": "boolean", "title": "Predicted" },
-            "name": "predicted",
+            "name": "confirmed",
             "in": "query"
           },
           {
@@ -1997,12 +1542,6 @@
               "title": "Affected Services"
             },
             "name": "affected_services",
-            "in": "query"
-          },
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Cel" },
-            "name": "cel",
             "in": "query"
           }
         ],
@@ -2084,137 +1623,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/IncidentListFilterParamsDto"
                 }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/facets/options": {
-      "post": {
-        "tags": ["incidents"],
-        "summary": "Fetch Inicident Facet Options",
-        "description": "Query incident facet options. Accepts dictionary where key is facet id and value is cel to query facet",
-        "operationId": "fetch_inicident_facet_options_incidents_facets_options_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/FacetOptionsQueryDto" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Fetch Inicident Facet Options Incidents Facets Options Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/facets": {
-      "get": {
-        "tags": ["incidents"],
-        "summary": "Fetch Inicident Facets",
-        "description": "Get incident facets",
-        "operationId": "fetch_inicident_facets_incidents_facets_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {},
-                  "type": "array",
-                  "title": "Response Fetch Inicident Facets Incidents Facets Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/facets/fields": {
-      "get": {
-        "tags": ["incidents"],
-        "summary": "Fetch Alert Facet Fields",
-        "description": "Get potential fields for incident facets",
-        "operationId": "fetch_alert_facet_fields_incidents_facets_fields_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {},
-                  "type": "array",
-                  "title": "Response Fetch Alert Facet Fields Incidents Facets Fields Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/report": {
-      "get": {
-        "tags": ["incidents"],
-        "summary": "Get Incidents Report",
-        "description": "Get incidents report",
-        "operationId": "get_incidents_report_incidents_report_get",
-        "parameters": [
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Cel" },
-            "name": "cel",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
               }
             }
           }
@@ -2350,98 +1758,6 @@
           "200": {
             "description": "Successful Response",
             "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/bulk": {
-      "delete": {
-        "tags": ["incidents"],
-        "summary": "Bulk Delete Incidents",
-        "description": "Delete incidents in bulk",
-        "operationId": "bulk_delete_incidents_incidents_bulk_delete",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_bulk_delete_incidents_incidents_bulk_delete"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/{incident_id}/split": {
-      "post": {
-        "tags": ["incidents"],
-        "summary": "Split Incident",
-        "description": "Split incident by incident id",
-        "operationId": "split_incident_incidents__incident_id__split_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Incident Id"
-            },
-            "name": "incident_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SplitIncidentRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SplitIncidentResponseDto"
-                }
-              }
-            }
           },
           "422": {
             "description": "Validation Error",
@@ -2599,9 +1915,9 @@
           "content": {
             "application/json": {
               "schema": {
-                "items": { "type": "string" },
+                "items": { "type": "string", "format": "uuid" },
                 "type": "array",
-                "title": "Alert Fingerprints"
+                "title": "Alert Ids"
               }
             }
           },
@@ -2656,9 +1972,9 @@
           "content": {
             "application/json": {
               "schema": {
-                "items": { "type": "string" },
+                "items": { "type": "string", "format": "uuid" },
                 "type": "array",
-                "title": "Fingerprints"
+                "title": "Alert Ids"
               }
             }
           },
@@ -2852,45 +2168,6 @@
         ]
       }
     },
-    "/incidents/{incident_id}/assign": {
-      "post": {
-        "tags": ["incidents"],
-        "summary": "Assign Incident",
-        "description": "Assign incident to user",
-        "operationId": "assign_incident_incidents__incident_id__assign_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Incident Id"
-            },
-            "name": "incident_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
     "/incidents/{incident_id}/status": {
       "post": {
         "tags": ["incidents"],
@@ -2914,59 +2191,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/IncidentStatusChangeDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/IncidentDto" }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/{incident_id}/severity": {
-      "post": {
-        "tags": ["incidents"],
-        "summary": "Change Incident Severity",
-        "description": "Change incident severity",
-        "operationId": "change_incident_severity_incidents__incident_id__severity_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Incident Id"
-            },
-            "name": "incident_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IncidentSeverityChangeDto"
               }
             }
           },
@@ -3180,104 +2404,6 @@
                 "schema": { "$ref": "#/components/schemas/IncidentDto" }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/{incident_id}/enrich": {
-      "post": {
-        "tags": ["incidents"],
-        "summary": "Enrich Incident",
-        "description": "Enrich incident with additional data",
-        "operationId": "enrich_incident_incidents__incident_id__enrich_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Incident Id"
-            },
-            "name": "incident_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnrichIncidentRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/incidents/{incident_id}/unenrich": {
-      "post": {
-        "tags": ["incidents"],
-        "summary": "Unenrich Incident",
-        "description": "Unenrich incident additional data",
-        "operationId": "unenrich_incident_incidents__incident_id__unenrich_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Incident Id"
-            },
-            "name": "incident_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UnEnrichIncidentRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
           },
           "422": {
             "description": "Validation Error",
@@ -3530,133 +2656,20 @@
         ]
       }
     },
-    "/settings/tenant/configuration": {
-      "get": {
-        "tags": ["settings"],
-        "summary": "Get Tenant Configuration",
-        "operationId": "get_tenant_configuration_settings_tenant_configuration_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Get Tenant Configuration Settings Tenant Configuration Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/facets/options": {
-      "post": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Fetch Facet Options",
-        "description": "Query workflows facet options. Accepts dictionary where key is facet id and value is cel to query facet",
-        "operationId": "fetch_facet_options_workflows_facets_options_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/FacetOptionsQueryDto" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Fetch Facet Options Workflows Facets Options Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/facets": {
-      "get": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Fetch Facets",
-        "description": "Get workflow facets",
-        "operationId": "fetch_facets_workflows_facets_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {},
-                  "type": "array",
-                  "title": "Response Fetch Facets Workflows Facets Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/facets/fields": {
-      "get": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Fetch Facet Fields",
-        "description": "Get potential fields for workflow facets",
-        "operationId": "fetch_facet_fields_workflows_facets_fields_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {},
-                  "type": "array",
-                  "title": "Response Fetch Facet Fields Workflows Facets Fields Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
     "/workflows": {
       "get": {
         "tags": ["workflows", "alerts"],
         "summary": "Get Workflows",
         "description": "Get workflows",
         "operationId": "get_workflows_workflows_get",
+        "parameters": [
+          {
+            "required": false,
+            "schema": { "type": "boolean", "title": "Is V2", "default": false },
+            "name": "is_v2",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3672,6 +2685,14 @@
                   ],
                   "title": "Response Get Workflows Workflows Get"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
               }
             }
           }
@@ -3724,48 +2745,6 @@
         ]
       }
     },
-    "/workflows/query": {
-      "post": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Query Workflows",
-        "description": "Query workflows",
-        "operationId": "query_workflows_workflows_query_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/QueryDto" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Query Workflows Workflows Query Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
     "/workflows/export": {
       "get": {
         "tags": ["workflows", "alerts"],
@@ -3794,39 +2773,6 @@
       }
     },
     "/workflows/{workflow_id}/run": {
-      "get": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Run Workflow With Query Params",
-        "description": "Run a workflow",
-        "operationId": "run_workflow_with_query_params_workflows__workflow_id__run_get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Workflow Id" },
-            "name": "workflow_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      },
       "post": {
         "tags": ["workflows", "alerts"],
         "summary": "Run Workflow",
@@ -3838,18 +2784,6 @@
             "schema": { "type": "string", "title": "Workflow Id" },
             "name": "workflow_id",
             "in": "path"
-          },
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Event Type" },
-            "name": "event_type",
-            "in": "query"
-          },
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Event Id" },
-            "name": "event_id",
-            "in": "query"
           }
         ],
         "requestBody": {
@@ -3895,8 +2829,10 @@
         "operationId": "run_workflow_from_definition_workflows_test_post",
         "requestBody": {
           "content": {
-            "application/json": {
-              "schema": { "type": "object", "title": "Body", "default": {} }
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_run_workflow_from_definition_workflows_test_post"
+              }
             }
           }
         },
@@ -3906,7 +2842,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowRunResponseDTO"
+                  "type": "object",
+                  "title": "Response Run Workflow From Definition Workflows Test Post"
                 }
               }
             }
@@ -3916,35 +2853,6 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/executions": {
-      "get": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Get Workflow Executions By Alert Fingerprint",
-        "description": "Get workflow executions by alert fingerprint",
-        "operationId": "get_workflow_executions_by_alert_fingerprint_workflows_executions_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/WorkflowToAlertExecutionDTO"
-                  },
-                  "type": "array",
-                  "title": "Response Get Workflow Executions By Alert Fingerprint Workflows Executions Get"
-                }
               }
             }
           }
@@ -4134,7 +3042,10 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/WorkflowRawDto" }
+                "schema": {
+                  "type": "string",
+                  "title": "Response Get Raw Workflow By Id Workflows  Workflow Id  Raw Get"
+                }
               }
             }
           },
@@ -4154,12 +3065,41 @@
         ]
       }
     },
+    "/workflows/executions": {
+      "get": {
+        "tags": ["workflows", "alerts"],
+        "summary": "Get Workflow Executions By Alert Fingerprint",
+        "description": "Get workflow executions by alert fingerprint",
+        "operationId": "get_workflow_executions_by_alert_fingerprint_workflows_executions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowToAlertExecutionDTO"
+                  },
+                  "type": "array",
+                  "title": "Response Get Workflow Executions By Alert Fingerprint Workflows Executions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { "API Key": [] },
+          { "HTTPBasic": [] },
+          { "OAuth2PasswordBearer": [] }
+        ]
+      }
+    },
     "/workflows/{workflow_id}/runs": {
       "get": {
         "tags": ["workflows", "alerts"],
-        "summary": "Get Workflow Runs By Id",
+        "summary": "Get Workflow By Id",
         "description": "Get workflow executions by ID",
-        "operationId": "get_workflow_runs_by_id_workflows__workflow_id__runs_get",
+        "operationId": "get_workflow_by_id_workflows__workflow_id__runs_get",
         "parameters": [
           {
             "required": true,
@@ -4263,226 +3203,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/runs/{workflow_execution_id}": {
-      "get": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Get Workflow Execution Status",
-        "operationId": "get_workflow_execution_status_workflows_runs__workflow_execution_id__get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Workflow Execution Id" },
-            "name": "workflow_execution_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowExecutionDTO"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/{workflow_id}/toggle": {
-      "put": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Toggle Workflow State",
-        "description": "Enable or disable a workflow",
-        "operationId": "toggle_workflow_state_workflows__workflow_id__toggle_put",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Workflow Id" },
-            "name": "workflow_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Toggle Workflow State Workflows  Workflow Id  Toggle Put"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/{workflow_id}/secrets": {
-      "get": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Read Workflow Secret",
-        "description": "Read a workflow secret",
-        "operationId": "read_workflow_secret_workflows__workflow_id__secrets_get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Workflow Id" },
-            "name": "workflow_id",
-            "in": "path"
-          },
-          {
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "title": "Is Json",
-              "default": true
-            },
-            "name": "is_json",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [{ "type": "object" }, { "type": "string" }],
-                  "title": "Response Read Workflow Secret Workflows  Workflow Id  Secrets Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      },
-      "post": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Write Workflow Secret",
-        "description": "Write a new secret or update existing secret for a workflow",
-        "operationId": "write_workflow_secret_workflows__workflow_id__secrets_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Workflow Id" },
-            "name": "workflow_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": { "type": "string" },
-                "type": "object",
-                "title": "Secret Data"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/workflows/{workflow_id}/secrets/{secret_name}": {
-      "delete": {
-        "tags": ["workflows", "alerts"],
-        "summary": "Delete Workflow Secret",
-        "description": "Delete a specific secret key for a workflow",
-        "operationId": "delete_workflow_secret_workflows__workflow_id__secrets__secret_name__delete",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Workflow Id" },
-            "name": "workflow_id",
-            "in": "path"
-          },
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Secret Name" },
-            "name": "secret_name",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
           },
           "422": {
             "description": "Validation Error",
@@ -4793,21 +3513,17 @@
         ]
       }
     },
-    "/preset/{preset_id}": {
+    "/preset/{uuid}": {
       "put": {
         "tags": ["preset"],
         "summary": "Update Preset",
         "description": "Update a preset for tenant",
-        "operationId": "update_preset_preset__preset_id__put",
+        "operationId": "update_preset_preset__uuid__put",
         "parameters": [
           {
             "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Preset Id"
-            },
-            "name": "preset_id",
+            "schema": { "type": "string", "title": "Uuid" },
+            "name": "uuid",
             "in": "path"
           }
         ],
@@ -4849,16 +3565,12 @@
         "tags": ["preset"],
         "summary": "Delete Preset",
         "description": "Delete a preset for tenant",
-        "operationId": "delete_preset_preset__preset_id__delete",
+        "operationId": "delete_preset_preset__uuid__delete",
         "parameters": [
           {
             "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Preset Id"
-            },
-            "name": "preset_id",
+            "schema": { "type": "string", "title": "Uuid" },
+            "name": "uuid",
             "in": "path"
           }
         ],
@@ -4935,11 +3647,7 @@
         "parameters": [
           {
             "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Preset Id"
-            },
+            "schema": { "type": "string", "title": "Preset Id" },
             "name": "preset_id",
             "in": "path"
           }
@@ -4982,11 +3690,7 @@
         "parameters": [
           {
             "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Preset Id"
-            },
+            "schema": { "type": "string", "title": "Preset Id" },
             "name": "preset_id",
             "in": "path"
           },
@@ -5083,43 +3787,6 @@
       }
     },
     "/mapping/{rule_id}": {
-      "get": {
-        "tags": ["enrichment", "mapping"],
-        "summary": "Get Rule",
-        "description": "Get a mapping rule by id",
-        "operationId": "get_rule_mapping__rule_id__get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/MappingRuleDtoOut" }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      },
       "put": {
         "tags": ["enrichment", "mapping"],
         "summary": "Update Rule",
@@ -5136,9 +3803,7 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MappingRuleUpdateDtoIn"
-              }
+              "schema": { "$ref": "#/components/schemas/MappingRuleDtoIn" }
             }
           },
           "required": true
@@ -5184,160 +3849,6 @@
           "200": {
             "description": "Successful Response",
             "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/mapping/{rule_id}/executions": {
-      "get": {
-        "tags": ["enrichment", "mapping"],
-        "summary": "Get Enrichment Events",
-        "description": "Get all executions for a rule",
-        "operationId": "get_enrichment_events_mapping__rule_id__executions_get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          },
-          {
-            "required": false,
-            "schema": { "type": "integer", "title": "Limit", "default": 20 },
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "required": false,
-            "schema": { "type": "integer", "title": "Offset", "default": 0 },
-            "name": "offset",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrichmentEventPaginatedResultsDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/mapping/{rule_id}/executions/{enrichment_event_id}": {
-      "get": {
-        "tags": ["enrichment", "mapping"],
-        "summary": "Get Enrichment Event Logs",
-        "description": "Get an execution for a rule",
-        "operationId": "get_enrichment_event_logs_mapping__rule_id__executions__enrichment_event_id__get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Enrichment Event Id"
-            },
-            "name": "enrichment_event_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrichmentEventWithLogs"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/mapping/{rule_id}/execute/{alert_id}": {
-      "post": {
-        "tags": ["enrichment", "mapping"],
-        "summary": "Execute Rule",
-        "description": "Execute a mapping rule against an alert",
-        "operationId": "execute_rule_mapping__rule_id__execute__alert_id__post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Alert Id"
-            },
-            "name": "alert_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Mapping rule executed successfully",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "400": { "description": "Mapping rule failed to execute" },
-          "404": { "description": "Mapping rule or alert not found" },
-          "403": {
-            "description": "User does not have permission to execute mapping rule"
           },
           "422": {
             "description": "Validation Error",
@@ -5877,7 +4388,7 @@
       "get": {
         "tags": ["metrics"],
         "summary": "Get Metrics",
-        "description": "This endpoint is used by Prometheus to scrape such metrics from the application:\n- alerts_total {incident_name, incident_id} - The total number of alerts per incident.\n- open_incidents_total - The total number of open incidents.\n- workflows_executions_total {status} - The total number of workflow executions.\n\nPlease note that those metrics are per-tenant and are not designed to be used for the monitoring of the application itself.\n\nExample prometheus configuration:\n```\nscrape_configs:\n- job_name: \"scrape_keep\"\n  scrape_interval: 5m  # It's important to scrape not too often to avoid rate limiting.\n  static_configs:\n  - targets: [\"https://api.keephq.dev\"]  # Or your own domain.\n  authorization:\n    type: Bearer\n    credentials: \"{Your API Key}\"\n\n  # Optional, you can add labels to exported incidents.\n  # Label values will be equal to the last incident's alert payload value matching the label.\n  # Attention! Don't add \"flaky\" labels which could change from alert to alert within the same incident.\n  # Good labels: ['labels.department', 'labels.team'], bad labels: ['labels.severity', 'labels.pod_id']\n  # Check Keep -> Feed -> \"extraPayload\" column, it will help in writing labels.\n\n  params:\n    labels: ['labels.service', 'labels.queue']\n  # Will resuld as: \"labels_service\" and \"labels_queue\".\n```",
+        "description": "This endpoint is used by Prometheus to scrape such metrics from the application:\n- alerts_total {incident_name, incident_id} - The total number of alerts per incident.\n- open_incidents_total - The total number of open incidents.\n- workflows_executions_total {status} - The total number of workflow executions.\n\nPlease note that those metrics are per-tenant and are not designed to be used for the monitoring of the application itself.\n\nExample prometheus configuration:\n```\nscrape_configs:\n- job_name: \"scrape_keep\"\n  scrape_interval: 5m  # It's important to scrape not too often to avoid rate limiting.\n  static_configs:\n  - targets: [\"https://api.keephq.dev\"]  # Or your own domain.\n  authorization:\n    type: Bearer\n    credentials: \"{Your API Key}\"\n\n  # Optional, you can add labels to exported incidents. \n  # Label values will be equal to the last incident's alert payload value matching the label.\n  # Attention! Don't add \"flaky\" labels which could change from alert to alert within the same incident.\n  # Good labels: ['labels.department', 'labels.team'], bad labels: ['labels.severity', 'labels.pod_id']\n  # Check Keep -> Feed -> \"extraPayload\" column, it will help in writing labels.\n\n  params:\n    labels: ['labels.service', 'labels.queue']\n  # Will resuld as: \"labels_service\" and \"labels_queue\".\n```",
         "operationId": "get_metrics_metrics_get",
         "parameters": [
           {
@@ -6045,160 +4556,6 @@
           "200": {
             "description": "Successful Response",
             "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/extraction/{rule_id}/execute/{alert_id}": {
-      "post": {
-        "tags": ["enrichment", "extraction"],
-        "summary": "Execute Rule",
-        "description": "Execute an extraction rule against an alert",
-        "operationId": "execute_rule_extraction__rule_id__execute__alert_id__post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Alert Id"
-            },
-            "name": "alert_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Extraction rule executed successfully",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "400": { "description": "Extraction rule failed to execute" },
-          "404": { "description": "Extraction rule or alert not found" },
-          "403": {
-            "description": "User does not have permission to execute extraction rule"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/extraction/{rule_id}/executions": {
-      "get": {
-        "tags": ["enrichment", "extraction"],
-        "summary": "Get Enrichment Events",
-        "description": "Get all executions for a rule",
-        "operationId": "get_enrichment_events_extraction__rule_id__executions_get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          },
-          {
-            "required": false,
-            "schema": { "type": "integer", "title": "Limit", "default": 20 },
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "required": false,
-            "schema": { "type": "integer", "title": "Offset", "default": 0 },
-            "name": "offset",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrichmentEventPaginatedResultsDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/extraction/{rule_id}/executions/{enrichment_event_id}": {
-      "get": {
-        "tags": ["enrichment", "extraction"],
-        "summary": "Get Enrichment Event Logs",
-        "description": "Get an execution for a rule",
-        "operationId": "get_enrichment_event_logs_extraction__rule_id__executions__enrichment_event_id__get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Rule Id" },
-            "name": "rule_id",
-            "in": "path"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Enrichment Event Id"
-            },
-            "name": "enrichment_event_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrichmentEventWithLogs"
-                }
-              }
-            }
           },
           "422": {
             "description": "Validation Error",
@@ -6822,357 +5179,6 @@
         ]
       }
     },
-    "/topology/pull": {
-      "post": {
-        "tags": ["topology"],
-        "summary": "Pull Topology Data",
-        "description": "Pull topology data on demand from providers",
-        "operationId": "pull_topology_data_topology_pull_post",
-        "parameters": [
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Provider Ids" },
-            "name": "provider_ids",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TopologyServiceDtoOut"
-                  },
-                  "type": "array",
-                  "title": "Response Pull Topology Data Topology Pull Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/topology/service": {
-      "put": {
-        "tags": ["topology"],
-        "summary": "Update Service",
-        "description": "Updating a service manually",
-        "operationId": "update_service_topology_service_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopologyServiceUpdateRequestDTO"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/TopologyService" }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      },
-      "post": {
-        "tags": ["topology"],
-        "summary": "Create Service",
-        "description": "Creating a service manually",
-        "operationId": "create_service_topology_service_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopologyServiceCreateRequestDTO"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/TopologyService" }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/topology/services": {
-      "delete": {
-        "tags": ["topology"],
-        "summary": "Delete Services",
-        "description": "Delete a list of services manually",
-        "operationId": "delete_services_topology_services_delete",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/DeleteServicesRequest" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/topology/dependency": {
-      "put": {
-        "tags": ["topology"],
-        "summary": "Update Dependency",
-        "description": "Updating a dependency manually",
-        "operationId": "update_dependency_topology_dependency_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopologyServiceDependencyUpdateRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TopologyServiceDependencyDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      },
-      "post": {
-        "tags": ["topology"],
-        "summary": "Create Dependencies",
-        "description": "Creating a new dependency manually",
-        "operationId": "create_dependencies_topology_dependency_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopologyServiceDependencyCreateRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TopologyServiceDependencyDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/topology/dependency/{dependency_id}": {
-      "delete": {
-        "tags": ["topology"],
-        "summary": "Delete Dependency",
-        "description": "Deleting a dependency manually",
-        "operationId": "delete_dependency_topology_dependency__dependency_id__delete",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "integer", "title": "Dependency Id" },
-            "name": "dependency_id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/topology/export": {
-      "get": {
-        "tags": ["topology"],
-        "summary": "Export Topology Yaml",
-        "description": "Exporting the topology map as a YAML",
-        "operationId": "export_topology_yaml_topology_export_get",
-        "parameters": [
-          {
-            "required": false,
-            "schema": { "type": "string", "title": "Services" },
-            "name": "services",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/topology/import": {
-      "post": {
-        "tags": ["topology"],
-        "summary": "Import Topology Yaml",
-        "description": "Import the topology map from YAML",
-        "operationId": "import_topology_yaml_topology_import_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_import_topology_yaml_topology_import_post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
     "/deduplications": {
       "get": {
         "tags": ["deduplications"],
@@ -7334,226 +5340,11 @@
           { "OAuth2PasswordBearer": [] }
         ]
       }
-    },
-    "/{entity_name}/facets": {
-      "post": {
-        "tags": ["facets"],
-        "summary": "Add Facet",
-        "description": "Add facet for {entity_name}",
-        "operationId": "add_facet__entity_name__facets_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Entity Name" },
-            "name": "entity_name",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateFacetDto" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/FacetDto" }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/{entity_name}/facets/{facet_id}": {
-      "delete": {
-        "tags": ["facets"],
-        "summary": "Delete Facet",
-        "description": "Delete facet for {enity_name}",
-        "operationId": "delete_facet__entity_name__facets__facet_id__delete",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Facet Id" },
-            "name": "facet_id",
-            "in": "path"
-          },
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Entity Name" },
-            "name": "entity_name",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/provider-images/upload/{image_name}": {
-      "post": {
-        "tags": ["provider-images"],
-        "summary": "Upload Provider Image",
-        "description": "Upload a provider image",
-        "operationId": "upload_provider_image_provider_images_upload__image_name__post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Image Name" },
-            "name": "image_name",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_upload_provider_image_provider_images_upload__image_name__post"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/provider-images/{image_name}": {
-      "get": {
-        "tags": ["provider-images"],
-        "summary": "Get Provider Image",
-        "description": "Get a provider image",
-        "operationId": "get_provider_image_provider_images__image_name__get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": { "type": "string", "title": "Image Name" },
-            "name": "image_name",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/provider-images": {
-      "get": {
-        "tags": ["provider-images"],
-        "summary": "List Provider Images",
-        "description": "List all custom provider images for the tenant",
-        "operationId": "list_provider_images_provider_images_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          }
-        },
-        "security": [
-          { "API Key": [] },
-          { "HTTPBasic": [] },
-          { "OAuth2PasswordBearer": [] }
-        ]
-      }
-    },
-    "/signin": {
-      "post": {
-        "summary": "Signin",
-        "operationId": "signin_signin_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "type": "object", "title": "Body" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": {} } }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "ActionType": {
+      "AlertActionType": {
         "enum": [
           "alert was triggered",
           "alert acknowledged",
@@ -7565,7 +5356,6 @@
           "alert status undone",
           "alert enriched by workflow",
           "alert enriched by mapping rule",
-          "alert enriched by extraction rule",
           "alert was deduplicated",
           "alert was assigned with ticket",
           "alert was unassigned from ticket",
@@ -7577,12 +5367,9 @@
           "a comment was added to the alert",
           "a comment was removed from the alert",
           "Alert is in maintenance window",
-          "A comment was added to the incident",
-          "Incident enriched",
-          "Incident status changed",
-          "Incident assigned"
+          "A comment was added to the incident"
         ],
-        "title": "ActionType",
+        "title": "AlertActionType",
         "description": "An enumeration."
       },
       "AlertAudit": {
@@ -7618,7 +5405,7 @@
             "title": "Timestamp"
           },
           "fingerprint": { "type": "string", "title": "Fingerprint" },
-          "action": { "$ref": "#/components/schemas/ActionType" },
+          "action": { "$ref": "#/components/schemas/AlertActionType" },
           "user_id": { "type": "string", "title": "User Id" },
           "description": { "type": "string", "title": "Description" }
         },
@@ -7641,11 +5428,6 @@
           "severity": { "$ref": "#/components/schemas/AlertSeverity" },
           "lastReceived": { "type": "string", "title": "Lastreceived" },
           "firingStartTime": { "type": "string", "title": "Firingstarttime" },
-          "firingCounter": {
-            "type": "integer",
-            "title": "Firingcounter",
-            "default": 0
-          },
           "environment": {
             "type": "string",
             "title": "Environment",
@@ -7672,10 +5454,6 @@
           "apiKeyRef": { "type": "string", "title": "Apikeyref" },
           "message": { "type": "string", "title": "Message" },
           "description": { "type": "string", "title": "Description" },
-          "description_format": {
-            "type": "string",
-            "title": "Description Format"
-          },
           "pushed": { "type": "boolean", "title": "Pushed", "default": false },
           "event_id": { "type": "string", "title": "Event Id" },
           "url": {
@@ -7684,13 +5462,6 @@
             "minLength": 1,
             "format": "uri",
             "title": "Url"
-          },
-          "imageUrl": {
-            "type": "string",
-            "maxLength": 65536,
-            "minLength": 1,
-            "format": "uri",
-            "title": "Imageurl"
           },
           "labels": { "type": "object", "title": "Labels", "default": {} },
           "fingerprint": { "type": "string", "title": "Fingerprint" },
@@ -7749,22 +5520,6 @@
           "fingerprint": "1234"
         }
       },
-      "AlertErrorDto": {
-        "properties": {
-          "id": { "type": "string", "title": "Id" },
-          "provider_type": { "type": "string", "title": "Provider Type" },
-          "event": { "type": "object", "title": "Event" },
-          "error_message": { "type": "string", "title": "Error Message" },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Timestamp"
-          }
-        },
-        "type": "object",
-        "required": ["id", "provider_type", "event", "timestamp"],
-        "title": "AlertErrorDto"
-      },
       "AlertSeverity": {
         "enum": ["critical", "high", "warning", "info", "low"],
         "title": "AlertSeverity",
@@ -7783,11 +5538,6 @@
           "severity": { "$ref": "#/components/schemas/AlertSeverity" },
           "lastReceived": { "type": "string", "title": "Lastreceived" },
           "firingStartTime": { "type": "string", "title": "Firingstarttime" },
-          "firingCounter": {
-            "type": "integer",
-            "title": "Firingcounter",
-            "default": 0
-          },
           "environment": {
             "type": "string",
             "title": "Environment",
@@ -7814,10 +5564,6 @@
           "apiKeyRef": { "type": "string", "title": "Apikeyref" },
           "message": { "type": "string", "title": "Message" },
           "description": { "type": "string", "title": "Description" },
-          "description_format": {
-            "type": "string",
-            "title": "Description Format"
-          },
           "pushed": { "type": "boolean", "title": "Pushed", "default": false },
           "event_id": { "type": "string", "title": "Event Id" },
           "url": {
@@ -7826,13 +5572,6 @@
             "minLength": 1,
             "format": "uri",
             "title": "Url"
-          },
-          "imageUrl": {
-            "type": "string",
-            "maxLength": 65536,
-            "minLength": 1,
-            "format": "uri",
-            "title": "Imageurl"
           },
           "labels": { "type": "object", "title": "Labels", "default": {} },
           "fingerprint": { "type": "string", "title": "Fingerprint" },
@@ -7913,50 +5652,6 @@
         "required": ["count", "items"],
         "title": "AlertWithIncidentLinkMetadataPaginatedResultsDto"
       },
-      "BatchEnrichAlertByCelRequestBody": {
-        "properties": {
-          "enrichments": {
-            "additionalProperties": { "type": "string" },
-            "type": "object",
-            "title": "Enrichments"
-          },
-          "cel": { "type": "string", "title": "Cel" },
-          "limit": { "type": "integer", "title": "Limit", "default": 1000 },
-          "offset": { "type": "integer", "title": "Offset", "default": 0 }
-        },
-        "type": "object",
-        "required": ["enrichments", "cel"],
-        "title": "BatchEnrichAlertByCelRequestBody"
-      },
-      "BatchEnrichAlertRequestBody": {
-        "properties": {
-          "enrichments": {
-            "additionalProperties": { "type": "string" },
-            "type": "object",
-            "title": "Enrichments"
-          },
-          "fingerprints": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Fingerprints"
-          }
-        },
-        "type": "object",
-        "required": ["enrichments", "fingerprints"],
-        "title": "BatchEnrichAlertRequestBody"
-      },
-      "Body_bulk_delete_incidents_incidents_bulk_delete": {
-        "properties": {
-          "incident_ids": {
-            "items": { "type": "string", "format": "uuid" },
-            "type": "array",
-            "title": "Incident Ids"
-          }
-        },
-        "type": "object",
-        "required": ["incident_ids"],
-        "title": "Body_bulk_delete_incidents_incidents_bulk_delete"
-      },
       "Body_create_actions_actions_post": {
         "properties": {
           "file": { "type": "string", "format": "binary", "title": "File" }
@@ -7971,14 +5666,6 @@
         "type": "object",
         "required": ["file"],
         "title": "Body_create_workflow_workflows_post"
-      },
-      "Body_import_topology_yaml_topology_import_post": {
-        "properties": {
-          "file": { "type": "string", "format": "binary", "title": "File" }
-        },
-        "type": "object",
-        "required": ["file"],
-        "title": "Body_import_topology_yaml_topology_import_post"
       },
       "Body_pusher_authentication_pusher_auth_post": {
         "properties": {
@@ -7997,23 +5684,12 @@
         "required": ["file"],
         "title": "Body_put_action_actions__action_id__put"
       },
-      "Body_upload_provider_image_provider_images_upload__image_name__post": {
+      "Body_run_workflow_from_definition_workflows_test_post": {
         "properties": {
           "file": { "type": "string", "format": "binary", "title": "File" }
         },
         "type": "object",
-        "required": ["file"],
-        "title": "Body_upload_provider_image_provider_images_upload__image_name__post"
-      },
-      "CreateFacetDto": {
-        "properties": {
-          "property_path": { "type": "string", "title": "Property Path" },
-          "name": { "type": "string", "title": "Name" },
-          "description": { "type": "string", "title": "Description" }
-        },
-        "type": "object",
-        "required": ["property_path", "name"],
-        "title": "CreateFacetDto"
+        "title": "Body_run_workflow_from_definition_workflows_test_post"
       },
       "CreateOrUpdateGroupRequest": {
         "properties": {
@@ -8056,11 +5732,6 @@
             "type": "array",
             "title": "Tags",
             "default": []
-          },
-          "counter_shows_firing_only": {
-            "type": "boolean",
-            "title": "Counter Shows Firing Only",
-            "default": true
           }
         },
         "type": "object",
@@ -8185,32 +5856,6 @@
         "required": ["fingerprint", "lastReceived"],
         "title": "DeleteRequestBody"
       },
-      "DeleteServicesRequest": {
-        "properties": {
-          "service_ids": {
-            "items": { "type": "integer" },
-            "type": "array",
-            "title": "Service Ids"
-          }
-        },
-        "type": "object",
-        "required": ["service_ids"],
-        "title": "DeleteServicesRequest"
-      },
-      "DismissAlertRequest": {
-        "properties": { "alert_id": { "type": "string", "title": "Alert Id" } },
-        "type": "object",
-        "title": "DismissAlertRequest"
-      },
-      "EnrichAlertNoteRequestBody": {
-        "properties": {
-          "note": { "type": "string", "title": "Note" },
-          "fingerprint": { "type": "string", "title": "Fingerprint" }
-        },
-        "type": "object",
-        "required": ["note", "fingerprint"],
-        "title": "EnrichAlertNoteRequestBody"
-      },
       "EnrichAlertRequestBody": {
         "properties": {
           "enrichments": {
@@ -8223,93 +5868,6 @@
         "type": "object",
         "required": ["enrichments", "fingerprint"],
         "title": "EnrichAlertRequestBody"
-      },
-      "EnrichIncidentRequestBody": {
-        "properties": {
-          "enrichments": { "type": "object", "title": "Enrichments" },
-          "force": { "type": "boolean", "title": "Force", "default": false }
-        },
-        "type": "object",
-        "required": ["enrichments"],
-        "title": "EnrichIncidentRequestBody"
-      },
-      "EnrichmentEvent": {
-        "properties": {
-          "id": { "type": "string", "format": "uuid", "title": "Id" },
-          "tenant_id": { "type": "string", "title": "Tenant Id" },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Timestamp"
-          },
-          "enriched_fields": { "type": "object", "title": "Enriched Fields" },
-          "status": { "type": "string", "title": "Status" },
-          "enrichment_type": { "type": "string", "title": "Enrichment Type" },
-          "rule_id": { "type": "integer", "title": "Rule Id" },
-          "alert_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Alert Id"
-          },
-          "date_hour": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Date Hour"
-          }
-        },
-        "type": "object",
-        "required": ["tenant_id", "status", "enrichment_type", "alert_id"],
-        "title": "EnrichmentEvent"
-      },
-      "EnrichmentEventPaginatedResultsDto": {
-        "properties": {
-          "limit": { "type": "integer", "title": "Limit", "default": 25 },
-          "offset": { "type": "integer", "title": "Offset", "default": 0 },
-          "count": { "type": "integer", "title": "Count" },
-          "items": {
-            "items": { "$ref": "#/components/schemas/EnrichmentEvent" },
-            "type": "array",
-            "title": "Items"
-          }
-        },
-        "type": "object",
-        "required": ["count", "items"],
-        "title": "EnrichmentEventPaginatedResultsDto"
-      },
-      "EnrichmentEventWithLogs": {
-        "properties": {
-          "enrichment_event": {
-            "$ref": "#/components/schemas/EnrichmentEvent"
-          },
-          "logs": {
-            "items": { "$ref": "#/components/schemas/EnrichmentLog" },
-            "type": "array",
-            "title": "Logs"
-          }
-        },
-        "type": "object",
-        "required": ["enrichment_event", "logs"],
-        "title": "EnrichmentEventWithLogs"
-      },
-      "EnrichmentLog": {
-        "properties": {
-          "id": { "type": "string", "format": "uuid", "title": "Id" },
-          "tenant_id": { "type": "string", "title": "Tenant Id" },
-          "enrichment_event_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Enrichment Event Id"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Timestamp"
-          },
-          "message": { "type": "string", "title": "Message" }
-        },
-        "type": "object",
-        "required": ["tenant_id", "message"],
-        "title": "EnrichmentLog"
       },
       "ExtractionRuleDtoBase": {
         "properties": {
@@ -8361,37 +5919,6 @@
         "type": "object",
         "required": ["name", "regex", "id", "created_at"],
         "title": "ExtractionRuleDtoOut"
-      },
-      "FacetDto": {
-        "properties": {
-          "id": { "type": "string", "title": "Id" },
-          "property_path": { "type": "string", "title": "Property Path" },
-          "name": { "type": "string", "title": "Name" },
-          "description": { "type": "string", "title": "Description" },
-          "is_static": { "type": "boolean", "title": "Is Static" },
-          "is_lazy": { "type": "boolean", "title": "Is Lazy", "default": true },
-          "type": { "$ref": "#/components/schemas/FacetType" }
-        },
-        "type": "object",
-        "required": ["id", "property_path", "name", "is_static", "type"],
-        "title": "FacetDto"
-      },
-      "FacetOptionsQueryDto": {
-        "properties": {
-          "cel": { "type": "string", "title": "Cel" },
-          "facet_queries": {
-            "additionalProperties": { "type": "string" },
-            "type": "object",
-            "title": "Facet Queries"
-          }
-        },
-        "type": "object",
-        "title": "FacetOptionsQueryDto"
-      },
-      "FacetType": {
-        "enum": ["string"],
-        "title": "FacetType",
-        "description": "An enumeration."
       },
       "Group": {
         "properties": {
@@ -8457,7 +5984,6 @@
             "format": "uuid",
             "title": "Same Incident In The Past Id"
           },
-          "severity": { "$ref": "#/components/schemas/IncidentSeverity" },
           "id": { "type": "string", "format": "uuid", "title": "Id" },
           "start_time": {
             "type": "string",
@@ -8485,6 +6011,7 @@
             "type": "array",
             "title": "Alert Sources"
           },
+          "severity": { "$ref": "#/components/schemas/IncidentSeverity" },
           "status": {
             "allOf": [{ "$ref": "#/components/schemas/IncidentStatus" }],
             "default": "firing"
@@ -8495,7 +6022,7 @@
             "title": "Services"
           },
           "is_predicted": { "type": "boolean", "title": "Is Predicted" },
-          "is_candidate": { "type": "boolean", "title": "Is Candidate" },
+          "is_confirmed": { "type": "boolean", "title": "Is Confirmed" },
           "generated_summary": {
             "type": "string",
             "title": "Generated Summary"
@@ -8516,35 +6043,17 @@
             "type": "string",
             "format": "date-time",
             "title": "Merged At"
-          },
-          "enrichments": {
-            "type": "object",
-            "title": "Enrichments",
-            "default": {}
-          },
-          "incident_type": { "type": "string", "title": "Incident Type" },
-          "incident_application": {
-            "type": "string",
-            "title": "Incident Application"
-          },
-          "resolve_on": {
-            "type": "string",
-            "title": "Resolve On",
-            "description": "Resolution strategy for the incident",
-            "default": "all_resolved"
-          },
-          "rule_id": { "type": "string", "format": "uuid", "title": "Rule Id" },
-          "rule_name": { "type": "string", "title": "Rule Name" },
-          "rule_is_deleted": { "type": "boolean", "title": "Rule Is Deleted" }
+          }
         },
         "type": "object",
         "required": [
           "id",
           "alerts_count",
           "alert_sources",
+          "severity",
           "services",
           "is_predicted",
-          "is_candidate"
+          "is_confirmed"
         ],
         "title": "IncidentDto",
         "example": {
@@ -8566,8 +6075,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Same Incident In The Past Id"
-          },
-          "severity": { "$ref": "#/components/schemas/IncidentSeverity" }
+          }
         },
         "type": "object",
         "title": "IncidentDtoIn",
@@ -8583,13 +6091,7 @@
           "statuses": {
             "items": { "$ref": "#/components/schemas/IncidentStatus" },
             "type": "array",
-            "default": [
-              "firing",
-              "resolved",
-              "acknowledged",
-              "merged",
-              "deleted"
-            ]
+            "default": ["firing", "resolved", "acknowledged", "merged"]
           },
           "severities": {
             "items": { "$ref": "#/components/schemas/IncidentSeverity" },
@@ -8621,15 +6123,6 @@
         "title": "IncidentSeverity",
         "description": "An enumeration."
       },
-      "IncidentSeverityChangeDto": {
-        "properties": {
-          "severity": { "$ref": "#/components/schemas/IncidentSeverity" },
-          "comment": { "type": "string", "title": "Comment" }
-        },
-        "type": "object",
-        "required": ["severity"],
-        "title": "IncidentSeverityChangeDto"
-      },
       "IncidentSorting": {
         "enum": [
           "creation_time",
@@ -8649,7 +6142,7 @@
         "description": "An enumeration."
       },
       "IncidentStatus": {
-        "enum": ["firing", "resolved", "acknowledged", "merged", "deleted"],
+        "enum": ["firing", "resolved", "acknowledged", "merged"],
         "title": "IncidentStatus",
         "description": "An enumeration."
       },
@@ -8802,7 +6295,7 @@
           },
           "type": { "type": "string", "maxLength": 255, "title": "Type" },
           "matchers": {
-            "items": { "items": { "type": "string" }, "type": "array" },
+            "items": { "type": "string" },
             "type": "array",
             "title": "Matchers"
           },
@@ -8820,21 +6313,6 @@
             "type": "string",
             "format": "date-time",
             "title": "Last Updated At"
-          },
-          "is_multi_level": {
-            "type": "boolean",
-            "title": "Is Multi Level",
-            "default": false
-          },
-          "new_property_name": {
-            "type": "string",
-            "maxLength": 255,
-            "title": "New Property Name"
-          },
-          "prefix_to_remove": {
-            "type": "string",
-            "maxLength": 255,
-            "title": "Prefix To Remove"
           }
         },
         "type": "object",
@@ -8848,7 +6326,7 @@
           "file_name": { "type": "string", "title": "File Name" },
           "priority": { "type": "integer", "title": "Priority", "default": 0 },
           "matchers": {
-            "items": { "items": { "type": "string" }, "type": "array" },
+            "items": { "type": "string" },
             "type": "array",
             "title": "Matchers"
           },
@@ -8858,16 +6336,6 @@
             "title": "Type",
             "default": "csv"
           },
-          "is_multi_level": {
-            "type": "boolean",
-            "title": "Is Multi Level",
-            "default": false
-          },
-          "new_property_name": {
-            "type": "string",
-            "title": "New Property Name"
-          },
-          "prefix_to_remove": { "type": "string", "title": "Prefix To Remove" },
           "rows": {
             "items": { "type": "object" },
             "type": "array",
@@ -8885,7 +6353,7 @@
           "file_name": { "type": "string", "title": "File Name" },
           "priority": { "type": "integer", "title": "Priority", "default": 0 },
           "matchers": {
-            "items": { "items": { "type": "string" }, "type": "array" },
+            "items": { "type": "string" },
             "type": "array",
             "title": "Matchers"
           },
@@ -8895,16 +6363,6 @@
             "title": "Type",
             "default": "csv"
           },
-          "is_multi_level": {
-            "type": "boolean",
-            "title": "Is Multi Level",
-            "default": false
-          },
-          "new_property_name": {
-            "type": "string",
-            "title": "New Property Name"
-          },
-          "prefix_to_remove": { "type": "string", "title": "Prefix To Remove" },
           "id": { "type": "integer", "title": "Id" },
           "created_by": { "type": "string", "title": "Created By" },
           "created_at": {
@@ -8923,53 +6381,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Last Updated At"
-          },
-          "rows": {
-            "items": { "type": "object" },
-            "type": "array",
-            "title": "Rows"
           }
         },
         "type": "object",
         "required": ["name", "matchers", "id", "created_at"],
         "title": "MappingRuleDtoOut"
-      },
-      "MappingRuleUpdateDtoIn": {
-        "properties": {
-          "name": { "type": "string", "title": "Name" },
-          "description": { "type": "string", "title": "Description" },
-          "file_name": { "type": "string", "title": "File Name" },
-          "priority": { "type": "integer", "title": "Priority", "default": 0 },
-          "matchers": {
-            "items": { "items": { "type": "string" }, "type": "array" },
-            "type": "array",
-            "title": "Matchers"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["csv", "topology"],
-            "title": "Type",
-            "default": "csv"
-          },
-          "is_multi_level": {
-            "type": "boolean",
-            "title": "Is Multi Level",
-            "default": false
-          },
-          "new_property_name": {
-            "type": "string",
-            "title": "New Property Name"
-          },
-          "prefix_to_remove": { "type": "string", "title": "Prefix To Remove" },
-          "rows": {
-            "items": { "type": "object" },
-            "type": "array",
-            "title": "Rows"
-          }
-        },
-        "type": "object",
-        "required": ["name", "matchers"],
-        "title": "MappingRuleUpdateDtoIn"
       },
       "MergeIncidentsRequestDto": {
         "properties": {
@@ -8995,6 +6411,11 @@
             "type": "array",
             "title": "Merged Incident Ids"
           },
+          "skipped_incident_ids": {
+            "items": { "type": "string", "format": "uuid" },
+            "type": "array",
+            "title": "Skipped Incident Ids"
+          },
           "failed_incident_ids": {
             "items": { "type": "string", "format": "uuid" },
             "type": "array",
@@ -9010,6 +6431,7 @@
         "type": "object",
         "required": [
           "merged_incident_ids",
+          "skipped_incident_ids",
           "failed_incident_ids",
           "destination_incident_id",
           "message"
@@ -9047,15 +6469,15 @@
             "title": "Is Noisy",
             "default": false
           },
-          "counter_shows_firing_only": {
-            "type": "boolean",
-            "title": "Counter Shows Firing Only",
-            "default": false
-          },
           "should_do_noise_now": {
             "type": "boolean",
             "title": "Should Do Noise Now",
             "default": false
+          },
+          "alerts_count": {
+            "type": "integer",
+            "title": "Alerts Count",
+            "default": 0
           },
           "static": { "type": "boolean", "title": "Static", "default": false },
           "tags": {
@@ -9106,146 +6528,6 @@
         "required": ["cel_query", "sql_query"],
         "title": "PresetSearchQuery"
       },
-      "Provider": {
-        "properties": {
-          "id": { "type": "string", "title": "Id" },
-          "display_name": { "type": "string", "title": "Display Name" },
-          "type": { "type": "string", "title": "Type" },
-          "config": {
-            "additionalProperties": { "type": "object" },
-            "type": "object",
-            "title": "Config"
-          },
-          "details": { "type": "object", "title": "Details" },
-          "can_notify": { "type": "boolean", "title": "Can Notify" },
-          "notify_params": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Notify Params"
-          },
-          "can_query": { "type": "boolean", "title": "Can Query" },
-          "query_params": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Query Params"
-          },
-          "installed": {
-            "type": "boolean",
-            "title": "Installed",
-            "default": false
-          },
-          "linked": { "type": "boolean", "title": "Linked", "default": false },
-          "last_alert_received": {
-            "type": "string",
-            "title": "Last Alert Received"
-          },
-          "supports_webhook": {
-            "type": "boolean",
-            "title": "Supports Webhook",
-            "default": false
-          },
-          "can_setup_webhook": {
-            "type": "boolean",
-            "title": "Can Setup Webhook",
-            "default": false
-          },
-          "webhook_required": {
-            "type": "boolean",
-            "title": "Webhook Required",
-            "default": false
-          },
-          "provider_description": {
-            "type": "string",
-            "title": "Provider Description"
-          },
-          "oauth2_url": { "type": "string", "title": "Oauth2 Url" },
-          "scopes": {
-            "items": { "$ref": "#/components/schemas/ProviderScope" },
-            "type": "array",
-            "title": "Scopes"
-          },
-          "validatedScopes": {
-            "additionalProperties": {
-              "anyOf": [{ "type": "boolean" }, { "type": "string" }]
-            },
-            "type": "object",
-            "title": "Validatedscopes"
-          },
-          "methods": {
-            "items": { "$ref": "#/components/schemas/ProviderMethodDTO" },
-            "type": "array",
-            "title": "Methods"
-          },
-          "installed_by": { "type": "string", "title": "Installed By" },
-          "installation_time": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Installation Time"
-          },
-          "pulling_available": {
-            "type": "boolean",
-            "title": "Pulling Available",
-            "default": false
-          },
-          "pulling_enabled": {
-            "type": "boolean",
-            "title": "Pulling Enabled",
-            "default": true
-          },
-          "last_pull_time": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Pull Time"
-          },
-          "docs": { "type": "string", "title": "Docs" },
-          "tags": {
-            "items": {
-              "type": "string",
-              "enum": [
-                "alert",
-                "ticketing",
-                "messaging",
-                "data",
-                "queue",
-                "topology",
-                "incident"
-              ]
-            },
-            "type": "array",
-            "title": "Tags"
-          },
-          "categories": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Categories"
-          },
-          "coming_soon": {
-            "type": "boolean",
-            "title": "Coming Soon",
-            "default": false
-          },
-          "alertsDistribution": {
-            "additionalProperties": { "type": "integer" },
-            "type": "object",
-            "title": "Alertsdistribution"
-          },
-          "alertExample": { "type": "object", "title": "Alertexample" },
-          "default_fingerprint_fields": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Default Fingerprint Fields"
-          },
-          "provisioned": {
-            "type": "boolean",
-            "title": "Provisioned",
-            "default": false
-          },
-          "health": { "type": "boolean", "title": "Health", "default": false }
-        },
-        "type": "object",
-        "required": ["display_name", "type", "can_notify", "can_query"],
-        "title": "Provider"
-      },
       "ProviderDTO": {
         "properties": {
           "type": { "type": "string", "title": "Type" },
@@ -9256,82 +6538,6 @@
         "type": "object",
         "required": ["type", "name", "installed"],
         "title": "ProviderDTO"
-      },
-      "ProviderMethodDTO": {
-        "properties": {
-          "name": { "type": "string", "title": "Name" },
-          "func_name": { "type": "string", "title": "Func Name" },
-          "scopes": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Scopes",
-            "default": []
-          },
-          "description": { "type": "string", "title": "Description" },
-          "category": { "type": "string", "title": "Category" },
-          "type": {
-            "type": "string",
-            "enum": ["view", "action"],
-            "title": "Type",
-            "default": "view"
-          },
-          "func_params": {
-            "items": { "$ref": "#/components/schemas/ProviderMethodParam" },
-            "type": "array",
-            "title": "Func Params",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": ["name", "func_name"],
-        "title": "ProviderMethodDTO",
-        "description": "Constructred in providers_factory, this includes the paramters the function receives\n    We use this to generate the UI for the provider method\n    This is populated using reflection from the function signature"
-      },
-      "ProviderMethodParam": {
-        "properties": {
-          "name": { "type": "string", "title": "Name" },
-          "type": { "type": "string", "title": "Type" },
-          "mandatory": {
-            "type": "boolean",
-            "title": "Mandatory",
-            "default": true
-          },
-          "default": { "type": "string", "title": "Default" },
-          "expected_values": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Expected Values"
-          }
-        },
-        "type": "object",
-        "required": ["name", "type"],
-        "title": "ProviderMethodParam",
-        "description": "Just a simple model to represent a provider method parameter"
-      },
-      "ProviderScope": {
-        "properties": {
-          "name": { "type": "string", "title": "Name" },
-          "description": { "type": "string", "title": "Description" },
-          "mandatory": {
-            "type": "boolean",
-            "title": "Mandatory",
-            "default": false
-          },
-          "mandatory_for_webhook": {
-            "type": "boolean",
-            "title": "Mandatory For Webhook",
-            "default": false
-          },
-          "documentation_url": {
-            "type": "string",
-            "title": "Documentation Url"
-          },
-          "alias": { "type": "string", "title": "Alias" }
-        },
-        "type": "object",
-        "required": ["name"],
-        "title": "ProviderScope",
-        "description": "Provider scope model.\n\nArgs:\n    name (str): The name of the scope.\n    description (Optional[str]): The description of the scope.\n    mandatory (bool): Whether the scope is mandatory.\n    mandatory_for_webhook (bool): Whether the scope is mandatory for webhook auto installation.\n    documentation_url (Optional[str]): The documentation url of the scope.\n    alias (Optional[str]): Another alias of the scope."
       },
       "ProviderWebhookSettings": {
         "properties": {
@@ -9345,22 +6551,6 @@
         "type": "object",
         "required": ["webhookTemplate"],
         "title": "ProviderWebhookSettings"
-      },
-      "QueryDto": {
-        "properties": {
-          "cel": { "type": "string", "title": "Cel" },
-          "limit": { "type": "integer", "title": "Limit" },
-          "offset": { "type": "integer", "title": "Offset" },
-          "sort_by": { "type": "string", "title": "Sort By" },
-          "sort_dir": { "type": "string", "title": "Sort Dir" },
-          "sort_options": {
-            "items": { "$ref": "#/components/schemas/SortOptionsDto" },
-            "type": "array",
-            "title": "Sort Options"
-          }
-        },
-        "type": "object",
-        "title": "QueryDto"
       },
       "ResourcePermission": {
         "properties": {
@@ -9429,25 +6619,6 @@
             "type": "string",
             "title": "Resolveon",
             "default": "never"
-          },
-          "createOn": {
-            "type": "string",
-            "title": "Createon",
-            "default": "any"
-          },
-          "incidentNameTemplate": {
-            "type": "string",
-            "title": "Incidentnametemplate"
-          },
-          "incidentPrefix": { "type": "string", "title": "Incidentprefix" },
-          "multiLevel": {
-            "type": "boolean",
-            "title": "Multilevel",
-            "default": false
-          },
-          "multiLevelPropertyName": {
-            "type": "string",
-            "title": "Multilevelpropertyname"
           }
         },
         "type": "object",
@@ -9501,48 +6672,6 @@
         "required": ["query", "timeframe"],
         "title": "SearchAlertsRequest"
       },
-      "SortOptionsDto": {
-        "properties": {
-          "sort_by": { "type": "string", "title": "Sort By" },
-          "sort_dir": { "type": "string", "title": "Sort Dir" }
-        },
-        "type": "object",
-        "title": "SortOptionsDto"
-      },
-      "SplitIncidentRequestDto": {
-        "properties": {
-          "alert_fingerprints": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Alert Fingerprints"
-          },
-          "destination_incident_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Destination Incident Id"
-          }
-        },
-        "type": "object",
-        "required": ["alert_fingerprints", "destination_incident_id"],
-        "title": "SplitIncidentRequestDto"
-      },
-      "SplitIncidentResponseDto": {
-        "properties": {
-          "destination_incident_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Destination Incident Id"
-          },
-          "moved_alert_fingerprints": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Moved Alert Fingerprints"
-          }
-        },
-        "type": "object",
-        "required": ["destination_incident_id", "moved_alert_fingerprints"],
-        "title": "SplitIncidentResponseDto"
-      },
       "TagDto": {
         "properties": {
           "id": { "type": "string", "title": "Id" },
@@ -9556,16 +6685,7 @@
         "properties": {
           "id": { "type": "string", "format": "uuid", "title": "Id" },
           "name": { "type": "string", "title": "Name" },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "repository": {
-            "type": "string",
-            "title": "Repository",
-            "default": ""
-          },
+          "description": { "type": "string", "title": "Description" },
           "services": {
             "items": { "$ref": "#/components/schemas/TopologyServiceDtoIn" },
             "type": "array",
@@ -9582,7 +6702,6 @@
           "id": { "type": "string", "format": "uuid", "title": "Id" },
           "name": { "type": "string", "title": "Name" },
           "description": { "type": "string", "title": "Description" },
-          "repository": { "type": "string", "title": "Repository" },
           "services": {
             "items": {
               "$ref": "#/components/schemas/TopologyApplicationServiceDto"
@@ -9598,7 +6717,7 @@
       },
       "TopologyApplicationServiceDto": {
         "properties": {
-          "id": { "type": "string", "title": "Id" },
+          "id": { "type": "integer", "title": "Id" },
           "name": { "type": "string", "title": "Name" },
           "service": { "type": "string", "title": "Service" }
         },
@@ -9606,102 +6725,9 @@
         "required": ["id", "name", "service"],
         "title": "TopologyApplicationServiceDto"
       },
-      "TopologyService": {
-        "properties": {
-          "id": { "type": "integer", "title": "Id" },
-          "tenant_id": { "type": "string", "title": "Tenant Id" },
-          "source_provider_id": {
-            "type": "string",
-            "title": "Source Provider Id",
-            "default": "unknown"
-          },
-          "repository": { "type": "string", "title": "Repository" },
-          "tags": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Tags"
-          },
-          "service": { "type": "string", "title": "Service" },
-          "environment": {
-            "type": "string",
-            "title": "Environment",
-            "default": "unknown"
-          },
-          "display_name": { "type": "string", "title": "Display Name" },
-          "description": { "type": "string", "title": "Description" },
-          "team": { "type": "string", "title": "Team" },
-          "email": { "type": "string", "title": "Email" },
-          "slack": { "type": "string", "title": "Slack" },
-          "ip_address": { "type": "string", "title": "Ip Address" },
-          "mac_address": { "type": "string", "title": "Mac Address" },
-          "category": { "type": "string", "title": "Category" },
-          "manufacturer": { "type": "string", "title": "Manufacturer" },
-          "namespace": { "type": "string", "title": "Namespace" },
-          "is_manual": {
-            "type": "boolean",
-            "title": "Is Manual",
-            "default": false
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": ["tenant_id", "service", "display_name"],
-        "title": "TopologyService"
-      },
-      "TopologyServiceCreateRequestDTO": {
-        "properties": {
-          "repository": { "type": "string", "title": "Repository" },
-          "tags": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Tags"
-          },
-          "service": { "type": "string", "title": "Service" },
-          "display_name": { "type": "string", "title": "Display Name" },
-          "environment": {
-            "type": "string",
-            "title": "Environment",
-            "default": "unknown"
-          },
-          "description": { "type": "string", "title": "Description" },
-          "team": { "type": "string", "title": "Team" },
-          "email": { "type": "string", "title": "Email" },
-          "slack": { "type": "string", "title": "Slack" },
-          "ip_address": { "type": "string", "title": "Ip Address" },
-          "mac_address": { "type": "string", "title": "Mac Address" },
-          "category": { "type": "string", "title": "Category" },
-          "manufacturer": { "type": "string", "title": "Manufacturer" },
-          "namespace": { "type": "string", "title": "Namespace" }
-        },
-        "type": "object",
-        "required": ["service", "display_name"],
-        "title": "TopologyServiceCreateRequestDTO"
-      },
-      "TopologyServiceDependencyCreateRequestDto": {
-        "properties": {
-          "service_id": { "type": "integer", "title": "Service Id" },
-          "depends_on_service_id": {
-            "type": "integer",
-            "title": "Depends On Service Id"
-          },
-          "protocol": {
-            "type": "string",
-            "title": "Protocol",
-            "default": "unknown"
-          }
-        },
-        "type": "object",
-        "required": ["service_id", "depends_on_service_id"],
-        "title": "TopologyServiceDependencyCreateRequestDto"
-      },
       "TopologyServiceDependencyDto": {
         "properties": {
-          "id": { "type": "string", "title": "Id" },
-          "serviceId": { "type": "string", "title": "Serviceid" },
+          "serviceId": { "type": "integer", "title": "Serviceid" },
           "serviceName": { "type": "string", "title": "Servicename" },
           "protocol": {
             "type": "string",
@@ -9712,24 +6738,6 @@
         "type": "object",
         "required": ["serviceId", "serviceName"],
         "title": "TopologyServiceDependencyDto"
-      },
-      "TopologyServiceDependencyUpdateRequestDto": {
-        "properties": {
-          "service_id": { "type": "integer", "title": "Service Id" },
-          "depends_on_service_id": {
-            "type": "integer",
-            "title": "Depends On Service Id"
-          },
-          "protocol": {
-            "type": "string",
-            "title": "Protocol",
-            "default": "unknown"
-          },
-          "id": { "type": "integer", "title": "Id" }
-        },
-        "type": "object",
-        "required": ["id"],
-        "title": "TopologyServiceDependencyUpdateRequestDto"
       },
       "TopologyServiceDtoIn": {
         "properties": { "id": { "type": "integer", "title": "Id" } },
@@ -9764,13 +6772,7 @@
           "mac_address": { "type": "string", "title": "Mac Address" },
           "category": { "type": "string", "title": "Category" },
           "manufacturer": { "type": "string", "title": "Manufacturer" },
-          "namespace": { "type": "string", "title": "Namespace" },
-          "is_manual": {
-            "type": "boolean",
-            "title": "Is Manual",
-            "default": false
-          },
-          "id": { "type": "string", "title": "Id" },
+          "id": { "type": "integer", "title": "Id" },
           "dependencies": {
             "items": {
               "$ref": "#/components/schemas/TopologyServiceDependencyDto"
@@ -9799,36 +6801,6 @@
         ],
         "title": "TopologyServiceDtoOut"
       },
-      "TopologyServiceUpdateRequestDTO": {
-        "properties": {
-          "repository": { "type": "string", "title": "Repository" },
-          "tags": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Tags"
-          },
-          "service": { "type": "string", "title": "Service" },
-          "display_name": { "type": "string", "title": "Display Name" },
-          "environment": {
-            "type": "string",
-            "title": "Environment",
-            "default": "unknown"
-          },
-          "description": { "type": "string", "title": "Description" },
-          "team": { "type": "string", "title": "Team" },
-          "email": { "type": "string", "title": "Email" },
-          "slack": { "type": "string", "title": "Slack" },
-          "ip_address": { "type": "string", "title": "Ip Address" },
-          "mac_address": { "type": "string", "title": "Mac Address" },
-          "category": { "type": "string", "title": "Category" },
-          "manufacturer": { "type": "string", "title": "Manufacturer" },
-          "namespace": { "type": "string", "title": "Namespace" },
-          "id": { "type": "integer", "title": "Id" }
-        },
-        "type": "object",
-        "required": ["service", "display_name", "id"],
-        "title": "TopologyServiceUpdateRequestDTO"
-      },
       "UnEnrichAlertRequestBody": {
         "properties": {
           "enrichments": {
@@ -9841,19 +6813,6 @@
         "type": "object",
         "required": ["enrichments", "fingerprint"],
         "title": "UnEnrichAlertRequestBody"
-      },
-      "UnEnrichIncidentRequestBody": {
-        "properties": {
-          "enrichments": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Enrichments"
-          },
-          "fingerprint": { "type": "string", "title": "Fingerprint" }
-        },
-        "type": "object",
-        "required": ["enrichments", "fingerprint"],
-        "title": "UnEnrichIncidentRequestBody"
       },
       "UpdateUserRequest": {
         "properties": {
@@ -9998,13 +6957,7 @@
             "title": "Provisioned",
             "default": false
           },
-          "provisioned_file": { "type": "string", "title": "Provisioned File" },
-          "alertRule": {
-            "type": "boolean",
-            "title": "Alertrule",
-            "default": false
-          },
-          "canRun": { "type": "boolean", "title": "Canrun", "default": true }
+          "provisioned_file": { "type": "string", "title": "Provisioned File" }
         },
         "type": "object",
         "required": [
@@ -10037,12 +6990,10 @@
           },
           "error": { "type": "string", "title": "Error" },
           "execution_time": { "type": "number", "title": "Execution Time" },
-          "results": { "type": "object", "title": "Results" },
-          "event_id": { "type": "string", "title": "Event Id" },
-          "event_type": { "type": "string", "title": "Event Type" }
+          "results": { "type": "object", "title": "Results" }
         },
         "type": "object",
-        "required": ["id", "started", "triggered_by", "status"],
+        "required": ["id", "workflow_id", "started", "triggered_by", "status"],
         "title": "WorkflowExecutionDTO"
       },
       "WorkflowExecutionLogsDTO": {
@@ -10087,25 +7038,6 @@
         "required": ["count", "items"],
         "title": "WorkflowExecutionsPaginatedResultsDto"
       },
-      "WorkflowRawDto": {
-        "properties": {
-          "workflow_raw": { "type": "string", "title": "Workflow Raw" }
-        },
-        "type": "object",
-        "required": ["workflow_raw"],
-        "title": "WorkflowRawDto"
-      },
-      "WorkflowRunResponseDTO": {
-        "properties": {
-          "workflow_execution_id": {
-            "type": "string",
-            "title": "Workflow Execution Id"
-          }
-        },
-        "type": "object",
-        "required": ["workflow_execution_id"],
-        "title": "WorkflowRunResponseDTO"
-      },
       "WorkflowToAlertExecutionDTO": {
         "properties": {
           "workflow_id": { "type": "string", "title": "Workflow Id" },
@@ -10122,8 +7054,7 @@
             "type": "string",
             "format": "date-time",
             "title": "Workflow Started"
-          },
-          "event_id": { "type": "string", "title": "Event Id" }
+          }
         },
         "type": "object",
         "required": [
