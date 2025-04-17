@@ -69,10 +69,62 @@ def upgrade() -> None:
 
     # Update existing records with their corresponding workflow revision
     connection = op.get_bind()
+
+    # Remove orphaned workflow executions
     connection.execute(
         sa.text(
-            "UPDATE workflowexecution SET workflow_revision = "
-            "(SELECT revision FROM workflow WHERE workflow.id = workflowexecution.workflow_id)"
+            """
+            DELETE FROM workflowexecution WHERE workflow_id NOT IN (SELECT id FROM workflow)
+            """
+        )
+    )
+
+    # Update workflow executions with their corresponding workflow revision, skipping null revisions
+    connection.execute(
+        sa.text(
+            """
+            UPDATE workflowexecution 
+            SET workflow_revision = (
+                SELECT revision 
+                FROM workflow 
+                WHERE workflow.id = workflowexecution.workflow_id
+                AND workflow.revision IS NOT NULL
+            )
+            WHERE EXISTS (
+                SELECT 1 
+                FROM workflow 
+                WHERE workflow.id = workflowexecution.workflow_id
+                AND workflow.revision IS NOT NULL
+            )
+            """
+        )
+    )
+
+    # Create initial workflow versions for existing workflows
+    connection.execute(
+        sa.text(
+            """
+            INSERT INTO workflowversion (
+                workflow_id, 
+                revision, 
+                workflow_raw, 
+                updated_by, 
+                updated_at, 
+                is_valid, 
+                is_current,
+                comment
+            )
+            SELECT 
+                id as workflow_id,
+                COALESCE(revision, 1) as revision,
+                workflow_raw,
+                COALESCE(updated_by, created_by) as updated_by,
+                last_updated as updated_at,
+                true as is_valid,
+                true as is_current,
+                'Initial version migration' as comment
+            FROM workflow
+            """
         )
     )
 
