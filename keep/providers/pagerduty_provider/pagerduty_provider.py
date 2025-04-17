@@ -886,6 +886,7 @@ class PagerdutyProvider(
                     "offset": offset,
                     "limit": limit,
                     "total": total,
+                    "sort_by": ["created_at:desc"],
                 }
                 if not incident_id and self.authentication_config.service_id:
                     params["service_ids[]"] = [self.authentication_config.service_id]
