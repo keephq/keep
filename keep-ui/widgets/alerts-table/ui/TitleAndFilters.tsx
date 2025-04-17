@@ -112,9 +112,8 @@ export const TitleAndFilters = ({
           hasZoomOut={false}
           enableYearNavigation
         />
-        <div className="flex items-center">
-          <SettingsSelection table={table} presetName={presetName} />
-        </div>
+
+        <SettingsSelection table={table} presetName={presetName} />
       </div>
     </div>
   );

@@ -59,8 +59,19 @@ class UptimekumaProvider(BaseProvider):
     ]
 
     STATUS_MAP = {
-        "up": AlertStatus.RESOLVED,
-        "down": AlertStatus.FIRING,
+        # Possible firing
+        "down": AlertStatus.FIRING.value,
+        "unavailable": AlertStatus.FIRING.value,
+        "firing": AlertStatus.FIRING.value,
+        "0": AlertStatus.FIRING.value,
+        0: AlertStatus.FIRING.value,
+
+        # RESOLVED
+        "up": AlertStatus.RESOLVED.value,
+        "available": AlertStatus.RESOLVED.value,
+        "1": AlertStatus.RESOLVED.value,
+        1: AlertStatus.RESOLVED.value,
+        "resolved": AlertStatus.RESOLVED.value,
     }
 
     def __init__(
@@ -121,19 +132,18 @@ class UptimekumaProvider(BaseProvider):
                     # Single retry
                     api = self._get_api()
                     name = api.get_monitor(monitor_id)["name"]
-
-                heartbeats.append(
-                    AlertDto(
-                        id=heartbeat["id"],
-                        name=name,
-                        monitor_id=heartbeat["monitor_id"],
-                        description=heartbeat["msg"],
-                        status=heartbeat["status"].name.lower(),
-                        lastReceived=heartbeat["time"],
-                        ping=heartbeat["ping"],
-                        source=["uptimekuma"],
-                    )
+            heartbeats.append(
+                AlertDto(
+                    id=heartbeat["id"],
+                    name=name,
+                    monitor_id=heartbeat["monitor_id"],
+                    description=heartbeat["msg"],
+                    status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
+                    lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
+                    ping=heartbeat["ping"],
+                    source=["uptimekuma"],
                 )
+            )
             api.disconnect()
             return heartbeats
         except Exception as e:
@@ -149,24 +159,27 @@ class UptimekumaProvider(BaseProvider):
             self.logger.error("Error getting alerts from UptimeKuma: %s", e)
             raise Exception(f"Error getting alerts from UptimeKuma: {e}")
 
-    @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: "BaseProvider" = None
-    ) -> AlertDto:
 
+    @classmethod
+    def _format_alert(
+        cls, event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         alert = AlertDto(
             id=event["monitor"]["id"],
             name=event["monitor"]["name"],
             monitor_url=event["monitor"]["url"],
-            status=event["heartbeat"]["status"],
+            status=cls.STATUS_MAP.get(event["heartbeat"]["status"], "firing"),
             description=event["msg"],
-            lastReceived=event["heartbeat"]["localDateTime"],
+            lastReceived=cls._format_datetime(event["heartbeat"]["localDateTime"], event["heartbeat"]["timezoneOffset"]),
             msg=event["heartbeat"]["msg"],
             source=["uptimekuma"],
         )
 
         return alert
 
+    @staticmethod
+    def _format_datetime(dt, offset):
+        return dt + offset
 
 if __name__ == "__main__":
     import logging

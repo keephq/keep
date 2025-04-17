@@ -119,6 +119,16 @@ def process_incident(
                                 "No alerts to add to incident, probably deduplicated",
                                 extra=extra,
                             )
+                    else:
+                        logger.info(
+                            "No alerts to add to incident",
+                            extra={
+                                **extra,
+                                "incident_id": incident_from_db.id,
+                                "incident_name": incident_from_db.name,
+                                "fingerprint": incident.fingerprint,
+                            },
+                        )
                 except Exception:
                     logger.exception("Error adding incident alerts", extra=extra)
                 logger.info("Processed incident", extra=extra)

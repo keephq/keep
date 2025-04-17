@@ -34,6 +34,7 @@ export const V2StepAlertTriggerSchema = z.object({
     alert: AlertTriggerValueSchema,
     source: z.string().optional(),
   }),
+  only_on_change: z.array(z.string()).optional(),
 });
 
 export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
@@ -198,7 +199,7 @@ export const WorkflowPropertiesSchema = z.object({
   description: z.string().min(1),
   disabled: z.boolean(),
   isLocked: z.boolean(),
-  consts: z.record(z.string(), z.string()),
+  consts: z.record(z.string(), z.string()).optional(),
   alert: AlertTriggerValueSchema.optional(),
   interval: IntervalTriggerValueSchema.optional(),
   incident: IncidentTriggerValueSchema.optional(),

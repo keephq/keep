@@ -2,6 +2,7 @@
 HttpProvider is a class that provides a way to send HTTP requests.
 """
 
+import copy
 import json
 import typing
 
@@ -56,6 +57,7 @@ class HttpProvider(BaseProvider):
         body: dict = None,
         params: dict = None,
         proxies: dict = None,
+        verify: bool = True,
         **kwargs,
     ):
         """
@@ -68,6 +70,7 @@ class HttpProvider(BaseProvider):
             body=body,
             params=params,
             proxies=proxies,
+            verify=verify,
             **kwargs,
         )
 
@@ -80,6 +83,7 @@ class HttpProvider(BaseProvider):
         params: dict = None,
         proxies: dict = None,
         fail_on_error: bool = True,
+        verify: bool = True,
         **kwargs: dict,
     ) -> dict:
         """
@@ -95,6 +99,9 @@ class HttpProvider(BaseProvider):
         if params is None:
             params = {}
 
+        extra_args = copy.deepcopy(kwargs)
+        extra_args.pop("enrich_alert", None)
+
         # todo: this might be problematic if params/body/headers contain sensitive data
         # think about changing those debug messages or adding a flag to enable/disable them
         self.logger.debug(
@@ -107,19 +114,39 @@ class HttpProvider(BaseProvider):
         )
         if method == "GET":
             response = requests.get(
-                url, headers=headers, params=params, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                params=params,
+                proxies=proxies,
+                verify=verify,
+                **extra_args,
             )
         elif method == "POST":
             response = requests.post(
-                url, headers=headers, json=body, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                json=body,
+                proxies=proxies,
+                verify=verify,
+                **extra_args,
             )
         elif method == "PUT":
             response = requests.put(
-                url, headers=headers, json=body, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                json=body,
+                proxies=proxies,
+                verify=verify,
+                **extra_args,
             )
         elif method == "DELETE":
             response = requests.delete(
-                url, headers=headers, json=body, proxies=proxies, **kwargs
+                url,
+                headers=headers,
+                json=body,
+                proxies=proxies,
+                verify=verify,
+                **extra_args,
             )
         else:
             raise Exception(f"Unsupported HTTP method: {method}")

@@ -101,7 +101,6 @@ export const AlertKnownKeys = [
   "ack_status",
   "deleted",
   "assignee",
-  "providerId",
   "checkbox",
   "alertMenu",
   "group",

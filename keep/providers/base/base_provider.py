@@ -174,6 +174,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Args:
             **kwargs (dict): The provider context (with statement)
         """
+        # TODO: pop enrich_event from kwargs to handle it more elegantly then in every provider (http, webhook, etc.)
         # trigger the provider
         results = self._notify(**kwargs)
         self.results.append(results)
