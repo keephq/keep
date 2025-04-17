@@ -40,7 +40,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -3679,20 +3679,22 @@ def get_incident_by_id(
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id, should_raise=True)
     with existed_or_new_session(session) as session:
-        query = session.query(
-            Incident,
-            AlertEnrichment,
-        ).outerjoin(
-            AlertEnrichment,
-            and_(
-                Incident.tenant_id == AlertEnrichment.tenant_id,
-                cast(col(Incident.id), String) == foreign(AlertEnrichment.alert_fingerprint),
-            ),
-        ).filter(
-            Incident.tenant_id == tenant_id,
-            Incident.id == incident_id,
+        query = (
+            select(Incident, AlertEnrichment)
+            .join(
+                AlertEnrichment,
+                and_(
+                    Incident.tenant_id == AlertEnrichment.tenant_id,
+                    cast(col(Incident.id), String) == AlertEnrichment.alert_fingerprint,
+                ),
+                isouter=True,
+            )
+            .where(Incident.tenant_id == tenant_id, Incident.id == incident_id)
+            .options(joinedload(Incident.merged_incidents))
         )
-        incident_with_enrichments = query.first()
+
+        incident_with_enrichments = session.exec(query).first()
+
         if incident_with_enrichments:
             incident, enrichments = incident_with_enrichments
             if with_alerts:

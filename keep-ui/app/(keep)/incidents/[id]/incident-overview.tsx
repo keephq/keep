@@ -5,15 +5,18 @@ import {
   type IncidentDto,
 } from "@/entities/incidents/model";
 import React, { useState } from "react";
-import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
+import {
+  useIncident,
+  useIncidentAlerts,
+  useIncidentsByIds,
+} from "@/utils/hooks/useIncidents";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronDown } from "react-icons/io5";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
-import { Badge, Callout, Icon, TextInput } from "@tremor/react";
+import { Badge, Callout } from "@tremor/react";
 import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
-import Modal from "@/components/ui/Modal";
 import { IncidentChangeStatusSelect } from "features/incidents/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -166,7 +169,7 @@ function Summary({
   );
 }
 
-function MergedCallout({
+function ThisIncidentMergedToCallout({
   merged_into_incident_id,
   className,
 }: {
@@ -193,6 +196,48 @@ function MergedCallout({
           >
             {getIncidentName(merged_incident)}
           </Link>
+        </div>
+      }
+      color="purple"
+      className={className}
+    />
+  );
+}
+
+function IncidentsMergedIntoThisOneCallout({
+  merged_incidents,
+  className,
+}: {
+  merged_incidents: string[];
+  className?: string;
+}) {
+  const incidents = useIncidentsByIds(merged_incidents);
+
+  if (!incidents) {
+    return null;
+  }
+
+  return (
+    <Callout
+      // @ts-ignore
+      title={
+        <div>
+          <p>Those incidents merged into this one:</p>
+          {incidents?.data?.map((incident: IncidentDto) => (
+            <Link
+              key={incident.id}
+              icon={() => (
+                <StatusIcon
+                  className="!p-0"
+                  status={incident.status}
+                  size="xs"
+                />
+              )}
+              href={`/incidents/${incident?.id}`}
+            >
+              {getIncidentName(incident)}
+            </Link>
+          )) || null}
         </div>
       }
       color="purple"
@@ -311,20 +356,16 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               alerts={alerts.items}
               incident={incident}
             />
-            {/* @tb: not sure how we use this, but leaving it here for now
-            {incident.user_summary && incident.generated_summary ? (
-              <Summary
-                title="AI version"
-                summary={incident.generated_summary}
-                collapsable={true}
-                alerts={alerts.items}
-                incident={incident}
-              />
-            ) : null} */}
             {incident.merged_into_incident_id && (
-              <MergedCallout
+              <ThisIncidentMergedToCallout
                 className="inline-block mt-2"
                 merged_into_incident_id={incident.merged_into_incident_id}
+              />
+            )}
+            {incident.merged_incidents?.length > 0 && (
+              <IncidentsMergedIntoThisOneCallout
+                className="inline-block mt-2"
+                merged_incidents={incident.merged_incidents}
               />
             )}
             <div className="mt-2">

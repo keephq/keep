@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Extra, Field, PrivateAttr, root_validator
 from sqlmodel import col, desc
+from sqlalchemy.orm.exc import DetachedInstanceError
 
 from keep.api.models.db.incident import Incident, IncidentSeverity, IncidentStatus
 from keep.api.models.db.rule import ResolveOn, Rule
@@ -73,6 +74,7 @@ class IncidentDto(IncidentDtoIn):
     merged_into_incident_id: UUID | None
     merged_by: str | None
     merged_at: datetime.datetime | None
+    merged_incidents: list[UUID] | None = []
 
     enrichments: dict | None = {}
     incident_type: str | None
@@ -158,6 +160,14 @@ class IncidentDto(IncidentDtoIn):
             else db_incident.severity
         )
 
+        # merged_incidents are joined only when needed
+        try:
+            merged_incidents = db_incident.merged_incidents or []
+            if isinstance(merged_incidents, list):
+                merged_incidents = [incident.id for incident in merged_incidents]
+        except DetachedInstanceError:
+            merged_incidents = None
+
         # some default value for resolve_on
         if not db_incident.resolve_on:
             db_incident.resolve_on = ResolveOn.ALL.value
@@ -193,6 +203,7 @@ class IncidentDto(IncidentDtoIn):
             rule_id=rule.id if rule else None,
             rule_name=rule.name if rule else None,
             rule_is_deleted=rule.is_deleted if rule else None,
+            merged_incidents=merged_incidents,
         )
 
         # This field is required for getting alerts when required

@@ -135,6 +135,27 @@ export const useIncidents = (
   };
 };
 
+export const useIncidentsByIds = (
+  incidentIds: string[],
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
+
+  return useSWR(
+    () =>
+      api.isReady() && incidentIds.length
+        ? incidentIds.map((id) => `/incidents/${id}`)
+        : null,
+    async (urls) => {
+      const results = await Promise.all(urls.map((url) => api.get(url)));
+      return results;
+    },
+    options
+  );
+};
+
 export const useIncidentAlerts = (
   incidentId: string,
   limit: number = 20,
