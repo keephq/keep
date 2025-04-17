@@ -165,12 +165,15 @@ class WorkflowManager:
                 )
             self.logger.info("Workflow added to run")
 
+    # @tb: should I move it to cel_utils.py?
+    # logging is easier here and I don't see other places who might use this >.<
     def _convert_filters_to_cel(self, filters: list[dict[str, str]]):
-        # Convert filters ({"key": "key", "value": "value"}) to CEL
+        # Convert filters ({"key": "key", "value": "value"}) and friends to CEL
         cel_filters = []
         for filter in filters:
             key = filter.get("key")
             value = filter.get("value")
+            exclude = filter.get("exclude", False)
 
             # malformed filter?
             if not key or not value:
@@ -189,20 +192,55 @@ class WorkflowManager:
                     for value_ in value_split:
                         value_ = value_.lstrip("(").rstrip(")").strip()
                         if key == "source":
-                            cel_regex.append(f'{key}.contains("{value_}")')
+                            if exclude:
+                                cel_regex.append(f'!{key}.contains("{value_}")')
+                            else:
+                                cel_regex.append(f'{key}.contains("{value_}")')
                         else:
-                            cel_regex.append(f'{key} == "{value_}"')
-                elif ".*" in value:
+                            if exclude:
+                                cel_regex.append(f'{key} != "{value_}"')
+                            else:
+                                cel_regex.append(f'{key} == "{value_}"')
+                elif value == ".*":
                     cel_regex.append(f"has({key})")
+                elif value == "^$":
+                    # empty string
+                    if exclude:
+                        cel_regex.append(f'{key} != ""')
+                    else:
+                        cel_regex.append(f'{key} == ""')
+                elif value.endswith(".*"):
+                    # for example: r"2025-01-30T09:.*"
+                    if exclude:
+                        cel_regex.append(f'!{key}.contains("{value[:-2]}")')
+                    else:
+                        cel_regex.append(f'{key}.contains("{value[:-2]}")')
                 else:
                     raise Exception(f"Unsupported regex: {value}")
-                cel_filters.append(" || ".join(cel_regex))
+                # if we're talking about excluded, we need to do AND between the regexes
+                # for example:
+                #   filters: [{"key": "source", "value": 'r"prometheus|grafana"', "exclude": true}]
+                #   cel: !source.contains("prometheus") && !source.contains("grafana")
+                # otherwise, we do OR between the regexes
+                # for example:
+                #   filters: [{"key": "source", "value": 'r"prometheus|grafana"'}]
+                #   cel: source.contains("prometheus") || source.contains("grafana")
+                if exclude:
+                    cel_filters.append(f"({' && '.join(cel_regex)})")
+                else:
+                    cel_filters.append(f"({' || '.join(cel_regex)})")
             else:
                 if key == "source":
                     # handle source, which is a list of sources
-                    cel_filters.append(f'{key}.contains("{value}")')
+                    if exclude:
+                        cel_filters.append(f'!{key}.contains("{value}")')
+                    else:
+                        cel_filters.append(f'{key}.contains("{value}")')
                 else:
-                    cel_filters.append(f'{key} == "{value}"')
+                    if exclude:
+                        cel_filters.append(f'{key} != "{value}"')
+                    else:
+                        cel_filters.append(f'{key} == "{value}"')
 
         self.logger.info(
             "Converted filters to CEL",
@@ -280,6 +318,8 @@ class WorkflowManager:
                                 "trigger": trigger,
                                 "workflow_id": workflow_model.id,
                                 "tenant_id": tenant_id,
+                                "cel": trigger["cel"],
+                                "deprecated_filters": trigger["filters"],
                             },
                         )
                         continue
@@ -291,6 +331,8 @@ class WorkflowManager:
                                 "triggers": workflow.workflow_triggers,
                                 "workflow_id": workflow_model.id,
                                 "tenant_id": tenant_id,
+                                "cel": trigger["cel"],
+                                "deprecated_filters": trigger["filters"],
                             },
                         )
                         continue
