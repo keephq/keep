@@ -9,6 +9,7 @@ import celpy.c7nlib
 import celpy.celparser
 import celpy.celtypes
 import celpy.evaluation
+from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import Session
 
 from keep.api.bl.incidents_bl import IncidentBl
@@ -155,6 +156,23 @@ class RulesEngine:
                                         )
 
                                 send_created_event = incident.is_visible
+
+                            incident_id = incident
+                            # Incident might change till this moment
+                            for attempt in range(3):
+                                try:
+                                    session.add(incident)
+                                    session.commit()
+                                    break
+                                except StaleDataError as ex:
+                                    if "expected to update" in ex.args[0]:
+                                        self.logger.info(
+                                            f"Race condition met while updating incident `{incident_id}`, retry #{attempt}"
+                                        )
+                                        session.rollback()
+                                        continue
+                                    else:
+                                        raise
 
                             incident = IncidentBl(
                                 self.tenant_id, session
