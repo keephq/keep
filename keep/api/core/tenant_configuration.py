@@ -38,10 +38,9 @@ class TenantConfiguration:
                 updated_configurations = self._load_tenant_configurations()
                 if updated_configurations:
                     self.configurations = updated_configurations
+                    self.logger.info("Tenants configurations reloaded")
                 else:
                     self.logger.warning("No tenants configurations found in db, maybe error")
-
-                self.logger.info("Tenants configurations reloaded")
 
         def get_configuration(self, tenant_id, config_name=None):
             self._reload_if_needed()
