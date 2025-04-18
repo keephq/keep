@@ -161,7 +161,7 @@ class AlertDto(BaseModel):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)
             url = f"https://{url}"
-        return urllib.parse.quote(url, safe="/:?=&")
+        return urllib.parse.quote(url, safe=":/%#?=@&;+!")
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
