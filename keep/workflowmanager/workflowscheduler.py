@@ -662,7 +662,7 @@ class WorkflowScheduler:
                 self._handle_event_workflows()
                 if runs % RUN_TIMEOUT_CHECKS_EVERY == 0:
                     self._timeout_workflows()
-            except Exception as ex:
+            except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
                 self.logger.error("Error getting workflows that should run")
