@@ -2190,7 +2190,6 @@ def get_incident_for_grouping_rule(
         ]:
             is_incident_expired = True
         elif incident and incident.alerts_count > 0:
-            enrich_incidents_with_alerts(tenant_id, [incident], session)
             is_incident_expired = max(
                 alert.timestamp for alert in incident._alerts
             ) < datetime.utcnow() - timedelta(seconds=rule.timeframe)
@@ -2198,6 +2197,8 @@ def get_incident_for_grouping_rule(
         # if there is no incident with the rule_fingerprint, create it or existed is already expired
         if not incident:
             return None, None
+
+    enrich_incidents_with_alerts(tenant_id, [incident], session)
 
     return incident, is_incident_expired
 
