@@ -781,7 +781,7 @@ def process_event(
 def __save_error_alerts(
     tenant_id,
     provider_type,
-    raw_events: dict | list[dict] | list[AlertDto] | None,
+    raw_events: dict | list[dict] | list[AlertDto] | AlertDto | None,
     error_message: str,
 ):
     if not raw_events:
@@ -798,8 +798,8 @@ def __save_error_alerts(
         session = get_session_sync()
 
         # Convert to list if single dict
-        if isinstance(raw_events, dict):
-            logger.info("Converting single dict to list")
+        if not isinstance(raw_events, list):
+            logger.info("Converting single dict or AlertDto to list")
             raw_events = [raw_events]
 
         logger.info(f"Saving {len(raw_events)} error alerts")
