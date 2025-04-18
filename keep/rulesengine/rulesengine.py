@@ -157,7 +157,9 @@ class RulesEngine:
 
                                 send_created_event = incident.is_visible
 
-                            incident_id = incident
+                            # If we try to access incident.id inside except block, it will try to refresh
+                            # instance and raises PendingRollback error
+                            incident_id = incident.id
                             # Incident might change till this moment
                             for attempt in range(3):
                                 try:
