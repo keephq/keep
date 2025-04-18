@@ -8,6 +8,7 @@ import os
 
 import pydantic
 import requests
+from pydantic.networks import AnyHttpUrl
 from requests.auth import HTTPBasicAuth
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
@@ -18,7 +19,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class PrometheusProviderAuthConfig:
-    url: pydantic.AnyHttpUrl = dataclasses.field(
+    url: AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Prometheus server URL",
@@ -39,6 +40,14 @@ class PrometheusProviderAuthConfig:
             "sensitive": True,
         },
         default="",
+    )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+        },
+        default=True,
     )
 
 
@@ -133,6 +142,7 @@ receivers:
                 and self.authentication_config.password
                 else None
             ),
+            verify=self.authentication_config.verify,
         )
 
         if response.status_code != 200:
@@ -149,6 +159,7 @@ receivers:
         response = requests.get(
             f"{self.authentication_config.url}/api/v1/alerts",
             auth=auth,
+            verify=self.authentication_config.verify,
         )
         response.raise_for_status()
         if not response.ok:
@@ -283,6 +294,7 @@ if __name__ == "__main__":
             "url": os.environ.get("PROMETHEUS_URL"),
             "username": os.environ.get("PROMETHEUS_USER"),
             "password": os.environ.get("PROMETHEUS_PASSWORD"),
+            "verify": os.environ.get("PROMETHEUS_VERIFY", "True").lower() == "true",
         }
     )
     context_manager = ContextManager(
