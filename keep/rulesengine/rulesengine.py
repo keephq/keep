@@ -160,9 +160,14 @@ class RulesEngine:
                             # If we try to access incident.id inside except block, it will try to refresh
                             # instance and raises PendingRollback error
                             incident_id = incident.id
-                            # Incident might change till this moment
+
+                            # Incident instance might change till this moment (set visible for example),
+                            # so we need to commit changes
+                            # Otherwise sqlalchemy might try to do this in unpredictable moment
                             for attempt in range(3):
                                 try:
+                                    # Explicitly add incident, but it most likely already there, since it was loaded in
+                                    # same session
                                     session.add(incident)
                                     session.commit()
                                     break
