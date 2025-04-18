@@ -8,7 +8,6 @@ import os
 
 import pydantic
 import requests
-from pydantic.networks import AnyHttpUrl
 from requests.auth import HTTPBasicAuth
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
@@ -19,7 +18,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class PrometheusProviderAuthConfig:
-    url: AnyHttpUrl = dataclasses.field(
+    url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Prometheus server URL",
