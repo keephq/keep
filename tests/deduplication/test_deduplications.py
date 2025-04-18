@@ -10,8 +10,8 @@ from sqlalchemy import text
 
 from keep.api.core.db import get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import DeduplicationRuleDto, AlertStatus
-from keep.api.models.db.alert import AlertDeduplicationRule, AlertDeduplicationEvent, Alert
+from keep.api.models.alert import AlertStatus
+from keep.api.models.db.alert import Alert, AlertDeduplicationRule
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.providers.providers_factory import ProvidersFactory
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
@@ -857,7 +857,9 @@ def test_full_deduplication_last_received(db_session, create_alert):
     db_session.exec(text("DELETE FROM alertdeduplicationrule"))
     dedup = AlertDeduplicationRule(
         name="Test Rule",
-        fingerprint_fields=["service",],
+        fingerprint_fields=[
+            "service",
+        ],
         full_deduplication=True,
         ignore_fields=["fingerprint", "lastReceived", "id"],
         is_provisioned=True,
@@ -879,30 +881,30 @@ def test_full_deduplication_last_received(db_session, create_alert):
         None,
         AlertStatus.FIRING,
         dt1,
-        {
-            "source": ["keep"],
-            "service": "service"
-        },
+        {"source": ["keep"], "service": "service"},
     )
 
     assert db_session.query(Alert).count() == 1
     alerts = get_last_alerts(SINGLE_TENANT_UUID)
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
 
-    assert alerts_dto[0].lastReceived == dt1.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    assert (
+        alerts_dto[0].lastReceived
+        == dt1.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    )
 
     create_alert(
         None,
         AlertStatus.FIRING,
         dt2,
-        {
-            "source": ["keep"],
-            "service": "service"
-        },
+        {"source": ["keep"], "service": "service"},
     )
 
     assert db_session.query(Alert).count() == 1
     alerts = get_last_alerts(SINGLE_TENANT_UUID)
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
 
-    assert alerts_dto[0].lastReceived == dt2.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    assert (
+        alerts_dto[0].lastReceived
+        == dt2.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    )
