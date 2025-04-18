@@ -166,7 +166,7 @@ class RulesEngine:
                                     break
                                 except StaleDataError as ex:
                                     if "expected to update" in ex.args[0]:
-                                        self.logger.info(
+                                        self.logger.warning(
                                             f"Race condition met while updating incident `{incident_id}`, retry #{attempt}"
                                         )
                                         session.rollback()
