@@ -28,15 +28,21 @@ export function useTopologySearchContext() {
   return context;
 }
 
-export const TopologySearchProvider: React.FC<{
+type TopologySearchProviderProps = {
   children: React.ReactNode;
-}> = ({ children }) => {
+  initialSelectedApplicationIds?: string[];
+};
+
+export const TopologySearchProvider: React.FC<TopologySearchProviderProps> = ({
+  children,
+  initialSelectedApplicationIds = [],
+}) => {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null
   );
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<
     string[]
-  >([]);
+  >(initialSelectedApplicationIds);
 
   return (
     <TopologySearchContext.Provider

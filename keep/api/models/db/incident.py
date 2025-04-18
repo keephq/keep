@@ -128,6 +128,7 @@ class Incident(SQLModel, table=True):
     incident_type: str = Field(default=IncidentType.MANUAL.value)
     # for topology incidents
     incident_application: UUID | None = Field(default=None)
+
     resolve_on: str = ResolveOn.ALL.value
 
     same_incident_in_the_past_id: UUID | None = Field(

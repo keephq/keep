@@ -1,10 +1,15 @@
+import csv
+import hashlib
+import io
 import json
 import logging
-from typing import List, Optional
+import uuid
+from collections import defaultdict, deque
+from typing import Dict, List, Optional, Set
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import and_, or_, exists
+from sqlalchemy import and_, exists, insert, or_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
@@ -15,13 +20,13 @@ from keep.api.models.db.topology import (
     TopologyApplicationDtoOut,
     TopologyService,
     TopologyServiceApplication,
-    TopologyServiceDependency,
-    TopologyServiceDtoOut,
     TopologyServiceCreateRequestDTO,
-    TopologyServiceUpdateRequestDTO,
+    TopologyServiceDependency,
     TopologyServiceDependencyCreateRequestDto,
-    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDependencyDto,
+    TopologyServiceDependencyUpdateRequestDto,
+    TopologyServiceDtoOut,
+    TopologyServiceUpdateRequestDTO,
     TopologyServiceYAML,
 )
 
@@ -170,15 +175,28 @@ class TopologiesService:
         service_ids = [service.id for service in services if service.id is not None]
         service_to_app_ids = get_service_application_ids_dict(session, service_ids)
 
-        logger.info(f"Service to app ids: {service_to_app_ids}")
-
-        service_dtos = [
-            TopologyServiceDtoOut.from_orm(
-                service, application_ids=service_to_app_ids.get(service.id, [])
-            )
-            for service in services
-            if service.dependencies or include_empty_deps
-        ]
+        logger.info("Service to app ids")
+        service_dtos = []
+        for service in services:
+            if include_empty_deps or service.dependencies:
+                try:
+                    service_dto = [
+                        TopologyServiceDtoOut.from_orm(
+                            service,
+                            application_ids=service_to_app_ids.get(service.id, []),
+                        )
+                    ]
+                    service_dtos.extend(service_dto)
+                except Exception:
+                    logger.exception(
+                        "Failed to parse service with id",
+                        extra={
+                            "service_id": service.id,
+                        },
+                    )
+                    raise ApplicationParseException(
+                        f"Failed to parse service with id {service.id}"
+                    )
 
         return service_dtos
 
@@ -472,18 +490,28 @@ class TopologiesService:
         tenant_id: str,
         session: Session,
     ) -> None:
-        """Creates multiple services in a single transaction without returning them."""
+        """Creates multiple services in a single transaction using modern bulk insert."""
 
         try:
-            for service in services:
-                db_service = TopologyService(**service.dict(), tenant_id=tenant_id)
-                session.add(db_service)
+            # Convert all services to dictionaries at once
+            service_dicts = [
+                {**service.dict(), "tenant_id": tenant_id} for service in services
+            ]
+
+            # Use modern SQLAlchemy 2.0 bulk insert approach
+            logger.info(f"Bulk inserting {len(service_dicts)} services")
+            import logging
+
+            logging.basicConfig()
+            logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
+            session.execute(insert(TopologyService), service_dicts)
 
             session.commit()
+            logger.info(f"Successfully inserted {len(service_dicts)} services")
 
         except Exception as e:
             session.rollback()
-            logger.error(f"Error while creating services: {e}")
+            logger.error(f"Error while bulk creating services: {e}")
             raise e
         finally:
             session.close()
@@ -715,33 +743,37 @@ class TopologiesService:
                     TopologyService.tenant_id == tenant_id
                 )
             ).delete(synchronize_session=False)
-    
+
             # Delete all service-application links for this tenant
             session.query(TopologyServiceApplication).filter(
                 TopologyServiceApplication.service.has(
                     TopologyService.tenant_id == tenant_id
                 )
             ).delete(synchronize_session=False)
-    
+
             # Delete all applications for this tenant
             session.query(TopologyApplication).filter(
                 TopologyApplication.tenant_id == tenant_id
             ).delete(synchronize_session=False)
-    
+
             # Delete all services for this tenant
             session.query(TopologyService).filter(
                 TopologyService.tenant_id == tenant_id
             ).delete(synchronize_session=False)
-    
+
             session.commit()
         except Exception as e:
             session.rollback()
             logger.error(f"Error during cleanup before import: {e}")
             raise e
-        
 
     @staticmethod
-    def import_to_db(topology_data: dict, session: Session, tenant_id: str):
+    def import_to_db(
+        topology_data: dict,
+        session: Session,
+        tenant_id: str,
+        correlation_settings: Optional[Dict] = None,
+    ):
         all_services: list[TopologyServiceYAML] = []
         all_applications: list[TopologyApplicationDtoIn] = []
         all_dependencies: list[TopologyServiceDependencyCreateRequestDto] = []
@@ -763,18 +795,24 @@ class TopologiesService:
                     TopologyServiceDependencyCreateRequestDto(**dependency)
                 )
 
+            # First create services
+            logger.info(f"Creating {len(all_services)} services")
             TopologiesService.create_services(
                 services=all_services,
                 tenant_id=tenant_id,
                 session=session,
             )
 
+            # Then create specified applications
+            logger.info(f"Creating {len(all_applications)} applications")
             TopologiesService.create_applications_by_tenant_id(
                 tenant_id=tenant_id,
                 applications=all_applications,
                 session=session,
             )
 
+            # And dependencies
+            logger.info(f"Creating {len(all_dependencies)} dependencies")
             TopologiesService.create_dependencies(
                 dependencies=all_dependencies,
                 tenant_id=tenant_id,
@@ -782,7 +820,439 @@ class TopologiesService:
                 enforce_manual=False,
             )
 
+            logger.info(f"Successfully imported topology for tenant {tenant_id}")
+
         except Exception as e:
             logger.error(f"Error while importing topology: {e}")
             session.rollback()
             raise e
+
+    @staticmethod
+    def _process_csv_to_topology(
+        csv_content: bytes,
+        field_mapping: Dict,
+        topology_name: Optional[str] = None,
+        correlation_settings: Optional[Dict] = None,
+    ) -> Dict:
+        """
+        Process CSV content into topology data structure.
+
+        Args:
+            csv_content: CSV file content
+            field_mapping: Mapping of CSV columns to topology fields
+            topology_name: Optional name for the topology
+            correlation_settings: Optional settings for auto-correlation of services
+
+        Returns:
+            Dictionary with services, applications, and dependencies
+        """
+        # Convert bytes to string and parse CSV
+        csv_text = csv_content.decode("utf-8")
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+
+        # Create data structures for topology
+        services_map = {}  # Maps service name to service id
+        services = []
+        applications_map = {}  # Maps application name to set of service ids
+        dependencies = []
+
+        # Extract required field names from mapping
+        service_field = field_mapping.get("service")
+        depends_on_field = field_mapping.get("dependsOn")
+        display_name_field = field_mapping.get("displayName")
+        environment_field = field_mapping.get("environment")
+        description_field = field_mapping.get("description")
+        application_field = field_mapping.get("application")
+        protocol_field = field_mapping.get("protocol")
+        team_field = field_mapping.get("team")
+        email_field = field_mapping.get("email")
+        slack_field = field_mapping.get("slack")
+        category_field = field_mapping.get("category")
+
+        # Validate required fields
+        if not service_field or not depends_on_field:
+            raise ValueError("Service and Dependencies fields must be mapped")
+
+        # Process CSV rows
+        for row_index, row in enumerate(csv_reader):
+            source_service = row.get(service_field, "").strip()
+            target_service = row.get(depends_on_field, "").strip()
+
+            if not source_service or not target_service:
+                continue  # Skip rows with missing service data
+
+            # Process source service
+            if source_service not in services_map:
+                service_id = len(services) + 1  # Generate simple sequential ID
+                services_map[source_service] = service_id
+
+                # Create service object
+                service = {
+                    "id": service_id,
+                    "service": source_service,
+                    "display_name": (
+                        row.get(display_name_field, source_service).strip()
+                        if display_name_field
+                        else source_service
+                    ),
+                    "environment": (
+                        row.get(environment_field, "production").strip()
+                        if environment_field
+                        else "production"
+                    ),
+                    "description": (
+                        row.get(description_field, "").strip()
+                        if description_field
+                        else ""
+                    ),
+                    "is_manual": True,
+                }
+
+                # Add optional fields if they exist in the mapping
+                if team_field and row.get(team_field):
+                    service["team"] = row.get(team_field).strip()
+                if email_field and row.get(email_field):
+                    service["email"] = row.get(email_field).strip()
+                if slack_field and row.get(slack_field):
+                    service["slack"] = row.get(slack_field).strip()
+                if category_field and row.get(category_field):
+                    service["category"] = row.get(category_field).strip()
+
+                services.append(service)
+
+            # Process target service
+            if target_service not in services_map:
+                service_id = len(services) + 1  # Generate simple sequential ID
+                services_map[target_service] = service_id
+
+                # Create service object with minimal information
+                service = {
+                    "id": service_id,
+                    "service": target_service,
+                    "display_name": target_service,
+                    "environment": "production",
+                    "description": "",
+                    "is_manual": True,
+                }
+                services.append(service)
+
+            # Create dependency
+            dependency = {
+                "service_id": services_map[source_service],
+                "depends_on_service_id": services_map[target_service],
+                "protocol": (
+                    row.get(protocol_field, "HTTP").strip()
+                    if protocol_field
+                    else "HTTP"
+                ),
+            }
+            if dependency not in dependencies:
+                dependencies.append(dependency)
+            else:
+                logger.debug(f"Duplicate dependency found: {dependency}, skipping it.")
+
+            # Process applications if field is mapped
+            if application_field and row.get(application_field):
+                apps = [
+                    app.strip()
+                    for app in row.get(application_field, "").split(",")
+                    if app.strip()
+                ]
+                for app_name in apps:
+                    if app_name not in applications_map:
+                        applications_map[app_name] = set()
+                    # Add both source and target services to the application
+                    applications_map[app_name].add(services_map[source_service])
+                    applications_map[app_name].add(services_map[target_service])
+
+        # Create applications list with proper UUID IDs
+        applications = []
+        for app_name, service_ids in applications_map.items():
+            # Generate proper UUID for application
+            application_id = uuid.uuid4()
+
+            application = {
+                "id": str(application_id),  # Use UUID as string
+                "name": app_name,
+                "description": f"Application: {app_name}",
+                "services": list(service_ids),
+            }
+            applications.append(application)
+
+        # If no application mapping field is provided or no applications were found,
+        # and correlation settings are provided, generate auto-correlated applications
+        if (
+            (not application_field or not applications)
+            and correlation_settings
+            and "depth" in correlation_settings
+        ):
+            # Build dependency graph for auto-correlation
+            dependency_graph = {}
+
+            # Create graph from services and dependencies
+            for service in services:
+                service_name = service["service"]
+                if service_name not in dependency_graph:
+                    dependency_graph[service_name] = set()
+
+            for dependency in dependencies:
+                source_id = dependency["service_id"]
+                target_id = dependency["depends_on_service_id"]
+
+                # Get service names from ids
+                source_name = next(
+                    (s["service"] for s in services if s["id"] == source_id), None
+                )
+                target_name = next(
+                    (s["service"] for s in services if s["id"] == target_id), None
+                )
+
+                if source_name and target_name:
+                    # Add bidirectional edges
+                    if source_name not in dependency_graph:
+                        dependency_graph[source_name] = set()
+                    if target_name not in dependency_graph:
+                        dependency_graph[target_name] = set()
+
+                    dependency_graph[source_name].add(target_name)
+                    dependency_graph[target_name].add(source_name)
+
+            # Get correlation depth from settings
+            correlation_depth = correlation_settings.get("depth", 5)
+
+            # Find correlated service groups
+            correlated_groups = TopologiesService._find_correlated_service_groups(
+                dependency_graph, list(dependency_graph.keys()), correlation_depth
+            )
+
+            # Create applications for correlated groups
+            for group_idx, service_group in enumerate(correlated_groups):
+                # Generate a stable identifier for this service group
+                sorted_services = sorted(service_group)
+                interconnectivity_id = TopologiesService._generate_interconnectivity_id(
+                    sorted_services
+                )
+
+                # Check if group services have IDs in our mapping
+                group_service_ids = []
+                for service_name in service_group:
+                    if service_name in services_map:
+                        group_service_ids.append(services_map[service_name])
+
+                # Create application only if we have service IDs
+                if group_service_ids:
+                    # trim the services because they can be many services
+                    services_desc = ", ".join(sorted_services[:3])
+                    if len(sorted_services) > 3:
+                        services_desc += f" and {len(sorted_services) - 3} more"
+                    # Create application with a unique ID
+                    description = f"Auto-generated application representing {len(sorted_services)} interconnected services: {services_desc}"
+                    application = {
+                        "id": interconnectivity_id,
+                        "name": f"Auto-Correlated Services {group_idx+1}",
+                        "description": description,
+                        "services": group_service_ids,
+                    }
+                    applications.append(application)
+
+        # Create the final topology data
+        topology_data = {
+            "name": topology_name or "Imported Topology",
+            "services": services,
+            "applications": applications,
+            "dependencies": dependencies,
+        }
+
+        return topology_data
+
+    @staticmethod
+    def import_from_csv(
+        csv_content: bytes,
+        field_mapping: Dict,
+        tenant_id: str,
+        session: Session,
+        topology_name: Optional[str] = None,
+        correlation_settings: Optional[Dict] = None,
+    ):
+        """
+        Import topology data from CSV content.
+
+        Args:
+            csv_content: Raw CSV file content
+            field_mapping: Mapping between CSV columns and topology fields
+            tenant_id: Tenant ID for which to import the topology
+            session: Database session
+            topology_name: Optional name for the topology
+            correlation_settings: Optional settings for auto-correlation of services
+        """
+        try:
+            # Process CSV to topology data structure
+            topology_data = TopologiesService._process_csv_to_topology(
+                csv_content, field_mapping, topology_name, correlation_settings
+            )
+
+            # Import processed data to the database
+            TopologiesService.import_to_db(
+                topology_data,
+                session,
+                tenant_id,
+                None,  # No need to pass correlation_settings here since auto-correlation is done in _process_csv_to_topology
+            )
+
+        except Exception as e:
+            logger.error(f"Error during CSV import: {e}")
+            session.rollback()
+            raise e
+
+    @staticmethod
+    def _build_dependency_graph(
+        topology_data: List[TopologyServiceDtoOut],
+    ) -> Dict[str, Set[str]]:
+        """
+        Build a graph representation of service dependencies.
+        Returns a dict where keys are service names and values are sets of dependent services.
+        """
+        graph = defaultdict(set)
+
+        # Map service IDs to service names for lookup
+        service_id_to_name = {}
+
+        for service in topology_data:
+            service_id_to_name[str(service.id)] = service.service
+            # Initialize entry for this service (even if it has no dependencies)
+            if service.service not in graph:
+                graph[service.service] = set()
+
+        # Add dependencies to the graph
+        for service in topology_data:
+            source_service_name = service.service
+
+            # Skip if service has no dependencies attribute or it's None
+            if not hasattr(service, "dependencies") or service.dependencies is None:
+                continue
+
+            # Process each dependency
+            for dependency in service.dependencies:
+                # Skip null dependencies
+                if dependency is None:
+                    continue
+
+                # Skip if dependency doesn't have required attributes
+                if not hasattr(dependency, "serviceId") or not hasattr(
+                    dependency, "serviceName"
+                ):
+                    continue
+
+                # The source service is the current service
+                # The destination service is identified by the dependency.serviceId
+                dest_service_id = str(dependency.serviceId)
+
+                # Look up the destination service name
+                if dest_service_id in service_id_to_name:
+                    dest_service_name = service_id_to_name[dest_service_id]
+
+                    # Add bidirectional edges
+                    graph[source_service_name].add(dest_service_name)
+                    graph[dest_service_name].add(source_service_name)
+                else:
+                    # Use serviceName as fallback
+                    graph[source_service_name].add(dependency.serviceName)
+                    graph[dependency.serviceName].add(source_service_name)
+
+        return graph
+
+    @staticmethod
+    def _find_correlated_service_groups(
+        dependency_graph: Dict[str, Set[str]],
+        services_list: List[str],
+        max_depth: int,
+    ) -> List[Set[str]]:
+        """
+        Find connected components (groups of services connected within max_depth).
+        Each service will appear in only one group.
+        """
+        visited = set()
+        correlated_groups = []
+
+        for service in services_list:
+            if service in visited:
+                continue
+
+            # Start a new group
+            group = set()
+            queue = deque([(service, 0)])  # (service, depth)
+            visited.add(service)
+            group.add(service)
+
+            # BFS within max_depth
+            while queue:
+                current, depth = queue.popleft()
+
+                if depth >= max_depth:
+                    continue
+
+                for neighbor in dependency_graph.get(current, set()):
+                    if neighbor not in visited and neighbor in services_list:
+                        visited.add(neighbor)
+                        group.add(neighbor)
+                        queue.append((neighbor, depth + 1))
+
+            correlated_groups.append(group)
+
+        return correlated_groups
+
+    @staticmethod
+    def _find_connected_services(
+        graph: Dict[str, Set[str]],
+        start_service: str,
+        max_depth: int,
+        services_list: List[str],
+    ) -> Set[str]:
+        """
+        BFS to find all services connected to start_service within max_depth.
+        """
+        connected = {start_service}
+        queue = deque([(start_service, 0)])  # (service, depth)
+        visited = {start_service}
+
+        while queue:
+            current, depth = queue.popleft()
+
+            # If we reached max depth, don't explore further
+            if depth >= max_depth:
+                continue
+
+            for neighbor in graph.get(current, set()):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+
+                    # Only include services in the allowed list
+                    if neighbor in services_list:
+                        connected.add(neighbor)
+
+                    # Enqueue neighbor for further exploration
+                    queue.append((neighbor, depth + 1))
+
+        return connected
+
+    @staticmethod
+    def _generate_interconnectivity_id(service_group: List[str]) -> str:
+        """
+        Generate a stable identifier for a group of interconnected services.
+        This ensures that the same services will always get the same ID.
+
+        Args:
+            service_group: A list of service names
+
+        Returns:
+            A string UUID representation for the service group
+        """
+        # Sort to ensure consistent ordering
+        sorted_services = sorted(service_group)
+        # Join with a delimiter that won't appear in service names
+        service_string = "|".join(sorted_services)
+        # Use a hash function for a shorter representation
+        # We need to make it a proper UUID
+        md5_hash = hashlib.md5(service_string.encode()).hexdigest()
+        # Format as UUID - take first 32 chars and insert hyphens
+        return f"{md5_hash[:8]}-{md5_hash[8:12]}-{md5_hash[12:16]}-{md5_hash[16:20]}-{md5_hash[20:32]}"

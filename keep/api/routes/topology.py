@@ -1,26 +1,31 @@
+import json
 import logging
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from fastapi.responses import JSONResponse
+from pydantic.v1 import BaseModel
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import get_session, get_session_sync
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.db.topology import (
+    DeleteServicesRequest,
     TopologyApplicationDtoIn,
     TopologyApplicationDtoOut,
+    TopologyService,
+    TopologyServiceCreateRequestDTO,
+    TopologyServiceDependencyCreateRequestDto,
+    TopologyServiceDependencyDto,
+    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDtoIn,
     TopologyServiceDtoOut,
-    TopologyServiceCreateRequestDTO,
     TopologyServiceUpdateRequestDTO,
-    TopologyServiceDependencyCreateRequestDto,
-    TopologyServiceDependencyUpdateRequestDto,
-    TopologyServiceDependencyDto,
-    TopologyService,
-    DeleteServicesRequest,
 )
 from keep.api.tasks.process_topology_task import process_topology
+from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
@@ -28,16 +33,135 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import (
     ApplicationNotFoundException,
     ApplicationParseException,
+    DependencyNotFoundException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
-    TopologiesService,
-    DependencyNotFoundException,
     ServiceNotManualException,
+    TopologiesService,
 )
-from keep.functions import cyaml
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# Add new model for topology processor settings
+class TopologyProcessorSettings(BaseModel):
+    enabled: bool
+    lookBackWindow: int
+    global_enabled: bool
+    minimum_services: int
+
+
+# GET topology processor settings
+@router.get(
+    "/settings",
+    description="Get the topology processor settings",
+    response_model=TopologyProcessorSettings,
+)
+def get_topology_processor_settings(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:topology"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting topology processor settings", extra={"tenant_id": tenant_id})
+
+    # Get default values from environment variables
+    global_enabled = (
+        config("KEEP_TOPOLOGY_PROCESSOR", default="false").lower() == "true"
+    )
+    default_look_back_window = config(
+        "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
+    )
+    default_minimum_services = config(
+        "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
+    )
+
+    tenant_config_client = TenantConfiguration()
+    tenant_config = tenant_config_client.get_configuration(
+        tenant_id, "topology_processor"
+    )
+    if tenant_config:
+        enabled = tenant_config.get("enabled", global_enabled)
+        look_back_window = tenant_config.get("lookBackWindow", default_look_back_window)
+        minimum_services = tenant_config.get(
+            "minimum_services", default_minimum_services
+        )
+        return TopologyProcessorSettings(
+            enabled=enabled,
+            lookBackWindow=look_back_window,
+            global_enabled=global_enabled,
+            minimum_services=minimum_services,
+        )
+
+    # For now, return the default values
+    return TopologyProcessorSettings(
+        enabled=False,  # if no tenant config, default to false
+        lookBackWindow=default_look_back_window,
+        global_enabled=global_enabled,
+        minimum_services=default_minimum_services,
+    )
+
+
+# PUT topology processor settings
+@router.put(
+    "/settings",
+    description="Update the topology processor settings",
+    response_model=TopologyProcessorSettings,
+)
+def update_topology_processor_settings(
+    settings: TopologyProcessorSettings,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:topology"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Updating topology processor settings",
+        extra={
+            "tenant_id": tenant_id,
+            "settings": settings.dict(),
+        },
+    )
+
+    # Validate settings
+    if settings.lookBackWindow < 1:
+        raise HTTPException(
+            status_code=400, detail="Look back window must be a positive number"
+        )
+
+    if settings.minimum_services < 2:
+        raise HTTPException(
+            status_code=400, detail="Minimum services must be at least 2"
+        )
+
+    # Get global enabled status
+    global_enabled = (
+        config("KEEP_TOPOLOGY_PROCESSOR", default="false").lower() == "true"
+    )
+
+    tenant_config_client = TenantConfiguration()
+    tenant_config = tenant_config_client.get_configuration(tenant_id)
+    if not tenant_config:
+        tenant_config = {}
+    # Update the settings in the tenant configuration
+    tenant_config["topology_processor"] = {
+        "enabled": settings.enabled,
+        "lookBackWindow": settings.lookBackWindow,
+        "minimum_services": settings.minimum_services,
+    }
+    tenant_config_client.update_configuration(
+        tenant_id=tenant_id,
+        configuration=tenant_config,
+    )
+
+    # Return settings with current global_enabled status
+    return TopologyProcessorSettings(
+        enabled=settings.enabled,
+        lookBackWindow=settings.lookBackWindow,
+        global_enabled=global_enabled,
+        minimum_services=settings.minimum_services,
+    )
 
 
 # GET all topology data
@@ -475,14 +599,18 @@ async def export_topology_yaml(
         services_dict = data.model_dump()
         del services_dict["updated_at"]
         del services_dict["tenant_id"]
-        services_dict["is_manual"] = True if services_dict["is_manual"] is True else False
+        services_dict["is_manual"] = (
+            True if services_dict["is_manual"] is True else False
+        )
         full_data["services"].append(services_dict)
         for application in data.applications:
             application_dict = application.model_dump()
             del application_dict["tenant_id"]
             application_dict["id"] = str(application_dict["id"])
             if application_dict["id"] in full_data["applications"]:
-                full_data["applications"][application_dict["id"]]["services"].append(data.id)
+                full_data["applications"][application_dict["id"]]["services"].append(
+                    data.id
+                )
             else:
                 application_dict["services"] = [data.id]
                 full_data["applications"][application_dict["id"]] = application_dict
@@ -498,10 +626,14 @@ async def export_topology_yaml(
 
 @router.post(
     "/import",
-    description="Import the topology map from YAML",
+    description="Import topology data from YAML or CSV file",
 )
-async def import_topology_yaml(
+async def import_topology(
     file: UploadFile,
+    format: str = Form("yaml"),  # Default format is yaml
+    name: Optional[str] = Form(None),  # Optional topology name
+    mapping: Optional[str] = Form(None),  # Field mapping for CSV
+    correlation_settings: Optional[str] = Form(None),  # Correlation settings
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
     ),
@@ -509,18 +641,92 @@ async def import_topology_yaml(
 ):
     try:
         tenant_id = authenticated_entity.tenant_id
-        topology_yaml = await file.read()
-        topology_data: dict = cyaml.safe_load(topology_yaml)
-        TopologiesService.import_to_db(topology_data, session, tenant_id)
-        return JSONResponse(
-            status_code=200, content={"message": "Topology imported successfully"}
+        file_content = await file.read()
+
+        # Parse correlation settings if provided
+        corr_settings = {}
+        if correlation_settings:
+            try:
+                corr_settings = json.loads(correlation_settings)
+                # Validate depth setting
+                if "depth" in corr_settings and (
+                    not isinstance(corr_settings["depth"], int)
+                    or corr_settings["depth"] < 1
+                ):
+                    raise ValueError("Correlation depth must be a positive integer")
+            except json.JSONDecodeError:
+                logger.warning("Invalid correlation settings format, using defaults")
+                corr_settings = {}
+
+        # Get the tenant's minimum_services setting to include it in correlation settings
+        tenant_config_client = TenantConfiguration()
+        tenant_config = tenant_config_client.get_configuration(
+            tenant_id, "topology_processor"
         )
+        default_minimum_services = config(
+            "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
+        )
+        minimum_services = default_minimum_services
+        if tenant_config:
+            minimum_services = tenant_config.get(
+                "minimum_services", default_minimum_services
+            )
+
+        # Add minimum_services to correlation settings
+        corr_settings["minimum_services"] = minimum_services
+
+        if format.lower() == "yaml":
+            # Process YAML file
+            topology_data: dict = cyaml.safe_load(file_content)
+            # For YAML imports, only pass the correlation_settings if it's a direct file import without applications
+            if not topology_data.get("applications") and "depth" in corr_settings:
+                TopologiesService.import_to_db(
+                    topology_data, session, tenant_id, corr_settings
+                )
+            else:
+                TopologiesService.import_to_db(topology_data, session, tenant_id, None)
+            return JSONResponse(
+                status_code=200, content={"message": "Topology imported successfully"}
+            )
+
+        elif format.lower() == "csv":
+            # Process CSV file
+            if not mapping:
+                raise HTTPException(
+                    status_code=400, detail="Field mapping is required for CSV import"
+                )
+
+            field_mapping = json.loads(mapping)
+            TopologiesService.import_from_csv(
+                csv_content=file_content,
+                field_mapping=field_mapping,
+                tenant_id=tenant_id,
+                session=session,
+                topology_name=name,
+                correlation_settings=corr_settings,
+            )
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Topology imported successfully from CSV"},
+            )
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
 
     except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
 
+    except json.JSONDecodeError:
+        logger.exception("Invalid JSON mapping format")
+        raise HTTPException(status_code=400, detail="Invalid JSON mapping format")
+
+    except ValueError as e:
+        logger.exception(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
     except Exception as e:
+        logger.exception(f"Failed to import topology: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to import topology: {str(e)}"
         )

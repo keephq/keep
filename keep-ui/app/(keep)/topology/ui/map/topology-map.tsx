@@ -29,7 +29,9 @@ import {
   ArrowUpRightIcon,
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
-  EllipsisHorizontalIcon,
+  PlusIcon,
+  ArrowPathIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
@@ -63,15 +65,14 @@ import { EdgeBase, Connection } from "@xyflow/system";
 import { AddEditNodeSidePanel } from "./AddEditNodeSidePanel";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import {
-  DropdownMenu,
   EmptyStateCard,
   ErrorComponent,
   showErrorToast,
   showSuccessToast,
 } from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
-import { PlusIcon } from "@heroicons/react/20/solid";
 import { TbTopologyRing } from "react-icons/tb";
+import { ImportTopologyModal } from "./ImportTopologyModal";
 import { useAlerts } from "@/entities/alerts/model";
 
 const defaultFitViewOptions: FitViewOptions = {
@@ -88,13 +89,8 @@ type TopologyMapProps = {
   environment?: string;
   isVisible?: boolean;
   standalone?: boolean;
+  onPullTopology?: (e: React.MouseEvent) => Promise<void>;
 };
-
-interface MenuItem {
-  icon: ElementType;
-  label: string;
-  onClick: () => void;
-}
 
 export function TopologyMap({
   topologyServices: initialTopologyServices,
@@ -105,8 +101,15 @@ export function TopologyMap({
   environment,
   isVisible = true,
   standalone = false,
+  onPullTopology,
 }: TopologyMapProps) {
   const [initiallyFitted, setInitiallyFitted] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Track if we're in incident view mode (fixed application selection)
+  const isIncidentView = Boolean(
+    initialSelectedApplicationIds && initialSelectedApplicationIds.length > 0
+  );
 
   const {
     topologyData,
@@ -133,10 +136,24 @@ export function TopologyMap({
 
   // if initialSelectedApplicationIds is provided, set it as selectedApplicationIds
   useEffect(() => {
-    if (initialSelectedApplicationIds) {
+    // Only update when there are valid initial IDs provided as props
+    if (
+      initialSelectedApplicationIds &&
+      initialSelectedApplicationIds.length > 0
+    ) {
       setSelectedApplicationIds(initialSelectedApplicationIds);
     }
-  }, [initialSelectedApplicationIds, setSelectedApplicationIds]);
+    // We only want this effect to run once on initial render or when prop changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedApplicationIds]);
+
+  // Separate effect to check for application changes
+  useEffect(() => {
+    // This is only needed for debugging
+    if (selectedApplicationIds.length > 0) {
+      console.log("Active application filters:", selectedApplicationIds);
+    }
+  }, [selectedApplicationIds]);
 
   const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
 
@@ -152,7 +169,56 @@ export function TopologyMap({
   const [nodes, setNodes] = useState<TopologyNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
+  // Refs for storing data - all declared at component level
   const reactFlowInstanceRef = useRef<ReactFlowInstance<TopologyNode, Edge>>();
+  const edgeReconnectSuccessful = useRef(true);
+  const previousNodesIds = useRef<Set<string>>(new Set());
+  // Refs for storing the complete node data
+  const allNodesRef = useRef<TopologyNode[]>([]);
+  const allEdgesRef = useRef<Edge[]>([]);
+
+  // Warning state
+  const [limitWarning, setLimitWarning] = useState<{
+    show: boolean;
+    totalNodes?: number;
+    displayedNodes?: number;
+  }>({ show: false });
+
+  // Statistics about the topology
+  const [topologyStats, setTopologyStats] = useState<{
+    totalNodes: number;
+    displayedNodes: number;
+    totalEdges: number;
+    displayedEdges: number;
+  }>({
+    totalNodes: 0,
+    displayedNodes: 0,
+    totalEdges: 0,
+    displayedEdges: 0,
+  });
+
+  // Optional: "Show All" handler
+  const handleShowAll = useCallback(() => {
+    if (allNodesRef.current.length > 0) {
+      // This might cause performance issues, warn the user
+      const confirmShowAll = window.confirm(
+        `Showing all ${allNodesRef.current.length} nodes may cause performance issues. Continue?`
+      );
+
+      if (confirmShowAll) {
+        // Apply layout to all nodes - this will be slow for large graphs
+        const fullLayoutedElements = getLayoutedElements(
+          allNodesRef.current,
+          allEdgesRef.current,
+          true // Bypass the limit
+        );
+
+        setNodes(fullLayoutedElements.nodes);
+        setEdges(fullLayoutedElements.edges);
+        setLimitWarning({ show: false });
+      }
+    }
+  }, []);
 
   const highlightNodes = useCallback((nodeIds: string[]) => {
     setNodes((nds) =>
@@ -165,67 +231,28 @@ export function TopologyMap({
     );
   }, []);
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (!event.target.files) {
-      return;
-    }
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.set("file", file);
-
-    try {
-      const response = await api.request("/topology/import", {
-        method: "POST",
-        body: formData,
-      });
-      showSuccessToast("Topology imported Successfully!");
-      mutateApplications();
-      mutateTopologyData();
-    } catch (error) {
-      showErrorToast(error, "Error uploading file");
-    }
-  };
-
   const handleImportTopology = () => {
-    const confirm = window.confirm(
-      "Current topology will be completely replaced. Do you want to continue?"
-    );
-    if (confirm) {
-      document.getElementById("fileInput")?.click();
-    }
+    setIsImportModalOpen(true);
   };
 
-  const menuItems: MenuItem[] = [
-    {
-      label: "Import",
-      icon: ArrowUpTrayIcon,
-      onClick: handleImportTopology,
-    },
-    {
-      label: "Export",
-      icon: ArrowDownTrayIcon,
-      onClick: async () => {
-        try {
-          const response = await api.get("/topology/export", {
-            headers: {
-              Accept: "application/x-yaml",
-            },
-          });
-          downloadFileFromString({
-            data: response,
-            filename: "topology-export.yaml",
-            contentType: "application/x-yaml",
-          });
-        } catch (error) {
-          showErrorToast(error, "Error exporting topology");
-        }
-      },
-    },
-  ];
+  const api = useApi();
+
+  const handleExportTopology = async () => {
+    try {
+      const response = await api.get("/topology/export", {
+        headers: {
+          Accept: "application/x-yaml",
+        },
+      });
+      downloadFileFromString({
+        data: response,
+        filename: "topology-export.yaml",
+        contentType: "application/x-yaml",
+      });
+    } catch (error) {
+      showErrorToast(error, "Error exporting topology");
+    }
+  };
 
   const fitViewToServices = useCallback((serviceIds: string[]) => {
     const nodesToFit: TopologyNode[] = [];
@@ -258,9 +285,6 @@ export function TopologyMap({
     },
     [topologyData]
   );
-
-  const api = useApi();
-  const edgeReconnectSuccessful = useRef(true);
 
   const onConnect = useCallback(
     async (params: EdgeBase | Connection) => {
@@ -450,12 +474,11 @@ export function TopologyMap({
     setSelectedObjectId,
   ]);
 
-  const previousNodesIds = useRef<Set<string>>(new Set());
-
   const { data: allIncidents } = useIncidents({});
   const { useLastAlerts } = useAlerts();
   const { data: allAlerts } = useLastAlerts(undefined);
 
+  // Fixed useEffect with properly organized refs
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
       if (!topologyData) {
@@ -473,41 +496,107 @@ export function TopologyMap({
       const newNodes = Array.from(nodeMap.values());
       const newEdges = Array.from(edgeMap.values());
 
+      // Store the complete set of nodes and edges in refs for potential use later
+      allNodesRef.current = newNodes;
+      allEdgesRef.current = newEdges;
+
       if (
         previousNodesIds.current.size > 0 &&
         areSetsEqual(previousNodesIds.current, new Set(nodeMap.keys()))
       ) {
-        setEdges(newEdges);
-        setNodes((prevNodes) =>
-          prevNodes.map((n) => {
-            const newNode = newNodes.find((nn) => nn.id === n.id);
-            if (newNode) {
-              // Update node, but keep the position
-              return { ...newNode, position: n.position };
-            }
-            return n;
-          })
-        );
+        // No need to update positions here since getLayoutedElements will return a new set of nodes
+        previousNodesIds.current = new Set(nodeMap.keys());
       } else {
         previousNodesIds.current = new Set(nodeMap.keys());
       }
 
+      // If we have initial selected applications, immediately apply those filters
+      // instead of showing the default limited view
+      if (
+        initialSelectedApplicationIds &&
+        initialSelectedApplicationIds.length > 0
+      ) {
+        // The watchSelectedApplications effect will handle this after state updates
+        return;
+      }
+
       const layoutedElements = getLayoutedElements(newNodes, newEdges);
 
-      // Adjust group node sizes and positions
+      // Set state for nodes and edges - now only using the limited set
       setNodes(layoutedElements.nodes);
       setEdges(layoutedElements.edges);
+
+      // Store the total counts for potential use
+      setTopologyStats({
+        totalNodes: newNodes.length,
+        displayedNodes: layoutedElements.nodes.length,
+        totalEdges: newEdges.length,
+        displayedEdges: layoutedElements.edges.length,
+      });
+
+      // Show warning banner if node limit was applied
+      if (layoutedElements.metadata?.limitApplied) {
+        setLimitWarning({
+          show: true,
+          totalNodes: layoutedElements.metadata.totalNodes,
+          displayedNodes: layoutedElements.metadata.displayedNodes,
+        });
+      } else {
+        setLimitWarning({ show: false });
+      }
     },
-    [topologyData, applicationMap, allIncidents, mutateTopologyData]
+    [
+      topologyData,
+      applicationMap,
+      allIncidents,
+      mutateTopologyData,
+      initialSelectedApplicationIds,
+    ]
   );
 
   useEffect(
     function watchSelectedApplications() {
       if (selectedApplicationIds.length === 0) {
-        setNodes((prev) => prev.map((n) => ({ ...n, hidden: false })));
-        setEdges((prev) => prev.map((e) => ({ ...e, hidden: false })));
+        // When no applications are selected, we need to go back to the
+        // limited view to avoid performance issues with large topologies
+
+        // Re-apply the original layout with limits (don't bypass)
+        const layoutedElements = getLayoutedElements(
+          allNodesRef.current,
+          allEdgesRef.current,
+          false, // Don't bypass limit
+          false // Not in application mode
+        );
+
+        // Update nodes and edges with the original limited layout
+        setNodes(layoutedElements.nodes);
+        setEdges(layoutedElements.edges);
+
+        // Restore the original topology stats
+        setTopologyStats({
+          totalNodes: allNodesRef.current.length,
+          displayedNodes: layoutedElements.nodes.length,
+          totalEdges: allEdgesRef.current.length,
+          displayedEdges: layoutedElements.edges.length,
+        });
+
+        // Show the warning banner if node limit was applied
+        if (layoutedElements.metadata?.limitApplied) {
+          setLimitWarning({
+            show: true,
+            totalNodes: layoutedElements.metadata.totalNodes,
+            displayedNodes: layoutedElements.metadata.displayedNodes,
+          });
+        }
+
+        // Fit view to the visible nodes
+        setTimeout(() => {
+          reactFlowInstanceRef.current?.fitView(defaultFitViewOptions);
+        }, 0);
+
         return;
       }
+
       // Get all service nodes that are part of selected applications
       const selectedServiceNodesIds = new Set(
         applications.flatMap((app) =>
@@ -516,42 +605,66 @@ export function TopologyMap({
             : []
         )
       );
-      // Hide all nodes and edges that are not part of selected applications
-      setNodes((prev) =>
-        prev.map((n) => {
-          const isSelectedService = selectedServiceNodesIds.has(n.id);
-          return {
-            ...n,
-            hidden: n.type === "service" && !isSelectedService,
-          };
-        })
-      );
-      setEdges((prev) =>
-        prev.map((e) => {
-          const isSelectedService =
-            selectedServiceNodesIds.has(e.source) &&
-            selectedServiceNodesIds.has(e.target);
-          return {
-            ...e,
-            hidden: !isSelectedService,
-          };
-        })
+
+      // When applications are selected, let's use only the nodes and edges
+      // that are part of the selected applications, but bypass the limit
+      const filteredNodes = allNodesRef.current.filter(
+        (n) => n.type !== "service" || selectedServiceNodesIds.has(n.id)
       );
 
-      const nodesToFit: TopologyNode[] = Array.from(
-        selectedServiceNodesIds.values()
-      )
-        .map((id) => reactFlowInstanceRef.current?.getNode(id))
-        .filter((node) => !!node);
-      // Then fit view to selected nodes
-      reactFlowInstanceRef.current?.fitView({
-        padding: 10,
-        minZoom: 0.5,
-        nodes: nodesToFit,
-        duration: 300,
-      });
+      const filteredEdges = allEdgesRef.current.filter(
+        (e) =>
+          selectedServiceNodesIds.has(e.source) &&
+          selectedServiceNodesIds.has(e.target)
+      );
+
+      // Apply layout with application mode to handle larger sets with a higher limit
+      const layoutedElements = getLayoutedElements(
+        filteredNodes,
+        filteredEdges,
+        false, // Don't bypass the limit completely
+        true // Use application mode with higher limits
+      );
+
+      // Update nodes and edges with the newly layouted elements
+      setNodes(layoutedElements.nodes);
+      setEdges(layoutedElements.edges);
+
+      // Update stats to reflect what we're displaying
+      setTopologyStats((prev) => ({
+        ...prev,
+        displayedNodes: layoutedElements.nodes.length,
+        displayedEdges: layoutedElements.edges.length,
+      }));
+
+      // Show warning if we had to limit application nodes
+      if (layoutedElements.metadata?.limitApplied) {
+        setLimitWarning({
+          show: true,
+          totalNodes: layoutedElements.metadata.totalNodes,
+          displayedNodes: layoutedElements.metadata.displayedNodes,
+        });
+      } else {
+        // Hide the limit warning if there's no limit applied
+        setLimitWarning({ show: false });
+      }
+
+      // Then fit view to the nodes
+      setTimeout(() => {
+        reactFlowInstanceRef.current?.fitView({
+          padding: 0.2,
+          minZoom: 0.5,
+          nodes: layoutedElements.nodes,
+          duration: 300,
+        });
+      }, 0);
     },
-    [applications, selectedApplicationIds]
+    [
+      applications,
+      selectedApplicationIds,
+      getLayoutedElements,
+      defaultFitViewOptions,
+    ]
   );
 
   if (isLoading) {
@@ -574,6 +687,37 @@ export function TopologyMap({
   return (
     <>
       <div className="flex flex-col gap-4 h-full">
+        {/* Banner placed outside the flex layout for the controls */}
+        {limitWarning.show && (
+          <div className="bg-amber-50 w-full py-2 px-4 mb-2 flex justify-between items-center border-y border-amber-200">
+            <div className="flex items-center">
+              <span className="font-medium text-amber-800 mr-2">
+                Limited View
+              </span>
+              <span className="text-amber-700">
+                For performance reasons, only {limitWarning.displayedNodes} out
+                of {limitWarning.totalNodes} nodes are displayed.
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                size="xs"
+                color="amber"
+                variant="secondary"
+                onClick={handleShowAll}
+                className="whitespace-nowrap"
+              >
+                Show All (May Affect Performance)
+              </Button>
+              <button
+                className="text-amber-400 hover:text-amber-500"
+                onClick={() => setLimitWarning({ show: false })}
+              >
+                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between gap-4 items-center">
           <TopologySearchAutocomplete
             wrapperClassName="w-full flex-1"
@@ -587,10 +731,20 @@ export function TopologyMap({
           {/* Using z-index to overflow the manage selection component */}
           <div className="basis-1/3 relative z-30">
             <MultiSelect
-              placeholder="Show application"
+              placeholder={
+                isIncidentView
+                  ? "Application filter locked"
+                  : "Show application"
+              }
               value={selectedApplicationIds}
-              onValueChange={setSelectedApplicationIds}
-              disabled={!applications.length}
+              onValueChange={(newValues) => {
+                // Prevent changes if we're in incident view
+                if (isIncidentView) {
+                  return;
+                }
+                setSelectedApplicationIds(newValues);
+              }}
+              disabled={!applications.length || isIncidentView}
             >
               {applications.map((app) => (
                 <MultiSelectItem key={app.id} value={app.id}>
@@ -600,34 +754,47 @@ export function TopologyMap({
             </MultiSelect>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => setIsSidePanelOpen(true)}
-              color="orange"
-              variant="primary"
-              size="md"
-              icon={PlusIcon}
-            >
-              Add Node
-            </Button>
-            <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
-              {menuItems.map((item, index) => (
-                <DropdownMenu.Item
-                  key={item.label + index}
-                  icon={item.icon}
-                  label={item.label}
-                  onClick={item.onClick}
-                />
-              ))}
-            </DropdownMenu.Menu>
+            {onPullTopology && (
+              <>
+                <Button
+                  onClick={() => setIsSidePanelOpen(true)}
+                  color="orange"
+                  variant="primary"
+                  size="md"
+                  icon={PlusIcon}
+                >
+                  Add Node
+                </Button>
+                <Button
+                  onClick={handleImportTopology}
+                  color="orange"
+                  variant="secondary"
+                  size="md"
+                  icon={ArrowUpTrayIcon}
+                >
+                  Import
+                </Button>
+                <Button
+                  onClick={handleExportTopology}
+                  color="orange"
+                  variant="secondary"
+                  size="md"
+                  icon={ArrowDownTrayIcon}
+                >
+                  Export
+                </Button>
+                <Button
+                  onClick={onPullTopology}
+                  color="orange"
+                  variant="secondary"
+                  size="md"
+                  icon={ArrowPathIcon}
+                >
+                  Pull from providers
+                </Button>
+              </>
+            )}
           </div>
-
-          <input
-            type="file"
-            id="fileInput"
-            className="hidden"
-            onChange={handleFileUpload}
-            accept=".yaml,.json,.csv"
-          />
 
           {!standalone ? (
             <div>
@@ -643,6 +810,10 @@ export function TopologyMap({
           ) : null}
         </div>
         <Card className="p-0 h-full mx-auto relative overflow-hidden flex flex-col">
+          <div className="absolute bottom-4 left-4 z-30 bg-white bg-opacity-80 rounded-md px-2 py-1 text-xs text-gray-600">
+            Displaying {topologyStats.displayedNodes} of{" "}
+            {topologyStats.totalNodes} nodes
+          </div>
           <ReactFlowProvider>
             <ManageSelection
               topologyMutator={mutateTopologyData}
@@ -715,6 +886,18 @@ export function TopologyMap({
             ))}
         </Card>
       </div>
+
+      {/* Import Modal */}
+      <ImportTopologyModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          mutateApplications();
+          mutateTopologyData();
+        }}
+      />
+
+      {/* Add Node Side Panel */}
       <AddEditNodeSidePanel
         isOpen={isSidePanelOpen}
         topologyMutator={mutateTopologyData}

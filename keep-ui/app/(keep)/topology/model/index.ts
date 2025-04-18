@@ -10,3 +10,5 @@ export type {
 
 export { useTopology } from "./useTopology";
 export { useTopologyApplications } from "./useTopologyApplications";
+export { useTopologySettings } from "./useTopologySettings";
+export type { TopologyProcessorSettings } from "./useTopologySettings";

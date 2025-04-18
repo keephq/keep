@@ -2,7 +2,8 @@ import logging
 import os
 import threading
 from collections import defaultdict
-from typing import Dict, Optional, Set
+from typing import Dict, List, Optional
+from uuid import UUID
 
 from sqlmodel import select
 
@@ -14,12 +15,11 @@ from keep.api.core.db import (
     existed_or_new_session,
     get_last_alerts,
 )
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.incident import IncidentStatus
-from keep.api.models.db.topology import TopologyServiceApplication
+from keep.api.models.db.topology import TopologyApplication, TopologyServiceApplication
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
@@ -36,31 +36,55 @@ class TopologyProcessor:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.logger.info("Starting topology processor")
         self.started = False
         self.thread = None
         self._stop_event = threading.Event()
         self._topology_cache = {}
         self._cache_lock = threading.Lock()
         self.enabled = (
-            os.environ.get("KEEP_TOPOLOGY_PROCESSOR", "false").lower() == "true"
+            os.environ.get("KEEP_TOPOLOGY_PROCESSOR", "true").lower() == "true"
         )
         # get enabled tenants
         self.tenant_configuration = TenantConfiguration()
-        self.enabled_tenants = {
-            tenant_id: self.tenant_configuration.get_configuration(
-                tenant_id, "topology_processor"
-            )
-            for tenant_id in self.tenant_configuration.configurations
-        }
-        # for the single tenant, use the global configuration
-        self.enabled_tenants[SINGLE_TENANT_UUID] = self.enabled
-        # Configuration
+
+        # Global Configuration
         self.process_interval = config(
-            "KEEP_TOPOLOGY_PROCESSOR_INTERVAL", cast=int, default=10
+            "KEEP_TOPOLOGY_PROCESSOR_INTERVAL", cast=int, default=60
         )  # seconds
         self.look_back_window = config(
             "KEEP_TOPOLOGY_PROCESSOR_LOOK_BACK_WINDOW", cast=int, default=15
         )  # minutes
+        self.default_depth = config(
+            "KEEP_TOPOLOGY_PROCESSOR_DEPTH", cast=int, default=10
+        )  # depth of service dependencies to check
+        self.default_minimum_services = config(
+            "KEEP_TOPOLOGY_PROCESSOR_MINIMUM_SERVICES", cast=int, default=2
+        )  # minimum number of services with alerts for correlation
+        self.logger.info(
+            "Topology processor started",
+            extra={
+                "enabled": self.enabled,
+                "process_interval": self.process_interval,
+                "look_back_window": self.look_back_window,
+                "default_depth": self.default_depth,
+                "default_minimum_services": self.default_minimum_services,
+            },
+        )
+
+    def _get_enabled_tenants(self) -> List[str]:
+        """Get the list of enabled tenants for topology processing"""
+        enabled_tenants = []
+        for tenant_id in self.tenant_configuration.configurations:
+            # get the tenant configuration
+            tenant_config = self.tenant_configuration.get_configuration(
+                tenant_id, "topology_processor"
+            )
+            if tenant_config:
+                # check if the tenant is enabled
+                if tenant_config.get("enabled", False):
+                    enabled_tenants.append(tenant_id)
+        return enabled_tenants
 
     async def start(self):
         """Runs the topology processor in server mode"""
@@ -121,7 +145,7 @@ class TopologyProcessor:
 
     def _process_all_tenants(self):
         """Process topology for all tenants"""
-        tenants = self.enabled_tenants.keys()
+        tenants = self._get_enabled_tenants()
         for tenant_id in tenants:
             try:
                 self.logger.info(f"Processing topology for tenant {tenant_id}")
@@ -134,6 +158,25 @@ class TopologyProcessor:
         """Process topology for a single tenant"""
         self.logger.info(f"Processing topology for tenant {tenant_id}")
 
+        # Get tenant-specific configuration
+        tenant_config = self.tenant_configuration.get_configuration(
+            tenant_id, "topology_processor"
+        )
+
+        # Skip if tenant is not enabled for topology processing
+        if not tenant_config or not tenant_config.get("enabled", False):
+            self.logger.info(f"Topology processing is disabled for tenant {tenant_id}")
+            return
+
+        # Get correlation depth from tenant config or use default
+        correlation_depth = tenant_config.get("depth", self.default_depth)
+        minimum_services = tenant_config.get(
+            "minimum_services", self.default_minimum_services
+        )
+        self.logger.info(
+            f"Using correlation settings for tenant {tenant_id}: depth={correlation_depth}, minimum_services={minimum_services}"
+        )
+
         # 1. Get last alerts for the tenant
         topology_data = self._get_topology_data(tenant_id)
         applications = self._get_applications_data(tenant_id)
@@ -142,14 +185,7 @@ class TopologyProcessor:
             self.logger.info(f"No topology data found for tenant {tenant_id}")
             return
 
-        # Currently topology-based incidents are created for applications only
-        # SHAHAR: this is harder to implement service-related incidents without applications
-        # TODO: add support for service-related incidents
-        if not applications:
-            self.logger.info(f"No applications found for tenant {tenant_id}")
-            return
-
-        # TODO: get only alerts with service ( if lot of alerts it will be hidden)
+        # Get alerts and group by service
         db_last_alerts = get_last_alerts(tenant_id, with_incidents=True)
         last_alerts = convert_db_alerts_to_dto_alerts(db_last_alerts)
 
@@ -164,6 +200,27 @@ class TopologyProcessor:
                     )
                     continue
                 services_to_alerts[alert.service].append(alert)
+
+        # First process application-based correlation
+        self._process_application_correlation(
+            tenant_id, applications, services_to_alerts, minimum_services
+        )
+
+    def _process_application_correlation(
+        self,
+        tenant_id: str,
+        applications: List[TopologyServiceApplication],
+        services_to_alerts: Dict[str, List[AlertDto]],
+        minimum_services: int,
+    ):
+        """Process application-based correlation"""
+        self.logger.info(
+            f"Processing application-based correlation for tenant {tenant_id}"
+        )
+
+        if not applications:
+            self.logger.info(f"No applications found for tenant {tenant_id}")
+            return
 
         for application in applications:
             # check if there is an incident for the application
@@ -200,40 +257,180 @@ class TopologyProcessor:
                     f"No existing incident found for application {application.name}"
                 )
                 # create a new incident with the alerts
-                self._create_application_based_incident(
-                    tenant_id, application, services_to_alerts
+                if len(services_with_alerts) >= minimum_services:
+                    self.logger.info(
+                        f"Creating new incident for application {application.name}"
+                    )
+                    # create a new incident
+                    self._create_application_based_incident(
+                        tenant_id, application, services_to_alerts
+                    )
+                else:
+                    self.logger.info(
+                        f"Not enough services with alerts for application {application.name}, skipping"
+                    )
+                    continue
+        self.logger.info(
+            f"Finished processing application-based correlation for tenant {tenant_id}"
+        )
+
+    def _create_service_group_incident(
+        self,
+        tenant_id: str,
+        service_group: List[str],
+        services_to_alerts: Dict[str, List[AlertDto]],
+        application_id: UUID = None,
+    ) -> None:
+        """Create a new incident for a correlated service group"""
+        sorted_services = sorted(service_group)
+
+        with existed_or_new_session() as session:
+            # Create a new incident
+            incident = Incident(
+                tenant_id=tenant_id,
+                user_generated_name="Service correlation incident",
+                user_summary=f"Multiple related services are experiencing issues: {', '.join(sorted_services)}",
+                incident_type="topology",
+                is_candidate=False,
+                is_visible=True,
+                affected_services=sorted_services,  # Set affected_services
+                incident_application=application_id,
+            )
+
+            # Collect all alerts for services in this group
+            all_alerts = []
+            for service in service_group:
+                if service in services_to_alerts:
+                    all_alerts.extend(services_to_alerts[service])
+
+            # Assign alerts to the incident
+            for alert in all_alerts:
+                incident = assign_alert_to_incident(
+                    fingerprint=alert.fingerprint,
+                    incident=incident,
+                    tenant_id=tenant_id,
+                    session=session,
                 )
+
+            # Send notification about new incident
+            incident_dto = IncidentDto.from_db_incident(incident)
+            RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "created")
+
+            self.logger.info(
+                f"Created new incident for service group with application_id: {application_id}"
+            )
+
+    def _update_service_group_incident(
+        self,
+        tenant_id: str,
+        service_group: List[str],
+        incident: Incident,
+        services_to_alerts: Dict[str, List[AlertDto]],
+    ) -> None:
+        """Update an existing service group incident with new alerts"""
+        sorted_services = sorted(service_group)
+
+        with existed_or_new_session() as session:
+            # Update affected_services if needed
+            if set(incident.affected_services) != set(sorted_services):
+                self.logger.info(
+                    f"Updating affected_services from {incident.affected_services} to {sorted_services}"
+                )
+                incident.affected_services = sorted_services
+                session.add(incident)
+                session.commit()
+
+            # Collect all alerts for services in this group
+            all_alerts = []
+            for service in service_group:
+                if service in services_to_alerts:
+                    all_alerts.extend(services_to_alerts[service])
+
+            # Add alerts to the incident
+            add_alerts_to_incident(
+                tenant_id=tenant_id,
+                incident=incident,
+                fingerprints=[alert.fingerprint for alert in all_alerts],
+                session=session,
+                exclude_unlinked_alerts=True,
+            )
+
+            # Check if incident should be resolved
+            if incident.resolve_on == "all_resolved":
+                self.logger.info(
+                    "Checking if service group incident should be resolved"
+                )
+                incident = enrich_incidents_with_alerts(tenant_id, [incident], session)[
+                    0
+                ]
+                alert_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+                statuses = []
+                for alert in alert_dtos:
+                    if isinstance(alert.status, str):
+                        statuses.append(alert.status)
+                    else:
+                        statuses.append(alert.status.value)
+                all_resolved = all(
+                    [
+                        s == AlertStatus.RESOLVED.value
+                        or s == AlertStatus.SUPPRESSED.value
+                        for s in statuses
+                    ]
+                )
+
+                # Update incident status based on alert statuses
+                if all_resolved and incident.status != IncidentStatus.RESOLVED.value:
+                    self.logger.info(
+                        "All alerts resolved, updating incident status to resolved"
+                    )
+                    incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+                    session.commit()
+                elif (
+                    incident.status == IncidentStatus.RESOLVED.value
+                    and not all_resolved
+                ):
+                    self.logger.info(
+                        "Not all alerts resolved, updating incident status to firing"
+                    )
+                    incident.status = IncidentStatus.FIRING.value
+                    session.add(incident)
+                    session.commit()
+
+            # Send notification about incident update
+            incident_dto = IncidentDto.from_db_incident(incident)
+            RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "updated")
+
+            self.logger.info(
+                f"Updated incident with application_id: {incident.incident_application}"
+            )
 
     def _get_topology_based_incidents(self, tenant_id: str) -> Dict[str, Incident]:
         """Get all topology-based incidents for a tenant"""
         with existed_or_new_session() as session:
             incidents = session.exec(
                 select(Incident).where(
-                    Incident.tenant_id == tenant_id
-                    and Incident.incident_type == "topology"
+                    Incident.tenant_id == tenant_id,
+                    Incident.incident_type == "topology",
                 )
             ).all()
             return incidents
 
-    def _check_topology_for_incidents(
-        self,
-        last_alerts: Dict[str, AlertDto],
-        topology_based_incidents: Dict[str, Incident],
-    ) -> Set[Incident]:
-        """Check if the topology should create incidents"""
-        incidents = []
-        # get all alerts within the same application:
-
-        # get all alerts within services that have dependencies:
-        return incidents
-
     def _get_application_based_incident(
-        self, tenant_id, application: TopologyServiceApplication
+        self, tenant_id, application: TopologyApplication
     ) -> Optional[Incident]:
         """Get the incident for an application"""
         with existed_or_new_session() as session:
             incident = session.exec(
-                select(Incident).where(Incident.incident_application == application.id)
+                select(Incident)
+                .where(Incident.tenant_id == tenant_id)
+                .where(Incident.incident_type == "topology")
+                .where(Incident.incident_application == application.id)
+                .where(
+                    Incident.status.in_(
+                        [IncidentStatus.FIRING.value, IncidentStatus.ACKNOWLEDGED.value]
+                    )
+                )  # Not resolved or merged/deleted
             ).first()
             return incident
 
