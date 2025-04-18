@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, Index, PrimaryKeyConstraint
+from sqlalchemy import TEXT, DateTime, Index, PrimaryKeyConstraint, func
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
@@ -18,7 +18,15 @@ class Workflow(SQLModel, table=True):
     is_deleted: bool = Field(default=False)
     is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            name="last_updated",
+            onupdate=func.now(),
+            server_default=func.now(),
+            nullable=False,
+        )
+    )
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
 
@@ -36,7 +44,15 @@ class WorkflowVersion(SQLModel, table=True):
     revision: int = Field(primary_key=True)
     workflow_raw: str = Field(sa_column=Column(TEXT))
     updated_by: str
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            name="updated_at",
+            onupdate=func.now(),
+            server_default=func.now(),
+            nullable=False,
+        )
+    )
     is_valid: bool = Field(default=False)
     is_current: bool = Field(default=False)
     comment: Optional[str] = None

@@ -26,7 +26,12 @@ def upgrade() -> None:
         sa.Column("revision", sa.Integer(), nullable=False),
         sa.Column("workflow_raw", sa.TEXT(), nullable=True),
         sa.Column("updated_by", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.current_timestamp(),
+            nullable=False,
+        ),
         sa.Column("is_valid", sa.Boolean(), nullable=False),
         sa.Column("is_current", sa.Boolean(), nullable=False),
         sa.Column("comment", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -36,6 +41,14 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("workflow_id", "revision"),
     )
+
+    with op.batch_alter_table("workflow", schema=None) as batch_op:
+        batch_op.alter_column(
+            "last_updated",
+            existing_type=sa.DateTime(timezone=True),
+            server_default=sa.func.current_timestamp(),
+            nullable=False,
+        )
 
     # Then handle column and index changes
     with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
@@ -119,7 +132,7 @@ def upgrade() -> None:
                 COALESCE(revision, 1) as revision,
                 workflow_raw,
                 COALESCE(updated_by, created_by) as updated_by,
-                last_updated as updated_at,
+                COALESCE(last_updated, CURRENT_DATE) as updated_at,
                 true as is_valid,
                 true as is_current,
                 'Initial version migration' as comment
