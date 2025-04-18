@@ -2190,15 +2190,14 @@ def get_incident_for_grouping_rule(
         ]:
             is_incident_expired = True
         elif incident and incident.alerts_count > 0:
+            enrich_incidents_with_alerts(tenant_id, [incident], session)
             is_incident_expired = max(
-                alert.timestamp for alert in incident._alerts
+                alert.timestamp for alert in incident.alerts
             ) < datetime.utcnow() - timedelta(seconds=rule.timeframe)
 
         # if there is no incident with the rule_fingerprint, create it or existed is already expired
         if not incident:
             return None, None
-
-    enrich_incidents_with_alerts(tenant_id, [incident], session)
 
     return incident, is_incident_expired
 
@@ -4569,7 +4568,7 @@ def merge_incidents_to_id(
         failed_incident_ids = []
         for source_incident in source_incidents:
             source_incident_alerts_fingerprints = [
-                alert.fingerprint for alert in source_incident._alerts
+                alert.fingerprint for alert in source_incident.alerts
             ]
             source_incident.merged_into_incident_id = destination_incident.id
             source_incident.merged_at = datetime.now(tz=timezone.utc)
@@ -4579,7 +4578,7 @@ def merge_incidents_to_id(
                 remove_alerts_to_incident_by_incident_id(
                     tenant_id,
                     source_incident.id,
-                    [alert.fingerprint for alert in source_incident._alerts],
+                    [alert.fingerprint for alert in source_incident.alerts],
                 )
             except OperationalError as e:
                 logger.error(
