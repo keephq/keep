@@ -249,6 +249,8 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, str(val))
             tokens_handled.add(token_to_replace)
 
+        # Remove raw marks after full render
+        parsed_string = parsed_string.replace("{% raw %}", "").replace("{% endraw %}", "")
         return parsed_string
 
     def _parse_token(self, token):
