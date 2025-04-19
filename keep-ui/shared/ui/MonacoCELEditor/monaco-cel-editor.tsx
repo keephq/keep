@@ -32,6 +32,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     useRef<MonacoCelProps["fieldsForSuggestions"]>();
   fieldsForSuggestionsRef.current = props.fieldsForSuggestions;
   const enteredTokensRef = useRef<Token[]>([]);
+  const suggestionsShownRef = useRef<boolean>();
 
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")
@@ -60,11 +61,15 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     modelRef.current = editor.getModel();
     setIsEditorMounted(true);
     editor.onKeyDown((e) => {
-      onKeyDownRef.current?.(e.browserEvent);
-
       if (e.keyCode === monaco.KeyCode.Enter) {
         e.preventDefault(); // block typing Enter
+
+        if (suggestionsShownRef.current) {
+          return;
+        }
       }
+
+      onKeyDownRef.current?.(e.browserEvent);
     });
     editor.onDidFocusEditorText(() => onFocusRef.current?.());
     editor.onDidChangeModelContent(() => {
@@ -77,6 +82,24 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       }
       enteredTokensRef.current = monaco.editor.tokenize(value, "cel")[0];
     });
+    // const suggestController = editor.getContribution(
+    //   "editor.contrib.suggestController"
+    // );
+    // (suggestController as any).model.on
+    // console.log("Ihor", suggestController);
+
+    const suggestionWidget = (
+      editor.getContribution("editor.contrib.suggestController") as any
+    )?.widget;
+
+    if (suggestionWidget) {
+      suggestionWidget.value.onDidShow(() => {
+        suggestionsShownRef.current = true;
+      });
+      suggestionWidget.value.onDidHide(() => {
+        suggestionsShownRef.current = false;
+      });
+    }
   };
 
   if (error) {
