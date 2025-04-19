@@ -8,20 +8,14 @@ import logging
 import re
 
 import astunparse
+import jinja2
 import requests
-from jinja2 import Undefined, Environment, TemplateSyntaxError
+from jinja2 import TemplateSyntaxError
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
 from keep.step.step_provider_parameter import StepProviderParameter
 
-missing_keys = set()
-
-class TrackingUndefined(Undefined):
-    def __str__(self):
-        # Hack to get Jinja rendering missing values
-        missing_keys.add(self._undefined_name)
-        return super().__str__()
 
 class RenderException(Exception):
     def __init__(self, message, missing_keys=None):
@@ -443,10 +437,7 @@ class IOHandler:
         if additional_context:
             context.update(additional_context)
 
-        # Clear missing keys before render
-        missing_keys.clear()
-
-        rendered = self.render_recursively(key, context)
+        rendered, missing_keys = self.render_recursively(key, context)
         # jinja2 render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         # If render should failed if value does not exists
@@ -605,9 +596,20 @@ class IOHandler:
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
 
+    def _undefined_collector(self):
+        missing_keys = set()
+
+        class TrackingUndefined(jinja2.Undefined):
+            def __str__(self):
+                # Hack to get Jinja rendering missing values
+                missing_keys.add(self._undefined_name)
+                return super().__str__()
+
+        return missing_keys, TrackingUndefined
+
     def render_recursively(
         self, template: str, context: dict, max_iterations: int = 10
-    ) -> str:
+    ) -> tuple[str, set[str]]:
         """
         Recursively render a template until there are no more mustache tags or max iterations reached.
 
@@ -622,11 +624,17 @@ class IOHandler:
         current = template
         iterations = 0
 
+        missing_keys = set()
+
         try:
             while iterations < max_iterations:
-                env = Environment(undefined=TrackingUndefined)
+                undefined, undefined_cls = self._undefined_collector()
+                env = jinja2.Environment(undefined=undefined_cls)
                 template = env.from_string(current)
                 rendered = template.render(**context)
+
+                for key in undefined:
+                    missing_keys.add(key)
 
                 # https://github.com/keephq/keep/issues/2326
                 rendered = html.unescape(rendered)
@@ -638,14 +646,14 @@ class IOHandler:
                         or ("{{" not in rendered and "{%" not in rendered)
                         or "providers." in rendered
                 ):
-                    return rendered
+                    return rendered, missing_keys
 
                 current = rendered
                 iterations += 1
         except TemplateSyntaxError:
             self.logger.exception("Failed to render template")
         # Return the last rendered version even if we hit max iterations
-        return current
+        return current, missing_keys
 
 if __name__ == "__main__":
     # debug & test
