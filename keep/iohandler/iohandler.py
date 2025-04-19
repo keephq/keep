@@ -10,7 +10,6 @@ import re
 import astunparse
 import jinja2
 import requests
-from jinja2 import TemplateSyntaxError
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
@@ -664,7 +663,7 @@ class IOHandler:
                 current = rendered
                 iterations += 1
         except Exception as e:
-            pass
+            self.logger.exception(f"Error rendering template: {e}")
         # Return the last rendered version even if we hit max iterations
         return current, missing_keys
 
