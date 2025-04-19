@@ -9,7 +9,7 @@ import re
 
 import astunparse
 import requests
-from jinja2 import Undefined, Environment
+from jinja2 import Undefined, Environment, TemplateSyntaxError
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
@@ -622,26 +622,28 @@ class IOHandler:
         current = template
         iterations = 0
 
-        while iterations < max_iterations:
-            env = Environment(undefined=TrackingUndefined)
-            template = env.from_string(current)
-            rendered = template.render(**context)
+        try:
+            while iterations < max_iterations:
+                env = Environment(undefined=TrackingUndefined)
+                template = env.from_string(current)
+                rendered = template.render(**context)
 
-            # https://github.com/keephq/keep/issues/2326
-            rendered = html.unescape(rendered)
+                # https://github.com/keephq/keep/issues/2326
+                rendered = html.unescape(rendered)
 
-            # If no more changes or no more mustache tags, we're done
-            # we don't want to render providers. ever, so this is a hack for it for now
-            if (
-                    rendered == current
-                    or ("{{" not in rendered and "{%" not in rendered)
-                    or "providers." in rendered
-            ):
-                return rendered
+                # If no more changes or no more mustache tags, we're done
+                # we don't want to render providers. ever, so this is a hack for it for now
+                if (
+                        rendered == current
+                        or ("{{" not in rendered and "{%" not in rendered)
+                        or "providers." in rendered
+                ):
+                    return rendered
 
-            current = rendered
-            iterations += 1
-
+                current = rendered
+                iterations += 1
+        except TemplateSyntaxError:
+            self.logger.exception("Failed to render template")
         # Return the last rendered version even if we hit max iterations
         return current
 
