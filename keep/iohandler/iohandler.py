@@ -6,7 +6,6 @@ import inspect
 import json
 import logging
 import re
-import sys
 
 import astunparse
 import requests
@@ -443,6 +442,9 @@ class IOHandler:
 
         if additional_context:
             context.update(additional_context)
+
+        # Clear missing keys before render
+        missing_keys.clear()
 
         rendered = self.render_recursively(key, context)
         # jinja2 render will escape the quotes, we need to unescape them
