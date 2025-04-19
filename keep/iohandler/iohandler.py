@@ -157,7 +157,6 @@ class IOHandler:
 
         # first render everything using chevron
         # inject the context
-        string = self._render(string, safe, default, additional_context)
 
         raw_blocks = {}
         raw_pattern = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
@@ -177,10 +176,14 @@ class IOHandler:
                 text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
             return text
 
+        # Extract raw blocks
+        string = _extract_raw_blocks(string)
+
+        # Now render the string
+        string = self._render(string, safe, default, additional_context)
+
         # Now, extract the token if exists
         parsed_string = copy.copy(string)
-        # Extract Jinja raw blocks if exists
-        parsed_string = _extract_raw_blocks(parsed_string)
 
         if string.startswith("raw_render_without_execution(") and string.endswith(")"):
             tokens = []
