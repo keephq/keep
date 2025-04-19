@@ -6,6 +6,7 @@ import datetime
 from unittest.mock import patch
 
 import pytest
+from jinja2 import Template
 
 from keep.api.models.alert import AlertDto
 from keep.iohandler.iohandler import IOHandler
@@ -959,3 +960,43 @@ def test_render_with_consts(context_manager):
     assert (
         result == expected_result
     ), f"Expected '{expected_result}', but got '{result}'"
+
+def test_jinja_with_custom_functions(context_manager):
+    iohandler = IOHandler(context_manager)
+
+    context_manager.steps_context = {
+        "user": {
+            "name": "bob",
+        },
+        "response": {
+            "status": 201
+        }
+    }
+
+    template = (
+        "User: {{ steps.user.name | upper() }}\n"
+        "{% if steps.response.status %}"
+        "Status: ✅ Success"
+        "{% else %}"
+        "Status: ❌ Error"
+        "{% endif %}"
+    )
+
+    result = iohandler.render(template)
+
+    expected = "User: BOB\nStatus: ✅ Success"
+    assert result.strip() == expected, f"Expected:\n{expected}\nBut got:\n{result}"
+
+def test_keep_functions_respect_jinja_raw(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "some_list": [1, 2, 3],
+    }
+    context_manager.providers_context = {
+        "name": "s3",
+    }
+    s = iohandler.render(
+        "{% raw %}hello keep.len({{ steps.some_list }}){% endraw %}"
+    )
+
+    assert s == "hello keep.len({{ steps.some_list }})"
