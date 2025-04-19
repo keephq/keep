@@ -688,8 +688,15 @@ class NewrelicProvider(BaseProvider):
             ]["entities"]
             # print(id_list)
             return id_list[0]["id"]
-        except Exception:
-            self.logger.error("Error getting workflow by name and channel")
+        except Exception as ex:
+            self.logger.warning(
+                "Error getting workflow by name and channel",
+                exc_info=ex,
+                extra={
+                    "name": name,
+                    "channel_id": channel_id,
+                }
+            )
 
     def __add_new_worflow(
         self, channel_id: str, policy_ids: list, name: str
