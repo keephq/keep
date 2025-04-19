@@ -654,7 +654,7 @@ if __name__ == "__main__":
     }
     iohandler = IOHandler(context_manager)
     res = iohandler.render(
-        "{{ alert.header | upper() }}\n{% if alert.body %}{{ alert.body }}{% endif %}",
+        "{{ alert.header }}\n{% if alert.body %}{{ alert.body }}{% endif %}",
     )
     from asteval import Interpreter
 
