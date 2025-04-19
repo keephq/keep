@@ -20,6 +20,7 @@ missing_keys = set()
 
 class TrackingUndefined(Undefined):
     def __str__(self):
+        # Hack to get Jinja rendering missing values
         missing_keys.add(self._undefined_name)
         return super().__str__()
 

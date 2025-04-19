@@ -1,0 +1,132 @@
+---
+title: Templating
+---
+KeepHQ allows templating within YAML workflow definitions using [Jinja2](https://jinja.palletsprojects.com/) – a flexible and powerful templating language for Python. This is especially useful for dynamically generating descriptions, titles, and other content in alerts or actions like Jira ticket creation.
+---
+
+### Basic Syntax
+
+#### Variables
+Use `{{ variable_name }}` to interpolate variables.
+```jinja2
+{{ alert.alertname }}
+{{ alert.annotations.summary }}
+{{ alert.generatorURL }}
+```
+
+#### Logic Conditions
+Use `{% if %}`...`{% endif %}` blocks to conditionally include fields.
+
+```jinja2
+{% if alert.channel %}
+*Channel:* {{ alert.channel }}
+{% endif %}
+```
+
+You can chain multiple independent conditions:
+```jinja2
+{% if alert.cluster %}
+*Cluster:* {{ alert.cluster }}
+{% endif %}
+{% if alert.namespace %}
+*Namespace:* {{ alert.namespace }}
+{% endif %}
+```
+
+#### Default Values
+Use `or` to set a default value when a variable may be empty or undefined:
+```jinja2
+*Alertgroup:* {{ alert.alertgroup or 'None' }}
+```
+
+---
+
+### 📦 Example: JiraOnPrem Action Description Block
+
+Here's a real-world usage pattern in a `jiraonprem` provider action:
+
+```jinja2
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    description: Creates investigation task in jira
+    disabled: false
+    triggers:
+      - type: manual
+    consts: {}
+    owners: []
+    services: []
+    steps: []
+    actions:
+      - name: jiraonprem-action
+        provider:
+          type: jiraonprem
+          config: "{{` {{ providers.jiraOnPrem }} `}}"
+          with:
+            board_name: SA
+            components:
+              - Monitoring
+            custom_fields: ""
+            description: "--------------------------------------------------------------------
+
+            *Alertname:* {{ alert.alertname }}
+
+            *Summary:* {{ alert.annotations.summary }}
+
+            *Description:* {{ alert.description }}
+
+            *Alertgroup:* {{ alert.alertgroup or 'None' }}
+
+            {% if alert.channel %}
+            *Channel:* {{ alert.channel }}
+            {% endif %}
+
+            {% if alert.cluster %}
+            *Cluster:* {{ alert.cluster }}
+            {% endif %}
+
+            {% if alert.namespace %}
+            *Namespace:* {{ alert.namespace }}
+            {% endif %}
+
+            {% if alert.project %}
+            *Project:* {{ alert.project }}
+            {% endif %}
+
+            *Severity:* {{ alert.severity }}
+
+            --------------------------------------------------------------------
+
+            {% if alert.annotations.runbook_url %}
+            Runbook: [Runbook|{{ alert.annotations.runbook_url }}]
+            {% endif %}
+
+            {% if alert.generatorURL %}
+            Query: [Query|{{ alert.generatorURL }}]
+            {% endif %}
+
+            --------------------------------------------------------------------"
+```
+
+---
+
+### ✅ Best Practices
+
+- **Escape YAML properly**: If using multiline Jinja in YAML, wrap with double quotes (`"`) and indent consistently.
+- **Avoid logic nesting when possible**: Keep your `if` statements clean and flat for readability.
+- **Always check for nulls**: Use conditionals for optional values to avoid rendering issues.
+- **Use `or` for fallback values**: This keeps your output graceful even with missing data.
+
+---
+
+### 📘 Useful Filters
+
+- `default` – Provide fallback if a variable is undefined:
+  ```jinja2
+  {{ alert.cluster | default('Unknown Cluster') }}
+  ```
+- `join` – Join lists into strings:
+  ```jinja2
+  {{ alert.labels | join(', ') }}
+  ```
+---
