@@ -1,10 +1,8 @@
 import ast
 import copy
 import html
-
 # TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
-import io
 import json
 import logging
 import re
@@ -12,12 +10,18 @@ import sys
 
 import astunparse
 import requests
-from jinja2 import Template
+from jinja2 import Undefined, Environment
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
 from keep.step.step_provider_parameter import StepProviderParameter
 
+missing_keys = set()
+
+class TrackingUndefined(Undefined):
+    def __str__(self):
+        missing_keys.add(self._undefined_name)
+        return super().__str__()
 
 class RenderException(Exception):
     def __init__(self, message, missing_keys=None):
@@ -176,7 +180,7 @@ class IOHandler:
                 text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
             return text
 
-        # Extract raw blocks
+        # Extract jinja raw blocks
         string = _extract_raw_blocks(string)
 
         # Now render the string
@@ -255,6 +259,7 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, str(val))
             tokens_handled.add(token_to_replace)
 
+        # Restore jinja raw blocks
         parsed_string = _restore_raw_blocks(parsed_string)
         return parsed_string
 
@@ -440,26 +445,15 @@ class IOHandler:
 
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
-        sys.stderr = io.StringIO()
         rendered = self.render_recursively(key, context)
-        # chevron.render will escape the quotes, we need to unescape them
+        # jinja2 render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
-        stderr_output = sys.stderr.getvalue()
-        sys.stderr = original_stderr
         # If render should failed if value does not exists
-        if safe and "Could not find key" in stderr_output:
-            # if more than one keys missing, pretiffy the error
-            if stderr_output.count("Could not find key") > 1:
-                missing_keys = stderr_output.split("Could not find key")
-                missing_keys = [
-                    missing_key.strip().replace("\n", "")
-                    for missing_key in missing_keys[1:]
-                ]
-                missing_keys = list(set(missing_keys))
-                err = "Could not find keys: " + ", ".join(missing_keys)
+        if safe and missing_keys:
+            if len(missing_keys) == 1:
+                err = f"Could not find key: {next(iter(missing_keys))}"
             else:
-                missing_keys = [stderr_output.split("Could not find key")[1].strip()]
-                err = stderr_output.replace("\n", "")
+                err = "Could not find keys: " + ", ".join(sorted(missing_keys))
             raise RenderException(f"{err} in the context.", missing_keys=missing_keys)
         if not rendered:
             return default
@@ -628,7 +622,9 @@ class IOHandler:
         iterations = 0
 
         while iterations < max_iterations:
-            rendered = Template(current).render(**context)
+            env = Environment(undefined=TrackingUndefined)
+            template = env.from_string(current)
+            rendered = template.render(**context)
 
             # https://github.com/keephq/keep/issues/2326
             rendered = html.unescape(rendered)
@@ -647,7 +643,6 @@ class IOHandler:
 
         # Return the last rendered version even if we hit max iterations
         return current
-
 
 if __name__ == "__main__":
     # debug & test
