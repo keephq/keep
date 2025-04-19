@@ -444,8 +444,6 @@ class IOHandler:
         if additional_context:
             context.update(additional_context)
 
-        # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
-        original_stderr = sys.stderr
         rendered = self.render_recursively(key, context)
         # jinja2 render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
