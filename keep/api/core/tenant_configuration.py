@@ -35,8 +35,12 @@ class TenantConfiguration:
         def _reload_if_needed(self):
             if datetime.now() - self.last_loaded > timedelta(minutes=self.reload_time):
                 self.logger.info("Reloading tenants configurations")
-                self.configurations = self._load_tenant_configurations()
-                self.logger.info("Tenants configurations reloaded")
+                updated_configurations = self._load_tenant_configurations()
+                if updated_configurations:
+                    self.configurations = updated_configurations
+                    self.logger.info("Tenants configurations reloaded")
+                else:
+                    self.logger.warning("No tenants configurations found in db, maybe error")
 
         def get_configuration(self, tenant_id, config_name=None):
             self._reload_if_needed()
