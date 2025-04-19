@@ -27,6 +27,7 @@ import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
+import { useFacetPotentialFields } from "@/features/filter";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -170,6 +171,8 @@ export const AlertsRulesBuilder = ({
   const { data: config } = useConfig();
 
   const { deletePreset } = usePresetActions();
+
+  const { data: alertFields } = useFacetPotentialFields("alerts");
 
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
@@ -470,6 +473,7 @@ export const AlertsRulesBuilder = ({
                 <CelInput
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
+                  fieldsForSuggestions={alertFields}
                   onValueChange={onValueChange}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}

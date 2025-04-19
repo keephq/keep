@@ -1,17 +1,19 @@
 "use client";
 
 import { KeepLoader } from "../KeepLoader/KeepLoader";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
 import { setupCustomCellanguage } from "./cel-support";
 import { MonacoCel } from "./monaco-cel-base.turbopack";
-import { editor } from "monaco-editor";
+import { editor, Token } from "monaco-editor";
+import { handleCompletions } from "./handle-completions";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
 interface MonacoCelProps {
   className: string;
   value: string;
+  fieldsForSuggestions?: string[];
   onValueChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
@@ -19,24 +21,44 @@ interface MonacoCelProps {
 
 export function MonacoCelEditor(props: MonacoCelProps) {
   const [error, setError] = useState<Error | null>(null);
-  const [editor, setEditor] = useState<editor.IStandaloneCodeEditor | null>(
-    null
-  );
+  const [isEditorMounted, setIsEditorMounted] = useState(false);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const modelRef = useRef<editor.ITextModel | null>(null);
   const onKeyDownRef = useRef<MonacoCelProps["onKeyDown"]>(props.onKeyDown);
   onKeyDownRef.current = props.onKeyDown;
   const onFocusRef = useRef<MonacoCelProps["onFocus"]>(props.onFocus);
   onFocusRef.current = props.onFocus;
+  const fieldsForSuggestionsRef =
+    useRef<MonacoCelProps["fieldsForSuggestions"]>();
+  fieldsForSuggestionsRef.current = props.fieldsForSuggestions;
+  const enteredTokensRef = useRef<Token[]>([]);
 
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")
   ) {
+    monacoInstance.languages.registerCompletionItemProvider("cel", {
+      triggerCharacters: ["."], // or "" if you want auto-trigger on any char
+
+      provideCompletionItems: (model, position, context, cancellationToken) =>
+        handleCompletions(model, position, context, cancellationToken),
+    });
     setupCustomCellanguage(monacoInstance);
   }
+
+  useEffect(() => {
+    if (!isEditorMounted) return;
+
+    (modelRef.current as any).___fieldsForSuggestions___ =
+      props.fieldsForSuggestions;
+  }, [props.fieldsForSuggestions, isEditorMounted]);
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
     monaco: typeof import("monaco-editor")
   ) => {
+    editorRef.current = editor;
+    modelRef.current = editor.getModel();
+    setIsEditorMounted(true);
     editor.onKeyDown((e) => {
       onKeyDownRef.current?.(e.browserEvent);
 
@@ -53,17 +75,8 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       if (value.includes("\n")) {
         model.setValue(value.replace(/\n/g, " "));
       }
-      const tokens = monaco.editor.tokenize(value, "cel");
-      console.log("Ihor CEL Tokens:", tokens);
+      enteredTokensRef.current = monaco.editor.tokenize(value, "cel")[0];
     });
-
-    const model = editor.getModel();
-
-    if (!model) {
-      return;
-    }
-
-    setEditor(editor);
   };
 
   if (error) {

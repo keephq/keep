@@ -4,6 +4,7 @@ import { MonacoCelEditor } from "@/shared/ui/MonacoCELEditor";
 
 interface CelInputProps {
   value?: string;
+  fieldsForSuggestions?: string[];
   onValueChange?: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
@@ -13,6 +14,7 @@ interface CelInputProps {
 
 const CelInput: FC<CelInputProps> = ({
   value = "",
+  fieldsForSuggestions = [],
   onValueChange,
   onKeyDown,
   onFocus,
@@ -29,6 +31,7 @@ const CelInput: FC<CelInputProps> = ({
       <MonacoCelEditor
         className="h-20 relative top-1 {}"
         value={value}
+        fieldsForSuggestions={fieldsForSuggestions}
         onValueChange={onValueChange || ((value: string) => {})}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
