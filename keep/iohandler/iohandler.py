@@ -641,7 +641,7 @@ if __name__ == "__main__":
         "labels": {"statusCode": "404"},
     }
     iohandler = IOHandler(context_manager)
-    res = iohandler.render("{{ alert.header }}")
+    res = iohandler.render("{{ alert.header }}{{ alert.header }}")
     from asteval import Interpreter
 
     aeval = Interpreter()
