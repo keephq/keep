@@ -58,6 +58,19 @@ class IOHandler:
         val = self.parse(template, safe, default, additional_context)
         return val
 
+    def quote(self, template):
+        """Quote {{ }} with ''
+
+        Args:
+            template (str): string with {{ }} variables in it
+
+        Returns:
+            str: string with {{ }} variables quoted with ''
+        """
+        pattern = r"(?<!')\{\{[\s]*([^\}]+)[\s]*\}\}(?!')"
+        replacement = r"'{{ \1 }}'"
+        return re.sub(pattern, replacement, template)
+
     def extract_keep_functions(self, text):
         matches = []
         i = 0
@@ -633,8 +646,8 @@ class IOHandler:
                 template = env.from_string(current)
                 rendered = template.render(**context)
 
-                for key in undefined:
-                    missing_keys.add(key)
+                if iterations == 0:
+                    missing_keys.update(undefined)
 
                 # https://github.com/keephq/keep/issues/2326
                 rendered = html.unescape(rendered)
@@ -650,8 +663,8 @@ class IOHandler:
 
                 current = rendered
                 iterations += 1
-        except TemplateSyntaxError:
-            self.logger.exception("Failed to render template")
+        except Exception as e:
+            pass
         # Return the last rendered version even if we hit max iterations
         return current, missing_keys
 
