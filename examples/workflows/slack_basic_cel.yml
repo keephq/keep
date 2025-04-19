@@ -1,0 +1,15 @@
+workflow:
+  id: cloudwatch-slack-notifier-cel
+  name: CloudWatch Slack Notifier (CEL)
+  description: Forwards AWS CloudWatch alarms to Slack channels with customized alert messages using CEL filters.
+  triggers:
+    - type: alert
+      cel: source.contains("cloudwatch")
+    - type: manual
+  actions:
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-prod }} "
+        with:
+          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
