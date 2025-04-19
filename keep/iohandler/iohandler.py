@@ -63,26 +63,9 @@ class IOHandler:
     def extract_keep_functions(self, text):
         matches = []
         i = 0
-        inside_raw = False
-        raw_start = "{% raw %}"
-        raw_end = "{% endraw %}"
 
         while i < len(text):
-
-            # Check for Jinja raw block start
-            if text[i: i + len(raw_start)] == raw_start:
-                inside_raw = True
-                i += len(raw_start)
-                continue
-
-            # Check for Jinja raw block end
-            if text[i: i + len(raw_end)] == raw_end:
-                inside_raw = False
-                i += len(raw_end)
-                continue
-
-            # Respect Jinja RAW blocks
-            if not inside_raw and text[i: i + 5] == "keep.":
+            if text[i: i + 5] == "keep.":
                 start = i
                 func_start = text.find("(", start)
                 if func_start > -1:  # Opening '(' found after "keep."
@@ -176,8 +159,28 @@ class IOHandler:
         # inject the context
         string = self._render(string, safe, default, additional_context)
 
+        raw_blocks = {}
+        raw_pattern = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
+
+        def _extract_raw_blocks(text):
+            def replacer(match):
+                key = f"__RAW_BLOCK_{len(raw_blocks)}__"
+                raw_blocks[key] = match.group(0)  # Full raw block
+                return key
+
+            return raw_pattern.sub(replacer, text)
+
+        def _restore_raw_blocks(text):
+            for key, raw_content in raw_blocks.items():
+                text = text.replace(key, raw_content)
+                # Remove Jinja raw marks after
+                text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
+            return text
+
         # Now, extract the token if exists
         parsed_string = copy.copy(string)
+        # Extract Jinja raw blocks if exists
+        parsed_string = _extract_raw_blocks(parsed_string)
 
         if string.startswith("raw_render_without_execution(") and string.endswith(")"):
             tokens = []
@@ -249,8 +252,7 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, str(val))
             tokens_handled.add(token_to_replace)
 
-        # Remove raw marks after full render
-        parsed_string = parsed_string.replace("{% raw %}", "").replace("{% endraw %}", "")
+        parsed_string = _restore_raw_blocks(parsed_string)
         return parsed_string
 
     def _parse_token(self, token):
@@ -619,30 +621,13 @@ class IOHandler:
         Returns:
             The fully rendered string
         """
-
-        raw_blocks = {}
-        raw_pattern = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
-
-        # Step 1: Extract raw blocks and replace with placeholders
-        def _extract_raw_blocks(text):
-            def replacer(match):
-                key = f"__RAW_BLOCK_{len(raw_blocks)}__"
-                raw_blocks[key] = match.group(0)  # Full raw block
-                return key
-
-            return raw_pattern.sub(replacer, text)
-
-        # Step 2: Restore raw blocks after rendering
-        def _restore_raw_blocks(text):
-            for key, raw_content in raw_blocks.items():
-                text = text.replace(key, raw_content)
-            return text
-
-        current = _extract_raw_blocks(template)
+        current = template
         iterations = 0
 
         while iterations < max_iterations:
             rendered = Template(current).render(**context)
+
+            # https://github.com/keephq/keep/issues/2326
             rendered = html.unescape(rendered)
 
             # If no more changes or no more mustache tags, we're done
@@ -652,13 +637,13 @@ class IOHandler:
                     or ("{{" not in rendered and "{%" not in rendered)
                     or "providers." in rendered
             ):
-                rendered = _restore_raw_blocks(rendered)
                 return rendered
 
-            current = _extract_raw_blocks(rendered)
+            current = rendered
             iterations += 1
 
-        return _restore_raw_blocks(current)
+        # Return the last rendered version even if we hit max iterations
+        return current
 
 
 if __name__ == "__main__":
