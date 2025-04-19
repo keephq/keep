@@ -499,7 +499,7 @@ class IncidentBl:
 
         if new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
             enrichments = {"status": new_status.value}
-            fingerprints = [alert.fingerprint for alert in incident._alerts]
+            fingerprints = [alert.fingerprint for alert in incident.alerts]
             enrichments_bl = EnrichmentsBl(self.tenant_id, db=self.session)
             (
                 action_type,

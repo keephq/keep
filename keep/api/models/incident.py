@@ -95,6 +95,9 @@ class IncidentDto(IncidentDtoIn):
         super().__init__(**data)
         if "alerts" in data:
             self._alerts = data["alerts"]
+        if "tenant_id" in data:
+            self._tenant_id = data.pop("tenant_id")
+
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary

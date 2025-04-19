@@ -196,7 +196,10 @@ class Incident(SQLModel, table=True):
 
     @property
     def alerts(self):
-        return self._alerts
+        if hasattr(self, "_alerts"):
+            return self._alerts
+        else:
+            return []
 
     @property
     def enrichments(self):
