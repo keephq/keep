@@ -1,7 +1,13 @@
 import { editor, languages, Position, CancellationToken } from "monaco-editor";
 
+// NOTE: The enums below are workarounds due to inability to import from monaco-editor (turbopack related)
 enum CompletionItemKind {
+  Function = 1,
   Property = 9,
+}
+
+enum CompletionItemInsertTextRule {
+  InsertAsSnippet = 4,
 }
 
 export function handleCompletions(
@@ -57,25 +63,25 @@ export function handleCompletions(
   suggestions = suggestions?.concat([
     {
       label: "contains",
-      kind: 1, // languages.CompletionItemKind.Function,
+      kind: CompletionItemKind.Function,
       insertText: "contains('${1:arg}')",
-      insertTextRules: 4, // languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      insertTextRules: CompletionItemInsertTextRule.InsertAsSnippet,
       documentation: "Check if value contains a substring.",
       range,
     },
     {
       label: "startsWith",
-      kind: 1, // languages.CompletionItemKind.Function,
+      kind: CompletionItemKind.Function,
       insertText: "startsWith('${1:arg}')",
-      insertTextRules: 4, // languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      insertTextRules: CompletionItemInsertTextRule.InsertAsSnippet,
       documentation: "When value starts with a substring.",
       range,
     },
     {
       label: "endsWith",
-      kind: 1, // languages.CompletionItemKind.Function,
+      kind: CompletionItemKind.Function,
       insertText: "endsWith('${1:arg}')",
-      insertTextRules: 4, // languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      insertTextRules: CompletionItemInsertTextRule.InsertAsSnippet,
       documentation: "When value ends with a substring.",
       range,
     },
