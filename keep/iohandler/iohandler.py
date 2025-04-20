@@ -129,7 +129,7 @@ class IOHandler:
             for var in simple_vars:
                 if '|' in var or var.startswith('{{ '):
                     has_jinja2 = True
-                elif not ' ' in var.strip('{}'):
+                elif ' ' not in var.strip('{}'):
                     has_mustache = True
 
         # Validate against expected engine
