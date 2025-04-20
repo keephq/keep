@@ -1,6 +1,9 @@
 .monaco-cel-editor {
   @apply w-[99%] h-8 min-h-8 max-h-8 !important;
 
+  * {
+      @apply border-none !important;
+    }
   .monaco-editor,
   .monaco-editor .overflow-guard {
     overflow: visible !important;
