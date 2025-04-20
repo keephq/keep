@@ -327,7 +327,7 @@ def test_search_by_cel(
 
     for command in commands:
         command(browser)
-    expect(cel_input_locator).to_have_text(cel_query)
+    expect(cel_input_locator.locator(".view-lines")).to_have_text(cel_query)
 
     browser.keyboard.press("Enter")
 
