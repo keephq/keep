@@ -18,9 +18,6 @@ export function MonacoCelBase(props: MonacoCelProps) {
     MonacoCelProps["onMonacoLoadFailure"] | null
   >();
   onMonacoLoadFailureRef.current = props.onMonacoLoadFailure;
-  useEffect(() => {
-    console.log("Ihor MonacoCelTurbopack created");
-  }, []);
 
   useEffect(() => {
     loader
