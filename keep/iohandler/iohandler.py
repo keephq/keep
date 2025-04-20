@@ -641,7 +641,7 @@ class IOHandler:
         try:
             while iterations < max_iterations:
                 undefined, undefined_cls = self._undefined_collector()
-                env = jinja2.Environment(undefined=undefined_cls)
+                env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
                 template = env.from_string(current)
                 rendered = template.render(**context)
 
