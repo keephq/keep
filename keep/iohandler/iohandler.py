@@ -6,8 +6,10 @@ import inspect
 import json
 import logging
 import re
+from enum import Enum
 
 import astunparse
+import chevron
 import jinja2
 import requests
 
@@ -21,10 +23,14 @@ class RenderException(Exception):
         self.missing_keys = missing_keys
         super().__init__(message)
 
+class TemplateEngine(Enum):
+    JINJA2 = "jinja2"
+    MUSTACHE = "mustache"
 
 class IOHandler:
-    def __init__(self, context_manager: ContextManager):
+    def __init__(self, context_manager: ContextManager, template_engine: TemplateEngine = TemplateEngine.MUSTACHE):
         self.context_manager = context_manager
+        self.template_engine = template_engine
         self.logger = logging.getLogger(self.__class__.__name__)
         # whether Keep should shorten urls in the message or not
         # todo: have a specific parameter for this?
@@ -49,6 +55,10 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of %}} and {{% does not match: {template}"
             )
+        if template.count("#}") != template.count("{#"):
+            raise Exception(
+                f"Invalid template - number of #}} and {{# does not match: {template}"
+            )
         # TODO - better validate functions
         if template.count("(") != template.count(")"):
             raise Exception(
@@ -57,8 +67,79 @@ class IOHandler:
         val = self.parse(template, safe, default, additional_context)
         return val
 
+    def validate_template_syntax(self, template: str) -> bool:
+        """
+        Checks whether the template matches the expected template engine.
+
+        Args:
+            template (str): The template text to be checked.
+
+        Returns:
+            bool: True if the template matches the expected engine.
+
+        Raises:
+            RenderException: If the template contains syntax from a different engine.
+        """
+        # TODO ensure this is work correctly
+        # Patterns specific to Jinja2
+        jinja2_patterns = {
+            'statement': r'{%[^%}]+%}',  # {% if something %}
+            'comment': r'{#[^#}]+#}',  # {# comment #}
+            'filters': r'\{\{[^}]+\|[^}]+\}\}',  # {{ variable|filter }}
+            'blocks': r'{%\s*(end)?(if|for|block|macro|set)[^%}]*%}',  # {% endif %}, {% endfor %}, etc.
+        }
+
+        # Patterns specific to Mustache
+        mustache_patterns = {
+            'section': r'{{#[^}]+}}',  # {{#section}}
+            'inverted': r'{{(\^|\^!)[^}]+}}',  # {{^section}} or {{^!section}}
+            'end_section': r'{{/[^}]+}}',  # {{/section}}
+            'unescaped': r'{{{[^}]+}}}',  # {{{ variable }}}
+            'comment': r'{{![^}]+}}',  # {{! comment }}
+            'partial': r'{{>[^}]+}}',  # {{> partial }}
+        }
+
+        has_jinja2 = False
+        has_mustache = False
+
+        # Check for Jinja2 patterns
+        for pattern in jinja2_patterns.values():
+            if re.search(pattern, template):
+                has_jinja2 = True
+                if self.template_engine == TemplateEngine.MUSTACHE:
+                    raise RenderException(
+                        "You selected Mustache as the template engine, but Jinja2 syntax was found",
+                    )
+
+        # Check for Mustache patterns
+        for pattern in mustache_patterns.values():
+            if re.search(pattern, template):
+                has_mustache = True
+                if self.template_engine == TemplateEngine.JINJA2:
+                    raise RenderException(
+                        "You selected Jinja2 as the template engine, but Mustache syntax was found",
+                    )
+
+        # Check for simple variable placeholders
+        simple_vars = re.findall(r'{{[^{#/>!\^][^}]+}}', template)
+
+        # If no specific patterns found, but simple variables are present
+        if simple_vars and not (has_jinja2 or has_mustache):
+            # Determine based on filter usage or spacing
+            for var in simple_vars:
+                if '|' in var or var.startswith('{{ '):
+                    has_jinja2 = True
+                elif not ' ' in var.strip('{}'):
+                    has_mustache = True
+
+        # Validate against expected engine
+        if self.template_engine == TemplateEngine.JINJA2:
+            return has_jinja2 or not has_mustache
+        else:  # TemplateEngine.MUSTACHE
+            return has_mustache or not has_jinja2
+
     def quote(self, template):
-        """Quote {{ }} with ''
+        """Quote {{ }} and {% %} with ''
 
         Args:
             template (str): string with {{ }} variables in it
@@ -66,9 +147,15 @@ class IOHandler:
         Returns:
             str: string with {{ }} variables quoted with ''
         """
-        pattern = r"(?<!')\{\{[\s]*([^\}]+)[\s]*\}\}(?!')"
-        replacement = r"'{{ \1 }}'"
-        return re.sub(pattern, replacement, template)
+        quote_pattern = r"(?<!')\{\{[\s]*([^\}]+)[\s]*\}\}(?!')"
+        jinja_statement = r"(?<!')\{%\s*([^\}]+?)\s*%\}(?!')"
+
+        # Replace unquoted {{ ... }} with quoted version
+        template = re.sub(quote_pattern, r"'{{ \1 }}'", template)
+        # Replace unquoted {% ... %} with quoted version
+        template = re.sub(jinja_statement, r"'{% \1 %}'", template)
+
+        return template
 
     def extract_keep_functions(self, text):
         matches = []
@@ -438,7 +525,7 @@ class IOHandler:
         return _parse(self, tree)
 
     def _render(self, key: str, safe=False, default="", additional_context=None):
-        if "{{^" in key or "{{ ^" in key:
+        if self.template_engine == TemplateEngine.MUSTACHE and "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
             )
@@ -450,7 +537,7 @@ class IOHandler:
             context.update(additional_context)
 
         rendered, missing_keys = self.render_recursively(key, context)
-        # jinja2 render will escape the quotes, we need to unescape them
+        # chevron render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         # If render should failed if value does not exists
         if safe and missing_keys:
@@ -612,12 +699,29 @@ class IOHandler:
         missing_keys = set()
 
         class TrackingUndefined(jinja2.Undefined):
+            # TODO make _path working
             def __str__(self):
                 # Hack to get Jinja rendering missing values
                 missing_keys.add(self._undefined_name)
                 return super().__str__()
 
-        return missing_keys, TrackingUndefined
+        class ChevronTrackingDict(dict):
+            def __init__(self, *args, **kwargs):
+                self._path = kwargs.pop('_path', '')
+                super().__init__(*args, **kwargs)
+
+            def __getitem__(self, key):
+                full_path = f'{self._path}.{key}' if self._path else key
+                try:
+                    value = super().__getitem__(key)
+                    if isinstance(value, dict):
+                        return ChevronTrackingDict(value, _path=full_path)
+                    return value
+                except KeyError:
+                    missing_keys.add(full_path)
+                    raise
+
+        return missing_keys, ChevronTrackingDict, TrackingUndefined
 
     def render_recursively(
         self, template: str, context: dict, max_iterations: int = 10
@@ -640,13 +744,27 @@ class IOHandler:
 
         try:
             while iterations < max_iterations:
-                undefined, undefined_cls = self._undefined_collector()
-                env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
-                template = env.from_string(current)
-                rendered = template.render(**context)
+                undefined, tracking_dict, undefined_cls = self._undefined_collector()
 
-                if iterations == 0:
-                    missing_keys.update(undefined)
+                # Render Mustache templates
+                if self.template_engine == TemplateEngine.MUSTACHE:
+                    ctx = tracking_dict(context)
+                    rendered = chevron.render(
+                        current, ctx, warn=False
+                    )
+
+                    if iterations == 0:
+                        missing_keys.update(undefined)
+
+
+                # Render Jinja2 templates
+                else:
+                    env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
+                    template = env.from_string(current)
+                    rendered = template.render(**context)
+
+                    if iterations == 0:
+                        missing_keys.update(undefined)
 
                 # https://github.com/keephq/keep/issues/2326
                 rendered = html.unescape(rendered)
@@ -672,7 +790,6 @@ if __name__ == "__main__":
     context_manager = ContextManager("keep")
     context_manager.event_context = {
         "header": "HTTP API Error {{ alert.labels.statusCode }}",
-        "body": "Page {{ alert.page or 'NONE' }} is not exists",
         "labels": {"statusCode": "404"},
     }
     iohandler = IOHandler(context_manager)
