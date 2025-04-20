@@ -1383,5 +1383,3 @@ def dismiss_error_alerts(
         )
 
         return {"success": True, "message": "Successfully dismissed all alerts"}
-
-print()
