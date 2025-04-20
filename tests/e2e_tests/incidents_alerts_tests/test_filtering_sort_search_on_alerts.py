@@ -327,11 +327,9 @@ def test_search_by_cel(
 
     for command in commands:
         command(browser)
-        # browser.wait_for_timeout(5000)
     expect(cel_input_locator).to_have_text(cel_query)
 
     browser.keyboard.press("Enter")
-    # browser.wait_for_timeout(5000)
 
     assert_alerts_by_column(
         browser,

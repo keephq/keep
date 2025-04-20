@@ -1,10 +1,4 @@
-import {
-  editor,
-  Token,
-  languages,
-  Position,
-  CancellationToken,
-} from "monaco-editor";
+import { editor, languages, Position, CancellationToken } from "monaco-editor";
 
 enum CompletionItemKind {
   Property = 9,
@@ -42,10 +36,17 @@ export function handleCompletions(
   pathPrefix = `${pathPrefix}.`;
 
   let suggestions = fieldsForSuggestions
-    ?.filter((x) => x !== pathPrefix && x.startsWith(pathPrefix))
-    .map((x) => x.replace(pathPrefix, ""))
-    .map((x) => (x.startsWith(".") ? x.slice(1) : x))
-    .filter((x) => x.length > 0)
+    ?.filter(
+      (fieldSuggestion) =>
+        fieldSuggestion !== pathPrefix && fieldSuggestion.startsWith(pathPrefix)
+    )
+    .map((fieldSuggestion) => fieldSuggestion.replace(pathPrefix, ""))
+    .map((fieldSuggestion) =>
+      fieldSuggestion.startsWith(".")
+        ? fieldSuggestion.slice(1)
+        : fieldSuggestion
+    )
+    .filter((fieldSuggestion) => fieldSuggestion.length > 0)
     .map((label) => ({
       label,
       kind: CompletionItemKind.Property,
@@ -79,12 +80,6 @@ export function handleCompletions(
       range,
     },
   ] as any);
-
-  // console.log("Ihor", {
-  //   pathPrefix,
-  //   suggestions,
-  //   fieldsForSuggestions: fieldsForSuggestions?.toSorted(),
-  // });
 
   return { suggestions: suggestions || [] };
 }

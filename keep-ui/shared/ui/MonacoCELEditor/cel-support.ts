@@ -72,7 +72,7 @@ export const setupCustomCellanguage = (monaco: any) => {
   });
 
   monaco.languages.registerCompletionItemProvider("cel", {
-    triggerCharacters: ["."], // or "" if you want auto-trigger on any char
+    triggerCharacters: ["."],
 
     provideCompletionItems: (
       model: any,
