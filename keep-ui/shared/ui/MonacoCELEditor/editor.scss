@@ -1,0 +1,22 @@
+.monaco-cel-editor {
+  @apply h-9 min-h-9 max-h-9 !important;
+
+  .monaco-editor,
+  .monaco-editor .overflow-guard {
+    overflow: visible !important;
+  }
+
+  .monaco-editor,
+  .monaco-editor .overflow-guard,
+  .monaco-editor .editor-scrollable {
+    @apply h-9 min-h-9 max-h-9 !important;
+  }
+
+  .monaco-editor .view-lines {
+    line-height: 18px !important;
+  }
+
+  .monaco-editor .margin {
+    @apply hidden !important;
+  }
+}

@@ -7,6 +7,7 @@ import { setupCustomCellanguage } from "./cel-support";
 import { MonacoCel } from "./monaco-cel-base.turbopack";
 import { editor, Token } from "monaco-editor";
 import { handleCompletions } from "./handle-completions";
+import "./editor.scss";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
@@ -118,7 +119,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onMonacoLoadFailure={setError}
       onMount={handleEditorDidMount}
       onChange={(val) => props.onValueChange(val || "")}
-      className={props.className}
+      className={"monaco-cel-editor " + props.className}
       language="cel"
       defaultLanguage="cel"
       theme="cel-dark"
@@ -127,9 +128,11 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       wrapperProps={{
         style: {
           backgroundColor: "transparent", // ✅ wrapper transparency
+          height: "60px",
+          overflow: "visible", // 👈 allow suggestions to overflow
+          position: "relative",
         },
       }}
-      height="30px" // 👈 small height
       options={{
         lineNumbers: "off",
         minimap: { enabled: false },
@@ -146,6 +149,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
         renderLineHighlight: "none",
         fontSize: 14,
         padding: { top: 0, bottom: 0 },
+        glyphMargin: false,
       }}
     />
   );
