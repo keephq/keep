@@ -1,12 +1,12 @@
 import ast
 import copy
+import enum
 import html
 # TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
 import json
 import logging
 import re
-from enum import Enum
 
 import astunparse
 import chevron
@@ -23,12 +23,16 @@ class RenderException(Exception):
         self.missing_keys = missing_keys
         super().__init__(message)
 
-class TemplateEngine(Enum):
+class TemplateEngine(enum.StrEnum):
     JINJA2 = "jinja2"
     MUSTACHE = "mustache"
 
 class IOHandler:
-    def __init__(self, context_manager: ContextManager, template_engine: TemplateEngine = TemplateEngine.MUSTACHE):
+    def __init__(
+            self,
+            context_manager: ContextManager,
+            template_engine: TemplateEngine = TemplateEngine.MUSTACHE
+    ):
         self.context_manager = context_manager
         self.template_engine = template_engine
         self.logger = logging.getLogger(self.__class__.__name__)

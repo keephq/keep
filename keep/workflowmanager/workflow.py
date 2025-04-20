@@ -5,7 +5,7 @@ import typing
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.rbac import Roles
-from keep.iohandler.iohandler import IOHandler
+from keep.iohandler.iohandler import IOHandler, TemplateEngine
 from keep.step.step import Step, StepError
 
 
@@ -25,6 +25,7 @@ class Workflow:
         workflow_id: str,
         workflow_revision: int,
         workflow_name: str,
+        workflow_templating: TemplateEngine,
         workflow_owners: typing.List[str],
         workflow_tags: typing.List[str],
         workflow_interval: int,
@@ -60,7 +61,7 @@ class Workflow:
         self.context_manager = context_manager
         self.context_manager.set_consts_context(workflow_consts)
         self.context_manager.set_secret_context()
-        self.io_nandler = IOHandler(context_manager)
+        self.io_nandler = IOHandler(context_manager, template_engine=workflow_templating)
         self.logger = logging.getLogger(__name__)
         self.workflow_debug = workflow_debug
         self.workflow_permissions = workflow_permissions

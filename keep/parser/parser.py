@@ -11,6 +11,7 @@ from keep.api.core.config import config
 from keep.api.core.db import get_installed_providers, get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
+from keep.iohandler.iohandler import TemplateEngine
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
@@ -167,6 +168,7 @@ class Parser:
         workflow_id = self._parse_id(workflow)
         workflow_name = workflow.get("name", "Untitled")
         workflow_description = workflow.get("description", "No description")
+        workflow_templating = self._parse_templating(workflow)
         workflow_permissions = workflow.get("permissions", [])
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
@@ -195,6 +197,7 @@ class Parser:
             workflow_id=workflow_id,
             workflow_revision=workflow_revision,
             workflow_name=workflow_name,
+            workflow_templating=workflow_templating,
             workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,
             workflow_owners=workflow_owners,
@@ -404,6 +407,12 @@ class Parser:
     def _parse_tags(self, workflow) -> typing.List[str]:
         workflow_tags = workflow.get("tags", [])
         return workflow_tags
+
+    def _parse_templating(self, workflow) -> TemplateEngine:
+        template_engine = workflow.get("template_engine", "mustache")
+        if template_engine not in TemplateEngine.__members__.values():
+            raise ValueError(f"Invalid template engine: {template_engine}\nPossible values: {', '.join(param.value for param in TemplateEngine.__members__.values())}")
+        return TemplateEngine(template_engine)
 
     def parse_interval(self, workflow) -> int:
         # backward compatibility
