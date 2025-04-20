@@ -29,13 +29,6 @@ const CelInput: FC<CelInputProps> = ({
 }) => {
   return (
     <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white">
-      <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-
-      {placeholder && !value && (
-        <div className="absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50">
-          {placeholder}
-        </div>
-      )}
       <MonacoCelEditor
         editorId={id}
         className="h-20 relative {}"
@@ -45,6 +38,13 @@ const CelInput: FC<CelInputProps> = ({
         onKeyDown={onKeyDown}
         onFocus={onFocus}
       />
+      <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+
+      {placeholder && !value && (
+        <div className="pointer-events-none absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50">
+          {placeholder}
+        </div>
+      )}
       {value && (
         <button
           onClick={onClearValue}
