@@ -778,7 +778,7 @@ def enrich_alert_note(
 
 @router.post(
     "/batch_enrich",
-    description="Enrich an alerts",
+    description="Enrich alerts by providing either a list of fingerprints or a CEL expression to select alerts. Examples for CEL: \"name.contains('CPU')\", \"labels.severity == 'critical'\", \"name.contains('Memory') && labels.region == 'us-east-1'\"",
 )
 def batch_enrich_alerts(
     enrich_data: BatchEnrichAlertRequestBody,
@@ -792,9 +792,8 @@ def batch_enrich_alerts(
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
-        "Enriching alerts batch",
+        "Enriching alerts in batch",
         extra={
-            "fingerprints": enrich_data.fingerprints,
             "tenant_id": tenant_id,
         },
     )
@@ -805,6 +804,74 @@ def batch_enrich_alerts(
     ):
         enrich_data.enrichments["status"] = AlertStatus.SUPPRESSED.value
 
+    if not enrich_data.fingerprints and not enrich_data.cel:
+        raise HTTPException(
+            status_code=400, detail="Either fingerprints or cel must be provided"
+        )
+
+    if enrich_data.fingerprints and enrich_data.cel:
+        raise HTTPException(
+            status_code=400, detail="Either fingerprints or cel can be provided at once"
+        )
+
+    # If CEL is provided, use it to find matching alerts
+    if enrich_data.cel:
+        logger.info(
+            "Enriching alerts by CEL query",
+            extra={
+                "cel": enrich_data.cel,
+                "tenant_id": tenant_id,
+            },
+        )
+
+        try:
+            db_alerts, total_count = query_last_alerts(
+                tenant_id=tenant_id,
+                query=QueryDto(cel=enrich_data.cel),
+            )
+
+            if not db_alerts:
+                logger.info(
+                    "No alerts found matching the CEL query",
+                    extra={"cel": enrich_data.cel, "tenant_id": tenant_id},
+                )
+                return {
+                    "status": "ok",
+                    "message": "No alerts matched the query",
+                }
+
+            fingerprints = [alert.fingerprint for alert in db_alerts]
+            logger.info(
+                "Found alerts matching CEL query",
+                extra={
+                    "cel": enrich_data.cel,
+                    "tenant_id": tenant_id,
+                    "alert_count": total_count,
+                },
+            )
+        except CelToSqlException as e:
+            logger.exception(
+                f'Error parsing CEL expression "{enrich_data.cel}". {str(e)}'
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error parsing CEL expression: {enrich_data.cel}",
+            ) from e
+        except Exception as e:
+            logger.exception("Failed to process CEL query", extra={"error": str(e)})
+            return {"status": "failed", "message": str(e)}
+    else:
+        # Use the provided fingerprints
+        fingerprints = enrich_data.fingerprints
+        logger.info(
+            "Enriching alerts batch",
+            extra={
+                "fingerprints": fingerprints,
+                "tenant_id": tenant_id,
+            },
+        )
+
+    # Common enrichment processing
     try:
         enrichment_bl = EnrichmentsBl(tenant_id, db=session)
         (
@@ -819,7 +886,7 @@ def batch_enrich_alerts(
         enrichments = deepcopy(enrich_data.enrichments)
 
         enrichment_bl.batch_enrich(
-            fingerprints=enrich_data.fingerprints,
+            fingerprints=fingerprints,
             enrichments=enrichments,
             action_type=action_type,
             action_callee=authenticated_entity.email,
@@ -828,9 +895,8 @@ def batch_enrich_alerts(
         )
 
         last_alerts = get_last_alerts_by_fingerprints(
-            authenticated_entity.tenant_id, enrich_data.fingerprints, session=session
+            tenant_id, fingerprints, session=session
         )
-
         alert_ids = [last_alert.alert_id for last_alert in last_alerts]
 
         if dispose_on_new_alert:
@@ -843,20 +909,16 @@ def batch_enrich_alerts(
                 )
                 for alert_id in alert_ids
             ]
-
             enrichment_bl.batch_enrich(
                 fingerprints=formatted_alert_ids,
-                enrichments=enrich_data.enrichments,
+                enrichments=enrichments,
                 action_type=action_type,
                 action_callee=authenticated_entity.email,
                 action_description=action_description,
                 audit_enabled=False,
             )
 
-        # get the alert with the new enrichment
-        alerts = get_alerts_by_ids(
-            authenticated_entity.tenant_id, alert_ids, session=session
-        )
+        alerts = get_alerts_by_ids(tenant_id, alert_ids, session=session)
 
         enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alerts, session=session)
         # push the enriched alert to the elasticsearch
@@ -870,6 +932,7 @@ def batch_enrich_alerts(
         except Exception:
             logger.exception("Failed to push alerts to elasticsearch")
             pass
+
         # use pusher to push the enriched alert to the client
         pusher_client = get_pusher_client()
         if pusher_client:
@@ -884,9 +947,10 @@ def batch_enrich_alerts(
             except Exception:
                 logger.exception("Failed to tell client to poll alerts")
                 pass
+
         logger.info(
             "Alerts batch enriched successfully",
-            extra={"fingerprints": enrich_data.fingerprints, "tenant_id": tenant_id},
+            extra={"fingerprints": fingerprints, "tenant_id": tenant_id},
         )
 
         if should_run_workflow:
@@ -910,7 +974,9 @@ def batch_enrich_alerts(
                     session.commit()
 
         return {"status": "ok"}
-
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
         logger.exception("Failed to enrich alerts batch", extra={"error": str(e)})
         return {"status": "failed"}

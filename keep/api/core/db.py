@@ -3332,7 +3332,7 @@ def update_action(
     return found_action
 
 
-def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
+def get_tenants_configurations(only_with_config=False) -> dict:
     with Session(engine) as session:
         try:
             tenants = session.exec(select(Tenant)).all()
