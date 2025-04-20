@@ -859,7 +859,7 @@ class PagerdutyProvider(
         response.raise_for_status()
         return response.json()
 
-    def __get_all_incidents_or_alerts(self, incident_id: str = None):
+    def __get_all_incidents_or_alerts(self, incident_id: str = None, limit: int = 100):
         self.logger.info(
             "Getting incidents or alerts",
             extra={
@@ -869,8 +869,9 @@ class PagerdutyProvider(
         )
         paginated_response = []
         offset = 0
-        max_iterations = os.environ.get("KEEP_PAGERDUTY_MAX_ITERATIONS", 100)
+        max_iterations = os.environ.get("KEEP_PAGERDUTY_MAX_ITERATIONS", 2)
         current_iteration = 0
+        total = True
         while True:
             try:
                 url = f"{self.BASE_API_URL}/incidents"
@@ -883,7 +884,9 @@ class PagerdutyProvider(
                 params = {
                     "include[]": include,
                     "offset": offset,
-                    "limit": 100,
+                    "limit": limit,
+                    "total": total,
+                    "sort_by": ["created_at:desc"],
                 }
                 if not incident_id and self.authentication_config.service_id:
                     params["service_ids[]"] = [self.authentication_config.service_id]
@@ -902,12 +905,30 @@ class PagerdutyProvider(
                         "tenant_id": self.context_manager.tenant_id,
                     },
                 )
-                raise
-            offset = response.get("offset", 0)
+                if paginated_response:
+                    self.logger.warning(
+                        "Failed to get incidents from offset",
+                        extra={
+                            "offset": offset,
+                            "tenant_id": self.context_manager.tenant_id,
+                        },
+                    )
+                    break
+                else:
+                    self.logger.exception(
+                        "Failed to get any incidents or alerts",
+                        extra={"tenant_id": self.context_manager.tenant_id},
+                    )
+                    raise
+            offset += limit
             paginated_response.extend(response.get(resource, []))
+            extra = {"offset": offset, "tenant_id": self.context_manager.tenant_id}
+            if total:
+                extra["total"] = response.get("total", 0)
+                extra["to_fetch"] = min([limit * max_iterations, extra["total"]])
             self.logger.info(
                 "Fetched incidents or alerts",
-                extra={"offset": offset, "tenant_id": self.context_manager.tenant_id},
+                extra=extra,
             )
             # No more results
             if not response.get("more", False) or current_iteration >= max_iterations:
@@ -919,8 +940,10 @@ class PagerdutyProvider(
                         "max_iterations": max_iterations,
                     },
                 )
-                current_iteration += 1
                 break
+            current_iteration += 1
+            # We want total only on the first iteration
+            total = False
         self.logger.info(
             "Fetched all incidents or alerts",
             extra={
@@ -1113,4 +1136,5 @@ if __name__ == "__main__":
         provider_type="pagerduty",
         provider_config=provider_config,
     )
-    provider.get_incidents()
+    incidents = provider.get_incidents()
+    print(len(incidents))
