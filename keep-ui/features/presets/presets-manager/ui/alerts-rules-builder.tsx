@@ -457,20 +457,8 @@ export const AlertsRulesBuilder = ({
             {/* Textarea and error message container */}
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
-                {/* <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" /> */}
-                {/* <Textarea
-                  ref={textAreaRef}
-                  rows={1}
-                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-10" // Added pl-9 for left padding to accommodate icon
-                  value={celRules}
-                  onValueChange={onValueChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
-                  error={!isValidCEL}
-                  onFocus={() => setShowSuggestions(true)}
-                /> */}
-
                 <CelInput
+                  id="alerts-cel-input"
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   fieldsForSuggestions={alertFields}
@@ -479,15 +467,6 @@ export const AlertsRulesBuilder = ({
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                 />
-
-                {/* {celRules && (
-                  <button
-                    onClick={handleClearInput}
-                    className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
-                  >
-                    <XMarkIcon className="h-4 w-4" />
-                  </button>
-                )} */}
               </div>
               {showSuggestions && (
                 <div className="absolute z-10 w-full">

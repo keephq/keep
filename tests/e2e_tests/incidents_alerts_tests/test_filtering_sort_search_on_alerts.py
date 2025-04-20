@@ -296,13 +296,18 @@ def test_search_by_cel(
     browser.wait_for_timeout(3000)
     print(current_alerts)
     init_test(browser, current_alerts)
-    search_input = browser.locator(
-        "textarea[placeholder*='Use CEL to filter your alerts']"
-    )
-    expect(search_input).to_be_visible()
+    cel_input_id = "alerts-cel-input"
     browser.wait_for_timeout(1000)
-    search_input.fill(cel_query)
-    search_input.press("Enter")
+
+    browser.evaluate(
+        f"""
+            var models = window.monaco?.editor?.getModels?.();
+            var celModel = models.find(model => model.editorId == '{cel_input_id}');
+            celModel?.setValue("{cel_query}");
+        """
+    )
+    browser.locator(f".{cel_input_id}").click()
+    browser.keyboard.press("Enter")
 
     assert_alerts_by_column(
         browser,

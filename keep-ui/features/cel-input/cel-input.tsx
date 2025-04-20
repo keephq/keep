@@ -5,6 +5,7 @@ import { IoSearchOutline } from "react-icons/io5";
 import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface CelInputProps {
+  id?: string;
   value?: string;
   fieldsForSuggestions?: string[];
   onValueChange?: (value: string) => void;
@@ -16,6 +17,7 @@ interface CelInputProps {
 }
 
 const CelInput: FC<CelInputProps> = ({
+  id,
   value = "",
   fieldsForSuggestions = [],
   onValueChange,
@@ -35,6 +37,7 @@ const CelInput: FC<CelInputProps> = ({
         </div>
       )}
       <MonacoCelEditor
+        editorId={id}
         className="h-20 relative {}"
         value={value}
         fieldsForSuggestions={fieldsForSuggestions}

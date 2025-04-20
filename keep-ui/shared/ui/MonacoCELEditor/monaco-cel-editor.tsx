@@ -11,6 +11,7 @@ import "./editor.scss";
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
 interface MonacoCelProps {
+  editorId?: string;
   className: string;
   value: string;
   fieldsForSuggestions?: string[];
@@ -45,7 +46,10 @@ export function MonacoCelEditor(props: MonacoCelProps) {
 
     (modelRef.current as any).___fieldsForSuggestions___ =
       props.fieldsForSuggestions;
-  }, [props.fieldsForSuggestions, isEditorMounted]);
+    if (props.editorId) {
+      (modelRef.current as any).editorId = props.editorId;
+    }
+  }, [props.fieldsForSuggestions, props.editorId, isEditorMounted]);
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
@@ -107,7 +111,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onMonacoLoadFailure={setError}
       onMount={handleEditorDidMount}
       onChange={(val) => props.onValueChange(val || "")}
-      className={"monaco-cel-editor " + props.className}
+      className={`${props.editorId ? props.editorId + " " : ""}monaco-cel-editor ${props.className}`}
       language="cel"
       defaultLanguage="cel"
       theme="vs"
