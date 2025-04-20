@@ -457,7 +457,7 @@ export const AlertsRulesBuilder = ({
             {/* Textarea and error message container */}
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
-                <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                {/* <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" /> */}
                 {/* <Textarea
                   ref={textAreaRef}
                   rows={1}
@@ -475,18 +475,19 @@ export const AlertsRulesBuilder = ({
                   value={celRules}
                   fieldsForSuggestions={alertFields}
                   onValueChange={onValueChange}
+                  onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                 />
 
-                {celRules && (
+                {/* {celRules && (
                   <button
                     onClick={handleClearInput}
                     className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
                   >
                     <XMarkIcon className="h-4 w-4" />
                   </button>
-                )}
+                )} */}
               </div>
               {showSuggestions && (
                 <div className="absolute z-10 w-full">

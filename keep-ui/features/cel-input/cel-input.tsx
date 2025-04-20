@@ -1,11 +1,14 @@
 import React, { ChangeEvent, FC, useRef, useState } from "react";
 import type { editor } from "monaco-editor";
 import { MonacoCelEditor } from "@/shared/ui/MonacoCELEditor";
+import { IoSearchOutline } from "react-icons/io5";
+import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface CelInputProps {
   value?: string;
   fieldsForSuggestions?: string[];
   onValueChange?: (value: string) => void;
+  onClearValue?: () => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
   placeholder?: string;
@@ -16,6 +19,7 @@ const CelInput: FC<CelInputProps> = ({
   value = "",
   fieldsForSuggestions = [],
   onValueChange,
+  onClearValue,
   onKeyDown,
   onFocus,
   placeholder = "Enter value",
@@ -23,19 +27,29 @@ const CelInput: FC<CelInputProps> = ({
 }) => {
   return (
     <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white">
+      <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+
       {placeholder && !value && (
         <div className="absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50">
           {placeholder}
         </div>
       )}
       <MonacoCelEditor
-        className="h-20 relative top-1 {}"
+        className="h-20 relative {}"
         value={value}
         fieldsForSuggestions={fieldsForSuggestions}
         onValueChange={onValueChange || ((value: string) => {})}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
       />
+      {value && (
+        <button
+          onClick={onClearValue}
+          className="absolute top-0 right-0 w-9 h-full flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
+        >
+          <XMarkIcon className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 };

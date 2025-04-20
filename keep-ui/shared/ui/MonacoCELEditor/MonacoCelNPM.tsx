@@ -8,7 +8,7 @@ interface MonacoCelProps extends EditorProps {
   onMonacoLoadFailure?: (error: Error) => void;
 }
 
-export function MonacoCel(props: MonacoCelProps) {
+export function MonacoCelNPM(props: MonacoCelProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const onMonacoLoadedRef = useRef<MonacoCelProps["onMonacoLoaded"] | null>(
     null

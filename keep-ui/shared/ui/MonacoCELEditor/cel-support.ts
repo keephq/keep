@@ -1,3 +1,5 @@
+import { handleCompletions } from "./handle-completions";
+
 // Call this once before rendering
 export const setupCustomCellanguage = (monaco: any) => {
   if (monaco.languages.getLanguages().some((lang: any) => lang.id === "cel"))
@@ -56,55 +58,27 @@ export const setupCustomCellanguage = (monaco: any) => {
     },
   });
 
-  // monaco.editor.defineTheme("cel-dark", {
-  //   base: "vs-dark",
-  //   inherit: true,
-  //   rules: [
-  //     { token: "keyword", foreground: "C586C0" }, // purple
-  //     { token: "identifier", foreground: "9CDCFE" }, // light blue
-  //     { token: "number", foreground: "B5CEA8" }, // light green
-  //     { token: "string", foreground: "CE9178" }, // salmon
-  //     { token: "operator", foreground: "FFFF00" }, // yellow
-  //     { token: "delimiter", foreground: "D4D4D4" }, // same as operator
-  //     { token: "function", foreground: "C586C0" }, // purple
-  //   ],
-  //   colors: {
-  //     "editor.background": "#00000000", // Transparent background
-  //   },
-  // });
-
-  monaco.editor.defineTheme("cel-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "C586C0" }, // purple
-      { token: "identifier", foreground: "000000" }, // black
-      { token: "number", foreground: "B5CEA8" }, // light green
-      { token: "string", foreground: "CE9178" }, // salmon
-      { token: "operator", foreground: "9CDCFE" }, // yellow
-      { token: "delimiter", foreground: "D4D4D4" }, // same as operator
-      { token: "function", foreground: "C586C0" }, // purple
-    ],
-    colors: {
-      "editor.background": "#00000000", // Transparent background
-    },
-  });
-
   monaco.languages.setLanguageConfiguration("cel", {
-    // comments: {
-    //   lineComment: "//",
-    // },
     brackets: [
-      // ["{", "}"],
       ["[", "]"],
       ["(", ")"],
     ],
     autoClosingPairs: [
       { open: '"', close: '"' },
       { open: "'", close: "'" },
-      // { open: "{", close: "}" },
       { open: "[", close: "]" },
       { open: "(", close: ")" },
     ],
+  });
+
+  monaco.languages.registerCompletionItemProvider("cel", {
+    triggerCharacters: ["."], // or "" if you want auto-trigger on any char
+
+    provideCompletionItems: (
+      model: any,
+      position: any,
+      context: any,
+      cancellationToken: any
+    ) => handleCompletions(model, position, context, cancellationToken),
   });
 };

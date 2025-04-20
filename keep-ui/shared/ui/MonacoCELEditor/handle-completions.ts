@@ -16,8 +16,8 @@ export function handleCompletions(
   context: languages.CompletionContext,
   token: CancellationToken
 ): languages.ProviderResult<languages.CompletionList> {
-  const fieldsForSuggestions: string[] | undefined = (model as any)
-    .___fieldsForSuggestions___;
+  const fieldsForSuggestions: string[] | undefined =
+    (model as any).___fieldsForSuggestions___ || [];
 
   const word = model.getWordUntilPosition(position);
   const range = {
@@ -38,10 +38,11 @@ export function handleCompletions(
     /([a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)*)\.?$/
   );
 
-  const pathPrefix = match?.[1] ?? ""; // e.g. "gcp.tags"
+  let pathPrefix = match?.[1] ?? ""; // e.g. "gcp.tags"
+  pathPrefix = `${pathPrefix}.`;
 
   let suggestions = fieldsForSuggestions
-    ?.filter((x) => x.startsWith(pathPrefix))
+    ?.filter((x) => x !== pathPrefix && x.startsWith(pathPrefix))
     .map((x) => x.replace(pathPrefix, ""))
     .map((x) => (x.startsWith(".") ? x.slice(1) : x))
     .filter((x) => x.length > 0)
@@ -79,9 +80,11 @@ export function handleCompletions(
     },
   ] as any);
 
-  console.log("Ihor", {
-    suggestions,
-  });
+  // console.log("Ihor", {
+  //   pathPrefix,
+  //   suggestions,
+  //   fieldsForSuggestions: fieldsForSuggestions?.toSorted(),
+  // });
 
   return { suggestions: suggestions || [] };
 }

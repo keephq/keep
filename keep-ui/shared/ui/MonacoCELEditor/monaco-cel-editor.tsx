@@ -4,9 +4,8 @@ import { KeepLoader } from "../KeepLoader/KeepLoader";
 import { useEffect, useRef, useState } from "react";
 import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
 import { setupCustomCellanguage } from "./cel-support";
-import { MonacoCel } from "./monaco-cel-base.turbopack";
+import { MonacoCelBase } from "./MonacoCel";
 import { editor, Token } from "monaco-editor";
-import { handleCompletions } from "./handle-completions";
 import "./editor.scss";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
@@ -38,12 +37,6 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")
   ) {
-    monacoInstance.languages.registerCompletionItemProvider("cel", {
-      triggerCharacters: ["."], // or "" if you want auto-trigger on any char
-
-      provideCompletionItems: (model, position, context, cancellationToken) =>
-        handleCompletions(model, position, context, cancellationToken),
-    });
     setupCustomCellanguage(monacoInstance);
   }
 
@@ -83,11 +76,6 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       }
       enteredTokensRef.current = monaco.editor.tokenize(value, "cel")[0];
     });
-    // const suggestController = editor.getContribution(
-    //   "editor.contrib.suggestController"
-    // );
-    // (suggestController as any).model.on
-    // console.log("Ihor", suggestController);
 
     const suggestionWidget = (
       editor.getContribution("editor.contrib.suggestController") as any
@@ -114,7 +102,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   }
 
   return (
-    <MonacoCel
+    <MonacoCelBase
       onMonacoLoaded={monacoLoadedCallback}
       onMonacoLoadFailure={setError}
       onMount={handleEditorDidMount}
@@ -122,7 +110,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       className={"monaco-cel-editor " + props.className}
       language="cel"
       defaultLanguage="cel"
-      theme="cel-dark"
+      theme="vs"
       loading={Loader}
       value={props.value}
       wrapperProps={{
