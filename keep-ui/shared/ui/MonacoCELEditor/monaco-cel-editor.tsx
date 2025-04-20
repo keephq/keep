@@ -81,9 +81,17 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       enteredTokensRef.current = monaco.editor.tokenize(value, "cel")[0];
     });
 
-    const suggestionWidget = (
-      editor.getContribution("editor.contrib.suggestController") as any
-    )?.widget;
+    const suggestController = editorRef.current.getContribution(
+      "editor.contrib.suggestController"
+    );
+
+    const suggestionWidget = (suggestController as any)?.widget;
+    // NOTE: This is left commented on purpose. This snippet allows to disable
+    // the suggestion widget from hiding up when the user clicks outside of the input.
+    // Super useful for debugging to inspect suggestions.
+    // if ((suggestController as any)?.widget?.value) {
+    //   (suggestController as any).widget.value.hideWidget = () => {}; // NO-OP
+    // }
 
     if (suggestionWidget) {
       suggestionWidget.value.onDidShow(() => {
