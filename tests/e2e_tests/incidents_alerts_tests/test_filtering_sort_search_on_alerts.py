@@ -264,11 +264,27 @@ search_by_cel_tescases = {
         "predicate": lambda alert: "java-otel"
         in alert.get("labels", {}).get("service", ""),
         "alert_property_name": "name",
+        "commands": [
+            lambda browser: browser.keyboard.type("labels."),
+            lambda browser: browser.locator(
+                ".monaco-highlighted-label", has_text="service"
+            ).click(),
+            lambda browser: browser.keyboard.type("."),
+            lambda browser: browser.locator(
+                ".monaco-highlighted-label", has_text="contains"
+            ).click(),
+            lambda browser: browser.keyboard.type("java-otel"),
+        ],
     },
     "using enriched field": {
         "cel_query": "host == 'enriched host'",
         "predicate": lambda alert: "Enriched" in alert["name"],
         "alert_property_name": "name",
+        "commands": [
+            lambda browser: browser.keyboard.type("host"),
+            lambda browser: browser.keyboard.type(" == "),
+            lambda browser: browser.keyboard.type("'enriched host'"),
+        ],
     },
     "date comparison greater than or equal": {
         "cel_query": f"dateForTests >= '{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'",
@@ -276,6 +292,13 @@ search_by_cel_tescases = {
         and datetime.fromisoformat(alert.get("dateForTests"))
         >= (datetime(2025, 2, 10, 10) + timedelta(days=-14)),
         "alert_property_name": "name",
+        "commands": [
+            lambda browser: browser.keyboard.type("dateForTests"),
+            lambda browser: browser.keyboard.type(" >= "),
+            lambda browser: browser.keyboard.type(
+                f"'{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'"
+            ),
+        ],
     },
 }
 
@@ -290,6 +313,7 @@ def test_search_by_cel(
 ):
     test_case = search_by_cel_tescases[search_test_case]
     cel_query = test_case["cel_query"]
+    commands = test_case["commands"]
     predicate = test_case["predicate"]
     alert_property_name = test_case["alert_property_name"]
     current_alerts = setup_test_data
@@ -298,16 +322,16 @@ def test_search_by_cel(
     init_test(browser, current_alerts)
     cel_input_id = "alerts-cel-input"
     browser.wait_for_timeout(1000)
+    cel_input_locator = browser.locator(f".{cel_input_id}")
+    cel_input_locator.click()
 
-    browser.evaluate(
-        f"""
-            var models = window.monaco?.editor?.getModels?.();
-            var celModel = models.find(model => model.editorId == '{cel_input_id}');
-            celModel?.setValue("{cel_query}");
-        """
-    )
-    browser.locator(f".{cel_input_id}").click()
+    for command in commands:
+        command(browser)
+        # browser.wait_for_timeout(5000)
+    expect(cel_input_locator).to_have_text(cel_query)
+
     browser.keyboard.press("Enter")
+    # browser.wait_for_timeout(5000)
 
     assert_alerts_by_column(
         browser,
