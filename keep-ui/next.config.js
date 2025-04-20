@@ -11,7 +11,7 @@ const turbopackAliases =
     ? {
         "./MonacoEditor": "@/shared/ui/MonacoEditor/index.turbopack.ts",
         "./MonacoYAMLEditor": "@/shared/ui/MonacoYAMLEditor/index.turbopack.ts",
-        "./MonacoCel": "./MonacoCel.turbopack.tsx",
+        "./MonacoCel": "@/shared/ui/MonacoCELEditor/MonacoCel.turbopack.tsx",
       }
     : {};
 
