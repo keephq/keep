@@ -1562,153 +1562,169 @@ def test_workflow_permissions(
         mock_scheduler.handle_manual_event_workflow.assert_not_called()
 
 
-workflow_definition_jinja = """workflow:
-  id: jinja-template-test
-  description: Test Jinja2 template engine features
-  templating: jinja2
-  triggers:
-    - type: alert
-      filters:
-        - key: name
-          value: "server-alert"
-  steps:
-    - name: format_message
-      provider:
-        type: keep
-        with:
-          set:
-            formatted_message: >
-              {% if alert.severity == 'critical' %}
-              🔴 Critical Alert:
-              {% elif alert.severity == 'warning' %}
-              🟡 Warning Alert:
-              {% else %}
-              ℹ️ Info Alert:
-              {% endif %}
-              {{ alert.name | upper }}
-              
-              Details:
-              {% for key, value in alert.labels.items() %}
-              - {{ key }}: {{ value }}
-              {% endfor %}
-  actions:
-    - name: send-notification
-      provider:
-        type: console
-        with:
-          message: "{{ steps.format_message.formatted_message }}"
+workflow_definition_jinja2 = """workflow:
+id: %s
+description: send slack message only the first time an alert fires
+templating: jinja2
+triggers:
+  - type: alert
+    filters:
+      - key: name
+        value: "server-is-down"
+actions:
+  - name: send-slack-message
+    if: "keep.is_first_time('{{ alert.fingerprint }}', '24h')"
+    provider:
+      type: console
+      with:
+        message: |
+          "Tier 1 Alert: {% if alert.name %}{{ alert.name }}{% endif %} - {% if alert.name %}{{ alert.description }}{% endif %}
+          Alert details: {{ alert }}"
 """
 
 @pytest.mark.parametrize(
-    "test_app, test_case, alert_data, expected_message_parts, db_session",
+    "test_app, workflow_id, test_case, alert_statuses, expected_action",
     [
         (
             {"AUTH_TYPE": "NOAUTH"},
-            "Critical Alert with Labels",
-            {
-                "name": "server-alert",
-                "labels": {
-                    "host": "prod-server-01",
-                    "region": "eu-west-1",
-                    "service": "api"
-                }
-            },
-            [
-                "🔴 Critical Alert:",
-                "SERVER-ALERT",
-                "host: prod-server-01",
-                "region: eu-west-1",
-                "service: api"
-            ],
-            None
+            "alert-first-firing",
+            "First firing",
+            [[0, "firing"]],
+            True,
         ),
         (
             {"AUTH_TYPE": "NOAUTH"},
-            "Warning Alert with Labels",
-            {
-                "name": "server-alert",
-                "severity": "warning",
-                "labels": {
-                    "host": "stage-server-02",
-                    "component": "database"
-                }
-            },
-            [
-                "🟡 Warning Alert:",
-                "SERVER-ALERT",
-                "host: stage-server-02",
-                "component: database"
-            ],
-            None
+            "alert-second-firing",
+            "Second firing within 24h",
+            [[0, "firing"], [1, "firing"]],
+            False,
         ),
         (
             {"AUTH_TYPE": "NOAUTH"},
-            "Info Alert without Labels",
-            {
-                "name": "server-alert",
-                "severity": "info",
-                "labels": {}
-            },
+            "firing-resolved-firing-24",
+            "First firing, resolved, and fired again after 24h",
+            [[0, "firing"], [1, "resolved"], [25, "firing"]],
+            True,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "multiple-firings-24",
+            "Multiple firings within 24h",
+            [[0, "firing"], [1, "firing"], [2, "firing"], [3, "firing"]],
+            False,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "resolved-fired-24",
+            "Resolved and fired again within 24h",
+            [[0, "firing"], [1, "resolved"], [2, "firing"]],
+            False,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "first-firing-multiple-resolutions",
+            "First firing after multiple resolutions",
+            [[0, "resolved"], [1, "resolved"], [2, "firing"]],
+            True,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "firing-exactly-24",
+            "Firing exactly at 24h boundary",
+            [[0, "firing"], [24, "firing"]],
+            True,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "complex-scenario",
+            "Complex scenario with multiple status changes",
             [
-                "ℹ️ Info Alert:",
-                "SERVER-ALERT"
+                [0, "firing"],
+                [1, "resolved"],
+                [2, "firing"],
+                [3, "resolved"],
+                [26, "firing"],
             ],
-            None
-        )
+            False,
+        ),
     ],
-    indirect=["test_app", "db_session"]
+    indirect=["test_app"],
 )
-def test_workflow_jinja_template(
+def test_workflow_execution_with_jinja2(
     db_session,
     test_app,
+    create_alert,
     workflow_manager,
+    workflow_id,
     test_case,
-    alert_data,
-    expected_message_parts
+    alert_statuses,
+    expected_action,
 ):
     """
-    Test workflow execution with Jinja2 template engine features.
-    Tests various template features like conditionals, loops, and filters.
+    This test function verifies the execution of the workflow based on different alert scenarios.
+    It uses parameterized testing to cover various cases of alert firing and resolution times.
+
+    The test does the following:
+    1. Creates alerts with specified statuses and timestamps.
+    2. Inserts a current alert into the workflow manager.
+    3. Waits for the workflow execution to complete.
+    4. Checks if the workflow execution was successful.
+    5. Verifies if the correct action was triggered based on the alert firing time.
+
+    Parameters:
+    - test_case: Description of the test scenario.
+    - alert_statuses: List of [time_diff, status] pairs representing alert history.
+    - expected_action: Boolean indicating if the action is expected to be triggered.
+
+    The test covers scenarios such as:
+    - First firing of an alert
+    - Second firing of an alert within 24 hours
+    - Firing of an alert after resolving and firing again after 24 hours
     """
-    # ARRANGE
     workflow = Workflow(
-        id="jinja-template-test",
-        name="jinja-template-test",
+        id=workflow_id,
+        name=workflow_id,
         tenant_id=SINGLE_TENANT_UUID,
-        description="Test Jinja2 template engine features",
+        description="Send slack message only the first time an alert fires",
         created_by="test@keephq.dev",
         interval=0,
-        workflow_raw=workflow_definition_jinja
+        workflow_raw=workflow_definition2 % workflow_id,
     )
     db_session.add(workflow)
     db_session.commit()
+    base_time = datetime.now(tz=pytz.utc)
 
-    # Create the alert
+    # Create alerts with specified statuses and timestamps
+    for time_diff, status in alert_statuses:
+        alert_status = (
+            AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+        )
+        create_alert("fp1", alert_status, base_time - timedelta(hours=time_diff))
+
+    # Create the current alert
     current_alert = AlertDto(
-        id="test-alert-1",
-        source=["test"],
-        name=alert_data["name"],
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-down",
         status=AlertStatus.FIRING,
-        severity=alert_data["severity"],
-        labels=alert_data["labels"]
+        severity=AlertSeverity.CRITICAL,
+        fingerprint="fp1",
     )
 
-    # ACT
-    # Insert the alert into workflow manager
+    # Insert the current alert into the workflow manager
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
-    # Wait for workflow execution
-    workflow_execution = wait_for_workflow_execution(
-        SINGLE_TENANT_UUID, "jinja-template-test"
-    )
+    # Wait for the workflow execution to complete
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow_id)
 
-    # ASSERT
-    # Verify workflow execution completed successfully
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+    # Check if the workflow execution was successful
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
 
-    # Verify the formatted message contains all expected parts
-    result_message = workflow_execution.results["send-notification"][0]
-    for expected_part in expected_message_parts:
-        assert expected_part in result_message, \
-            f"Expected '{expected_part}' to be in message: {result_message}"
+    # Verify if the correct action was triggered
+    if expected_action:
+        assert "Tier 1 Alert" in workflow_execution.results["send-slack-message"][0]
+    else:
+        assert workflow_execution.results["send-slack-message"] == []
