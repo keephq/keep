@@ -543,7 +543,7 @@ def test_db_disk_space_alert(mocked_context_manager):
 
     # Jinja2
     iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
-    template = "Number of logs: {{ keep.len(steps['check-error-rate'].results.logs) }}"
+    template = "Number of logs: keep.len({{ steps['check-error-rate'].results.logs }})"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
