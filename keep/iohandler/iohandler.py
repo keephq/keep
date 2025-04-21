@@ -716,7 +716,7 @@ class IOHandler:
                 missing_keys.add(self._undefined_name)
                 return super().__str__()
 
-        class ChevronTrackingDict(dict):
+        class TrackingDict(dict):
             def __init__(self, *args, **kwargs):
                 self._path = kwargs.pop('_path', '')
                 super().__init__(*args, **kwargs)
@@ -726,13 +726,13 @@ class IOHandler:
                 try:
                     value = super().__getitem__(key)
                     if isinstance(value, dict):
-                        return ChevronTrackingDict(value, _path=full_path)
+                        return TrackingDict(value, _path=full_path)
                     return value
                 except KeyError:
                     missing_keys.add(full_path)
                     raise
 
-        return missing_keys, ChevronTrackingDict, TrackingUndefined
+        return missing_keys, TrackingDict, TrackingUndefined
 
     def render_recursively(
         self, template: str, context: dict, max_iterations: int = 10

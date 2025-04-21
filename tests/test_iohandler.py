@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from keep.api.models.alert import AlertDto
-from keep.iohandler.iohandler import IOHandler
+from keep.iohandler.iohandler import IOHandler, TemplateEngine
 
 
 def test_vanilla(context_manager):
@@ -961,7 +961,10 @@ def test_render_with_consts(context_manager):
     ), f"Expected '{expected_result}', but got '{result}'"
 
 def test_jinja_with_custom_functions(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = IOHandler(
+        context_manager,
+        template_engine=TemplateEngine.JINJA2
+    )
 
     context_manager.steps_context = {
         "user": {
@@ -987,7 +990,11 @@ def test_jinja_with_custom_functions(context_manager):
     assert result.strip() == expected, f"Expected:\n{expected}\nBut got:\n{result}"
 
 def test_keep_functions_respect_jinja_raw(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = IOHandler(
+        context_manager,
+        template_engine=TemplateEngine.JINJA2
+    )
+    
     context_manager.steps_context = {
         "some_list": [1, 2, 3],
     }
