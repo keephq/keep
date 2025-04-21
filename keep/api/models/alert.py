@@ -367,7 +367,8 @@ class EnrichAlertRequestBody(BaseModel):
 
 class BatchEnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
-    fingerprints: list[str]
+    fingerprints: Optional[list[str]] = None
+    cel: Optional[str] = None
 
 
 class UnEnrichAlertRequestBody(BaseModel):
