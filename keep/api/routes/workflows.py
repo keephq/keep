@@ -482,7 +482,8 @@ async def run_workflow_from_definition(
     if workflow_id:
         # if workflow exists, use it's id for test run
         try:
-            workflowstore.get_workflow(tenant_id, workflow_id)
+            workflow_from_db = workflowstore.get_workflow(tenant_id, workflow_id)
+            workflow_id = workflow_from_db.workflow_id
         except HTTPException:
             # if workflow_id is not found, use dummy workflow id for test run
             workflow_id = None

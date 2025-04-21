@@ -225,7 +225,7 @@ def get_or_create(
     Get an instance by filter kwargs, or create one with those filters plus any defaults.
 
     Args:
-        session: SQLAlchemy session
+        session: SQLModel session
         model: Model class
         defaults: Dict of default values for creation (not used for lookup)
         **kwargs: Filter parameters used both for lookup and creation
@@ -233,7 +233,13 @@ def get_or_create(
     Returns:
         tuple: (instance, created) where created is a boolean indicating if a new instance was created
     """
-    instance = session.exec(select(model).where(**kwargs)).first()
+    # Build query with all filter conditions
+    query = select(model)
+    for key, value in kwargs.items():
+        query = query.where(getattr(model, key) == value)
+
+    # Execute the query
+    instance = session.exec(query).first()
 
     if instance:
         return instance, False
@@ -253,7 +259,9 @@ def get_or_create(
     except IntegrityError:
         # If there's a conflict, roll back and try to fetch again (another process might have created it)
         session.rollback()
-        instance = session.exec(select(model).where(**kwargs)).first()
+
+        # Try to fetch again with the same query
+        instance = session.exec(query).first()
         if instance:
             return instance, False
         # If we still can't find it, something else is wrong, re-raise

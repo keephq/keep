@@ -279,6 +279,7 @@ def get_last_completed_execution(
     return session.exec(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
+        .where(WorkflowExecution.is_test_run == False)
         .where(
             (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
@@ -610,6 +611,13 @@ def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None)
             is_disabled=False,
             is_test=True,
         )
+        if created:
+            # For new instances, make sure they're committed and refreshed from the database
+            session.commit()
+            session.refresh(workflow)
+        elif workflow:
+            # For existing instances, refresh to get the current state
+            session.refresh(workflow)
         return workflow
 
 
@@ -739,6 +747,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
@@ -751,6 +760,7 @@ def get_all_workflows(tenant_id: str):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).all()
     return workflows
 
@@ -762,6 +772,7 @@ def get_all_provisioned_workflows(tenant_id: str):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.provisioned == True)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).all()
     return list(workflows)
 
@@ -782,6 +793,7 @@ def get_all_workflows_yamls(tenant_id: str):
             select(Workflow.workflow_raw)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).all()
     return list(workflows)
 
@@ -792,6 +804,7 @@ def get_workflow(tenant_id: str, workflow_id: str):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         )
         if validators.uuid(workflow_id):
             query = query.where(Workflow.id == workflow_id)
@@ -921,6 +934,7 @@ def get_workflow_executions(
     status: Optional[Union[str, List[str]]] = None,
     trigger: Optional[Union[str, List[str]]] = None,
     execution_id: Optional[str] = None,
+    is_test_run: bool = False,
 ):
     with Session(engine) as session:
         query = session.query(
@@ -928,6 +942,7 @@ def get_workflow_executions(
         ).filter(
             WorkflowExecution.tenant_id == tenant_id,
             WorkflowExecution.workflow_id == workflow_id,
+            WorkflowExecution.is_test_run == False,
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -1091,21 +1106,24 @@ def push_logs_to_db(log_entries):
         session.commit()
 
 
-def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
+def get_workflow_execution(
+    tenant_id: str, workflow_execution_id: str, is_test_run: bool | None = None
+):
     with Session(engine) as session:
-        execution_with_logs = (
-            session.query(WorkflowExecution)
-            .filter(
-                WorkflowExecution.id == workflow_execution_id,
-                WorkflowExecution.tenant_id == tenant_id,
+        base_query = session.query(WorkflowExecution)
+        if is_test_run is not None:
+            base_query = base_query.filter(
+                WorkflowExecution.is_test_run == is_test_run,
             )
-            .options(
-                joinedload(WorkflowExecution.logs),
-                joinedload(WorkflowExecution.workflow_to_alert_execution),
-                joinedload(WorkflowExecution.workflow_to_incident_execution),
-            )
-            .one()
+        base_query = base_query.filter(
+            WorkflowExecution.id == workflow_execution_id,
+            WorkflowExecution.tenant_id == tenant_id,
         )
+        execution_with_logs = base_query.options(
+            joinedload(WorkflowExecution.logs),
+            joinedload(WorkflowExecution.workflow_to_alert_execution),
+            joinedload(WorkflowExecution.workflow_to_incident_execution),
+        ).one()
     return execution_with_logs
 
 
@@ -2038,6 +2056,7 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id != workflow_execution_id)
+            .where(WorkflowExecution.is_test_run == False)
             .where(
                 WorkflowExecution.started >= datetime.now() - timedelta(days=1)
             )  # no need to check more than 1 day ago
