@@ -36,8 +36,6 @@ def test_jinja2_syntax_not_valid_with_mustache_engine(context_manager, template)
     with pytest.raises(RenderException):
         iohandler.render(template)
 
-import pytest
-
 @pytest.mark.parametrize(
     "template",
     [

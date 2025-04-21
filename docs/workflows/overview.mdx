@@ -25,6 +25,7 @@ The general structure of a workflow is:
 workflow:
   id: aks-example
   description: aks-example
+  templating: mustache or jinja2
   triggers:
     # list of triggers
     - type: manual
@@ -107,8 +108,8 @@ Add context to alerts, like customer details or ticket metadata, using enrichmen
 
 [See syntax](/workflows/syntax/enrichment)
 
-### Templating(#templating)
+### Templating
 
-Keep supports Jinja2 templating for dynamic values throughout workflows—use.
+Keep supports both Jinja2 and Mustache templating for dynamic values throughout workflows. Users can manually select the templating engine, with Mustache syntax set as the default.
 
 [See syntax](/workflows/syntax/templating)

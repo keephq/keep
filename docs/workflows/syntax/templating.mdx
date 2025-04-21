@@ -1,132 +1,171 @@
 ---
 title: Templating
 ---
-KeepHQ allows templating within YAML workflow definitions using [Jinja2](https://jinja.palletsprojects.com/) – a flexible and powerful templating language for Python. This is especially useful for dynamically generating descriptions, titles, and other content in alerts or actions like Jira ticket creation.
+
+KeepHQ supports two templating engines for dynamic values inside workflow YAML definitions:
+
+- Jinja2 — powerful and Pythonic
+- Mustache — simple and logic-less
+
+You can select the templating engine by setting the templating parameter in your YAML workflow. By default, Keep uses Mustache.
+
+## 🔀 Switching Between Engines
+
+Set the templating mode at the top of your workflow:
+
+- Default (no need to specify): mustache
+- To use Jinja2: add templating: jinja2
+
+Example:
+
+```yaml
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: mustache
+    actions:
+      ...
+```
+
+or
+
+```yaml
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: jinja2
+    actions:
+      ...
+```
+
 ---
 
-### Basic Syntax
+## Mustache Syntax (Default)
 
-#### Variables
-Use `{{ variable_name }}` to interpolate variables.
-```jinja2
+Mustache uses double curly braces for variable interpolation and does not support logic like if/else.
+
+### Variables
+```mustache
 {{ alert.alertname }}
 {{ alert.annotations.summary }}
 {{ alert.generatorURL }}
 ```
 
-#### Logic Conditions
-Use `{% if %}`...`{% endif %}` blocks to conditionally include fields.
+### Sections (conditionally rendered if value exists)
+```mustache
+{{#alert.channel}}
+*Channel:* {{ alert.channel }}
+{{/alert.channel}}
+```
 
+### Inverted Sections (rendered if value is missing or false)
+```mustache
+{{^alert.alertgroup}}
+*Alertgroup:* None
+{{/alert.alertgroup}}
+```
+
+[See more in the docs](https://github.com/noahmorrison/chevron)
+—
+
+## 🧠 Jinja2 Syntax
+
+Jinja2 provides more advanced capabilities including conditionals, filters, and logic.
+
+Set:
+```yaml
+templating: jinja2
+```
+
+### Variables
+```jinja2
+{{ alert.alertname }}
+{{ alert.annotations.summary }}
+```
+
+### Conditionals
 ```jinja2
 {% if alert.channel %}
 *Channel:* {{ alert.channel }}
 {% endif %}
 ```
 
-You can chain multiple independent conditions:
+### Default Values
 ```jinja2
-{% if alert.cluster %}
-*Cluster:* {{ alert.cluster }}
-{% endif %}
-{% if alert.namespace %}
-*Namespace:* {{ alert.namespace }}
-{% endif %}
+{{ alert.alertgroup or 'None' }}
 ```
 
-#### Default Values
-Use `or` to set a default value when a variable may be empty or undefined:
+### Filters
 ```jinja2
-*Alertgroup:* {{ alert.alertgroup or 'None' }}
+{{ alert.labels | join(', ') }}
+{{ alert.cluster | default('Unknown Cluster') }}
 ```
 
----
+[See more in the docs](https://jinja.palletsprojects.com/en/stable/)
+—
 
-### 📦 Example: JiraOnPrem Action Description Block
+## 📦 Example: JiraOnPrem with Mustache (Default)
 
-Here's a real-world usage pattern in a `jiraonprem` provider action:
-
-```jinja2
+```yaml
 workflows:
   - id: jiraonprem-investigate
     name: Create investigation
-    description: Creates investigation task in jira
-    disabled: false
-    triggers:
-      - type: manual
-    consts: {}
-    owners: []
-    services: []
-    steps: []
+    templating: mustache
     actions:
       - name: jiraonprem-action
         provider:
           type: jiraonprem
-          config: "{{` {{ providers.jiraOnPrem }} `}}"
+          config: "{{ providers.jiraOnPrem }}"
           with:
-            board_name: SA
-            components:
-              - Monitoring
-            custom_fields: ""
-            description: "--------------------------------------------------------------------
-
-            *Alertname:* {{ alert.alertname }}
-
-            *Summary:* {{ alert.annotations.summary }}
-
-            *Description:* {{ alert.description }}
-
-            *Alertgroup:* {{ alert.alertgroup or 'None' }}
-
-            {% if alert.channel %}
-            *Channel:* {{ alert.channel }}
-            {% endif %}
-
-            {% if alert.cluster %}
-            *Cluster:* {{ alert.cluster }}
-            {% endif %}
-
-            {% if alert.namespace %}
-            *Namespace:* {{ alert.namespace }}
-            {% endif %}
-
-            {% if alert.project %}
-            *Project:* {{ alert.project }}
-            {% endif %}
-
-            *Severity:* {{ alert.severity }}
-
-            --------------------------------------------------------------------
-
-            {% if alert.annotations.runbook_url %}
-            Runbook: [Runbook|{{ alert.annotations.runbook_url }}]
-            {% endif %}
-
-            {% if alert.generatorURL %}
-            Query: [Query|{{ alert.generatorURL }}]
-            {% endif %}
-
-            --------------------------------------------------------------------"
+            description: |
+              *Alertname:* {{ alert.alertname }}
+              *Summary:* {{ alert.annotations.summary }}
+              {{#alert.channel}}
+              *Channel:* {{ alert.channel }}
+              {{/alert.channel}}
+              {{#alert.annotations.runbook_url}}
+              Runbook: [Runbook|{{ alert.annotations.runbook_url }}]
+              {{/alert.annotations.runbook_url}}
 ```
 
----
+—
 
-### ✅ Best Practices
 
-- **Escape YAML properly**: If using multiline Jinja in YAML, wrap with double quotes (`"`) and indent consistently.
-- **Avoid logic nesting when possible**: Keep your `if` statements clean and flat for readability.
-- **Always check for nulls**: Use conditionals for optional values to avoid rendering issues.
-- **Use `or` for fallback values**: This keeps your output graceful even with missing data.
+—
 
----
+## 📦 Example: JiraOnPrem with Jinja2
 
-### 📘 Useful Filters
+```yaml
+templating: jinja2
 
-- `default` – Provide fallback if a variable is undefined:
-  ```jinja2
-  {{ alert.cluster | default('Unknown Cluster') }}
-  ```
-- `join` – Join lists into strings:
-  ```jinja2
-  {{ alert.labels | join(', ') }}
-  ```
----
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: jinja2
+    actions:
+      - name: jiraonprem-action
+        provider:
+          type: jiraonprem
+          config: "{{ providers.jiraOnPrem }}"
+          with:
+            description: |
+              *Alertname:* {{ alert.alertname }}
+              *Summary:* {{ alert.annotations.summary }}
+              {% if alert.channel %}
+              *Channel:* {{ alert.channel }}
+              {% endif %}
+              {% if alert.annotations.runbook_url %}
+              Runbook: [Runbook|{{ alert.annotations.runbook_url }}]
+              {% endif %}
+```
+
+
+## ✅ Best Practices
+
+- Use mustache for simple output formatting.
+- Use jinja2 if you need conditions, defaults, or filters.
+- Always wrap multiline strings with quotes and indent properly in YAML.
+- In Jinja2, use {% if %} to check for presence of values.
+- In Mustache, use {{#section}} and {{^section}} for presence/absence.
+
+—
