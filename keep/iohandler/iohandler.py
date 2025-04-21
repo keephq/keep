@@ -34,7 +34,7 @@ class IOHandler:
             template_engine: TemplateEngine = TemplateEngine.MUSTACHE
     ):
         self.context_manager = context_manager
-        self.template_engine = TemplateEngine.JINJA2
+        self.template_engine = template_engine
         self.logger = logging.getLogger(self.__class__.__name__)
         # whether Keep should shorten urls in the message or not
         # todo: have a specific parameter for this?
@@ -50,6 +50,10 @@ class IOHandler:
         # rendering is only support for strings
         if not isinstance(template, str):
             return template
+
+        # validate that template is syntactically correct due to current selected template engine
+        self.validate_template_syntax(template)
+
         # check if inside the mustache is object in the context
         if template.count("}}") != template.count("{{"):
             raise Exception(
@@ -87,7 +91,6 @@ class IOHandler:
         Raises:
             RenderException: If the template contains syntax from a different engine.
         """
-        # TODO ensure this is work correctly
         # Patterns specific to Jinja2
         jinja2_patterns = {
             'statement': r'{%[^%}]+%}',  # {% if something %}
