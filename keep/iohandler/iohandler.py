@@ -55,14 +55,17 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of }} and {{ does not match {template}"
             )
-        if template.count("%}") != template.count("{%"):
-            raise Exception(
-                f"Invalid template - number of %}} and {{% does not match: {template}"
-            )
-        if template.count("#}") != template.count("{#"):
-            raise Exception(
-                f"Invalid template - number of #}} and {{# does not match: {template}"
-            )
+
+        if self.template_engine == TemplateEngine.JINJA2:
+            if template.count("%}") != template.count("{%"):
+                raise Exception(
+                    f"Invalid template - number of %}} and {{% does not match: {template}"
+                )
+            if template.count("#}") != template.count("{#"):
+                raise Exception(
+                    f"Invalid template - number of #}} and {{# does not match: {template}"
+                )
+
         # TODO - better validate functions
         if template.count("(") != template.count(")"):
             raise Exception(
@@ -277,8 +280,9 @@ class IOHandler:
                 text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
             return text
 
-        # Extract jinja raw blocks
-        string = _extract_raw_blocks(string)
+        # Extract jinja2 raw blocks
+        if self.template_engine == TemplateEngine.JINJA2:
+            string = _extract_raw_blocks(string)
 
         # Now render the string
         string = self._render(string, safe, default, additional_context)
@@ -356,8 +360,10 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, str(val))
             tokens_handled.add(token_to_replace)
 
-        # Restore jinja raw blocks
-        parsed_string = _restore_raw_blocks(parsed_string)
+        # Restore jinja2 raw blocks
+        if self.template_engine == TemplateEngine.JINJA2:
+            parsed_string = _restore_raw_blocks(parsed_string)
+
         return parsed_string
 
     def _parse_token(self, token):
@@ -529,6 +535,7 @@ class IOHandler:
         return _parse(self, tree)
 
     def _render(self, key: str, safe=False, default="", additional_context=None):
+        # TODO migrate it to validate_template_syntax func
         if self.template_engine == TemplateEngine.MUSTACHE and "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
@@ -757,18 +764,14 @@ class IOHandler:
                         current, ctx, warn=False
                     )
 
-                    if iterations == 0:
-                        missing_keys.update(undefined)
-
-
                 # Render Jinja2 templates
                 else:
                     env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
                     template = env.from_string(current)
                     rendered = template.render(**context)
 
-                    if iterations == 0:
-                        missing_keys.update(undefined)
+                if iterations == 0:
+                    missing_keys.update(undefined)
 
                 # https://github.com/keephq/keep/issues/2326
                 rendered = html.unescape(rendered)
@@ -796,12 +799,17 @@ if __name__ == "__main__":
         "header": "HTTP API Error {{ alert.labels.statusCode }}",
         "labels": {"statusCode": "404"},
     }
-    iohandler = IOHandler(context_manager)
-    res = iohandler.render(
+    iohandler = IOHandler(context_manager, template_engine=TemplateEngine.JINJA2)
+    mustache_res = iohandler.render(
+        "{{alert.header}}",
+    )
+    jinja_res = iohandler.render(
         "{{ alert.header }}\n{% if alert.body %}{{ alert.body }}{% endif %}",
     )
     from asteval import Interpreter
 
     aeval = Interpreter()
-    evaluated_if_met = aeval(res)
+    evaluated_if_met = aeval(mustache_res)
+    print(evaluated_if_met)
+    evaluated_if_met = aeval(jinja_res)
     print(evaluated_if_met)
