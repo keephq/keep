@@ -39,6 +39,50 @@ def upgrade() -> None:
             )
         )
 
+    # Delete all related data for deprecated system test workflow tenant, workflow and related workflowexecutions, workfloecexutionlog, etc
+
+    # First delete workflow execution logs
+    op.execute(
+        """
+        DELETE FROM workflowexecutionlog 
+        WHERE workflow_execution_id IN (
+            SELECT id FROM workflowexecution WHERE workflow_id = 'test'
+        )
+    """
+    )
+
+    # Delete workflow-to-alert relations
+    op.execute(
+        """
+        DELETE FROM workflowtoalertexecution
+        WHERE workflow_execution_id IN (
+            SELECT id FROM workflowexecution WHERE workflow_id = 'test'
+        )
+    """
+    )
+
+    # Delete workflow-to-incident relations
+    op.execute(
+        """
+        DELETE FROM workflowtoincidentexecution
+        WHERE workflow_execution_id IN (
+            SELECT id FROM workflowexecution WHERE workflow_id = 'test'
+        )
+    """
+    )
+
+    # Delete workflow executions
+    op.execute("DELETE FROM workflowexecution WHERE workflow_id = 'test'")
+
+    # Delete workflow version
+    op.execute("DELETE FROM workflowversion WHERE workflow_id = 'test'")
+
+    # Delete the test workflow
+    op.execute("DELETE FROM workflow WHERE id = 'test'")
+
+    # Finally delete the system test tenant
+    op.execute("DELETE FROM tenant WHERE id = 'system-test-workflow'")
+
     # ### end Alembic commands ###
 
 
