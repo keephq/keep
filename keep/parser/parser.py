@@ -408,11 +408,12 @@ class Parser:
         workflow_tags = workflow.get("tags", [])
         return workflow_tags
 
-    def _parse_templating(self, workflow) -> TemplateEngine:
-        template_engine = workflow.get("template_engine", "mustache")
+    def _parse_templating(self, workflow) -> str:
+        print(workflow)
+        template_engine = workflow.get("templating", "mustache")
         if template_engine not in TemplateEngine.__members__.values():
             raise ValueError(f"Invalid template engine: {template_engine}\nPossible values: {', '.join(param.value for param in TemplateEngine.__members__.values())}")
-        return TemplateEngine(template_engine)
+        return TemplateEngine(template_engine).value
 
     def parse_interval(self, workflow) -> int:
         # backward compatibility
