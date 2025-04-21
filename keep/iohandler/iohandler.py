@@ -34,7 +34,7 @@ class IOHandler:
             template_engine: TemplateEngine = TemplateEngine.MUSTACHE
     ):
         self.context_manager = context_manager
-        self.template_engine = template_engine
+        self.template_engine = TemplateEngine.JINJA2
         self.logger = logging.getLogger(self.__class__.__name__)
         # whether Keep should shorten urls in the message or not
         # todo: have a specific parameter for this?
