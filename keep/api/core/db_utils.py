@@ -7,6 +7,7 @@ Mainly, it creates the database engine based on the environment variables.
 import json
 import logging
 import os
+from typing import Any, Dict, Optional, Type, TypeVar, Tuple
 
 import pymysql
 from dotenv import find_dotenv, load_dotenv
@@ -15,7 +16,8 @@ from sqlalchemy import func
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, create_engine, SQLModel, select
+from sqlalchemy.exc import IntegrityError
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -208,3 +210,51 @@ def _compile_json_table(element, compiler, **kw):
             for clause in element.clauses.clauses[1:]
         ),
     )
+
+
+T = TypeVar("T", bound=SQLModel)
+
+
+def get_or_create(
+    session: Session,
+    model: Type[T],
+    defaults: Optional[Dict[str, Any]] = None,
+    **kwargs: Any,
+) -> Tuple[T, bool]:
+    """
+    Get an instance by filter kwargs, or create one with those filters plus any defaults.
+
+    Args:
+        session: SQLAlchemy session
+        model: Model class
+        defaults: Dict of default values for creation (not used for lookup)
+        **kwargs: Filter parameters used both for lookup and creation
+
+    Returns:
+        tuple: (instance, created) where created is a boolean indicating if a new instance was created
+    """
+    instance = session.exec(select(model).where(**kwargs)).first()
+
+    if instance:
+        return instance, False
+
+    # Prepare creation attributes
+    create_attrs = kwargs.copy()
+    if defaults:
+        create_attrs.update(defaults)
+
+    instance = model(**create_attrs)
+    session.add(instance)
+
+    try:
+        # Try to flush without committing to detect any integrity errors
+        session.flush()
+        return instance, True
+    except IntegrityError:
+        # If there's a conflict, roll back and try to fetch again (another process might have created it)
+        session.rollback()
+        instance = session.exec(select(model).where(**kwargs)).first()
+        if instance:
+            return instance, False
+        # If we still can't find it, something else is wrong, re-raise
+        raise

@@ -13,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
 import validators
@@ -47,7 +47,11 @@ from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
-from keep.api.core.db_utils import create_db_engine, get_json_extract_field
+from keep.api.core.db_utils import (
+    create_db_engine,
+    get_json_extract_field,
+    get_or_create,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
@@ -112,7 +116,7 @@ def dispose_session():
 
 
 @contextmanager
-def existed_or_new_session(session: Optional[Session] = None) -> Session:
+def existed_or_new_session(session: Optional[Session] = None) -> Iterator[Session]:
     try:
         if session:
             yield session
@@ -207,7 +211,7 @@ def create_workflow_execution(
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
                 id=workflow_execution_id,
-                workflow_id=workflow_id if not test_run else "test",
+                workflow_id=workflow_id,
                 workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
@@ -217,7 +221,7 @@ def create_workflow_execution(
                 error=None,
                 execution_time=None,
                 results={},
-                # is_test_run=test_run,
+                is_test_run=test_run,
             )
             session.add(workflow_execution)
             # Ensure the object has an id
@@ -537,6 +541,7 @@ def add_or_update_workflow(
     updated_by: str,
     provisioned: bool = False,
     provisioned_file: str | None = None,
+    is_test: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
@@ -557,6 +562,7 @@ def add_or_update_workflow(
             )
 
         else:
+            now = datetime.now(tz=timezone.utc)
             # Create a new workflow
             workflow = Workflow(
                 id=id,
@@ -566,11 +572,13 @@ def add_or_update_workflow(
                 description=description,
                 created_by=created_by,
                 updated_by=updated_by,
+                last_updated=now,
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
                 provisioned=provisioned,
                 provisioned_file=provisioned_file,
+                is_test=is_test,
             )
             version = WorkflowVersion(
                 workflow_id=workflow.id,
@@ -578,11 +586,31 @@ def add_or_update_workflow(
                 workflow_raw=workflow_raw,
                 updated_by=updated_by,
                 comment=f"Created by {created_by}",
+                is_valid=True,
+                is_current=True,
+                updated_at=now,
             )
             session.add(workflow)
             session.add(version)
             session.commit()
             return workflow
+
+
+def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None):
+    with existed_or_new_session(session) as session:
+        workflow, created = get_or_create(
+            session,
+            Workflow,
+            tenant_id=tenant_id,
+            id=get_dummy_workflow_id(tenant_id),
+            name="Dummy Workflow for test runs",
+            description="Auto-generated dummy workflow for test runs",
+            created_by="system",
+            workflow_raw="{}",
+            is_disabled=False,
+            is_test=True,
+        )
+        return workflow
 
 
 def get_workflow_to_alert_execution_by_workflow_execution_id(
