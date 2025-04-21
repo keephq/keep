@@ -468,7 +468,7 @@ def test_workflow_execution_2(
         source=["grafana"],
         name="server-is-down",
         status=AlertStatus.FIRING,
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         fingerprint="fp1",
     )
 
@@ -576,7 +576,7 @@ def test_workflow_execution3(
         source=["grafana"],
         name="server-is-down",
         status=AlertStatus.FIRING,
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         fingerprint="fp1",
     )
 
@@ -684,7 +684,7 @@ def test_workflow_execution_with_disabled_workflow(
         source=["grafana"],
         name="server-is-down",
         status=AlertStatus.FIRING,
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         fingerprint="fp1",
     )
 
@@ -794,7 +794,7 @@ def test_workflow_incident_triggers(
         alerts_count=0,
         alert_sources=[],
         services=[],
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         is_predicted=False,
         is_candidate=False,
     )
@@ -893,7 +893,7 @@ def test_workflow_incident_triggers(
 #         source=["grafana"],
 #         name="server-is-hamburger",
 #         status=AlertStatus.FIRING,
-#         severity="critical",
+#         severity=AlertSeverity.CRITICAL,
 #         fingerprint="fp1",
 #     )
 
@@ -1132,7 +1132,7 @@ def test_alert_routing_policy(
         source=["test"],
         name="test-alert",
         status=AlertStatus.FIRING,
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         team=alert_data["team"],
         env=alert_data["env"],
         monitor_name=alert_data["monitor_name"],
@@ -1301,7 +1301,7 @@ def test_nested_conditional_flow(
         source=["test"],
         name="test-alert",
         status=AlertStatus.FIRING,
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         priority=alert_data["priority"],
         region=alert_data["region"],
         contains_pii=alert_data["contains_pii"],
@@ -1607,7 +1607,6 @@ workflow_definition_jinja = """workflow:
             "Critical Alert with Labels",
             {
                 "name": "server-alert",
-                "severity": "critical",
                 "labels": {
                     "host": "prod-server-01",
                     "region": "eu-west-1",
