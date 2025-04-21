@@ -15,7 +15,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
-from keep.api.models.db.incident import Incident, IncidentStatus
+from keep.api.models.db.incident import Incident, IncidentStatus, IncidentSeverity
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -794,7 +794,7 @@ def test_workflow_incident_triggers(
         alerts_count=0,
         alert_sources=[],
         services=[],
-        severity=AlertSeverity.CRITICAL,
+        severity=IncidentSeverity.CRITICAL,
         is_predicted=False,
         is_candidate=False,
     )
