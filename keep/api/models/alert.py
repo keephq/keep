@@ -71,7 +71,7 @@ class AlertDto(BaseModel):
     name: str
     status: AlertStatus
     severity: AlertSeverity
-    lastReceived: str
+    lastReceived: str | None = None
     firingStartTime: str | None = None
     firingCounter: int = 0
     environment: str = "undefined"

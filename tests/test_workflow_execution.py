@@ -14,7 +14,7 @@ from keep.api.core.db import (
     get_last_workflow_execution_by_workflow_id,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from keep.api.models.db.incident import Incident, IncidentStatus
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
@@ -295,7 +295,7 @@ def test_workflow_execution(
         source=["grafana"],
         name="server-is-down",
         status=AlertStatus.FIRING,
-        severity="critical",
+        severity=AlertSeverity.CRITICAL,
         fingerprint="fp1",
     )
 
@@ -1560,3 +1560,156 @@ def test_workflow_permissions(
     else:
         # For 403 responses, the workflow execution should not be attempted
         mock_scheduler.handle_manual_event_workflow.assert_not_called()
+
+
+workflow_definition_jinja = """workflow:
+  id: jinja-template-test
+  description: Test Jinja2 template engine features
+  templating: jinja2
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: "server-alert"
+  steps:
+    - name: format_message
+      provider:
+        type: keep
+        with:
+          set:
+            formatted_message: >
+              {% if alert.severity == 'critical' %}
+              🔴 Critical Alert:
+              {% elif alert.severity == 'warning' %}
+              🟡 Warning Alert:
+              {% else %}
+              ℹ️ Info Alert:
+              {% endif %}
+              {{ alert.name | upper }}
+              
+              Details:
+              {% for key, value in alert.labels.items() %}
+              - {{ key }}: {{ value }}
+              {% endfor %}
+  actions:
+    - name: send-notification
+      provider:
+        type: console
+        with:
+          message: "{{ steps.format_message.formatted_message }}"
+"""
+
+@pytest.mark.parametrize(
+    "test_app, test_case, alert_data, expected_message_parts, db_session",
+    [
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Critical Alert with Labels",
+            {
+                "name": "server-alert",
+                "severity": "critical",
+                "labels": {
+                    "host": "prod-server-01",
+                    "region": "eu-west-1",
+                    "service": "api"
+                }
+            },
+            [
+                "🔴 Critical Alert:",
+                "SERVER-ALERT",
+                "host: prod-server-01",
+                "region: eu-west-1",
+                "service: api"
+            ],
+            None
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Warning Alert with Labels",
+            {
+                "name": "server-alert",
+                "severity": "warning",
+                "labels": {
+                    "host": "stage-server-02",
+                    "component": "database"
+                }
+            },
+            [
+                "🟡 Warning Alert:",
+                "SERVER-ALERT",
+                "host: stage-server-02",
+                "component: database"
+            ],
+            None
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Info Alert without Labels",
+            {
+                "name": "server-alert",
+                "severity": "info",
+                "labels": {}
+            },
+            [
+                "ℹ️ Info Alert:",
+                "SERVER-ALERT"
+            ],
+            None
+        )
+    ],
+    indirect=["test_app", "db_session"]
+)
+def test_workflow_jinja_template(
+    db_session,
+    test_app,
+    workflow_manager,
+    test_case,
+    alert_data,
+    expected_message_parts
+):
+    """
+    Test workflow execution with Jinja2 template engine features.
+    Tests various template features like conditionals, loops, and filters.
+    """
+    # ARRANGE
+    workflow = Workflow(
+        id="jinja-template-test",
+        name="jinja-template-test",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test Jinja2 template engine features",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_jinja
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Create the alert
+    current_alert = AlertDto(
+        id="test-alert-1",
+        source=["test"],
+        name=alert_data["name"],
+        status=AlertStatus.FIRING,
+        severity=alert_data["severity"],
+        labels=alert_data["labels"]
+    )
+
+    # ACT
+    # Insert the alert into workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for workflow execution
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "jinja-template-test"
+    )
+
+    # ASSERT
+    # Verify workflow execution completed successfully
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # Verify the formatted message contains all expected parts
+    result_message = workflow_execution.results["send-notification"][0]
+    for expected_part in expected_message_parts:
+        assert expected_part in result_message, \
+            f"Expected '{expected_part}' to be in message: {result_message}"
