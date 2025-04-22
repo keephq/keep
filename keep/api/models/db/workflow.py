@@ -19,6 +19,7 @@ class Workflow(SQLModel, table=True):
     is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(
+        default_factory=datetime.utcnow,
         sa_column=Column(
             DateTime(timezone=True),
             name="last_updated",
@@ -45,6 +46,7 @@ class WorkflowVersion(SQLModel, table=True):
     workflow_raw: str = Field(sa_column=Column(TEXT))
     updated_by: str
     updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
         sa_column=Column(
             DateTime(timezone=True),
             name="updated_at",
