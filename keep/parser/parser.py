@@ -549,9 +549,10 @@ class Parser:
             provider = ProvidersFactory.get_provider(
                 context_manager, provider_id, step_provider_type, provider_config
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for step {_step.get('name')}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
@@ -651,9 +652,10 @@ class Parser:
                 provider_config,
                 **parsed_provider_parameters,
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for action {name}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
