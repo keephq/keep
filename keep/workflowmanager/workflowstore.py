@@ -326,7 +326,7 @@ class WorkflowStore:
                 logger.info("Old provisioned workflows found!")
                 for workflow in provisioned_workflows:
                     logger.info(
-                        f"Deprovisioning workflow {workflow.id} as its id doesn't match the provisioned workflow provided in the env"
+                        f"Deprovisioning workflow {workflow.id} as it no longer exists in the env"
                     )
                     delete_workflow_by_provisioned_file(
                         workflow.id, tenant_id, workflow.provisioned_file
