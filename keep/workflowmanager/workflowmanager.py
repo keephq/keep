@@ -98,9 +98,10 @@ class WorkflowManager:
                     "tenant_id": tenant_id,
                 },
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 "Error getting workflow",
+                exc_info=ex,
                 extra={
                     "workflow_id": workflow_model.id,
                     "tenant_id": tenant_id,
