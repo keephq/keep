@@ -409,7 +409,6 @@ class Parser:
         return workflow_tags
 
     def _parse_templating(self, workflow) -> str:
-        print(workflow)
         template_engine = workflow.get("templating", "mustache")
         if template_engine not in TemplateEngine.__members__.values():
             raise ValueError(f"Invalid template engine: {template_engine}\nPossible values: {', '.join(param.value for param in TemplateEngine.__members__.values())}")
