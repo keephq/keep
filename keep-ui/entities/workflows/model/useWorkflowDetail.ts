@@ -5,22 +5,25 @@ import { workflowKeys } from "./workflowKeys";
 
 export function useWorkflowDetail(
   workflowId: string | null,
+  workflowRevision: number | null,
   options?: SWRConfiguration<Workflow>
 ) {
   const api = useApi();
 
   const cacheKey =
-    api.isReady() && workflowId ? workflowKeys.detail(workflowId) : null;
+    api.isReady() && workflowId
+      ? workflowKeys.detail(workflowId, workflowRevision)
+      : null;
+
+  const requestUrl = workflowRevision
+    ? `/workflows/${workflowId}/versions/${workflowRevision}`
+    : `/workflows/${workflowId}`;
 
   const {
     data: workflow,
     error,
     isLoading,
-  } = useSWR<Workflow>(
-    cacheKey,
-    () => api.get(`/workflows/${workflowId}`),
-    options
-  );
+  } = useSWR<Workflow>(cacheKey, () => api.get(requestUrl), options);
 
   return {
     workflow,

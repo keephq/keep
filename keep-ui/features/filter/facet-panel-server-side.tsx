@@ -145,9 +145,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         areFacetOptionsLoading={!isSilentReloading && facetOptionsLoading}
         clearFiltersToken={clearFiltersToken}
         facetsConfig={facetsConfig}
-        onCelChange={(cel: string) => {
-          onCelChange && onCelChange(cel);
-        }}
+        onCelChange={onCelChange}
         onAddFacet={() => setIsModalOpen(true)}
         onLoadFacetOptions={(facetId) => {
           setFacetQueriesState({ ...facetQueriesState, [facetId]: "" });

@@ -60,6 +60,7 @@ class Parser:
         providers_file: str = None,
         actions_file: str = None,
         workflow_db_id: str = None,
+        workflow_revision: int = None,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -82,6 +83,7 @@ class Parser:
                     tenant_id,
                     workflow,
                     providers_file,
+                    workflow_revision,
                     workflow_providers,
                     actions_file,
                     workflow_actions,
@@ -98,6 +100,7 @@ class Parser:
                 tenant_id,
                 raw_workflow,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
@@ -109,6 +112,7 @@ class Parser:
                 tenant_id,
                 parsed_workflow_yaml,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
@@ -139,6 +143,7 @@ class Parser:
         tenant_id,
         workflow: dict,
         providers_file: str,
+        workflow_revision: int = None,
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
@@ -188,6 +193,7 @@ class Parser:
 
         workflow_class = Workflow(
             workflow_id=workflow_id,
+            workflow_revision=workflow_revision,
             workflow_name=workflow_name,
             workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,
@@ -533,9 +539,10 @@ class Parser:
             provider = ProvidersFactory.get_provider(
                 context_manager, provider_id, step_provider_type, provider_config
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for step {_step.get('name')}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
@@ -635,9 +642,10 @@ class Parser:
                 provider_config,
                 **parsed_provider_parameters,
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for action {name}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,

@@ -23,6 +23,7 @@ class Workflow:
         self,
         context_manager: ContextManager,
         workflow_id: str,
+        workflow_revision: int,
         workflow_name: str,
         workflow_owners: typing.List[str],
         workflow_tags: typing.List[str],
@@ -41,6 +42,7 @@ class Workflow:
         workflow_permissions: typing.List[str] = [],
     ):
         self.workflow_id = workflow_id
+        self.workflow_revision = workflow_revision
         self.workflow_name = workflow_name
         self.workflow_owners = workflow_owners
         self.workflow_tags = workflow_tags

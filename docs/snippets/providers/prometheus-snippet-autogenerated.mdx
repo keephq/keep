@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -6,9 +6,10 @@ This provider requires authentication.
 - **url**: Prometheus server URL (required: True, sensitive: False)
 - **username**: Prometheus username (required: False, sensitive: False)
 - **password**: Prometheus password (required: False, sensitive: True)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **connectivity**: Connectivity Test (mandatory) 
+- **connectivity**: Connectivity Test (mandatory)
 
 
 
@@ -24,7 +25,7 @@ steps:
       provider: prometheus
       config: "{{ provider.my_provider_name }}"
       with:
-        query: {value}  
+        query: {value}
 ```
 
 
@@ -36,6 +37,7 @@ Check the following workflow examples:
 - [enrich_using_structured_output_from_deepseek.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_deepseek.yaml)
 - [enrich_using_structured_output_from_openai.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_openai.yaml)
 - [enrich_using_structured_output_from_vllm_qwen.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_vllm_qwen.yaml)
+- [http_enrich.yml](https://github.com/keephq/keep/blob/main/examples/workflows/http_enrich.yml)
 - [kubernetes.yml](https://github.com/keephq/keep/blob/main/examples/workflows/kubernetes.yml)
 
 ## Connecting via Webhook (omnidirectional)

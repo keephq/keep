@@ -95,6 +95,9 @@ class IncidentDto(IncidentDtoIn):
         super().__init__(**data)
         if "alerts" in data:
             self._alerts = data["alerts"]
+        if "tenant_id" in data:
+            self._tenant_id = data.pop("tenant_id")
+
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -123,7 +126,14 @@ class IncidentDto(IncidentDtoIn):
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
-        if not self._tenant_id:
+        try:
+            if not self._tenant_id:
+                return []
+        except Exception:
+            logging.getLogger(__name__).error(
+                "Tenant ID is not set in incident",
+                extra={"incident_id": self.id},
+            )
             return []
         alerts, _ = get_incident_alerts_by_incident_id(self._tenant_id, str(self.id))
         return convert_db_alerts_to_dto_alerts(alerts)
@@ -135,7 +145,7 @@ class IncidentDto(IncidentDtoIn):
         try:
             values["status"] = IncidentStatus(status)
         except ValueError:
-            logging.warning(
+            logging.getLogger(__name__).warning(
                 f"Invalid status value: {status}, setting default.",
                 extra={"event": values},
             )

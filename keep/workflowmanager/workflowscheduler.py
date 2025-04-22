@@ -122,8 +122,11 @@ class WorkflowScheduler:
         try:
             # get all workflows that should run due to interval
             workflows = get_workflows_that_should_run()
-        except Exception:
-            self.logger.exception("Error getting workflows that should run")
+        except Exception as ex:
+            self.logger.warning(
+                "Error getting workflows that should run",
+                exc_info=ex,
+            )
             pass
         for workflow in workflows:
             workflow_execution_id = workflow.get("workflow_execution_id")
@@ -150,8 +153,9 @@ class WorkflowScheduler:
                 )
                 continue
             except Exception as e:
-                self.logger.error(
+                self.logger.warning(
                     f"Error getting workflow: {e}",
+                    exc_info=e,
                     extra={
                         "workflow_id": workflow_id,
                         "workflow_execution_id": workflow_execution_id,
@@ -280,6 +284,7 @@ class WorkflowScheduler:
     def handle_manual_event_workflow(
         self,
         workflow_id,
+        workflow_revision,
         tenant_id,
         triggered_by_user,
         event: AlertDto | IncidentDto,
@@ -303,6 +308,7 @@ class WorkflowScheduler:
 
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
@@ -432,8 +438,9 @@ class WorkflowScheduler:
                     )
                 # In case the provider are not configured properly
                 except ProviderConfigurationException as e:
-                    self.logger.error(
+                    self.logger.warning(
                         f"Error getting workflow: {e}",
+                        exc_info=e,
                         extra={
                             "workflow_id": workflow_id,
                             "workflow_execution_id": workflow_execution_id,
@@ -449,8 +456,9 @@ class WorkflowScheduler:
                     )
                     continue
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.warning(
                         f"Error getting workflow: {e}",
+                        exc_info=e,
                         extra={
                             "workflow_id": workflow_id,
                             "workflow_execution_id": workflow_execution_id,
@@ -503,6 +511,7 @@ class WorkflowScheduler:
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
+                        workflow_revision=workflow.workflow_revision,
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
@@ -656,7 +665,7 @@ class WorkflowScheduler:
             except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
-                self.logger.exception("Error getting workflows that should run")
+                self.logger.error("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
             time.sleep(1)

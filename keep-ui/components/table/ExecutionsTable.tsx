@@ -6,9 +6,9 @@ import {
 } from "@/shared/api/enrichment-events";
 import { Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { getIcon } from "../../app/(keep)/workflows/[workflow_id]/workflow-execution-table";
 import TimeAgo from "react-timeago";
 import { formatDistanceToNowStrict } from "date-fns";
+import { getIconForStatusString } from "@/shared/ui";
 
 interface Pagination {
   limit: number;
@@ -30,7 +30,7 @@ export function ExecutionsTable({ executions, setPagination }: Props) {
       header: "Status",
       cell: ({ row }) => {
         const status = row.original.status;
-        return <div>{getIcon(status)}</div>;
+        return <div>{getIconForStatusString(status)}</div>;
       },
     }),
     columnHelper.display({

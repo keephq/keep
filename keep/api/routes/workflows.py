@@ -27,6 +27,9 @@ from keep.api.core.db import (
     get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
+    get_workflow_version,
+    get_workflow_versions,
+    update_workflow_by_id as update_workflow_by_id_db,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.workflows import (
@@ -46,6 +49,8 @@ from keep.api.models.workflow import (
     WorkflowRawDto,
     WorkflowRunResponseDTO,
     WorkflowToAlertExecutionDTO,
+    WorkflowVersionDTO,
+    WorkflowVersionListDTO,
 )
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
@@ -388,7 +393,12 @@ def run_workflow(
             event, inputs = get_event_from_body(body, tenant_id)
 
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, event, inputs=inputs
+            workflow_id,
+            workflow.workflow_revision,
+            tenant_id,
+            created_by,
+            event,
+            inputs=inputs,
         )
     except Exception as e:
         logger.exception(
@@ -468,7 +478,7 @@ async def run_workflow_from_definition(
     workflowmanager = WorkflowManager.get_instance()
     try:
         workflow = workflowstore.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow_dict
+            tenant_id=tenant_id, workflow_dict=workflow_dict
         )
     except Exception as e:
         logger.exception(
@@ -484,6 +494,7 @@ async def run_workflow_from_definition(
         event, inputs = get_event_from_body(body, tenant_id)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow.workflow_id,
+            workflow.workflow_revision,
             tenant_id,
             created_by,
             event,
@@ -718,26 +729,23 @@ async def update_workflow_by_id(
     workflow_raw_data = await __get_workflow_raw_data(request, None)
     parser = Parser()
     workflow_interval = parser.parse_interval(workflow_raw_data)
-    # In case the workflow name changed to empty string, keep the old name
-    workflow_name = workflow_raw_data.get("name", "")
-    if workflow_name != "":
-        workflow_from_db.name = workflow_name
-    else:
-        workflow_raw_data["name"] = workflow_from_db.name
-    workflow_from_db.description = workflow_raw_data.get("description")
-    workflow_from_db.interval = workflow_interval
-    workflow_from_db.is_disabled = workflow_raw_data.get("disabled", False)
-    workflow_from_db.workflow_raw = cyaml.dump(workflow_raw_data, width=99999)
-    workflow_from_db.last_updated = datetime.datetime.now()
-    workflow_from_db.revision += 1
-    session.add(workflow_from_db)
-    session.commit()
-    session.refresh(workflow_from_db)
+    updated_workflow = update_workflow_by_id_db(
+        id=workflow_id,
+        tenant_id=tenant_id,
+        name=workflow_raw_data.get("name", ""),
+        description=workflow_raw_data.get("description"),
+        interval=workflow_interval,
+        workflow_raw=cyaml.dump(workflow_raw_data, width=99999),
+        updated_by=authenticated_entity.email,
+        is_disabled=workflow_raw_data.get("disabled", False),
+    )
     logger.info(f"Updated workflow {workflow_id}", extra={"tenant_id": tenant_id})
-    return WorkflowCreateOrUpdateDTO(workflow_id=workflow_id, status="updated")
+    return WorkflowCreateOrUpdateDTO(
+        workflow_id=workflow_id, revision=updated_workflow.revision, status="updated"
+    )
 
 
-@router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
+@router.get("/{workflow_id}/raw", description="Get raw workflow by ID")
 def get_raw_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -754,8 +762,12 @@ def get_raw_workflow_by_id(
 
 
 @router.get("/{workflow_id}", description="Get workflow by ID")
+@router.get(
+    "/{workflow_id}/versions/{revision}", description="Get workflow by ID and revision"
+)
 def get_workflow_by_id(
     workflow_id: str,
+    revision: int | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
@@ -769,6 +781,20 @@ def get_workflow_by_id(
             extra={"tenant_id": tenant_id},
         )
         raise HTTPException(404, "Workflow not found")
+
+    updated_at = workflow.last_updated
+    updated_by = workflow.updated_by or "unknown"
+    workflow_raw = workflow.workflow_raw
+
+    if revision:
+        workflow_version = get_workflow_version(
+            tenant_id=tenant_id, workflow_id=workflow_id, revision=revision
+        )
+        if not workflow_version:
+            raise HTTPException(404, "Workflow version not found")
+        updated_at = workflow_version.updated_at
+        updated_by = workflow_version.updated_by or "unknown"
+        workflow_raw = workflow_version.workflow_raw
 
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
@@ -794,27 +820,51 @@ def get_workflow_by_id(
         providers_dto, triggers = [], []  # Default in case of failure
 
     try:
-        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
+        workflow_yaml = cyaml.safe_load(workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
         final_workflow_raw = cyaml.dump(valid_workflow_yaml, width=99999)
-        workflow_dto = WorkflowDTO(
-            id=workflow.id,
-            name=workflow.name,
-            description=workflow.description or "[This workflow has no description]",
-            created_by=workflow.created_by,
-            creation_time=workflow.creation_time,
-            interval=workflow.interval,
-            providers=providers_dto,
-            triggers=triggers,
-            workflow_raw=final_workflow_raw,
-            last_updated=workflow.last_updated,
-            disabled=workflow.is_disabled,
-            revision=workflow.revision,
-        )
-        return workflow_dto
+
     except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
+
+    return WorkflowDTO(
+        id=workflow.id,
+        name=workflow.name,
+        description=workflow.description or "[This workflow has no description]",
+        created_by=workflow.created_by,
+        creation_time=workflow.creation_time,
+        interval=workflow.interval,
+        providers=providers_dto,
+        triggers=triggers,
+        workflow_raw=final_workflow_raw,
+        last_updated=updated_at,
+        disabled=workflow.is_disabled,
+        revision=workflow.revision,
+        last_updated_by=updated_by,
+    )
+
+
+@router.get("/{workflow_id}/versions")
+def list_workflow_versions(
+    workflow_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    versions = get_workflow_versions(tenant_id=tenant_id, workflow_id=workflow_id)
+
+    return WorkflowVersionListDTO(
+        versions=[
+            WorkflowVersionDTO(
+                revision=version.revision,
+                updated_by=version.updated_by,
+                updated_at=version.updated_at,
+            )
+            for version in versions
+        ]
+    )
 
 
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
@@ -832,6 +882,13 @@ def get_workflow_runs_by_id(
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow:
+        logger.warning(
+            f"Tenant tried to get workflow {workflow_id} that does not exist",
+            extra={"tenant_id": tenant_id},
+        )
+        raise HTTPException(404, "Workflow not found")
+
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
     for installed_provider in installed_providers:
@@ -863,6 +920,7 @@ def get_workflow_runs_by_id(
             workflow_execution_dto = {
                 "id": workflow_execution.id,
                 "workflow_id": workflow_execution.workflow_id,
+                "workflow_revision": workflow_execution.workflow_revision,
                 "status": workflow_execution.status,
                 "started": workflow_execution.started.isoformat(),
                 "triggered_by": workflow_execution.triggered_by,
@@ -946,7 +1004,8 @@ def get_workflow_execution_status(
         )
 
     workflow = get_workflow(
-        tenant_id=tenant_id, workflow_id=workflow_execution.workflow_id
+        tenant_id=tenant_id,
+        workflow_id=workflow_execution.workflow_id,
     )
 
     event_id = None
@@ -964,6 +1023,7 @@ def get_workflow_execution_status(
         id=workflow_execution.id,
         workflow_name=workflow.name if workflow else None,
         workflow_id=workflow_execution.workflow_id,
+        workflow_revision=workflow_execution.workflow_revision,
         status=workflow_execution.status,
         started=workflow_execution.started,
         triggered_by=workflow_execution.triggered_by,
@@ -1025,6 +1085,7 @@ def toggle_workflow_state(
         raise HTTPException(403, detail="Cannot modify a provisioned workflow")
 
     # Toggle the disabled state
+    # TODO: update workflow_raw
     workflow.is_disabled = not workflow.is_disabled
     workflow.last_updated = datetime.datetime.now()
 
