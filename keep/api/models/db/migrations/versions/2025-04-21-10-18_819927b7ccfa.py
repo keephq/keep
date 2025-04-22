@@ -39,7 +39,7 @@ def upgrade() -> None:
             )
         )
 
-    # Delete all related data for deprecated system test workflow tenant, workflow and related workflowexecutions, workfloecexutionlog, etc
+    # Delete all related data for deprecated system test workflow tenant, workflow and related workflowexecutions, workflowexecutionlog, etc
 
     # First delete workflow execution logs
     op.execute(
