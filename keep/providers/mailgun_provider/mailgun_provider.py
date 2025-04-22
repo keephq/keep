@@ -229,12 +229,17 @@ class MailgunProvider(BaseProvider):
         # We receive FormData here, convert it to simple dict.
         logger.info(
             "Received alert from mail",
+            extra={
+                "from": event["from"],
+                "subject": event.get("subject")
+            },
         )
         event = dict(event)
 
-        name = event.get("subject")
         source = event["from"]
-        message = event.get("stripped-text")
+        name = event.get("subject", source)
+        body_plain = event.get("Body-plain")
+        message = event.get("stripped-text", body_plain)
         raw_content = event.get("raw_content")
 
         if isinstance(raw_content, bytes) and b"dmarc" in raw_content.lower():
