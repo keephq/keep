@@ -14,7 +14,7 @@ class Workflow(SQLModel, table=True):
     updated_by: Optional[str] = None
     creation_time: datetime = Field(default_factory=datetime.now(tz=timezone.utc))
     interval: Optional[int]
-    workflow_raw: str = Field(sa_column=Column(TEXT))datetime.now(tz=timezone.utc)
+    workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
     is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
@@ -130,7 +130,7 @@ class WorkflowExecution(SQLModel, table=True):
     status: str = Field(sa_column=Column(TEXT))
     is_running: int = Field(default=1)
     timeslot: int = Field(
-        default_factory=lambda: int(datetime.now(tz=timezone.utc).timestamp() / 120)
+        default_factory=lambda: int(datetime.now(tz=timezone.utc)().timestamp() / 120)
     )
     execution_number: int
     error: Optional[str] = Field(max_length=10240)
