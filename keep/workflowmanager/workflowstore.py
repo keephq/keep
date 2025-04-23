@@ -423,7 +423,7 @@ class WorkflowStore:
                                 workflow_interval,
                                 workflow_disabled,
                             ) = WorkflowStore.pre_parse_workflow_yaml(workflow_yaml)
-                        if workflow_path not in [workflow.provisioned_file for workflow in provisioned_workflows]:
+                        if workflow_id not in [workflow.provisioned_file for workflow in provisioned_workflows]:
                             logger.info(f"Provisioning workflow from {file}")
                             add_or_update_workflow(
                                 id=workflow_id,
