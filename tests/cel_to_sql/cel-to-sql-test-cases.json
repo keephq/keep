@@ -21,9 +21,9 @@
     "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
     "description": "IN operator along with NOT",
     "expected_sql_dialect_based": {
-      "mysql": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NOT NULL))",
-      "postgresql": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NOT NULL))",
-      "sqlite": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NOT NULL))"
+      "mysql": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NULL))",
+      "postgresql": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NULL))",
+      "sqlite": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NULL))"
     }
   },
   {
