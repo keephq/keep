@@ -1,5 +1,4 @@
 from typing import Any, List
-from types import NoneType
 
 from sqlalchemy import Dialect, String
 
@@ -223,8 +222,11 @@ class BaseCelToSqlProvider:
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
-    def coalesce(self, args: List[str]) -> str:
-        raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
+    def coalesce(self, args):
+        if len(args) == 1:
+            return args[0]
+
+        return f"COALESCE({', '.join(args)})"
 
     def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")

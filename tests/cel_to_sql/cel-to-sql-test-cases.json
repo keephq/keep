@@ -18,12 +18,12 @@
     }
   },
   {
-    "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
+    "input_cel": "name in ['Payments incident', 'API incident', 'Network incident', null]",
     "description": "IN operator along with NULL",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL",
-      "postgresql": "COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL",
-      "sqlite": "COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL"
+      "mysql": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)",
+      "postgresql": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)",
+      "sqlite": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)"
     }
   },
   {

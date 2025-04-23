@@ -11,12 +11,6 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"json_extract({column}, '$.{property_path_str}')"
 
-    def coalesce(self, args):
-        if len(args) == 1:
-            return args[0]
-
-        return f"COALESCE({', '.join(args)})"
-
     def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:
             to_type_str = "TEXT"

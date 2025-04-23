@@ -17,12 +17,6 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         json_property_path = " -> ".join(all_columns[:-1])
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
-    def coalesce(self, args):
-        if len(args) == 1:
-            return args[0]
-
-        return f"COALESCE({', '.join(args)})"
-
     def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:
             to_type_str = "TEXT"
