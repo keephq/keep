@@ -185,12 +185,6 @@ class BaseCelToSqlProvider:
     def _get_order_by_field(self, cel_sort_by: str) -> str:
         return self.get_field_expression(cel_sort_by)
 
-    def _get_default_value_for_type(self, type: type) -> str:
-        # if type is str or type is NoneType:
-        #     return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
-
-        return "NULL"
-
     def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
         stack.append(abstract_node)
         result = None
@@ -381,7 +375,7 @@ class BaseCelToSqlProvider:
 
     def _visit_constant_node(self, value: Any) -> str:
         if value is None:
-            return self._get_default_value_for_type(NoneType)
+            return "NULL"
         if isinstance(value, str):
             return self.literal_proc(value)
         if isinstance(value, bool):
@@ -403,8 +397,6 @@ class BaseCelToSqlProvider:
 
         if len(coalesce_args) == 1:
             return coalesce_args[0]
-
-        coalesce_args.append(self._get_default_value_for_type(cast_to))
 
         return self.coalesce(coalesce_args)
 
