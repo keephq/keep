@@ -3,27 +3,27 @@
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')), '__@NULL@__') = 'HIGH'",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'severity')::TEXT, ((alert_event) ->> 'severity')::TEXT, '__@NULL@__') = 'HIGH'",
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT), CAST(json_extract(alert_event, '$.\"severity\"') as TEXT), '__@NULL@__') = 'HIGH'"
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')), NULL) = 'HIGH'",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'severity')::TEXT, ((alert_event) ->> 'severity')::TEXT, NULL) = 'HIGH'",
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT), CAST(json_extract(alert_event, '$.\"severity\"') as TEXT), NULL) = 'HIGH'"
     }
   },
   {
     "input_cel": "name != 'Payments incident'",
     "description": "Queried field refers to multipl columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'",
-      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'",
-      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'"
+      "mysql": "COALESCE(user_generated_name, ai_generated_name, NULL) != 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name, NULL) != 'Payments incident'",
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name, NULL) != 'Payments incident'"
     }
   },
   {
     "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
     "description": "IN operator along with NOT",
     "expected_sql_dialect_based": {
-      "mysql": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-      "postgresql": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-      "sqlite": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
+      "mysql": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NOT NULL))",
+      "postgresql": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NOT NULL))",
+      "sqlite": "NOT ((COALESCE(user_generated_name, ai_generated_name, NULL) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name, NULL) IS NOT NULL))"
     }
   },
   {
@@ -129,9 +129,9 @@
     "input_cel": "name == 'Payments incident' && severity <= 'critical'",
     "description": "AND with less than than comparison operator with enum when constat is the last value in enum",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
-      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
-      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'"
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name, NULL) = 'Payments incident'",
+      "mysql": "COALESCE(user_generated_name, ai_generated_name, NULL) = 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name, NULL) = 'Payments incident'"
     }
   },
   {
@@ -147,9 +147,9 @@
     "input_cel": "name == 'Payments incident' && severity > 'critical'",
     "description": "AND with greater than comparison operator with enum when constat is the last value in enum",
     "expected_sql_dialect_based": {
-      "sqlite": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND false)",
-      "mysql": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND FALSE)",
-      "postgresql": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND false)"
+      "sqlite": "(COALESCE(user_generated_name, ai_generated_name, NULL) = 'Payments incident' AND false)",
+      "mysql": "(COALESCE(user_generated_name, ai_generated_name, NULL) = 'Payments incident' AND FALSE)",
+      "postgresql": "(COALESCE(user_generated_name, ai_generated_name, NULL) = 'Payments incident' AND false)"
     }
   },
   {
