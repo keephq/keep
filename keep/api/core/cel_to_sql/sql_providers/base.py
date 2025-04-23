@@ -186,8 +186,8 @@ class BaseCelToSqlProvider:
         return self.get_field_expression(cel_sort_by)
 
     def _get_default_value_for_type(self, type: type) -> str:
-        if type is str or type is NoneType:
-            return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
+        # if type is str or type is NoneType:
+        #     return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
 
         return "NULL"
 
@@ -314,7 +314,7 @@ class BaseCelToSqlProvider:
         return f"{first_operand} = {second_operand}"
 
     def _visit_not_equal(self, first_operand: str, second_operand: str) -> str:
-        if second_operand == "NULL":
+        if second_operand is None:
             return f"{first_operand} IS NOT NULL"
 
         return f"{first_operand} != {second_operand}"
@@ -344,11 +344,39 @@ class BaseCelToSqlProvider:
         else:
             first_operand_str = self.__build_sql_filter(first_operand, stack)
 
-        return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
+        constant_nodes_without_none = []
+        is_none_found = False
+
+        for item in array:
+            if isinstance(item, ConstantNode):
+                if item.value is None:
+                    is_none_found = True
+                    continue
+                constant_nodes_without_none.append(item)
+
+        or_queries = []
+
+        if len(constant_nodes_without_none) > 0:
+            or_queries.append(
+                f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in constant_nodes_without_none])})"
+            )
+
+        if is_none_found:
+            or_queries.append(self._visit_not_equal(first_operand_str, None))
+
+        if len(or_queries) == 0:
+            return self._visit_constant_node(False)
+
+        final_query = or_queries[0]
+
+        for query in or_queries[1:]:
+            final_query = self._visit_logical_or(final_query, query)
+
+        return final_query
 
     # endregion
 
-    def _visit_constant_node(self, value: str) -> str:
+    def _visit_constant_node(self, value: Any) -> str:
         if value is None:
             return self._get_default_value_for_type(NoneType)
         if isinstance(value, str):

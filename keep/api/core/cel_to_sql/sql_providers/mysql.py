@@ -93,6 +93,9 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         return super()._visit_constant_node(value)
 
     def coalesce(self, args):
+        if len(args) == 1:
+            return args[0]
+
         return f"COALESCE({', '.join(args)})"
 
     def _visit_contains_method_calling(

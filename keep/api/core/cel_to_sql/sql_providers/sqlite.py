@@ -12,12 +12,10 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         return f"json_extract({column}, '$.{property_path_str}')"
 
     def coalesce(self, args):
-        coalesce_args = args
-
         if len(args) == 1:
-            coalesce_args += ["NULL"]
+            return args[0]
 
-        return f"COALESCE({', '.join(coalesce_args)})"
+        return f"COALESCE({', '.join(args)})"
 
     def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:

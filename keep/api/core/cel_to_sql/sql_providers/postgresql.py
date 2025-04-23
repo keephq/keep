@@ -18,10 +18,8 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
     def coalesce(self, args):
-        coalesce_args = args
-
         if len(args) == 1:
-            coalesce_args += ["NULL"]
+            return args[0]
 
         return f"COALESCE({', '.join(args)})"
 
