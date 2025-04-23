@@ -307,13 +307,13 @@ class BaseCelToSqlProvider:
         return result
 
     def _visit_equal(self, first_operand: str, second_operand: str) -> str:
-        if second_operand is None:
+        if second_operand == "NULL":
             return f"{first_operand} IS NULL"
 
         return f"{first_operand} = {second_operand}"
 
     def _visit_not_equal(self, first_operand: str, second_operand: str) -> str:
-        if second_operand is None:
+        if second_operand == "NULL":
             return f"{first_operand} IS NOT NULL"
 
         return f"{first_operand} != {second_operand}"
@@ -361,7 +361,7 @@ class BaseCelToSqlProvider:
             )
 
         if is_none_found:
-            or_queries.append(self._visit_equal(first_operand_str, None))
+            or_queries.append(self._visit_equal(first_operand_str, "NULL"))
 
         if len(or_queries) == 0:
             return self._visit_constant_node(False)

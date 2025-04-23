@@ -1,5 +1,14 @@
 [
   {
+    "input_cel": "alert.severity == null",
+    "description": "Equality with null",
+    "expected_sql_dialect_based": {
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"'))) IS NULL",
+      "postgresql": "COALESCE((alert_enrichments) ->> 'severity', (alert_event) ->> 'severity') IS NULL",
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"severity\"'), json_extract(alert_event, '$.\"severity\"')) IS NULL"
+    }
+  },
+  {
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
@@ -10,7 +19,7 @@
   },
   {
     "input_cel": "name != 'Payments incident'",
-    "description": "Queried field refers to multipl columns",
+    "description": "Queried field refers to multiple columns",
     "expected_sql_dialect_based": {
       "mysql": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'",
       "postgresql": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'",
