@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import TEXT, DateTime, Index, PrimaryKeyConstraint, func
