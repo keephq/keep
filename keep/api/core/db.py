@@ -976,10 +976,11 @@ def delete_workflow(tenant_id, workflow_id):
             session.commit()
 
 
-def delete_workflow_by_provisioned_file(tenant_id, provisioned_file):
+def delete_workflow_by_provisioned_file(tenant_id: str, workflow_id: str, provisioned_file: str):
     with Session(engine) as session:
         workflow = session.exec(
             select(Workflow)
+            .where(Workflow.id == workflow_id)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.provisioned_file == provisioned_file)
         ).first()
