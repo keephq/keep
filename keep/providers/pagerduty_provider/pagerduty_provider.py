@@ -1047,11 +1047,22 @@ class PagerdutyProvider(
             incident_alerts = self.__get_all_incidents_or_alerts(
                 incident_id=incident_dto.fingerprint
             )
-            incident_alerts = [
-                PagerdutyProvider._format_alert(alert, None, force_new_format=True)
-                for alert in incident_alerts
-            ]
-            incident_dto._alerts = incident_alerts
+            try:
+                incident_alerts = [
+                    PagerdutyProvider._format_alert(alert, None, force_new_format=True)
+                    for alert in incident_alerts
+                ]
+                incident_dto._alerts = incident_alerts
+            except Exception:
+                self.logger.exception(
+                    "Failed to format incident alerts",
+                    extra={
+                        "provider_id": self.provider_id,
+                        "source_incident_id": incident_dto.fingerprint,
+                        "tenant_id": self.context_manager.tenant_id,
+                        "alerts": incident_alerts,
+                    },
+                )
             incidents.append(incident_dto)
         return incidents
 
