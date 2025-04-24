@@ -32,7 +32,7 @@ def diff(iterable: iter) -> bool:
     return not all(iterable)
 
 
-def len(iterable=[]) -> int:
+def len(iterable=[], **kwargs) -> int:
     return _len(iterable)
 
 
@@ -49,6 +49,8 @@ def split(string, delimeter) -> list:
 
 
 def index(iterable, index) -> any:
+    if isinstance(index, str) and index.isdigit():  # Если индекс — строка с числом
+        index = int(index)
     return iterable[index]
 
 

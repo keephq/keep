@@ -10,16 +10,17 @@ from openai import OpenAI, OpenAIError
 from sqlmodel import Session
 
 from keep.api.bl.incidents_bl import IncidentBl
+from keep.api.consts import OPENAI_MODEL_NAME
 from keep.api.core.db import get_session_sync
-from keep.api.models.alert import (
-    AlertDto,
+from keep.api.models.alert import AlertDto
+from keep.api.models.db.ai_suggestion import AIFeedback, AISuggestion, AISuggestionType
+from keep.api.models.db.topology import TopologyServiceDtoOut
+from keep.api.models.incident import (
     IncidentCandidate,
     IncidentClustering,
     IncidentDto,
     IncidentsClusteringSuggestion,
 )
-from keep.api.models.db.ai_suggestion import AIFeedback, AISuggestion, AISuggestionType
-from keep.api.models.db.topology import TopologyServiceDtoOut
 
 
 class AISuggestionBl:
@@ -276,7 +277,7 @@ class AISuggestionBl:
                 suggestion_input=suggestion_input,
                 suggestion_type=AISuggestionType.INCIDENT_SUGGESTION,
                 suggestion_content=incident_clustering.dict(),
-                model="gpt-4o-2024-08-06",
+                model=OPENAI_MODEL_NAME,
             )
 
             # Process incidents
@@ -403,7 +404,7 @@ class AISuggestionBl:
     def _get_ai_completion(self, system_prompt: str, user_prompt: str):
         """Get completion from OpenAI."""
         return self._client.chat.completions.create(
-            model="gpt-4o-2024-08-06",
+            model=OPENAI_MODEL_NAME,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -494,7 +495,8 @@ class AISuggestionBl:
                 alert_ids=[alerts_dto[i - 1].id for i in incident.alerts],
                 recommended_actions=incident.recommended_actions,
                 is_predicted=True,
-                is_confirmed=False,
+                is_candidate=True,
+                is_visible=True,
                 alerts_count=len(incident.alerts),
                 alert_sources=list(alert_sources),
                 alerts=incident_alerts,

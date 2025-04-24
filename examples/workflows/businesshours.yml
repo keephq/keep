@@ -1,6 +1,7 @@
 workflow:
-  id: businesshours
-  description: demonstrate how to do smth only when it's business hours
+  id: business-hours-alert-handler
+  name: Business Hours Alert Handler
+  description: Processes alerts only during specified business hours in the America/New York timezone, preventing off-hours notifications.
   triggers:
     - type: alert
     - type: manual

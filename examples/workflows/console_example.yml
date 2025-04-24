@@ -1,6 +1,7 @@
 workflow:
-  id: console-example
-  description: console-example
+  id: console-logger
+  name: Console Logger
+  description: Simple workflow demonstrating console logging functionality with customizable messages.
   triggers:
     - type: manual
   actions:

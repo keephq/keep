@@ -1,11 +1,14 @@
-import { Title, Subtitle } from "@tremor/react";
+import { PageTitle, PageSubtitle } from "@/shared/ui";
 export default function Layout({ children }: { children: any }) {
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-full">
-      <Title>Maintenance Windows</Title>
-      <Subtitle>
-        Configure maintenance windows and suppress alerts automatically
-      </Subtitle>
+    <main className="mx-auto max-w-full flex flex-col gap-6">
+      <header>
+        <PageTitle>Maintenance Windows</PageTitle>
+        <PageSubtitle>
+          Configure maintenance windows and suppress alerts automatically
+        </PageSubtitle>
+      </header>
+
       {children}
     </main>
   );

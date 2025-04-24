@@ -1,11 +1,11 @@
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from arq import ArqRedis
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Body,
     Depends,
     HTTPException,
     Query,
@@ -14,18 +14,19 @@ from fastapi import (
 )
 from pusher import Pusher
 from pydantic.types import UUID
+from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.bl.incident_reports import IncidentReportsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
-    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     get_future_incidents_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
@@ -35,37 +36,34 @@ from keep.api.core.db import (
     get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,
-    merge_incidents_to_id,
+    merge_incidents_to_id, get_enrichment,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.incidents import (
     get_incident_facets,
     get_incident_facets_data,
     get_incident_potential_facet_fields,
-    get_last_incidents_by_cel,
 )
-from keep.api.models.alert import (
-    AlertDto,
-    EnrichAlertRequestBody,
-    EnrichIncidentRequestBody,
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
+from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
+from keep.api.models.facet import FacetOptionsQueryDto
+from keep.api.models.incident import (
     IncidentCommit,
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
     IncidentsClusteringSuggestion,
-    IncidentSeverity,
+    IncidentSeverityChangeDto,
     IncidentSorting,
-    IncidentStatus,
     IncidentStatusChangeDto,
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
-    SplitIncidentResponseDto, IncidentSeverityChangeDto,
+    SplitIncidentResponseDto,
 )
-from keep.api.models.facet import FacetOptionsQueryDto
-from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.models.workflow import WorkflowExecutionDTO
-from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import (
@@ -122,7 +120,7 @@ def get_incidents_meta(
     description="Get last incidents",
 )
 def get_all_incidents(
-    confirmed: bool = True,
+    candidate: bool = False,
     predicted: Optional[bool] = None,
     limit: int = 25,
     offset: int = 0,
@@ -172,10 +170,12 @@ def get_all_incidents(
         authenticated_entity=authenticated_entity,
     )
 
+    incident_bl = IncidentBl(tenant_id, session=None, pusher_client=None)
+
     try:
-        incidents, total_count = get_last_incidents_by_cel(
+        result = incident_bl.query_incidents(
             tenant_id=tenant_id,
-            is_confirmed=confirmed,
+            is_candidate=candidate,
             is_predicted=predicted,
             limit=limit,
             offset=offset,
@@ -183,30 +183,22 @@ def get_all_incidents(
             cel=cel,
             allowed_incident_ids=allowed_incident_ids,
         )
+        logger.info(
+            "Fetched incidents from DB",
+            extra={
+                "tenant_id": tenant_id,
+                "limit": limit,
+                "offset": offset,
+                "sorting": sorting,
+                "filters": filters,
+            },
+        )
+        return result
     except CelToSqlException as e:
         logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
-        )
-
-    incidents_dto = []
-    for incident in incidents:
-        incidents_dto.append(IncidentDto.from_db_incident(incident))
-
-    logger.info(
-        "Fetched incidents from DB",
-        extra={
-            "tenant_id": tenant_id,
-            "limit": limit,
-            "offset": offset,
-            "sorting": sorting,
-            "filters": filters,
-        },
-    )
-
-    return IncidentsPaginatedResultsDto(
-        limit=limit, offset=offset, count=total_count, items=incidents_dto
-    )
+        ) from e
 
 
 @router.post(
@@ -239,10 +231,10 @@ def fetch_inicident_facet_options(
     )
 
     facet_options = get_incident_facets_data(
-            tenant_id = tenant_id,
-            allowed_incident_ids=allowed_incident_ids,
-            facet_options_query = facet_options_query
-        )
+        tenant_id=tenant_id,
+        allowed_incident_ids=allowed_incident_ids,
+        facet_options_query=facet_options_query,
+    )
 
     logger.info(
         "Fetched incident facets from DB",
@@ -283,6 +275,7 @@ def fetch_inicident_facets(
 
     return facets
 
+
 @router.get(
     "/facets/fields",
     description="Get potential fields for incident facets",
@@ -290,7 +283,7 @@ def fetch_inicident_facets(
 def fetch_alert_facet_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    )
+    ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
 
@@ -301,9 +294,7 @@ def fetch_alert_facet_fields(
         },
     )
 
-    fields = get_incident_potential_facet_fields(
-            tenant_id = tenant_id
-        )
+    fields = get_incident_potential_facet_fields(tenant_id=tenant_id)
 
     logger.info(
         "Fetched incident facet fields from DB",
@@ -312,6 +303,40 @@ def fetch_alert_facet_fields(
         },
     )
     return fields
+
+
+@router.get(
+    "/report",
+    description="Get incidents report",
+)
+def get_incidents_report(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    cel: str = Query(None),
+):
+    tenant_id = authenticated_entity.tenant_id
+    reports_bl = IncidentReportsBl(tenant_id)
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="incident",
+        authenticated_entity=authenticated_entity,
+    )
+
+    try:
+        return reports_bl.get_incident_reports(
+            incidents_query_cel=cel, allowed_incident_ids=allowed_incident_ids
+        )
+    except CelToSqlException as e:
+        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        raise HTTPException(
+            status_code=400, detail=f"Error parsing CEL expression: {cel}"
+        )
 
 
 @router.get(
@@ -365,10 +390,45 @@ def update_incident(
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session=session, pusher_client=pusher_client)
+
+    current_incident = get_incident_by_id(tenant_id, incident_id)
+    if not current_incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if (
+        updated_incident_dto.assignee
+        and current_incident.assignee != updated_incident_dto.assignee
+    ):
+        add_audit(
+            tenant_id,
+            str(incident_id),
+            authenticated_entity.email,
+            ActionType.INCIDENT_ASSIGN,
+            f"Incident assigned to {updated_incident_dto.assignee}",
+        )
+
     new_incident_dto = incident_bl.update_incident(
         incident_id, updated_incident_dto, generated_by_ai
     )
     return new_incident_dto
+
+
+@router.delete(
+    "/bulk",
+    description="Delete incidents in bulk",
+)
+def bulk_delete_incidents(
+    incident_ids: List[UUID] = Body(..., embed=True),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    incident_bl.bulk_delete_incidents(incident_ids)
+    return Response(status_code=202)
 
 
 @router.delete(
@@ -446,7 +506,7 @@ def merge_incidents(
     )
 
     try:
-        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
+        merged_ids, failed_ids = merge_incidents_to_id(
             tenant_id,
             command.source_incident_ids,
             command.destination_incident_id,
@@ -458,14 +518,12 @@ def merge_incidents(
         else:
             message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
 
-        if skipped_ids:
-            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
         if failed_ids:
             message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
+            raise HTTPException(f"Some incidents failed to merge. {message}")
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
-            skipped_incident_ids=skipped_ids,
             failed_incident_ids=failed_ids,
             destination_incident_id=command.destination_incident_id,
             message=message,
@@ -742,6 +800,35 @@ async def receive_event(
     return Response(status_code=202)
 
 
+@router.post("/{incident_id}/assign", description="Assign incident to user")
+def assign_incident(
+    incident_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+):
+    logger.info(
+        "Assigning incident to user",
+        extra={"incident_id": incident_id, "assignee": authenticated_entity.email},
+    )
+    incident = get_incident_by_id(
+        authenticated_entity.tenant_id, incident_id, session=session
+    )
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    incident.assignee = authenticated_entity.email
+    add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        ActionType.INCIDENT_ASSIGN,
+        f"Incident self-assigned to {authenticated_entity.email}",
+    )
+    session.commit()
+    return Response(status_code=202)
+
+
 @router.post(
     "/{incident_id}/status",
     description="Change incident status",
@@ -753,42 +840,15 @@ def change_incident_status(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
+    session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
+
+    incident_bl = IncidentBl(tenant_id, session)
+
+    new_incident_dto = incident_bl.change_status(
+        incident_id, change.status, authenticated_entity
     )
-
-    with_alerts = change.status == IncidentStatus.RESOLVED
-    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    # We need to do something only if status really changed
-    if not change.status == incident.status:
-        end_time = (
-            datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
-        )
-        change_incident_status_by_id(
-            tenant_id, incident_id, change.status, end_time
-        )
-        if change.status == IncidentStatus.RESOLVED:
-            for alert in incident._alerts:
-                _enrich_alert(
-                    EnrichAlertRequestBody(
-                        enrichments={"status": "resolved"},
-                        fingerprint=alert.fingerprint,
-                    ),
-                    authenticated_entity=authenticated_entity,
-                )
-        incident.end_time = end_time
-        incident.status = change.status
-
-    new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
 
@@ -816,8 +876,12 @@ def change_incident_severity(
             "severity": change.severity.value,
         },
     )
-    incident_bl = IncidentBl(tenant_id, session, pusher_client, user=authenticated_entity.email)
-    incident_dto = incident_bl.update_severity(incident_id, change.severity, change.comment)
+    incident_bl = IncidentBl(
+        tenant_id, session, pusher_client, user=authenticated_entity.email
+    )
+    incident_dto = incident_bl.update_severity(
+        incident_id, change.severity, change.comment
+    )
     return incident_dto
 
 
@@ -971,7 +1035,8 @@ async def enrich_incident(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
-) -> IncidentDto:
+    db_session: Session = Depends(get_session),
+) -> Response:
     """Enrich incident with additional data."""
     tenant_id = authenticated_entity.tenant_id
 
@@ -981,14 +1046,78 @@ async def enrich_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Use the existing enrichment infrastructure
-    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl = EnrichmentsBl(tenant_id, db_session)
+    fingerprint = UUIDType(binary=False).process_bind_param(
+        incident_id, db_session.bind.dialect
+    )
+
     enrichment_bl.enrich_entity(
-        fingerprint=str(incident_id),  # Use incident_id as fingerprint
+        fingerprint=fingerprint,
         enrichments=enrichment.enrichments,
         action_type=ActionType.INCIDENT_ENRICH,
         action_callee=authenticated_entity.email,
         action_description=f"Incident enriched by {authenticated_entity.email}",
         force=enrichment.force,
+    )
+
+    # Notify clients if pusher is available
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "incident-change",
+                {},
+            )
+        except Exception as e:
+            logger.exception(
+                "Failed to notify clients about incident change",
+                extra={"error": str(e)},
+            )
+
+    return Response(status_code=202)
+
+
+@router.post(
+    "/{incident_id}/unenrich",
+    description="Unenrich incident additional data",
+    status_code=202,
+)
+async def unenrich_incident(
+    incident_id: UUID,
+    enrichment: UnEnrichIncidentRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> Response:
+    """Unenrich incident additional data."""
+    tenant_id = authenticated_entity.tenant_id
+
+    # Get incident to verify it exists
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    enrichments_object = get_enrichment(tenant_id, enrichment.fingerprint)
+    if not enrichments_object:
+        raise HTTPException(status_code=404, detail="Enrichment not found")
+
+    enrichments = enrichments_object.enrichments
+    new_enrichments = {
+        key: value
+        for key, value in enrichments.items()
+        if key not in enrichment.enrichments
+    }
+
+    # Use the existing enrichment infrastructure
+    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl.enrich_entity(
+        fingerprint=enrichment.fingerprint,
+        enrichments=new_enrichments,
+        action_type=ActionType.INCIDENT_UNENRICH,
+        action_callee=authenticated_entity.email,
+        action_description=f"Incident un-enriched by {authenticated_entity.email}",
+        force=True,
     )
 
     # Notify clients if pusher is available

@@ -1,5 +1,4 @@
-from typing import List
-from types import NoneType
+from typing import Any, List
 
 from sqlalchemy import Dialect, String
 
@@ -17,12 +16,25 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 from keep.api.core.cel_to_sql.properties_mapper import JsonPropertyAccessNode, MultipleFieldsNode, PropertiesMapper, PropertiesMappingException
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.core.cel_to_sql.properties_metadata import (
+    JsonFieldMapping,
+    PropertiesMetadata,
+    PropertyMetadataInfo,
+    SimpleFieldMapping,
+)
 from celpy import CELParseError
 
 
 class CelToSqlException(Exception):
     pass
+
+
+class CelToSqlResult:
+
+    def __init__(self, sql: str, involved_fields: List[PropertyMetadataInfo]):
+        self.sql = sql
+        self.involved_fields = involved_fields
+
 
 class BaseCelToSqlProvider:
     """
@@ -84,10 +96,14 @@ class BaseCelToSqlProvider:
 
     def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
-        self.literal_proc = String("").literal_processor(dialect=dialect)
+        self.__literal_proc = String("").literal_processor(dialect=dialect)
+        self.properties_metadata = properties_metadata
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
     def convert_to_sql_str(self, cel: str) -> str:
+        return self.convert_to_sql_str_v2(cel).sql
+
+    def convert_to_sql_str_v2(self, cel: str) -> CelToSqlResult:
         """
         Converts a CEL (Common Expression Language) expression to an SQL string.
         Args:
@@ -99,7 +115,7 @@ class BaseCelToSqlProvider:
         """
 
         if not cel:
-            return ""
+            return CelToSqlResult(sql="", involved_fields=[])
 
         try:
             original_query = CelToAstConverter.convert_to_ast(cel)
@@ -107,24 +123,66 @@ class BaseCelToSqlProvider:
             raise CelToSqlException(f"Error parsing CEL expression: {str(e)}") from e
 
         try:
-            with_mapped_props = self.properties_mapper.map_props_in_ast(original_query)
+            with_mapped_props, involved_fields = (
+                self.properties_mapper.map_props_in_ast(original_query)
+            )
         except PropertiesMappingException as e:
             raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
         if not with_mapped_props:
-            return ""
+            return CelToSqlResult(sql="", involved_fields=[])
 
         try:
             sql_filter = self.__build_sql_filter(with_mapped_props, [])
-            return sql_filter
+            return CelToSqlResult(sql=sql_filter, involved_fields=involved_fields)
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
 
-    def _get_default_value_for_type(self, type: type) -> str:
-        if type is str or type is NoneType:
-            return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
+    def get_order_by_expression(self, sort_options: list[tuple[str, str]]) -> str:
+        sort_expressions: list[str] = []
 
-        return "NULL"
+        for sort_option in sort_options:
+            sort_by, sort_dir = sort_option
+            sort_dir = sort_dir.lower()
+            order_by_exp = self.get_field_expression(sort_by)
+
+            sort_expressions.append(
+                f"{order_by_exp} {sort_dir == 'asc' and 'ASC' or 'DESC'}"
+            )
+
+        return ", ".join(sort_expressions)
+
+    def get_field_expression(self, cel_field: str) -> str:
+        metadata = self.properties_metadata.get_property_metadata_for_str(cel_field)
+        field_expressions = []
+
+        for field_mapping in metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                field_expressions.append(
+                    self.json_extract_as_text(
+                        field_mapping.json_prop, field_mapping.prop_in_json
+                    )
+                )
+                continue
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                field_expressions.append(field_mapping.map_to)
+                continue
+
+            raise ValueError(f"Unsupported field mapping type: {type(field_mapping)}")
+
+        if len(field_expressions) > 1:
+            return self.coalesce(field_expressions)
+        else:
+            return field_expressions[0]
+
+    def literal_proc(self, value: Any) -> str:
+        if isinstance(value, str):
+            return self.__literal_proc(value)
+
+        return f"'{str(value)}'"
+
+    def _get_order_by_field(self, cel_sort_by: str) -> str:
+        return self.get_field_expression(cel_sort_by)
 
     def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
         stack.append(abstract_node)
@@ -161,16 +219,16 @@ class BaseCelToSqlProvider:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def json_extract(self, column: str, path: str) -> str:
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
-    def json_extract_as_text(self, column: str, path: str) -> str:
-        raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
+    def coalesce(self, args):
+        if len(args) == 1:
+            return args[0]
 
-    def coalesce(self, args: List[str]) -> str:
-        raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
+        return f"COALESCE({', '.join(args)})"
 
-    def cast(self, expression_to_cast: str, to_type: type) -> str:
+    def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
@@ -249,6 +307,9 @@ class BaseCelToSqlProvider:
         return result
 
     def _visit_equal(self, first_operand: str, second_operand: str) -> str:
+        if second_operand == "NULL":
+            return f"{first_operand} IS NULL"
+
         return f"{first_operand} = {second_operand}"
 
     def _visit_not_equal(self, first_operand: str, second_operand: str) -> str:
@@ -282,13 +343,41 @@ class BaseCelToSqlProvider:
         else:
             first_operand_str = self.__build_sql_filter(first_operand, stack)
 
-        return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
+        constant_nodes_without_none = []
+        is_none_found = False
+
+        for item in array:
+            if isinstance(item, ConstantNode):
+                if item.value is None:
+                    is_none_found = True
+                    continue
+                constant_nodes_without_none.append(item)
+
+        or_queries = []
+
+        if len(constant_nodes_without_none) > 0:
+            or_queries.append(
+                f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in constant_nodes_without_none])})"
+            )
+
+        if is_none_found:
+            or_queries.append(self._visit_equal(first_operand_str, "NULL"))
+
+        if len(or_queries) == 0:
+            return self._visit_constant_node(False)
+
+        final_query = or_queries[0]
+
+        for query in or_queries[1:]:
+            final_query = self._visit_logical_or(final_query, query)
+
+        return final_query
 
     # endregion
 
-    def _visit_constant_node(self, value: str) -> str:
+    def _visit_constant_node(self, value: Any) -> str:
         if value is None:
-            return self._get_default_value_for_type(NoneType)
+            return "NULL"
         if isinstance(value, str):
             return self.literal_proc(value)
         if isinstance(value, bool):
@@ -310,8 +399,6 @@ class BaseCelToSqlProvider:
 
         if len(coalesce_args) == 1:
             return coalesce_args[0]
-
-        coalesce_args.append(self._get_default_value_for_type(cast_to))
 
         return self.coalesce(coalesce_args)
 
@@ -340,7 +427,9 @@ class BaseCelToSqlProvider:
         if (isinstance(property_access_node, JsonPropertyAccessNode)):
             return self.json_extract_as_text(property_access_node.json_property_name, property_access_node.property_to_extract)
 
-        return property_access_node.get_property_path()
+        return ".".join(
+            [f"{item}" for item in property_access_node.get_property_path()]
+        )
 
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")

@@ -1,0 +1,37 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: Sentry Api Key (required: True, sensitive: True)
+- **organization_slug**: Sentry organization slug (required: True, sensitive: False)
+- **api_url**: Sentry API URL (required: False, sensitive: False)
+- **project_slug**: Sentry project slug within the organization (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- ****: Write permission for projects in organization  
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query sentry
+      provider: sentry
+      config: "{{ provider.my_provider_name }}"
+      with:
+        project: {value}  # project name
+        time: {value}  # time range, for example: 14d
+```
+
+
+
+
+
+Check the following workflow example:
+- [create_jira_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_jira_ticket_upon_alerts.yml)

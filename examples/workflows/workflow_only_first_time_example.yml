@@ -1,6 +1,7 @@
 workflow:
-  id: alert-first-time
-  description: send slack message only the first time an alert fires
+  id: first-alert-notifier
+  name: First Alert Notifier
+  description: Sends Slack notifications only for the first occurrence of an alert within a 24-hour window.
   triggers:
     - type: alert
       filters:

@@ -8,6 +8,9 @@ on:
       - synchronize
       - reopened
 
+permissions:
+  pull-requests: write # Add explicit permissions for PR comments
+
 jobs:
   main:
     name: Validate PR title

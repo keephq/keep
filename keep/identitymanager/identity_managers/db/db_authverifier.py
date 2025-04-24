@@ -35,6 +35,7 @@ class DbAuthVerifier(AuthVerifierBase):
             )  # default to admin for backwards compatibility
             role = get_role_by_role_name(role_name)
         except Exception:
+            self.logger.exception("Failed to decode JWT token")
             raise HTTPException(status_code=401, detail="Invalid JWT token")
         # validate scopes
         if not role.has_scopes(self.scopes):

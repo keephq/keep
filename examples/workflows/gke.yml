@@ -1,6 +1,7 @@
-alert:
-  id: gke-example
-  description: gke-example
+workflow:
+  id: gke-pod-status-monitor
+  name: GKE Pod Status Monitor
+  description: Monitors and displays status information for all pods in a Google Kubernetes Engine cluster, including pod names, namespaces, and phases.
   triggers:
     - type: manual
   steps:

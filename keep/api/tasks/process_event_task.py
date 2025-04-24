@@ -4,7 +4,9 @@ import datetime
 import json
 import logging
 import os
+import sys
 import time
+import traceback
 from typing import List
 
 # third-parties
@@ -17,9 +19,11 @@ from sqlmodel import Session
 # internals
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
+    enrich_alerts_with_incidents,
     get_alerts_by_fingerprint,
     get_all_presets_dtos,
     get_enrichment_with_session,
@@ -35,10 +39,14 @@ from keep.api.core.metrics import (
     events_out_counter,
     processing_time_summary,
 )
-from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
-from keep.api.models.db.alert import ActionType, Alert, AlertAudit, AlertRaw
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
+from keep.api.models.db.incident import IncidentStatus
+from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
+    calculated_firing_counter,
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
 )
@@ -98,6 +106,22 @@ def __internal_prepartion(
             alert.apiKeyRef = api_key_name
 
 
+def __validate_last_received(event):
+    # Make sure the lastReceived is a valid date string
+    # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
+    # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
+    if not event.lastReceived:
+        event.lastReceived = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    else:
+        try:
+            dateutil.parser.isoparse(event.lastReceived)
+        except ValueError:
+            logger.warning("Invalid lastReceived date, setting to now")
+            event.lastReceived = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat()
+
+
 def __save_to_db(
     tenant_id,
     provider_type,
@@ -123,6 +147,7 @@ def __save_to_db(
                 )
                 session.add(alert)
 
+        enrichments_bl = EnrichmentsBl(tenant_id, session)
         # add audit to the deduplicated events
         # TODO: move this to the alert deduplicator
         if KEEP_AUDIT_EVENTS_ENABLED:
@@ -137,7 +162,18 @@ def __save_to_db(
                 )
                 session.add(audit)
 
+                __validate_last_received(event)
+                enrichments_bl.enrich_entity(
+                    event.fingerprint,
+                    enrichments={"lastReceived": event.lastReceived},
+                    dispose_on_new_alert=True,
+                    action_type=ActionType.GENERIC_ENRICH,
+                    action_callee="system",
+                    action_description="Alert lastReceived enriched on deduplication",
+                )
+
         enriched_formatted_events = []
+        saved_alerts = []
 
         for formatted_event in formatted_events:
             formatted_event.pushed = True
@@ -154,7 +190,11 @@ def __save_to_db(
                     formatted_event, previous_alert
                 )
 
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
+                # we now need to update the firing counter
+                formatted_event.firingCounter = calculated_firing_counter(
+                    formatted_event, previous_alert
+                )
+
             # Dispose enrichments that needs to be disposed
             try:
                 enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
@@ -179,21 +219,7 @@ def __save_to_db(
                     },
                 )
 
-            # Make sure the lastReceived is a valid date string
-            # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
-            # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
-            if not formatted_event.lastReceived:
-                formatted_event.lastReceived = datetime.datetime.now(
-                    tz=datetime.timezone.utc
-                ).isoformat()
-            else:
-                try:
-                    dateutil.parser.isoparse(formatted_event.lastReceived)
-                except ValueError:
-                    logger.warning("Invalid lastReceived date, setting to now")
-                    formatted_event.lastReceived = datetime.datetime.now(
-                        tz=datetime.timezone.utc
-                    ).isoformat()
+            __validate_last_received(formatted_event)
 
             alert_args = {
                 "tenant_id": tenant_id,
@@ -211,6 +237,7 @@ def __save_to_db(
             alert = Alert(**alert_args)
             session.add(alert)
             session.flush()
+            saved_alerts.append(alert)
             alert_id = alert.id
             formatted_event.event_id = str(alert_id)
 
@@ -228,6 +255,8 @@ def __save_to_db(
                 )
                 session.add(audit)
 
+            session.commit()
+            session.flush()
             set_last_alert(tenant_id, alert, session=session)
 
             # Mapping
@@ -245,8 +274,39 @@ def __save_to_db(
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
                     value = alert_enrichment.enrichments[enrichment]
+                    if isinstance(value, str):
+                        value = value.strip()
                     setattr(formatted_event, enrichment, value)
             enriched_formatted_events.append(formatted_event)
+
+        logger.info("Checking for incidents to resolve", extra={"tenant_id": tenant_id})
+        try:
+            saved_alerts = enrich_alerts_with_incidents(
+                tenant_id, saved_alerts, session
+            )  # note: this only enriches incidents that were not yet ended
+
+            session.expire_on_commit = False
+            incident_bl = IncidentBl(tenant_id, session)
+            for alert in saved_alerts:
+                if alert.event.get("status") == AlertStatus.RESOLVED.value:
+                    logger.debug(
+                        "Checking for alert with status resolved",
+                        extra={"alert_id": alert.id, "tenant_id": tenant_id},
+                    )
+                    for incident in alert._incidents:
+                        if incident.status in IncidentStatus.get_active(
+                            return_values=True
+                        ):
+                            incident_bl.resolve_incident_if_require(incident)
+            logger.info(
+                "Completed checking for incidents to resolve",
+                extra={"tenant_id": tenant_id},
+            )
+        except Exception:
+            logger.exception(
+                "Failed to check for incidents to resolve",
+                extra={"tenant_id": tenant_id},
+            )
         session.commit()
 
         logger.info(
@@ -633,12 +693,14 @@ def process_event(
                 #         todo: move it to be generic
                 if event is None and provider_type == "cloudwatch":
                     logger.info(
-                        "This is a subscription notification message from AWS - skipping processing"
+                        "This is a subscription notification message from AWS - skipping processing",
+                        extra=extra_dict,
                     )
                     return
                 elif event is None:
                     logger.info(
-                        "Provider returned None (failed silently), skipping processing"
+                        "Provider returned None (failed silently), skipping processing",
+                        extra=extra_dict,
                     )
 
         if event:
@@ -685,13 +747,30 @@ def process_event(
             events_out_counter.inc()
             return formatted_events
     except Exception:
+        stacktrace = traceback.format_exc()
+        tb = traceback.extract_tb(sys.exc_info()[2])
+
+        # Get the name of the last function in the traceback
+        try:
+            last_function = tb[-1].name if tb else ""
+        except Exception:
+            last_function = ""
+
+        # Check if the last function matches the pattern
+        if "_format_alert" in last_function or "_format" in last_function:
+            # In case of exception, add the alerts to the defect table
+            error_msg = stacktrace
+        # if this is a bug in the code, we don't want the user to see the stacktrace
+        else:
+            error_msg = "Error processing event, contact Keep team for more information"
+
         logger.exception(
             "Error processing event",
             extra={**extra_dict, "processing_time": time.time() - start_time},
         )
-        # In case of exception, add the alerts to the defect table
-        __save_error_alerts(tenant_id, provider_type, raw_event)
+        __save_error_alerts(tenant_id, provider_type, raw_event, error_msg)
         events_error_counter.inc()
+
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
@@ -700,7 +779,10 @@ def process_event(
 
 
 def __save_error_alerts(
-    tenant_id, provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
+    tenant_id,
+    provider_type,
+    raw_events: dict | list[dict] | list[AlertDto] | AlertDto | None,
+    error_message: str,
 ):
     if not raw_events:
         logger.info("No raw events to save as errors")
@@ -716,8 +798,8 @@ def __save_error_alerts(
         session = get_session_sync()
 
         # Convert to list if single dict
-        if isinstance(raw_events, dict):
-            logger.info("Converting single dict to list")
+        if not isinstance(raw_events, list):
+            logger.info("Converting single dict or AlertDto to list")
             raw_events = [raw_events]
 
         logger.info(f"Saving {len(raw_events)} error alerts")
@@ -745,7 +827,11 @@ def __save_error_alerts(
                 },
             )
             alert = AlertRaw(
-                tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
+                tenant_id=tenant_id,
+                raw_alert=raw_event,
+                provider_type=provider_type,
+                error=True,
+                error_message=error_message,
             )
             session.add(alert)
             logger.info("AlertRaw object created")

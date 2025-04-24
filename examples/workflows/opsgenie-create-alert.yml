@@ -1,5 +1,7 @@
-id: opsgenie-create-alert
-description: Create an alert in OpsGenie
+workflow:
+  id: opsgenie-critical-alert-creator
+  name: OpsGenie Critical Alert Creator
+  description: Creates OpsGenie alerts for critical Coralogix issues with team assignment and alert enrichment tracking.
 triggers:
   - type: manual
   - type: alert

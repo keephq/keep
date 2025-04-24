@@ -1,3 +1,25 @@
+/**
+ * It's facets state. Key is the facet id, and value is Set<string> of unselected options.
+ * If facet option value is selected, the set will contain it's display value, otherwise it will not.
+ */
+export type FacetState = {
+  [facetId: string]: Set<string>;
+};
+
+export interface FacetConfig {
+  canHitEmptyState?: boolean;
+  uncheckedByDefaultOptionValues?: string[];
+  renderOptionIcon?: (facetOption: FacetOptionDto) => JSX.Element | undefined;
+  renderOptionLabel?: (
+    facetOption: FacetOptionDto
+  ) => JSX.Element | string | undefined;
+  sortCallback?: (facetOption: FacetOptionDto) => number;
+}
+
+export interface FacetsConfig {
+  [facetName: string]: FacetConfig;
+}
+
 export interface FacetOptionDto {
   display_name: string;
   value: any;

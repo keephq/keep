@@ -18,6 +18,7 @@ import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
+import "./frigade-overrides.css";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -104,6 +105,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           flow?.isCompleted === false && (
             <li>
               <Frigade.ProgressBadge
+                className="get-started-badge"
                 flowId={ONBOARDING_FLOW_ID}
                 onClick={() => setIsOnboardingOpen(true)}
               />
@@ -118,17 +120,17 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           )}
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-            Providers
+            <Subtitle className="text-xs">Providers</Subtitle>
           </LinkWithIcon>
         </li>
-        <li className="flex items-center gap-2">
+        <li className="flex text-xs items-center gap-2">
           <LinkWithIcon
             icon={FaSlack}
             href="https://slack.keephq.dev/"
             className="w-auto pr-3.5"
             target="_blank"
           >
-            Join Slack
+            Slack
           </LinkWithIcon>
           <LinkWithIcon
             icon={HiOutlineDocumentText}

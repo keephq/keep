@@ -114,6 +114,7 @@ export default function MaintenanceRulesTable({
   ] as DisplayColumnDef<MaintenanceRule>[];
 
   const table = useReactTable({
+    getRowId: (row) => row.id.toString(),
     columns,
     data: maintenanceRules,
     state: { expanded },

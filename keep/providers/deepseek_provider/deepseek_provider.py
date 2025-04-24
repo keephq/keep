@@ -50,6 +50,20 @@ class DeepseekProvider(BaseProvider):
         system_prompt=None,
         structured_output_format=None,
     ):
+        """
+        Query the DeepSeek API with the given prompt and system prompt.
+        Args:
+            prompt (str): The user query.
+            model (str): The model to use for the query.
+            max_tokens (int): The maximum number of tokens to generate.
+            system_prompt (str): The system prompt to use.
+            structured_output_format (dict): The structured output format.
+        """
+        try:
+            max_tokens = int(max_tokens)
+        except (TypeError, ValueError):
+            max_tokens = 1024
+
         client = OpenAI(
             api_key=self.authentication_config.api_key,
             base_url=self.BASE_URL,
@@ -120,9 +134,7 @@ if __name__ == "__main__":
                 "answer": "Mount Everest"
             }
             """,
-            structured_output_format={
-                "type": "json_object"
-            },
+            structured_output_format={"type": "json_object"},
             max_tokens=100,
         )
     )

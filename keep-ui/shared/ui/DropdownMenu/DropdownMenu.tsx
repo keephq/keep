@@ -158,6 +158,7 @@ const MenuComponent = React.forwardRef<
         data-open={isOpen ? "" : undefined}
         data-nested={isNested ? "" : undefined}
         data-focus-inside={hasFocusInside ? "" : undefined}
+        data-testid="dropdown-menu-button"
         className={clsx(
           isNested ? "DropdownMenuItem" : "DropdownMenuButton",
           "group",
@@ -167,6 +168,10 @@ const MenuComponent = React.forwardRef<
         {...getReferenceProps(
           parent.getItemProps({
             ...props,
+            onClick(event: React.MouseEvent<HTMLButtonElement>) {
+              props.onClick?.(event);
+              tree?.events.emit("click");
+            },
             onFocus(event: React.FocusEvent<HTMLButtonElement>) {
               props.onFocus?.(event);
               setHasFocusInside(false);
@@ -213,6 +218,7 @@ const MenuComponent = React.forwardRef<
                   className="DropdownMenu"
                   style={floatingStyles}
                   {...getFloatingProps()}
+                  data-testid="dropdown-menu-list"
                 >
                   {children}
                 </div>

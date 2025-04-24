@@ -1,14 +1,12 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import { MappingExecutionTable } from "../mapping-execution-table";
+import { useState, use } from "react";
+import { ExecutionsTable } from "../../../../../components/table/ExecutionsTable";
 import {
   Card,
   Title,
   Icon,
   Subtitle,
-  Badge,
-  Text,
   Table,
   TableHead,
   TableRow,
@@ -22,28 +20,27 @@ import {
   ArrowRightIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/16/solid";
-import { useMappings } from "@/utils/hooks/useMappingRules";
-import TimeAgo from "react-timeago";
+import { useMappingRule, useMappings } from "@/utils/hooks/useMappingRules";
+import { Tooltip } from "@/shared/ui/Tooltip";
 
 interface Pagination {
   limit: number;
   offset: number;
 }
 
-export default function MappingExecutionsPage({
-  params,
-}: {
-  params: { rule_id: string };
+export default function MappingExecutionsPage(props: {
+  params: Promise<{ rule_id: string }>;
 }) {
+  const params = use(props.params);
   const [pagination, setPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
   });
   const [isDataPreviewExpanded, setIsDataPreviewExpanded] = useState(false);
 
-  const { data: mappings } = useMappings();
-  const rule = mappings?.find((m) => m.id === parseInt(params.rule_id));
+  const { data: rule } = useMappingRule(parseInt(params.rule_id));
 
   const { executions, totalCount, isLoading } = useEnrichmentEvents({
     ruleId: params.rule_id,
@@ -69,7 +66,7 @@ export default function MappingExecutionsPage({
 
       <div className="space-y-4">
         <Card>
-          <MappingExecutionTable
+          <ExecutionsTable
             executions={{
               items: executions,
               count: totalCount,
@@ -85,7 +82,17 @@ export default function MappingExecutionsPage({
               className="flex justify-between items-center cursor-pointer"
               onClick={() => setIsDataPreviewExpanded(!isDataPreviewExpanded)}
             >
-              <Title>Data Preview</Title>
+              <Title>
+                Data Preview
+                <Tooltip
+                  content={
+                    <>The data preview shows the first 20 rows of the data.</>
+                  }
+                  className="z-50"
+                >
+                  <QuestionMarkCircleIcon className="w-4 h-4 ml-1 text-gray-400" />
+                </Tooltip>
+              </Title>
               <Icon
                 icon={isDataPreviewExpanded ? ChevronUpIcon : ChevronDownIcon}
                 color="gray"
@@ -103,7 +110,7 @@ export default function MappingExecutionsPage({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rule.rows.slice(0, 5).map((row, idx) => (
+                    {rule.rows.slice(0, 20).map((row, idx) => (
                       <TableRow key={idx}>
                         {Object.values(row).map((value: any, valueIdx) => (
                           <TableCell key={valueIdx}>

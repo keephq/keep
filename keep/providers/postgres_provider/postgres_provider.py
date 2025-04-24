@@ -109,6 +109,7 @@ class PostgresProvider(BaseProvider):
             password=self.authentication_config.password,
             host=self.authentication_config.host,
             port=self.authentication_config.port,
+            connect_timeout=10,
         )
         self.conn = conn
         return conn

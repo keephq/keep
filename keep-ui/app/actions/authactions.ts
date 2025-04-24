@@ -12,7 +12,19 @@ export async function authenticate(username: string, password: string) {
       redirect: false,
     });
 
-    return { success: true, data: result };
+    // Check if result exists before returning success
+    if (result) {
+      return { success: true, data: result };
+    } else {
+      // Handle the case where signIn returns undefined
+      console.log(
+        "Authentication failed: No response from authentication service"
+      );
+      return {
+        success: false,
+        error: "Authentication failed: No response from authentication service",
+      };
+    }
   } catch (error) {
     if (error instanceof AuthenticationError) {
       switch (error.code) {
@@ -39,7 +51,7 @@ export async function authenticate(username: string, password: string) {
         default:
           return {
             success: false,
-            error: "An unexpected error occurred",
+            error: "An unexpected authentication error",
           };
       }
     }

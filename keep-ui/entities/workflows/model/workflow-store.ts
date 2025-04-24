@@ -10,78 +10,182 @@ import {
 import {
   createCustomEdgeMeta,
   processWorkflowV2,
-  getTriggerStep,
+  getTriggerSteps,
   reConstructWorklowToDefinition,
 } from "utils/reactFlow";
-import { createDefaultNodeV2 } from "../../../utils/reactFlow";
+import { createDefaultNodeV2 } from "@/utils/reactFlow";
 import {
   V2Step,
   StoreSet,
   StoreGet,
-  FlowStateValues,
-  FlowState,
+  WorkflowStateValues,
+  WorkflowState,
   FlowNode,
   Definition,
-  ToolboxConfiguration,
+  V2StepTemplateSchema,
+  V2EndStep,
+  V2StartStep,
+  V2StepTrigger,
+  V2StepTemplate,
+  V2StepTriggerSchema,
+  WorkflowProperties,
+  InitializationConfiguration,
 } from "@/entities/workflows";
-import { validateStepPure, validateGlobalPure } from "./validation";
+import {
+  validateStepPure,
+  validateGlobalPure,
+  ValidationError,
+} from "../lib/validation";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
-import { wrapDefinitionV2 } from "@/entities/workflows/lib/parser";
+import {
+  parseWorkflow,
+  wrapDefinitionV2,
+} from "@/entities/workflows/lib/parser";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { ZodError } from "zod";
+import { fromError } from "zod-validation-error";
+import {
+  canAddConditionBeforeEdge,
+  canAddForeachBeforeEdge,
+  canAddStepBeforeEdge,
+  canAddTriggerBeforeEdge,
+  edgeCanHaveAddButton,
+  getToolboxConfiguration,
+} from "@/features/workflows/builder/lib/utils";
+import { Provider } from "@/shared/api/providers";
+import { parseWorkflowYamlStringToJSON } from "../lib/yaml-utils";
+import { getYamlWorkflowDefinitionSchema } from "./yaml.schema";
 
+class KeepWorkflowStoreError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "KeepWorkflowStoreError";
+  }
+}
+const PROTECTED_NODE_IDS = ["start", "end", "trigger_start", "trigger_end"];
+
+/**
+ * Add a node between two edges
+ * @param nodeOrEdgeId - The id of the node or edge to add the new node between
+ * @param rawStep - The step to add
+ * @param type - The type of the node or edge
+ * @param set - The set function
+ * @param get - The get function
+ * @returns The id of the new node
+ * @throws KeepWorkflowStoreError if the node or edge or step is not defined
+ * @throws ZodError if the step is not valid
+ */
 function addNodeBetween(
   nodeOrEdgeId: string,
-  step: V2Step,
+  rawStep: V2StepTemplate | V2StepTrigger | Omit<V2Step, "id">,
   type: "node" | "edge",
   set: StoreSet,
   get: StoreGet
 ) {
-  if (!nodeOrEdgeId || !step) {
-    console.error("addNodeBetween: Node or edge or step is not defined");
-    return;
+  if (!rawStep) {
+    throw new KeepWorkflowStoreError("Step is not defined");
   }
+
+  if (!nodeOrEdgeId) {
+    throw new KeepWorkflowStoreError("Node or edge id is not defined");
+  }
+
+  const isTriggerComponent = rawStep.componentType === "trigger";
+  let step: V2StepTemplate | V2StepTrigger;
+
+  if (isTriggerComponent) {
+    step = V2StepTriggerSchema.parse(rawStep);
+  } else {
+    step = V2StepTemplateSchema.parse(rawStep);
+  }
+
   let edge = {} as Edge;
   if (type === "node") {
     edge = get().edges.find((edge) => edge.target === nodeOrEdgeId) as Edge;
+    if (!edge) {
+      throw new KeepWorkflowStoreError(
+        `Edge with target ${nodeOrEdgeId} not found`
+      );
+    }
   }
 
   if (type === "edge") {
     edge = get().edges.find((edge) => edge.id === nodeOrEdgeId) as Edge;
+    if (!edge) {
+      throw new KeepWorkflowStoreError(
+        `Edge with id ${nodeOrEdgeId} not found`
+      );
+    }
   }
 
   let { source: sourceId, target: targetId } = edge || {};
-  if (!sourceId || !targetId) {
-    console.error("addNodeBetween: Source or target is not defined");
-    return;
+  if (sourceId === "trigger_start") {
+    targetId = "trigger_end";
   }
 
-  const isTriggerComponent = step.componentType === "trigger";
+  if (!sourceId) {
+    throw new KeepWorkflowStoreError(
+      `Source is not defined for edge ${edge.id}`
+    );
+  }
+  if (!targetId) {
+    throw new KeepWorkflowStoreError(
+      `Target is not defined for edge ${edge.id}`
+    );
+  }
+
+  if (isTriggerComponent && !canAddTriggerBeforeEdge(sourceId, targetId)) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add trigger`);
+  }
+
+  if (
+    step.componentType === "switch" &&
+    !canAddConditionBeforeEdge(sourceId, targetId)
+  ) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add condition`);
+  }
+
+  if (
+    step.componentType === "container" &&
+    step.type === "foreach" &&
+    !canAddForeachBeforeEdge(sourceId, targetId)
+  ) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add foreach`);
+  }
 
   if (sourceId !== "trigger_start" && isTriggerComponent) {
-    return;
+    throw new KeepWorkflowStoreError(
+      `Trigger is only allowed at the start of the workflow. Attempted to add trigger at edge ${edge.id}`
+    );
   }
 
   if (sourceId == "trigger_start" && !isTriggerComponent) {
-    return;
+    throw new KeepWorkflowStoreError(
+      `Only trigger can be added at the start of the workflow. Attempted to add step at edge ${edge.id}`
+    );
+  }
+
+  if (!isTriggerComponent && !canAddStepBeforeEdge(sourceId, targetId)) {
+    throw new KeepWorkflowStoreError(`Edge ${edge.id} cannot add step`);
   }
 
   const nodes = get().nodes;
-  if (
-    sourceId === "trigger_start" &&
-    isTriggerComponent &&
-    nodes.find((node) => node && step.id === node.id)
-  ) {
-    return;
+  // Return if the trigger is already in the workflow
+  if (isTriggerComponent && nodes.find((node) => node && step.id === node.id)) {
+    throw new KeepWorkflowStoreError(
+      `Trigger of type ${step.type} is already in the workflow`
+    );
   }
 
   let targetIndex = nodes.findIndex((node) => node.id === targetId);
   const sourceIndex = nodes.findIndex((node) => node.id === sourceId);
   if (targetIndex == -1) {
-    return;
+    throw new KeepWorkflowStoreError(
+      `Target node with id ${targetId} not found`
+    );
   }
 
-  if (sourceId === "trigger_start") {
-    targetId = "trigger_end";
-  }
+  // for triggers, we use the id from the step, for steps we generate a new id
   const newNodeId = isTriggerComponent ? step.id : uuidv4();
   const cloneStep = JSON.parse(JSON.stringify(step));
   const newStep = { ...cloneStep, id: newNodeId };
@@ -131,29 +235,36 @@ function addNodeBetween(
     nodes: newNodes,
     isLayouted: false,
     changes: get().changes + 1,
+    lastChangedAt: Date.now(),
   });
-  if (type == "edge") {
-    set({
-      selectedEdge: edges[edges.length - 1]?.id,
-    });
-  }
-
-  if (type === "node") {
-    set({ selectedNode: nodeOrEdgeId });
-  }
 
   switch (newNodeId) {
     case "interval":
     case "manual": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: "" } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: newStep.properties?.[newNodeId] ?? "",
+        },
+      });
       break;
     }
     case "alert": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: {} } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: newStep.properties?.[newNodeId] ?? {},
+        },
+      });
       break;
     }
     case "incident": {
-      set({ v2Properties: { ...get().v2Properties, [newNodeId]: {} } });
+      set({
+        v2Properties: {
+          ...get().v2Properties,
+          [newNodeId]: newStep.properties?.[newNodeId] ?? {},
+        },
+      });
       break;
     }
   }
@@ -168,55 +279,99 @@ function addNodeBetween(
 // - core worfklow state (definition, nodes, edges, selectedNode, etc)
 // - editor state (editorOpen, stepEditorOpenForNode)
 // - builder state (toolbox, selectedEdge, selectedNode, isLayouted, etc)
-const defaultState: FlowStateValues = {
+const defaultState: WorkflowStateValues = {
   workflowId: null,
   nodes: [],
   edges: [],
   selectedNode: null,
   v2Properties: {},
-  editorOpen: true,
+  editorOpen: false,
   toolboxConfiguration: null,
+  providers: null,
+  installedProviders: null,
+  yamlSchema: null,
+  secrets: {},
+  isInitialized: false,
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
-  synced: true,
+  isEditorSyncedWithNodes: true,
+  lastChangedAt: null,
+  lastDeployedAt: null,
   canDeploy: false,
-  buttonsEnabled: false,
   saveRequestCount: 0,
-  runRequestCount: 0,
   isSaving: false,
   definition: null,
   isLoading: false,
+  isDeployed: false,
   validationErrors: {},
 };
 
-export const useWorkflowStore = create<FlowState>()(
+export const useWorkflowStore = create<WorkflowState>()(
   devtools((set, get) => ({
     ...defaultState,
     setDefinition: (def) => set({ definition: def }),
     setIsLoading: (loading) => set({ isLoading: loading }),
-    setButtonsEnabled: (state: boolean) => set({ buttonsEnabled: state }),
     triggerSave: () =>
       set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
-    triggerRun: () =>
-      set((state) => ({ runRequestCount: state.runRequestCount + 1 })),
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
-    setSynced: (sync) => set({ synced: sync }),
-    setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null }),
+    setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
+    setLastDeployedAt: (deployedAt) => set({ lastDeployedAt: deployedAt }),
+    setSelectedEdge: (id) => {
+      const edge = get().edges.find((edge) => edge.id === id);
+      if (!edge) {
+        return;
+      }
+      set({
+        selectedEdge: id,
+        selectedNode: null,
+        editorOpen: edgeCanHaveAddButton(edge?.source, edge?.target),
+      });
+    },
     setIsLayouted: (isLayouted) => set({ isLayouted }),
+    getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
     addNodeBetween: (
       nodeOrEdgeId: string,
-      step: V2Step,
+      step: V2StepTrigger | Omit<V2Step, "id">,
       type: "node" | "edge"
     ) => {
       const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
-      if (newNodeId) {
-        get().setSelectedNode(newNodeId);
+      set({ selectedNode: newNodeId, selectedEdge: null });
+      return newNodeId ?? null;
+    },
+    addNodeBetweenSafe: (
+      nodeOrEdgeId: string,
+      step: V2StepTrigger | Omit<V2Step, "id">,
+      type: "node" | "edge"
+    ) => {
+      try {
+        const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
+        set({ selectedNode: newNodeId, selectedEdge: null });
+        return newNodeId ?? null;
+      } catch (error) {
+        if (error instanceof ZodError) {
+          // TODO: extract meaningful error from ZodError
+          const validationError = fromError(error);
+          showErrorToast(validationError);
+          console.error(error);
+        } else {
+          showErrorToast(error);
+          console.error(error);
+        }
+        return null;
       }
     },
-    setToolBoxConfig: (config: ToolboxConfiguration) =>
-      set({ toolboxConfiguration: config }),
+    setProviders: (providers: Provider[]) => {
+      set({
+        providers,
+        yamlSchema: getYamlWorkflowDefinitionSchema(providers),
+        toolboxConfiguration: getToolboxConfiguration(providers),
+      });
+    },
+    setInstalledProviders: (installedProviders: Provider[]) =>
+      set({ installedProviders }),
+    setSecrets: (secrets: Record<string, string>) => set({ secrets }),
     setEditorOpen: (open) => set({ editorOpen: open }),
     updateSelectedNodeData: (key, value) => {
       const currentSelectedNode = get().selectedNode;
@@ -236,9 +391,45 @@ export const useWorkflowStore = create<FlowState>()(
         set({
           nodes: updatedNodes,
           changes: get().changes + 1,
+          lastChangedAt: Date.now(),
         });
         get().updateDefinition();
       }
+    },
+    updateFromYamlString: (yamlString: string) => {
+      try {
+        const json = parseWorkflowYamlStringToJSON(yamlString);
+        const parsed = get().yamlSchema?.parse(json);
+      } catch (error) {
+        if (error instanceof ZodError) {
+          console.error("Failed to validate against Zod schema", error);
+        } else {
+          console.error("Failed to parse YAML", error);
+        }
+        // we do not update nodes if the yaml is invalid or cannot be parsed
+        return;
+      }
+      set({
+        definition: wrapDefinitionV2({
+          // todo: do not change node ids, maybe use determenistic ids
+          ...parseWorkflow(yamlString, get().providers ?? []),
+          isValid: true,
+        }),
+      });
+      set({
+        changes: get().changes + 1,
+        lastChangedAt: Date.now(),
+      });
+      initializeWorkflow(
+        get().workflowId,
+        {
+          providers: get().providers ?? [],
+          installedProviders: get().installedProviders ?? [],
+          secrets: get().secrets ?? {},
+        },
+        set,
+        get
+      );
     },
     updateDefinition: () => {
       // Immediately update definition with new properties
@@ -250,54 +441,107 @@ export const useWorkflowStore = create<FlowState>()(
           properties: get().v2Properties,
         });
 
+      const definition: Definition = {
+        sequence,
+        properties: newProperties as WorkflowProperties,
+      };
+
+      const { isValid, validationErrors, canDeploy } =
+        get().validateDefinition(definition);
+
+      set({
+        definition: wrapDefinitionV2({
+          ...definition,
+          isValid,
+        }),
+        validationErrors,
+        canDeploy,
+        isEditorSyncedWithNodes: true,
+      });
+    },
+    validateDefinition: (definition: Definition) => {
       // Use validators to check if the workflow is valid
       let isValid = true;
-      const validationErrors: Record<string, string> = {};
-      const definition: Definition = { sequence, properties: newProperties };
+      const validationErrors: Record<string, ValidationError> = {};
 
       const result = validateGlobalPure(definition);
       if (result) {
         result.forEach(([key, error]) => {
-          validationErrors[key] = error;
+          validationErrors[key] = [error, "error"];
         });
         isValid = result.length === 0;
       }
 
       // Check each step's validity
-      for (const step of sequence) {
-        const error = validateStepPure(step);
-        if (error) {
-          validationErrors[step.name || step.id] = error;
+      for (const step of definition.sequence) {
+        const errors = validateStepPure(
+          step,
+          get().providers ?? [],
+          get().installedProviders ?? [],
+          get().secrets ?? {},
+          definition
+        );
+        if (step.componentType === "switch") {
+          [...step.branches.true, ...step.branches.false].forEach((branch) => {
+            const errors = validateStepPure(
+              branch,
+              get().providers ?? [],
+              get().installedProviders ?? [],
+              get().secrets ?? {},
+              definition
+            );
+            if (errors.length > 0) {
+              validationErrors[branch.name || branch.id] = errors[0];
+              isValid = false;
+            }
+          });
+        }
+        if (step.componentType === "container") {
+          step.sequence.forEach((s) => {
+            const errors = validateStepPure(
+              s,
+              get().providers ?? [],
+              get().installedProviders ?? [],
+              get().secrets ?? {},
+              definition
+            );
+            if (errors.length > 0) {
+              validationErrors[s.name || s.id] = errors[0];
+              isValid = false;
+            }
+          });
+        }
+        if (errors.length > 0) {
+          validationErrors[step.name || step.id] = errors[0];
           isValid = false;
         }
       }
 
-      // We allow deployment even if there are provider errors, as the user can fix them later
+      // We allow deployment even if there are
+      // - provider errors, as the user can fix them later
+      // - variable errors, as the user can fix them later
       const canDeploy =
         Object.values(validationErrors).filter(
-          (error) => !error.includes("provider")
+          ([_, severity]) => severity === "error"
         ).length === 0;
 
-      set({
-        definition: wrapDefinitionV2({
-          sequence,
-          properties: newProperties,
-          isValid,
-        }),
-        validationErrors,
-        canDeploy,
-        synced: true,
-      });
+      return { isValid, validationErrors, canDeploy };
     },
     updateV2Properties: (properties) => {
       const updatedProperties = { ...get().v2Properties, ...properties };
-      set({ v2Properties: updatedProperties, changes: get().changes + 1 });
+      set({
+        v2Properties: updatedProperties,
+        changes: get().changes + 1,
+        lastChangedAt: Date.now(),
+      });
       get().updateDefinition();
     },
     setSelectedNode: (id) => {
       set({
         selectedNode: id || null,
         selectedEdge: null,
+        // open editor if we select a node
+        editorOpen: !!id,
       });
     },
     onNodesChange: (changes) =>
@@ -325,7 +569,10 @@ export const useWorkflowStore = create<FlowState>()(
             get().edges.filter((edge) => edge.source === source).length < 2
           );
         }
-        if (sourceType === "foreach" || sourceNode?.data?.type === "foreach") {
+        if (
+          sourceType === "container" &&
+          sourceNode?.data?.type === "foreach"
+        ) {
           return true;
         }
         return (
@@ -406,12 +653,15 @@ export const useWorkflowStore = create<FlowState>()(
     deleteNodes: (ids) => {
       //for now handling only single node deletion. can later enhance to multiple deletions
       if (typeof ids !== "string") {
-        return;
+        return [];
+      }
+      if (PROTECTED_NODE_IDS.includes(ids)) {
+        throw new KeepWorkflowStoreError("Cannot delete protected node");
       }
       const nodes = get().nodes;
       const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
       if (nodeStartIndex === -1) {
-        return;
+        return [];
       }
       let idArray = Array.isArray(ids) ? ids : [ids];
 
@@ -493,6 +743,24 @@ export const useWorkflowStore = create<FlowState>()(
       });
       get().onLayout({ direction: "DOWN" });
       get().updateDefinition();
+
+      return [ids];
+    },
+    getNextEdge: (nodeId: string) => {
+      const node = get().getNodeById(nodeId);
+      if (!node) {
+        throw new KeepWorkflowStoreError("Node not found");
+      }
+      // TODO: handle multiple edges
+      const edges = get().edges.filter((e) => e.source === nodeId);
+      if (!edges.length) {
+        throw new KeepWorkflowStoreError("Edge not found");
+      }
+      if (node.data.componentType === "switch") {
+        // If the node is a switch, return the second edge, because "true" is the second edge
+        return edges[1];
+      }
+      return edges[0];
     },
     // used to reset the store to the initial state, on builder unmount
     reset: () => set(defaultState),
@@ -504,8 +772,14 @@ export const useWorkflowStore = create<FlowState>()(
     }) => onLayout(params, set, get),
     initializeWorkflow: (
       workflowId: string | null,
-      toolboxConfiguration: ToolboxConfiguration
-    ) => initializeWorkflow(workflowId, toolboxConfiguration, set, get),
+      { providers, installedProviders, secrets }: InitializationConfiguration
+    ) =>
+      initializeWorkflow(
+        workflowId,
+        { providers, installedProviders, secrets },
+        set,
+        get
+      ),
   }))
 );
 
@@ -550,22 +824,31 @@ function onLayout(
   });
 }
 
-async function initializeWorkflow(
+function initializeWorkflow(
   workflowId: string | null,
-  toolboxConfiguration: ToolboxConfiguration,
+  { providers, installedProviders, secrets }: InitializationConfiguration,
   set: StoreSet,
   get: StoreGet
 ) {
+  const isUpdatingExistingState = get().workflowId === workflowId;
+  const currentSelectedNode = get().selectedNode;
+  const currentSelectedNodeStepName = get().nodes.find(
+    (node) => node.id === currentSelectedNode
+  )?.data?.name;
   const definition = get().definition;
   if (definition === null) {
     throw new Error("Definition should be set before initializing workflow");
   }
   set({ isLoading: true });
   let parsedWorkflow = definition?.value;
-  const name =
-    parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
+  const name = parsedWorkflow?.properties?.name;
 
-  const sequences = [
+  const toolboxConfiguration = getToolboxConfiguration(providers);
+  const yamlSchema = getYamlWorkflowDefinitionSchema(providers, {
+    partial: true,
+  });
+
+  const fullSequence = [
     {
       id: "start",
       type: "start",
@@ -573,8 +856,8 @@ async function initializeWorkflow(
       properties: {},
       isLayouted: false,
       name: "start",
-    } as V2Step,
-    ...getTriggerStep(parsedWorkflow?.properties),
+    } as V2StartStep,
+    ...getTriggerSteps(parsedWorkflow?.properties),
     ...(parsedWorkflow?.sequence || []),
     {
       id: "end",
@@ -583,20 +866,48 @@ async function initializeWorkflow(
       properties: {},
       isLayouted: false,
       name: "end",
-    } as V2Step,
+    } as V2EndStep,
   ];
   const initialPosition = { x: 0, y: 50 };
-  let { nodes, edges } = processWorkflowV2(sequences, initialPosition, true);
+  let { nodes, edges } = processWorkflowV2(fullSequence, initialPosition, true);
+  let newSelectedNodeId = null;
+  if (isUpdatingExistingState && currentSelectedNode) {
+    newSelectedNodeId =
+      nodes.find((node) => node.data.name === currentSelectedNodeStepName)
+        ?.id ?? null;
+  }
   set({
     workflowId,
-    selectedNode: null,
+    selectedNode: newSelectedNodeId,
     isLayouted: false,
     nodes,
     edges,
     v2Properties: { ...(parsedWorkflow?.properties ?? {}), name },
+    providers,
+    installedProviders,
+    yamlSchema,
+    secrets,
     toolboxConfiguration,
     isLoading: false,
+    isInitialized: true,
+    isDeployed: workflowId !== null,
+    // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
+    editorOpen: !workflowId || (isUpdatingExistingState && get().editorOpen),
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
+}
+
+export function useWorkflowEditorChangesSaved() {
+  const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
+    useWorkflowStore();
+  const isDeployedAndUntouched = lastChangedAt === null && isDeployed;
+  const isDeployedAndChangesSaved =
+    lastDeployedAt !== null &&
+    lastChangedAt !== null &&
+    lastDeployedAt >= lastChangedAt;
+  const isChangesSaved =
+    isEditorSyncedWithNodes &&
+    (isDeployedAndChangesSaved || isDeployedAndUntouched);
+  return isChangesSaved;
 }

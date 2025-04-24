@@ -1,4 +1,3 @@
-import Loading from "@/app/(keep)/loading";
 import {
   LogEntry,
   WorkflowExecutionDetail,
@@ -15,12 +14,10 @@ import {
   XCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import parseISO from "date-fns/parseISO";
-import formatDistance from "date-fns/formatDistance";
-import { differenceInSeconds } from "date-fns";
+import { parseISO, differenceInSeconds, formatDistance } from "date-fns";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import Editor from "@monaco-editor/react";
+import { JsonCard } from "@/shared/ui";
 
 function getStepIcon(status: string) {
   switch (status) {
@@ -185,37 +182,7 @@ function LogGroupAccordion({
               >
                 {log.timestamp}: {log.message}
               </p>
-              {result && (
-                <div className="bg-gray-100 rounded-md overflow-hidden text-xs my-2">
-                  <div className="text-gray-500 bg-gray-50 p-2 flex justify-between items-center">
-                    <span>output</span>
-                  </div>
-                  <div
-                    className="overflow-auto"
-                    style={{
-                      height: Math.min(
-                        JSON.stringify(result, null, 2).split("\n").length * 18,
-                        192
-                      ),
-                    }}
-                  >
-                    <Editor
-                      value={JSON.stringify(result, null, 2)}
-                      language="json"
-                      theme="vs-light"
-                      options={{
-                        readOnly: true,
-                        minimap: { enabled: false },
-                        scrollBeyondLastLine: false,
-                        fontSize: 12,
-                        lineNumbers: "off",
-                        folding: true,
-                        wordWrap: "on",
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+              {result && <JsonCard title="output" json={result} />}
             </div>
           ))}
         </div>
@@ -231,6 +198,7 @@ export function WorkflowExecutionLogs({
   checks,
   hoveredStep,
   selectedStep,
+  showSkeleton,
 }: {
   logs: LogEntry[] | null;
   results: Record<string, any> | null;
@@ -238,6 +206,7 @@ export function WorkflowExecutionLogs({
   checks: number;
   hoveredStep: string | null;
   selectedStep: string | null;
+  showSkeleton: boolean;
 }) {
   const groupedLogs = useMemo(() => {
     if (!logs) {
@@ -327,7 +296,7 @@ export function WorkflowExecutionLogs({
   return (
     <Card className="flex flex-col overflow-hidden p-2">
       <div className="flex-1 overflow-auto">
-        {status === "in_progress" ? (
+        {showSkeleton ? (
           <div>
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="flex gap-2 h-10">
@@ -339,10 +308,16 @@ export function WorkflowExecutionLogs({
                 </div>
               </div>
             ))}
-            <p>
-              The workflow is in progress, will check again in one second (times
-              checked: {checks})
-            </p>
+            {status === "in_progress" && (
+              <p>
+                The workflow is in progress, will check again in one second
+                (times checked: {checks})
+              </p>
+            )}
+            {status === "failed" && <p>The workflow failed, loading logs...</p>}
+            {status === "success" && (
+              <p>The workflow succeeded, loading logs...</p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-1">

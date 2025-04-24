@@ -124,7 +124,7 @@ export default function GroupsTab() {
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
       />
-      <Card className="flex-grow overflow-auto h-full">
+      <Card className="overflow-auto p-0">
         <div className="h-full w-full overflow-auto">
           <Table className="h-full">
             <TableHead>

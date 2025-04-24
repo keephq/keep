@@ -37,17 +37,19 @@ class WorkflowDTO(BaseModel):
     workflow_raw: str
     revision: int = 1
     last_updated: datetime = None
+    last_updated_by: str = None
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
     last_executions: List[dict] = None
     last_execution_started: datetime = None
     provisioned: bool = False
     provisioned_file: str = None
     alertRule: bool = False
+    canRun: bool = True
 
     @property
     def workflow_raw_id(self):
-        id = cyaml.safe_load(self.workflow_raw).get("id")
-        return id
+        workflow_id = cyaml.safe_load(self.workflow_raw).get("id")
+        return workflow_id
 
     @validator("workflow_raw", pre=False, always=True)
     def manipulate_raw(cls, raw, values):
@@ -108,7 +110,8 @@ class WorkflowToAlertExecutionDTO(BaseModel):
 
 class WorkflowExecutionDTO(BaseModel):
     id: str
-    workflow_id: str
+    workflow_id: str | None  # None for test runs
+    workflow_revision: int | None
     started: datetime
     triggered_by: str
     status: str
@@ -126,4 +129,20 @@ class WorkflowCreateOrUpdateDTO(BaseModel):
     status: Literal["created", "updated"]
     revision: int = 1
 
-# trigger CI. TODO: remove this
+
+class WorkflowRunResponseDTO(BaseModel):
+    workflow_execution_id: str
+
+
+class WorkflowRawDto(BaseModel):
+    workflow_raw: str
+
+
+class WorkflowVersionDTO(BaseModel):
+    revision: int
+    updated_by: str | None
+    updated_at: datetime
+
+
+class WorkflowVersionListDTO(BaseModel):
+    versions: List[WorkflowVersionDTO]

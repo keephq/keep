@@ -63,9 +63,27 @@ class KeepProvider(BaseProvider):
         delta = (to_time - from_time).total_seconds() / (24 * 3600)  # convert to days
         return delta
 
-    def _query(self, filters=None, version=1, distinct=True, time_delta=1, **kwargs):
+    def _query(
+        self,
+        filters=None,
+        version=1,
+        distinct=True,
+        time_delta=1,
+        timerange=None,
+        filter=None,
+        limit: int | None = None,
+        **kwargs,
+    ):
         """
         Query Keep for alerts.
+        Args:
+            filters: filters to query Keep (only for version 1)
+            version: version of Keep API
+            distinct: if True, return only distinct alerts
+            time_delta: time delta in days to query Keep
+            timerange: timerange dict to calculate time delta
+            filter: filter to query Keep (only for version 2)
+            limit: limit number of results (only for version 2)
         """
         self.logger.info(
             "Querying Keep for alerts",
@@ -76,9 +94,11 @@ class KeepProvider(BaseProvider):
             },
         )
         # if timerange is provided, calculate time delta
-        if kwargs.get("timerange"):
-            time_delta = self._calculate_time_delta(
-                timerange=kwargs.get("timerange"), default_time_range=time_delta
+        if timerange:
+            time_delta = int(
+                self._calculate_time_delta(
+                    timerange=timerange, default_time_range=time_delta
+                )
             )
         if version == 1:
             # filters are mandatory for version 1
@@ -101,12 +121,11 @@ class KeepProvider(BaseProvider):
                     fingerprints[alert.fingerprint] = True
         else:
             search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
-            _filter = kwargs.get("filter")
-            if not _filter:
+            if not filter:
                 raise ValueError("Filter is required for version 2")
             try:
                 alerts = search_engine.search_alerts_by_cel(
-                    cel_query=_filter, limit=kwargs.get("limit"), timeframe=time_delta
+                    cel_query=filter, limit=limit or 100, timeframe=int(time_delta)
                 )
             except Exception as e:
                 self.logger.exception(
@@ -139,8 +158,11 @@ class KeepProvider(BaseProvider):
             fingerprint=kwargs.get("fingerprint"),
             annotations=kwargs.get("annotations"),
             workflowId=self.context_manager.workflow_id,
-            **alert_data,
         )
+        # to avoid multiple key word argument, add and key,val on alert data only if it doesn't exists:
+        for key, val in alert_data.items():
+            if not hasattr(alert, key):
+                setattr(alert, key, val)
         # if fingerprint_fields are not provided, use labels
         if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
@@ -329,7 +351,7 @@ class KeepProvider(BaseProvider):
         return alerts_to_notify
 
     def _handle_stateless_alerts(
-        self, stateless_alerts: list[AlertDto]
+        self, stateless_alerts: list[AlertDto], read_only=False
     ) -> list[AlertDto]:
         """
         Handle alerts without PENDING state - just FIRING or RESOLVED.
@@ -343,13 +365,16 @@ class KeepProvider(BaseProvider):
             extra={"num_alerts": len(stateless_alerts)},
         )
         alerts_to_notify = []
-        search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
-        curr_alerts = search_engine.search_alerts_by_cel(
-            cel_query=f"providerId == '{self.context_manager.workflow_id}'"
-        )
-        self.logger.debug(
-            "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
-        )
+        if not read_only:
+            search_engine = SearchEngine(tenant_id=self.context_manager.tenant_id)
+            curr_alerts = search_engine.search_alerts_by_cel(
+                cel_query=f"providerId == '{self.context_manager.workflow_id}'"
+            )
+            self.logger.debug(
+                "Found existing alerts", extra={"num_curr_alerts": len(curr_alerts)}
+            )
+        else:
+            curr_alerts = []
 
         # Create lookup by fingerprint for efficient comparison
         curr_alerts_map = {alert.fingerprint: alert for alert in curr_alerts}
@@ -409,8 +434,31 @@ class KeepProvider(BaseProvider):
         )
         return alerts_to_notify
 
-    def _notify_alert(self, **kwargs):
-        self.logger.debug("Starting _notify_alert", extra={"kwargs": kwargs})
+    def _notify_alert(
+        self,
+        alert: dict | None = None,
+        if_condition: str | None = None,
+        for_duration: str | None = None,
+        fingerprint_fields: list | None = None,
+        override_source_with: str | None = None,
+        read_only: bool = False,
+        fingerprint: str | None = None,
+        **kwargs,
+    ) -> list:
+        """
+        Notify alerts with the given parameters
+        Args:
+            alert: alert data to create
+            if_condition: condition to evaluate for alert creation
+            for_duration: duration for state alerts
+            fingerprint_fields: fields to use for alert fingerprinting
+            override_source_with: override alert source
+            read_only: if True, don't modify existing alerts
+            fingerprint: alert fingerprint
+        Returns:
+            list of created/updated alerts
+        """
+        self.logger.debug("Starting _notify_alert")
         context = self.context_manager.get_full_context()
         alert_step = context.get("alert_step", None)
         self.logger.debug("Got alert step", extra={"alert_step": alert_step})
@@ -433,43 +481,55 @@ class KeepProvider(BaseProvider):
                 extra={"alert_results": alert_results},
             )
 
-        _if = kwargs.get("if", None)
-        _for = kwargs.get("for", None)
-        fingerprint_fields = kwargs.pop("fingerprint_fields", [])
+        # create_alert_in_keep.yml for example
+        if not alert_results:
+            self.logger.info("No alert results found")
+            if alert:
+                self.logger.info("Creating alert from 'alert' parameter")
+                alert_results = [alert]
+
         self.logger.debug(
             "Got condition parameters",
-            extra={"if": _if, "for": _for, "fingerprint_fields": fingerprint_fields},
+            extra={
+                "if": if_condition,
+                "for": for_duration,
+                "fingerprint_fields": fingerprint_fields,
+            },
         )
 
-        # if we need to check _if, handle the condition
+        # if we need to check if_condition, handle the condition
         trigger_alerts = []
-        if _if:
+        if if_condition:
             self.logger.info(
-                "Processing alerts with 'if' condition", extra={"condition": _if}
+                "Processing alerts with 'if' condition",
+                extra={"condition": if_condition},
             )
             # if its multialert, handle each alert separately
             if isinstance(alert_results, list):
                 self.logger.debug("Processing multiple alerts")
-                for alert in alert_results:
+                for alert_result in alert_results:
                     # render
-                    _if_rendered = self.io_handler.render(
-                        _if, safe=True, additional_context=alert
+                    if_rendered = self.io_handler.render(
+                        if_condition, safe=True, additional_context=alert_result
                     )
                     self.logger.debug(
                         "Rendered if condition",
-                        extra={"original": _if, "rendered": _if_rendered},
+                        extra={"original": if_condition, "rendered": if_rendered},
                     )
                     # evaluate
-                    if not self._evaluate_if(_if, _if_rendered):
+                    if not self._evaluate_if(if_condition, if_rendered):
                         self.logger.debug(
-                            "Alert did not meet condition", extra={"alert": alert}
+                            "Alert did not meet condition",
+                            extra={"alert": alert_result},
                         )
                         continue
-                    trigger_alerts.append(alert)
-                    self.logger.debug("Alert met condition", extra={"alert": alert})
+                    trigger_alerts.append(alert_result)
+                    self.logger.debug(
+                        "Alert met condition", extra={"alert": alert_result}
+                    )
             else:
                 pass
-        # if no _if, trigger all alerts
+        # if no if_condition, trigger all alerts
         else:
             self.logger.info("No 'if' condition - triggering all alerts")
             trigger_alerts = alert_results
@@ -480,21 +540,25 @@ class KeepProvider(BaseProvider):
             "Building alert DTOs", extra={"trigger_count": len(trigger_alerts)}
         )
         # render alert data
-        for alert_results in trigger_alerts:
-            alert_data = copy.copy(kwargs.get("alert", {}))
+        for alert_result in trigger_alerts:
+            alert_data = copy.copy(alert or {})
             # render alert data
             rendered_alert_data = self.io_handler.render_context(
-                alert_data, additional_context=alert_results
+                alert_data, additional_context=alert_result
             )
             self.logger.debug(
                 "Rendered alert data",
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            rendered_alert_data = self._handle_tenrary_exressions(rendered_alert_data)
+            # TODO: find another solution since js2py is not secure
+            # rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
             alert_dto = self._build_alert(
-                alert_results, fingerprint_fields, **rendered_alert_data
+                alert_result, fingerprint_fields or [], **rendered_alert_data
             )
+            if override_source_with:
+                alert_dto.source = [override_source_with]
+
             alert_dtos.append(alert_dto)
             self.logger.debug(
                 "Built alert DTO", extra={"fingerprint": alert_dto.fingerprint}
@@ -503,25 +567,26 @@ class KeepProvider(BaseProvider):
         # sanity check - if more than one alert has the same fingerprint it means something is wrong
         # this would happen if the fingerprint fields are not unique
         fingerprints = {}
-        for alert in alert_dtos:
-            if fingerprints.get(alert.fingerprint):
+        for alert_dto in alert_dtos:
+            if fingerprints.get(alert_dto.fingerprint):
                 self.logger.warning(
                     "Alert with the same fingerprint already exists - it means your fingerprint labels are not unique",
-                    extra={"alert": alert, "fingerprint": alert.fingerprint},
+                    extra={"alert": alert_dto, "fingerprint": alert_dto.fingerprint},
                 )
-            fingerprints[alert.fingerprint] = True
+            fingerprints[alert_dto.fingerprint] = True
 
-        # if _for is provided, handle state alerts
-        if _for:
+        # if for_duration is provided, handle state alerts
+        if for_duration:
             self.logger.info(
-                "Handling state alerts with 'for' condition", extra={"for": _for}
+                "Handling state alerts with 'for' condition",
+                extra={"for": for_duration},
             )
             # handle alerts with state
-            alerts = self._handle_state_alerts(_for, alert_dtos)
+            alerts = self._handle_state_alerts(for_duration, alert_dtos)
         # else, handle all alerts
         else:
             self.logger.info("Handling stateless alerts")
-            alerts = self._handle_stateless_alerts(alert_dtos)
+            alerts = self._handle_stateless_alerts(alert_dtos, read_only=read_only)
 
         # handle all alerts
         self.logger.info(
@@ -531,8 +596,9 @@ class KeepProvider(BaseProvider):
             ctx={},
             tenant_id=self.context_manager.tenant_id,
             provider_type="keep",
-            provider_id=self.context_manager.workflow_id,  # so we can track the alerts that are created by this workflow
-            fingerprint=kwargs.get("fingerprint"),
+            provider_id=self.context_manager.workflow_id,
+            # so we can track the alerts that are created by this workflow
+            fingerprint=fingerprint,
             api_key_name=None,
             trace_id=None,
             event=alerts,
@@ -542,27 +608,72 @@ class KeepProvider(BaseProvider):
         )
         return alerts
 
-    def _delete_workflows(self):
+    def _delete_workflows(self, except_workflow_id=None):
         self.logger.info("Deleting all workflows")
         workflow_store = WorkflowStore()
         workflows = workflow_store.get_all_workflows(self.context_manager.tenant_id)
         for workflow in workflows:
-            self.logger.info(f"Deleting workflow {workflow.id}")
-            try:
-                workflow_store.delete_workflow(
-                    self.context_manager.tenant_id, workflow.id
+            if not (except_workflow_id and workflow.id == except_workflow_id):
+                self.logger.info(f"Deleting workflow {workflow.id}")
+                try:
+                    workflow_store.delete_workflow(
+                        self.context_manager.tenant_id, workflow.id
+                    )
+                    self.logger.info(f"Deleted workflow {workflow.id}")
+                except Exception as e:
+                    self.logger.exception(
+                        f"Failed to delete workflow {workflow.id}: {e}"
+                    )
+                    raise ProviderException(
+                        f"Failed to delete workflow {workflow.id}: {e}"
+                    )
+            else:
+                self.logger.info(
+                    f"Not deleting workflow {workflow.id} as it's current workflow"
                 )
-                self.logger.info(f"Deleted workflow {workflow.id}")
-            except Exception as e:
-                self.logger.exception(f"Failed to delete workflow {workflow.id}: {e}")
-                raise ProviderException(f"Failed to delete workflow {workflow.id}: {e}")
         self.logger.info("Deleted all workflows")
 
-    def _notify(self, **kwargs):
-        if "workflow_full_sync" in kwargs:
-            self._delete_workflows()
-        elif "workflow_to_update_yaml" in kwargs:
-            workflow_to_update_yaml = kwargs["workflow_to_update_yaml"]
+    def _notify(
+        self,
+        delete_all_other_workflows: bool = False,
+        workflow_full_sync: bool = False,
+        workflow_to_update_yaml: str | None = None,
+        alert: dict | None = None,
+        fingerprint_fields: list | None = None,
+        override_source_with: str | None = None,
+        read_only: bool = False,
+        fingerprint: str | None = None,
+        if_: str | None = None,
+        for_: str | None = None,
+        **kwargs,
+    ):
+        """
+        Notify alerts or update workflow
+        Args:
+            delete_all_other_workflows: if True, delete all other workflows
+            workflow_full_sync: if True, sync all workflows
+            workflow_to_update_yaml: workflow yaml to update
+            alert: alert data to create
+            if: condition to evaluate for alert creation
+            for: duration for state alerts
+            fingerprint_fields: fields to use for alert fingerprinting
+            override_source_with: override alert source
+            read_only: if True, don't modify existing alerts
+            fingerprint: alert fingerprint
+        """
+        # for backward compatibility
+        if_condition = if_ or kwargs.get("if", None)
+        for_duration = for_ or kwargs.get("for", None)
+        if workflow_full_sync or delete_all_other_workflows:
+            # We need DB id, not user id for the workflow, so getting it from the wf execution.
+            workflow_store = WorkflowStore()
+            workflow_execution = workflow_store.get_workflow_execution(
+                self.context_manager.tenant_id,
+                self.context_manager.workflow_execution_id,
+            )
+            workflow_db_id = workflow_execution.workflow_id
+            self._delete_workflows(except_workflow_id=workflow_db_id)
+        elif workflow_to_update_yaml:
             self.logger.info(
                 "Updating workflow YAML",
                 extra={"workflow_to_update_yaml": workflow_to_update_yaml},
@@ -599,8 +710,16 @@ class KeepProvider(BaseProvider):
                 )
                 raise ProviderException(f"Failed to create workflow: {e}")
         else:
-            self.logger.info("Notifying Alerts", extra={"kwargs": kwargs})
-            alerts = self._notify_alert(**kwargs)
+            self.logger.info("Notifying Alerts")
+            alerts = self._notify_alert(
+                alert=alert,
+                if_condition=if_condition,
+                for_duration=for_duration,
+                fingerprint_fields=fingerprint_fields,
+                override_source_with=override_source_with,
+                read_only=read_only,
+                fingerprint=fingerprint,
+            )
             self.logger.info("Alerts notified")
             return alerts
 
@@ -640,8 +759,10 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
-    def _handle_tenrary_exressions(self, rendered_providers_parameters):
-        # SG: a hack to allow tenrary expressions
+    """
+    TODO: find alternative to js2py
+    def _handle_ternary_expressions(self, rendered_providers_parameters):
+        # SG: a hack to allow ternary expressions
         #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
         #
         #     this is a hack and should be improved
@@ -649,13 +770,14 @@ class KeepProvider(BaseProvider):
             try:
                 split_value = value.split(" ")
                 if split_value[1] == ">" and split_value[3] == "?":
-                    import js2py
+                    # import js2py
 
                     rendered_providers_parameters[key] = js2py.eval_js(value)
-            # we don't care, it's not a tenrary expression
+            # we don't care, it's not a ternary expression
             except Exception:
                 pass
         return rendered_providers_parameters
+    """
 
 
 if __name__ == "__main__":

@@ -34,6 +34,7 @@ class ContextManager:
         self.consts_context = {}
         self.current_step_vars = {}
         self.current_step_aliases = {}
+        self.secret_context = {}
         # cli context
         try:
             self.click_context = click.get_current_context()
@@ -49,6 +50,7 @@ class ContextManager:
                 workflow_str = json5.dumps(workflow)
                 last_workflow_results_in_workflow = (
                     "last_workflow_results" in workflow_str
+                    or "last_workflow_run_time" in workflow_str
                 )
                 if last_workflow_results_in_workflow:
                     last_workflow_execution = (
@@ -70,6 +72,7 @@ class ContextManager:
         #     and we want to use it in iohandler, we need to import it before the eval
         self.dependencies = set()
         self.workflow_execution_id = None
+        self.workflow_inputs = None
         self._api_key = None
         self.__loggers = {}
 
@@ -102,6 +105,9 @@ class ContextManager:
         for logger in self.__loggers.values():
             logger.workflow_execution_id = workflow_execution_id
 
+    def set_inputs(self, inputs):
+        self.workflow_inputs = inputs
+
     def set_event_context(self, event):
         self.event_context = event
 
@@ -113,6 +119,26 @@ class ContextManager:
 
     def get_workflow_id(self):
         return self.workflow_id
+
+    def set_secret_context(self):
+        """
+        Set the secret context for the workflow.
+        If no secret is provided, attempt to load it from the secret manager.
+        """
+        from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
+        secret_manager = SecretManagerFactory.get_secret_manager(self)
+
+        secret_key = f"{self.tenant_id}_{self.workflow_id}_secrets"
+        try:
+            secret = secret_manager.read_secret(secret_name=secret_key, is_json=True)
+            self.secret_context = secret or {}
+        except Exception:
+            self.logger.warning(
+                "Could not load secrets for workflow",
+                extra={"workflow_id": self.workflow_id, "tenant_id": self.tenant_id},
+            )
+            self.secret_context = {}
 
     def get_full_context(self, exclude_providers=False, exclude_env=False):
         """
@@ -133,6 +159,7 @@ class ContextManager:
         """
         full_context = {
             "steps": self.steps_context,
+            "actions": self.steps_context,  # this is an alias for steps
             "foreach": self.foreach_context,
             "event": self.event_context,
             "last_workflow_results": self.last_workflow_execution_results,
@@ -142,6 +169,8 @@ class ContextManager:
             "consts": self.consts_context,
             "vars": self.current_step_vars,
             "aliases": self.current_step_aliases,
+            "secrets": self.secret_context,
+            "inputs": self.workflow_inputs,
         }
 
         if not exclude_providers:
@@ -241,6 +270,7 @@ class ContextManager:
         self.current_step_aliases = _aliases
         self.steps_context[step_id]["vars"] = _vars
         self.steps_context[step_id]["aliases"] = _aliases
+        self.secret_context = {**self.secret_context, **_vars}
 
     def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)

@@ -12,7 +12,6 @@ services:
       - PUSHER_HOST=localhost
       - PUSHER_PORT=6001
       - PUSHER_APP_KEY=keepappkey
-      - NEXT_PUBLIC_KEEP_VERSION=0.2.9
 
   keep-backend-common:
     ports:

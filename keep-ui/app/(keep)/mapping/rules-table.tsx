@@ -27,6 +27,7 @@ import { FaFileCsv, FaFileCode, FaNetworkWired } from "react-icons/fa";
 import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import RunMappingModal from "./run-mapping-modal";
+import { TrashIcon } from "@heroicons/react/24/outline";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -116,7 +117,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       id: "attributes",
       header: "Enriched With",
       cell: (context) => (
-        <div className="flex flex-wrap">
+        <div className="flex flex-wrap gap-1">
           {context.row.original.attributes?.map((attr) => (
             <Badge key={attr} color="orange" size="xs">
               {attr}
@@ -155,7 +156,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             color="red"
             size="xs"
             variant="secondary"
-            icon={MdRemoveCircle}
+            icon={TrashIcon}
             tooltip="Delete"
             onClick={(event) => {
               event.stopPropagation();
@@ -171,6 +172,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   ] as DisplayColumnDef<MappingRule>[];
 
   const table = useReactTable({
+    getRowId: (row) => row.id.toString(),
     columns,
     data: mappings.sort((a, b) => b.priority - a.priority),
     getCoreRowModel: getCoreRowModel(),

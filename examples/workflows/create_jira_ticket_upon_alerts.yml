@@ -1,6 +1,7 @@
 workflow:
-  id: sentry-alerts
-  description: handle alerts
+  id: sentry-to-jira-bridge
+  name: Sentry-to-Jira Bridge
+  description: Creates Jira tickets for critical Sentry alerts and notifies relevant teams via Slack.
   triggers:
     - type: alert
       # we want to run this workflow only for Sentry alerts with high severity

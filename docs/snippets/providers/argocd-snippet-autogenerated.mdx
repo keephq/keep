@@ -1,0 +1,24 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **argocd_access_token**: Argocd Access Token (required: True, sensitive: True)
+- **deployment_url**: Deployment Url (required: True, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: User is Authorized (mandatory) 
+
+
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).

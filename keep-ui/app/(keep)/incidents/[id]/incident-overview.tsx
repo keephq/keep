@@ -11,15 +11,16 @@ import { IoChevronDown } from "react-icons/io5";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
-import { Badge, Callout } from "@tremor/react";
+import { Badge, Callout, Icon, TextInput } from "@tremor/react";
 import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
-import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
+import Modal from "@/components/ui/Modal";
+import { IncidentChangeStatusSelect } from "features/incidents/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
 import {
   SameIncidentField,
   FollowingIncidents,
-} from "@/features/same-incidents-in-the-past/";
+} from "@/features/incidents/same-incidents-in-the-past/";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
 import clsx from "clsx";
 import { TbSparkles } from "react-icons/tb";
@@ -33,8 +34,23 @@ import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
 import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
-import { IncidentChangeSeveritySelect } from "@/features/change-incident-severity";
+import { IncidentChangeSeveritySelect } from "features/incidents/change-incident-severity";
 import remarkGfm from "remark-gfm";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { startCase, xor, map, some } from "lodash";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { EnrichmentEditableField } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
+import { EnrichmentEditableForm } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
+
+const PROVISIONED_ENRICHMENTS = [
+  "services",
+  "incident_id",
+  "incident_url",
+  "incident_provider",
+  "incident_title",
+  "environments",
+  "repositories",
+];
 
 interface Props {
   incident: IncidentDto;
@@ -56,6 +72,7 @@ function Summary({
   incident: IncidentDto;
 }) {
   const [generatedSummary, setGeneratedSummary] = useState("");
+  const { data: config } = useConfig();
   const { updateIncident } = useIncidentActions();
   const context = useCopilotContext();
   useCopilotReadable({
@@ -95,13 +112,14 @@ function Summary({
   };
 
   const formatedSummary = (
-    <Markdown 
-    remarkPlugins={[remarkGfm, remarkRehype]} 
-    rehypePlugins={[rehypeRaw]}
-    className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1"
-    >
-      {summary ?? generatedSummary}
-    </Markdown>
+    <div className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1">
+      <Markdown
+        remarkPlugins={[remarkGfm, remarkRehype]}
+        rehypePlugins={[rehypeRaw]}
+      >
+        {summary ?? generatedSummary}
+      </Markdown>
+    </div>
   );
 
   if (collapsable) {
@@ -132,10 +150,15 @@ function Summary({
         variant="secondary"
         onClick={executeTask}
         className="mt-2.5"
-        disabled={generatingSummary}
+        disabled={generatingSummary || !config?.OPEN_AI_API_KEY_SET}
         loading={generatingSummary}
         icon={TbSparkles}
         size="xs"
+        tooltip={
+          !config?.OPEN_AI_API_KEY_SET
+            ? "AI is not configured"
+            : "Generate AI summary"
+        }
       >
         AI Summary
       </Button>
@@ -180,43 +203,48 @@ function MergedCallout({
 
 export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const router = useRouter();
-  const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
-    fallbackData: initialIncidentData,
-    revalidateOnMount: false,
-  });
+  const { data: fetchedIncident, mutate } = useIncident(
+    initialIncidentData.id,
+    {
+      fallbackData: initialIncidentData,
+      revalidateOnMount: false,
+    }
+  );
   const incident = fetchedIncident || initialIncidentData;
   const summary = incident.user_summary || incident.generated_summary;
   // Why do we have "null" in services?
   const notNullServices = incident.services.filter(
     (service) => service !== "null"
   );
+  const { assignIncident } = useIncidentActions();
   const {
     data: alerts,
     isLoading: _alertsLoading,
     error: alertsError,
   } = useIncidentAlerts(incident.id, 20, 0);
-  const environments = Array.from(
-    new Set(
-      alerts?.items
-        .filter(
-          (alert) =>
-            alert.environment &&
-            alert.environment !== "undefined" &&
-            alert.environment !== "default"
-        )
-        .map((alert) => alert.environment)
-    )
-  );
-  const repositories = Array.from(
-    new Set(
-      alerts?.items
-        .filter((alert) => (alert as any).repository)
-        .map((alert) => (alert as any).repository as string)
-    )
-  );
-  if (!alerts || _alertsLoading) {
-    return <IncidentOverviewSkeleton />;
-  }
+  const environments =
+    incident.enrichments.environments ||
+    (Array.from(
+      new Set(
+        alerts?.items
+          .filter(
+            (alert) =>
+              alert.environment &&
+              alert.environment !== "undefined" &&
+              alert.environment !== "default"
+          )
+          .map((alert) => alert.environment)
+      )
+    ) as Array<string>);
+  const repositories =
+    incident.enrichments.repositories ||
+    (Array.from(
+      new Set(
+        alerts?.items
+          .filter((alert) => (alert as any).repository)
+          .map((alert) => (alert as any).repository as string)
+      )
+    ) as Array<string>);
 
   const filterBy = (key: string, value: string) => {
     router.push(
@@ -224,6 +252,52 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
     );
   };
 
+  const api = useApi();
+
+  const handleBulkEnrichmentChange = async (
+    fields: Record<string, string | string[]>
+  ) => {
+    try {
+      const requestData = {
+        enrichments: fields,
+        fingerprint: incident.id,
+      };
+      await api.post(`/incidents/${incident.id}/enrich`, requestData);
+      await mutate();
+    } catch (error) {
+      // Handle unexpected error
+      console.error("An unexpected error occurred");
+    }
+  };
+
+  const handleBulkUnEnrichment = async (fields: string[]) => {
+    try {
+      const requestData = {
+        enrichments: fields,
+        fingerprint: incident.id,
+      };
+      await api.post(`/incidents/${incident.id}/unenrich`, requestData);
+      await mutate();
+    } catch (error) {
+      // Handle unexpected error
+      console.error("An unexpected error occurred");
+    }
+  };
+
+  const handleEnrichmentChange = async (
+    fieldName: string,
+    fieldValue: string | string[]
+  ) => {
+    await handleBulkEnrichmentChange({ [fieldName]: fieldValue });
+  };
+
+  const handleUnEnrichment = async (fieldName: string) => {
+    await handleBulkUnEnrichment([fieldName]);
+  };
+
+  if (!alerts || _alertsLoading) {
+    return <IncidentOverviewSkeleton />;
+  }
   return (
     // Adding padding bottom to visually separate from the tabs
     <div className="flex gap-6 items-start w-full text-tremor-default">
@@ -260,121 +334,157 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           <div className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <FieldHeader>Involved services</FieldHeader>
-                {notNullServices.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {notNullServices.map((service) => (
-                      <Badge
-                        key={service}
-                        color="orange"
-                        size="sm"
-                        className="cursor-pointer"
-                        onClick={() => filterBy("service", service)}
-                      >
-                        {service}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  "No services involved"
-                )}
+                <FieldHeader>Services</FieldHeader>
+                <EnrichmentEditableField
+                  name="services"
+                  value={notNullServices}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={
+                    incident.enrichments?.services
+                      ? handleUnEnrichment
+                      : undefined
+                  }
+                />
               </div>
 
               <div>
-                <FieldHeader>Affected environments</FieldHeader>
-                {environments.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {environments.map((env) => (
-                      <Badge
-                        key={env}
-                        size="sm"
-                        color="orange"
-                        className="cursor-pointer"
-                        onClick={() => filterBy("environment", env)}
-                      >
-                        {env}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  "No environments involved"
-                )}
+                <FieldHeader>Environments</FieldHeader>
+                <EnrichmentEditableField
+                  name="environments"
+                  value={environments}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={
+                    incident.enrichments?.environments
+                      ? handleUnEnrichment
+                      : undefined
+                  }
+                />
               </div>
 
               <div>
                 <FieldHeader>External incident</FieldHeader>
-                {incident.enrichments?.incident_id &&
-                incident.enrichments?.incident_url ? (
-                  <div className="flex flex-wrap gap-1 truncate">
-                    <Badge
-                      size="sm"
-                      color="orange"
-                      icon={
-                        incident.enrichments?.incident_provider
-                          ? (props: any) => (
-                              <DynamicImageProviderIcon
-                                providerType={
-                                  incident.enrichments?.incident_provider
-                                }
-                                height="24"
-                                width="24"
-                                {...props}
-                              />
+
+                <EnrichmentEditableForm
+                  fields={{
+                    incident_id: incident.enrichments?.incident_id,
+                    incident_url: incident.enrichments?.incident_url,
+                    incident_provider: incident.enrichments?.incident_provider,
+                    incident_title: incident.enrichments?.incident_title,
+                  }}
+                  title="External incident"
+                  onUpdate={handleBulkEnrichmentChange}
+                  onDelete={handleBulkUnEnrichment}
+                >
+                  <>
+                    {incident.enrichments?.incident_id &&
+                    incident.enrichments?.incident_url ? (
+                      <div className="flex flex-wrap gap-1 truncate">
+                        <Badge
+                          size="sm"
+                          color="orange"
+                          icon={
+                            incident.enrichments?.incident_provider
+                              ? (props: any) => (
+                                  <DynamicImageProviderIcon
+                                    providerType={
+                                      incident.enrichments?.incident_provider
+                                    }
+                                    src={`/icons/${incident.enrichments?.incident_provider}-icon.png`}
+                                    height="24"
+                                    width="24"
+                                    {...props}
+                                  />
+                                )
+                              : undefined
+                          }
+                          className="cursor-pointer text-ellipsis"
+                          onClick={() =>
+                            window.open(
+                              incident.enrichments.incident_url,
+                              "_blank"
                             )
-                          : undefined
-                      }
-                      className="cursor-pointer text-ellipsis"
-                      onClick={() =>
-                        window.open(incident.enrichments.incident_url, "_blank")
-                      }
-                    >
-                      {incident.enrichments?.incident_title ??
-                        incident.user_generated_name}
-                    </Badge>
-                  </div>
-                ) : (
-                  "No external incidents"
-                )}
+                          }
+                        >
+                          {incident.enrichments?.incident_title ??
+                            incident.user_generated_name}
+                        </Badge>
+                      </div>
+                    ) : (
+                      "No external incidents"
+                    )}
+                  </>
+                </EnrichmentEditableForm>
               </div>
 
               <div>
                 <FieldHeader>Repositories</FieldHeader>
-                {repositories?.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {repositories.map((repo) => {
-                      const repoName = repo.split("/").pop();
-                      return (
-                        <Badge
-                          key={repo}
-                          color="orange"
-                          size="sm"
-                          icon={(props: any) => (
-                            <DynamicImageProviderIcon
-                              providerType="github"
-                              height="24"
-                              width="24"
-                              {...props}
-                            />
-                          )}
-                          className="cursor-pointer"
-                          onClick={() => window.open(repo, "_blank")}
-                        >
-                          {repoName}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  "No environments involved"
-                )}
+
+                <EnrichmentEditableField
+                  name="repositories"
+                  value={repositories}
+                  onUpdate={handleEnrichmentChange}
+                  onDelete={
+                    incident.enrichments?.repositories
+                      ? handleUnEnrichment
+                      : undefined
+                  }
+                >
+                  {repositories?.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {repositories.map((repo: any) => {
+                        const repoName = repo.split("/").pop();
+                        return (
+                          <Badge
+                            key={repo}
+                            color="orange"
+                            size="sm"
+                            icon={(props: any) => (
+                              <DynamicImageProviderIcon
+                                providerType="github"
+                                src={`/icons/github-icon.png`}
+                                height="24"
+                                width="24"
+                                {...props}
+                              />
+                            )}
+                            className="cursor-pointer"
+                            onClick={() => window.open(repo, "_blank")}
+                          >
+                            {repoName}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    "No environments involved"
+                  )}
+                </EnrichmentEditableField>
               </div>
               <div>
                 <FieldHeader>Assignee</FieldHeader>
-                {incident.assignee ? (
-                  <p>{incident.assignee}</p>
-                ) : (
-                  <p>No assignee yet</p>
-                )}
+                <div className="flex flex-col gap-1">
+                  {incident.assignee ? (
+                    <p>{incident.assignee}</p>
+                  ) : (
+                    <p>No assignee yet</p>
+                  )}
+                  <div>
+                    <span
+                      className="text-sm text-gray-500 cursor-pointer hover:text-orange-500 underline"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "Are you sure you want to assign this incident to yourself?"
+                          )
+                        ) {
+                          assignIncident(incident.id);
+                        }
+                      }}
+                    >
+                      Assign to me
+                    </span>
+                  </div>
+                </div>
               </div>
               {incident.rule_fingerprint !== "none" &&
                 !!incident.rule_fingerprint && (
@@ -384,13 +494,36 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       <Badge
                         color="orange"
                         size="sm"
-                        className="cursor-pointer"
+                        className="cursor-pointer overflow-ellipsis"
+                        tooltip={incident.rule_fingerprint}
                       >
-                        {incident.rule_fingerprint}
+                        {incident.rule_fingerprint.length > 10
+                          ? incident.rule_fingerprint.slice(0, 10) + "..."
+                          : incident.rule_fingerprint}
                       </Badge>
                     </div>
                   </div>
                 )}
+              {map(incident.enrichments, (value: any, key: string) => {
+                if (PROVISIONED_ENRICHMENTS.indexOf(key) > -1) return;
+                return (
+                  <div key={`incident-enrichment-${key}`}>
+                    <FieldHeader>{startCase(key)}</FieldHeader>
+                    <EnrichmentEditableField
+                      name={key}
+                      value={value}
+                      onUpdate={handleEnrichmentChange}
+                      onDelete={handleUnEnrichment}
+                    />
+                  </div>
+                );
+              })}
+              <div>
+                <EnrichmentEditableField
+                  value={""}
+                  onUpdate={handleEnrichmentChange}
+                />
+              </div>
             </div>
           </div>
           <div>
@@ -443,12 +576,6 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             {incident.resolve_on}
           </Badge>
         </div>
-        {!!incident.rule_fingerprint && (
-          <div>
-            <FieldHeader>Group by value</FieldHeader>
-            <p>{incident.rule_fingerprint}</p>
-          </div>
-        )}
       </div>
     </div>
   );

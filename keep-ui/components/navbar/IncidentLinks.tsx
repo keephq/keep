@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
@@ -9,18 +8,25 @@ import { IoChevronUp } from "react-icons/io5";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
 import { MdFlashOn } from "react-icons/md";
 import clsx from "clsx";
+import {
+  DEFAULT_INCIDENTS_PAGE_SIZE,
+  DEFAULT_INCIDENTS_CEL,
+  DEFAULT_INCIDENTS_SORTING,
+} from "@/entities/incidents/model/models";
 
 type IncidentsLinksProps = { session: Session | null };
 
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
   const { data: incidents, mutate } = useIncidents(
-    true,
-    null,
-    25,
-    0,
-    { id: "creation_time", desc: false },
-    '!(status in [\'deleted\', \'resolved\'])',
+    {
+      candidate: false,
+      predicted: null,
+      limit: 0,
+      offset: 0,
+      sorting: DEFAULT_INCIDENTS_SORTING,
+      cel: DEFAULT_INCIDENTS_CEL,
+    },
     {}
   );
   usePollIncidents(mutate);
@@ -30,8 +36,8 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   }
 
   return (
-    <Disclosure as="div" className="space-y-1" defaultOpen>
-      <Disclosure.Button className="w-full flex justify-between items-center p-2">
+    <Disclosure as="div" className="space-y-0.5" defaultOpen>
+      <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
             <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
@@ -44,14 +50,14 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         )}
       </Disclosure.Button>
 
-      <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4 relative">
+      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
         <li className="relative">
           <LinkWithIcon
             href="/incidents"
             icon={MdFlashOn}
             count={incidents?.count}
           >
-            <Subtitle>Incidents</Subtitle>
+            <Subtitle className="text-xs">Incidents</Subtitle>
           </LinkWithIcon>
         </li>
       </Disclosure.Panel>

@@ -2,6 +2,7 @@
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
 """
 
+import os
 import dataclasses
 import json
 
@@ -100,9 +101,14 @@ class ServicenowProvider(BaseTopologyProvider):
                 "client_id": self.authentication_config.client_id,
                 "client_secret": self.authentication_config.client_secret,
             }
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            }
             response = requests.post(
                 url,
-                json=payload,
+                data=payload,
+                headers=headers,
             )
             if response.ok:
                 self._access_token = response.json().get("access_token")
@@ -112,13 +118,28 @@ class ServicenowProvider(BaseTopologyProvider):
                     extra={
                         "response": response.text,
                         "status_code": response.status_code,
+                        "provider_id": self.provider_id,
                     },
+                )
+                raise ProviderException(
+                    f"Failed to get OAuth access token from ServiceNow: {response.status_code}, {response.text}."
+                    " Please check your ServiceNow logs, information about this error should be there."
                 )
 
     def validate_scopes(self):
         """
         Validates that the user has the required scopes to use the provider.
         """
+
+        # Optional scope validation skipping
+        if (
+            os.environ.get(
+                "KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "false"
+            ).lower()
+            == "true"
+        ):
+            return {"itil": True}
+
         try:
             self.logger.info("Validating ServiceNow scopes")
             url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_user_role?sysparm_query=user_name={self.authentication_config.username}"
@@ -189,6 +210,14 @@ class ServicenowProvider(BaseTopologyProvider):
         sysparm_offset: int = 0,
         **kwargs: dict,
     ):
+        """
+        Query ServiceNow for records.
+        Args:
+            table_name (str): The name of the table to query.
+            incident_id (str): The incident ID to query.
+            sysparm_limit (int): The maximum number of records to return.
+            sysparm_offset (int): The offset to start from.
+        """
         request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -280,6 +309,9 @@ class ServicenowProvider(BaseTopologyProvider):
                 extra={
                     "tenant_id": self.context_manager.tenant_id,
                     "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
                 },
             )
             return topology, {}
@@ -297,7 +329,16 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_type_response.ok:
-            self.logger.error("Failed to get topology types")
+            self.logger.error(
+                "Failed to get topology types",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_type_json = rel_type_response.json()
             for result in rel_type_json.get("result", []):
@@ -312,12 +353,29 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
         )
         if not rel_response.ok:
-            self.logger.error("Failed to get topology relationships")
+            self.logger.error(
+                "Failed to get topology relationships",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                    "response_body": cmdb_response.text,
+                    "using_access_token": self._access_token is not None,
+                    "provider_id": self.provider_id,
+                },
+            )
         else:
             rel_json = rel_response.json()
             for relationship in rel_json.get("result", []):
-                parent_id = relationship.get("parent", {}).get("value")
-                child_id = relationship.get("child", {}).get("value")
+                parent = relationship.get("parent", {})
+                if type(parent) is dict:
+                    parent_id = relationship.get("parent", {}).get("value")
+                else:
+                    parent_id = None
+                child = relationship.get("child", {})
+                if type(child) is dict:
+                    child_id = child.get("value")
+                else:
+                    child_id = None
                 relationship_type_id = relationship.get("type", {}).get("value")
                 relationship_type = relationship_types.get(relationship_type_id)
                 if parent_id not in relationships:
@@ -329,12 +387,15 @@ class ServicenowProvider(BaseTopologyProvider):
         for entity in cmdb_data:
             sys_id = entity.get("sys_id")
             owned_by = entity.get("owned_by.name")
+            environment = entity.get("environment")
+            if environment is None:
+                environment = ""
             topology_service = TopologyServiceInDto(
                 source_provider_id=self.provider_id,
                 service=sys_id,
                 display_name=entity.get("name"),
                 description=entity.get("short_description"),
-                environment=entity.get("environment"),
+                environment=environment,
                 team=owned_by,
                 dependencies=relationships.get(sys_id, {}),
                 ip_address=entity.get("ip_address"),
@@ -347,6 +408,8 @@ class ServicenowProvider(BaseTopologyProvider):
             extra={
                 "tenant_id": self.context_manager.tenant_id,
                 "len_of_topology": len(topology),
+                "using_access_token": self._access_token is not None,
+                "provider_id": self.provider_id,
             },
         )
         return topology, {}
@@ -358,7 +421,14 @@ class ServicenowProvider(BaseTopologyProvider):
         pass
 
     def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
-        # Create ticket
+        """
+        Create a ticket in ServiceNow.
+        Args:
+            table_name (str): The name of the table to create the ticket in.
+            payload (dict): The ticket payload.
+            ticket_id (str): The ticket ID (optional to update a ticket).
+            fingerprint (str): The fingerprint of the ticket (optional to update a ticket).
+        """
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
             (
@@ -462,10 +532,14 @@ if __name__ == "__main__":
     )
     # Load environment variables
     import os
+    from unittest.mock import patch
 
-    service_now_base_url = os.environ.get("SERVICENOW_BASE_URL")
-    service_now_username = os.environ.get("SERVICENOW_USERNAME")
-    service_now_password = os.environ.get("SERVICENOW_PASSWORD")
+    service_now_base_url = os.environ.get("SERVICENOW_BASE_URL", "https://meow.me")
+    service_now_username = os.environ.get("SERVICENOW_USERNAME", "admin")
+    service_now_password = os.environ.get("SERVICENOW_PASSWORD", "admin")
+    mock_real_requests_with_json_data = (
+        os.environ.get("MOCK_REAL_REQUESTS_WITH_JSON_DATA", "true").lower() == "true"
+    )
 
     # Initalize the provider and provider config
     config = ProviderConfig(
@@ -480,5 +554,40 @@ if __name__ == "__main__":
         context_manager, provider_id="servicenow", config=config
     )
 
-    r = provider.pull_topology()
+    def mock_get(*args, **kwargs):
+        """
+        Mock topology responses using json files.
+        """
+
+        class MockResponse:
+            def __init__(self):
+                self.ok = True
+                self.status_code = 200
+                self.url = args[0]
+
+            def json(self):
+                if "cmdb_ci" in self.url:
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "cmdb_ci.json")
+                    ) as f:
+                        return json.load(f)
+                elif "cmdb_rel_type" in self.url:
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "cmdb_rel_type.json")
+                    ) as f:
+                        return json.load(f)
+                elif "cmdb_rel_ci" in self.url:
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "cmdb_rel_ci.json")
+                    ) as f:
+                        return json.load(f)
+                return {}
+
+        return MockResponse()
+
+    if mock_real_requests_with_json_data:
+        with patch("requests.get", side_effect=mock_get):
+            r = provider.pull_topology()
+    else:
+        r = provider.pull_topology()
     print(r)

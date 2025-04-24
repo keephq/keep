@@ -9,7 +9,7 @@ import {
   useIncidentAlerts,
   usePollIncidentComments,
 } from "@/utils/hooks/useIncidents";
-import { useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { IncidentActivityItem } from "./ui/IncidentActivityItem";
 import { IncidentActivityComment } from "./ui/IncidentActivityComment";
@@ -18,13 +18,28 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
+// TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
+
 interface IncidentActivity {
   id: string;
-  type: "comment" | "alert" | "newcomment";
+  type: "comment" | "alert" | "newcomment" | "statuschange" | "assign";
   text?: string;
   timestamp: string;
   initiator?: string | AlertDto;
 }
+
+const ACTION_TYPES = [
+  "alert was triggered",
+  "alert acknowledged",
+  "alert automatically resolved",
+  "alert manually resolved",
+  "alert status manually changed",
+  "alert status changed by API",
+  "alert automatically resolved by API",
+  "A comment was added to the incident",
+  "Incident status changed",
+  "Incident assigned",
+];
 
 function Item({
   icon,
@@ -39,7 +54,7 @@ function Item({
         {/* vertical line */}
         <div className="absolute mx-auto right-0 left-0 top-0 bottom-0 h-full bg-gray-200 w-px" />
         {/* wrapping icon to avoid vertical line visible behind transparent background */}
-        <div className="relative z-[1] bg-tremor-background rounded-full border border-2 border-tremor-background">
+        <div className="relative z-[1] bg-tremor-background rounded-full border-2 border-tremor-background">
           {icon}
         </div>
       </div>
@@ -84,7 +99,6 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     _auditEventsLoading || (!auditEvents && !auditEventsError);
   const incidentEventsLoading =
     _incidentEventsLoading || (!incidentEvents && !incidentEventsError);
-  const usersLoading = _usersLoading || (!users && !usersError);
 
   const auditActivities = useMemo(() => {
     if (!auditEvents.length && !incidentEvents.length) {
@@ -93,6 +107,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     return (
       auditEvents
         .concat(incidentEvents)
+        .filter((auditEvent) => ACTION_TYPES.includes(auditEvent.action))
         .sort(
           (a, b) =>
             new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -101,17 +116,28 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
           const _type =
             auditEvent.action === "A comment was added to the incident" // @tb: I wish this was INCIDENT_COMMENT and not the text..
               ? "comment"
-              : "alert";
+              : auditEvent.action === "Incident status changed"
+                ? "statuschange"
+                : auditEvent.action === "Incident assigned"
+                  ? "assign"
+                  : "alert";
           return {
             id: auditEvent.id,
             type: _type,
             initiator:
-              _type === "comment"
+              _type === "comment" ||
+              _type === "statuschange" ||
+              _type === "assign"
                 ? auditEvent.user_id
                 : alerts?.items.find(
                     (a) => a.fingerprint === auditEvent.fingerprint
                   ),
-            text: _type === "comment" ? auditEvent.description : "",
+            text:
+              _type === "comment" ||
+              _type === "statuschange" ||
+              _type === "assign"
+                ? auditEvent.description
+                : "",
             timestamp: auditEvent.timestamp,
           } as IncidentActivity;
         }) || []
@@ -141,7 +167,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
         />
       );
     } else {
-      const source = (activity.initiator as AlertDto)?.source?.[0];
+      const source = (activity.initiator as AlertDto)?.source?.[0] || "keep";
       const imagePath = `/icons/${source}-icon.png`;
       return (
         <DynamicImageProviderIcon

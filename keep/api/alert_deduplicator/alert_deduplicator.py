@@ -197,6 +197,10 @@ class AlertDeduplicator:
     def get_deduplication_rules(
         self, tenant_id, provider_id, provider_type
     ) -> list[DeduplicationRuleDto]:
+        # if not provider_type, force it to be "keep" so custom deduplication rule can be used
+        if not provider_type:
+            provider_type = "keep"
+
         # try to get the rule from the database
         rule = (
             get_custom_deduplication_rule(tenant_id, provider_id, provider_type)
@@ -243,6 +247,11 @@ class AlertDeduplicator:
     def _generate_uuid(self, provider_id, provider_type):
         # this is a way to generate a unique uuid for the default deduplication rule per (provider_id, provider_type)
         namespace_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, "keephq.dev")
+
+        # this is a workaround for this - https://github.com/keephq/keep/issues/4273
+        if not provider_id and provider_type and provider_type.lower() == "keep":
+            provider_type = None
+
         generated_uuid = str(
             uuid.uuid5(namespace_uuid, f"{provider_id}_{provider_type}")
         )
@@ -333,6 +342,10 @@ class AlertDeduplicator:
         custom_deduplications_dict = {}
         for rule in custom_deduplications_dto:
             key = f"{rule.provider_type}_{rule.provider_id}"
+            # for linked providers without an id ("main")
+            if "null" in key:
+                key = key.replace("null", "None")
+
             if key not in custom_deduplications_dict:
                 custom_deduplications_dict[key] = []
             custom_deduplications_dict[key].append(rule)
@@ -345,7 +358,16 @@ class AlertDeduplicator:
         # calculate the deduplciations
         # if a provider has custom deduplication rule, use it
         # else, use the default deduplication rule of the provider
-        final_deduplications = [catch_all_full_deduplication]
+        if "keep_None" in custom_deduplications_dict:
+            self.logger.info(
+                "Using custom deduplication rule for default deduplication rule",
+                extra={
+                    "tenant_id": self.tenant_id,
+                },
+            )
+            final_deduplications = custom_deduplications_dict["keep_None"]
+        else:
+            final_deduplications = [catch_all_full_deduplication]
         for provider in providers:
             # if the provider doesn't have a deduplication rule, use the default one
             key = f"{provider.type}_{provider.id}"
@@ -460,12 +482,18 @@ class AlertDeduplicator:
         installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
         linked_providers = ProvidersFactory.get_linked_providers(self.tenant_id)
         provider_key = f"{rule.provider_type}_{rule.provider_id}"
+
+        if "null" in provider_key:
+            # for linked providers without an id ("main")
+            # see this ticket - https://github.com/keephq/keep/issues/3729
+            provider_key = provider_key.replace("null", "None")
+            rule.provider_id = None
         for p in installed_providers + linked_providers:
             if provider_key == f"{p.type}_{p.id}":
                 provider = p
                 break
 
-        if not provider:
+        if not provider and provider_key:
             message = f"Provider {rule.provider_type} not found"
             if rule.provider_id:
                 message += f" with id {rule.provider_id}"

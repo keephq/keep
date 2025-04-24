@@ -1,5 +1,8 @@
-id: enrich-using-ai
-description: Enrich alerts using structured output from LLMs
+workflow:
+  id: openai-alert-enrichment
+  name: OpenAI Alert Enrichment
+  description: Enriches Prometheus alerts using GPT-4 structured output to determine environment and impacted customer information with strict schema validation.
+
 triggers:
   - type: alert
     filters:
@@ -10,7 +13,7 @@ steps:
   - name: get-enrichments
     provider:
       config: "{{ providers.my_openai }}"
-      type: openai
+      type: openai  # Could be also LiteLLM
       with:
         prompt: "You received such an alert {{alert}}, generate missing fields."
         model: "gpt-4o-mini" # This model supports structured output
@@ -23,7 +26,7 @@ steps:
               properties:
                 environment:
                   type: string
-                  enum: 
+                  enum:
                     - "production"
                     - "pre-prod"
                     - "debug"

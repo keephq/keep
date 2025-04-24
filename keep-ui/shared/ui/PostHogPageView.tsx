@@ -8,7 +8,7 @@ import { useConfig } from "@/utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "../lib/hooks/useHydratedSession";
 import { NoAuthUserEmail } from "@/utils/authenticationType";
 
-export default function PostHogPageView(): null {
+export function PostHogPageView(): null {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const posthog = usePostHog();
@@ -45,7 +45,9 @@ export default function PostHogPageView(): null {
 
     if (posthog_id && posthog_id !== NoAuthUserEmail) {
       console.log("Identifying user in PostHog");
-      posthog.identify(posthog_id);
+      posthog.identify(posthog_id, {
+        is_ai_enabled: config.OPEN_AI_API_KEY_SET,
+      });
     }
   }, [session, posthog, isPosthogDisabled]);
 

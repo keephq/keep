@@ -7,7 +7,6 @@ import { GuestSession } from "@/types/auth";
 export function useApi() {
   const { data: config } = useConfig();
   const { data: user_session, status } = useSession();
-
   const api = useMemo(() => {
     const session = status === "unauthenticated" ? {
       accessToken: "unauthenticated"

@@ -49,6 +49,34 @@
       ]
     },
     {
+      "group": "AIOps",
+      "pages": [
+        {
+          "group": "AI",
+          "pages": [
+            "overview/ai-incident-assistant",
+            "overview/ai-workflow-assistant",
+            "overview/ai-semi-automatic-correlation",
+            "overview/ai-in-workflows",
+            "overview/ai-correlation"
+          ]
+        },
+        {
+          "group": "Non-AI Correlation",
+          "pages": [
+            "overview/correlation-rules",
+            "overview/correlation-topology"
+          ]
+        },
+        "overview/deduplication",
+        "overview/enrichment/extraction",
+        "overview/enrichment/mapping",
+        "overview/maintenance-windows",
+        "overview/servicetopology",
+        "overview/workflow-automation"
+      ]
+    },
+    {
       "group": "Alerts",
       "pages": [
         "alerts/overview",
@@ -64,24 +92,6 @@
       "pages": ["incidents/overview", "incidents/facets"]
     },
     {
-      "group": "AIOps",
-      "pages": [
-        {
-          "group": "Correlation",
-          "pages": [
-            "overview/correlation-rules",
-            "overview/correlation-topology"
-          ]
-        },
-        "overview/deduplication",
-        "overview/enrichment/extraction",
-        "overview/enrichment/mapping",
-        "overview/maintenance-windows",
-        "overview/servicetopology",
-        "overview/workflow-automation"
-      ]
-    },
-    {
       "group": "Workflow Automation",
       "pages": [
         "workflows/overview",
@@ -89,6 +99,7 @@
           "group": "Syntax",
           "pages": [
             "workflows/syntax/triggers",
+            "workflows/syntax/permissions",
             "workflows/syntax/steps-and-actions",
             "workflows/syntax/conditions",
             "workflows/syntax/functions",
@@ -127,15 +138,17 @@
       "group": "Providers",
       "pages": [
         "providers/overview",
-        "providers/adding-a-new-provider",
+        "providers/linked-providers",
         "providers/provider-methods",
         {
           "group": "Supported Providers",
           "pages": [
+            "providers/documentation/airflow-provider",
             "providers/documentation/aks-provider",
             "providers/documentation/amazonsqs-provider",
             "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
+            "providers/documentation/asana-provider",
             "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
@@ -159,6 +172,7 @@
             "providers/documentation/dynatrace-provider",
             "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
+            "providers/documentation/flashduty-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gemini-provider",
             "providers/documentation/github-provider",
@@ -183,8 +197,10 @@
             "providers/documentation/keep-provider",
             "providers/documentation/kibana-provider",
             "providers/documentation/kubernetes-provider",
+            "providers/documentation/libre_nms-provider",
             "providers/documentation/linear_provider",
             "providers/documentation/linearb-provider",
+            "providers/documentation/litellm-provider",
             "providers/documentation/llamacpp-provider",
             "providers/documentation/mailchimp-provider",
             "providers/documentation/mailgun-provider",
@@ -201,12 +217,14 @@
             "providers/documentation/ollama-provider",
             "providers/documentation/openai-provider",
             "providers/documentation/openobserve-provider",
+            "providers/documentation/opensearchserverless-provider",
             "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
             "providers/documentation/pagertree-provider",
             "providers/documentation/parseable-provider",
             "providers/documentation/pingdom-provider",
+            "providers/documentation/posthog-provider",
             "providers/documentation/planner-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/prometheus-provider",
@@ -233,18 +251,23 @@
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/template",
+            "providers/documentation/thousandeyes-provider",
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/uptimekuma-provider",
+            "providers/documentation/victorialogs-provider",
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/vllm-provider",
             "providers/documentation/wazuh-provider",
             "providers/documentation/webhook-provider",
             "providers/documentation/websocket-provider",
+            "providers/documentation/youtrack-provider",
             "providers/documentation/zabbix-provider",
-            "providers/documentation/zenduty-provider"
+            "providers/documentation/zenduty-provider",
+            "providers/documentation/zoom-provider"
           ]
-        }
+        },
+        "providers/adding-a-new-provider"
       ]
     },
     {

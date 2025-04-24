@@ -35,6 +35,7 @@ export function WorkflowExecutionError({
       title="Error during workflow execution"
       icon={ExclamationCircleIcon}
       color="rose"
+      className="shrink-0"
     >
       <div className="flex justify-between items-center">
         <div>

@@ -1,5 +1,6 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
 
 type UseHealthResult = {
   isHealthy: boolean;
@@ -11,36 +12,35 @@ const CACHE_DURATION = 30000;
 
 export function useHealth(): UseHealthResult {
   const api = useApi();
-  const [isHealthy, setIsHealthy] = useState(true);
   const [lastChecked, setLastChecked] = useState(0);
 
-  const checkHealth = useCallback(async () => {
-    // Skip if checked recently
-    if (Date.now() - lastChecked < CACHE_DURATION) {
-      return;
-    }
-
-    try {
-      await api.request("/healthcheck", {
+  const {
+    data: health,
+    error,
+    mutate: mutateHealth,
+  } = useSWR(
+    "/healthcheck",
+    () =>
+      api.request("/healthcheck", {
         method: "GET",
         // Short timeout to avoid blocking
         signal: AbortSignal.timeout(2000),
-      });
-      setIsHealthy(true);
-    } catch (error) {
-      setIsHealthy(false);
+      }),
+    {
+      refreshInterval: CACHE_DURATION,
+      onError: (error) => {
+        setLastChecked(Date.now());
+      },
+      onSuccess: () => {
+        setLastChecked(Date.now());
+      },
     }
-    setLastChecked(Date.now());
-  }, [api]);
+  );
 
-  useEffect(() => {
-    if (!lastChecked) {
-      checkHealth();
-    }
-  }, [checkHealth, lastChecked]);
+  const isHealthy = !error;
 
   return useMemo(
-    () => ({ isHealthy, lastChecked, checkHealth }),
-    [isHealthy, lastChecked, checkHealth]
+    () => ({ isHealthy, lastChecked, checkHealth: mutateHealth }),
+    [isHealthy, lastChecked, mutateHealth]
   );
 }

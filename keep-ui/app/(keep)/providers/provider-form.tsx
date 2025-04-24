@@ -5,7 +5,7 @@ import {
   ProviderFormData,
   ProviderFormValue,
   ProviderInputErrors,
-} from "./providers";
+} from "@/shared/api/providers";
 import Image from "next/image";
 import {
   Title,
@@ -36,7 +36,7 @@ import {
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
   GlobeAltIcon,
-  DocumentTextIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
@@ -45,7 +45,6 @@ import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
 import { toast } from "react-toastify";
-import { useProviders } from "@/utils/hooks/useProviders";
 import { getZodSchema } from "./form-validation";
 import TimeAgo from "react-timeago";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -66,6 +65,11 @@ import {
 } from "./form-fields";
 import ProviderLogs from "./provider-logs";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import {
+  LightningBoltIcon,
+  TrashIcon,
+  UpdateIcon,
+} from "@radix-ui/react-icons";
 
 type HealthResults = {
   spammy: any[];
@@ -99,7 +103,7 @@ function getInitialFormValues(provider: Provider, isHealthCheck?: boolean) {
   const initialValues: ProviderFormData = {
     provider_id: provider.id,
     install_webhook: !isHealthCheck
-      ? (provider.can_setup_webhook ?? false)
+      ? provider.can_setup_webhook ?? false
       : false,
     pulling_enabled: provider.pulling_enabled,
   };
@@ -172,6 +176,8 @@ const ProviderForm = ({
 
   const api = useApi();
   const { data: config } = useConfig();
+  const inInstalledMode =
+    installedProvidersMode && Object.keys(provider.config).length > 0;
 
   function installWebhook(provider: Provider) {
     return toast.promise(
@@ -191,7 +197,7 @@ const ProviderForm = ({
         },
       },
       {
-        position: toast.POSITION.TOP_LEFT,
+        position: "top-left",
       }
     );
   }
@@ -451,8 +457,6 @@ const ProviderForm = ({
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
-  const [activeTab, setActiveTab] = useState(0);
-
   const renderFormContent = () => (
     <>
       <div className="form-group">
@@ -574,27 +578,31 @@ const ProviderForm = ({
                     tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
                   />
                 </label>
-                {provider.pulling_available && <>
+                {provider.pulling_available && (
+                  <>
                     <input
-                    type="checkbox"
-                    id="pulling_enabled"
-                    name="pulling_enabled"
-                    className="mr-2.5"
-                    onChange={handlePullingEnabledChange}
-                    checked={Boolean(formValues["pulling_enabled"])}
-                  />
-                  <label htmlFor="pulling_enabled" className="flex items-center">
-                    <Text className="capitalize">Pulling Enabled</Text>
-                    <Icon
-                      icon={QuestionMarkCircleIcon}
-                      variant="simple"
-                      color="gray"
-                      size="sm"
-                      tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                      type="checkbox"
+                      id="pulling_enabled"
+                      name="pulling_enabled"
+                      className="mr-2.5"
+                      onChange={handlePullingEnabledChange}
+                      checked={Boolean(formValues["pulling_enabled"])}
                     />
-                  </label>
-                </>
-              }
+                    <label
+                      htmlFor="pulling_enabled"
+                      className="flex items-center"
+                    >
+                      <Text className="capitalize">Pulling Enabled</Text>
+                      <Icon
+                        icon={QuestionMarkCircleIcon}
+                        variant="simple"
+                        color="gray"
+                        size="sm"
+                        tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                      />
+                    </label>
+                  </>
+                )}
               </div>
               {isLocalhost && (
                 <span className="text-sm">
@@ -625,35 +633,35 @@ const ProviderForm = ({
 
         {!isHealthCheck &&
           !provider.can_setup_webhook &&
-          !installedProvidersMode && provider.pulling_available && (
+          !installedProvidersMode &&
+          provider.pulling_available && (
             <div
               className={`${
                 isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
               }`}
             >
               <div className="flex items-center">
-                    <input
-                    type="checkbox"
-                    id="pulling_enabled"
-                    name="pulling_enabled"
-                    className="mr-2.5"
-                    onChange={handlePullingEnabledChange}
-                    checked={Boolean(formValues["pulling_enabled"])}
+                <input
+                  type="checkbox"
+                  id="pulling_enabled"
+                  name="pulling_enabled"
+                  className="mr-2.5"
+                  onChange={handlePullingEnabledChange}
+                  checked={Boolean(formValues["pulling_enabled"])}
+                />
+                <label htmlFor="pulling_enabled" className="flex items-center">
+                  <Text className="capitalize">Pulling Enabled</Text>
+                  <Icon
+                    icon={QuestionMarkCircleIcon}
+                    variant="simple"
+                    color="gray"
+                    size="sm"
+                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
                   />
-                  <label htmlFor="pulling_enabled" className="flex items-center">
-                    <Text className="capitalize">Pulling Enabled</Text>
-                    <Icon
-                      icon={QuestionMarkCircleIcon}
-                      variant="simple"
-                      color="gray"
-                      size="sm"
-                      tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
-                    />
-                  </label>
+                </label>
               </div>
             </div>
           )}
-
       </div>
 
       {!isHealthCheck &&
@@ -709,33 +717,51 @@ const ProviderForm = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-auto p-5">
-        <div className="flex flex-row">
-          <Title>Connect to {provider.display_name}</Title>
-          {provider.provisioned && (
-            <Badge color="orange" className="ml-2">
-              Provisioned
-            </Badge>
-          )}
+      <div className="flex-grow p-5">
+        <div className="flex flex-row w-full">
+          <div className="flex-grow flex gap-1">
+            <Title>Connect to {provider.display_name}</Title>
+            {provider.provisioned && (
+              <Badge color="orange" className="ml-2">
+                Provisioned
+              </Badge>
+            )}
+          </div>
+          <Button
+            variant="light"
+            color="gray"
+            className="aspect-square p-1 hover:bg-gray-100 hover:dark:bg-gray-400/10 rounded"
+            onClick={(e) => {
+              e.preventDefault();
+              closeModal();
+            }}
+          >
+            <XMarkIcon className="size-6" aria-hidden="true" />
+          </Button>
+        </div>
+        {installedProvidersMode && provider.id && (
+          <Subtitle>Id: {provider.id}</Subtitle>
+        )}
+        <Subtitle>
+          Need help? Check out the{" "}
           <Link
+            className="text-orange-600 underline"
             href={`${
               config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
             }/providers/documentation/${provider.type}-provider`}
             target="_blank"
           >
-            <Icon
-              icon={DocumentTextIcon}
-              variant="simple"
-              color="gray"
-              size="sm"
-              tooltip={`${provider.type} provider documentation`}
-            />
+            {`Provider Documentation`}
           </Link>
-        </div>
-
-        {installedProvidersMode && provider.id && (
-          <Subtitle>{provider.id}</Subtitle>
-        )}
+          , or ask{" "}
+          <Link
+            className="text-orange-600 underline"
+            href={`https://getkeep.slack.com/join/shared_invite/zt-2leydxr6s-XmuQtBttgxZ0GOv8MJu6rQ#/shared-invite/email`}
+            target="_blank"
+          >
+            Slack Community
+          </Link>
+        </Subtitle>
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
             Provider last pull time:{" "}
@@ -837,49 +863,54 @@ const ProviderForm = ({
         )}
       </div>
 
-      <div className="flex justify-end p-5 border-t">
-        <Button
-          variant="secondary"
-          color="orange"
-          onClick={closeModal}
-          className="mr-2.5"
-          disabled={isLoading}
-        >
-          Cancel
-        </Button>
-        {installedProvidersMode && Object.keys(provider.config).length > 0 && (
-          <>
-            <Button
-              onClick={deleteProvider}
-              color="orange"
-              className="mr-2.5"
-              disabled={provider.provisioned}
-              variant="secondary"
-            >
-              Delete
-            </Button>
-            <div className="relative">
-              <Button
-                loading={isLoading}
-                onClick={handleUpdateClick}
-                color="orange"
-                disabled={provider.provisioned}
-                variant="secondary"
-              >
-                Update
-              </Button>
-            </div>
-          </>
-        )}
-        {!installedProvidersMode && Object.keys(provider.config).length > 0 && (
+      <div className="flex justify-between p-5 border-t sticky bottom-0 bg-white">
+        {inInstalledMode ? (
           <Button
-            loading={isLoading}
-            onClick={handleConnectClick}
-            color="orange"
+            onClick={deleteProvider}
+            color="red"
+            className="mr-2.5"
+            disabled={provider.provisioned}
+            variant="secondary"
+            icon={TrashIcon}
           >
-            {isHealthCheck ? `Check health` : `Connect`}
+            Disconnect
           </Button>
+        ) : (
+          <div></div>
         )}
+        <div className="flex items-center">
+          <Button
+            variant="secondary"
+            color="orange"
+            onClick={closeModal}
+            className="mr-2.5"
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          {inInstalledMode && (
+            <Button
+              loading={isLoading}
+              onClick={handleUpdateClick}
+              icon={UpdateIcon}
+              color="orange"
+              disabled={provider.provisioned}
+              variant="primary"
+            >
+              Update
+            </Button>
+          )}
+          {!inInstalledMode && (
+            <Button
+              loading={isLoading}
+              onClick={handleConnectClick}
+              color="orange"
+              icon={LightningBoltIcon}
+            >
+              {isHealthCheck ? `Check health` : `Connect`}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

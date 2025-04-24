@@ -1,10 +1,10 @@
 import React from "react";
-import { Card, Title, Badge, Text, Button } from "@tremor/react";
-import { useProviderLogs, ProviderLog } from "@/utils/hooks/useProviderLogs";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import { Card, Badge, Text, Button } from "@tremor/react";
+import { useProviderLogs } from "@/utils/hooks/useProviderLogs";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { KeepApiError } from "@/shared/api";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { EmptyStateCard, ErrorComponent } from "@/shared/ui";
 interface ProviderLogsProps {
   providerId: string;
 }
@@ -32,25 +32,26 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
           <EmptyStateCard
             title="Provider Logs Not Enabled"
             description="Provider logs need to be enabled on the backend. Please check the documentation for instructions on how to enable provider logs."
-            buttonText="View Documentation"
-            onClick={() =>
-              window.open(
-                `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
-                "_blank"
-              )
-            }
-          />
+          >
+            <Button
+              color="orange"
+              variant="primary"
+              onClick={() =>
+                window.open(
+                  `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
+                  "_blank"
+                )
+              }
+            >
+              View Documentation
+            </Button>
+          </EmptyStateCard>
         </div>
       );
     }
     return (
       <div className="flex items-center">
-        <EmptyStateCard
-          title="Error Loading Provider Logs"
-          description="An error occurred while loading the provider logs. Please try again later."
-          buttonText="Retry"
-          onClick={() => refresh()}
-        />
+        <ErrorComponent error={error} reset={() => refresh()} />
       </div>
     );
   }

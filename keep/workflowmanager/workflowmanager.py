@@ -12,7 +12,8 @@ from keep.api.core.db import (
     save_workflow_results,
 )
 from keep.api.core.metrics import workflow_execution_duration
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -39,6 +40,10 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
+        # this is to enqueue the workflows in the REDIS queue
+        # SHAHAR: todo - finish the REDIS implementation
+        # self.loop = None
+        # self.redis = config("REDIS", default="false").lower() == "true"
 
     async def start(self):
         """Runs the workflow manager in server mode"""
@@ -53,6 +58,7 @@ class WorkflowManager:
         """Stops the workflow manager"""
         if not self.started:
             return
+
         self.scheduler.stop()
         self.started = False
         # Clear the scheduler reference
@@ -92,9 +98,10 @@ class WorkflowManager:
                     "tenant_id": tenant_id,
                 },
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 "Error getting workflow",
+                exc_info=ex,
                 extra={
                     "workflow_id": workflow_model.id,
                     "tenant_id": tenant_id,
@@ -137,6 +144,11 @@ class WorkflowManager:
                 )
                 continue
 
+            incident_enrichment = get_enrichment(tenant_id, str(incident.id))
+            if incident_enrichment:
+                for k, v in incident_enrichment.enrichments.items():
+                    setattr(incident, k, v)
+
             self.logger.info("Adding workflow to run")
             with self.scheduler.lock:
                 self.scheduler.workflows_to_run.append(
@@ -169,6 +181,7 @@ class WorkflowManager:
                     )
                     continue
                 workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+                # FIX: this will fail silently if error in the workflow provider configuration
                 if workflow is None:
                     continue
 
@@ -329,6 +342,54 @@ class WorkflowManager:
                         continue
                     # Lastly, if the workflow should run, add it to the scheduler
                     self.logger.info("Adding workflow to run")
+
+                    # SHAHAR: TODO - finish redis implementation
+                    # if REDIS is enabled, add the workflow to the queue
+
+                    """
+                    if os.environ.get("REDIS", "false").lower() == "true":
+                        try:
+                            self.logger.info("Adding workflow to REDIS")
+                            from arq import ArqRedis
+                            from keep.api.arq_pool import get_pool
+                            from keep.api.consts import KEEP_ARQ_QUEUE_WORKFLOWS
+
+                            # We need to run this asynchronously
+                            async def enqueue_workflow():
+                                redis: ArqRedis = await get_pool()
+                                job = await redis.enqueue_job(
+                                    "run_workflow_in_worker",  # You'll need to create this function
+                                    tenant_id,
+                                    str(workflow_model.id),  # Convert UUID to string if needed
+                                    "alert",  # triggered_by
+                                    event,  # Pass the event
+                                    _queue_name=KEEP_ARQ_QUEUE_WORKFLOWS,
+                                )
+                                self.logger.info(
+                                    "Enqueued workflow job",
+                                    extra={
+                                        "job_id": job.job_id,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                        "queue": KEEP_ARQ_QUEUE_WORKFLOWS,
+                                    },
+                                )
+
+                            # Execute the async function
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            job_id = loop.run_until_complete(enqueue_workflow())
+                            self.logger.info("Job enqueued", extra={"job_id": job_id})
+                        except Exception as e:
+                            self.logger.error(
+                                "Failed to enqueue workflow job",
+                                extra={
+                                    "exception": str(e),
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                    """
                     with self.scheduler.lock:
                         self.scheduler.workflows_to_run.append(
                             {
@@ -425,16 +486,13 @@ class WorkflowManager:
             )
 
     @timing_histogram(workflow_execution_duration)
-    def _run_workflow(
-        self, workflow: Workflow, workflow_execution_id: str, test_run=False
-    ):
+    def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
         threading.current_thread().workflow_debug = workflow.workflow_debug
         threading.current_thread().workflow_id = workflow.workflow_id
         threading.current_thread().workflow_execution_id = workflow_execution_id
         threading.current_thread().tenant_id = workflow.context_manager.tenant_id
         errors = []
-        results = {}
         try:
             self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
@@ -455,12 +513,9 @@ class WorkflowManager:
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
 
-        if test_run:
-            results = self._get_workflow_results(workflow)
-        else:
-            self._save_workflow_results(workflow, workflow_execution_id)
+        self._save_workflow_results(workflow, workflow_execution_id)
 
-        return [errors, results]
+        return [errors, None]
 
     @staticmethod
     def _get_workflow_results(workflow: Workflow):

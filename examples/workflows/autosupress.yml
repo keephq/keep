@@ -1,7 +1,8 @@
 workflow:
-  id: autosupress
+  id: automatic-alert-suppression
+  name: Automatic Alert Suppression
   strategy: parallel
-  description: demonstrates how to automatically suppress alerts
+  description: Automatically suppresses incoming alerts by marking them as dismissed, useful for handling known or expected alert conditions.
   triggers:
     - type: alert
   actions:

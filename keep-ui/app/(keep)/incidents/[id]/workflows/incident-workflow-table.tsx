@@ -20,12 +20,6 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import {
-  extractTriggerDetails,
-  extractTriggerValue,
-  getIcon,
-  getTriggerIcon,
-} from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
 import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
 import { useEffect, useState } from "react";
 import Skeleton from "react-loading-skeleton";
@@ -33,7 +27,12 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { useIncidentWorkflowExecutions } from "utils/hooks/useIncidents";
 import { IncidentWorkflowsEmptyState } from "./incident-workflow-empty";
 import IncidentWorkflowSidebar from "./incident-workflow-sidebar";
-import { TablePagination } from "@/shared/ui";
+import { TablePagination, getIconForStatusString } from "@/shared/ui";
+import {
+  extractTriggerDetails,
+  extractTriggerValue,
+  getTriggerIcon,
+} from "@/entities/workflows/lib/ui-utils";
 
 interface Props {
   incident: IncidentDto;
@@ -106,7 +105,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     }),
     columnHelper.accessor("status", {
       header: "Status",
-      cell: (info) => getIcon(info.getValue()),
+      cell: (info) => getIconForStatusString(info.getValue()),
     }),
     columnHelper.accessor("started", {
       header: "Start Time",
@@ -180,6 +179,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
   ];
 
   const table = useReactTable({
+    getRowId: (row) => row.id,
     columns,
     data: workflows?.items ?? [],
     getCoreRowModel: getCoreRowModel(),

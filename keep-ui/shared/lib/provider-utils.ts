@@ -1,4 +1,4 @@
-import { Provider } from "@/app/(keep)/providers/providers";
+import { Provider } from "@/shared/api/providers";
 
 export function isProviderInstalled(
   provider: Pick<Provider, "type" | "installed">,

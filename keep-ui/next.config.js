@@ -1,13 +1,39 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
+const isSentryDisabled =
+  process.env.SENTRY_DISABLED === "true" ||
+  process.env.NODE_ENV === "development";
+
+// Turbopack doesn't support dynamic imports yet, so we need to fallback to CDN for development
+// Checking NODE_ENV because in the future we may use turbopack in production as well
+const turbopackAliases =
+  process.env.NODE_ENV === "development"
+    ? {
+        "./MonacoEditor": "@/shared/ui/MonacoEditor/index.turbopack.ts",
+        "./MonacoYAMLEditor": "@/shared/ui/MonacoYAMLEditor/index.turbopack.ts",
+      }
+    : {};
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  devIndicators: {
+    position: "bottom-right",
+  },
+  experimental: {
+    turbo: {
+      resolveAlias: turbopackAliases,
+    },
+  },
   webpack: (
     config,
     { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
   ) => {
     // Only apply proxy configuration for Node.js server runtime
+    if (isServer) {
+      console.log(` 🔐 AUTH_TYPE=${process.env.AUTH_TYPE}`);
+      console.log(` 🔐 AUTH_DEBUG=${process.env.AUTH_DEBUG}`);
+    }
     if (isServer && nextRuntime === "nodejs") {
       // Add environment variables for proxy at build time
       config.plugins.push(
@@ -41,6 +67,7 @@ const nextConfig = {
         message: /Critical dependency/,
       },
     ];
+
     return config;
   },
   // @auth/core is ESM-only and jest fails to transpile it.
@@ -72,15 +99,26 @@ const nextConfig = {
         protocol: "https",
         hostname: "cdn.prod.website-files.com",
       },
+      // Cloudflare Image Delivery
+      {
+        protocol: "https",
+        hostname: "imagedelivery.net",
+      },
     ],
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
   output: "standalone",
-  productionBrowserSourceMaps:
-    process.env.ENV === "development" || process.env.SENTRY_DISABLED !== "true",
+  productionBrowserSourceMaps: !isSentryDisabled,
   async redirects() {
+    const workflowRawYamlRedirects = [
+      {
+        source: "/workflows/:path*.yaml",
+        destination: "/raw/workflows/:path*.yaml",
+        permanent: false,
+      },
+    ];
     return process.env.DISABLE_REDIRECTS === "true"
       ? []
       : [
@@ -89,6 +127,7 @@ const nextConfig = {
             destination: "/incidents",
             permanent: process.env.ENV === "production",
           },
+          ...workflowRawYamlRedirects,
         ];
   },
   async headers() {
@@ -160,7 +199,7 @@ const sentryConfig = {
   // Hides source maps from generated client bundles
   hideSourceMaps: true,
   sourceMaps: {
-    deleteSourcemapsAfterUpload: true,
+    deleteSourcemapsAfterUpload: process.env.KEEP_INCLUDE_SOURCES !== "true",
   },
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
@@ -172,10 +211,6 @@ const sentryConfig = {
   // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
 };
-
-const isSentryDisabled =
-  process.env.SENTRY_DISABLED === "true" ||
-  process.env.NODE_ENV === "development";
 
 // Compose the final config
 let config = nextConfig;

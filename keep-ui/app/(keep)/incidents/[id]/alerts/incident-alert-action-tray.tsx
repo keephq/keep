@@ -1,48 +1,87 @@
 import { AlertDto } from "@/entities/alerts/model";
 import { EyeIcon, LinkIcon } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
+import { IoExpandSharp } from "react-icons/io5";
+import { clsx } from "clsx";
+import { Button } from "@/components/ui";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
+import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 
 interface Props {
   alert: AlertDto;
   onViewAlert: (alert: AlertDto) => void;
   onUnlink: (alert: AlertDto) => void;
-  isConfirmed: boolean;
+  isCandidate: boolean;
 }
 
 export function IncidentAlertActionTray({
   alert,
   onViewAlert,
   onUnlink,
-  isConfirmed,
+  isCandidate,
 }: Props) {
+  const [rowStyle] = useAlertRowStyle();
+  const { isRowExpanded, toggleRowExpanded } =
+    useExpandedRows("incident-alerts");
+  const expanded = isRowExpanded(alert.fingerprint);
+
+  const actionIconButtonClassName = clsx(
+    "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
+    rowStyle === "relaxed" ? "rounded-tremor-default" : "rounded-none"
+  );
+
   return (
-    <div className="flex items-center h-full border-l border-gray-200 bg-white pl-2">
-      <div className="flex items-center gap-1 transition-all duration-200 transform translate-x-2 opacity-0 group-hover/row:translate-x-0 group-hover/row:opacity-100">
-        <button
+    <div className="flex items-center justify-end relative group">
+      <div
+        className={clsx("flex items-center", [
+          "transition-opacity duration-100",
+          "opacity-0 bg-orange-100",
+          "group-hover:opacity-100",
+        ])}
+      >
+        <Button
+          className={actionIconButtonClassName}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleRowExpanded(alert.fingerprint);
+          }}
+          variant="light"
+          icon={() => (
+            <Icon
+              icon={IoExpandSharp}
+              className={clsx(
+                "w-4 h-4 object-cover rounded",
+                expanded ? "text-orange-400" : "text-gray-500"
+              )}
+            />
+          )}
+          tooltip={expanded ? "Collapse Row" : "Expand Row"}
+        />
+        <Button
+          className={actionIconButtonClassName}
           onClick={(e) => {
             e.stopPropagation();
             onViewAlert(alert);
           }}
-          className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-          title="View Alert Details"
-        >
-          <Icon icon={EyeIcon} size="sm" className="text-gray-500" />
-        </button>
-        {isConfirmed && (
-          <button
+          variant="light"
+          icon={() => (
+            <Icon icon={EyeIcon} className="w-4 h-4 text-gray-500" />
+          )}
+          tooltip="View Alert Details"
+        />
+        {!isCandidate && (
+          <Button
+            className={actionIconButtonClassName}
             onClick={(e) => {
               e.stopPropagation();
               onUnlink(alert);
             }}
-            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-            title="Unlink from incident"
-          >
-            <Icon
-              icon={LinkIcon}
-              size="sm"
-              className="rotate-45 text-gray-500"
-            />
-          </button>
+            variant="light"
+            icon={() => (
+              <Icon icon={LinkIcon} className="rotate-45 w-4 h-4 text-gray-500" />
+            )}
+            tooltip="Unlink from incident"
+          />
         )}
       </div>
     </div>

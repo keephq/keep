@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import typing
+import keyword
 
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.config import config
@@ -59,6 +60,7 @@ class Parser:
         providers_file: str = None,
         actions_file: str = None,
         workflow_db_id: str = None,
+        workflow_revision: int = None,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -81,6 +83,7 @@ class Parser:
                     tenant_id,
                     workflow,
                     providers_file,
+                    workflow_revision,
                     workflow_providers,
                     actions_file,
                     workflow_actions,
@@ -97,6 +100,7 @@ class Parser:
                 tenant_id,
                 raw_workflow,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
@@ -108,9 +112,11 @@ class Parser:
                 tenant_id,
                 parsed_workflow_yaml,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
+                workflow_db_id=workflow_db_id,
             )
             workflows = [workflow]
         return workflows
@@ -137,13 +143,16 @@ class Parser:
         tenant_id,
         workflow: dict,
         providers_file: str,
+        workflow_revision: int = None,
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
         workflow_db_id: str = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
-        workflow_id = self._get_workflow_id(tenant_id, workflow)
+        # @tb: we need to remove this id in workflow yaml, it has no real use.
+        # or at least, align it with the id in the DB.
+        workflow_id = workflow_db_id or self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
             tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )
@@ -156,7 +165,9 @@ class Parser:
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
         workflow_id = self._parse_id(workflow)
-        workflow_description = workflow.get("description")
+        workflow_name = workflow.get("name", "Untitled")
+        workflow_description = workflow.get("description", "No description")
+        workflow_permissions = workflow.get("permissions", [])
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
@@ -180,8 +191,10 @@ class Parser:
         workflow_consts = workflow.get("consts", {})
         workflow_debug = workflow.get("debug", False)
 
-        workflow = Workflow(
+        workflow_class = Workflow(
             workflow_id=workflow_id,
+            workflow_revision=workflow_revision,
+            workflow_name=workflow_name,
             workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,
             workflow_owners=workflow_owners,
@@ -196,9 +209,10 @@ class Parser:
             workflow_strategy=workflow_strategy,
             workflow_consts=workflow_consts,
             workflow_debug=workflow_debug,
+            workflow_permissions=workflow_permissions,
         )
         self.logger.debug("Workflow parsed successfully")
-        return workflow
+        return workflow_class
 
     def _load_providers_config(
         self,
@@ -244,7 +258,7 @@ class Parser:
         # _use_loaded_provider_cache is a flag to control whether to use the loaded providers cache
         if not self._loaded_providers_cache or not self._use_loaded_provider_cache:
             # this should print once when the providers are loaded for the first time
-            self.logger.info("Loading installed providers to workfloe")
+            self.logger.info("Loading installed providers to workflow")
             installed_providers = ProvidersFactory.get_installed_providers(
                 tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
             )
@@ -398,6 +412,34 @@ class Parser:
         for trigger in triggers:
             if trigger.get("type") == "interval":
                 workflow_interval = trigger.get("value", 0)
+
+        # Convert time strings to seconds
+        if isinstance(workflow_interval, str):
+            if workflow_interval.isnumeric():
+                workflow_interval = int(workflow_interval)
+            elif workflow_interval.endswith("m"):
+                try:
+                    minutes = int(workflow_interval[:-1])
+                    workflow_interval = minutes * 60
+                except ValueError:
+                    self.logger.warning(f"Invalid interval format: {workflow_interval}")
+            elif workflow_interval.endswith("h"):
+                try:
+                    hours = int(workflow_interval[:-1])
+                    workflow_interval = hours * 3600
+                except ValueError:
+                    self.logger.warning(f"Invalid interval format: {workflow_interval}")
+
+            elif workflow_interval.endswith("d"):
+                try:
+                    days = int(workflow_interval[:-1])
+                    workflow_interval = days * 86400
+                except ValueError:
+                    self.logger.warning(f"Invalid interval format: {workflow_interval}")
+
+        if not isinstance(workflow_interval, int):
+            raise ValueError(f"Invalid interval format: {workflow_interval}")
+
         return workflow_interval
 
     @staticmethod
@@ -416,16 +458,23 @@ class Parser:
     def parse_provider_parameters(provider_parameters: dict) -> dict:
         parsed_provider_parameters = {}
         for parameter in provider_parameters:
+            if keyword.iskeyword(parameter):
+                # add suffix _ to provider parameters if it's a reserved keyword in python
+                parameter_name = parameter + "_"
+            else:
+                parameter_name = parameter
             if isinstance(provider_parameters[parameter], (str, list, int, bool)):
-                parsed_provider_parameters[parameter] = provider_parameters[parameter]
+                parsed_provider_parameters[parameter_name] = provider_parameters[
+                    parameter
+                ]
             elif isinstance(provider_parameters[parameter], dict):
                 try:
-                    parsed_provider_parameters[parameter] = StepProviderParameter(
+                    parsed_provider_parameters[parameter_name] = StepProviderParameter(
                         **provider_parameters[parameter]
                     )
                 except Exception:
                     # It could be a dict/list but not of ProviderParameter type
-                    parsed_provider_parameters[parameter] = provider_parameters[
+                    parsed_provider_parameters[parameter_name] = provider_parameters[
                         parameter
                     ]
         return parsed_provider_parameters
@@ -490,9 +539,10 @@ class Parser:
             provider = ProvidersFactory.get_provider(
                 context_manager, provider_id, step_provider_type, provider_config
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for step {_step.get('name')}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
@@ -592,9 +642,10 @@ class Parser:
                 provider_config,
                 **parsed_provider_parameters,
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for action {name}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
@@ -783,9 +834,15 @@ class Parser:
             workflow (dict): _description_
         """
         actions_providers = [
-            action.get("provider") for action in workflow.get("actions", [])
+            action.get("provider")
+            for action in workflow.get("actions", [])
+            if "provider" in action
         ]
-        steps_providers = [step.get("provider") for step in workflow.get("steps", [])]
+        steps_providers = [
+            step.get("provider")
+            for step in workflow.get("steps", [])
+            if "provider" in step
+        ]
         providers = actions_providers + steps_providers
         try:
             providers = [

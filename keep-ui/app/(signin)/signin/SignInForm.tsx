@@ -56,7 +56,10 @@ export default function SignInForm({
   }, []);
 
   useEffect(() => {
+    console.log("Checking providers");
+    console.log("Search params:", searchParams);
     if (providers) {
+      console.log("Providers:", providers);
       if (providers.auth0) {
         console.log("Signing in with auth0 provider");
         if (params?.amt) {
@@ -78,22 +81,54 @@ export default function SignInForm({
         providers.credentials &&
         providers.credentials.name == "NoAuth"
       ) {
+        console.log("Signing in with no auth provider");
+        console.log("URL:", window.location.href);
+        console.log("Raw search params:", window.location.search);
+
+        // Parse the query params manually
+        // Shahar: I'm not sure why this is needed, but I'm keeping it for now
+        const urlParams = new URLSearchParams(window.location.search);
+        const callbackUrl = urlParams.get("callbackUrl") || "";
+        const tenantId = new URLSearchParams(
+          callbackUrl?.split("?")[1] || ""
+        ).get("tenantId");
+
+        console.log("Manual parsing - callbackUrl:", callbackUrl);
+        console.log("Manual parsing - tenantId:", tenantId);
+
+        // If tenantId is present in query params, add it to the callback URL
+        const callbackWithTenant = tenantId
+          ? `${callbackUrl}${
+              callbackUrl.includes("?") ? "&" : "?"
+            }tenantId=${tenantId}`
+          : callbackUrl;
+
         signIn("credentials", {
-          callbackUrl: (searchParams["callbackUrl"] as string) || "/",
+          callbackUrl: callbackWithTenant,
         });
+      } else {
+        console.log("No providers found");
       }
     }
-  }, [providers, params]);
+  }, [providers, params, searchParams]);
 
   const onSubmit = async (data: SignInFormInputs) => {
     try {
+      console.log("Authenticating with credentials provider");
       const result = await authenticate(data.username, data.password);
+
+      if (!result) {
+        setError("root", {
+          message: "An unexpected error occurred",
+        });
+        return;
+      }
 
       if (!result.success) {
         setError("root", {
           message: result.error,
         });
-        return <></>;
+        return;
       }
 
       // Set redirecting state before navigation
@@ -105,10 +140,9 @@ export default function SignInForm({
 
       // Disable form interactions during redirect
       await revalidateAfterAuth();
-      return <></>;
     } catch (error) {
       setError("root", {
-        message: "An unexpected error occurred",
+        message: (error as Error)?.message || "An unexpected error occurred",
       });
       setIsRedirecting(false);
     }
@@ -116,6 +150,7 @@ export default function SignInForm({
 
   // Show loading state during redirect
   if (isRedirecting) {
+    console.log("Redirecting...");
     return (
       <Text className="text-tremor-title h-full flex items-center justify-center font-bold text-tremor-content-strong">
         Authentication successful, redirecting...
@@ -124,6 +159,7 @@ export default function SignInForm({
   }
 
   if (providers?.credentials) {
+    console.log("Rendering form");
     return (
       <>
         <Text className="text-tremor-title font-bold text-tremor-content-strong">
@@ -192,8 +228,8 @@ export default function SignInForm({
             {isSubmitting
               ? "Signing in..."
               : isRedirecting
-                ? "Redirecting..."
-                : "Sign in"}
+              ? "Redirecting..."
+              : "Sign in"}
           </Button>
         </form>
       </>

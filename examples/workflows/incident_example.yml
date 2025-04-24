@@ -1,6 +1,7 @@
 workflow:
-  id: aks-example
-  description: aks-example
+  id: incident-echo-monitor
+  name: Incident Echo Monitor
+  description: Monitors incident updates and creations, providing basic console logging for incident tracking and debugging.
   triggers:
     - type: incident
       events:

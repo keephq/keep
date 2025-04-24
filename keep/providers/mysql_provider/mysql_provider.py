@@ -32,6 +32,9 @@ class MysqlProviderAuthConfig:
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "MySQL database name"}, default=None
     )
+    port: int | None = dataclasses.field(
+        metadata={"required": False, "description": "MySQL port"}, default=3306
+    )
 
 
 class MysqlProvider(BaseProvider):
@@ -84,6 +87,7 @@ class MysqlProvider(BaseProvider):
             password=self.authentication_config.password,
             host=self.authentication_config.host,
             database=self.authentication_config.database,
+            port=self.authentication_config.port or 3306,
         )
         return client
 
@@ -100,11 +104,16 @@ class MysqlProvider(BaseProvider):
         self.authentication_config = MysqlProviderAuthConfig(
             **self.config.authentication
         )
-        
+
     def _notify(self, **kwargs):
         """
         For MySQL there is no difference if we're querying data or we want to make an impact.
         This will allow using the provider in actions as well as steps.
+        Args:
+            query (str): Query to execute
+            as_dict (bool): If True, returns the results as a list of dictionaries
+            single_row (bool): If True, returns only the first row of the results
+            **kwargs: Arguments will me passed to the query.format(**kwargs)
         """
         return self._query(**kwargs)
 
@@ -113,6 +122,11 @@ class MysqlProvider(BaseProvider):
     ) -> list | tuple:
         """
         Executes a query against the MySQL database.
+        Args:
+            query (str): Query to execute
+            as_dict (bool): If True, returns the results as a list of dictionaries
+            single_row (bool): If True, returns only the first row of the results
+            **kwargs: Arguments will me passed to the query.format(**kwargs)
 
         Returns:
             list | tuple: list of results or single result if single_row is True

@@ -118,12 +118,6 @@
 <table>
 <tr>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/amazonsqs-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/amazonsqs-icon.png" alt="AmazonSQS"/><br/>
-            Amazon SQS
-        </a>
-    </td>
-    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/appdynamics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/appdynamics-icon.png" alt="AppDynamics"/><br/>
             AppDynamics
@@ -153,14 +147,14 @@
             Checkmk
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cilium-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cilium-icon.png" alt="Cilium"/><br/>
             Cilium
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/checkly-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/checkly-icon.png" alt="Checkly"/><br/>
@@ -191,14 +185,14 @@
             Datadog
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/dynatrace-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/dynatrace-icon.png" alt="Dynatrace"/><br/>
             Dynatrace
         </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/documentation/elastic-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
@@ -229,12 +223,18 @@
             Graylog
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/kibana-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/kibana-icon.png" alt="Kibana"/><br/>
             Kibana
+        </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/libre_nms-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/libre_nms-icon.png" alt="LibreNMS"/><br/>
+            LibreNMS
         </a>
     </td>
     <td align="center" width="150">
@@ -256,19 +256,26 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/opensearchserverless-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/opensearchserverless-icon.png" alt="OpenSearch Serverless"/><br/>
+            OpenSearch Serverless
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
             Parseable
         </a>
     </td>
+
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/pingdom-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/pingdom-icon.png" alt="Pingdom"/><br/>
             Pingdom
         </a>
     </td>
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/prometheus-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/prometheus-icon.png" alt="Prometheus"/><br/>
@@ -299,14 +306,15 @@
             OpenObserve
         </a>
     </td>
-  <td align="center" width="150">
+
+</tr>
+<tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
           Site24x7
         </a>
   </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/splunk-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/splunk-icon.png" alt="Splunk"/><br/>
@@ -326,12 +334,27 @@
         </a>
   </td>
   <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/thousandeyes-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/thousandeyes-icon.png" alt="SumoLogic"/><br/>
+          ThousandEyes
+        </a>
+  </td>
+  <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
           UptimeKuma
         </a>
   </td>
-  <td align="center" width="150">
+
+</tr>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/victorialogs-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/victorialogs-icon.png" alt="VictoriaLogs"/><br/>
+          VictoriaLogs
+        </a>
+  </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
           VictoriaMetrics
@@ -343,8 +366,6 @@
           Wazuh
         </a>
   </td>
-<tr>
-</tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
@@ -483,6 +504,12 @@
           Teams
       </a>
   </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/zoom-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/zoom-icon.png" alt="Teams"/><br/>
+          Zoom
+      </a>
+  </td>
 </tr>
 <tr>
   <td align="center" width="150">
@@ -572,6 +599,12 @@
               Zenduty
           </a>
       </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/flashduty-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/flashduty-icon.png" alt="Flashduty"/><br/>
+              Flashduty
+          </a>
+      </td>
   </tr>
 </table>
 
@@ -579,6 +612,12 @@
 
 <table>
 <tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/asana-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/asana-icon.png" alt="Asana"/><br/>
+            Asana
+        </a>
+    </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/github-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/github-icon.png" alt="GitHub"/><br/>
@@ -615,14 +654,14 @@
             Microsoft Planner
         </a>
     </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/monday-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/monday-icon.png" alt="Monday"/><br/>
             Monday
         </a>
     </td>
-</tr>
-<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/redmine-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/redmine-icon.png" alt="Redmine"/><br/>
@@ -639,6 +678,12 @@
       <a href="https://docs.keephq.dev/providers/documentation/trello-provider" target="_blank">
           <img width="40" src="keep-ui/public/icons/trello-icon.png" alt="Trello"/><br/>
           Trello
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/youtrack-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/youtrack-icon.png" alt="YouTrack"/><br/>
+          YouTrack
       </a>
   </td>
 </tr>
@@ -719,6 +764,38 @@
         <a href="https://docs.keephq.dev/providers/documentation/webhook-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/webhook-icon.png" alt="Webhook"/><br/>
             Webhook
+        </a>
+    </td>
+</tr>
+</table>
+
+### Workflow Orchestration
+
+<table>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/airflow-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/airflow-icon.png" alt="Airflow"/><br/>
+            Airflow
+        </a>
+    </td>
+</tr>
+</table>
+
+### Queues
+
+<table>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/amazonsqs-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/amazonsqs-icon.png" alt="AmazonSQS"/><br/>
+            Amazon SQS
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/kafka-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/kafka-icon.png" alt="Kafka"/><br/>
+            Kafka
         </a>
     </td>
 </tr>

@@ -1,10 +1,11 @@
-id: execute-workflow-example
-description: a Slack message with button that triggers a workflow - use with slack_basic.yml
+workflow:
+  id: slack-workflow-trigger
+  name: Slack Interactive Workflow Trigger
+  description: Creates an interactive Slack message with a button that can trigger another workflow, demonstrating workflow chaining through Slack interactions.
 disabled: false
 triggers:
   - type: manual
 consts: {}
-name: Trigger workflow from Slack message
 owners: []
 services: []
 steps: []
@@ -29,9 +30,9 @@ actions:
                   type: plain_text
                 type: button
                 # The following will trigger the workflow with the whole alert object:
-                # url: "https://api.keephq.dev/workflows/WORKFLOW_ID_TO_EXECUTE/execute?alert={{alert.id}}&api_key=YOUR_API_KEY"
+                # url: "https://api.keephq.dev/workflows/WORKFLOW_ID_TO_EXECUTE/run?alert={{alert.id}}&api_key=YOUR_API_KEY"
                 # The following will trigger the workflow with the alert name, as an example, while any parameters can be passed:
-                url: "https://api.keephq.dev/workflows/WORKFLOW_ID_TO_EXECUTE/execute?name={{alert.name}}&api_key=YOUR_API_KEY"
+                url: "https://api.keephq.dev/workflows/WORKFLOW_ID_TO_EXECUTE/run?name={{alert.name}}&api_key=YOUR_API_KEY"
             type: actions
         channel: C06PF9TCWUF
         message: ""

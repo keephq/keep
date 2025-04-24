@@ -6,16 +6,12 @@ import { FrigadeProvider } from "../frigade-provider";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
 import { PHProvider } from "../posthog-provider";
-import dynamic from "next/dynamic";
 import ReadOnlyBanner from "@/components/banners/read-only-banner";
 import { auth } from "@/auth";
 import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
-
-const PostHogPageView = dynamic(() => import("@/shared/ui/PostHogPageView"), {
-  ssr: false,
-});
+import { PostHogPageView } from "@/shared/ui/PostHogPageView";
 
 // If loading a variable font, you don't need to specify the font weight
 const mulish = Mulish({

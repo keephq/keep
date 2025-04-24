@@ -14,7 +14,7 @@ import Image from "next/image";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { AuthType } from "utils/authenticationType";
 import { User } from "@/app/(keep)/settings/models";
-import { getInitials } from "@/components/navbar/UserAvatar";
+import UserAvatar, { getInitials } from "@/components/navbar/UserAvatar";
 
 interface UsersTableProps {
   users: User[];
@@ -40,8 +40,7 @@ export function UsersTable({
   return (
     <Table>
       <TableHead>
-        <TableRow>
-          <TableHeaderCell className="w-1/24">{/** Image */}</TableHeaderCell>
+        <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
           <TableHeaderCell className="w-3/12">
             {authType === AuthType.AUTH0 || authType === AuthType.KEYCLOAK
               ? "Email"
@@ -67,26 +66,17 @@ export function UsersTable({
             `}
             onClick={() => !isDisabled && onRowClick && onRowClick(user)}
           >
-            <TableCell>
-              {user.picture ? (
-                <Image
-                  className="rounded-full w-7 h-7 inline"
-                  src={user.picture}
-                  alt="user avatar"
-                  width={28}
-                  height={28}
-                />
-              ) : (
-                <span className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600">
-                  <span className="font-medium text-white text-xs">
-                    {getInitials(user.name ?? user.email)}
-                  </span>
-                </span>
-              )}
-            </TableCell>
             <TableCell className="w-3/12">
               <div className="flex items-center justify-between">
-                <Text className="truncate">{user.email}</Text>
+                <div className="flex items-center gap-2">
+                  <UserAvatar
+                    image={user.picture}
+                    name={user.name ?? user.email}
+                    email={user.email}
+                    size="sm"
+                  />
+                  <Text className="truncate">{user.email}</Text>
+                </div>
                 <div className="ml-2">
                   {user.ldap && <Badge color="orange">LDAP</Badge>}
                 </div>

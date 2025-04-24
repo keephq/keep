@@ -7,7 +7,7 @@ import {
   FacetOptionsQuery,
 } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { showErrorToast } from "@/shared/ui";
 import { InitialFacetsData } from "./api";
@@ -63,11 +63,14 @@ export const useFacetOptions = (
   entityName: string,
   initialFacetOptions: FacetOptionsDict | undefined,
   facetsQuery: FacetOptionsQuery | null,
+  revalidationToken?: string | undefined,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
+    dedupingInterval: 3000,
   }
 ) => {
   const api = useApi();
+  const isLoadingRef = useRef<boolean>(false);
   const [mergedFacetOptions, setMergedFacetOptions] =
     useState(initialFacetOptions);
   const requestUrl = `/${entityName}/facets/options`;
@@ -77,16 +80,26 @@ export const useFacetOptions = (
       api.isReady() && facetsQuery
         ? requestUrl + "_" + JSON.stringify(facetsQuery)
         : null,
-    () => api.post(requestUrl, facetsQuery),
+    async () => {
+      isLoadingRef.current = true;
+      const currentDate = new Date();
+      const response = await api.post(requestUrl, facetsQuery);
+      const responseTime = new Date().getTime() - currentDate.getTime();
+      isLoadingRef.current = false;
+      return {
+        response,
+        responseTime: responseTime,
+      };
+    },
     options
   );
 
   useEffect(() => {
-    if (!swrValue.data) {
+    if (!swrValue.data?.response) {
       return;
     }
 
-    const fetchedData: FacetOptionsDict = swrValue.data;
+    const fetchedData: FacetOptionsDict = swrValue.data.response;
     const newFacetOptions: FacetOptionsDict = JSON.parse(
       JSON.stringify(mergedFacetOptions || {})
     );
@@ -115,10 +128,41 @@ export const useFacetOptions = (
     setMergedFacetOptions(newFacetOptions);
   }, [swrValue.data]);
 
+  const [isSilentLoading, setIsSilentLoading] = useState<boolean>(false);
+  const revalidationTokenRef = useRef<string | undefined>(revalidationToken);
+  revalidationTokenRef.current = revalidationToken;
+  const processedRevalidationTokenRef = useRef<string | undefined>(undefined);
+  const refreshInterval = Math.ceil(
+    Math.max((swrValue.data?.responseTime || 1) * 2, 5000)
+  );
+
+  useEffect(
+    function watchRevalidationToken() {
+      const intervalId = setInterval(() => {
+        if (
+          revalidationTokenRef.current !==
+            processedRevalidationTokenRef.current &&
+          !isLoadingRef.current
+        ) {
+          processedRevalidationTokenRef.current = revalidationTokenRef.current;
+          setIsSilentLoading(true);
+          swrValue.mutate();
+        }
+      }, refreshInterval);
+
+      return () => clearInterval(intervalId);
+    },
+    // disabled as it should watch only responseTimeSeconds
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [refreshInterval, swrValue.mutate]
+  );
+  useEffect(() => setIsSilentLoading(false), [facetsQuery]);
+
   return {
     facetOptions: mergedFacetOptions,
-    mutate: swrValue.mutate,
-    isLoading: swrValue.isLoading,
+    mutate: () => swrValue.mutate(),
+    isLoading: !isSilentLoading && swrValue.isLoading,
+    responseTime: swrValue.data?.responseTime,
   };
 };
 

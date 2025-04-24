@@ -30,6 +30,9 @@ class RuleCreateDto(BaseModel):
     resolveOn: str = ResolveOn.NEVER.value
     createOn: str = CreateIncidentOn.ANY.value
     incidentNameTemplate: str = None
+    incidentPrefix: str = None
+    multiLevel: bool = False
+    multiLevelPropertyName: str = None
 
 
 @router.get(
@@ -49,7 +52,7 @@ def get_rules(
     rules_incidents = get_rule_incidents_count_db(tenant_id=tenant_id)
     logger.info("Got rules")
     # return rules
-    rules = [rule.dict() for rule in rules]
+    rules = [rule.model_dump() for rule in rules]
     for rule in rules:
         rule["distribution"] = rules_dist.get(rule["id"], [])
         rule["incidents"] = rules_incidents.get(rule["id"], 0)
@@ -82,6 +85,9 @@ async def create_rule(
     sql = rule_create_request.sqlQuery.get("sql")
     params = rule_create_request.sqlQuery.get("params")
     incident_name_template = rule_create_request.incidentNameTemplate
+    incident_prefix = rule_create_request.incidentPrefix
+    multi_level = rule_create_request.multiLevel
+    multi_level_property_name = rule_create_request.multiLevelPropertyName
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -125,6 +131,9 @@ async def create_rule(
         resolve_on=resolve_on,
         create_on=create_on,
         incident_name_template=incident_name_template,
+        incident_prefix=incident_prefix,
+        multi_level=multi_level,
+        multi_level_property_name=multi_level_property_name,
     )
     logger.info("Rule created")
     return rule
@@ -176,6 +185,10 @@ async def update_rule(
         create_on = body["createOn"]
         grouping_criteria = body.get("groupingCriteria", [])
         require_approve = body.get("requireApprove", [])
+        incident_template_name = body.get("incidentNameTemplate", None)
+        incident_prefix = body.get("incidentPrefix", None)
+        multi_level = body.get("multiLevel", False)
+        multi_level_property_name = body.get("multiLevelPropertyName", None)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -224,6 +237,10 @@ async def update_rule(
         require_approve=require_approve,
         resolve_on=resolve_on,
         create_on=create_on,
+        incident_name_template=incident_template_name,
+        incident_prefix=incident_prefix,
+        multi_level=multi_level,
+        multi_level_property_name=multi_level_property_name,
     )
 
     if rule:

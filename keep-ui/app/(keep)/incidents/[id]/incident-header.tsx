@@ -4,16 +4,15 @@ import {
   useIncidentActions,
   type IncidentDto,
 } from "@/entities/incidents/model";
-import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
+import { Badge, Button, Icon, Subtitle } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
-import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
+import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
+import { CreateOrUpdateIncidentForm } from "features/incidents/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
@@ -63,12 +62,12 @@ export function IncidentHeader({
   return (
     <CopilotKit runtimeUrl="/api/copilotkit">
       <header className="flex flex-col mb-1">
-        <div className="flex flex-row justify-between items-end">
+        <div className="flex flex-row justify-between items-end mb-2.5">
           <div>
             <Subtitle className="text-sm">
               <Link href="/incidents">All Incidents</Link>{" "}
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_confirmed ? "" : "Possible "}
+              {incident.is_candidate ? "" : "Possible "}
               {getIncidentName(incident)}
               {pathNameCapitalized && (
                 <>
@@ -79,13 +78,13 @@ export function IncidentHeader({
             </Subtitle>
           </div>
 
-          {incident.is_confirmed && (
-            <div>
+          {!incident.is_candidate && (
+            <div className="flex">
               <Button
                 color="orange"
                 size="xs"
                 variant="secondary"
-                className="mr-2"
+                className="!py-0.5 mr-2"
                 icon={MdPlayArrow}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -99,6 +98,7 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 variant="secondary"
+                className="!py-0.5"
                 icon={MdModeEdit}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -134,7 +134,7 @@ export function IncidentHeader({
               </Badge>
             )}
           </div>
-          {!incident.is_confirmed && (
+          {incident.is_candidate && (
             <div className="space-x-1 flex flex-row items-center justify-center">
               <Button
                 color="orange"

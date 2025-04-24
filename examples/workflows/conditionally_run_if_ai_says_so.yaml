@@ -1,3 +1,8 @@
+workflow:
+  id: ai-guided-mysql-cleanup
+  name: AI-Guided MySQL Cleanup
+  description: Uses OpenAI to intelligently determine whether to run MySQL table cleanup operations based on alert context.
+
 id: auto-fix-mysql-table-overflow
 description: Clean heavy mysql tables after consulting with OpenAI using structured output
 triggers:
@@ -14,7 +19,7 @@ steps:
       with:
         prompt: "There is a task cleaning MySQL database. Should we run the task if we received an alert with such a name {{ alert.name }}?"
         model: "gpt-4o-mini" # This model supports structured output
-        structured_output_format:  # We limit what model could return
+        structured_output_format: # We limit what model could return
           type: json_schema
           json_schema:
             name: workflow_applicability

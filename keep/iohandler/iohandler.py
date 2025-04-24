@@ -90,6 +90,7 @@ class IOHandler:
                             continue
                         elif text[i] in ('"', "'"):
                             if not in_string:
+                                # Detecting the beginning of the string
                                 in_string = True
                                 quote_char = text[i]
                             elif (
@@ -100,6 +101,8 @@ class IOHandler:
                                     and str(text[i + 1]) != " "
                                 )  # end of statement, arg, etc. if its alpha numeric or whitespace, we just need to escape it
                             ):
+                                # Detecting the end of the string
+                                # If the next character is not alphanumeric or whitespace, it's the end of the string
                                 in_string = False
                                 quote_char = ""
                             elif text[i] == quote_char and not escape_next:

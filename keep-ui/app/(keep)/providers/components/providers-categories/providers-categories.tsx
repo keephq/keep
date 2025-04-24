@@ -1,4 +1,4 @@
-import { TProviderCategory } from "@/app/(keep)/providers/providers";
+import { TProviderCategory } from "@/shared/api/providers";
 import { Badge } from "@tremor/react";
 import { useFilterContext } from "../../filter-context";
 
@@ -19,6 +19,7 @@ export const ProvidersCategories = () => {
     "Collaboration",
     "CRM",
     "Queues",
+    "Orchestration",
     "Coming Soon",
     "Others",
   ];

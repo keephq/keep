@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Card, Button, Title, Subtitle, TextInput } from "@tremor/react";
+import { Card, Button, Title, TextInput } from "@tremor/react";
 import useSWR from "swr";
 import Loading from "@/app/(keep)/loading";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { PageTitle } from "@/shared/ui";
+import { PageSubtitle } from "@/shared/ui";
 
 interface SMTPSettings {
   host: string;
@@ -216,10 +218,12 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
   };
 
   return (
-    <div className="mt-10">
-      <Title>SMTP Settings</Title>
-      <Subtitle>Configure your SMTP server to send emails</Subtitle>
-      <Card className="mt-4 p-4">
+    <div className="flex flex-col gap-4">
+      <header>
+        <PageTitle>SMTP Settings</PageTitle>
+        <PageSubtitle>Configure your SMTP server to send emails</PageSubtitle>
+      </header>
+      <Card className="p-4">
         <div className="mb-4">
           <label htmlFor="host" className="block text-sm font-medium mb-1">
             Host
@@ -368,7 +372,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
         </div>
       </Card>
 
-      <Card className="mt-8 p-4">
+      <Card className="p-4">
         <div className="mb-4">
           <label htmlFor="to_email" className="block text-sm font-medium mb-1">
             To:
@@ -398,9 +402,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
       </Card>
       {testResult && (
         <Card
-          className={`mt-4 p-4 ${
-            testResult.status ? "bg-green-100" : "bg-red-100"
-          }`}
+          className={`p-4 ${testResult.status ? "bg-green-100" : "bg-red-100"}`}
         >
           <Title>{testResult.status ? "Success" : "Failure"}</Title>
           <div

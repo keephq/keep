@@ -1,29 +1,65 @@
-import { act, renderHook, RenderHookResult } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import {
   useWorkflowStore,
   FlowNode,
-  ToolboxConfiguration,
-  V2Step,
+  V2StepTrigger,
 } from "@/entities/workflows";
 import { v4 as uuidv4 } from "uuid";
 import { Connection } from "@xyflow/react";
-import {
-  ConditionsGroup,
-  MiscGroup,
-  TriggersGroup,
-} from "@/features/workflows/builder/lib/utils";
+import { Provider } from "@/shared/api/providers";
 
 // Mock uuid to return predictable values
 jest.mock("uuid", () => ({
   v4: jest.fn(),
 }));
 
-const mockToolboxConfiguration: ToolboxConfiguration = {
-  groups: [TriggersGroup, MiscGroup, ConditionsGroup],
+// First declare the mock function
+const showErrorToastMock = jest.fn();
+
+// Mock the entire module path
+jest.mock("../../../../shared/ui/utils/showErrorToast", () => ({
+  showErrorToast: () => showErrorToastMock(),
+}));
+
+const mockProvider: Provider = {
+  id: "mock-provider",
+  type: "mock",
+  config: {},
+  installed: true,
+  linked: true,
+  last_alert_received: "",
+  details: {
+    authentication: {},
+  },
+  display_name: "Mock Provider",
+  can_query: true,
+  can_notify: true,
+  validatedScopes: {},
+  tags: [],
+  pulling_available: true,
+  pulling_enabled: true,
+  health: true,
+  categories: [],
+  coming_soon: false,
+};
+
+const notInstalledProvider: Provider = {
+  ...mockProvider,
+  type: "notinstalled",
+  installed: false,
+};
+
+const mockProvidersConfiguration = {
+  providers: [mockProvider, notInstalledProvider],
+  installedProviders: [mockProvider],
+  secrets: {},
 };
 
 describe("useWorkflowStore", () => {
   beforeEach(() => {
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+
     // Reset the store before each test
     const { result } = renderHook(() => useWorkflowStore());
     act(() => {
@@ -62,15 +98,17 @@ describe("useWorkflowStore", () => {
 
       // Add a trigger node
       act(() => {
-        result.current.addNodeBetween(
+        result.current.addNodeBetweenSafe(
           "edge-1",
           {
             id: "interval",
             componentType: "trigger",
             type: "interval",
-            properties: {},
+            properties: {
+              interval: "5m",
+            },
             name: "Interval Trigger",
-          } as V2Step,
+          } as V2StepTrigger,
           "edge"
         );
       });
@@ -78,7 +116,7 @@ describe("useWorkflowStore", () => {
       // Verify the node was added correctly
       expect(result.current.nodes).toHaveLength(3);
       expect(result.current.edges).toHaveLength(2);
-      expect(result.current.v2Properties).toHaveProperty("interval", "");
+      expect(result.current.v2Properties).toHaveProperty("interval", "5m");
     });
 
     it("should not add trigger component if one already exists", () => {
@@ -86,48 +124,54 @@ describe("useWorkflowStore", () => {
 
       // Setup initial state with existing trigger
       act(() => {
-        result.current.setNodes([
-          {
-            id: "trigger_start",
-            type: "trigger",
-            position: { x: 0, y: 0 },
-            data: { type: "trigger" },
-            isNested: false,
-          } as FlowNode,
-          {
-            id: "interval",
-            type: "trigger",
-            position: { x: 50, y: 50 },
-            data: { type: "trigger" },
-            isNested: false,
-          } as FlowNode,
-          {
-            id: "trigger_end",
-            type: "trigger",
-            position: { x: 100, y: 100 },
-            data: { type: "trigger" },
-            isNested: false,
-          } as FlowNode,
-        ]);
+        result.current.setDefinition({
+          value: {
+            sequence: [],
+            properties: {
+              id: "test",
+              disabled: false,
+              name: "test",
+              description: "test",
+              interval: "5m",
+              isLocked: false,
+              consts: {},
+            },
+          },
+          isValid: true,
+        });
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
+
+      expect(result.current.nodes.map((node) => node.id)).toEqual([
+        "start",
+        "trigger_start",
+        "interval",
+        "trigger_end",
+        "end",
+      ]);
 
       // Try to add another trigger
       act(() => {
-        result.current.addNodeBetween(
-          "trigger_end",
+        const edges = result.current.edges;
+        result.current.addNodeBetweenSafe(
+          edges[1].id,
           {
             id: "interval",
             componentType: "trigger",
             type: "interval",
-            properties: {},
+            properties: {
+              interval: "6m",
+            },
             name: "Interval Trigger",
-          } as V2Step,
-          "node"
+          } as V2StepTrigger,
+          "edge"
         );
       });
 
       // Verify no new node was added
-      expect(result.current.nodes).toHaveLength(3);
+      expect(showErrorToastMock).toHaveBeenCalled();
+      expect(result.current.nodes).toHaveLength(5);
+      expect(result.current.v2Properties).toHaveProperty("interval", "5m");
     });
   });
 
@@ -186,12 +230,18 @@ describe("useWorkflowStore", () => {
           value: {
             sequence: [],
             properties: {
+              id: "test",
+              disabled: false,
+              name: "test",
+              description: "test",
               interval: "5m",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Delete interval trigger
@@ -213,7 +263,7 @@ describe("useWorkflowStore", () => {
         result.current.setNodes([
           {
             id: "switch1",
-            data: { componentType: "switch", type: "switch" },
+            data: { componentType: "switch", type: "condition-threshold" },
             position: { x: 0, y: 0 },
             isNested: false,
           } as FlowNode,
@@ -318,7 +368,11 @@ describe("useWorkflowStore", () => {
         result.current.setNodes([
           {
             id: "node1",
-            data: { type: "step", config: "old-config" },
+            data: {
+              type: "step",
+              componentType: "task",
+              properties: { config: "old-config" },
+            },
             position: { x: 0, y: 0 },
             isNested: false,
           } as FlowNode,
@@ -344,7 +398,13 @@ describe("useWorkflowStore", () => {
         result.current.setNodes([
           {
             id: "node1",
-            data: { type: "step", removable: "value" },
+            data: {
+              type: "step",
+              componentType: "task",
+              properties: {
+                config: "old-config",
+              },
+            },
             position: { x: 0, y: 0 },
             isNested: false,
           } as FlowNode,
@@ -354,11 +414,11 @@ describe("useWorkflowStore", () => {
 
       // Update node data with null
       act(() => {
-        result.current.updateSelectedNodeData("removable", null);
+        result.current.updateSelectedNodeData("config", null);
       });
 
       // Verify property was removed
-      expect(result.current.nodes[0].data).not.toHaveProperty("removable");
+      expect(result.current.nodes[0].data).not.toHaveProperty("config");
     });
   });
 
@@ -374,9 +434,10 @@ describe("useWorkflowStore", () => {
               {
                 id: "step1",
                 name: "Step 1",
-                type: "step",
+                type: "step-mock",
                 componentType: "task",
                 properties: {
+                  stepParams: ["param1"],
                   config: "test",
                   with: {
                     param1: "value1",
@@ -385,14 +446,18 @@ describe("useWorkflowStore", () => {
               },
             ],
             properties: {
+              id: "test",
+              disabled: false,
               name: "test",
               description: "test",
-              manual: true,
+              manual: "true",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: true,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify no validation errors and canDeploy is true
@@ -408,11 +473,12 @@ describe("useWorkflowStore", () => {
         result.current.setDefinition({
           value: {
             sequence: [],
+            // @ts-ignore
             properties: {},
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify validation errors are captured
@@ -434,35 +500,52 @@ describe("useWorkflowStore", () => {
             sequence: [
               {
                 id: "step1",
-                name: "Step 1",
-                type: "step",
+                name: "step1",
+                type: "step-mock",
                 componentType: "task",
-                properties: {},
+                properties: {
+                  stepParams: [],
+                },
               },
               {
                 id: "step2",
                 name: "",
-                type: "step",
+                type: "step-uninstalled",
                 componentType: "task",
-                properties: {},
+                properties: {
+                  stepParams: [],
+                },
               },
             ],
             properties: {
+              id: "test",
+              disabled: false,
               name: "test",
               description: "test",
-              manual: true,
+              manual: "true",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify step validation errors are captured
+      expect(result.current.validationErrors).toHaveProperty("step1");
+      expect(result.current.validationErrors["step1"][0]).toBe(
+        "No parameters configured"
+      );
+      expect(result.current.validationErrors["step1"][1]).toBe("error");
       expect(result.current.validationErrors).toHaveProperty("step2");
+      expect(result.current.validationErrors["step2"][0]).toBe(
+        "Step name cannot be empty."
+      );
+      expect(result.current.validationErrors["step2"][1]).toBe("error");
     });
 
-    it("should allow deployment if only provider errors exist", () => {
+    it("should allow deployment if errors exist but are about missing providers", () => {
       const { result } = renderHook(() => useWorkflowStore());
 
       // Setup a workflow with provider-related errors
@@ -473,20 +556,29 @@ describe("useWorkflowStore", () => {
               {
                 id: "step1",
                 name: "Step 1",
-                type: "step",
-                componentType: "step",
-                properties: {},
+                type: "step-notinstalled",
+                componentType: "task",
+                properties: {
+                  stepParams: ["param1"],
+                  with: {
+                    param1: "value1",
+                  },
+                },
               },
             ],
             properties: {
+              id: "test",
+              disabled: false,
               name: "test",
               description: "test",
-              manual: true,
+              manual: "true",
+              isLocked: false,
+              consts: {},
             },
           },
           isValid: false,
         });
-        result.current.initializeWorkflow(null, mockToolboxConfiguration);
+        result.current.initializeWorkflow(null, mockProvidersConfiguration);
       });
 
       // Verify canDeploy is true despite provider errors

@@ -11,7 +11,10 @@ const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
 const READ_ONLY_ALWAYS_ALLOWED_URLS = [
   "/alerts/audit",
   "/alerts/facets/options",
+  "/alerts/query",
   "/incidents/facets/options",
+  "/workflows/query",
+  "/workflows/facets/options",
 ];
 
 interface ApiClientOptions {
@@ -45,6 +48,7 @@ export class ApiClient {
     }
     return {
       Authorization: `Bearer ${this.session.accessToken}`,
+      "ngrok-skip-browser-warning": true,
       ...this.additionalHeaders,
     };
   }

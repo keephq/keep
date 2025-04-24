@@ -11,8 +11,9 @@ import {
   TableRow,
   Icon,
   Button,
+  Callout,
 } from "@tremor/react";
-import { Provider } from "./providers";
+import { Provider } from "@/shared/api/providers";
 import {
   ArrowPathIcon,
   QuestionMarkCircleIcon,
@@ -30,6 +31,9 @@ const ProviderFormScopes = ({
   refreshLoading: boolean;
   onRevalidate: () => void;
 }) => {
+  var invalidScopesPresent = Object.values(validatedScopes).some(
+    (scope) => scope !== true && scope !== undefined
+  );
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
@@ -43,8 +47,18 @@ const ProviderFormScopes = ({
             variant="secondary"
             loading={refreshLoading}
           >
-            Refresh
+            Validate Scopes
           </Button>
+        )}
+        {provider.installed && invalidScopesPresent && (
+          <Callout
+            title="Installed With Missing Scopes"
+            className="mt-5"
+            color="gray"
+          >
+            Provider is installed. Ignore missing scopes if you don&apos;t need
+            related features.
+          </Callout>
         )}
         <Table className="mt-5">
           <TableHead>
@@ -83,16 +97,18 @@ const ProviderFormScopes = ({
                           validatedScopes[scope.name] === true // scope is tested and valid
                             ? "emerald"
                             : validatedScopes[scope.name] === undefined // scope was not tested
-                              ? "gray"
-                              : "red" // scope was tested and is a string, meaning it has an error
+                            ? "gray"
+                            : "red" // scope was tested and is a string, meaning it has an error
                         }
-                        className={`truncate ${isScopeLong ? "max-w-lg" : "max-w-xs"}`}
+                        className={`truncate ${
+                          isScopeLong ? "max-w-lg" : "max-w-xs"
+                        }`}
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
                           : validatedScopes[scope.name] === undefined
-                            ? "Not checked"
-                            : validatedScopes[scope.name]}
+                          ? "Not checked"
+                          : validatedScopes[scope.name]}
                       </Badge>
                     </TableCell>
                     <TableCell title={scope.description} className="max-w-xs">

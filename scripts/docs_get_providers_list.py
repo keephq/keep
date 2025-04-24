@@ -1,6 +1,9 @@
 """
+The script will output a markdown list of links to the documentation of each provider.
+The script will also validate if all providers are documented in the docs/providers/documentation folder.
+
 To execute the script and copy to clipboard:
-`
+
 cd scripts
 python docs_get_providers_list.py | pbcopy
 python docs_get_providers_list.py --validate # To check docs/providers/overview.mdx and if all providers are documented.

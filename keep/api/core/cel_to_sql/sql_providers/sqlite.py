@@ -6,18 +6,12 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
 class CelToSqliteProvider(BaseCelToSqlProvider):
-    def json_extract_as_text(self, column: str, path: str) -> str:
-        return f"json_extract({column}, '$.{path}')"
 
-    def coalesce(self, args):
-        coalesce_args = args
+    def json_extract_as_text(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"json_extract({column}, '$.{property_path_str}')"
 
-        if len(args) == 1:
-            coalesce_args += ["NULL"]
-
-        return f"COALESCE({', '.join(coalesce_args)})"
-
-    def cast(self, expression_to_cast: str, to_type):
+    def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type is str:
             to_type_str = "TEXT"
         elif to_type is NoneType:
@@ -59,20 +53,18 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
 
-        processed_literal = self.literal_proc(f"*{method_args[0].value}*")
-        return (
-            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
-        )
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}%'"
 
     def _visit_starts_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
-        processed_literal = self.literal_proc(f"{method_args[0].value}*")
-        return (
-            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
-        )
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '{unquoted_literal}%'"
 
     def _visit_ends_with_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -80,7 +72,6 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         if len(method_args) != 1:
             raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
 
-        processed_literal = self.literal_proc(f"*{method_args[0].value}")
-        return (
-            f"{property_path} IS NOT NULL AND {property_path} GLOB {processed_literal}"
-        )
+        processed_literal = self.literal_proc(method_args[0].value)
+        unquoted_literal = processed_literal[1:-1]
+        return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}'"

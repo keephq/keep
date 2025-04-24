@@ -3,13 +3,15 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Text, Button, TextInput, Badge, Title, Card } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import {
-  getIcon,
-  getTriggerIcon,
+  isWorkflowExecution,
+  WorkflowExecutionDetail,
+} from "@/shared/api/workflow-executions";
+import { useWorkflowExecutionDetail } from "@/entities/workflow-executions/model/useWorkflowExecutionDetail";
+import {
   extractTriggerValue,
-} from "@/app/(keep)/workflows/[workflow_id]/workflow-execution-table";
-import { useWorkflowExecution } from "utils/hooks/useWorkflowExecutions";
-import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
-
+  getTriggerIcon,
+} from "@/entities/workflows/lib/ui-utils";
+import { getIconForStatusString } from "@/shared/ui";
 interface IncidentWorkflowSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
@@ -21,10 +23,16 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
   toggle,
   selectedExecution,
 }) => {
-  const { data: workflowExecutionData } = useWorkflowExecution(
+  const { data: workflowExecutionData } = useWorkflowExecutionDetail(
     selectedExecution.workflow_id,
     selectedExecution.id
   );
+
+  const logs =
+    isWorkflowExecution(workflowExecutionData) &&
+    Array.isArray(workflowExecutionData.logs)
+      ? workflowExecutionData.logs
+      : null;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -89,7 +97,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       Status
                     </Text>
                     <div className="flex items-center">
-                      {getIcon(selectedExecution.status)}
+                      {getIconForStatusString(selectedExecution.status)}
                       <span className="ml-2 capitalize">
                         {selectedExecution.status}
                       </span>
@@ -100,7 +108,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       Triggered By
                     </Text>
                     <Button
-                      className="px-3 py-0.5 bg-white text-black rounded-xl border-2 border-gray-400 inline-flex items-center gap-2 font-bold hover:bg-white border-gray-400"
+                      className="px-3 py-0.5 bg-white text-black rounded-xl border-2 inline-flex items-center gap-2 font-bold hover:bg-white border-gray-400"
                       variant="secondary"
                       tooltip={selectedExecution.triggered_by ?? ""}
                       icon={getTriggerIcon(
@@ -140,13 +148,13 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                 </Text>
                 <div className="bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
                   <pre className="whitespace-pre-wrap">
-                    {Array.isArray(workflowExecutionData?.logs)
-                      ? workflowExecutionData.logs.map((log, index) => (
+                    {logs
+                      ? logs.map((log, index) => (
                           <div key={index}>
                             {log.timestamp} - {log.message}
                           </div>
                         ))
-                      : workflowExecutionData?.logs || "No logs available"}
+                      : "No logs available"}
                   </pre>
                 </div>
               </Card>

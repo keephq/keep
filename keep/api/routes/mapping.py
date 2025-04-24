@@ -9,7 +9,12 @@ from sqlmodel import Session
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_session
 from keep.api.models.db.enrichment_event import EnrichmentEventWithLogs
-from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
+from keep.api.models.db.mapping import (
+    MappingRule,
+    MappingRuleDtoIn,
+    MappingRuleDtoOut,
+    MappingRuleUpdateDtoIn,
+)
 from keep.api.models.db.topology import TopologyService
 from keep.api.utils.pagination import EnrichmentEventPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -20,7 +25,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("", description="Get all mapping rules")
+@router.get("", description="Get all mapping rules", response_model_exclude=["rows"])
 def get_rules(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:rules"])
@@ -28,6 +33,8 @@ def get_rules(
     session: Session = Depends(get_session),
 ) -> list[MappingRuleDtoOut]:
     logger.info("Getting mapping rules")
+
+    # @tb: get the model without all the rows becuase it might be heavy
     rules: list[MappingRule] = (
         session.query(MappingRule)
         .filter(MappingRule.tenant_id == authenticated_entity.tenant_id)
@@ -38,10 +45,11 @@ def get_rules(
     rules_dtos = []
     if rules:
         for rule in rules:
-            rule_dto = MappingRuleDtoOut(**rule.dict())
+            rule_dto = MappingRuleDtoOut(**rule.model_dump())
 
             attributes = []
             if rule_dto.type == "csv":
+                # @tb: when we get the model without the rows, we have to save the attributes when creating the rule.
                 attributes = [
                     key
                     for key in rule.rows[0].keys()
@@ -60,6 +68,28 @@ def get_rules(
             rules_dtos.append(rule_dto)
 
     return rules_dtos
+
+
+@router.get("/{rule_id}", description="Get a mapping rule by id")
+def get_rule(
+    rule_id: int,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
+    session: Session = Depends(get_session),
+) -> MappingRuleDtoOut:
+    logger.info("Getting mapping rule by id", extra={"rule_id": rule_id})
+    rule = (
+        session.query(MappingRule)
+        .filter(
+            MappingRule.tenant_id == authenticated_entity.tenant_id,
+            MappingRule.id == rule_id,
+        )
+        .first()
+    )
+    if rule is None:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return MappingRuleDtoOut(**rule.model_dump())
 
 
 @router.post(
@@ -120,7 +150,7 @@ def delete_rule(
 @router.put("/{rule_id}", description="Update an existing rule")
 def update_rule(
     rule_id: int,
-    rule: MappingRuleDtoIn,
+    rule: MappingRuleUpdateDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:rules"])
     ),

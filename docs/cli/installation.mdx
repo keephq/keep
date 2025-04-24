@@ -22,7 +22,10 @@ git clone https://github.com/keephq/keep.git && cd keep
 Install Keep CLI with `pip`:
 
 ```shell
-pip install .
+# MacOS if python or pip not present:
+# brew install python@3.11
+# brew install postgresql
+pip3.11 install .
 ```
 or with `poetry`:
 
@@ -36,33 +39,33 @@ From now on, Keep should be installed locally and accessible from your CLI, test
 keep version
 ```
 
+### Configuration
+
+To get API key, check Keep UI -> your username (bottom left) -> Settings -> API Keys
+```
+keep config new --url http://backend.my_keep.my_awesome_org.com:backend_port --api-key your_personal_api_key
+```
+
 ### Test
-Get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it
 
+Now, 
 ```
-keep config provider --provider-type slack --provider-id slack-demo
-```
-Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...) and you're good to go 👌
-
-Let's now execute our example "Paper DB has insufficient disk space" alert
-
-```bash
-keep run --alerts-file examples/workflows/db_disk_space.yml
+keep workflow apply -f examples/workflows/query_clickhouse.yml
 ```
 
-Congrats 🥳 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
+Congrats 🥳 Check your UI for the new workflow uploaded from the YAML file.
 
 
 ## Docker image (Option 2)
 ### Install
 
 ```
-docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli config provider --provider-type slack --provider-id slack-demo
+docker run -v ${PWD}:/app -v ~/.keep.yaml:/root/.keep.yaml -it us-central1-docker.pkg.dev/keephq/keep/keep-cli keep config new --url http://backend.my_keep.my_awesome_org.com:backend_port --api-key your_personal_api_key
 ```
 
 ### Test
 ```
-docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
+docker run -v ${PWD}:/app -v ~/.keep.yaml:/root/.keep.yaml -it us-central1-docker.pkg.dev/keephq/keep/keep-cli workflow apply -f examples/workflows/query_clickhouse.yml
 ```
 
 

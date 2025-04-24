@@ -1,12 +1,18 @@
-import os
-import sys
+import re
 from datetime import datetime
 
 import requests
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.utils import trigger_alert, assert_scope_text_count, open_connected_provider, delete_provider, assert_connected_provider_count
-
+from tests.e2e_tests.utils import (
+    assert_connected_provider_count,
+    assert_scope_text_count,
+    delete_provider,
+    init_e2e_test,
+    open_connected_provider,
+    save_failure_artifacts,
+    trigger_alert,
+)
 
 # NOTE 2: to run the tests with a browser, uncomment this:
 # os.environ["PLAYWRIGHT_HEADLESS"] = "false"
@@ -59,14 +65,40 @@ def open_grafana_card(browser):
     grafana_tile.first.click()
 
 
-def test_grafana_provider(browser):
+def test_grafana_provider(browser: Page, setup_page_logging, failure_artifacts):
     try:
         provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
         provider_name_invalid = provider_name + "-invalid"
         provider_name_readonly = provider_name + "-read-only"
         provider_name_success = provider_name + "-success"
 
-        browser.goto(f"{KEEP_UI_URL}/signin")
+        # browser.goto(f"{KEEP_UI_URL}/signin")
+        max_attemps = 3
+        for attempt in range(max_attemps):
+            try:
+                init_e2e_test(
+                    browser,
+                    next_url="/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders",
+                )
+                # Give the page a moment to process redirects
+                browser.wait_for_timeout(500)
+                # Wait for navigation to complete to either signin or providers page
+                # (since we might get redirected automatically)
+                browser.wait_for_load_state("networkidle")
+
+                # init_e2e_test(browser=browser, next_url="/signin")
+                base_url = "http://localhost:3000/providers"
+                url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
+                browser.wait_for_url(url_pattern)
+                print("Providers page loaded successfully. [try: %d]" % (attempt + 1))
+                break
+            except Exception as e:
+                if attempt < max_attemps - 1:
+                    print("Failed to load providers page. Retrying...")
+                    continue
+                else:
+                    raise e
+
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
 
@@ -90,7 +122,11 @@ def test_grafana_provider(browser):
         browser.get_by_role("button", name="Connect", exact=True).click()
         browser.wait_for_timeout(5000)
         # browser.reload()
-        open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_readonly)
+        open_connected_provider(
+            browser=browser,
+            provider_type="Grafana",
+            provider_name=provider_name_readonly,
+        )
         assert_scope_text_count(browser=browser, contains_text="Missing Scope", count=2)
         assert_scope_text_count(browser=browser, contains_text="Valid", count=1)
         browser.get_by_role("button", name="Cancel", exact=True).click()
@@ -103,7 +139,11 @@ def test_grafana_provider(browser):
         )
         browser.get_by_placeholder("Enter host").fill(GRAFANA_HOST)
         browser.get_by_role("button", name="Connect", exact=True).click()
-        open_connected_provider(browser=browser, provider_type="Grafana", provider_name=provider_name_success)
+        open_connected_provider(
+            browser=browser,
+            provider_type="Grafana",
+            provider_name=provider_name_success,
+        )
         toast_div = browser.locator("div.Toastify")
         browser.get_by_role("button", name="Install/Update Webhook", exact=True).click()
         expect(toast_div).to_contain_text("grafana webhook installed", timeout=10000)
@@ -143,24 +183,21 @@ def test_grafana_provider(browser):
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()
         providers_to_delete = [provider_name_readonly, provider_name_success]
-
         for provider_to_delete in providers_to_delete:
             # Perform actions on each matching element
-            delete_provider(browser=browser, provider_type="Grafana", provider_name=provider_to_delete)
+            delete_provider(
+                browser=browser,
+                provider_type="Grafana",
+                provider_name=provider_to_delete,
+            )
             # Assert provider was deleted
-            assert_connected_provider_count(browser=browser, provider_type="Grafana", provider_name=provider_to_delete, provider_count=0)
+            assert_connected_provider_count(
+                browser=browser,
+                provider_type="Grafana",
+                provider_name=provider_to_delete,
+                provider_count=0,
+            )
 
     except Exception:
         # Current file + test name for unique html and png dump.
-        current_test_name = (
-            "playwright_dump_"
-            + os.path.basename(__file__)[:-3]
-            + "_"
-            + sys._getframe().f_code.co_name
-        )
-
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
-            f.write(browser.content())
-
-        raise
+        save_failure_artifacts(browser)

@@ -22,6 +22,9 @@ export type Rule = {
   distribution: { [group: string]: { [timestamp: string]: number } };
   incidents: number;
   incident_name_template: string | null;
+  incident_prefix: string | null;
+  multi_level: boolean;
+  multi_level_property_name: string | null;
 };
 
 export const useRules = (options?: SWRConfiguration) => {

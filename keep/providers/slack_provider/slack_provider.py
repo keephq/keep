@@ -11,6 +11,7 @@ import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
+from keep.functions import utcnowtimestamp
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -151,7 +152,14 @@ class SlackProvider(BaseProvider):
         https://api.slack.com/messaging/webhooks
 
         Args:
-            kwargs (dict): The providers with context
+            message (str): The content of the message.
+            blocks (list): The blocks of the message.
+            channel (str): The channel to send the message
+            slack_timestamp (str): The timestamp of the message to update
+            thread_timestamp (str): The timestamp of the thread to send the message
+            attachments (list): The attachments of the message.
+            username (str): The username of the message.
+            notification_type (str): The type of notification.
         """
         if notification_type == "reaction":
             return self._notify_reaction(
@@ -215,6 +223,7 @@ class SlackProvider(BaseProvider):
                 raise ProviderException(
                     f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
                 )
+            notify_data = {"slack_timestamp": utcnowtimestamp()}
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")

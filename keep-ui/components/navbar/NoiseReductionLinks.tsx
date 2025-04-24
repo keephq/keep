@@ -24,8 +24,8 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
   }
 
   return (
-    <Disclosure as="div" className="space-y-1" defaultOpen>
-      <Disclosure.Button className="w-full flex justify-between items-center p-2">
+    <Disclosure as="div" className="space-y-0.5" defaultOpen>
+      <Disclosure.Button className="w-full flex justify-between items-center px-2">
         {({ open }) => (
           <>
             <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
@@ -38,20 +38,20 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         )}
       </Disclosure.Button>
 
-      <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4">
+      <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
         <li>
           <LinkWithIcon href="/deduplication" icon={IoMdGitMerge}>
-            <Subtitle>Deduplication</Subtitle>
+            <Subtitle className="text-xs">Deduplication</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/rules" icon={Rules}>
-            <Subtitle>Correlations</Subtitle>
+            <Subtitle className="text-xs">Correlations</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/workflows" icon={Workflows}>
-            <Subtitle>Workflows</Subtitle>
+            <Subtitle className="text-xs">Workflows</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
@@ -63,28 +63,28 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               topologyData?.length === 0 ? undefined : topologyData?.length
             }
           >
-            <Subtitle>Service Topology</Subtitle>
+            <Subtitle className="text-xs">Service Topology</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/mapping" icon={Mapping}>
-            <Subtitle>Mapping</Subtitle>
+            <Subtitle className="text-xs">Mapping</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/extraction" icon={ExportIcon}>
-            <Subtitle>Extraction</Subtitle>
+            <Subtitle className="text-xs">Extraction</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
-            <Subtitle>Maintenance Windows</Subtitle>
+            <Subtitle className="text-xs">Maintenance Windows</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <AILink></AILink>
         </li>
-    </Disclosure.Panel>
+      </Disclosure.Panel>
     </Disclosure>
   );
 };

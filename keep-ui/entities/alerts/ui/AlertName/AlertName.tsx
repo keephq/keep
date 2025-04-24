@@ -1,159 +1,41 @@
-import {
-  ArrowTopRightOnSquareIcon,
-  BookOpenIcon,
-  TicketIcon,
-  TrashIcon,
-  PencilSquareIcon,
-  Cog8ToothIcon,
-} from "@heroicons/react/24/outline";
-import { Icon } from "@tremor/react";
-import { AlertDto, AlertToWorkflowExecution } from "@/entities/alerts/model";
-import { useRouter } from "next/navigation";
-import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
+import React from "react";
+import { AlertDto } from "@/entities/alerts/model";
+import { clsx } from "clsx";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 
 interface Props {
   alert: AlertDto;
-  setNoteModalAlert?: (alert: AlertDto) => void;
-  setTicketModalAlert?: (alert: AlertDto) => void;
+  className?: string;
+  expanded?: boolean;
 }
-export function AlertName({
-  alert,
-  setNoteModalAlert,
-  setTicketModalAlert,
-}: Props) {
-  const router = useRouter();
-  const { data: executions } = useWorkflowExecutions();
 
-  const handleNoteClick = () => {
-    if (setNoteModalAlert) {
-      setNoteModalAlert(alert);
-    }
-  };
-
-  const handleTicketClick = () => {
-    if (!ticketUrl && setTicketModalAlert) {
-      setTicketModalAlert(alert);
-    } else {
-      window.open(ticketUrl, "_blank"); // Open the ticket URL in a new tab
-    }
-  };
-
-  const relevantWorkflowExecution = executions?.find(
-    (wf) => wf.event_id === alert.event_id
-  );
-
-  const {
-    name,
-    url,
-    generatorURL,
-    deleted,
-    note,
-    ticket_url: ticketUrl,
-    ticket_status: ticketStatus,
-    playbook_url,
-  } = alert;
-
-  function handleWorkflowClick(
-    relevantWorkflowExecution: AlertToWorkflowExecution
-  ): void {
-    router.push(
-      `/workflows/${relevantWorkflowExecution.workflow_id}/runs/${relevantWorkflowExecution.workflow_execution_id}`
-    );
-  }
+export function AlertName({ alert, className, expanded }: Props) {
+  const [rowStyle] = useAlertRowStyle();
+  const isCompact = rowStyle === "default";
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="line-clamp-3 whitespace-pre-wrap" title={alert.name}>
-        {name}
-      </div>
-      <div className="flex-shrink-0">
-        {(url ?? generatorURL) && (
-          <a href={url || generatorURL} target="_blank">
-            <Icon
-              icon={ArrowTopRightOnSquareIcon}
-              tooltip="Open Original Alert"
-              color="green"
-              variant="solid"
-              size="xs"
-              className="ml-1"
-            />
-          </a>
+    <div
+      className={clsx(
+        "flex items-center justify-between",
+        // Strictly constrain the width with a fixed value
+        expanded ? "max-w-[180px] overflow-hidden" : "",
+        className
+      )}
+    >
+      <div
+        className={clsx(
+          // Use overflow-hidden to ensure content doesn't expand container
+          expanded
+            ? "whitespace-pre-wrap break-words overflow-hidden max-w-[180px]"
+            : isCompact
+            ? "truncate whitespace-nowrap"
+            : "line-clamp-3 whitespace-pre-wrap",
+          // Remove flex-grow which can cause expansion issues
+          expanded ? "" : "flex-grow"
         )}
-        {setTicketModalAlert && (
-          <Icon
-            icon={TicketIcon}
-            tooltip={
-              ticketUrl
-                ? `Ticket Assigned ${
-                    ticketStatus ? `(status: ${ticketStatus})` : ""
-                  }`
-                : "Click to assign Ticket"
-            }
-            size="xs"
-            color={ticketUrl ? "green" : "gray"}
-            className="ml-1 cursor-pointer"
-            variant="solid"
-            onClick={handleTicketClick}
-          />
-        )}
-
-        {playbook_url && (
-          <a href={playbook_url} target="_blank">
-            <Icon
-              icon={BookOpenIcon}
-              tooltip="Playbook"
-              size="xs"
-              color="gray"
-              className="ml-1"
-              variant="solid"
-            />
-          </a>
-        )}
-        {setNoteModalAlert && (
-          <Icon
-            icon={PencilSquareIcon}
-            tooltip="Click to add note"
-            size="xs"
-            color={note ? "green" : "gray"}
-            className="ml-1 cursor-pointer"
-            variant="solid"
-            onClick={handleNoteClick}
-          />
-        )}
-
-        {deleted && (
-          <Icon
-            icon={TrashIcon}
-            tooltip="This alert has been deleted"
-            size="xs"
-            color="gray"
-            className="ml-1"
-            variant="solid"
-          />
-        )}
-        {relevantWorkflowExecution && (
-          <Icon
-            icon={Cog8ToothIcon}
-            size="xs"
-            color={`${
-              relevantWorkflowExecution.workflow_status === "success"
-                ? "green"
-                : relevantWorkflowExecution.workflow_status === "error"
-                ? "red"
-                : "gray"
-            }`}
-            tooltip={`${
-              relevantWorkflowExecution.workflow_status === "success"
-                ? "Last workflow executed successfully"
-                : relevantWorkflowExecution.workflow_status === "error"
-                ? "Last workflow execution failed"
-                : undefined
-            }`}
-            onClick={() => handleWorkflowClick(relevantWorkflowExecution)}
-            className="ml-1 cursor-pointer"
-            variant="solid"
-          />
-        )}
+        title={expanded ? undefined : alert.name}
+      >
+        {alert.name}
       </div>
     </div>
   );

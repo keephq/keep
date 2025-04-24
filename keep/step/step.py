@@ -245,7 +245,7 @@ class Step:
                     f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}"
                 )
             # maybe its because of quoting, try again without quoting
-            elif aeval.error_msg:
+            elif aeval.error_msg or aeval.error:
                 # without quoting
                 aeval_without_quote = Interpreter()
                 if_met = self.io_handler.render(if_conf, safe=False)

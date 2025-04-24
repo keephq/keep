@@ -1,21 +1,29 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { showErrorToast } from "@/shared/ui";
 import { Definition } from "@/entities/workflows/model/types";
-import { stringify } from "yaml";
 import { useCallback } from "react";
-import { getWorkflowFromDefinition } from "@/entities/workflows/lib/parser";
+import { KeepApiError } from "@/shared/api/KeepApiError";
+import { getBodyFromStringOrDefinitionOrObject } from "../lib/yaml-utils";
+import { useWorkflowRevalidation } from "./useWorkflowRevalidation";
+
+type DeleteOptions = {
+  skipConfirmation?: boolean;
+};
 
 type UseWorkflowActionsReturn = {
+  uploadWorkflowFiles: (files: FileList) => Promise<string[]>;
   createWorkflow: (
-    definition: Definition
+    definition: Definition | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
   updateWorkflow: (
     workflowId: string,
-    definition: Definition | Record<string, unknown>
+    definition: Definition | Record<string, unknown> | string
   ) => Promise<CreateOrUpdateWorkflowResponse | null>;
-  deleteWorkflow: (workflowId: string) => void;
+  deleteWorkflow: (
+    workflowId: string,
+    options?: DeleteOptions
+  ) => Promise<boolean>;
 };
 
 type CreateOrUpdateWorkflowResponse = {
@@ -26,16 +34,67 @@ type CreateOrUpdateWorkflowResponse = {
 
 export function useWorkflowActions(): UseWorkflowActionsReturn {
   const api = useApi();
-  const revalidateMultiple = useRevalidateMultiple();
-  const refreshWorkflows = useCallback(() => {
-    revalidateMultiple(["/workflows?is_v2=true"], { isExact: true });
-  }, [revalidateMultiple]);
+  const { revalidateWorkflow, revalidateLists } = useWorkflowRevalidation();
+
+  const uploadWorkflowFiles = useCallback(
+    async (files: FileList) => {
+      const uploadFile = async (formData: FormData, fName: string) => {
+        try {
+          const response = await api.request<CreateOrUpdateWorkflowResponse>(
+            `/workflows`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          revalidateWorkflow(response.workflow_id);
+
+          return response;
+        } catch (error) {
+          if (error instanceof KeepApiError) {
+            showErrorToast(
+              error,
+              `Failed to upload ${fName}: ${error.message}`
+            );
+          } else {
+            showErrorToast(error, "Failed to upload file");
+          }
+        }
+      };
+
+      const formData = new FormData();
+      const uploadedWorkflowsIds: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fName = file.name;
+        formData.set("file", file);
+        const response = await uploadFile(formData, fName);
+        if (response?.workflow_id) {
+          uploadedWorkflowsIds.push(response.workflow_id);
+        }
+      }
+
+      if (uploadedWorkflowsIds.length === 0) {
+        return [];
+      }
+
+      const plural =
+        uploadedWorkflowsIds.length === 1 ? "workflow" : "workflows";
+      revalidateLists();
+      showSuccessToast(
+        `${uploadedWorkflowsIds.length} ${plural} uploaded successfully`
+      );
+      return uploadedWorkflowsIds;
+    },
+    [api, revalidateWorkflow, revalidateLists]
+  );
 
   const createWorkflow = useCallback(
-    async (definition: Definition) => {
+    async (definition: Definition | string) => {
       try {
-        const workflow = getWorkflowFromDefinition(definition);
-        const body = stringify(workflow);
+        const body = getBodyFromStringOrDefinitionOrObject(definition);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           "/workflows/json",
           {
@@ -45,27 +104,23 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           }
         );
         showSuccessToast("Workflow created successfully");
-        refreshWorkflows();
+        revalidateWorkflow(response.workflow_id);
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to create workflow");
         return null;
       }
     },
-    [api, refreshWorkflows]
+    [api, revalidateWorkflow]
   );
 
   const updateWorkflow = useCallback(
     async (
       workflowId: string,
-      definition: Definition | Record<string, unknown>
+      definition: Definition | Record<string, unknown> | string
     ) => {
       try {
-        const body = stringify(
-          "workflow" in definition
-            ? definition
-            : getWorkflowFromDefinition(definition as Definition)
-        );
+        const body = getBodyFromStringOrDefinitionOrObject(definition);
         const response = await api.request<CreateOrUpdateWorkflowResponse>(
           `/workflows/${workflowId}`,
           {
@@ -75,21 +130,21 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
           }
         );
         showSuccessToast("Workflow updated successfully");
-        refreshWorkflows();
-        revalidateMultiple([`/workflows/${workflowId}`], { isExact: true });
+        revalidateWorkflow(workflowId);
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to update workflow");
         return null;
       }
     },
-    [api, refreshWorkflows]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [api, revalidateWorkflow]
   );
 
   const deleteWorkflow = useCallback(
     async (
       workflowId: string,
-      { skipConfirmation = false }: { skipConfirmation?: boolean } = {}
+      { skipConfirmation = false }: DeleteOptions = {}
     ) => {
       if (
         !skipConfirmation &&
@@ -100,17 +155,21 @@ export function useWorkflowActions(): UseWorkflowActionsReturn {
       try {
         await api.delete(`/workflows/${workflowId}`);
         showSuccessToast("Workflow deleted successfully");
-        refreshWorkflows();
+        revalidateWorkflow(workflowId);
+        return true;
       } catch (error) {
+        console.error(error);
         showErrorToast(error, "An error occurred while deleting workflow");
+        return false;
       }
     },
-    [api, refreshWorkflows]
+    [api, revalidateWorkflow]
   );
 
   return {
     createWorkflow,
     updateWorkflow,
     deleteWorkflow,
+    uploadWorkflowFiles,
   };
 }

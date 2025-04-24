@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { Provider } from "./providers";
+import { Provider } from "@/shared/api/providers";
 import { Subtitle, Title, Text, Icon } from "@tremor/react";
 import { CopyBlock, a11yLight, railscast } from "react-code-blocks";
 import Image from "next/image";
@@ -21,8 +21,11 @@ interface Props {
 
 export const ProviderSemiAutomated = ({ provider }: Props) => {
   const api = useApi();
+  const uri = provider.installed
+    ? `/providers/${provider.type}/webhook?provider_id=${provider.id}`
+    : `/providers/${provider.type}/webhook`;
   const { data, error, isLoading } = useSWR<WebhookSettings>(
-    `/providers/${provider.type}/webhook`,
+    uri,
     (url: string) => api.get(url)
   );
 
@@ -81,11 +84,11 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
           </Text>
         ))
       ) : (
-        <Text className="my-2.5">{data!.webhookDescription}</Text>
+        <Text className="my-2.5 text-wrap">{data!.webhookDescription}</Text>
       )}
       {settingsNotEmpty && <CopyBlock {...settings} />}
       {webhookMarkdown && (
-        <div className="prose whitespace-nowrap">
+        <div className="prose text-wrap">
           <Markdown remarkPlugins={[remarkGfm]}>{webhookMarkdown}</Markdown>
         </div>
       )}

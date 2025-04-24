@@ -1,7 +1,6 @@
 import enum
 import hashlib
 import logging
-import queue
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -10,6 +9,7 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
@@ -27,7 +27,8 @@ from keep.api.core.metrics import (
     workflow_queue_size,
     workflows_running,
 )
-from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.alert import AlertDto
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
@@ -121,8 +122,11 @@ class WorkflowScheduler:
         try:
             # get all workflows that should run due to interval
             workflows = get_workflows_that_should_run()
-        except Exception:
-            self.logger.exception("Error getting workflows that should run")
+        except Exception as ex:
+            self.logger.warning(
+                "Error getting workflows that should run",
+                exc_info=ex,
+            )
             pass
         for workflow in workflows:
             workflow_execution_id = workflow.get("workflow_execution_id")
@@ -149,8 +153,9 @@ class WorkflowScheduler:
                 )
                 continue
             except Exception as e:
-                self.logger.error(
+                self.logger.warning(
                     f"Error getting workflow: {e}",
+                    exc_info=e,
                     extra={
                         "workflow_id": workflow_id,
                         "workflow_execution_id": workflow_execution_id,
@@ -183,6 +188,7 @@ class WorkflowScheduler:
         workflow: Workflow,
         workflow_execution_id: str,
         event_context=None,
+        inputs=None,
     ):
         if READ_ONLY_MODE:
             self.logger.debug("Sleeping for 3 seconds in favor of read only mode")
@@ -215,6 +221,9 @@ class WorkflowScheduler:
                 workflow.context_manager.set_event_context(event_context)
             else:
                 workflow.context_manager.set_incident_context(event_context)
+
+            if inputs:
+                workflow.context_manager.set_inputs(inputs)
 
             errors, _ = self.workflow_manager._run_workflow(
                 workflow, workflow_execution_id
@@ -272,72 +281,16 @@ class WorkflowScheduler:
 
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
-    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
-        workflow_execution_id = self._get_unique_execution_number()
-
-        self.logger.info(
-            "Adding workflow to run",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "triggered_by": "manual",
-                "triggered_by_user": triggered_by_user,
-            },
-        )
-
-        result_queue = queue.Queue()
-
-        def run_workflow_wrapper(
-            run_workflow, workflow, workflow_execution_id, test_run, result_queue
-        ):
-            try:
-                errors, results = run_workflow(
-                    workflow, workflow_execution_id, test_run
-                )
-                result_queue.put((errors, results))
-            except Exception as e:
-                print(f"Exception in workflow: {e}")
-                result_queue.put((str(e), None))
-
-        future = self.executor.submit(
-            run_workflow_wrapper,
-            self.workflow_manager._run_workflow,
-            workflow,
-            workflow_execution_id,
-            True,
-            result_queue,
-        )
-        future.result()  # Wait for completion
-        errors, results = result_queue.get()
-
-        status = "success"
-        error = None
-        if errors is not None and any(errors):
-            error = "\n".join(str(e) for e in errors)
-            status = "error"
-
-        self.logger.info(
-            "Workflow test complete",
-            extra={
-                "workflow_id": workflow.workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "status": status,
-                "error": error,
-                "results": results,
-            },
-        )
-
-        return {
-            "workflow_execution_id": workflow_execution_id,
-            "status": status,
-            "error": error,
-            "results": results,
-        }
-
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event: [AlertDto | IncidentDto]
+        self,
+        workflow_id,
+        workflow_revision,
+        tenant_id,
+        triggered_by_user,
+        event: AlertDto | IncidentDto,
+        workflow: Workflow = None,
+        test_run: bool = False,
+        inputs: dict = None,
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -355,22 +308,26 @@ class WorkflowScheduler:
 
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
                 fingerprint=fingerprint,
                 event_id=event_id,
                 event_type=event_type,
+                test_run=test_run,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
             raise e
+
         self.logger.info(
-            "Adding workflow to run",
+            f"Adding workflow to run {'(test)' if test_run else ''}",
             extra={
                 "workflow_id": workflow_id,
+                "by_definition": workflow is not None,
                 "workflow_execution_id": workflow_execution_id,
                 "tenant_id": tenant_id,
                 "triggered_by": "manual",
@@ -382,17 +339,20 @@ class WorkflowScheduler:
             self.workflows_to_run.append(
                 {
                     "workflow_id": workflow_id,
+                    "workflow": workflow,
                     "workflow_execution_id": workflow_execution_id,
                     "tenant_id": tenant_id,
                     "triggered_by": "manual",
                     "triggered_by_user": triggered_by_user,
                     "event": event,
                     "retry": True,
+                    "test_run": test_run,
+                    "inputs": inputs,
                 }
             )
         return workflow_execution_id
 
-    def _get_unique_execution_number(self, fingerprint=None):
+    def _get_unique_execution_number(self, fingerprint=None, workflow_id=None):
         """
         Translates the fingerprint to a unique execution number
 
@@ -400,9 +360,11 @@ class WorkflowScheduler:
             int: an int represents unique execution number
         """
         # if fingerprint supplied
-        if fingerprint:
-            payload = str(fingerprint).encode()
+        if fingerprint and workflow_id:
+            payload = f"{str(fingerprint)}:{str(workflow_id)}".encode()
         # else, just return random
+        elif fingerprint:
+            payload = str(fingerprint).encode()
         else:
             payload = str(uuid.uuid4()).encode()
         return int(hashlib.sha256(payload).hexdigest(), 16) % (
@@ -423,12 +385,24 @@ class WorkflowScheduler:
                     "tenant_id": workflow_execution.tenant_id,
                 },
             )
+            timeout_message = "Workflow execution timed out. "
+
+            if RUNNING_IN_CLOUD_RUN:
+                timeout_message += (
+                    "Please contact Keep support for help with this issue."
+                )
+            else:
+                timeout_message += (
+                    "Most probably it's caused by worker restart or crash "
+                    "during long workflow execution. Check backend logs."
+                )
+
             self._finish_workflow_execution(
                 tenant_id=workflow_execution.tenant_id,
                 workflow_id=workflow_execution.workflow_id,
                 workflow_execution_id=workflow_execution.id,
                 status=WorkflowStatus.ERROR,
-                error="Workflow execution timed out, may happen because of the worker restart. Please check backend logs.",
+                error=timeout_message,
             )
 
     def _handle_event_workflows(self):
@@ -464,8 +438,9 @@ class WorkflowScheduler:
                     )
                 # In case the provider are not configured properly
                 except ProviderConfigurationException as e:
-                    self.logger.error(
+                    self.logger.warning(
                         f"Error getting workflow: {e}",
+                        exc_info=e,
                         extra={
                             "workflow_id": workflow_id,
                             "workflow_execution_id": workflow_execution_id,
@@ -481,8 +456,9 @@ class WorkflowScheduler:
                     )
                     continue
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.warning(
                         f"Error getting workflow: {e}",
+                        exc_info=e,
                         extra={
                             "workflow_id": workflow_id,
                             "workflow_execution_id": workflow_execution_id,
@@ -512,7 +488,7 @@ class WorkflowScheduler:
             if isinstance(event, IncidentDto):
                 event_id = str(event.id)
                 event_type = "incident"
-                fingerprint = "incident:{}".format(event_id)
+                fingerprint = event_id
             else:
                 event_id = event.event_id
                 event_type = "alert"
@@ -531,10 +507,11 @@ class WorkflowScheduler:
                     # else, we want to enforce that no workflow already run with the same fingerprint
                     else:
                         workflow_execution_number = self._get_unique_execution_number(
-                            fingerprint
+                            fingerprint, workflow_id
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
+                        workflow_revision=workflow.workflow_revision,
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
@@ -596,14 +573,14 @@ class WorkflowScheduler:
                     self.logger.error(f"Error creating workflow execution: {e}")
                     continue
 
-            # if thats a retry, we need to re-pull the alert to update the enrichments
+            # if thats a retry, we need to re-pull the alert/incident to update the enrichments
             # for example: 2 alerts arrived within a 0.1 seconds the first one is "firing" and the second one is "resolved"
             #               - the first alert will trigger a workflow that will create a ticket with "firing"
             #                    and enrich the alert with the ticket_url
             #               - the second one will wait for the next iteration
             #               - on the next iteratino, the second alert enriched with the ticket_url
             #                    and will trigger a workflow that will update the ticket with "resolved"
-            if workflow_to_run.get("retry", False) and isinstance(event, AlertDto):
+            if workflow_to_run.get("retry", False):
                 try:
                     self.logger.info(
                         "Updating enrichments for workflow after retry",
@@ -614,13 +591,16 @@ class WorkflowScheduler:
                         },
                     )
                     new_enrichment = get_enrichment(
-                        tenant_id, event.fingerprint, refresh=True
+                        tenant_id, fingerprint, refresh=True
                     )
                     # merge the new enrichment with the original event
                     if new_enrichment:
                         new_event = event.dict()
                         new_event.update(new_enrichment.enrichments)
-                        event = AlertDto(**new_event)
+                        if isinstance(event, IncidentDto):
+                            event = IncidentDto(**new_event)
+                        else:
+                            event = AlertDto(**new_event)
                     self.logger.info(
                         "Enrichments updated for workflow after retry",
                         extra={
@@ -648,6 +628,7 @@ class WorkflowScheduler:
                     )
                     continue
             # Last, run the workflow
+            inputs = workflow_to_run.get("inputs", {})
             future = self.executor.submit(
                 self._run_workflow,
                 tenant_id,
@@ -655,6 +636,7 @@ class WorkflowScheduler:
                 workflow,
                 workflow_execution_id,
                 event,
+                inputs,
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
@@ -665,8 +647,11 @@ class WorkflowScheduler:
         )
 
     def _start(self):
+        RUN_TIMEOUT_CHECKS_EVERY = 100
         self.logger.info("Starting workflows scheduler")
+        runs = 0
         while not self._stop:
+            runs += 1
             # get all workflows that should run now
             self.logger.debug(
                 "Starting workflow scheduler iteration",
@@ -675,11 +660,12 @@ class WorkflowScheduler:
             try:
                 self._handle_interval_workflows()
                 self._handle_event_workflows()
-                self._timeout_workflows()
+                if runs % RUN_TIMEOUT_CHECKS_EVERY == 0:
+                    self._timeout_workflows()
             except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
-                self.logger.exception("Error getting workflows that should run")
+                self.logger.error("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
             time.sleep(1)

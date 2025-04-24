@@ -9,12 +9,15 @@ import json
 import logging
 import os
 import time
+import typing
+from typing import List
 from urllib.parse import urlparse
 
 import boto3
 import pydantic
 import requests
 
+from keep.api.core.config import config as keep_config
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
@@ -23,21 +26,27 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class CloudwatchProviderAuthConfig:
-    access_key: str = dataclasses.field(
-        metadata={"required": True, "description": "AWS access key", "sensitive": True}
-    )
-    access_key_secret: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "AWS access key secret",
-            "sensitive": True,
-        }
-    )
     region: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "AWS region",
             "senstive": False,
+        },
+    )
+    access_key: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS access key (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
+        },
+    )
+    access_key_secret: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS access key secret (Leave empty if using IAM role at EC2)",
+            "sensitive": True,
         },
     )
     session_token: str = dataclasses.field(
@@ -54,8 +63,17 @@ class CloudwatchProviderAuthConfig:
         metadata={
             "required": False,
             "description": "AWS Cloudwatch SNS Topic [ARN or name]",
-            "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the exists SNS topic)",
+            "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the existing SNS topic)",
             "sensitive": False,
+        },
+    )
+    protocol: typing.Literal["https", "http"] = dataclasses.field(
+        default="https",
+        metadata={
+            "required": True,
+            "description": "Protocol to use for the webhook",
+            "type": "select",
+            "options": ["https", "http"],
         },
     )
 
@@ -158,6 +176,11 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         super().__init__(context_manager, provider_id, config)
         self.aws_client_type = None
         self._client = None
+        self.disable_api_key = keep_config(
+            "KEEP_CLOUDWATCH_DISABLE_API_KEY", default=False
+        )
+        if self.disable_api_key:
+            self.logger.info("API key is disabled for CloudWatch provider")
 
     def validate_scopes(self):
         # init the scopes as False
@@ -170,7 +193,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             identity = sts_client.get_caller_identity()["Arn"]
             iam_client = self.__generate_client("iam")
         except Exception as e:
-            self.logger.exception("Error validating AWS IAM scopes")
+            self.logger.exception(
+                "Error validating AWS IAM scopes",
+                extra={"tenant_id": self.context_manager.tenant_id},
+            )
             scopes = {s: str(e) for s in scopes.keys()}
             return scopes
         # 0. try to validate all scopes using simulate_principal_policy
@@ -186,18 +212,28 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             scopes["iam:SimulatePrincipalPolicy"] = True
             if all(scopes.values()):
                 self.logger.info(
-                    "All AWS IAM scopes are granted!", extra={"scopes": scopes}
+                    "All AWS IAM scopes are granted!",
+                    extra={
+                        "scopes": scopes,
+                        "tenant_id": self.context_manager.tenant_id,
+                    },
                 )
                 return scopes
             # if not all the scopes are granted, we need to test them one by one
             else:
                 self.logger.warning(
                     "Some of the AWS IAM scopes are not granted, testing them one by one...",
-                    extra={"scopes": scopes},
+                    extra={
+                        "scopes": scopes,
+                        "tenant_id": self.context_manager.tenant_id,
+                    },
                 )
         # otherwise, we need to test them one by one
         except Exception:
-            self.logger.info("Error validating AWS IAM scopes")
+            self.logger.exception(
+                "Error validating AWS IAM scopes",
+                extra={"tenant_id": self.context_manager.tenant_id},
+            )
             scopes["iam:SimulatePrincipalPolicy"] = (
                 "No permissions to simulate_principal_policy (but its cool, its not a must)"
             )
@@ -211,7 +247,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             scopes["cloudwatch:DescribeAlarms"] = True
         except Exception as e:
             self.logger.exception(
-                "Error validating AWS cloudwatch:DescribeAlarms scope"
+                "Error validating AWS cloudwatch:DescribeAlarms scope",
+                extra={"tenant_id": self.context_manager.tenant_id},
             )
             scopes["cloudwatch:DescribeAlarms"] = str(e)
         # if we got the response, we can validate the other scopes
@@ -229,7 +266,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 scopes["cloudwatch:PutMetricAlarm"] = True
             except Exception as e:
                 self.logger.exception(
-                    "Error validating AWS cloudwatch:PutMetricAlarm scope"
+                    "Error validating AWS cloudwatch:PutMetricAlarm scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
                 )
                 scopes["cloudwatch:PutMetricAlarm"] = str(e)
         else:
@@ -248,7 +286,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 scopes["sns:ListSubscriptionsByTopic"] = True
             except Exception as e:
                 self.logger.exception(
-                    "Error validating AWS sns:ListSubscriptionsByTopic scope"
+                    "Error validating AWS sns:ListSubscriptionsByTopic scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
                 )
                 scopes["sns:ListSubscriptionsByTopic"] = str(e)
         else:
@@ -258,9 +297,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
 
         # 4. validate start query
         logs_client = self.__generate_client("logs")
-        query = False
+
         try:
-            query = logs_client.start_query(
+            logs_client.start_query(
                 logGroupName="keepTest",
                 queryString="keepTest",
                 startTime=int(
@@ -270,34 +309,72 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 ),
                 endTime=int(datetime.datetime.now().timestamp()),
             )
+            scopes["logs:StartQuery"] = True
         except Exception as e:
             # that means that the user/role have the permissions but we've just made up the logGroupName which make sense
             if "ResourceNotFoundException" in str(e):
-                self.logger.info("AWS logs:StartQuery scope is not required")
+                self.logger.info(
+                    "AWS logs:StartQuery scope is not required",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
                 scopes["logs:StartQuery"] = True
             # other/wise the scope is false
             else:
-                self.logger.info("Error validating AWS logs:StartQuery scope")
+                self.logger.info(
+                    "Error validating AWS logs:StartQuery scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
                 scopes["logs:StartQuery"] = str(e)
 
         query_id = False
-        if query:
-            try:
-                query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-            except Exception:
-                self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-                scopes["logs:GetQueryResults", "logs:DescribeQueries"] = (
-                    "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-                )
+        self.logger.info(
+            "Validating AWS logs:DescribeQueries scope",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+            },
+        )
+        try:
+            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+            scopes["logs:DescribeQueries"] = True
+        except Exception:
+            self.logger.exception(
+                "Error validating AWS logs:DescribeQueries scope",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                },
+            )
+            scopes["logs:DescribeQueries"] = (
+                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
+
+        self.logger.info(
+            "Validating AWS logs:StartQuery scope",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+            },
+        )
+        if query_id:
             try:
                 logs_client.get_query_results(queryId=query_id)
                 scopes["logs:StartQuery"] = True
-                scopes["logs:DescribeQueries"] = True
             except Exception as e:
-                self.logger.exception("Error validating AWS logs:StartQuery scope")
+                self.logger.exception(
+                    "Error validating AWS logs:StartQuery scope",
+                    extra={"tenant_id": self.context_manager.tenant_id},
+                )
                 scopes["logs:StartQuery"] = str(e)
+        else:
+            scopes["logs:StartQuery"] = (
+                "Could not validate logs:StartQuery scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         # 5. validate get query results
+        self.logger.info(
+            "Validating AWS logs:GetQueryResults scope",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+            },
+        )
         if query_id:
             try:
                 logs_client.get_query_results(queryId=query_id)
@@ -305,6 +382,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
+        else:
+            scopes["logs:DescribeQueries"] = (
+                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            )
 
         # Finally
         return scopes
@@ -316,26 +397,37 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         return self._client
 
     def _query(
-        self, log_group: str = None, query: str = None, hours: int = 24, **kwargs: dict
+        self,
+        log_group: str = None,
+        log_groups: List[str] | None = None,
+        remove_ptr_from_results=False,
+        query: str = None,
+        hours: int = 24,
+        **kwargs: dict,
     ) -> dict:
         # log_group = kwargs.get("log_group")
         # query = kwargs.get("query")
         # hours = kwargs.get("hours", 24)
         logs_client = self.__generate_client("logs")
         try:
-            start_query_response = logs_client.start_query(
-                logGroupName=log_group,
-                queryString=query,
-                startTime=int(
+            query_kwargs = {
+                "queryString": query,
+                "startTime": int(
                     (
                         datetime.datetime.today() - datetime.timedelta(hours=hours)
                     ).timestamp()
                 ),
-                endTime=int(datetime.datetime.now().timestamp()),
-            )
-        except Exception:
+                "endTime": int(datetime.datetime.now().timestamp()),
+            }
+            if log_group is not None:
+                query_kwargs["logGroupName"] = log_group
+            if log_groups is not None:
+                query_kwargs["logGroupNames"] = log_groups
+
+            start_query_response = logs_client.start_query(**query_kwargs)
+        except Exception as e:
             self.logger.exception(
-                "Error starting AWS cloudwatch query - add logs:StartQuery permissions",
+                f"Error starting AWS cloudwatch query - add logs:StartQuery permissions, {e}",
                 extra={"kwargs": kwargs},
             )
             raise
@@ -346,17 +438,20 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         while response is None or response["status"] == "Running":
             self.logger.debug("Waiting for AWS cloudwatch query to complete...")
             time.sleep(1)
-            try:
-                response = logs_client.get_query_results(queryId=query_id)
-            except Exception:
-                # probably no permissions
-                self.logger.exception(
-                    "Error getting AWS cloudwatch query results - add logs:GetQueryResults permissions",
-                    extra={"kwargs": kwargs},
-                )
-                raise
-
-        results = response.get("results")
+            response = logs_client.get_query_results(queryId=query_id)
+            # Response in format List[{field: fieldName, value: fieldValue}]
+            # We need to convert it to List[Dict[fieldName: fieldValue]]
+            results = []
+            for result in response.get("results", []):
+                results.append({field["field"]: field["value"] for field in result})
+                # Trying to parse JSON of each field["value"]
+                for field in results[-1]:
+                    try:
+                        results[-1][field] = json.loads(results[-1][field])
+                    except json.JSONDecodeError:
+                        pass
+                if remove_ptr_from_results:
+                    results[-1].pop("@ptr", None)
         return results
 
     def _get_account_id(self):
@@ -480,13 +575,24 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                     for sub in subscriptions
                 )
                 if not already_subscribed:
-                    url_with_api_key = keep_api_url.replace(
-                        "https://", f"https://api_key:{api_key}@"
-                    )
+                    # for self-hosted Keep, sometimes api_key should be disabled
+                    if self.disable_api_key:
+                        self.logger.info("API key is disabled, using the url as is")
+                        url_with_api_key = keep_api_url + "&tenant_id=" + tenant_id
+                    else:
+                        if self.authentication_config.protocol == "https":
+                            url_with_api_key = keep_api_url.replace(
+                                "https://", f"https://api_key:{api_key}@"
+                            )
+                        else:
+                            url_with_api_key = keep_api_url.replace(
+                                "http://", f"http://api_key:{api_key}@"
+                            )
+
                     self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,
-                        Protocol="https",
+                        Protocol=self.authentication_config.protocol,
                         Endpoint=url_with_api_key,
                     )
                     self.logger.info("Subscribed to topic %s!", topic)
@@ -599,6 +705,7 @@ if __name__ == "__main__":
             "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
             "region": os.environ.get("AWS_REGION"),
+            "session_token": os.environ.get("AWS_SESSION_TOKEN"),
         }
     )
     context_manager = ContextManager(

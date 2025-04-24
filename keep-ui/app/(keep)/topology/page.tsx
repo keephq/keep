@@ -1,9 +1,9 @@
 import React from "react";
 import { getApplications, getTopology } from "./api";
 import { TopologyPageClient } from "./topology-client";
-import { Subtitle, Title } from "@tremor/react";
 import { createServerApiClient } from "@/shared/api/server";
 import { TopologyApplication, TopologyService } from "./model";
+import { PageSubtitle, PageTitle } from "@/shared/ui";
 
 export const metadata = {
   title: "Keep - Service Topology",
@@ -11,14 +11,15 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams: {
+  searchParams: Promise<{
     providerIds?: string[];
     services?: string[];
     environment?: string;
-  };
+  }>;
 };
 
-export default async function Page({ searchParams }: PageProps) {
+export default async function Page(props: PageProps) {
+  const searchParams = await props.searchParams;
   const api = await createServerApiClient();
 
   let applications: TopologyApplication[] | undefined;
@@ -39,10 +40,10 @@ export default async function Page({ searchParams }: PageProps) {
     <>
       <div className="flex w-full justify-between items-center mb-2">
         <div>
-          <Title>Service Topology</Title>
-          <Subtitle>
+          <PageTitle>Service Topology</PageTitle>
+          <PageSubtitle>
             Data describing the topology of components in your environment.
-          </Subtitle>
+          </PageSubtitle>
         </div>
       </div>
       <TopologyPageClient

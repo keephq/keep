@@ -16,11 +16,30 @@ export type Filter = {
   value: string;
 };
 
-export type Trigger = {
-  type: string;
-  filters?: Filter[];
-  value?: string;
+type IncidentFilter = {
+  type: "incident";
+  events: string[];
 };
+
+type AlertFilter = {
+  type: "alert";
+  filters: Filter[];
+};
+
+type IntervalFilter = {
+  type: "interval";
+  value: string;
+};
+
+type ManualFilter = {
+  type: "manual";
+};
+
+export type Trigger =
+  | IncidentFilter
+  | AlertFilter
+  | IntervalFilter
+  | ManualFilter;
 
 export type LastWorkflowExecution = {
   execution_time: number;
@@ -47,6 +66,8 @@ export type Workflow = {
   last_executions?: LastWorkflowExecution[];
   provisioned?: boolean;
   alertRule?: boolean;
+  revision?: number;
+  canRun?: boolean;
 };
 
 export type MockProvider = {
@@ -98,6 +119,23 @@ export type WorkflowTemplate = {
   workflow: MockWorkflow;
   workflow_raw: string;
   workflow_raw_id: string;
+};
+
+export type PaginatedWorkflowsResults = {
+  count: number;
+  results: Workflow[];
+  limit: number;
+  offset: number;
+};
+
+export type WorkflowRevision = {
+  revision: number;
+  updated_by: string;
+  updated_at: string;
+};
+
+export type WorkflowRevisionList = {
+  versions: WorkflowRevision[];
 };
 
 export async function getWorkflow(api: ApiClient, id: string) {

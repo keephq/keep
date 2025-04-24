@@ -1,6 +1,7 @@
 workflow:
-  id: discord-example
-  description: Discord example
+  id: discord-notification-demo
+  name: Discord Notification Demo
+  description: Demonstrates Discord integration with interactive button components for alert notifications.
   triggers:
     - type: manual
   actions:
@@ -11,9 +12,9 @@ workflow:
         with:
           content: Alerta!
           components:
-          - type: 1  # Action row
-            components:
-              - type: 2  # Button
-                style: 1  # Primary style
-                label: "Click Me!"
-                custom_id: "button_click"
+            - type: 1 # Action row
+              components:
+                - type: 2 # Button
+                  style: 1 # Primary style
+                  label: "Click Me!"
+                  custom_id: "button_click"

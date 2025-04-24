@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { AreaChart, Card } from "@tremor/react";
+import { Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
-import { WidgetData, WidgetType } from "./types";
-import AlertQuality from "@/app/(keep)/alerts/alert-quality-table";
-import { useSearchParams } from "next/navigation";
+import { WidgetData } from "./types";
+import PresetGridItem from "./widget-types/preset/preset-grid-item";
+import MetricGridItem from "./widget-types/metric/metric-grid-item";
+import GenericMetricsGridItem from "./widget-types/generic-metrics/generic-metrics-grid-item";
 
 interface GridItemProps {
   item: WidgetData;
@@ -12,148 +13,41 @@ interface GridItemProps {
   onSave: (updateItem: WidgetData) => void;
 }
 
-function GenericMetrics({
-  item,
-  filters,
-  setFilters,
-}: {
-  item: WidgetData;
-  filters: any;
-  setFilters: any;
-}) {
-  switch (item?.genericMetrics?.key) {
-    case "alert_quality":
-      return (
-        <AlertQuality
-          isDashBoard={true}
-          filters={filters}
-          setFilters={setFilters}
-        />
-      );
-
-    default:
-      return null;
-  }
-}
-
 const GridItem: React.FC<GridItemProps> = ({
   item,
   onEdit,
   onDelete,
   onSave,
 }) => {
-  const searchParams = useSearchParams();
-  const [filters, setFilters] = useState({
-    ...(item?.genericMetrics?.meta?.defaultFilters || {}),
-  });
-  let timeStampParams = searchParams?.get("time_stamp") ?? "{}";
-  let timeStamp: { start?: string; end?: string } = {};
-  try {
-    timeStamp = JSON.parse(timeStampParams as string);
-  } catch (e) {
-    timeStamp = {};
-  }
-  const getColor = () => {
-    let color = "#000000";
-    if (
-      item.widgetType === WidgetType.PRESET &&
-      item.thresholds &&
-      item.preset
-    ) {
-      for (let i = item.thresholds.length - 1; i >= 0; i--) {
-        if (
-          item.preset &&
-          item.preset.alerts_count >= item.thresholds[i].value
-        ) {
-          color = item.thresholds[i].color;
-          break;
-        }
-      }
-    }
-    return color;
-  };
+  const [updatedItem, setUpdatedItem] = useState<WidgetData>(item);
 
-  function getUpdateItem() {
-    let newUpdateItem = item.genericMetrics;
-    if (newUpdateItem && newUpdateItem.meta) {
-      newUpdateItem.meta = {
-        ...newUpdateItem.meta,
-        defaultFilters: filters || {},
-      };
-      return { ...item };
-    }
-    return item;
-  }
   const handleEdit = () => {
-    onEdit(item.i, getUpdateItem());
+    onEdit(updatedItem.i, updatedItem);
   };
 
   return (
-    <Card
-      className={`relative w-full h-full ${!item.metric ? "!p-4" : "!pt-0.5"}`}
-    >
-      <div className="flex flex-col h-full">
-        <div
-          className={`flex-none flex items-center justify-between p-2 ${
-            item.preset ? "h-1/5" : item.metric ? "h-1/5 mb-3" : "h-[10%]"
-          }`}
-        >
-          {/* For table view we need intract with table filter and pagination.so we aare dragging the widget here */}
-          <span
-            className={`text-lg font-semibold truncate ${
-              item.preset ? "" : "grid-item__widget"
-            }`}
-          >
+    <Card className="relative w-full h-full p-3">
+      <div className="flex flex-col h-full px-2">
+        <div className={`flex-none flex items-center justify-between`}>
+          <span className="text-lg font-bold truncate grid-item__widget">
             {item.name}
           </span>
           <MenuButton
             onEdit={handleEdit}
             onDelete={() => onDelete(item.i)}
             onSave={() => {
-              onSave(getUpdateItem());
+              onSave(updatedItem);
             }}
           />
         </div>
-        {item.preset && (
-          //We can remove drag and drop style and make it same as table view. if we want to maintain consistency.
-          <div className="flex-1 h-4/5 flex items-center justify-center grid-item__widget">
-            <div className="text-4xl font-bold" style={{ color: getColor() }}>
-              {item.preset.alerts_count}
-            </div>
-          </div>
-        )}
-        {item.metric && (
-          <div
-            className={
-              'h-56 w-full "flex-1 flex items-center justify-center grid-item__widget'
-            }
-          >
-            <div className={"w-[100%]"}>
-              <AreaChart
-                className="h-56"
-                data={item.metric?.data}
-                index="timestamp"
-                categories={[item.metric?.id === "mttr" ? "mttr" : "number"]}
-                valueFormatter={(number: number) =>
-                  `${Intl.NumberFormat().format(number).toString()}`
-                }
-                startEndOnly
-                connectNulls
-                showLegend={false}
-                showTooltip={true}
-                xAxisLabel="Timestamp"
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="w-full h-[90%]">
-          <GenericMetrics
+        {item.preset && <PresetGridItem item={item} />}
+        {item.metric && <MetricGridItem item={item} />}
+        {item.genericMetrics && (
+          <GenericMetricsGridItem
             item={item}
-            filters={filters}
-            setFilters={setFilters}
-          />
-        </div>
+            onEdit={setUpdatedItem}
+          ></GenericMetricsGridItem>
+        )}
       </div>
     </Card>
   );

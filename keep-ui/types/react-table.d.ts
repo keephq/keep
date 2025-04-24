@@ -5,5 +5,6 @@ declare module "@tanstack/table-core" {
     thClassName?: string;
     tdClassName?: string;
     sticky?: boolean;
+    align?: "left" | "right" | "center";
   }
 }

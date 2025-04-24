@@ -373,9 +373,9 @@ class OpenobserveProvider(BaseProvider):
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
-    ) -> AlertDto:
+    ) -> AlertDto | List[AlertDto]:
         logger = logging.getLogger(__name__)
-        name = event.pop("alert_name", "")
+        alert_name = event.pop("alert_name", "")
         # openoboserve does not provide severity
         severity = AlertSeverity.WARNING
         # Mapping 'stream_name' to 'environment'
@@ -435,12 +435,14 @@ class OpenobserveProvider(BaseProvider):
                         except json.JSONDecodeError:
                             logger.exception(f"Failed to parse row: {row}")
                             continue
-                    group_by_key, group_by_value = row_data.popitem()
+                    row_name = row_data.pop("name", "")
+                    if row_name:
+                        row_data['row_name'] = row_name
+                    group_by_keys = list(row_data.keys())
                     logger.info(
-                        "Formatting aggergated alert with group by key",
+                        "Formatting aggregated alert with group by keys",
                         extra={
-                            "group_by_key": group_by_key,
-                            "group_by_value": group_by_value,
+                            "group_by_keys": group_by_keys,
                         },
                     )
 
@@ -450,11 +452,12 @@ class OpenobserveProvider(BaseProvider):
                     event.pop("value", "")
                     # if the group_by_key is already in the event, remove it
                     #   since we are adding it to the alert_dto
-                    event.pop(group_by_key, "")
+                    for group_by_key in group_by_keys:
+                        event.pop(group_by_key, "")
 
                     alert_dto = AlertDto(
                         id=f"{alert_id}",
-                        name=f"{name}",
+                        name=f"{alert_name}: {row_name}" if row_name else f"{alert_name}",
                         severity=severity,
                         environment=environment,
                         startedAt=startedAt,
@@ -466,11 +469,11 @@ class OpenobserveProvider(BaseProvider):
                         value=value,
                         alert_url=alert_url,  # I'm not putting on URL since sometimes it doesn't return full URL so pydantic will throw an error
                         **event,
-                        **{group_by_key: group_by_value},
+                        **row_data
                     )
                     # calculate the fingerprint based on name + group_by_value
                     alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
-                        alert_dto, fingerprint_fields=["name", group_by_key]
+                        alert_dto, fingerprint_fields=["name", *group_by_keys]
                     )
                     logger.info(
                         "Formatted openobserve aggregated alert",
@@ -494,7 +497,7 @@ class OpenobserveProvider(BaseProvider):
             }
             alert_dto = AlertDto(
                 id=alert_id,
-                name=name,
+                name=alert_name,
                 severity=severity,
                 environment=environment,
                 startedAt=startedAt,

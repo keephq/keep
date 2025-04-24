@@ -1,6 +1,7 @@
 workflow:
-  id: on-field-change
-  description: demonstrates how to trigger a workflow when a field changes
+  id: alert-status-change-monitor
+  name: Alert Status Change Monitor
+  description: Triggers workflow actions specifically when an alert's status field changes, useful for status-based notifications.
   triggers:
     - type: alert
       only_on_change:

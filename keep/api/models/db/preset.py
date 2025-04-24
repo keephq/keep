@@ -46,6 +46,7 @@ class Preset(SQLModel, table=True):
     created_by: Optional[str] = Field(index=True, nullable=False)
     is_private: Optional[bool] = Field(default=False)
     is_noisy: Optional[bool] = Field(default=False)
+    counter_shows_firing_only: Optional[bool] = Field(default=False)
     name: str = Field(unique=True)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
     tags: List[Tag] = Relationship(
@@ -78,13 +79,16 @@ class PresetDto(BaseModel, extra="ignore"):
     options: list = []
     created_by: Optional[str] = None
     is_private: Optional[bool] = Field(default=False)
-    # whether the preset is noisy or not
     is_noisy: Optional[bool] = Field(default=False)
-    # if true, the preset should be do noise now
-    #   meaning is_noisy + at least one alert is doing noise
+    """Whether the preset is noisy or not"""
+
+    # if true, the preset should do noise now
+    counter_shows_firing_only: Optional[bool] = Field(default=False)
+    """Indicates whether counter in navbar displays only firing alerts"""
+
     should_do_noise_now: Optional[bool] = Field(default=False)
-    # number of alerts
-    alerts_count: Optional[int] = Field(default=0)
+    """Meaning is_noisy + at least one alert is doing noise"""
+
     # static presets
     static: Optional[bool] = Field(default=False)
     tags: List[TagDto] = []

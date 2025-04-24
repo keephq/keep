@@ -1,3 +1,8 @@
+workflow:
+  id: clickhouse-multi-query-monitor
+  name: ClickHouse Multi-Query Monitor
+  description: Executes multiple ClickHouse queries to monitor system health and creates ServiceNow tickets when issues are detected.
+
 id: query-clickhouse
 description: Query Clickhouse and send an alert if there is an error
 triggers:

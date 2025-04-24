@@ -1,41 +1,22 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import {
-  Card,
-  Title,
-  Icon,
-  Subtitle,
-  Badge,
-  Text,
-  Table,
-  TableHead,
-  TableRow,
-  TableHeaderCell,
-  TableBody,
-  TableCell,
-} from "@tremor/react";
+import { useState, use } from "react";
+import { Card, Title, Icon, Subtitle } from "@tremor/react";
 import { useEnrichmentEvents } from "@/utils/hooks/useEnrichmentEvents";
 import { Link } from "@/components/ui";
-import {
-  ArrowRightIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from "@heroicons/react/16/solid";
+import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { useExtractions } from "@/utils/hooks/useExtractionRules";
-import TimeAgo from "react-timeago";
-import { MappingExecutionTable } from "../../../mapping/[rule_id]/mapping-execution-table";
+import { ExecutionsTable } from "../../../../../components/table/ExecutionsTable";
 
 interface Pagination {
   limit: number;
   offset: number;
 }
 
-export default function ExtractionExecutionsPage({
-  params,
-}: {
-  params: { rule_id: string };
+export default function ExtractionExecutionsPage(props: {
+  params: Promise<{ rule_id: string }>;
 }) {
+  const params = use(props.params);
   const [pagination, setPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
@@ -68,7 +49,7 @@ export default function ExtractionExecutionsPage({
       </div>
 
       <Card>
-        <MappingExecutionTable
+        <ExecutionsTable
           executions={{
             items: executions,
             count: totalCount,

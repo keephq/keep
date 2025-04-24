@@ -2,10 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TODO: use proper tailwind/css-variables solution */
+html {
+  /* override default font size for better look on small screens */
+  font-size: 14px;
+}
+
 /**
  * Taken from https://dev.to/jochemstoel/re-add-dark-mode-to-any-website-with-just-a-few-lines-of-code-phl
+ * TODO: use proper tailwind/css-variables solution
  */
+
+/* This class is useful in cases where you need to revert dark-mode,
+so that this content looks like light mode when dark mode is on, and vise versa.
+For example, tooltip, that should look different from main content */
+.invert-dark-mode {
+  filter: invert(100%) hue-rotate(180deg) contrast(100%) !important;
+}
+
 html.workaround-dark {
   filter: invert(100%) hue-rotate(180deg) contrast(80%) !important;
   background: #fff;
@@ -22,11 +35,30 @@ html.workaround-dark {
     display: block !important;
   }
 }
-/* https://github.com/vercel/next.js/discussions/13387
- nextjs-portal {
-    display: none;
-}
+
+/* --- Radix UI / Tremor Hotfixes --- */
+/* Radix backdrop prevents clicks on elements behind it, so we need to override it.
+   HeadlessUI portal root, should be above all other elements, as Select dropdowns are rendered there
 */
+#headlessui-portal-root {
+  pointer-events: auto;
+  z-index: 55;
+}
+.Toastify {
+  pointer-events: auto;
+}
+
+/* It makes the toast container */
+/* not block clicks on elements  */
+/* between open toasts */
+.Toastify__toast-container {
+  @apply pointer-events-none;
+}
+.Toastify__toast * {
+  @apply pointer-events-auto;
+}
+/* --- End of Radix UI / Tremor Hotfixes */
+
 .rules-tooltip [role="tooltip"] {
   @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
   @apply break-words; /* This will wrap long words if needed. */
@@ -43,9 +75,9 @@ html.workaround-dark {
 }
 
 .page-container {
-  @apply p-4 mx-auto w-full;
+  @apply p-4 pl-1 mx-auto w-full;
   @screen xl {
-    @apply p-6;
+    @apply p-6 pl-1;
   }
 }
 
@@ -63,11 +95,6 @@ html.workaround-dark {
   100% {
     transform: rotate(360deg);
   }
-}
-
-.sliding-panel-container.active {
-  /* original value is ridiculous 15.000, overflowing toasts*/
-  @apply z-[1000] !important;
 }
 
 @keyframes scroll-shadow-left {
@@ -112,4 +139,8 @@ html.workaround-dark {
   &:not(:disabled):hover {
     @apply bg-slate-100;
   }
+}
+
+.tremor-TableRow-row > td.bg-tremor-background {
+  background-color: inherit !important;
 }

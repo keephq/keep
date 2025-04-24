@@ -1,5 +1,6 @@
 import dataclasses
 
+import json5
 import pydantic
 import requests
 
@@ -45,22 +46,31 @@ class MattermostProvider(BaseProvider):
         """
         pass
 
-    def _notify(self, message="", blocks=[], channel="", **kwargs: dict):
+    def _notify(self, message="", attachments=[], channel="", **kwargs: dict):
         """
         Notify alert message to Mattermost using the Mattermost Incoming Webhook API
         https://docs.mattermost.com/developer/webhooks-incoming.html
 
         Args:
-            kwargs (dict): The providers with context
+            message (str): The content of the message.
+            attachments (list): The attachments of the message.
+            channel (str): The channel to send the message
         """
         self.logger.info("Notifying alert message to Mattermost")
         if not message:
-            message = blocks[0].get("text")
+            message = attachments[0].get("text")
         webhook_url = self.authentication_config.webhook_url
-        payload = {"text": message, "blocks": blocks}
-        # channel is currently bugged (and unnecessary, as a webhook url is already one per channel) and so it is ignored for now
-        # if channel:
-        #    payload["channel"] = channel
+        payload = {"text": message, **kwargs}
+
+        if channel:
+            payload["channel"] = channel
+
+        if attachments:
+            try:
+                attachments = json5.loads(attachments)
+            except Exception:
+                pass
+            payload["attachments"] = attachments
 
         response = requests.post(webhook_url, json=payload, verify=False)
 

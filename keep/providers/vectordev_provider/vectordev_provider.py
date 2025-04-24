@@ -1,20 +1,19 @@
 import dataclasses
-
-import random
 import json
+import logging
+import random
 
 import pydantic
-import logging
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
-from keep.api.models.alert import AlertDto
 from keep.providers.providers_factory import ProvidersFactory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @pydantic.dataclasses.dataclass
 class VectordevProviderAuthConfig:
@@ -53,22 +52,31 @@ class VectordevProvider(BaseProvider):
             events = [event]
         alert_dtos = []
         for e in events:
-            if "keep_source_type" in e and e["keep_source_type"] in VectordevProvider.SOURCE_TO_PROVIDER_MAP:
-                provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[e["keep_source_type"]])
-                alert_dtos.extend(provider_class._format_alert(e["message"],provider_instance))
-            else:
-                message_str = json.dumps(e.get("message"))
-                alert_dtos.append(
-                AlertDto(
-                    name="",
-                    message=message_str,
-                    description=message_str,
-                    lastReceived=e.get("timestamp"),
-                    source_type=e.get("source_type"),
-                    source=["vectordev"],
-                    original_event=e.get("message"),
+            if (
+                "keep_source_type" in e
+                and e["keep_source_type"] in VectordevProvider.SOURCE_TO_PROVIDER_MAP
+            ):
+                provider_class = ProvidersFactory.get_provider_class(
+                    VectordevProvider.SOURCE_TO_PROVIDER_MAP[e["keep_source_type"]]
                 )
-            )
+                alert_dtos.extend(
+                    provider_class._format_alert(
+                        e.get("message", e.get("event")), provider_instance
+                    )
+                )
+            else:
+                message_str = json.dumps(e.get("message", e.get("event")))
+                alert_dtos.append(
+                    AlertDto(
+                        name="",
+                        message=message_str,
+                        description=message_str,
+                        lastReceived=e.get("timestamp"),
+                        source_type=e.get("source_type"),
+                        source=["vectordev"],
+                        original_event=e.get("message"),
+                    )
+                )
         return alert_dtos
 
     def dispose(self):
@@ -79,7 +87,8 @@ class VectordevProvider(BaseProvider):
 
     @classmethod
     def simulate_alert(cls, **kwargs) -> dict:
-        provider = random.choice(list(VectordevProvider.SOURCE_TO_PROVIDER_MAP.values()))
+        provider = random.choice(
+            list(VectordevProvider.SOURCE_TO_PROVIDER_MAP.values())
+        )
         provider_class = ProvidersFactory.get_provider_class(provider)
         return provider_class.simulate_alert(to_wrap_with_provider_type=True)
-

@@ -1,6 +1,7 @@
 workflow:
-  id: aks-example
-  description: aks-example
+  id: aks-pod-status-monitor
+  name: AKS Pod Status Monitor
+  description: Retrieves and displays status information for all pods in an AKS cluster, including pod names, namespaces, and current phase.
   triggers:
     - type: manual
   steps:

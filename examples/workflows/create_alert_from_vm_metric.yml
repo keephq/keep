@@ -1,11 +1,11 @@
 # This workflow queries VictoriaMetrics metrics and creates alerts based on CPU usage
 workflow:
   # Unique identifier for this workflow
-  id: query-victoriametrics
+  id: victoriametrics-cpu-alert
   # Display name shown in the UI
-  name: victoriametrics-alert-example
+  name: VictoriaMetrics CPU Alert
   # Brief description of what this workflow does
-  description: Monitors CPU usage metrics from VictoriaMetrics and creates alerts when thresholds are exceeded
+  description: Monitors CPU usage metrics from VictoriaMetrics and generates alerts based on configurable thresholds.
 
   # Define how the workflow is triggered
   triggers:

@@ -1,7 +1,7 @@
 workflow:
-  id: d4d5221a-41b6-44c1-9c25-33d00ff6deb1
-  name: query-databend
-  description: Query rows from databend
+  id: databend-performance-monitor
+  name: Databend Performance Monitor
+  description: Executes performance analysis queries on Databend for large dataset operations.
   disabled: false
   triggers:
     - type: manual

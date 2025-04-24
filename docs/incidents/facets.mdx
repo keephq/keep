@@ -28,8 +28,9 @@ Incident supports facets by direct Incident fields and also by Alert's data link
 - **end_time**: Incident end time
 - **last_seen_time**: Incident last seen time
 - **is_predicted**: Whether the Incident is predicted
-- **is_confirmed**: Whether the Incident is confirmed
+- **is_candidate**: Whether the Incident is candidate
 - **alerts_count**: Number of alerts associated with the Incident
 - **merged_at**: When the Incident was merged
 - **merged_by**: Who merged the Incident
+- **hasLinkedIncident**: Whether the Incident has past incident linked
 - **alert.***: Refers to alert properties in the Incident. Examples: alert.labels.monitor, alert.monitor, etc.

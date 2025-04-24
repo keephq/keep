@@ -6,7 +6,7 @@ import {
   Text,
   Title,
 } from "@tremor/react";
-import { Provider, TProviderLabels } from "./providers";
+import { Provider, TProviderLabels } from "@/shared/api/providers";
 import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
@@ -27,6 +27,7 @@ interface Props {
   onClick: () => void;
 }
 
+// TODO: move to a separate file
 const WebhookIcon = (props: any) => (
   <svg
     width="256px"
@@ -230,7 +231,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
 
             {provider.details && provider.details.name && (
               <Subtitle className="truncate">
-                id: {provider.details.name}
+                Name: {provider.details.name}
               </Subtitle>
             )}
             {provider.last_alert_received ? (
@@ -242,7 +243,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text className="truncate">Id: {provider.id}</Text>
+              <Text className="truncate">Name: {provider.id}</Text>
             ) : null}
             {renderChart()}
           </div>
@@ -256,6 +257,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             width={48}
             height={48}
             alt={provider.type}
+            providerType={provider.type}
             className={`${
               provider.installed || provider.linked || provider.coming_soon
                 ? ""

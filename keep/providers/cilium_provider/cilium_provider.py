@@ -78,7 +78,7 @@ class CiliumProvider(BaseTopologyProvider):
             return "unknown"
         return service
 
-    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
+    def pull_topology(self) -> list[TopologyServiceInDto]:
         # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
         from keep.providers.cilium_provider.grpc.observer_pb2 import (  # noqa
             FlowFilter,
@@ -106,7 +106,9 @@ class CiliumProvider(BaseTopologyProvider):
         # get the responses as list
         responses = list(responses)
 
-        application_to_create = {}
+        # Track applications and their services
+        application_to_services = {}
+        application_to_name = {}
 
         for response in responses:
             flow = response.flow
@@ -130,19 +132,25 @@ class CiliumProvider(BaseTopologyProvider):
                 if destination_port == 5432:
                     category = "postgres"
 
-                application = None
-
+                # Check for application label
                 try:
                     application_label = [
                         label
                         for label in flow.source.labels
                         if label.startswith("k8s:keepapp=")
-                    ][0]
-                    application = application_label.split("=")[1]
+                    ]
+                    # If no application label, skip
+                    if not application_label:
+                        continue
+                    application_id = application_label[0].split("=")[1]
 
-                    if application not in application_to_create:
-                        application_to_create[application] = {"services": set()}
-                    application_to_create[application]["services"].add(source)
+                    # Store application name (using app ID as name for now)
+                    application_to_name[application_id] = application_id
+
+                    # Add service to application
+                    if application_id not in application_to_services:
+                        application_to_services[application_id] = set()
+                    application_to_services[application_id].add(source)
                 except Exception:
                     pass
 
@@ -191,12 +199,14 @@ class CiliumProvider(BaseTopologyProvider):
                 service_map[source]["tags"].append(flow.source.cluster_name)
                 service_map[source]["tags"] += node_labels
 
-                # look for the application
-                for application in application_to_create:
-                    if source in application_to_create[application]["services"]:
-                        self.logger.debug(f"Adding {destination} to {application}")
-                        application_to_create[application]["services"].add(destination)
-                        break
+                # Check if this source service belongs to any applications
+                for app_id, services in application_to_services.items():
+                    if source in services:
+                        self.logger.debug(
+                            f"Adding {destination} to application {app_id}"
+                        )
+                        application_to_services[app_id].add(destination)
+
                 if destination not in service_map:
                     service_map[destination] = {
                         "dependencies": set(),
@@ -211,8 +221,23 @@ class CiliumProvider(BaseTopologyProvider):
 
         # Convert to TopologyServiceInDto
         topology = []
+        app_ids_to_uuids = {}
         for service, data in service_map.items():
             try:
+                # Create application_relations dictionary for this service
+                application_relations = {}
+                for app_id, services in application_to_services.items():
+                    if service in services:
+                        # idk what Jay did...
+                        import uuid
+
+                        if app_id in app_ids_to_uuids:
+                            app_uuid = app_ids_to_uuids[app_id]
+                        else:
+                            app_ids_to_uuids[app_id] = uuid.uuid4()
+                            app_uuid = app_ids_to_uuids[app_id]
+                        application_relations[app_uuid] = app_id
+
                 topology_service = TopologyServiceInDto(
                     source_provider_id=self.provider_id,
                     service=service,
@@ -222,6 +247,9 @@ class CiliumProvider(BaseTopologyProvider):
                     tags=list(data["tags"]),
                     category=data.get("category", "http"),
                     namespace=data["namespace"],
+                    application_relations=(
+                        application_relations if application_relations else None
+                    ),
                 )
                 topology.append(topology_service)
             except Exception as e:
@@ -242,7 +270,8 @@ class CiliumProvider(BaseTopologyProvider):
                 "len_of_topology": len(topology),
             },
         )
-        return topology, application_to_create
+        # Return only the topology data as the application info is now included in each service
+        return topology, {}
 
     def get_existing_services(self, all_services):
         """Helper function to create a set of all valid service names"""

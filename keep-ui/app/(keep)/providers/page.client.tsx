@@ -1,5 +1,5 @@
 "use client";
-import { defaultProvider, Provider } from "./providers";
+import { defaultProvider, Provider } from "@/shared/api/providers";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
@@ -13,7 +13,7 @@ import { useConfig } from "@/utils/hooks/useConfig";
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
-  const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
+  const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]);
   const { data: config } = useConfig();
   const { data, error, mutate } = useProviders();
 
@@ -46,7 +46,7 @@ export const useFetchProviders = () => {
     if (isLocalhost && !toastShown) {
       toast(<ToastMessage />, {
         type: "info",
-        position: toast.POSITION.TOP_CENTER,
+        position: "top-center",
         autoClose: 10000,
         onClick: () =>
           window.open(
@@ -54,10 +54,9 @@ export const useFetchProviders = () => {
             "_blank"
           ),
         style: {
-          width: "250%", // Set width
-          marginLeft: "-75%", // Adjust starting position to left
+          width: "250%",
+          marginLeft: "-75%",
         },
-        progressStyle: { backgroundColor: "orange" },
       });
       localStorage.setItem(toastShownKey, "true");
     }
@@ -80,23 +79,26 @@ export const useFetchProviders = () => {
         installed: provider.installed ?? false,
       }));
 
-      const fetchedLinkedProviders = data.linked_providers?.map((provider) => ({
-        ...defaultProvider,
-        ...provider,
-        linked: true,
-        validatedScopes: provider.validatedScopes ?? {},
-      }));
+      const fetchedLinkedProviders = (data.linked_providers ?? []).map(
+        (provider, i) => ({
+          ...defaultProvider,
+          ...provider,
+          id: provider.type + "-linked-" + i,
+          linked: true,
+          validatedScopes: provider.validatedScopes ?? {},
+        })
+      );
 
       setInstalledProviders(fetchedInstalledProviders);
       setProviders(fetchedProviders);
-      setLinkedProviders(fetchedLinkedProviders); // Update state with linked providers
+      setLinkedProviders(fetchedLinkedProviders);
     }
   }, [data]);
 
   return {
     providers,
     installedProviders,
-    linkedProviders, // Include linkedProviders in the returned object
+    linkedProviders,
     setInstalledProviders,
     error,
     isLocalhost,
@@ -107,13 +109,12 @@ export const useFetchProviders = () => {
 export default function ProvidersPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const {
     providers,
     installedProviders,
     linkedProviders,
-    setInstalledProviders,
     isLocalhost,
     mutate,
   } = useFetchProviders();
@@ -124,13 +125,26 @@ export default function ProvidersPage({
     providersSelectedCategories,
   } = useFilterContext();
 
+  const isFilteringActive =
+    providersSearchString ||
+    providersSelectedTags.length > 0 ||
+    providersSelectedCategories.length > 0;
+
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
-      const reason = JSON.parse(searchParams.reason);
-      showErrorToast(new Error(`Failed to install provider: ${reason.detail}`));
+      try {
+        const reason = JSON.parse(searchParams.reason as string);
+        showErrorToast(
+          new Error(`Failed to install provider: ${reason.detail}`)
+        );
+      } catch (error) {
+        showErrorToast(
+          new Error(`Failed to install provider: ${searchParams.reason}`)
+        );
+      }
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {
-        position: toast.POSITION.TOP_LEFT,
+        position: "top-left",
       });
     }
   }, [searchParams]);
@@ -169,10 +183,39 @@ export default function ProvidersPage({
     );
   };
 
+  const filteredProviders = providers.filter(
+    (provider) =>
+      searchProviders(provider) &&
+      searchTags(provider) &&
+      searchCategories(provider)
+  );
+
   return (
     <>
+      {isFilteringActive && (
+        <div className="mb-4">
+          <ProvidersTiles
+            title="Available Providers"
+            providers={filteredProviders}
+            isLocalhost={isLocalhost}
+            mutate={mutate}
+          />
+          {filteredProviders.length > 0 && (
+            <p className="text-m text-gray-500">
+              {filteredProviders.length} provider
+              {filteredProviders.length > 1 ? "s" : ""} found
+            </p>
+          )}
+          {filteredProviders.length === 0 && (
+            <p className="text-m text-gray-500">
+              No providers found matching your filters.
+            </p>
+          )}
+        </div>
+      )}
       {installedProviders.length > 0 && (
         <ProvidersTiles
+          title="Installed Providers"
           providers={installedProviders}
           installedProvidersMode={true}
           mutate={mutate}
@@ -180,22 +223,21 @@ export default function ProvidersPage({
       )}
       {linkedProviders?.length > 0 && (
         <ProvidersTiles
+          title="Linked Providers"
           providers={linkedProviders}
           linkedProvidersMode={true}
           isLocalhost={isLocalhost}
           mutate={mutate}
         />
       )}
-      <ProvidersTiles
-        providers={providers.filter(
-          (provider) =>
-            searchProviders(provider) &&
-            searchTags(provider) &&
-            searchCategories(provider)
-        )}
-        isLocalhost={isLocalhost}
-        mutate={mutate}
-      />
+      {!isFilteringActive && (
+        <ProvidersTiles
+          title="Available Providers"
+          providers={filteredProviders}
+          isLocalhost={isLocalhost}
+          mutate={mutate}
+        />
+      )}
     </>
   );
 }

@@ -7,16 +7,16 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
+
 class NetboxProvider(BaseProvider):
-  """
-  Get alerts from NetBox into Keep.
-  """
+    """
+    Get alerts from NetBox into Keep.
+    """
 
-  webhook_description = ""
-  webhook_template = ""
-  webhook_markdown = """
-  💡 For more details on how to configure NetBox to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/netbox-provider).
-
+    webhook_documentation_here_differs_from_general_documentation = True
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """
   To send alerts from NetBox to Keep, Use the following webhook url to configure NetBox send alerts to Keep:
 
   1. In NetBox, go to Webhooks under Operations.
@@ -27,43 +27,44 @@ class NetboxProvider(BaseProvider):
   6. Go to Event Rules and create a new rule and select the webhook created in step 2 to receive alerts.
   """
 
-  PROVIDER_DISPLAY_NAME = "NetBox"
-  PROVIDER_TAGS = ["topology", "alert"]
-  PROVIDER_CATEGORY = ["Cloud Infrastructure", "Monitoring"]
+    PROVIDER_DISPLAY_NAME = "NetBox"
+    PROVIDER_TAGS = ["alert"]
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Monitoring"]
 
-  def __init__(
-      self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-  ):
-      super().__init__(context_manager, provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
-  def validate_config(self):
-      """
-      Validates required configuration for NetBox's provider.
-      """
-      pass
-  
-  @staticmethod
-  def _format_alert(
-     event: dict, provider_instance: "BaseProvider" = None
-  ) -> AlertDto:
-     
-     data = event.get("data", {})
-     snapshots = event.get("snapshots", {})
+    def validate_config(self):
+        """
+        Validates required configuration for NetBox's provider.
+        """
+        pass
 
-     alert = AlertDto(
-        name=data.get("name", "Could not fetch name"),
-        lastReceived=event.get("timestamp"),
-        startedAt=data.get("created"),
-        model=event.get("model", "Could not fetch model"),
-        username=event.get("username", "Could not fetch username"),
-        id=event.get("request_id"),
-        data=data,
-        description=event.get("event", "Could not fetch event"),
-        snapshots=snapshots,
-        source=["netbox"]
-     )
-     
-     return alert
-  
+    @staticmethod
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
+
+        data = event.get("data", {})
+        snapshots = event.get("snapshots", {})
+
+        alert = AlertDto(
+            name=data.get("name", "Could not fetch name"),
+            lastReceived=event.get("timestamp"),
+            startedAt=data.get("created"),
+            model=event.get("model", "Could not fetch model"),
+            username=event.get("username", "Could not fetch username"),
+            id=event.get("request_id"),
+            data=data,
+            description=event.get("event", "Could not fetch event"),
+            snapshots=snapshots,
+            source=["netbox"],
+        )
+
+        return alert
+
+
 if __name__ == "__main__":
-  pass
+    pass

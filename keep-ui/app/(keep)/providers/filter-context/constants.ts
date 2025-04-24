@@ -1,4 +1,4 @@
-import { TProviderLabels } from "../providers";
+import { TProviderLabels } from "@/shared/api/providers";
 
 export const PROVIDER_LABELS: Record<TProviderLabels, string> = {
   alert: "Alert",

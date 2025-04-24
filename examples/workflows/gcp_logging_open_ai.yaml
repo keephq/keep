@@ -1,5 +1,7 @@
-id: enrich-gcp-alert
-description: Enriched GCP Alert
+workflow:
+  id: gcp-log-analysis-ai
+  name: GCP Log Analysis with AI
+  description: Analyzes Cloud Run errors using OpenAI to provide root cause analysis from GCP logs, including confidence scoring and relevant log entries.
 disabled: false
 triggers:
   - type: manual

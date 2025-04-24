@@ -23,7 +23,7 @@ class PrometheusProviderAuthConfig:
             "required": True,
             "description": "Prometheus server URL",
             "hint": "https://prometheus-us-central1.grafana.net/api/prom",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
     username: str = dataclasses.field(
@@ -39,6 +39,14 @@ class PrometheusProviderAuthConfig:
             "sensitive": True,
         },
         default="",
+    )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+        },
+        default=True,
     )
 
 
@@ -67,7 +75,9 @@ receivers:
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,
+        "high": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
+        "medium": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
     }
@@ -131,6 +141,7 @@ receivers:
                 and self.authentication_config.password
                 else None
             ),
+            verify=self.authentication_config.verify,
         )
 
         if response.status_code != 200:
@@ -147,6 +158,7 @@ receivers:
         response = requests.get(
             f"{self.authentication_config.url}/api/v1/alerts",
             auth=auth,
+            verify=self.authentication_config.verify,
         )
         response.raise_for_status()
         if not response.ok:
@@ -281,6 +293,7 @@ if __name__ == "__main__":
             "url": os.environ.get("PROMETHEUS_URL"),
             "username": os.environ.get("PROMETHEUS_USER"),
             "password": os.environ.get("PROMETHEUS_PASSWORD"),
+            "verify": os.environ.get("PROMETHEUS_VERIFY", "True").lower() == "true",
         }
     )
     context_manager = ContextManager(

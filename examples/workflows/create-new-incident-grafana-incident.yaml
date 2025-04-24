@@ -1,0 +1,23 @@
+workflow:
+  id: grafana-incident-creator
+  name: Grafana Incident Creator
+  description: Creates and manages incidents in Grafana Incident with customizable severity and status.
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: grafana_incident-action
+      provider:
+        type: grafana_incident
+        config: "{{ providers.incide }}"
+        with:
+          # Checkout https://docs.keephq.dev/providers/documentation/grafana_incident-provider for other available fields
+          operationType: create
+          title: Creating new incident from Keep
+          severity: critical
+          status: active
+          attachURL: https://keephq.dev

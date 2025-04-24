@@ -1,0 +1,7 @@
+.get-started-badge {
+  & .fr-progress-fraction {
+    order: 1;
+  }
+
+  --fr-colors-blue800: rgba(107 114 128 / 0.15);
+}

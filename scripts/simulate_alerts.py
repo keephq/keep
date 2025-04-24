@@ -4,7 +4,11 @@ import argparse
 
 import asyncio
 
-from keep.api.core.demo_mode import simulate_alerts, simulate_alerts_worker, simulate_alerts_async
+from keep.api.core.demo_mode import (
+    simulate_alerts,
+    simulate_alerts_worker,
+    simulate_alerts_async,
+)
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -22,7 +26,7 @@ async def main():
         action="store",
         dest="num",
         type=int,
-        help="Number of alerts to simulate."
+        help="Number of alerts to simulate.",
     )
     parser.add_argument(
         "--full-demo",
@@ -30,7 +34,13 @@ async def main():
         help="Run the full demo including correlation rules and topology.",
     )
     parser.add_argument("--rps", type=int, help="Base requests per second")
-    parser.add_argument("--workers", "-w", type=int, default=1, help="Amount of background workers to send alerts")
+    parser.add_argument(
+        "--workers",
+        "-w",
+        type=int,
+        default=1,
+        help="Amount of background workers to send alerts",
+    )
 
     args = parser.parse_args()
     rps = args.rps
@@ -40,9 +50,7 @@ async def main():
         default_sleep_interval = 5
         rps = 0
 
-    SLEEP_INTERVAL = float(
-        os.environ.get("SLEEP_INTERVAL", default_sleep_interval)
-    )
+    SLEEP_INTERVAL = float(os.environ.get("SLEEP_INTERVAL", default_sleep_interval))
     keep_api_key = os.environ.get("KEEP_API_KEY") or "keepappkey"
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
 
@@ -55,7 +63,6 @@ async def main():
         sleep_interval=SLEEP_INTERVAL,
         demo_correlation_rules=args.full_demo,
         demo_topology=args.full_demo,
-        clean_old_incidents=args.full_demo,
         demo_ai=args.full_demo,
         count=args.num,
         target_rps=rps,

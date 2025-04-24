@@ -1,0 +1,28 @@
+workflow:
+  id: opensearch-serverless-create-query
+  name: OSS Create Query Docs
+  description: Retrieves all the documents from index keep, and uploads a document to opensearch in index keep.
+  disabled: false
+  triggers:
+    - type: manual
+  steps:
+    # This step will fail if there is no index called keep
+    - name: query-index
+      provider:
+        type: opensearchserverless
+        config: "{{ providers.opensearchserverless }}"
+        with:
+          query:
+            query:
+              match_all: {}
+          index: keep
+  actions:
+    - name: create-doc
+      provider:
+        type: opensearchserverless
+        config: "{{ providers.opensearchserverless }}"
+        with:
+          index: keep
+          document:
+            message: Keep test doc
+          doc_id: doc_1

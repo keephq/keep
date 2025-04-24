@@ -29,9 +29,10 @@ from keep.api.core.db import (
     is_linked_provider,
 )
 from keep.api.logging import ProviderLoggerAdapter
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
-from keep.api.models.db.alert import ActionType
+from keep.api.models.action_type import ActionType
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
+from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -65,6 +66,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             "Organizational Tools",
             "CRM",
             "Queues",
+            "Orchestration",
             "Others",
         ]
     ] = [
@@ -172,18 +174,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Args:
             **kwargs (dict): The provider context (with statement)
         """
+        # TODO: pop enrich_event from kwargs to handle it more elegantly then in every provider (http, webhook, etc.)
         # trigger the provider
         results = self._notify(**kwargs)
         self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_event = kwargs.get("enrich_alert", kwargs.get("enrich_incident", []))
-        if not enrich_event or results is None:
-            return results if results else None
+        if enrich_event:
+            audit_enabled = bool(kwargs.get("audit_enabled", True))
+            self._enrich(enrich_event, results, audit_enabled=audit_enabled)
 
-        audit_enabled = bool(kwargs.get("audit_enabled", True))
-
-        self._enrich(enrich_event, results, audit_enabled=audit_enabled)
-        return results
+        return results if results else None
 
     def _enrich(self, enrichments, results, audit_enabled=True):
         """
@@ -205,8 +206,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
             if isinstance(foreach_context, AlertDto):
                 fingerprint = foreach_context.fingerprint
-            else:
+            # if we are in a dict context, use the fingerprint from the dict
+            elif isinstance(foreach_context, dict) and "fingerprint" in foreach_context:
                 fingerprint = foreach_context.get("fingerprint")
+            # in case the foreach itself doesn't have a fingerprint, use the event fingerprint
+            elif self.context_manager.event_context:
+                fingerprint = self.context_manager.event_context.fingerprint
+            else:
+                self.logger.warning(
+                    "No fingerprint found for alert enrichment",
+                    extra={"provider": self.provider_id},
+                )
+                fingerprint = None
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
@@ -262,35 +273,41 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
-            enrichment_string = ""
-            for key, value in _enrichments.items():
-                enrichment_string += f"{key}={value}, "
-            # remove the last comma
-            enrichment_string = enrichment_string[:-2]
+            enrichment_string = ", ".join(
+                [f"{key}={value}" for key, value in _enrichments.items()]
+            )
+            disposable_enrichment_string = ", ".join(
+                [f"{key}={value}" for key, value in disposable_enrichments.items()]
+            )
+
+            common_kwargs = {
+                "fingerprint": fingerprint,
+                "action_type": ActionType.WORKFLOW_ENRICH,
+                "action_callee": "system",
+                "audit_enabled": audit_enabled,
+            }
+
             # enrich the alert with _enrichments
             enrichments_bl.enrich_entity(
-                fingerprint,
-                _enrichments,
-                action_type=ActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
-                action_callee="system",
+                enrichments=_enrichments,
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
-                audit_enabled=audit_enabled,
+                **common_kwargs,
             )
+
             # enrich with disposable enrichments
-            enrichment_string = ""
-            for key, value in disposable_enrichments.items():
-                enrichment_string += f"{key}={value}, "
-            # remove the last comma
-            enrichment_string = enrichment_string[:-2]
-            enrichments_bl.enrich_entity(
-                fingerprint,
-                disposable_enrichments,
-                action_type=ActionType.WORKFLOW_ENRICH,
-                action_callee="system",
-                action_description=f"Workflow enriched the alert with {enrichment_string}",
-                dispose_on_new_alert=True,
-                audit_enabled=audit_enabled,
+            enrichments_bl.disposable_enrich_entity(
+                enrichments=disposable_enrichments,
+                action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
+                **common_kwargs,
             )
+
+            should_check_incidents_resolution = (
+                _enrichments.get("status", None) == "resolved"
+                or disposable_enrichments.get("status", None) == "resolved"
+            )
+
+            if event and should_check_incidents_resolution:
+                enrichments_bl.check_incident_resolution(event)
 
         except Exception as e:
             self.logger.error(

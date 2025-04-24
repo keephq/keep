@@ -1,9 +1,10 @@
 import dataclasses
 import typing
 
-import requests
+import json5
 import opsgenie_sdk
 import pydantic
+import requests
 from opsgenie_sdk.rest import ApiException
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -31,6 +32,7 @@ class OpsgenieProviderAuthConfig:
             "hint": "https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/",
         },
     )
+
 
 class OpsGenieRecipient(pydantic.BaseModel):
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/Recipient.md
@@ -102,7 +104,9 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
                     break
             else:
                 self.logger.error("Failed to find OpsGenie integration")
-                return {"opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"}
+                return {
+                    "opsgenie:create": f"Failed to find Integration name {self.authentication_config.integration_name}"
+                }
 
             # Get the integration details and check if it has write access
             response = requests.get(
@@ -116,8 +120,10 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
             if response.json()["data"]["allowWriteAccess"]:
                 scopes["opsgenie:create"] = True
             else:
-                scopes["opsgenie:create"] = "OpsGenie integration does not have write access"
-            
+                scopes["opsgenie:create"] = (
+                    "OpsGenie integration does not have write access"
+                )
+
         except Exception as e:
             self.logger.exception("Failed to create OpsGenie alert")
             scopes["opsgenie:create"] = str(e)
@@ -160,6 +166,14 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         Creates OpsGenie Alert.
 
         """
+        if isinstance(tags, str):
+            self.logger.debug("Parsing tags", extra={"tags": tags})
+            try:
+                tags = json5.loads(tags)
+                self.logger.debug("Parsed tags", extra={"tags": tags})
+            except Exception:
+                self.logger.exception("Failed to parse tags")
+
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
         create_alert_payload = opsgenie_sdk.CreateAlertPayload(
             user=user,
@@ -254,12 +268,38 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
     ):
         """
         Create a OpsGenie alert.
-            Alert/Incident is created either via the Events API or the Incidents API.
-            See https://community.pagerduty.com/forum/t/create-incident-using-python/3596/3 for more information
 
         Args:
-            kwargs (dict): The providers with context
+            type (str): Type of the request, e.g. create_alert, close_alert
+            user (str, optional): Display name of the request owner
+            note (str, optional): Additional note that will be added while creating the alert
+            source (str, optional): Source field of the alert. Default value is IP address of the incoming request
+            message (str): Message of the alert
+            alias (str, optional): Client-defined identifier of the alert, that is also the key element of alert deduplication
+            description (str, optional): Description field of the alert that is generally used to provide a detailed information
+            responders (List[Recipient], optional): Responders that the alert will be routed to send notifications
+            visible_to (List[Recipient], optional): Teams and users that the alert will become visible to without sending any notification
+            actions (List[str], optional): Custom actions that will be available for the alert
+            tags (List[str], optional): Tags of the alert
+            details (Dict[str, str], optional): Map of key-value pairs to use as custom properties of the alert
+            entity (str, optional): Entity field of the alert that is generally used to specify which domain alert is related to
+            priority (str, optional): Priority level of the alert
+            **kwargs: Additional arguments
         """
+        if kwargs and "type" in kwargs and kwargs["type"] == "close_alert":
+            # Create an incident
+            alert_id = kwargs.get("alert_id")
+            if not alert_id:
+                self.logger.error("alert_id is required to close an alert")
+                return
+            self.logger.info(
+                "Closing Opsgenie alert", extra={"alert_id": kwargs["alert_id"]}
+            )
+            return self.close_alert(
+                alert_id=alert_id,
+            )
+
+        # default, backward compatibility behavior
         return self._create_alert(
             user,
             note,

@@ -14,6 +14,8 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 
+logger = logging.getLogger(__name__)
+
 
 @pydantic.dataclasses.dataclass
 class MailgunProviderAuthConfig:
@@ -78,7 +80,7 @@ class MailgunProvider(BaseProvider):
         if not isinstance(raw_body, bytes):
             return raw_body
 
-        logging.getLogger(__name__).info("Parsing Mail Body")
+        logger.info("Parsing Mail Body")
         try:
             # Use latin1 as it can handle any byte sequence
             content = raw_body.decode("latin1", errors="replace")
@@ -86,7 +88,7 @@ class MailgunProvider(BaseProvider):
 
             # Try to find body-plain content
             if 'Content-Disposition: form-data; name="body-plain"' in content:
-                logging.getLogger(__name__).info("Mail Body Found")
+                logger.info("Mail Body Found")
                 # Extract body-plain content
                 parts = content.split(
                     'Content-Disposition: form-data; name="body-plain"'
@@ -103,7 +105,7 @@ class MailgunProvider(BaseProvider):
                     }
 
                     # Parse the content line by line
-                    for line in body_content.strip().split("\r\n"):
+                    for line in body_content.strip().splitlines():
                         if ":" in line:
                             key, value = line.split(":", 1)
                             key = key.strip()
@@ -127,6 +129,8 @@ class MailgunProvider(BaseProvider):
                                     parsed_data["timestamp"] = str(
                                         datetime.datetime.now().timestamp()
                                     )
+                            else:
+                                parsed_data[key.lower()] = value
 
                     # Combine relevant fields for the message
                     message_parts = []
@@ -146,19 +150,17 @@ class MailgunProvider(BaseProvider):
 
                     # Store the full original content
                     parsed_data["raw_content"] = body_content
-                    logging.getLogger(__name__).info(
-                        "Mail Body Parsed", extra={"parsed_data": parsed_data}
-                    )
+                    logger.info("Mail Body Parsed", extra={"parsed_data": parsed_data})
                     return parsed_data
-            logging.getLogger(__name__).info("Mail Body Not Found")
+            logger.info("Mail Body Not Found")
             return {
                 "subject": "Unknown Alert",
-                "from": "system",
+                "from": "system@keep",
                 "stripped-text": content,
             }
 
         except Exception as e:
-            logging.getLogger(__name__).exception(f"Error parsing webhook body: {e}")
+            logger.exception(f"Error parsing webhook body: {e}")
             return {
                 "subject": "Error Processing Alert",
                 "from": "system",
@@ -225,17 +227,39 @@ class MailgunProvider(BaseProvider):
         event: dict, provider_instance: "MailgunProvider" = None
     ) -> AlertDto:
         # We receive FormData here, convert it to simple dict.
-        logging.getLogger(__name__).info(
+        logger.info(
             "Received alert from mail",
+            extra={
+                "from": event["from"],
+                "subject": event.get("subject")
+            },
         )
         event = dict(event)
 
-        name = event["subject"]
         source = event["from"]
-        message = event["stripped-text"]
-        timestamp = datetime.datetime.fromtimestamp(
-            float(event["timestamp"])
-        ).isoformat()
+        name = event.get("subject", source)
+        body_plain = event.get("Body-plain")
+        message = event.get("stripped-text", body_plain)
+        raw_content = event.get("raw_content")
+
+        if isinstance(raw_content, bytes) and b"dmarc" in raw_content.lower():
+            logger.warning("DMARC alert detected, skipping")
+            return None
+        elif isinstance(raw_content, str) and "dmarc" in raw_content.lower():
+            logger.warning("DMARC alert detected, skipping")
+            return None
+
+        if not name or not message:
+            raise Exception(
+                "Could not create alert from email when name or message is missing."
+            )
+
+        try:
+            timestamp = datetime.datetime.fromtimestamp(
+                float(event["timestamp"])
+            ).isoformat()
+        except Exception:
+            timestamp = datetime.datetime.now().isoformat()
         # default values
         severity = "info"
         status = "firing"
@@ -244,7 +268,8 @@ class MailgunProvider(BaseProvider):
         event.pop("signature", "")
         event.pop("token", "")
 
-        logging.getLogger(__name__).info("Basic formatting done")
+        logger.info("Basic formatting done")
+
         alert = AlertDto(
             name=name,
             source=[source],
@@ -255,17 +280,24 @@ class MailgunProvider(BaseProvider):
             status=status,
             raw_email={**event},
         )
-        logging.getLogger(__name__).info(
+
+        # now I want to add all attributes from raw_email to the alert dto, except the ones that are already set
+        for key, value in event.items():
+            # avoid "-" in keys cuz CEL will failed [stripped-text screw CEL]
+            if not hasattr(alert, key) and "-" not in key:
+                setattr(alert, key, value)
+
+        logger.info(
             "Alert formatted",
         )
 
         if provider_instance:
-            logging.getLogger(__name__).info(
+            logger.info(
                 "Provider instance found",
             )
             extraction_rules = provider_instance.authentication_config.extraction
             if extraction_rules:
-                logging.getLogger(__name__).info(
+                logger.info(
                     "Extraction rules found",
                 )
                 for rule in extraction_rules:
@@ -281,14 +313,14 @@ class MailgunProvider(BaseProvider):
                                 ) in match.groupdict().items():
                                     setattr(alert, group_name, group_value)
                         except Exception as e:
-                            logging.getLogger(__name__).exception(
+                            logger.exception(
                                 f"Error extracting key {key} with regex {regex}: {e}",
                                 extra={
                                     "provider_id": provider_instance.provider_id,
                                     "tenant_id": provider_instance.context_manager.tenant_id,
                                 },
                             )
-        logging.getLogger(__name__).info(
+        logger.info(
             "Alert extracted",
         )
         return alert
