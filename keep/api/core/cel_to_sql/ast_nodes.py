@@ -10,6 +10,14 @@ class Node:
     provides a common interface for all AST nodes.
     """
 
+    @property
+    def __str(self):
+        """
+        Returns string representation of Node. The property used for debugging
+        """
+        return str(self)
+
+
 class ConstantNode(Node):
     """
     A node representing a constant value in CEL abstract syntax tree.
@@ -25,7 +33,7 @@ class ConstantNode(Node):
         self.value = value
 
     def __str__(self):
-        return self.value
+        return self.value or "null"
 
 class ParenthesisNode(Node):
     """
@@ -68,9 +76,9 @@ class LogicalNode(Node):
         self.left = left
         self.operator = operator
         self.right = right
-    
+
     def __str__(self):
-        return f"{self.left} {self.operator} {self.right}"
+        return f"{self.left} {self.operator} {self.right }"
 
 class ComparisonNode(Node):
     """
@@ -110,7 +118,14 @@ class ComparisonNode(Node):
         self.second_operand = second_operand
 
     def __str__(self):
-        return f"{self.first_operand} {self.operator} {self.second_operand}"
+        operand_value = self.second_operand
+
+        if self.operator == ComparisonNode.IN:
+            operand_value = (
+                f"[{', '.join([item.value for item in self.second_operand])}]"
+            )
+
+        return f"{self.first_operand} {self.operator} {operand_value}"
 
 class UnaryNode(Node):
     """

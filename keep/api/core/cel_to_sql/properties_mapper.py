@@ -56,6 +56,10 @@ class MultipleFieldsNode(Node):
     def __init__(self, fields: list[PropertyAccessNode]):
         self.fields = fields
 
+    def __str__(self):
+        return f"[{', '.join(['.'.join(field.get_property_path()) for field in self.fields])}]"
+
+
 class PropertiesMappingException(Exception):
     """
     Exception raised for errors in the properties mapping process.
