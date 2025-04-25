@@ -36,10 +36,17 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         method_access_node: MethodAccessNode,
         data_type: type,
     ):
-        super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
+        super().__init__(
+            f"JSON({json_property_name}).{property_to_extract}",
+            method_access_node,
+            data_type,
+        )
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
         self.data_type = data_type
+
+    def __str__(self):
+        return f"JSON({self.json_property_name}).{'.'.join(self.property_to_extract)}"
 
 
 class MultipleFieldsNode(Node):
