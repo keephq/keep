@@ -23,7 +23,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     SimpleFieldMapping,
 )
 from celpy import CELParseError
-
+from keep.api.core.cel_to_sql.cel_ast_rebuilder import CelAstRebuilder
 
 class CelToSqlException(Exception):
     pass
@@ -126,6 +126,7 @@ class BaseCelToSqlProvider:
             with_mapped_props, involved_fields = (
                 self.properties_mapper.map_props_in_ast(original_query)
             )
+            with_mapped_props = CelAstRebuilder(with_mapped_props).rebuild()
         except PropertiesMappingException as e:
             raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
@@ -343,35 +344,7 @@ class BaseCelToSqlProvider:
         else:
             first_operand_str = self.__build_sql_filter(first_operand, stack)
 
-        constant_nodes_without_none = []
-        is_none_found = False
-
-        for item in array:
-            if isinstance(item, ConstantNode):
-                if item.value is None:
-                    is_none_found = True
-                    continue
-                constant_nodes_without_none.append(item)
-
-        or_queries = []
-
-        if len(constant_nodes_without_none) > 0:
-            or_queries.append(
-                f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in constant_nodes_without_none])})"
-            )
-
-        if is_none_found:
-            or_queries.append(self._visit_equal(first_operand_str, "NULL"))
-
-        if len(or_queries) == 0:
-            return self._visit_constant_node(False)
-
-        final_query = or_queries[0]
-
-        for query in or_queries[1:]:
-            final_query = self._visit_logical_or(final_query, query)
-
-        return final_query
+        return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
     # endregion
 
