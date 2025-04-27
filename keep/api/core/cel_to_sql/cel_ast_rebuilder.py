@@ -4,11 +4,13 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     Node,
     LogicalNode,
     ComparisonNode,
+    PropertyAccessNode,
     UnaryNode,
     ParenthesisNode,
 )
 
 from keep.api.core.cel_to_sql.properties_mapper import (
+    JsonPropertyAccessNode,
     MultipleFieldsNode,
 )
 
@@ -20,11 +22,11 @@ class CelAstRebuilder:
 
     def rebuild(self) -> Node:
         self.stack = []
-        result = self.__build_sql_filter(self.cel_ast)
+        result = self.__visit_ast(self.cel_ast)
         self.stack = []
         return result
 
-    def __build_sql_filter(self, abstract_node: Node) -> Node:
+    def __visit_ast(self, abstract_node: Node) -> Node:
         result = None
 
         if abstract_node is None:
@@ -32,27 +34,30 @@ class CelAstRebuilder:
 
         if isinstance(abstract_node, ParenthesisNode):
             result = ParenthesisNode(
-                expression=self.__build_sql_filter(abstract_node.left),
+                expression=self.__visit_ast(abstract_node.left),
             )
 
         if isinstance(abstract_node, LogicalNode):
             result = LogicalNode(
-                left=self.__build_sql_filter(abstract_node.left),
+                left=self.__visit_ast(abstract_node.left),
                 operator=abstract_node.operator,
-                right=self.__build_sql_filter(abstract_node.right),
+                right=self.__visit_ast(abstract_node.right),
             )
 
         if isinstance(abstract_node, ComparisonNode):
             result = self._visit_comparison_node(abstract_node)
 
-        if isinstance(abstract_node, MemberAccessNode):
+        if isinstance(abstract_node, PropertyAccessNode):
             result = abstract_node
 
         if isinstance(abstract_node, UnaryNode):
-            result = UnaryNode(
-                operator=abstract_node.operator,
-                operand=self.__build_sql_filter(abstract_node.operand),
-            )
+            if abstract_node.operator == UnaryNode.NOT:
+                result = self._visit_unary_not_node(abstract_node)
+            else:
+                result = UnaryNode(
+                    operator=abstract_node.operator,
+                    operand=self.__visit_ast(abstract_node.operand),
+                )
 
         if isinstance(abstract_node, ConstantNode):
             result = abstract_node
@@ -69,6 +74,46 @@ class CelAstRebuilder:
 
     def _visit_parentheses(self, node: str) -> Node:
         return f"({node})"
+
+    def _visit_unary_not_node(self, unary_node: UnaryNode) -> Node:
+        if (
+            isinstance(unary_node.operand, UnaryNode)
+            and unary_node.operand.operator == UnaryNode.NOT
+        ):
+            return self.__visit_ast(unary_node.operand.operand)
+
+        if isinstance(unary_node.operand, PropertyAccessNode):
+            return LogicalNode(
+                left=ComparisonNode(
+                    unary_node.operand,
+                    ComparisonNode.NE,
+                    ConstantNode(None),
+                ),
+                operator=LogicalNode.AND,
+                right=LogicalNode(
+                    left=ComparisonNode(
+                        unary_node.operand,
+                        ComparisonNode.NE,
+                        ConstantNode(0),
+                    ),
+                    operator=LogicalNode.AND,
+                    right=LogicalNode(
+                        left=ComparisonNode(
+                            unary_node.operand,
+                            ComparisonNode.NE,
+                            ConstantNode(False),
+                        ),
+                        operator=LogicalNode.AND,
+                        right=ComparisonNode(
+                            unary_node.operand,
+                            ComparisonNode.NE,
+                            ConstantNode(""),
+                        ),
+                    ),
+                ),
+            )
+
+        return unary_node
 
     # region Comparison Visitors
     def _visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
@@ -118,54 +163,3 @@ class CelAstRebuilder:
             )
 
         return final_node
-
-    # endregion
-
-    # def _visit_constant_node(self, value: Any) -> str:
-    #     if value is None:
-    #         return "NULL"
-    #     if isinstance(value, str):
-    #         return self.literal_proc(value)
-    #     if isinstance(value, bool):
-    #         return str(value).lower()
-    #     if isinstance(value, float) or isinstance(value, int):
-    #         return str(value)
-
-    #     raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet. Consider implementing this support in child class.")
-
-    # # region Member Access Visitors
-    # def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode, cast_to: type, stack) -> str:
-    #     coalesce_args = []
-
-    #     for item in multiple_fields_node.fields:
-    #         arg = self._visit_property_access_node(item, stack)
-    #         if isinstance(item, JsonPropertyAccessNode) and cast_to:
-    #             arg = self.cast(arg, cast_to)
-    #         coalesce_args.append(arg)
-
-    #     if len(coalesce_args) == 1:
-    #         return coalesce_args[0]
-
-    #     return self.coalesce(coalesce_args)
-
-    # def _visit_member_access_node(self, member_access_node: MemberAccessNode, stack) -> str:
-    #     if isinstance(member_access_node, PropertyAccessNode):
-    #         if member_access_node.is_function_call():
-    #             method_access_node = member_access_node.get_method_access_node()
-    #             return self._visit_method_calling(
-    #                self._visit_property_access_node(member_access_node, stack),
-    #                 method_access_node.member_name,
-    #                 method_access_node.args,
-    #             )
-
-    #         return self._visit_property_access_node(member_access_node, stack)
-
-    #     if isinstance(member_access_node, MethodAccessNode):
-    #         return self._visit_method_calling(
-    #             None, member_access_node.member_name, member_access_node.args
-    #         )
-
-    #     raise NotImplementedError(
-    #         f"{type(member_access_node).__name__} member access node is not supported yet"
-    #     )
-    # endregion

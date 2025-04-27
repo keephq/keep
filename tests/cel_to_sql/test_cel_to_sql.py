@@ -27,6 +27,9 @@ fake_field_configurations = [
         map_from_pattern="alert.provider_type", map_to="incident_alert_provider_type"
     ),
     FieldMappingConfiguration(
+        map_from_pattern="alert.isActive", map_to="alert_is_active"
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="alert.tags.*",
         map_to=["JSON(alert_event).tagsContainer.*"],
     ),

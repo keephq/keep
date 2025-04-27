@@ -185,44 +185,44 @@ class PropertiesMapper:
         member_access_node: MemberAccessNode,
         involved_fields: list[PropertyMetadataInfo],
     ) -> Node:
-        if (
-            isinstance(member_access_node, PropertyAccessNode)
-            and not member_access_node.is_function_call()
-        ):
-            # in case expression is just property access node
-            # it will behave like !!property in JS
-            # converting queried property to boolean and evaluate as boolean
-            mapped_prop, property_metadata = self._map_property(member_access_node)
-            involved_fields.append(property_metadata)
-            return LogicalNode(
-                left=ComparisonNode(
-                    mapped_prop,
-                    ComparisonNode.NE,
-                    ConstantNode(None),
-                ),
-                operator=LogicalNode.AND,
-                right=LogicalNode(
-                    left=ComparisonNode(
-                        mapped_prop,
-                        ComparisonNode.NE,
-                        ConstantNode("0"),
-                    ),
-                    operator=LogicalNode.AND,
-                    right=LogicalNode(
-                        left=ComparisonNode(
-                            mapped_prop,
-                            ComparisonNode.NE,
-                            ConstantNode(False),
-                        ),
-                        operator=LogicalNode.AND,
-                        right=ComparisonNode(
-                            mapped_prop,
-                            ComparisonNode.NE,
-                            ConstantNode(""),
-                        ),
-                    ),
-                ),
-            )
+        # if (
+        #     isinstance(member_access_node, PropertyAccessNode)
+        #     and not member_access_node.is_function_call()
+        # ):
+        #     # in case expression is just property access node
+        #     # it will behave like !!property in JS
+        #     # converting queried property to boolean and evaluate as boolean
+        #     mapped_prop, property_metadata = self._map_property(member_access_node)
+        #     involved_fields.append(property_metadata)
+        #     return LogicalNode(
+        #         left=ComparisonNode(
+        #             mapped_prop,
+        #             ComparisonNode.NE,
+        #             ConstantNode(None),
+        #         ),
+        #         operator=LogicalNode.AND,
+        #         right=LogicalNode(
+        #             left=ComparisonNode(
+        #                 mapped_prop,
+        #                 ComparisonNode.NE,
+        #                 ConstantNode("0"),
+        #             ),
+        #             operator=LogicalNode.AND,
+        #             right=LogicalNode(
+        #                 left=ComparisonNode(
+        #                     mapped_prop,
+        #                     ComparisonNode.NE,
+        #                     ConstantNode(False),
+        #                 ),
+        #                 operator=LogicalNode.AND,
+        #                 right=ComparisonNode(
+        #                     mapped_prop,
+        #                     ComparisonNode.NE,
+        #                     ConstantNode(""),
+        #                 ),
+        #             ),
+        #         ),
+        #     )
 
         if (
             isinstance(member_access_node, PropertyAccessNode)
