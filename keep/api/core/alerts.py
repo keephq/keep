@@ -49,6 +49,9 @@ alert_field_configurations = [
         map_from_pattern="providerType", map_to="alert.provider_type", data_type=str
     ),
     FieldMappingConfiguration(
+        map_from_pattern="source", map_to="alert.provider_type", data_type=str
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="timestamp",
         map_to="lastalert.timestamp",
         data_type=datetime.datetime,
