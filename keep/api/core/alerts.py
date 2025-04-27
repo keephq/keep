@@ -43,13 +43,13 @@ alert_field_configurations = [
         map_from_pattern="id", map_to="lastalert.alert_id", data_type=UUID
     ),
     FieldMappingConfiguration(
+        map_from_pattern="source", map_to="alert.provider_type", data_type=str
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="providerId", map_to="alert.provider_id", data_type=str
     ),
     FieldMappingConfiguration(
         map_from_pattern="providerType", map_to="alert.provider_type", data_type=str
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="source", map_to="alert.provider_type", data_type=str
     ),
     FieldMappingConfiguration(
         map_from_pattern="timestamp",
