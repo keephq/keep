@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from typing import Tuple
+from uuid import UUID
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import OperationalError
@@ -39,7 +40,7 @@ alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 50000))
 
 alert_field_configurations = [
     FieldMappingConfiguration(
-        map_from_pattern="source", map_to="alert.provider_type", data_type=str
+        map_from_pattern="id", map_to="lastalert.alert_id", data_type=UUID
     ),
     FieldMappingConfiguration(
         map_from_pattern="providerId", map_to="alert.provider_id", data_type=str
@@ -63,7 +64,7 @@ alert_field_configurations = [
         map_to=[
             "incident.id",
         ],
-        data_type=str,
+        data_type=UUID,
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.name",
