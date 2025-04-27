@@ -1,6 +1,6 @@
 from datetime import datetime
 from types import NoneType
-from typing import Any, List
+from typing import List
 from uuid import UUID
 
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
