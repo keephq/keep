@@ -165,7 +165,7 @@ class CelAstRebuilder:
         if isinstance(comparison_node.first_operand, MultipleFieldsNode):
             return self._handle_mutliple_fields_node(
                 comparison_node.first_operand,
-                lambda field_node: self._visit_comparison_node(
+                lambda field_node, is_first, is_last: self._visit_comparison_node(
                     ComparisonNode(
                         first_operand=field_node,
                         operator=comparison_node.operator,
