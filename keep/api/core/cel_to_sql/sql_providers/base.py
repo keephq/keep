@@ -395,18 +395,14 @@ class BaseCelToSqlProvider:
         Extracts data type from node.
         The data type will be used to convert the value of constant node into the expected type (SQL type).
         """
-        property_access_node = None
         if isinstance(node, PropertyAccessNode):
-            property_access_node = node
+            return node.data_type
 
         if isinstance(node, MultipleFieldsNode):
-            property_access_node = node.fields[0]
+            return node.data_type
 
         if isinstance(node, ComparisonNode):
-            property_access_node = node.first_operand
-
-        if property_access_node:
-            return property_access_node.data_type
+            return self._get_data_type_to_convert(node.first_operand)
 
         raise NotImplementedError(
             f"Cannot find data type to convert for {type(node).__name__} node"
