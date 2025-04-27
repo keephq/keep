@@ -303,6 +303,18 @@ class BaseCelToSqlProvider:
             result = self._visit_less_than(first_operand, second_operand)
         elif comparison_node.operator == ComparisonNode.LE:
             result = self._visit_less_than_or_equal(first_operand, second_operand)
+        elif comparison_node.operator == ComparisonNode.CONTAINS:
+            result = self._visit_contains_method_calling(
+                first_operand, [comparison_node.second_operand]
+            )
+        elif comparison_node.operator == ComparisonNode.STARTS_WITH:
+            result = self._visit_starts_with_method_calling(
+                first_operand, [comparison_node.second_operand]
+            )
+        elif comparison_node.operator == ComparisonNode.ENDS_WITH:
+            result = self._visit_ends_with_method_calling(
+                first_operand, [comparison_node.second_operand]
+            )
         else:
             raise NotImplementedError(
                 f"{comparison_node.operator} comparison operator is not supported yet"
