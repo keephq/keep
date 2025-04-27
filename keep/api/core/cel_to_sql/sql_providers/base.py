@@ -10,7 +10,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     UnaryNode,
     PropertyAccessNode,
-    MethodAccessNode,
     ParenthesisNode,
 )
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
@@ -361,6 +360,27 @@ class BaseCelToSqlProvider:
 
         return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
+    def _visit_contains_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'contains' method must be implemented in the child class"
+        )
+
+    def _visit_starts_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'startsWith' method call must be implemented in the child class"
+        )
+
+    def _visit_ends_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'endsWith' method call must be implemented in the child class"
+        )
+
     # endregion
 
     def _visit_constant_node(self, value: Any, expected_data_type: type = None) -> str:
@@ -410,20 +430,7 @@ class BaseCelToSqlProvider:
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode, stack) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
-            if member_access_node.is_function_call():
-                method_access_node = member_access_node.get_method_access_node()
-                return self._visit_method_calling(
-                   self._visit_property_access_node(member_access_node, stack),
-                    method_access_node.member_name,
-                    method_access_node.args,
-                )
-
             return self._visit_property_access_node(member_access_node, stack)
-
-        if isinstance(member_access_node, MethodAccessNode):
-            return self._visit_method_calling(
-                None, member_access_node.member_name, member_access_node.args
-            )
 
         raise NotImplementedError(
             f"{type(member_access_node).__name__} member access node is not supported yet"
@@ -439,38 +446,6 @@ class BaseCelToSqlProvider:
 
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")
-    # endregion
-
-    # region Method Calling Visitors
-    def _visit_method_calling(
-        self, property_path: str, method_name: str, method_args: List[str]
-    ) -> str:
-        if method_name == "contains":
-            return self._visit_contains_method_calling(property_path, method_args)
-
-        if method_name == "startsWith":
-            return self._visit_starts_with_method_calling(property_path, method_args)
-
-        if method_name == "endsWith":
-            return self._visit_ends_with_method_calling(property_path, method_args)
-
-        raise NotImplementedError(f"'{method_name}' method is not supported")
-
-    def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
-    ) -> str:
-        raise NotImplementedError("'contains' method must be implemented in the child class")
-
-    def _visit_starts_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
-    ) -> str:
-        raise NotImplementedError("'startsWith' method call must be implemented in the child class")
-
-    def _visit_ends_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
-    ) -> str:
-        raise NotImplementedError("'endsWith' method call must be implemented in the child class")
-
     # endregion
 
     # region Unary Visitors

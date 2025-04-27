@@ -26,7 +26,6 @@ class JsonPropertyAccessNode(PropertyAccessNode):
     Attributes:
         json_property_name (str): The name of the JSON property to access.
         property_to_extract (str): The specific property to extract from the JSON object.
-        method_access_node (MethodAccessNode): The method access node used for extraction. (*.contains, *.startsWith, etc)
     """
     def __init__(
         self,
