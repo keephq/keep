@@ -163,7 +163,7 @@ static_facets = [
     ),
     FacetDto(
         id="461bef05-fc20-4363-b427-9d26fe064e7f",
-        property_path="providerType",
+        property_path="source",
         name="Source",
         is_static=True,
         type=FacetType.str,
