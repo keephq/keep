@@ -3,7 +3,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     LogicalNode,
     MemberAccessNode,
-    MethodAccessNode,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
@@ -33,12 +32,11 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         self,
         json_property_name: str,
         property_to_extract: list[str],
-        method_access_node: MethodAccessNode,
         data_type: type,
     ):
         super().__init__(
             f"JSON({json_property_name}).{property_to_extract}",
-            method_access_node,
+            None,
             data_type,
         )
         self.json_property_name = json_property_name
@@ -185,51 +183,12 @@ class PropertiesMapper:
         member_access_node: MemberAccessNode,
         involved_fields: list[PropertyMetadataInfo],
     ) -> Node:
-        if (
-            isinstance(member_access_node, PropertyAccessNode)
-            and not member_access_node.is_function_call()
-        ):
-            # in case expression is just property access node
-            # it will behave like !!property in JS
-            # converting queried property to boolean and evaluate as boolean
-            mapped_prop, property_metadata = self._map_property(member_access_node)
-            involved_fields.append(property_metadata)
-            return mapped_prop
-
-        if (
-            isinstance(member_access_node, PropertyAccessNode)
-            and member_access_node.is_function_call()
-        ):
-            property_metadata = self.properties_metadata.get_property_metadata(
-                member_access_node.get_property_path()
-            )
-
-            if not property_metadata:
-                raise PropertiesMappingException(
-                    f'Missing mapping configuration for property "{member_access_node.get_property_path()}" '
-                    f'while processing the comparison node: "{member_access_node}".'
-                )
-            involved_fields.append(property_metadata)
-            result = None
-            for mapping in property_metadata.field_mappings:
-                method_access_node = member_access_node.get_method_access_node().copy()
-                current_node_result = self._create_property_access_node(
-                    mapping, property_metadata.data_type, method_access_node
-                )
-
-                if result is None:
-                    result = current_node_result
-                    continue
-
-                result = LogicalNode(
-                    left=result,
-                    operator=LogicalNode.OR,
-                    right=current_node_result,
-                )
-
-            return result
-
-        return member_access_node
+        # in case expression is just property access node
+        # it will behave like !!property in JS
+        # converting queried property to boolean and evaluate as boolean
+        mapped_prop, property_metadata = self._map_property(member_access_node)
+        involved_fields.append(property_metadata)
+        return mapped_prop
 
     def _modify_comparison_node_based_on_mapping(
         self, comparison_node: ComparisonNode, mapping: PropertyMetadataInfo
@@ -324,21 +283,18 @@ class PropertiesMapper:
 
         return comparison_node
 
-    def _create_property_access_node(
-        self, mapping, data_type: type, method_access_node: MethodAccessNode
-    ) -> Node:
+    def _create_property_access_node(self, mapping, data_type: type) -> Node:
         if isinstance(mapping, JsonFieldMapping):
             return JsonPropertyAccessNode(
                 json_property_name=mapping.json_prop,
                 property_to_extract=mapping.prop_in_json,
-                method_access_node=method_access_node,
                 data_type=data_type,
             )
 
         if isinstance(mapping, SimpleFieldMapping):
             return PropertyAccessNode(
                 member_name=mapping.map_to,
-                value=method_access_node,
+                value=None,
                 data_type=data_type,
             )
 
@@ -360,7 +316,7 @@ class PropertiesMapper:
 
         for mapping in property_metadata.field_mappings:
             property_access_node = self._create_property_access_node(
-                mapping, property_metadata.data_type, None
+                mapping, property_metadata.data_type
             )
             result.append(property_access_node)
         return (
