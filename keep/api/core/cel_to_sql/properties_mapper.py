@@ -60,10 +60,8 @@ class MultipleFieldsNode(Node):
     Args:
         fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances to initialize the node with.
     """
-    def __init__(self, fields: list[PropertyAccessNode], data_type: type = None):
+    def __init__(self, fields: list[PropertyAccessNode]):
         self.fields = fields
-        self.data_type = data_type
-
 
     def __str__(self):
         return f"[{', '.join(['.'.join(field.get_property_path()) for field in self.fields])}]"
@@ -187,44 +185,16 @@ class PropertiesMapper:
         member_access_node: MemberAccessNode,
         involved_fields: list[PropertyMetadataInfo],
     ) -> Node:
-        # if (
-        #     isinstance(member_access_node, PropertyAccessNode)
-        #     and not member_access_node.is_function_call()
-        # ):
-        #     # in case expression is just property access node
-        #     # it will behave like !!property in JS
-        #     # converting queried property to boolean and evaluate as boolean
-        #     mapped_prop, property_metadata = self._map_property(member_access_node)
-        #     involved_fields.append(property_metadata)
-        #     return LogicalNode(
-        #         left=ComparisonNode(
-        #             mapped_prop,
-        #             ComparisonNode.NE,
-        #             ConstantNode(None),
-        #         ),
-        #         operator=LogicalNode.AND,
-        #         right=LogicalNode(
-        #             left=ComparisonNode(
-        #                 mapped_prop,
-        #                 ComparisonNode.NE,
-        #                 ConstantNode("0"),
-        #             ),
-        #             operator=LogicalNode.AND,
-        #             right=LogicalNode(
-        #                 left=ComparisonNode(
-        #                     mapped_prop,
-        #                     ComparisonNode.NE,
-        #                     ConstantNode(False),
-        #                 ),
-        #                 operator=LogicalNode.AND,
-        #                 right=ComparisonNode(
-        #                     mapped_prop,
-        #                     ComparisonNode.NE,
-        #                     ConstantNode(""),
-        #                 ),
-        #             ),
-        #         ),
-        #     )
+        if (
+            isinstance(member_access_node, PropertyAccessNode)
+            and not member_access_node.is_function_call()
+        ):
+            # in case expression is just property access node
+            # it will behave like !!property in JS
+            # converting queried property to boolean and evaluate as boolean
+            mapped_prop, property_metadata = self._map_property(member_access_node)
+            involved_fields.append(property_metadata)
+            return mapped_prop
 
         if (
             isinstance(member_access_node, PropertyAccessNode)
@@ -394,7 +364,5 @@ class PropertiesMapper:
             )
             result.append(property_access_node)
         return (
-            MultipleFieldsNode(result, property_metadata.data_type)
-            if len(result) > 1
-            else result[0]
+            MultipleFieldsNode(result) if len(result) > 1 else result[0]
         ), property_metadata

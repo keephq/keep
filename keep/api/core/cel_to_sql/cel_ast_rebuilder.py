@@ -76,36 +76,51 @@ class CelAstRebuilder:
         return f"({node})"
 
     def _visit_unary_not_node(self, unary_node: UnaryNode) -> Node:
-        if (
-            isinstance(unary_node.operand, UnaryNode)
-            and unary_node.operand.operator == UnaryNode.NOT
-        ):
-            return self.__visit_ast(unary_node.operand.operand)
+        current_node: Node = unary_node
+        depth = 0
 
-        if isinstance(unary_node.operand, PropertyAccessNode):
-            return LogicalNode(
+        while isinstance(current_node, UnaryNode):
+            current_node = current_node.operand
+            depth += 1
+
+        if depth % 2 != 0:
+            current_node = UnaryNode(
+                operator=UnaryNode.NOT,
+                operand=current_node,
+            )
+
+        if isinstance(current_node, PropertyAccessNode) or isinstance(
+            current_node.operand, PropertyAccessNode
+        ):
+            operand = (
+                current_node.operand
+                if isinstance(current_node, UnaryNode)
+                else current_node
+            )
+
+            logical_node = LogicalNode(
                 left=ComparisonNode(
-                    unary_node.operand,
+                    operand,
                     ComparisonNode.NE,
                     ConstantNode(None),
                 ),
                 operator=LogicalNode.AND,
                 right=LogicalNode(
                     left=ComparisonNode(
-                        unary_node.operand,
+                        operand,
                         ComparisonNode.NE,
                         ConstantNode(0),
                     ),
                     operator=LogicalNode.AND,
                     right=LogicalNode(
                         left=ComparisonNode(
-                            unary_node.operand,
+                            operand,
                             ComparisonNode.NE,
                             ConstantNode(False),
                         ),
                         operator=LogicalNode.AND,
                         right=ComparisonNode(
-                            unary_node.operand,
+                            operand,
                             ComparisonNode.NE,
                             ConstantNode(""),
                         ),
@@ -113,16 +128,67 @@ class CelAstRebuilder:
                 ),
             )
 
+            return (
+                logical_node
+                if isinstance(current_node, UnaryNode)
+                else UnaryNode(
+                    operator=UnaryNode.NOT,
+                    operand=logical_node,
+                )
+            )
         return unary_node
+
+    def _handle_mutliple_fields_node(
+        self, node: Node, callback: lambda field_node, is_first, is_last: Node
+    ) -> Node:
+        final_node = None
+        current_node = None
+        for index, field in enumerate(node.fields):
+            current_node = callback(field, index == 0, index == len(node.fields) - 1)
+            if final_node is None:
+                final_node = current_node
+            else:
+                final_node = LogicalNode(
+                    left=final_node,
+                    operator=LogicalNode.OR,
+                    right=current_node,
+                )
+
+        return final_node
 
     # region Comparison Visitors
     def _visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
+
         if comparison_node.operator == ComparisonNode.IN:
             return self._visit_in(comparison_node)
 
+        if isinstance(comparison_node.first_operand, MultipleFieldsNode):
+            return self._handle_mutliple_fields_node(
+                comparison_node.first_operand,
+                lambda field_node: self._visit_comparison_node(
+                    ComparisonNode(
+                        first_operand=field_node,
+                        operator=comparison_node.operator,
+                        second_operand=comparison_node.second_operand,
+                    )
+                ),
+            )
+
         return comparison_node
 
-    def _visit_in(self, in_node: ComparisonNode) -> Node:
+    def _visit_in(self, in_node: ComparisonNode, skip_null_check=False) -> Node:
+        if isinstance(in_node.first_operand, MultipleFieldsNode):
+            return self._handle_mutliple_fields_node(
+                in_node.first_operand,
+                lambda field_node, is_first, is_last: self._visit_in(
+                    in_node=ComparisonNode(
+                        first_operand=field_node,
+                        operator=in_node.operator,
+                        second_operand=in_node.second_operand,
+                    ),
+                    skip_null_check=not is_last,
+                ),
+            )
         is_none_in_args = None in in_node.second_operand
         filtered_args = []
         nodes = []
@@ -135,7 +201,7 @@ class CelAstRebuilder:
 
         nodes = []
 
-        if len(filtered_args) > 1:
+        if len(filtered_args) > 0:
             nodes.append(
                 ComparisonNode(
                     operator=ComparisonNode.IN,
@@ -144,7 +210,7 @@ class CelAstRebuilder:
                 )
             )
 
-        if is_none_in_args:
+        if is_none_in_args and not skip_null_check:
             nodes.append(
                 ComparisonNode(
                     operator=ComparisonNode.EQ,
