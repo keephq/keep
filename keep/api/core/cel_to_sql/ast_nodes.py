@@ -33,7 +33,15 @@ class ConstantNode(Node):
         self.value = value
 
     def __str__(self):
-        return self.value or "null"
+        if self.value is None:
+            return "null"
+        if isinstance(self.value, str):
+            return f"'{self.value}'"
+        if isinstance(self.value, bool):
+            return "true" if self.value else "false"
+        if isinstance(self.value, (int, float)):
+            return str(self.value)
+        return self.value
 
 class ParenthesisNode(Node):
     """
@@ -111,6 +119,9 @@ class ComparisonNode(Node):
     EQ = '=='
     NE = '!=='
     IN = 'in'
+    CONTAINS = "contains"
+    STARTS_WITH = "startsWith"
+    ENDS_WITH = "endsWith"
 
     def __init__(self, first_operand: Node, operator: str, second_operand: Node):
         self.operator = operator
@@ -118,12 +129,14 @@ class ComparisonNode(Node):
         self.second_operand = second_operand
 
     def __str__(self):
-        operand_value = self.second_operand
+        operand_value = None
 
         if self.operator == ComparisonNode.IN:
             operand_value = (
-                f"[{', '.join([item.value for item in self.second_operand])}]"
+                f"[{', '.join([str(item) for item in self.second_operand])}]"
             )
+        else:
+            operand_value = str(self.second_operand)
 
         return f"{self.first_operand} {self.operator} {operand_value}"
 
