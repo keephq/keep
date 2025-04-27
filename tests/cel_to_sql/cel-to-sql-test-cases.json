@@ -259,5 +259,23 @@
       "mysql": "",
       "postgresql": ""
     }
+  },
+  {
+    "input_cel": "id == '123e4567-e89b-12d3-a456-426614174000'",
+    "description": "UUID property access with dashed UUID",
+    "expected_sql_dialect_based": {
+      "sqlite": "entityId = '123e4567e89b12d3a456426614174000'",
+      "mysql": "entityId = '123e4567e89b12d3a456426614174000'",
+      "postgresql": "entityId = '123e4567-e89b-12d3-a456-426614174000'"
+    }
+  },
+  {
+    "input_cel": "id == '123e4567e89b12d3a456426614174000'",
+    "description": "UUID property access with HEX UUID",
+    "expected_sql_dialect_based": {
+      "sqlite": "entityId = '123e4567e89b12d3a456426614174000'",
+      "mysql": "entityId = '123e4567e89b12d3a456426614174000'",
+      "postgresql": "entityId = '123e4567-e89b-12d3-a456-426614174000'"
+    }
   }
 ]

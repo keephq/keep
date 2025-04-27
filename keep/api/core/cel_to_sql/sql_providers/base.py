@@ -274,7 +274,10 @@ class BaseCelToSqlProvider:
             )
 
         if isinstance(comparison_node.second_operand, ConstantNode):
-            second_operand = self._visit_constant_node(comparison_node.second_operand.value)
+            second_operand = self._visit_constant_node(
+                comparison_node.second_operand.value,
+                self._get_data_type_to_convert(comparison_node),
+            )
 
             if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
                 first_operand = self.cast(self.__build_sql_filter(comparison_node.first_operand, stack), type(comparison_node.second_operand.value))
@@ -348,7 +351,7 @@ class BaseCelToSqlProvider:
 
     # endregion
 
-    def _visit_constant_node(self, value: Any) -> str:
+    def _visit_constant_node(self, value: Any, expected_data_type: type = None) -> str:
         if value is None:
             return "NULL"
         if isinstance(value, str):
@@ -359,6 +362,24 @@ class BaseCelToSqlProvider:
             return str(value)
 
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet. Consider implementing this support in child class.")
+
+    def _get_data_type_to_convert(self, node: Node) -> type:
+        """
+        Extracts data type from node.
+        The data type will be used to convert the value of constant node into the expected type (SQL type).
+        """
+        if isinstance(node, PropertyAccessNode):
+            return node.data_type
+
+        if isinstance(node, MultipleFieldsNode):
+            return node.data_type
+
+        if isinstance(node, ComparisonNode):
+            return self._get_data_type_to_convert(node.first_operand)
+
+        raise NotImplementedError(
+            f"Cannot find data type to convert for {type(node).__name__} node"
+        )
 
     # region Member Access Visitors
     def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode, cast_to: type, stack) -> str:
