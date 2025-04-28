@@ -101,6 +101,7 @@ export function TriggerEditor() {
                     <Subtitle className="mt-2.5">CEL Expression</Subtitle>
                     <div className="flex items-center mt-1 relative">
                       <CelInput
+                        staticPositionForSuggestions={true}
                         value={(properties.alert as any)[filter] || ""}
                         placeholder="Use CEL to filter alerts that trigger this workflow. e.g. source.contains('kibana')"
                         onValueChange={(value: string) =>

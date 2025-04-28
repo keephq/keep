@@ -6,6 +6,7 @@ import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface CelInputProps {
   id?: string;
+  staticPositionForSuggestions?: boolean;
   value?: string;
   fieldsForSuggestions?: string[];
   onValueChange?: (value: string) => void;
@@ -18,6 +19,7 @@ interface CelInputProps {
 
 const CelInput: FC<CelInputProps> = ({
   id,
+  staticPositionForSuggestions,
   value = "",
   fieldsForSuggestions = [],
   onValueChange,
@@ -28,10 +30,10 @@ const CelInput: FC<CelInputProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full truncate">
+    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full">
       <MonacoCelEditor
         editorId={id}
-        className="h-20 relative {}"
+        className={`h-20 relative ${staticPositionForSuggestions ? "suggestions-static-position" : ""}`}
         value={value}
         fieldsForSuggestions={fieldsForSuggestions}
         onValueChange={onValueChange || ((value: string) => {})}
