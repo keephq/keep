@@ -664,8 +664,11 @@ class BaseIOHandler(IOValidatorMixin):
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
 
+    def _render_template(self, template, context):
+        raise NotImplementedError
+
     def render_recursively(
-        self, template: str, context: dict, max_iterations: int = 10
+            self, template: str, context: dict, max_iterations: int = 10
     ) -> tuple[str, set[str]]:
         """
         Recursively render a template until there are no more mustache tags or max iterations reached.
@@ -678,7 +681,37 @@ class BaseIOHandler(IOValidatorMixin):
         Returns:
             The fully rendered string
         """
-        raise NotImplementedError
+        current = template
+        iterations = 0
+
+        missing_keys = set()
+
+        try:
+            while iterations < max_iterations:
+
+                rendered, undefined = self._render_template(current, context)
+
+                if iterations == 0:
+                    missing_keys.update(undefined)
+
+                # https://github.com/keephq/keep/issues/2326
+                rendered = html.unescape(rendered)
+
+                # If no more changes or no more mustache tags, we're done
+                # we don't want to render providers. ever, so this is a hack for it for now
+                if (
+                        rendered == current
+                        or "{{" not in rendered
+                        or "providers." in rendered
+                ):
+                    return rendered, missing_keys
+
+                current = rendered
+                iterations += 1
+        except Exception as e:
+            self.logger.exception(f"Error rendering template: {e}")
+        # Return the last rendered version even if we hit max iterations
+        return current, missing_keys
 
 class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
 
@@ -711,56 +744,16 @@ class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
 
         return missing_keys, TrackingDict
 
-    def render_recursively(
-        self, template: str, context: dict, max_iterations: int = 10
-    ) -> tuple[str, set[str]]:
-        """
-        Recursively render a template until there are no more mustache tags or max iterations reached.
+    def _render_template(self, template, context):
+        undefined, tracking_dict = self._undefined_collector()
 
-        Args:
-            template: The template string containing mustache tags
-            context: The context dictionary for rendering
-            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+        # Render Mustache templates
+        ctx = tracking_dict(context)
+        rendered = chevron.render(
+            template, ctx, warn=False
+        )
 
-        Returns:
-            The fully rendered string
-        """
-        current = template
-        iterations = 0
-
-        missing_keys = set()
-
-        try:
-            while iterations < max_iterations:
-                undefined, tracking_dict = self._undefined_collector()
-
-                # Render Mustache templates
-                ctx = tracking_dict(context)
-                rendered = chevron.render(
-                    current, ctx, warn=False
-                )
-
-                if iterations == 0:
-                    missing_keys.update(undefined)
-
-                # https://github.com/keephq/keep/issues/2326
-                rendered = html.unescape(rendered)
-
-                # If no more changes or no more mustache tags, we're done
-                # we don't want to render providers. ever, so this is a hack for it for now
-                if (
-                        rendered == current
-                        or "{{" not in rendered
-                        or "providers." in rendered
-                ):
-                    return rendered, missing_keys
-
-                current = rendered
-                iterations += 1
-        except Exception as e:
-            self.logger.exception(f"Error rendering template: {e}")
-        # Return the last rendered version even if we hit max iterations
-        return current, missing_keys
+        return rendered, undefined
 
 class Jinja2IOHandler(BaseIOHandler):
 
@@ -863,54 +856,14 @@ class Jinja2IOHandler(BaseIOHandler):
 
         return missing_keys, TrackingUndefined
 
-    def render_recursively(
-        self, template: str, context: dict, max_iterations: int = 10
-    ) -> tuple[str, set[str]]:
-        """
-        Recursively render a template until there are no more mustache tags or max iterations reached.
+    def _render_template(self, template, context):
+        undefined, undefined_cls = self._undefined_collector()
 
-        Args:
-            template: The template string containing mustache tags
-            context: The context dictionary for rendering
-            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+        env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
+        template = env.from_string(template)
+        rendered = template.render(**context)
 
-        Returns:
-            The fully rendered string
-        """
-        current = template
-        iterations = 0
-
-        missing_keys = set()
-
-        try:
-            while iterations < max_iterations:
-                undefined, undefined_cls = self._undefined_collector()
-
-                env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
-                template = env.from_string(current)
-                rendered = template.render(**context)
-
-                if iterations == 0:
-                    missing_keys.update(undefined)
-
-                # https://github.com/keephq/keep/issues/2326
-                rendered = html.unescape(rendered)
-
-                # If no more changes or no more mustache tags, we're done
-                # we don't want to render providers. ever, so this is a hack for it for now
-                if (
-                        rendered == current
-                        or ("{{" not in rendered and "{%" not in rendered)
-                        or "providers." in rendered
-                ):
-                    return rendered, missing_keys
-
-                current = rendered
-                iterations += 1
-        except Exception as e:
-            self.logger.exception(f"Error rendering template: {e}")
-        # Return the last rendered version even if we hit max iterations
-        return current, missing_keys
+        return rendered, undefined
 
 if __name__ == "__main__":
     # debug & test
@@ -919,11 +872,12 @@ if __name__ == "__main__":
         "header": "HTTP API Error {{ alert.labels.statusCode }}",
         "labels": {"statusCode": "404"},
     }
-    iohandler = MustacheIOHandler(context_manager)
-    mustache_res = iohandler.render(
+    mustache_iohandler = MustacheIOHandler(context_manager)
+    mustache_res = mustache_iohandler.render(
         "{{alert.header}}",
     )
-    jinja_res = iohandler.render(
+    jinja_iohandler = Jinja2IOHandler(context_manager)
+    jinja_res = jinja_iohandler.render(
         "{{ alert.header }}\n{% if alert.body %}{{ alert.body }}{% endif %}",
     )
     from asteval import Interpreter
