@@ -139,7 +139,7 @@ class BaseIOHandler(IOValidatorMixin):
         # validate that template is syntactically correct due to current selected template engine
         self.validate_template_syntax(template)
 
-        self._validate_template(template, safe)
+        safe = self._validate_template(template, safe)
 
         val = self.parse(template, safe, default, additional_context)
         return val
