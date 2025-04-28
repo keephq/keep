@@ -495,7 +495,7 @@ export const AlertsRulesBuilder = ({
                 </div>
               )}
               {!isValidCEL && (
-                <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
+                <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
               )}
