@@ -284,7 +284,7 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     access_token = os.environ.get("SLACK_ACCESS_TOKEN")
-    webhook_url = "https://hooks.slack.com/services/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"  # os.environ.get("SLACK_WEBHOOK_URL")
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
 
     if access_token:
         config = {

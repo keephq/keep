@@ -195,10 +195,13 @@ const baseProviderConfigs = {
       issuer: process.env.KEYCLOAK_ISSUER,
       authorization: { params: { scope: "openid email profile roles groups" } },
       profile(profile, tokens) {
-        // Parse tenant information from groups
+        // Get the groups claim name from environment variable or use default
+        const groupsClaimName = process.env.KEYCLOAK_GROUPS_CLAIM || "groups";
+
+        // Parse tenant information from groups using the configured claim name
         let tenantIds = [];
-        if (profile.groups) {
-          tenantIds = profile.groups
+        if (profile[groupsClaimName]) {
+          tenantIds = profile[groupsClaimName]
             .map((group: string) => {
               // Parse group name to extract tenant_id and role
               // Assuming format like "org-a-admin"
