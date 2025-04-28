@@ -788,10 +788,8 @@ class Jinja2IOHandler(BaseIOHandler):
         """
         template = super().quote(template)
         jinja_statement = r"(?<!')\{%\s*([^\}]+?)\s*%\}(?!')"
-
         # Replace unquoted {% ... %} with quoted version
         template = re.sub(jinja_statement, r"'{% \1 %}'", template)
-
         return template
 
 
