@@ -98,15 +98,9 @@ class IOValidatorMixin:
         else:  # TemplateEngine.MUSTACHE
             return has_mustache or not has_jinja2
 
-
-class IOHandler(IOValidatorMixin):
-    def __init__(
-            self,
-            context_manager: ContextManager,
-            template_engine: TemplateEngine = TemplateEngine.MUSTACHE
-    ):
+class BaseIOHandler(IOValidatorMixin):
+    def __init__(self, context_manager: ContextManager):
         self.context_manager = context_manager
-        self.template_engine = template_engine
         self.logger = logging.getLogger(self.__class__.__name__)
         # whether Keep should shorten urls in the message or not
         # todo: have a specific parameter for this?
@@ -118,6 +112,21 @@ class IOHandler(IOValidatorMixin):
         ):
             self.shorten_urls = True
 
+    def _validate_template(self, template, safe):
+        # check if inside the mustache is object in the context
+        if template.count("}}") != template.count("{{"):
+            raise Exception(
+                f"Invalid template - number of }} and {{ does not match {template}"
+            )
+
+        # TODO - better validate functions
+        if template.count("(") != template.count(")"):
+            raise Exception(
+                f"Invalid template - number of ( and ) does not match {template}"
+            )
+
+        return safe
+
     def render(self, template, safe=False, default="", additional_context=None):
         # rendering is only support for strings
         if not isinstance(template, str):
@@ -126,32 +135,13 @@ class IOHandler(IOValidatorMixin):
         # validate that template is syntactically correct due to current selected template engine
         self.validate_template_syntax(template)
 
-        # check if inside the mustache is object in the context
-        if template.count("}}") != template.count("{{"):
-            raise Exception(
-                f"Invalid template - number of }} and {{ does not match {template}"
-            )
+        self._validate_template(template, safe)
 
-        if self.template_engine == TemplateEngine.JINJA2:
-            if template.count("%}") != template.count("{%"):
-                raise Exception(
-                    f"Invalid template - number of %}} and {{% does not match: {template}"
-                )
-            if template.count("#}") != template.count("{#"):
-                raise Exception(
-                    f"Invalid template - number of #}} and {{# does not match: {template}"
-                )
-
-        # TODO - better validate functions
-        if template.count("(") != template.count(")"):
-            raise Exception(
-                f"Invalid template - number of ( and ) does not match {template}"
-            )
         val = self.parse(template, safe, default, additional_context)
         return val
 
     def quote(self, template):
-        """Quote {{ }} and {% %} with ''
+        """Quote {{ }} with ''
 
         Args:
             template (str): string with {{ }} variables in it
@@ -160,12 +150,9 @@ class IOHandler(IOValidatorMixin):
             str: string with {{ }} variables quoted with ''
         """
         quote_pattern = r"(?<!')\{\{[\s]*([^\}]+)[\s]*\}\}(?!')"
-        jinja_statement = r"(?<!')\{%\s*([^\}]+?)\s*%\}(?!')"
 
         # Replace unquoted {{ ... }} with quoted version
         template = re.sub(quote_pattern, r"'{{ \1 }}'", template)
-        # Replace unquoted {% ... %} with quoted version
-        template = re.sub(jinja_statement, r"'{% \1 %}'", template)
 
         return template
 
@@ -267,29 +254,6 @@ class IOHandler(IOValidatorMixin):
         # first render everything using chevron
         # inject the context
 
-        raw_blocks = {}
-        raw_pattern = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
-
-        def _extract_raw_blocks(text):
-            def replacer(match):
-                key = f"__RAW_BLOCK_{len(raw_blocks)}__"
-                raw_blocks[key] = match.group(0)  # Full raw block
-                return key
-
-            return raw_pattern.sub(replacer, text)
-
-        def _restore_raw_blocks(text):
-            for key, raw_content in raw_blocks.items():
-                text = text.replace(key, raw_content)
-                # Remove Jinja raw marks after
-                text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
-            return text
-
-        # Extract jinja2 raw blocks
-        if self.template_engine == TemplateEngine.JINJA2:
-            string = _extract_raw_blocks(string)
-
-        # Now render the string
         string = self._render(string, safe, default, additional_context)
 
         # Now, extract the token if exists
@@ -364,10 +328,6 @@ class IOHandler(IOValidatorMixin):
                 )
             parsed_string = parsed_string.replace(token_to_replace, str(val))
             tokens_handled.add(token_to_replace)
-
-        # Restore jinja2 raw blocks
-        if self.template_engine == TemplateEngine.JINJA2:
-            parsed_string = _restore_raw_blocks(parsed_string)
 
         return parsed_string
 
@@ -540,13 +500,6 @@ class IOHandler(IOValidatorMixin):
         return _parse(self, tree)
 
     def _render(self, key: str, safe=False, default="", additional_context=None):
-        # TODO migrate it to validate_template_syntax func
-        if self.template_engine == TemplateEngine.MUSTACHE and "{{^" in key or "{{ ^" in key:
-            self.logger.debug(
-                "Safe render is not supported when there are inverted sections."
-            )
-            safe = False
-
         context = self.context_manager.get_full_context(exclude_providers=True)
 
         if additional_context:
@@ -711,15 +664,34 @@ class IOHandler(IOValidatorMixin):
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
 
+    def render_recursively(
+        self, template: str, context: dict, max_iterations: int = 10
+    ) -> tuple[str, set[str]]:
+        """
+        Recursively render a template until there are no more mustache tags or max iterations reached.
+
+        Args:
+            template: The template string containing mustache tags
+            context: The context dictionary for rendering
+            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+
+        Returns:
+            The fully rendered string
+        """
+        raise NotImplementedError
+
+class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
+
+    def _validate_template(self, template, safe):
+        self.logger.debug(
+            "Safe render is not supported when there are inverted sections."
+        )
+        safe = False
+
+        return super()._validate_template(self, template, safe)
+
     def _undefined_collector(self):
         missing_keys = set()
-
-        class TrackingUndefined(jinja2.Undefined):
-            # TODO make _path working
-            def __str__(self):
-                # Hack to get Jinja rendering missing values
-                missing_keys.add(self._undefined_name)
-                return super().__str__()
 
         class TrackingDict(dict):
             def __init__(self, *args, **kwargs):
@@ -737,7 +709,7 @@ class IOHandler(IOValidatorMixin):
                     missing_keys.add(full_path)
                     raise
 
-        return missing_keys, TrackingDict, TrackingUndefined
+        return missing_keys, TrackingDict
 
     def render_recursively(
         self, template: str, context: dict, max_iterations: int = 10
@@ -760,20 +732,163 @@ class IOHandler(IOValidatorMixin):
 
         try:
             while iterations < max_iterations:
-                undefined, tracking_dict, undefined_cls = self._undefined_collector()
+                undefined, tracking_dict = self._undefined_collector()
 
                 # Render Mustache templates
-                if self.template_engine == TemplateEngine.MUSTACHE:
-                    ctx = tracking_dict(context)
-                    rendered = chevron.render(
-                        current, ctx, warn=False
-                    )
+                ctx = tracking_dict(context)
+                rendered = chevron.render(
+                    current, ctx, warn=False
+                )
 
-                # Render Jinja2 templates
-                else:
-                    env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
-                    template = env.from_string(current)
-                    rendered = template.render(**context)
+                if iterations == 0:
+                    missing_keys.update(undefined)
+
+                # https://github.com/keephq/keep/issues/2326
+                rendered = html.unescape(rendered)
+
+                # If no more changes or no more mustache tags, we're done
+                # we don't want to render providers. ever, so this is a hack for it for now
+                if (
+                        rendered == current
+                        or "{{" not in rendered
+                        or "providers." in rendered
+                ):
+                    return rendered, missing_keys
+
+                current = rendered
+                iterations += 1
+        except Exception as e:
+            self.logger.exception(f"Error rendering template: {e}")
+        # Return the last rendered version even if we hit max iterations
+        return current, missing_keys
+
+class Jinja2IOHandler(BaseIOHandler):
+
+    def _validate_template(self, template, safe):
+
+        if template.count("%}") != template.count("{%"):
+            raise Exception(
+                f"Invalid template - number of %}} and {{% does not match: {template}"
+            )
+        if template.count("#}") != template.count("{#"):
+            raise Exception(
+                f"Invalid template - number of #}} and {{# does not match: {template}"
+            )
+
+        return super()._validate_template(self, template, safe)
+
+
+    def quote(self, template):
+        """Quote {{ }} and {% %} with ''
+
+        Args:
+            template (str): string with {{ }} and {% %} variables in it
+
+        Returns:
+            str: string with {{ }} and {% %} variables quoted with ''
+        """
+        template = super().quote(self, template)
+        jinja_statement = r"(?<!')\{%\s*([^\}]+?)\s*%\}(?!')"
+
+        # Replace unquoted {% ... %} with quoted version
+        template = re.sub(jinja_statement, r"'{% \1 %}'", template)
+
+        return template
+
+
+    def parse(self, string, safe=False, default="", additional_context=None):
+        """Use AST module to parse 'call stack'-like string and return the result
+
+        Example -
+            string = "first(split('1 2 3', ' '))" ==> 1
+
+        Args:
+            tree (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        # break the string to tokens
+        # this will break the following string to 3 tokens:
+        # string - "Number of errors: {{ steps.grep.condition.threshold.compare_to }}
+        #               [threshold was set to len({{ steps.grep.condition.threshold.value }})]
+        #               Error: split({{ foreach.value }},'a', 'b')
+        #               and first(split({{ foreach.value }},'a', 'b'))"
+        # tokens (with {{ expressions }} already rendered) -
+        #           len({{ steps.grep.condition.threshold.value }})
+        #           split({{ foreach.value }},'a', 'b')
+        #           first(split({{ foreach.value }},'a', 'b'))
+
+        # first render everything using chevron
+        # inject the context
+
+        raw_blocks = {}
+        raw_pattern = re.compile(r"{% raw %}(.*?){% endraw %}", re.DOTALL)
+
+        def _extract_raw_blocks(text):
+            def replacer(match):
+                key = f"__RAW_BLOCK_{len(raw_blocks)}__"
+                raw_blocks[key] = match.group(0)  # Full raw block
+                return key
+
+            return raw_pattern.sub(replacer, text)
+
+        def _restore_raw_blocks(text):
+            for key, raw_content in raw_blocks.items():
+                text = text.replace(key, raw_content)
+                # Remove Jinja raw marks after
+                text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
+            return text
+
+        # Extract jinja2 raw blocks
+        string = _extract_raw_blocks(string)
+
+        # Now parse a string
+        parsed_string = super().parse(self, string, safe=False, default="", additional_context=None)
+
+        # Restore jinja2 raw blocks
+        parsed_string = _restore_raw_blocks(parsed_string)
+
+        return parsed_string
+
+    def _undefined_collector(self):
+        missing_keys = set()
+
+        class TrackingUndefined(jinja2.Undefined):
+            # TODO make _path working
+            def __str__(self):
+                # Hack to get Jinja rendering missing values
+                missing_keys.add(self._undefined_name)
+                return super().__str__()
+
+        return missing_keys, TrackingUndefined
+
+    def render_recursively(
+        self, template: str, context: dict, max_iterations: int = 10
+    ) -> tuple[str, set[str]]:
+        """
+        Recursively render a template until there are no more mustache tags or max iterations reached.
+
+        Args:
+            template: The template string containing mustache tags
+            context: The context dictionary for rendering
+            max_iterations: Maximum number of rendering iterations to prevent infinite loops
+
+        Returns:
+            The fully rendered string
+        """
+        current = template
+        iterations = 0
+
+        missing_keys = set()
+
+        try:
+            while iterations < max_iterations:
+                undefined, undefined_cls = self._undefined_collector()
+
+                env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
+                template = env.from_string(current)
+                rendered = template.render(**context)
 
                 if iterations == 0:
                     missing_keys.update(undefined)
@@ -804,7 +919,7 @@ if __name__ == "__main__":
         "header": "HTTP API Error {{ alert.labels.statusCode }}",
         "labels": {"statusCode": "404"},
     }
-    iohandler = IOHandler(context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(context_manager)
     mustache_res = iohandler.render(
         "{{alert.header}}",
     )

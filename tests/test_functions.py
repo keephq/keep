@@ -11,7 +11,7 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertStatus
-from keep.iohandler.iohandler import IOHandler
+from keep.iohandler.iohandler import MustacheIOHandler
 
 
 @pytest.mark.parametrize(
@@ -767,7 +767,7 @@ def test_render_without_execution(mocked_context_manager):
     template = "My yaml is: {{ yaml }}!"
     context = {"yaml": "keep.is_business_hours(2024-03-25T14:00:00Z)"}
     mocked_context_manager.get_full_context.return_value = context
-    iohandler = IOHandler(mocked_context_manager)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     with pytest.raises(Exception):
         iohandler.render(
             template,

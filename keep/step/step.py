@@ -5,7 +5,7 @@ from enum import Enum
 from keep.conditions.condition_factory import ConditionFactory
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
-from keep.iohandler.iohandler import IOHandler
+from keep.iohandler.iohandler import MustacheIOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.step.step_provider_parameter import StepProviderParameter
 from keep.throttles.throttle_factory import ThrottleFactory
@@ -35,7 +35,7 @@ class Step:
         )
         self.on_failure = self.config.get("provider", {}).get("on-failure", {})
         self.context_manager: ContextManager = context_manager
-        self.io_handler = IOHandler(context_manager)
+        self.io_handler = MustacheIOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
         self.vars = self.config.get("vars", {})
         self.conditions_results = {}

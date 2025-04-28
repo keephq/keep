@@ -8,17 +8,17 @@ from unittest.mock import patch
 import pytest
 
 from keep.api.models.alert import AlertDto
-from keep.iohandler.iohandler import IOHandler, TemplateEngine
+from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine
 
 
 def test_vanilla(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     s = iohandler.render("hello world")
     assert s == "hello world"
 
 
 def test_with_basic_context(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "name": "s",
     }
@@ -30,7 +30,7 @@ def test_with_basic_context(context_manager):
 
 
 def test_with_function(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "some_list": [1, 2, 3],
     }
@@ -42,7 +42,7 @@ def test_with_function(context_manager):
 
 
 def test_with_function_is_business_hours_args(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "current_time": "2024-03-20T10:00:00+02:00",  # Example time in Asia/Jerusalem timezone
     }
@@ -62,7 +62,7 @@ def test_with_function_is_business_hours_args(context_manager):
 
 
 def test_with_function_is_business_hours_kwargs(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "current_time": "2024-03-20T10:00:00+02:00",  # Example time in Asia/Jerusalem timezone
     }
@@ -80,7 +80,7 @@ def test_with_function_is_business_hours_kwargs(context_manager):
 
 
 def test_with_function_2(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "some_list": [1, 2, 3],
     }
@@ -92,7 +92,7 @@ def test_with_function_2(context_manager):
 
 
 def test_with_json_dumps(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "some_list": [1, 2, 3],
     }
@@ -104,7 +104,7 @@ def test_with_json_dumps(context_manager):
 
 
 def test_with_json_dumps_when_json_string(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "some_list": "[1, 2, 3]",
     }
@@ -352,7 +352,7 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
     )
     context_manager.event_context = context_manager.alert
     # Mustache rendering
-    iohandler = IOHandler(
+    iohandler = MustacheIOHandler(
         context_manager,
         template_engine=TemplateEngine.MUSTACHE,
     )
@@ -364,7 +364,7 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
     assert "aptures a message event and sends it to Sentry" in s
 
     # Jinja2 rendering
-    iohandler = IOHandler(
+    iohandler = MustacheIOHandler(
         context_manager,
         template_engine=TemplateEngine.JINJA2,
     )
@@ -386,7 +386,7 @@ def test_functions(mocked_context_manager):
     mocked_context_manager.get_full_context.return_value = {
         "steps": {"some_list": [["Asd", 2, 3], [4, 5, 6], [7, 8, 9]]},
     }
-    iohandler = IOHandler(mocked_context_manager)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     s = iohandler.render("result is keep.first(keep.first({{ steps.some_list }}))")
     assert s == "result is Asd"
 
@@ -395,14 +395,14 @@ def test_render_with_json_dumps_function(mocked_context_manager):
     mocked_context_manager.get_full_context.return_value = {
         "steps": {"some_object": {"key": "value"}}
     }
-    iohandler = IOHandler(mocked_context_manager)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     template = "JSON: keep.json_dumps({{ steps.some_object }})"
     rendered = iohandler.render(template)
     assert rendered == 'JSON: {\n    "key": "value"\n}'
 
 
 def test_render_uppercase(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "hello keep.uppercase('world')"
     result = iohandler.render(template)
     assert result == "hello WORLD"
@@ -415,7 +415,7 @@ def test_render_datetime_compare(context_manager):
         "now": now.isoformat(),
         "one_hour_ago": one_hour_ago.isoformat(),
     }
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Difference in hours: keep.datetime_compare(keep.to_utc('{{ steps.now }}'), keep.to_utc('{{ steps.one_hour_ago }}'))"
     result = iohandler.render(template)
     assert "Difference in hours: 1.0" in result
@@ -441,14 +441,14 @@ def test_get_pods_foreach(mocked_context_manager):
     }
     expected_output = "Pod status report:\nPod name: pod1 || Namespace: default || Status: Running\nPod name: pod2 || Namespace: kube-system || Status: Pending"
     # Test with Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     template = "Pod status report:{{#steps.get-pods.results}}\nPod name: {{ metadata.name }} || Namespace: {{ metadata.namespace }} || Status: {{ status.phase }}{{/steps.get-pods.results}}"
     rendered = iohandler.render(template)
 
     assert rendered.strip() == expected_output.strip()
 
     # Test with Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     template = (
         "Pod status report:"
         "{% for pod in steps['get-pods'].results %}\n"
@@ -466,12 +466,12 @@ def test_resend_python_service_condition(mocked_context_manager):
     }
 
     # Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     condition = "{{ steps.run-script.results.return_code }} == 0"
     assert eval(iohandler.render(condition)) is True
 
     # Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     condition = "{{ steps['run-script'].results.return_code }} == 0"
     assert eval(iohandler.render(condition)) is True
 
@@ -496,13 +496,13 @@ def test_blogpost_workflow_enrich_alert(mocked_context_manager):
     )
 
     # Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     template = "Customer details: Name: {{ steps.get-more-details.results.name }}, Email: {{ steps.get-more-details.results.email }}, Tier: {{ steps.get-more-details.results.tier }}"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     template = "Customer details: Name: {{ steps['get-more-details'].results.name }}, Email: {{ steps['get-more-details'].results.email }}, Tier: {{ steps['get-more-details'].results.tier }}"
     rendered = iohandler.render(template)
     assert rendered == expected_output
@@ -518,7 +518,7 @@ def test_sentry_alerts_conditions(mocked_context_manager):
         }
     }
 
-    iohandler = IOHandler(mocked_context_manager)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     condition_payments = "'{{ alert.service }}' == 'payments'"
     condition_ftp = "'{{ alert.service }}' == 'ftp'"
 
@@ -536,13 +536,13 @@ def test_db_disk_space_alert(mocked_context_manager):
     expected_output = "Number of logs: 2"
 
     # Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     template = "Number of logs: keep.len({{ steps.check-error-rate.results.logs }})"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     template = "Number of logs: keep.len({{ steps['check-error-rate'].results.logs }})"
     rendered = iohandler.render(template)
     assert rendered == expected_output
@@ -560,12 +560,12 @@ def test_query_bigquery_for_customer_tier(mocked_context_manager):
     }
 
     # Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     condition = "'{{ steps.get-customer-tier-by-id.result.tier }}' == 'enterprise'"
     assert eval(iohandler.render(condition)) is True
 
     # Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     condition = "'{{ steps['get-customer-tier-by-id'].result.tier }}' == 'enterprise'"
     assert eval(iohandler.render(condition)) is True
 
@@ -596,7 +596,7 @@ def test_opsgenie_get_open_alerts(mocked_context_manager):
         }
     }
 
-    iohandler = IOHandler(mocked_context_manager)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     template = (
         "Opsgenie has {{ steps.get-open-alerts.results.number_of_alerts }} open alerts"
     )
@@ -606,7 +606,7 @@ def test_opsgenie_get_open_alerts(mocked_context_manager):
 
 
 def test_malformed_template_with_unmatched_braces(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     malformed_template = "This template has an unmatched {{ brace."
 
     with pytest.raises(Exception) as excinfo:
@@ -630,7 +630,7 @@ def test_malformed_template_with_incorrect_function_syntax(context_manager):
 
 
 def test_unrecognized_function_call(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template_with_unrecognized_function = (
         "Calling an unrecognized function keep.nonexistent_function()"
     )
@@ -644,7 +644,7 @@ def test_unrecognized_function_call(context_manager):
 
 
 def test_missing_closing_parenthesis(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     malformed_template = "keep.len({{ steps.some_list }"
     extracted_functions = iohandler.extract_keep_functions(malformed_template)
     assert (
@@ -653,7 +653,7 @@ def test_missing_closing_parenthesis(context_manager):
 
 
 def test_nested_malformed_function_calls(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     malformed_template = (
         "keep.first(keep.len({{ steps.some_list }, keep.lowercase('TEXT')"
     )
@@ -664,7 +664,7 @@ def test_nested_malformed_function_calls(context_manager):
 
 
 def test_extra_closing_parenthesis(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     malformed_template = "keep.len({{ steps.some_list }}))"
     extracted_functions = iohandler.extract_keep_functions(malformed_template)
     # Assuming the method can ignore the extra closing parenthesis and still extract the function correctly
@@ -674,7 +674,7 @@ def test_extra_closing_parenthesis(context_manager):
 
 
 def test_incorrect_function_name(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     malformed_template = "keep.lenght({{ steps.some_list }})"
     extracted_functions = iohandler.extract_keep_functions(malformed_template)
     # Assuming the method extracts the function call regardless of the function name being valid
@@ -684,7 +684,7 @@ def test_incorrect_function_name(context_manager):
 
 
 def test_keep_in_string_not_as_function_call(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Here is a sentence with keep. not as a function call: 'Let's keep. moving forward.'"
     extracted_functions = iohandler.extract_keep_functions(template)
     assert (
@@ -693,7 +693,7 @@ def test_keep_in_string_not_as_function_call(context_manager):
 
 
 def test_no_function_calls(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "This is a sentence with keep. but no function calls."
     # Assuming extract_keep_functions is a method of setup object
     functions = iohandler.extract_keep_functions(template)
@@ -701,28 +701,28 @@ def test_no_function_calls(context_manager):
 
 
 def test_malformed_function_calls(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Here is a malformed function call keep.(without closing parenthesis."
     functions = iohandler.extract_keep_functions(template)
     assert len(functions) == 0, "Should handle malformed function calls gracefully."
 
 
 def test_mixed_content(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Mix of valid keep.doSomething() and text keep. not as a call."
     functions = iohandler.extract_keep_functions(template)
     assert len(functions) == 1, "Should only extract valid function calls."
 
 
 def test_nested_functions(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Nested functions keep.nest(keep.inner()) should be handled."
     functions = iohandler.extract_keep_functions(template)
     assert len(functions) == 1, "Should handle nested functions without getting stuck."
 
 
 def test_endless_loop_potential(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "keep.() empty function call followed by text keep. not as a call."
     functions = iohandler.extract_keep_functions(template)
     assert (
@@ -731,7 +731,7 @@ def test_endless_loop_potential(context_manager):
 
 
 def test_edge_case_with_escaped_quotes(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = (
         r"Edge case keep.function('argument with an escaped quote\\') and more text."
     )
@@ -742,14 +742,14 @@ def test_edge_case_with_escaped_quotes(context_manager):
 
 
 def test_consecutive_function_calls(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Consecutive keep.first() and keep.second() calls."
     functions = iohandler.extract_keep_functions(template)
     assert len(functions) == 2, "Should correctly handle consecutive function calls."
 
 
 def test_function_call_at_end(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Function call at the very end keep.end()"
     functions = iohandler.extract_keep_functions(template)
     assert (
@@ -758,7 +758,7 @@ def test_function_call_at_end(context_manager):
 
 
 def test_complex_mixture(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "Mix keep.start() some text keep.in('middle') and malformed keep. and valid keep.end()."
     functions = iohandler.extract_keep_functions(template)
     assert (
@@ -767,7 +767,7 @@ def test_complex_mixture(context_manager):
 
 
 def test_escaped_quotes_inside_function_arguments(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "keep.split('some,string,with,escaped\\\\'quotes', ',')"
     extracted_functions = iohandler.extract_keep_functions(template)
     # Assuming the method can handle escaped quotes within function arguments
@@ -777,7 +777,7 @@ def test_escaped_quotes_inside_function_arguments(context_manager):
 
 
 def test_double_function_call(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = """{ vars.alert_tier }} Alert: Pipelines are down
       Hi,
       This {{ vars.alert_tier }} alert is triggered keep.get_firing_time('{{ alert }}', 'minutes') because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.
@@ -796,7 +796,7 @@ def test_if_else_in_template_existing(mocked_context_manager):
     expected_output = "it actually exists"
 
     # Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     rendered = iohandler.render(
         "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
         safe=True,
@@ -804,7 +804,7 @@ def test_if_else_in_template_existing(mocked_context_manager):
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     template = (
         "{% if alert.notexist %}{{ alert.notexist }}"
         "{% else %}{{ alert.name }}"
@@ -823,7 +823,7 @@ def test_if_else_in_template_not_existing(mocked_context_manager):
     expected_output = "this is a test"
 
     # Mustache
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
     rendered = iohandler.render(
         "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
         safe=True,
@@ -831,7 +831,7 @@ def test_if_else_in_template_not_existing(mocked_context_manager):
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = IOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
     template = (
         "{% if alert.notexist %}{{ alert.notexist }}"
         "{% else %}{{ alert.name }}"
@@ -843,7 +843,7 @@ def test_if_else_in_template_not_existing(mocked_context_manager):
 
 
 def test_escaped_quotes_with_with_space(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "keep.split('some string with 'quotes and with space' after', ',')"
     extracted_functions = iohandler.extract_keep_functions(template)
     # Assuming the method can handle escaped quotes within function arguments
@@ -853,7 +853,7 @@ def test_escaped_quotes_with_with_space(context_manager):
 
 
 def test_escaped_quotes_with_with_newlines(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "keep.split('some string with 'quotes and with space' \r\n after', ',')"
     extracted_functions = iohandler.extract_keep_functions(template)
     # Assuming the method can handle escaped quotes within function arguments
@@ -873,7 +873,7 @@ def test_add_time_to_date_function(context_manager):
         }
     )
     context_manager.event_context = context_manager.alert
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     s = iohandler.render(
         'keep.add_time_to_date("{{ alert.date }}", "%Y-%m-%dT%H:%M:%S.%f%z", "1w 2d 3h 30m")'
     )
@@ -955,7 +955,7 @@ def test_add_time_to_date_function(context_manager):
 
 
 def test_recursive_rendering_basic(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
 
     context_manager.steps_context = {
         "name": "World",
@@ -967,7 +967,7 @@ def test_recursive_rendering_basic(context_manager):
 
 
 def test_recursive_rendering_nested(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "name": "World",
         "greeting": "Hello {{ steps.name }}",
@@ -981,7 +981,7 @@ def test_recursive_rendering_nested(context_manager):
 
 
 def test_recursive_rendering_with_functions(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {
         "name": "world",
         "greeting": "Hello keep.uppercase({{ steps.name }})",
@@ -992,7 +992,7 @@ def test_recursive_rendering_with_functions(context_manager):
 
 
 def test_recursive_rendering_max_iterations(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.steps_context = {"loop": "{{ steps.loop }}"}
     template = "{{ steps.loop }}"
     result = iohandler.render(template)
@@ -1005,14 +1005,14 @@ def test_dont_render_providers(context_manager):
     context_manager.providers_context = {
         "keephq": '{"auth": "bla"}',
     }
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     template = "{{ providers.keephq }}"
     result = iohandler.render(template)
     assert "bla" not in result, "Expected empty string, but got {result}"
 
 
 def test_render_with_consts(context_manager):
-    iohandler = IOHandler(context_manager)
+    iohandler = MustacheIOHandler(context_manager)
     context_manager.alert = AlertDto(
         **{
             "id": "test",
@@ -1049,7 +1049,7 @@ def test_render_with_consts(context_manager):
     ), f"Expected '{expected_result}', but got '{result}'"
 
 def test_jinja_with_custom_functions(context_manager):
-    iohandler = IOHandler(
+    iohandler = MustacheIOHandler(
         context_manager,
         template_engine=TemplateEngine.JINJA2
     )
@@ -1078,7 +1078,7 @@ def test_jinja_with_custom_functions(context_manager):
     assert result.strip() == expected, f"Expected:\n{expected}\nBut got:\n{result}"
 
 def test_keep_functions_respect_jinja_raw(context_manager):
-    iohandler = IOHandler(
+    iohandler = MustacheIOHandler(
         context_manager,
         template_engine=TemplateEngine.JINJA2
     )

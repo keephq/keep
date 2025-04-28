@@ -5,7 +5,7 @@ import abc
 import logging
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.iohandler.iohandler import IOHandler
+from keep.iohandler.iohandler import MustacheIOHandler
 
 
 class BaseCondition(metaclass=abc.ABCMeta):
@@ -28,7 +28,7 @@ class BaseCondition(metaclass=abc.ABCMeta):
         self.condition_type = condition_type
         self.condition_config = condition_config
         self.condition_name = condition_name
-        self.io_handler = IOHandler(context_manager)
+        self.io_handler = MustacheIOHandler(context_manager)
         self.context_manager = context_manager
         self.condition_context = {}
         self.condition_alias = condition_config.get("alias") or condition_name

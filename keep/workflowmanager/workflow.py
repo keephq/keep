@@ -5,7 +5,7 @@ import typing
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.rbac import Roles
-from keep.iohandler.iohandler import IOHandler, TemplateEngine
+from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine
 from keep.step.step import Step, StepError
 
 
@@ -61,7 +61,7 @@ class Workflow:
         self.context_manager = context_manager
         self.context_manager.set_consts_context(workflow_consts)
         self.context_manager.set_secret_context()
-        self.io_nandler = IOHandler(context_manager, template_engine=workflow_templating)
+        self.io_nandler = MustacheIOHandler(context_manager, template_engine=workflow_templating)
         self.logger = logging.getLogger(__name__)
         self.workflow_debug = workflow_debug
         self.workflow_permissions = workflow_permissions

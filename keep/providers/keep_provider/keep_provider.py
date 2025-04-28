@@ -14,7 +14,7 @@ from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.tasks.process_event_task import process_event
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.iohandler.iohandler import IOHandler
+from keep.iohandler.iohandler import MustacheIOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.searchengine.searchengine import SearchEngine
@@ -29,7 +29,7 @@ class KeepProvider(BaseProvider):
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
-        self.io_handler = IOHandler(context_manager)
+        self.io_handler = MustacheIOHandler(context_manager)
         super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
