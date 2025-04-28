@@ -198,17 +198,6 @@ Keep is highly configurable through environment variables. This allows you to cu
 | :-----------------: | :-------------------------: | :------: | :-----------: | :---------------: |
 | **SENTRY_DISABLED** | Disables Sentry integration |    No    |    "false"    | "true" or "false" |
 
-### Frigade
-
-<Info>
-  Frigade configuration controls Keep's integration with the Frigade onboarding
-  platform.
-</Info>
-
-|       Env var        |           Purpose            | Required | Default Value |   Valid options   |
-| :------------------: | :--------------------------: | :------: | :-----------: | :---------------: |
-| **FRIGADE_DISABLED** | Disables Frigade integration |    No    |    "false"    | "true" or "false" |
-
 ### Ngrok
 
 <Info>
@@ -303,10 +292,10 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 
 ### General
 
-|   Env var   |                  Purpose                  | Required | Default Value | Valid options |
-| :---------: | :---------------------------------------: | :------: | :-----------: | :-----------: |
-| **API_URL** | Specifies the URL of the Keep backend API |   Yes    |     None      |   Valid URL   |
-| **KEEP_HIDE_SENSITIVE_FIELDS** | Hides sensitive fields | False |  None  |   "true", "false"   |
+|            Env var             |                  Purpose                  | Required | Default Value |  Valid options  |
+| :----------------------------: | :---------------------------------------: | :------: | :-----------: | :-------------: |
+|          **API_URL**           | Specifies the URL of the Keep backend API |   Yes    |     None      |    Valid URL    |
+| **KEEP_HIDE_SENSITIVE_FIELDS** |          Hides sensitive fields           |  False   |     None      | "true", "false" |
 
 ### Authentication
 

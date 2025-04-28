@@ -10,15 +10,10 @@ import { VscDebugDisconnect } from "react-icons/vsc";
 import { useFloating } from "@floating-ui/react";
 import { Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
-import * as Frigade from "@frigade/react";
-import { useState } from "react";
-import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
-import { useMounted } from "@/shared/lib/hooks/useMounted";
-import "./frigade-overrides.css";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -93,31 +88,10 @@ export const UserInfo = ({ session }: UserInfoProps) => {
   const { data: config } = useConfig();
 
   const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
-  const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const isMounted = useMounted();
 
   return (
     <>
       <ul className="space-y-2 p-2">
-        {isMounted &&
-          !config?.FRIGADE_DISABLED &&
-          flow?.isCompleted === false && (
-            <li>
-              <Frigade.ProgressBadge
-                className="get-started-badge"
-                flowId={ONBOARDING_FLOW_ID}
-                onClick={() => setIsOnboardingOpen(true)}
-              />
-              <Onboarding
-                isOpen={isOnboardingOpen}
-                toggle={() => setIsOnboardingOpen(false)}
-                variables={{
-                  name: session?.user?.name ?? session?.user?.email,
-                }}
-              />
-            </li>
-          )}
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
             <Subtitle className="text-xs">Providers</Subtitle>
