@@ -193,7 +193,45 @@ const baseProviderConfigs = {
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER,
-      authorization: { params: { scope: "openid email profile roles" } },
+      authorization: { params: { scope: "openid email profile roles groups" } },
+      profile(profile, tokens) {
+        // Parse tenant information from groups
+        let tenantIds = [];
+        if (profile.groups) {
+          tenantIds = profile.groups
+            .map((group: string) => {
+              // Parse group name to extract tenant_id and role
+              // Assuming format like "org-a-admin"
+              const lastDashIndex = group.lastIndexOf("-");
+              if (lastDashIndex > 0) {
+                return {
+                  tenant_id: group.substring(0, lastDashIndex),
+                  role: group.substring(lastDashIndex + 1),
+                };
+              }
+              return null;
+            })
+            .filter(Boolean);
+        }
+
+        // Default tenant is the first one if available
+        const defaultTenant =
+          tenantIds.length > 0 ? tenantIds[0].tenant_id : "keep";
+
+        return {
+          id: profile.sub,
+          name: profile.name || profile.preferred_username || "",
+          email: profile.email || "",
+          // Store all tenant IDs for tenant switching
+          tenantIds: tenantIds,
+          // Set default tenant
+          tenantId: defaultTenant,
+          // Default role from the first tenant
+          role: tenantIds.length > 0 ? tenantIds[0].role : "user",
+          // Ensure accessToken is always a string
+          accessToken: tokens.access_token || "",
+        };
+      },
     }),
   ],
   [AuthType.AZUREAD]: [
@@ -301,6 +339,18 @@ export const config = {
         token.role = role;
 
         if (authType === AuthType.KEYCLOAK) {
+          accessToken = account.access_token;
+
+          // If user object has tenantIds from profile parsing, include them
+          if (user.tenantIds) {
+            token.tenantIds = user.tenantIds;
+          }
+
+          // Set default tenant and role
+          token.tenantId = user.tenantId || "keep";
+          token.role = user.role || "user";
+
+          // Refresh token logic
           token.refreshToken = account.refresh_token;
           token.accessTokenExpires =
             Date.now() + (account.expires_in as number) * 1000;
@@ -330,6 +380,7 @@ export const config = {
           accessToken: token.accessToken as string,
           tenantId: token.tenantId as string,
           role: token.role as string,
+          tenantIds: token.tenantIds || [],
         },
       };
     },

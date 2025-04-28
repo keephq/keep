@@ -12,6 +12,7 @@ import time
 import pydantic
 import requests
 from packaging.version import Version
+from pydantic.networks import AnyHttpUrl
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -46,7 +47,7 @@ class GrafanaProviderAuthConfig:
             "sensitive": True,
         },
     )
-    host: pydantic.AnyHttpUrl = dataclasses.field(
+    host: AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana host",

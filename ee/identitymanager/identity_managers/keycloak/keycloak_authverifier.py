@@ -3,6 +3,7 @@ import os
 
 from fastapi import Depends, HTTPException
 
+from keep.api.core.config import config
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
 from keycloak import KeycloakOpenID, KeycloakOpenIDConnection
@@ -80,6 +81,17 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         self.keycloak_uma = KeycloakUMA(connection=self.keycloak_openid_connection)
         # will be populated in on_start of the identity manager
         self.protected_resource = None
+        self.roles_from_groups = config(
+            "KEYCLOAK_ROLES_FROM_GROUPS", default=False, cast=bool
+        )
+        self.groups_claims = config("KEYCLOAK_GROUPS_CLAIM", default="group-keeps")
+        self.groups_claims_admin = config(
+            "KEYCLOAK_GROUPS_CLAIM_ADMIN", default="admin"
+        )
+        self.groups_claims_noc = config("KEYCLOAK_GROUPS_CLAIM_NOC", default="noc")
+        self.groups_claims_webhook = config(
+            "KEYCLOAK_GROUPS_CLAIM_WEBHOOK", default="webhook"
+        )
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -99,19 +111,47 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             logger.warning(
                 "Invalid Keycloak configuration - no org information for user. Check organization mapper: https://github.com/keephq/keep/blob/main/keycloak/keep-realm.json#L93"
             )
-        role = (
-            payload.get("resource_access", {})
-            .get(self.keycloak_client_id, {})
-            .get("roles", [])
-        )
-        # filter out uma_protection
-        role = [r for r in role if not r.startswith("uma_protection")]
-        if not role:
-            raise HTTPException(
-                status_code=401, detail="Invalid Keycloak token - no role"
-            )
 
-        role = role[0]
+        # this allows more than one tenant to be configured in the same keycloak realm
+        # todo: support dynamic roles
+        if self.roles_from_groups:
+            self.logger.info("Using roles from groups")
+            # get roles from groups
+            # e.g.
+            # "group-keeps": [
+            # "/ORG-A-USERS",
+            # "/ORG-B-USERS",
+            # "/org-users"
+            # ],
+            groups = payload.get(self.groups_claims, [])
+            for group in groups:
+                if self.groups_claims_admin in groups:
+                    role = "admin"
+                elif self.groups_claims_noc in groups:
+                    role = "noc"
+                elif self.groups_claims_webhook in groups:
+                    role = "webhook"
+                else:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Invalid Keycloak token - no role in groups",
+                    )
+        else:
+            role = (
+                payload.get("resource_access", {})
+                .get(self.keycloak_client_id, {})
+                .get("roles", [])
+            )
+            # filter out uma_protection
+            role = [r for r in role if not r.startswith("uma_protection")]
+            if not role:
+                raise HTTPException(
+                    status_code=401, detail="Invalid Keycloak token - no role"
+                )
+
+            role = role[0]
+
+        # finally, check if the role is in the allowed roles
         return AuthenticatedEntity(
             tenant_id,
             email,
