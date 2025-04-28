@@ -194,6 +194,8 @@ export const AlertsRulesBuilder = ({
 
     if (value) {
       current.set(key, value);
+    } else {
+      current.delete(key);
     }
 
     // cast to string
@@ -218,6 +220,9 @@ export const AlertsRulesBuilder = ({
     setCELRules("");
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
+    if (shouldSetQueryParam) setQueryParam("cel", "");
+    onApplyFilter();
+    updateOutputCEL?.(celRules);
     setIsValidCEL(true);
   }, [table]);
 
@@ -453,7 +458,7 @@ export const AlertsRulesBuilder = ({
       <div className="flex flex-col gap-y-2 w-full justify-end">
         {/* Docs */}
         <div className="flex flex-wrap items-start gap-x-2">
-          <div className="flex flex-wrap gap-2 items-center relative flex-grow">
+          <div className="flex flex-1 min-w-0 gap-2 items-center relative">
             {/* Textarea and error message container */}
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
