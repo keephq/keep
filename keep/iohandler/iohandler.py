@@ -99,6 +99,8 @@ class IOValidatorMixin:
             return has_mustache or not has_jinja2
 
 class BaseIOHandler(IOValidatorMixin):
+    template_engine: TemplateEngine = None
+
     def __init__(self, context_manager: ContextManager):
         self.context_manager = context_manager
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -111,6 +113,8 @@ class BaseIOHandler(IOValidatorMixin):
             and self.context_manager.click_context.params.get("api_url")
         ):
             self.shorten_urls = True
+            if not self.template_engine:
+                raise AttributeError("template_engine is not defined")
 
     def _validate_template(self, template, safe):
         # check if inside the mustache is object in the context
@@ -714,6 +718,7 @@ class BaseIOHandler(IOValidatorMixin):
         return current, missing_keys
 
 class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
+    template_engine: TemplateEngine = TemplateEngine.MUSTACHE
 
     def _validate_template(self, template, safe):
         self.logger.debug(
@@ -721,7 +726,7 @@ class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
         )
         safe = False
 
-        return super()._validate_template(self, template, safe)
+        return super()._validate_template(template, safe)
 
     def _undefined_collector(self):
         missing_keys = set()
@@ -756,6 +761,7 @@ class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
         return rendered, undefined
 
 class Jinja2IOHandler(BaseIOHandler):
+    template_engine: TemplateEngine = TemplateEngine.JINJA2
 
     def _validate_template(self, template, safe):
 
@@ -768,7 +774,7 @@ class Jinja2IOHandler(BaseIOHandler):
                 f"Invalid template - number of #}} and {{# does not match: {template}"
             )
 
-        return super()._validate_template(self, template, safe)
+        return super()._validate_template(template, safe)
 
 
     def quote(self, template):
@@ -780,7 +786,7 @@ class Jinja2IOHandler(BaseIOHandler):
         Returns:
             str: string with {{ }} and {% %} variables quoted with ''
         """
-        template = super().quote(self, template)
+        template = super().quote(template)
         jinja_statement = r"(?<!')\{%\s*([^\}]+?)\s*%\}(?!')"
 
         # Replace unquoted {% ... %} with quoted version
@@ -837,7 +843,7 @@ class Jinja2IOHandler(BaseIOHandler):
         string = _extract_raw_blocks(string)
 
         # Now parse a string
-        parsed_string = super().parse(self, string, safe=False, default="", additional_context=None)
+        parsed_string = super().parse(string, safe=False, default="", additional_context=None)
 
         # Restore jinja2 raw blocks
         parsed_string = _restore_raw_blocks(parsed_string)
