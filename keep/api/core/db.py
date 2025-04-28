@@ -537,12 +537,21 @@ def add_or_update_workflow(
     updated_by: str,
     provisioned: bool = False,
     provisioned_file: str | None = None,
+    force_update: bool = True,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
         existing_workflow = get_workflow(tenant_id, id)
 
+        if not existing_workflow:
+            existing_workflow = get_workflow(tenant_id, name)
+
         if existing_workflow:
+            if workflow_raw == existing_workflow.workflow_raw and not force_update:
+                logger.info(
+                    f"Workflow {id} already exists with the same workflow_raw, skipping update"
+                )
+                return existing_workflow
             return update_workflow_with_values(
                 existing_workflow,
                 name=name,
