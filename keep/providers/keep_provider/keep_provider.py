@@ -672,8 +672,13 @@ class KeepProvider(BaseProvider):
                 self.context_manager.workflow_execution_id,
             )
             workflow_db_id = workflow_execution.workflow_id
-            self._delete_workflows(except_workflow_id=workflow_db_id)
-        elif workflow_to_update_yaml:
+            if not workflow_execution.workflow_id == "test":
+                self._delete_workflows(except_workflow_id=workflow_db_id)
+            else:
+                self.logger.info(
+                    "Not deleting workflow as it's a test run",
+                )
+        if workflow_to_update_yaml:
             self.logger.info(
                 "Updating workflow YAML",
                 extra={"workflow_to_update_yaml": workflow_to_update_yaml},
@@ -692,6 +697,7 @@ class KeepProvider(BaseProvider):
                     tenant_id=self.context_manager.tenant_id,
                     created_by=f"workflow id: {self.context_manager.workflow_id}",
                     workflow=workflow_to_update_yaml,
+                    force_update=False,
                 )
                 self.logger.info(
                     "Workflow created successfully",
