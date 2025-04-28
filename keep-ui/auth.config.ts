@@ -193,7 +193,7 @@ const baseProviderConfigs = {
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER,
-      authorization: { params: { scope: "openid email profile roles groups" } },
+      authorization: { params: { scope: "openid email profile" } },
       profile(profile, tokens) {
         // Get the groups claim name from environment variable or use default
         const groupsClaimName = process.env.KEYCLOAK_GROUPS_CLAIM || "groups";
@@ -220,6 +220,7 @@ const baseProviderConfigs = {
         // Default tenant is the first one if available
         const defaultTenant =
           tenantIds.length > 0 ? tenantIds[0].tenant_id : "keep";
+        j;
 
         return {
           id: profile.sub,
