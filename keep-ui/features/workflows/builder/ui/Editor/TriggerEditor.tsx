@@ -87,18 +87,6 @@ export function TriggerEditor() {
           <>
             <Subtitle className="mt-2.5">Alert filter</Subtitle>
             {error && <Text className="text-red-500 mb-1.5">{error}</Text>}
-            <div className="w-1/2">
-              <Button
-                onClick={addFilter}
-                size="xs"
-                className="ml-1 mt-1"
-                variant="light"
-                color="gray"
-                icon={FunnelIcon}
-              >
-                Add Filter
-              </Button>
-            </div>
             {properties.alert &&
               Object.keys(properties.alert ?? {}).map((filter) => (
                 <div key={filter}>
