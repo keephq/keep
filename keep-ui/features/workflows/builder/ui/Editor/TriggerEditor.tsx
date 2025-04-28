@@ -1,12 +1,14 @@
-import { Button, TextInput } from "@/components/ui";
+import { TextInput } from "@/components/ui";
 import { useWorkflowStore } from "@/entities/workflows";
-import { BackspaceIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { BackspaceIcon } from "@heroicons/react/24/outline";
 import { Text, Subtitle, Icon, Switch } from "@tremor/react";
 import { EditorLayout } from "./StepEditor";
 import { capitalize } from "@/utils/helpers";
 import { getHumanReadableInterval } from "@/entities/workflows/lib/getHumanReadableInterval";
 import { debounce } from "lodash";
 import { useCallback } from "react";
+import CelInput from "@/features/cel-input/cel-input";
+import { useFacetPotentialFields } from "@/features/filter";
 
 export function TriggerEditor() {
   const {
@@ -63,6 +65,7 @@ export function TriggerEditor() {
   const error = validationErrors?.[selectedTriggerKey];
 
   const renderTriggerContent = () => {
+    const { data: alertFields } = useFacetPotentialFields("alerts");
     switch (selectedTriggerKey) {
       case "manual":
         return (
@@ -86,32 +89,60 @@ export function TriggerEditor() {
         return (
           <>
             <Subtitle className="mt-2.5">Alert filter</Subtitle>
-            {error && <Text className="text-red-500 mb-1.5">{error}</Text>}
+            {error && (
+              <Text className="text-red-500 mb-1.5">
+                {Array.isArray(error) ? error[0] : error}
+              </Text>
+            )}
             {properties.alert &&
-              Object.keys(properties.alert ?? {}).map((filter) => (
-                <div key={filter}>
-                  <Subtitle className="mt-2.5">{filter}</Subtitle>
-                  <div className="flex items-center mt-1">
-                    <TextInput
-                      key={filter}
-                      placeholder={`Set alert ${filter}`}
-                      onChange={(e: any) =>
-                        updateAlertFilter(filter, e.target.value)
-                      }
-                      value={
-                        (properties.alert as any)[filter] || ("" as string)
-                      }
-                    />
-                    <Icon
-                      icon={BackspaceIcon}
-                      className="cursor-pointer"
-                      color="red"
-                      tooltip={`Remove ${filter} filter`}
-                      onClick={() => deleteFilter(filter)}
-                    />
+              Object.keys(properties.alert ?? {}).map((filter) =>
+                filter === "cel" ? (
+                  <div key={filter}>
+                    <Subtitle className="mt-2.5">CEL Expression</Subtitle>
+                    <div className="flex items-center mt-1 relative">
+                      <CelInput
+                        value={(properties.alert as any)[filter] || ""}
+                        placeholder="Use CEL to filter alerts that trigger this workflow. e.g. source.contains('kibana')"
+                        onValueChange={(value: string) =>
+                          updateAlertFilter(filter, value)
+                        }
+                        onClearValue={() => updateAlertFilter(filter, "")}
+                        fieldsForSuggestions={alertFields}
+                      />
+                      <Icon
+                        icon={BackspaceIcon}
+                        className="cursor-pointer"
+                        color="red"
+                        tooltip={`Remove ${filter} filter`}
+                        onClick={() => deleteFilter(filter)}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div key={filter}>
+                    <Subtitle className="mt-2.5">{filter}</Subtitle>
+                    <div className="flex items-center mt-1">
+                      <TextInput
+                        key={filter}
+                        placeholder={`Set alert ${filter}`}
+                        onChange={(e: any) =>
+                          updateAlertFilter(filter, e.target.value)
+                        }
+                        value={
+                          (properties.alert as any)[filter] || ("" as string)
+                        }
+                      />
+                      <Icon
+                        icon={BackspaceIcon}
+                        className="cursor-pointer"
+                        color="red"
+                        tooltip={`Remove ${filter} filter`}
+                        onClick={() => deleteFilter(filter)}
+                      />
+                    </div>
+                  </div>
+                )
+              )}
           </>
         );
 

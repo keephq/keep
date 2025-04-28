@@ -28,7 +28,7 @@ const CelInput: FC<CelInputProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white">
+    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full truncate">
       <MonacoCelEditor
         editorId={id}
         className="h-20 relative {}"
@@ -41,7 +41,7 @@ const CelInput: FC<CelInputProps> = ({
       <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
 
       {placeholder && !value && (
-        <div className="pointer-events-none absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50">
+        <div className="pointer-events-none absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50 truncate">
           {placeholder}
         </div>
       )}
