@@ -10,6 +10,7 @@
   }
 
     .monaco-editor {
+      --vscode-editor-inactiveSelectionBackground: transparent !important;
       --vscode-focusBorder: transparent !important;
     }
   .monaco-editor,
