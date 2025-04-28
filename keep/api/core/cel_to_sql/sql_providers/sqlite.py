@@ -25,9 +25,11 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         elif to_type is bool:
             cast_conditions = {
                 # f"{expression_to_cast} is NULL": "FALSE",
-                f"{expression_to_cast} = 'true'": "TRUE",
-                f"{expression_to_cast} = 'false'": "FALSE",
+                f"LOWER({expression_to_cast}) = 'true'": "TRUE",
+                f"LOWER({expression_to_cast}) = 'false'": "FALSE",
                 f"{expression_to_cast} = ''": "FALSE",
+                f"{expression_to_cast} IS NULL": "FALSE",
+                f"{expression_to_cast} IS NOT NULL": "TRUE",
                 f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
                 f"CAST({expression_to_cast} AS SIGNED) <= 0": "FALSE",
             }
