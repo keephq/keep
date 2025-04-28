@@ -158,9 +158,9 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         return None
 
 
-def retry_on_deadlock(f):
+def retry_on_db_error(f):
     @retry(
-        exceptions=(OperationalError,),
+        exceptions=(OperationalError, IntegrityError),
         tries=3,
         delay=0.1,
         backoff=2,
@@ -181,6 +181,10 @@ def retry_on_deadlock(f):
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}
                 )
                 raise  # retry will catch this
+            else:
+                logger.exception(
+                    f"Error while executing transaction during {f.__name__}",
+                )
             raise  # if it's not a deadlock, let it propagate
 
     return wrapper
@@ -537,12 +541,21 @@ def add_or_update_workflow(
     updated_by: str,
     provisioned: bool = False,
     provisioned_file: str | None = None,
+    force_update: bool = True,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
         existing_workflow = get_workflow(tenant_id, id)
 
+        if not existing_workflow:
+            existing_workflow = get_workflow(tenant_id, name)
+
         if existing_workflow:
+            if workflow_raw == existing_workflow.workflow_raw and not force_update:
+                logger.info(
+                    f"Workflow {id} already exists with the same workflow_raw, skipping update"
+                )
+                return existing_workflow
             return update_workflow_with_values(
                 existing_workflow,
                 name=name,
@@ -2202,6 +2215,7 @@ def get_incident_for_grouping_rule(
     return incident, is_incident_expired
 
 
+@retry_on_db_error
 def create_incident_for_grouping_rule(
     tenant_id,
     rule: Rule,
@@ -2233,7 +2247,7 @@ def create_incident_for_grouping_rule(
         session.refresh(incident)
     return incident
 
-
+@retry_on_db_error
 def create_incident_for_topology(
     tenant_id: str, alert_group: list[Alert], session: Session
 ) -> Incident:
@@ -3879,6 +3893,7 @@ def create_incident_from_dto(
     return create_incident_from_dict(tenant_id, incident_dict, session)
 
 
+@retry_on_db_error
 def create_incident_from_dict(
     tenant_id: str, incident_data: dict, session: Optional[Session] = None
 ) -> Optional[Incident]:
@@ -3893,6 +3908,7 @@ def create_incident_from_dict(
     return new_incident
 
 
+@retry_on_db_error
 def update_incident_from_dto_by_id(
     tenant_id: str,
     incident_id: str | UUID,
@@ -4141,7 +4157,7 @@ def get_alerts_data_for_incident(
         }
 
 
-@retry_on_deadlock
+@retry_on_db_error
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,

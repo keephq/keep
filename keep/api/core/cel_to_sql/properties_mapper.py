@@ -57,8 +57,10 @@ class MultipleFieldsNode(Node):
     Args:
         fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances to initialize the node with.
     """
-    def __init__(self, fields: list[PropertyAccessNode]):
+    def __init__(self, fields: list[PropertyAccessNode], data_type: type = None):
         self.fields = fields
+        self.data_type = data_type
+
 
     def __str__(self):
         return f"[{', '.join(['.'.join(field.get_property_path()) for field in self.fields])}]"
@@ -319,5 +321,7 @@ class PropertiesMapper:
             )
             result.append(property_access_node)
         return (
-            MultipleFieldsNode(result) if len(result) > 1 else result[0]
+            MultipleFieldsNode(result, property_metadata.data_type)
+            if len(result) > 1
+            else result[0]
         ), property_metadata

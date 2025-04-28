@@ -36,7 +36,9 @@ class WorkflowStore:
     def get_workflow_execution(self, tenant_id: str, workflow_execution_id: str):
         return get_workflow_execution(tenant_id, workflow_execution_id)
 
-    def create_workflow(self, tenant_id: str, created_by, workflow: dict):
+    def create_workflow(
+        self, tenant_id: str, created_by, workflow: dict, force_update: bool = True
+    ):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
@@ -56,6 +58,7 @@ class WorkflowStore:
             interval=interval,
             is_disabled=Parser.parse_disabled(workflow),
             workflow_raw=cyaml.dump(workflow, width=99999),
+            force_update=force_update,
         )
         self.logger.info(
             f"Workflow {workflow_db.id}, {workflow_db.revision} created successfully"
