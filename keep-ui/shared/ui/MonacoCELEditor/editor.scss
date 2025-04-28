@@ -1,0 +1,36 @@
+.monaco-cel-editor {
+  @apply w-[99%] h-8 min-h-8 max-h-8 !important;
+
+  * {
+      @apply border-none !important;
+    }
+  .monaco-editor,
+  .monaco-editor .overflow-guard {
+    overflow: visible !important;
+  }
+
+    .monaco-editor {
+      --vscode-focusBorder: transparent !important;
+    }
+  .monaco-editor,
+  .monaco-editor .overflow-guard,
+  .monaco-editor .editor-scrollable {
+    @apply h-8 min-h-8 max-h-8 !important;
+    }
+    
+    .lines-content {
+      @apply top-[5px] bg-transparent !important;
+  }
+
+  .monaco-editor .view-lines {
+    @apply h-6 bg-transparent !important;
+    line-height: 18px !important;
+    .view-line {
+        @apply relative bg-transparent !important;
+      }
+  }
+
+  .monaco-editor .margin {
+    @apply hidden !important;
+  }
+}
