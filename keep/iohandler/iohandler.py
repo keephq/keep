@@ -717,7 +717,7 @@ class BaseIOHandler(IOValidatorMixin):
         # Return the last rendered version even if we hit max iterations
         return current, missing_keys
 
-class MustacheIOHandler(BaseIOHandler, IOValidatorMixin):
+class MustacheIOHandler(BaseIOHandler):
     template_engine: TemplateEngine = TemplateEngine.MUSTACHE
 
     def _validate_template(self, template, safe):
