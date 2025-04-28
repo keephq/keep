@@ -27,57 +27,7 @@ class TemplateEngine(enum.StrEnum):
     JINJA2 = "jinja2"
     MUSTACHE = "mustache"
 
-class IOHandler:
-    def __init__(
-            self,
-            context_manager: ContextManager,
-            template_engine: TemplateEngine = TemplateEngine.MUSTACHE
-    ):
-        self.context_manager = context_manager
-        self.template_engine = template_engine
-        self.logger = logging.getLogger(self.__class__.__name__)
-        # whether Keep should shorten urls in the message or not
-        # todo: have a specific parameter for this?
-        self.shorten_urls = False
-        if (
-            self.context_manager.click_context
-            and self.context_manager.click_context.params.get("api_key")
-            and self.context_manager.click_context.params.get("api_url")
-        ):
-            self.shorten_urls = True
-
-    def render(self, template, safe=False, default="", additional_context=None):
-        # rendering is only support for strings
-        if not isinstance(template, str):
-            return template
-
-        # validate that template is syntactically correct due to current selected template engine
-        self.validate_template_syntax(template)
-
-        # check if inside the mustache is object in the context
-        if template.count("}}") != template.count("{{"):
-            raise Exception(
-                f"Invalid template - number of }} and {{ does not match {template}"
-            )
-
-        if self.template_engine == TemplateEngine.JINJA2:
-            if template.count("%}") != template.count("{%"):
-                raise Exception(
-                    f"Invalid template - number of %}} and {{% does not match: {template}"
-                )
-            if template.count("#}") != template.count("{#"):
-                raise Exception(
-                    f"Invalid template - number of #}} and {{# does not match: {template}"
-                )
-
-        # TODO - better validate functions
-        if template.count("(") != template.count(")"):
-            raise Exception(
-                f"Invalid template - number of ( and ) does not match {template}"
-            )
-        val = self.parse(template, safe, default, additional_context)
-        return val
-
+class IOValidatorMixin:
     def validate_template_syntax(self, template: str) -> bool:
         """
         Checks whether the template matches the expected template engine.
@@ -147,6 +97,58 @@ class IOHandler:
             return has_jinja2 or not has_mustache
         else:  # TemplateEngine.MUSTACHE
             return has_mustache or not has_jinja2
+
+
+class IOHandler(IOValidatorMixin):
+    def __init__(
+            self,
+            context_manager: ContextManager,
+            template_engine: TemplateEngine = TemplateEngine.MUSTACHE
+    ):
+        self.context_manager = context_manager
+        self.template_engine = template_engine
+        self.logger = logging.getLogger(self.__class__.__name__)
+        # whether Keep should shorten urls in the message or not
+        # todo: have a specific parameter for this?
+        self.shorten_urls = False
+        if (
+            self.context_manager.click_context
+            and self.context_manager.click_context.params.get("api_key")
+            and self.context_manager.click_context.params.get("api_url")
+        ):
+            self.shorten_urls = True
+
+    def render(self, template, safe=False, default="", additional_context=None):
+        # rendering is only support for strings
+        if not isinstance(template, str):
+            return template
+
+        # validate that template is syntactically correct due to current selected template engine
+        self.validate_template_syntax(template)
+
+        # check if inside the mustache is object in the context
+        if template.count("}}") != template.count("{{"):
+            raise Exception(
+                f"Invalid template - number of }} and {{ does not match {template}"
+            )
+
+        if self.template_engine == TemplateEngine.JINJA2:
+            if template.count("%}") != template.count("{%"):
+                raise Exception(
+                    f"Invalid template - number of %}} and {{% does not match: {template}"
+                )
+            if template.count("#}") != template.count("{#"):
+                raise Exception(
+                    f"Invalid template - number of #}} and {{# does not match: {template}"
+                )
+
+        # TODO - better validate functions
+        if template.count("(") != template.count(")"):
+            raise Exception(
+                f"Invalid template - number of ( and ) does not match {template}"
+            )
+        val = self.parse(template, safe, default, additional_context)
+        return val
 
     def quote(self, template):
         """Quote {{ }} and {% %} with ''
