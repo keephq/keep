@@ -64,7 +64,7 @@ class Workflow:
         self.logger = logging.getLogger(__name__)
         self.workflow_debug = workflow_debug
         self.workflow_permissions = workflow_permissions
-        
+
         match workflow_templating:
             case TemplateEngine.MUSTACHE:
                 self.io_nandler = MustacheIOHandler(context_manager)

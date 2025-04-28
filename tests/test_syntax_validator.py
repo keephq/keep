@@ -1,6 +1,6 @@
 import pytest
 
-from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine, RenderException
+from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine, RenderException, Jinja2IOHandler
 
 
 @pytest.mark.parametrize(
@@ -21,10 +21,7 @@ from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine, RenderEx
 )
 def test_jinja2_syntax_not_valid_with_mustache_engine(context_manager, template):
     """Test Jinja2 syntax is invalid when using the Mustache engine"""
-    iohandler = MustacheIOHandler(
-        context_manager,
-        template_engine=TemplateEngine.MUSTACHE
-    )
+    iohandler = MustacheIOHandler(context_manager)
 
     context_manager.steps_context = {
         "name": "John",
@@ -47,10 +44,7 @@ def test_jinja2_syntax_not_valid_with_mustache_engine(context_manager, template)
 )
 def test_mustache_syntax_not_valid_with_jinja2_engine(context_manager, template):
     """Test Mustache syntax is invalid when using the Jinja2 engine"""
-    iohandler = MustacheIOHandler(
-        context_manager,
-        template_engine=TemplateEngine.JINJA2
-    )
+    iohandler = Jinja2IOHandler(context_manager)
 
     context_manager.steps_context = {
         "name": "John",
