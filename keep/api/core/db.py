@@ -158,9 +158,9 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         return None
 
 
-def retry_on_deadlock(f):
+def retry_on_db_error(f):
     @retry(
-        exceptions=(OperationalError,),
+        exceptions=(OperationalError, IntegrityError),
         tries=3,
         delay=0.1,
         backoff=2,
@@ -181,6 +181,10 @@ def retry_on_deadlock(f):
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}
                 )
                 raise  # retry will catch this
+            else:
+                logger.exception(
+                    f"Error while executing transaction during {f.__name__}",
+                )
             raise  # if it's not a deadlock, let it propagate
 
     return wrapper
@@ -2211,6 +2215,7 @@ def get_incident_for_grouping_rule(
     return incident, is_incident_expired
 
 
+@retry_on_db_error
 def create_incident_for_grouping_rule(
     tenant_id,
     rule: Rule,
@@ -2242,7 +2247,7 @@ def create_incident_for_grouping_rule(
         session.refresh(incident)
     return incident
 
-
+@retry_on_db_error
 def create_incident_for_topology(
     tenant_id: str, alert_group: list[Alert], session: Session
 ) -> Incident:
@@ -3888,6 +3893,7 @@ def create_incident_from_dto(
     return create_incident_from_dict(tenant_id, incident_dict, session)
 
 
+@retry_on_db_error
 def create_incident_from_dict(
     tenant_id: str, incident_data: dict, session: Optional[Session] = None
 ) -> Optional[Incident]:
@@ -3902,6 +3908,7 @@ def create_incident_from_dict(
     return new_incident
 
 
+@retry_on_db_error
 def update_incident_from_dto_by_id(
     tenant_id: str,
     incident_id: str | UUID,
@@ -4150,7 +4157,7 @@ def get_alerts_data_for_incident(
         }
 
 
-@retry_on_deadlock
+@retry_on_db_error
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,

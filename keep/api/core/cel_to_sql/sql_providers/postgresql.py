@@ -1,6 +1,7 @@
 from datetime import datetime
 from types import NoneType
 from typing import List
+from uuid import UUID
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
@@ -62,7 +63,17 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         else:
             return field_expressions[0]
 
-    def _visit_constant_node(self, value: str) -> str:
+    def _visit_constant_node(self, value: str, expected_data_type: type = None) -> str:
+        if expected_data_type is UUID:
+            str_value = str(value)
+            try:
+                # Because PostgreSQL works with UUID with dashes, we need to convert it to a UUID with dashes string
+                # Example: 123e4567e89b12d3a456426614174000 -> 123e4567-e89b-12d3-a456-426614174000
+                # Example2: 123e4567-e89b-12d3-a456-426614174000 -> 123e4567-e89b-12d3-a456-426614174000 (dashed UUID in CEL is also supported)
+                value = str(UUID(str_value))
+            except ValueError:
+                pass
+
         if isinstance(value, datetime):
             date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
             date_exp = f"CAST({date_str} as TIMESTAMP)"
