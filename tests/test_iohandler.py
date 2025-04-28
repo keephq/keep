@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from keep.api.models.alert import AlertDto
-from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine
+from keep.iohandler.iohandler import MustacheIOHandler, TemplateEngine, Jinja2IOHandler
 
 
 def test_vanilla(context_manager):
@@ -352,10 +352,7 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
     )
     context_manager.event_context = context_manager.alert
     # Mustache rendering
-    iohandler = MustacheIOHandler(
-        context_manager,
-        template_engine=TemplateEngine.MUSTACHE,
-    )
+    iohandler = MustacheIOHandler(context_manager)
     s = iohandler.render(
         "{{#alert.exceptions}}\n*{{ type }}*\n{{ value }}\n\n*Stack Trace*\n{code:json} keep.json_dumps({{{ stacktrace }}}) {code}\n{{/alert.exceptions}}\n{{^alert.exceptions}}\nNo stack trace available\n{{/alert.exceptions}}\n\n*Tags*\n{code:json} keep.json_dumps({{{ alert.tags }}}) {code}\n\nSee: {{ alert.url }}\n",
 
@@ -364,10 +361,7 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
     assert "aptures a message event and sends it to Sentry" in s
 
     # Jinja2 rendering
-    iohandler = MustacheIOHandler(
-        context_manager,
-        template_engine=TemplateEngine.JINJA2,
-    )
+    iohandler = Jinja2IOHandler(context_manager,)
     s = iohandler.render(
         "{% if alert.exceptions %}\n"
         "{% for e in alert.exceptions %}\n"
@@ -441,14 +435,14 @@ def test_get_pods_foreach(mocked_context_manager):
     }
     expected_output = "Pod status report:\nPod name: pod1 || Namespace: default || Status: Running\nPod name: pod2 || Namespace: kube-system || Status: Pending"
     # Test with Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     template = "Pod status report:{{#steps.get-pods.results}}\nPod name: {{ metadata.name }} || Namespace: {{ metadata.namespace }} || Status: {{ status.phase }}{{/steps.get-pods.results}}"
     rendered = iohandler.render(template)
 
     assert rendered.strip() == expected_output.strip()
 
     # Test with Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     template = (
         "Pod status report:"
         "{% for pod in steps['get-pods'].results %}\n"
@@ -466,12 +460,12 @@ def test_resend_python_service_condition(mocked_context_manager):
     }
 
     # Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     condition = "{{ steps.run-script.results.return_code }} == 0"
     assert eval(iohandler.render(condition)) is True
 
     # Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     condition = "{{ steps['run-script'].results.return_code }} == 0"
     assert eval(iohandler.render(condition)) is True
 
@@ -496,13 +490,13 @@ def test_blogpost_workflow_enrich_alert(mocked_context_manager):
     )
 
     # Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     template = "Customer details: Name: {{ steps.get-more-details.results.name }}, Email: {{ steps.get-more-details.results.email }}, Tier: {{ steps.get-more-details.results.tier }}"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     template = "Customer details: Name: {{ steps['get-more-details'].results.name }}, Email: {{ steps['get-more-details'].results.email }}, Tier: {{ steps['get-more-details'].results.tier }}"
     rendered = iohandler.render(template)
     assert rendered == expected_output
@@ -536,13 +530,13 @@ def test_db_disk_space_alert(mocked_context_manager):
     expected_output = "Number of logs: 2"
 
     # Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     template = "Number of logs: keep.len({{ steps.check-error-rate.results.logs }})"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     template = "Number of logs: keep.len({{ steps['check-error-rate'].results.logs }})"
     rendered = iohandler.render(template)
     assert rendered == expected_output
@@ -560,12 +554,12 @@ def test_query_bigquery_for_customer_tier(mocked_context_manager):
     }
 
     # Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     condition = "'{{ steps.get-customer-tier-by-id.result.tier }}' == 'enterprise'"
     assert eval(iohandler.render(condition)) is True
 
     # Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     condition = "'{{ steps['get-customer-tier-by-id'].result.tier }}' == 'enterprise'"
     assert eval(iohandler.render(condition)) is True
 
@@ -796,7 +790,7 @@ def test_if_else_in_template_existing(mocked_context_manager):
     expected_output = "it actually exists"
 
     # Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     rendered = iohandler.render(
         "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
         safe=True,
@@ -804,7 +798,7 @@ def test_if_else_in_template_existing(mocked_context_manager):
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     template = (
         "{% if alert.notexist %}{{ alert.notexist }}"
         "{% else %}{{ alert.name }}"
@@ -823,7 +817,7 @@ def test_if_else_in_template_not_existing(mocked_context_manager):
     expected_output = "this is a test"
 
     # Mustache
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.MUSTACHE)
+    iohandler = MustacheIOHandler(mocked_context_manager)
     rendered = iohandler.render(
         "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
         safe=True,
@@ -831,7 +825,7 @@ def test_if_else_in_template_not_existing(mocked_context_manager):
     assert rendered == expected_output
 
     # Jinja2
-    iohandler = MustacheIOHandler(mocked_context_manager, template_engine=TemplateEngine.JINJA2)
+    iohandler = Jinja2IOHandler(mocked_context_manager)
     template = (
         "{% if alert.notexist %}{{ alert.notexist }}"
         "{% else %}{{ alert.name }}"
@@ -1049,10 +1043,7 @@ def test_render_with_consts(context_manager):
     ), f"Expected '{expected_result}', but got '{result}'"
 
 def test_jinja_with_custom_functions(context_manager):
-    iohandler = MustacheIOHandler(
-        context_manager,
-        template_engine=TemplateEngine.JINJA2
-    )
+    iohandler = Jinja2IOHandler(context_manager)
 
     context_manager.steps_context = {
         "user": {
@@ -1078,10 +1069,7 @@ def test_jinja_with_custom_functions(context_manager):
     assert result.strip() == expected, f"Expected:\n{expected}\nBut got:\n{result}"
 
 def test_keep_functions_respect_jinja_raw(context_manager):
-    iohandler = MustacheIOHandler(
-        context_manager,
-        template_engine=TemplateEngine.JINJA2
-    )
+    iohandler = Jinja2IOHandler(context_manager)
     
     context_manager.steps_context = {
         "some_list": [1, 2, 3],
