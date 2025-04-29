@@ -187,7 +187,7 @@ export const AlertsRulesBuilder = ({
 
   const action = isDynamic ? "update" : "create";
 
-  const setQueryParam = (key: string, value: string | null) => {
+  const setQueryParam = (key: string, value: string) => {
     const current = new URLSearchParams(
       Array.from(searchParams ? searchParams.entries() : [])
     );
