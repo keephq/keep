@@ -17,7 +17,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import { components, GroupBase, MenuListProps } from "react-select";
-import { Select } from "@/shared/ui";
+import { MonacoEditor, Select } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { IoSearchOutline } from "react-icons/io5";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -26,6 +26,8 @@ import { CornerDownLeft } from "lucide-react";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
+import CelInput from "@/features/cel-input/cel-input";
+import { useFacetPotentialFields } from "@/features/filter";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -170,6 +172,8 @@ export const AlertsRulesBuilder = ({
 
   const { deletePreset } = usePresetActions();
 
+  const { data: alertFields } = useFacetPotentialFields("alerts");
+
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
@@ -190,6 +194,8 @@ export const AlertsRulesBuilder = ({
 
     if (value) {
       current.set(key, value);
+    } else {
+      current.delete(key);
     }
 
     // cast to string
@@ -214,6 +220,9 @@ export const AlertsRulesBuilder = ({
     setCELRules("");
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
+    if (shouldSetQueryParam) setQueryParam("cel", "");
+    onApplyFilter();
+    updateOutputCEL?.(celRules);
     setIsValidCEL(true);
   }, [table]);
 
@@ -267,12 +276,8 @@ export const AlertsRulesBuilder = ({
   }, []);
 
   useEffect(() => {
-    if (defaultQuery === "") {
-      handleClearInput();
-    } else {
-      setCELRules(defaultQuery);
-    }
-  }, [defaultQuery, handleClearInput]);
+    setCELRules(defaultQuery);
+  }, [defaultQuery]);
 
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
@@ -312,7 +317,7 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // You can now use `target` which is asserted to be an HTMLTextAreaElement
@@ -449,30 +454,20 @@ export const AlertsRulesBuilder = ({
       <div className="flex flex-col gap-y-2 w-full justify-end">
         {/* Docs */}
         <div className="flex flex-wrap items-start gap-x-2">
-          <div className="flex flex-wrap gap-2 items-center relative flex-grow">
+          <div className="flex flex-1 min-w-0 gap-2 items-center relative">
             {/* Textarea and error message container */}
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
-                <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Textarea
-                  ref={textAreaRef}
-                  rows={1}
-                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-10" // Added pl-9 for left padding to accommodate icon
-                  value={celRules}
-                  onValueChange={onValueChange}
-                  onKeyDown={handleKeyDown}
+                <CelInput
+                  id="alerts-cel-input"
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
-                  error={!isValidCEL}
+                  value={celRules}
+                  fieldsForSuggestions={alertFields}
+                  onValueChange={onValueChange}
+                  onClearValue={handleClearInput}
+                  onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                 />
-                {celRules && (
-                  <button
-                    onClick={handleClearInput}
-                    className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
-                  >
-                    <XMarkIcon className="h-4 w-4" />
-                  </button>
-                )}
               </div>
               {showSuggestions && (
                 <div className="absolute z-10 w-full">
@@ -501,7 +496,7 @@ export const AlertsRulesBuilder = ({
                 </div>
               )}
               {!isValidCEL && (
-                <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
+                <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
               )}

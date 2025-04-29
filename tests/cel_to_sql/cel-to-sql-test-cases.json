@@ -1,29 +1,47 @@
 [
   {
+    "input_cel": "alert.severity == null",
+    "description": "Equality with null",
+    "expected_sql_dialect_based": {
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"'))) IS NULL",
+      "postgresql": "COALESCE((alert_enrichments) ->> 'severity', (alert_event) ->> 'severity') IS NULL",
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"severity\"'), json_extract(alert_event, '$.\"severity\"')) IS NULL"
+    }
+  },
+  {
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')), '__@NULL@__') = 'HIGH'",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'severity')::TEXT, ((alert_event) ->> 'severity')::TEXT, '__@NULL@__') = 'HIGH'",
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT), CAST(json_extract(alert_event, '$.\"severity\"') as TEXT), '__@NULL@__') = 'HIGH'"
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"'))) = 'HIGH'",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'severity')::TEXT, ((alert_event) ->> 'severity')::TEXT) = 'HIGH'",
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT), CAST(json_extract(alert_event, '$.\"severity\"') as TEXT)) = 'HIGH'"
     }
   },
   {
     "input_cel": "name != 'Payments incident'",
-    "description": "Queried field refers to multipl columns",
+    "description": "Queried field refers to multiple columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'",
-      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'",
-      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') != 'Payments incident'"
+      "mysql": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'",
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'"
+    }
+  },
+  {
+    "input_cel": "name in ['Payments incident', 'API incident', 'Network incident', null]",
+    "description": "IN operator along with NULL",
+    "expected_sql_dialect_based": {
+      "mysql": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)",
+      "postgresql": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)",
+      "sqlite": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)"
     }
   },
   {
     "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
-    "description": "IN operator along with NOT",
+    "description": "IN operator along with NOT and NULL",
     "expected_sql_dialect_based": {
-      "mysql": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-      "postgresql": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))",
-      "sqlite": "NOT (COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') in ('Payments incident', 'API incident', 'Network incident', '__@NULL@__'))"
+      "mysql": "NOT ((COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL))",
+      "postgresql": "NOT ((COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL))",
+      "sqlite": "NOT ((COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL))"
     }
   },
   {
@@ -84,18 +102,18 @@
     "input_cel": "alert.randomDate >= '2025-01-30T10:00:09.553Z'",
     "description": "Comparison operator with dates for a JSON multiple columns",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"randomDate\"'), json_extract(alert_event, '$.\"randomDate\"'), NULL) >= datetime('2025-01-30 10:00:09')",
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"randomDate\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"randomDate\"')), NULL) >= CAST('2025-01-30 10:00:09' as DATETIME)",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'randomDate')::TIMESTAMP, ((alert_event) ->> 'randomDate')::TIMESTAMP, NULL) >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"randomDate\"'), json_extract(alert_event, '$.\"randomDate\"')) >= datetime('2025-01-30 10:00:09')",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"randomDate\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"randomDate\"'))) >= CAST('2025-01-30 10:00:09' as DATETIME)",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'randomDate')::TIMESTAMP, ((alert_event) ->> 'randomDate')::TIMESTAMP) >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
     }
   },
   {
     "input_cel": "alert.count > 7.84",
     "description": "Greater than with float",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"count\"') as REAL), CAST(json_extract(alert_event, '$.\"count\"') as REAL), NULL) > 7.84",
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"count\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"count\"')), NULL) > 7.84",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT, NULL) > 7.84"
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"count\"') as REAL), CAST(json_extract(alert_event, '$.\"count\"') as REAL)) > 7.84",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"count\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"count\"'))) > 7.84",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT) > 7.84"
     }
   },
   {
@@ -129,9 +147,9 @@
     "input_cel": "name == 'Payments incident' && severity <= 'critical'",
     "description": "AND with less than than comparison operator with enum when constat is the last value in enum",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
-      "mysql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'",
-      "postgresql": "COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident'"
+      "sqlite": "COALESCE(user_generated_name, ai_generated_name) = 'Payments incident'",
+      "mysql": "COALESCE(user_generated_name, ai_generated_name) = 'Payments incident'",
+      "postgresql": "COALESCE(user_generated_name, ai_generated_name) = 'Payments incident'"
     }
   },
   {
@@ -147,18 +165,18 @@
     "input_cel": "name == 'Payments incident' && severity > 'critical'",
     "description": "AND with greater than comparison operator with enum when constat is the last value in enum",
     "expected_sql_dialect_based": {
-      "sqlite": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND false)",
-      "mysql": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND FALSE)",
-      "postgresql": "(COALESCE(user_generated_name, ai_generated_name, '__@NULL@__') = 'Payments incident' AND false)"
+      "sqlite": "(COALESCE(user_generated_name, ai_generated_name) = 'Payments incident' AND false)",
+      "mysql": "(COALESCE(user_generated_name, ai_generated_name) = 'Payments incident' AND FALSE)",
+      "postgresql": "(COALESCE(user_generated_name, ai_generated_name) = 'Payments incident' AND false)"
     }
   },
   {
     "input_cel": "alert.count <= 100",
     "description": "Less than or equal with integer",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"count\"') as REAL), CAST(json_extract(alert_event, '$.\"count\"') as REAL), NULL) <= 100",
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"count\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"count\"')), NULL) <= 100",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT, NULL) <= 100"
+      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"count\"') as REAL), CAST(json_extract(alert_event, '$.\"count\"') as REAL)) <= 100",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"count\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"count\"'))) <= 100",
+      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT) <= 100"
     }
   },
   {
@@ -240,6 +258,24 @@
       "sqlite": "CAST(json_extract(alert_event, '$.\"tagsContainer\".\"some tags.dot(&?:;\".\"tagKey\"') as TEXT) = 'tag value'",
       "mysql": "JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"tagsContainer\".\"some tags.dot(&?:;\".\"tagKey\"')) = 'tag value'",
       "postgresql": "((alert_event -> 'tagsContainer' -> 'some tags.dot(&?:;') ->> 'tagKey')::TEXT = 'tag value'"
+    }
+  },
+  {
+    "input_cel": "id == '123e4567-e89b-12d3-a456-426614174000'",
+    "description": "UUID property access with dashed UUID",
+    "expected_sql_dialect_based": {
+      "sqlite": "entityId = '123e4567e89b12d3a456426614174000'",
+      "mysql": "entityId = '123e4567e89b12d3a456426614174000'",
+      "postgresql": "entityId = '123e4567-e89b-12d3-a456-426614174000'"
+    }
+  },
+  {
+    "input_cel": "id == '123e4567e89b12d3a456426614174000'",
+    "description": "UUID property access with HEX UUID",
+    "expected_sql_dialect_based": {
+      "sqlite": "entityId = '123e4567e89b12d3a456426614174000'",
+      "mysql": "entityId = '123e4567e89b12d3a456426614174000'",
+      "postgresql": "entityId = '123e4567-e89b-12d3-a456-426614174000'"
     }
   }
 ]

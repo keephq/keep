@@ -307,7 +307,6 @@ def get_workflow_facets_data(
     queries = __build_base_query(tenant_id)
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
     select_expressions = facet_selects_metadata["select_expressions"]
-    new_fields_config = facet_selects_metadata["new_fields_config"]
 
     base_query_2 = select(
         *([literal_column("entity_id")] + select_expressions)
@@ -319,7 +318,7 @@ def get_workflow_facets_data(
         base_query=base_query_2,
         facets=facets,
         facet_options_query=facet_options_query,
-        properties_metadata=PropertiesMetadata(new_fields_config),
+        properties_metadata=properties_metadata,
     )
 
 
