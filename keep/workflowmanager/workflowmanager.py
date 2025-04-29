@@ -169,94 +169,104 @@ class WorkflowManager:
     # logging is easier here and I don't see other places who might use this >.<
     def _convert_filters_to_cel(self, filters: list[dict[str, str]]):
         # Convert filters ({"key": "key", "value": "value"}) and friends to CEL
-        cel_filters = []
-        for filter in filters:
-            key = filter.get("key")
-            value = filter.get("value")
-            exclude = filter.get("exclude", False)
-
-            # malformed filter?
-            if not key or not value:
-                self.logger.warning(
-                    "Filter is missing key or value",
-                    extra={"filter": filter},
-                )
-                continue
-
-            if value.startswith('r"'):
-                # Try to parse regex in to CEL
-                cel_regex = []
-                value = value[2:-1]
-
-                # for example: value: r"error\\.[a-z]+\\..*" is to hard to convert to CEL
-                # so we'll just hit the last else and raise an exception, that it's deprecated
-                if "]^" in value or "]+" in value:
-                    raise Exception(
-                        f"Unsupported regex: {value}, move to new CEL filters"
-                    )
-                elif "|" in value:
-                    value_split = value.split("|")
-                    for value_ in value_split:
-                        value_ = value_.lstrip("(").rstrip(")").strip()
-                        if key == "source":
-                            if exclude:
-                                cel_regex.append(f'!{key}.contains("{value_}")')
-                            else:
-                                cel_regex.append(f'{key}.contains("{value_}")')
-                        else:
-                            if exclude:
-                                cel_regex.append(f'{key} != "{value_}"')
-                            else:
-                                cel_regex.append(f'{key} == "{value_}"')
-                elif value == ".*":
-                    cel_regex.append(f"has({key})")
-                elif value == "^$":
-                    # empty string
-                    if exclude:
-                        cel_regex.append(f'{key} != ""')
-                    else:
-                        cel_regex.append(f'{key} == ""')
-                elif value.endswith(".*"):
-                    # for example: r"2025-01-30T09:.*"
-                    if exclude:
-                        cel_regex.append(f'!{key}.contains("{value[:-2]}")')
-                    else:
-                        cel_regex.append(f'{key}.contains("{value[:-2]}")')
-                else:
-                    raise Exception(
-                        f"Unsupported regex: {value}, move to new CEL filters"
-                    )
-                # if we're talking about excluded, we need to do AND between the regexes
-                # for example:
-                #   filters: [{"key": "source", "value": 'r"prometheus|grafana"', "exclude": true}]
-                #   cel: !source.contains("prometheus") && !source.contains("grafana")
-                # otherwise, we do OR between the regexes
-                # for example:
-                #   filters: [{"key": "source", "value": 'r"prometheus|grafana"'}]
-                #   cel: source.contains("prometheus") || source.contains("grafana")
-                if exclude:
-                    cel_filters.append(f"({' && '.join(cel_regex)})")
-                else:
-                    cel_filters.append(f"({' || '.join(cel_regex)})")
-            else:
-                if key == "source":
-                    # handle source, which is a list of sources
-                    if exclude:
-                        cel_filters.append(f'!{key}.contains("{value}")')
-                    else:
-                        cel_filters.append(f'{key}.contains("{value}")')
-                else:
-                    if exclude:
-                        cel_filters.append(f'{key} != "{value}"')
-                    else:
-                        cel_filters.append(f'{key} == "{value}"')
-
         self.logger.info(
-            "Converted filters to CEL",
-            extra={"cel_filters": cel_filters, "original_filters": filters},
+            "Converting filters to CEL",
+            extra={"original_filters": filters},
         )
+        try:
+            cel_filters = []
+            for filter in filters:
+                key = filter.get("key")
+                value = filter.get("value")
+                exclude = filter.get("exclude", False)
 
-        return " && ".join(cel_filters)
+                # malformed filter?
+                if not key or not value:
+                    self.logger.warning(
+                        "Filter is missing key or value",
+                        extra={"filter": filter},
+                    )
+                    continue
+
+                if value.startswith('r"'):
+                    # Try to parse regex in to CEL
+                    cel_regex = []
+                    value = value[2:-1]
+
+                    # for example: value: r"error\\.[a-z]+\\..*" is to hard to convert to CEL
+                    # so we'll just hit the last else and raise an exception, that it's deprecated
+                    if "]^" in value or "]+" in value:
+                        raise Exception(
+                            f"Unsupported regex: {value}, move to new CEL filters"
+                        )
+                    elif "|" in value:
+                        value_split = value.split("|")
+                        for value_ in value_split:
+                            value_ = value_.lstrip("(").rstrip(")").strip()
+                            if key == "source":
+                                if exclude:
+                                    cel_regex.append(f'!{key}.contains("{value_}")')
+                                else:
+                                    cel_regex.append(f'{key}.contains("{value_}")')
+                            else:
+                                if exclude:
+                                    cel_regex.append(f'{key} != "{value_}"')
+                                else:
+                                    cel_regex.append(f'{key} == "{value_}"')
+                    elif value == ".*":
+                        cel_regex.append(f"has({key})")
+                    elif value == "^$":
+                        # empty string
+                        if exclude:
+                            cel_regex.append(f'{key} != ""')
+                        else:
+                            cel_regex.append(f'{key} == ""')
+                    elif value.endswith(".*"):
+                        # for example: r"2025-01-30T09:.*"
+                        if exclude:
+                            cel_regex.append(f'!{key}.contains("{value[:-2]}")')
+                        else:
+                            cel_regex.append(f'{key}.contains("{value[:-2]}")')
+                    else:
+                        raise Exception(
+                            f"Unsupported regex: {value}, move to new CEL filters"
+                        )
+                    # if we're talking about excluded, we need to do AND between the regexes
+                    # for example:
+                    #   filters: [{"key": "source", "value": 'r"prometheus|grafana"', "exclude": true}]
+                    #   cel: !source.contains("prometheus") && !source.contains("grafana")
+                    # otherwise, we do OR between the regexes
+                    # for example:
+                    #   filters: [{"key": "source", "value": 'r"prometheus|grafana"'}]
+                    #   cel: source.contains("prometheus") || source.contains("grafana")
+                    if exclude:
+                        cel_filters.append(f"({' && '.join(cel_regex)})")
+                    else:
+                        cel_filters.append(f"({' || '.join(cel_regex)})")
+                else:
+                    if key == "source":
+                        # handle source, which is a list of sources
+                        if exclude:
+                            cel_filters.append(f'!{key}.contains("{value}")')
+                        else:
+                            cel_filters.append(f'{key}.contains("{value}")')
+                    else:
+                        if exclude:
+                            cel_filters.append(f'{key} != "{value}"')
+                        else:
+                            cel_filters.append(f'{key} == "{value}"')
+
+            self.logger.info(
+                "Converted filters to CEL",
+                extra={"cel_filters": cel_filters, "original_filters": filters},
+            )
+
+            return " && ".join(cel_filters)
+        except Exception as e:
+            self.logger.exception(
+                "Error converting filters to CEL", extra={"exception": e}
+            )
+            raise
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
