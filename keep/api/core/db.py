@@ -160,7 +160,7 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
 
 def retry_on_db_error(f):
     @retry(
-        exceptions=(OperationalError, IntegrityError),
+        exceptions=(OperationalError, IntegrityError, StaleDataError),
         tries=3,
         delay=0.1,
         backoff=2,
