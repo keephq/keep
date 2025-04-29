@@ -40,6 +40,7 @@ class Workflow:
         workflow_consts: typing.Dict[str, str] = {},
         workflow_debug: bool = False,
         workflow_permissions: typing.List[str] = [],
+        is_test: bool = False,
     ):
         self.workflow_id = workflow_id
         self.workflow_revision = workflow_revision
@@ -56,6 +57,7 @@ class Workflow:
         self.workflow_providers_type = workflow_providers_type
         self.workflow_strategy = workflow_strategy
         self.workflow_consts = workflow_consts
+        self.is_test = is_test
         self.on_failure = on_failure
         self.context_manager = context_manager
         self.context_manager.set_consts_context(workflow_consts)
