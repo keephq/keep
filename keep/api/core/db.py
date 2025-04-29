@@ -454,7 +454,7 @@ def update_workflow_by_id(
         if provisioned:
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
-            existing_workflow = get_workflow(tenant_id, id)
+            existing_workflow = get_workflow_by_id(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
         return update_workflow_with_values(
@@ -552,7 +552,7 @@ def add_or_update_workflow(
         if provisioned:
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
-            existing_workflow = get_workflow(tenant_id, id)
+            existing_workflow = get_workflow_by_id(tenant_id, id)
 
         if existing_workflow:
             if workflow_raw == existing_workflow.workflow_raw and not force_update:
@@ -786,20 +786,14 @@ def get_workflow_by_name(tenant_id: str, workflow_name: str):
     return workflow
 
 
-def get_workflow(tenant_id: str, workflow_id: str, fallback_to_name: bool = False):
+def get_workflow_by_id(tenant_id: str, workflow_id: str):
     with Session(engine) as session:
-        query = (
+        workflow = session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
-        )
-        if validators.uuid(workflow_id):
-            query = query.where(Workflow.id == workflow_id)
-        elif fallback_to_name:
-            query = query.where(Workflow.name == workflow_id)
-        else:
-            raise ValueError(f"Invalid workflow ID: {workflow_id}")
-        workflow = session.exec(query).first()
+        ).first()
     return workflow
 
 
