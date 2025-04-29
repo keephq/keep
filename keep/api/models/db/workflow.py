@@ -5,6 +5,10 @@ from sqlalchemy import TEXT, DateTime, Index, PrimaryKeyConstraint, func
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
+def get_dummy_workflow_id(tenant_id: str) -> str:
+    return f"system-dummy-workflow-{tenant_id}"
+
+
 class Workflow(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
@@ -29,6 +33,7 @@ class Workflow(SQLModel, table=True):
     )
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
+    is_test: bool = Field(default=False)
 
     executions: List["WorkflowExecution"] = Relationship(back_populates="workflow")
     versions: List["WorkflowVersion"] = Relationship(back_populates="workflow")
@@ -134,6 +139,7 @@ class WorkflowExecution(SQLModel, table=True):
     error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
+    is_test_run: bool = Field(default=False)
 
     workflow: "Workflow" = Relationship(
         back_populates="executions",

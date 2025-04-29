@@ -62,6 +62,7 @@ class Parser:
         actions_file: str = None,
         workflow_db_id: str = None,
         workflow_revision: int = None,
+        is_test: bool = False,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -89,6 +90,7 @@ class Parser:
                     actions_file,
                     workflow_actions,
                     workflow_db_id,
+                    is_test,
                 )
                 for workflow in raw_workflows
             ]
@@ -105,6 +107,8 @@ class Parser:
                 workflow_providers,
                 actions_file,
                 workflow_actions,
+                workflow_db_id,
+                is_test,
             )
             workflows = [workflow]
         # else, if it stored in the db, it stored without the "workflow" key
@@ -118,6 +122,7 @@ class Parser:
                 actions_file,
                 workflow_actions,
                 workflow_db_id=workflow_db_id,
+                is_test=is_test,
             )
             workflows = [workflow]
         return workflows
@@ -149,6 +154,7 @@ class Parser:
         actions_file: str = None,
         workflow_actions: dict = None,
         workflow_db_id: str = None,
+        is_test: bool = False,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
         # @tb: we need to remove this id in workflow yaml, it has no real use.
@@ -165,7 +171,6 @@ class Parser:
         self._load_actions_config(
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
-        workflow_id = self._parse_id(workflow)
         workflow_name = workflow.get("name", "Untitled")
         workflow_description = workflow.get("description", "No description")
         workflow_templating = self._parse_templating(workflow)
@@ -213,6 +218,7 @@ class Parser:
             workflow_consts=workflow_consts,
             workflow_debug=workflow_debug,
             workflow_permissions=workflow_permissions,
+            is_test=is_test,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow_class
