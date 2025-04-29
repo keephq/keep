@@ -192,15 +192,9 @@ export const AlertsRulesBuilder = ({
       Array.from(searchParams ? searchParams.entries() : [])
     );
 
-    console.log({
-      text: "Ihor",
-      key,
-      value,
-    });
-
     if (value) {
       current.set(key, value);
-    } else if (value === null) {
+    } else {
       current.delete(key);
     }
 
