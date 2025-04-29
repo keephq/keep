@@ -1,6 +1,5 @@
 workflow:
-  id: 62090939-16b3-409f-99af-b763d0a6325c
-  name: autosupress
+  id: autosupress
   strategy: parallel
   description: demonstrates how to automatically suppress alerts
   triggers:
