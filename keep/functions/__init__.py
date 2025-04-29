@@ -6,6 +6,7 @@ import re
 import urllib.parse
 from datetime import timedelta
 from itertools import groupby
+from typing import Literal
 
 import json5
 import pytz
@@ -46,6 +47,25 @@ def lowercase(string) -> str:
 
 def split(string, delimeter) -> list:
     return string.strip().split(delimeter)
+
+
+def apply_str_method(string: str, method_name: str, *args, **kwargs):
+    """
+    Apply a string method to a string.
+
+    Args:
+        string (str): The string to apply the method to.
+        method_name (str): The name of the method to apply.
+        *args: Additional arguments to pass to the method.
+        **kwargs: Additional keyword arguments to pass to the method.
+
+    Returns:
+        The result of applying the method to the string.
+    """
+    method = getattr(string, method_name, None)
+    if not callable(method):
+        raise ValueError(f"'{method_name}' is not a valid string method.")
+    return method(*args, **kwargs)
 
 
 def index(iterable, index) -> any:
@@ -95,6 +115,37 @@ def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
         datetime.datetime: The new datetime object
     """
     return dt - datetime.timedelta(minutes=minutes)
+
+
+def timestamp_delta(
+    dt: datetime.datetime,
+    amount: float,
+    timestamp_unit: Literal["seconds", "minutes", "hours", "days", "weeks"],
+) -> datetime.datetime:
+    """
+    Add or subtract a time delta to/from a given datetime. Use a negative amount to subtract time.
+
+    Args:
+        dt (datetime.datetime): The original datetime.
+        amount (float): How much to add (use negative to subtract).
+        timestamp_unit (str): The unit for the amount ('seconds', 'minutes', 'hours', 'days', 'weeks').
+
+    Returns:
+        datetime.datetime: The resulting datetime after adding/subtracting the delta.
+    """
+    valid_units = {
+        "seconds": "seconds",
+        "minutes": "minutes",
+        "hours": "hours",
+        "days": "days",
+        "weeks": "weeks",
+    }
+
+    if timestamp_unit not in valid_units:
+        raise ValueError(f"Unsupported timestamp_unit: {timestamp_unit}")
+
+    delta = datetime.timedelta(**{valid_units[timestamp_unit]: amount})
+    return dt + delta
 
 
 def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
