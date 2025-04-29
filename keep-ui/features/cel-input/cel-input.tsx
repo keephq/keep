@@ -30,10 +30,12 @@ const CelInput: FC<CelInputProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full">
+    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full truncate">
       <MonacoCelEditor
         editorId={id}
-        className={`h-20 relative ${staticPositionForSuggestions ? "suggestions-static-position" : ""}`}
+        className={`h-20 relative ${
+          staticPositionForSuggestions ? "suggestions-static-position" : ""
+        }`}
         value={value}
         fieldsForSuggestions={fieldsForSuggestions}
         onValueChange={onValueChange || ((value: string) => {})}

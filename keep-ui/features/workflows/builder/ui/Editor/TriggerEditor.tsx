@@ -1,6 +1,6 @@
-import { TextInput } from "@/components/ui";
+import { Button, TextInput } from "@/components/ui";
 import { useWorkflowStore } from "@/entities/workflows";
-import { BackspaceIcon } from "@heroicons/react/24/outline";
+import { BackspaceIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import { Text, Subtitle, Icon, Switch } from "@tremor/react";
 import { EditorLayout } from "./StepEditor";
 import { capitalize } from "@/utils/helpers";
@@ -94,6 +94,18 @@ export function TriggerEditor() {
                 {Array.isArray(error) ? error[0] : error}
               </Text>
             )}
+            <div className="w-1/2">
+              <Button
+                onClick={addFilter}
+                size="xs"
+                className="ml-1 mt-1"
+                variant="light"
+                color="gray"
+                icon={FunnelIcon}
+              >
+                Add Filter
+              </Button>
+            </div>
             {properties.alert &&
               Object.keys(properties.alert ?? {}).map((filter) =>
                 filter === "cel" ? (
