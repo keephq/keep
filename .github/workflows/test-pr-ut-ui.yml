@@ -5,9 +5,11 @@ on:
       - main
     paths:
       - "keep-ui/**"
+      - "tests/**"
   pull_request:
     paths:
       - "keep-ui/**"
+      - "tests/**"
   workflow_dispatch:
 
 permissions:
