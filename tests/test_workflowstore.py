@@ -110,7 +110,7 @@ def test_get_workflow_meta_data_3832():
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_WORKFLOWS_DIRECTORY": "./tests/provision/workflows_1",
+            "KEEP_WORKFLOWS_DIRECTORY": "./tests/provision/workflows_3",
         },
     ],
     indirect=True,
@@ -122,7 +122,7 @@ def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
-    assert len(first_provisioned) == 3  # There are 3 workflows in workflows_1 directory
+    assert len(first_provisioned) == 1  # There are 1 workflows in workflows_3 directory
     first_workflow_ids = {w.id for w in first_provisioned}
 
     # Second provisioning
@@ -130,7 +130,7 @@ def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
 
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
-    assert len(second_provisioned) == 3  # Should still be 3 workflows
+    assert len(second_provisioned) == 1  # Should still be 1 workflows
     second_workflow_ids = {w.id for w in second_provisioned}
 
     # Verify the workflows are the same
