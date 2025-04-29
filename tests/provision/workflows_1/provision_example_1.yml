@@ -1,5 +1,6 @@
 workflow:
-  id: aks-example
+  id: 62090939-16b3-409f-99af-b763d0a6325c
+  name: aks-example
   description: aks-example
   triggers:
     - type: manual

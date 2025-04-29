@@ -1,5 +1,6 @@
 workflow:
-  id: Resend-Python-service
+  id: 1bc444a3-965f-465a-939a-0a4a3c380a31
+  name: Resend-Python-service
   description: Python Resend Mail
   triggers:
   - type: manual
