@@ -456,8 +456,10 @@ def update_workflow_by_id(
 ):
     with Session(engine, expire_on_commit=False) as session:
         if provisioned:
+            # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
+            # otherwise, we want certainty, so just lookup by id
             existing_workflow = get_workflow_by_id(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
@@ -552,11 +554,11 @@ def add_or_update_workflow(
     is_test: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
-        # TODO: we need to better understanad if that's the right behavior we want
-
         if provisioned:
+            # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
+            # otherwise, we want certainty, so just lookup by id
             existing_workflow = get_workflow_by_id(tenant_id, id)
 
         if existing_workflow:
