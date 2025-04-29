@@ -187,14 +187,20 @@ export const AlertsRulesBuilder = ({
 
   const action = isDynamic ? "update" : "create";
 
-  const setQueryParam = (key: string, value: string) => {
+  const setQueryParam = (key: string, value: string | null) => {
     const current = new URLSearchParams(
       Array.from(searchParams ? searchParams.entries() : [])
     );
 
+    console.log({
+      text: "Ihor",
+      key,
+      value,
+    });
+
     if (value) {
       current.set(key, value);
-    } else {
+    } else if (value === null) {
       current.delete(key);
     }
 
@@ -220,7 +226,7 @@ export const AlertsRulesBuilder = ({
     setCELRules("");
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
-    if (shouldSetQueryParam) setQueryParam("cel", "");
+    if (shouldSetQueryParam) setQueryParam("cel", null);
     onApplyFilter();
     updateOutputCEL?.(celRules);
     setIsValidCEL(true);
@@ -276,12 +282,8 @@ export const AlertsRulesBuilder = ({
   }, []);
 
   useEffect(() => {
-    if (defaultQuery === "") {
-      handleClearInput();
-    } else {
-      setCELRules(defaultQuery);
-    }
-  }, [defaultQuery, handleClearInput]);
+    setCELRules(defaultQuery);
+  }, [defaultQuery]);
 
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
