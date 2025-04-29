@@ -652,6 +652,3 @@ class WorkflowStore:
                     return True
         # if no keep action is found, return False
         return False
-
-
-# trigger CI
