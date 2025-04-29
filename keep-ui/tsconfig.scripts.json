@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "skipDefaultLibCheck": true,
+    "types": ["node"]
+  },
+  "ts-node": {
+    "transpileOnly": true
+  }
+}
