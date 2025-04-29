@@ -276,12 +276,8 @@ export const AlertsRulesBuilder = ({
   }, []);
 
   useEffect(() => {
-    if (defaultQuery === "") {
-      handleClearInput();
-    } else {
-      setCELRules(defaultQuery);
-    }
-  }, [defaultQuery, handleClearInput]);
+    setCELRules(defaultQuery);
+  }, [defaultQuery]);
 
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
