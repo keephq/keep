@@ -16,7 +16,6 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
-import validators
 from dateutil.parser import parse
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
@@ -451,7 +450,10 @@ def update_workflow_by_id(
     provisioned_file: str | None = None,
 ):
     with Session(engine, expire_on_commit=False) as session:
-        existing_workflow = get_workflow(tenant_id, id)
+        if provisioned:
+            existing_workflow = get_workflow_by_name(tenant_id, name)
+        else:
+            existing_workflow = get_workflow_by_id(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
         return update_workflow_with_values(
@@ -545,10 +547,11 @@ def add_or_update_workflow(
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
-        existing_workflow = get_workflow(tenant_id, id)
 
-        if not existing_workflow:
-            existing_workflow = get_workflow(tenant_id, name)
+        if provisioned:
+            existing_workflow = get_workflow_by_name(tenant_id, name)
+        else:
+            existing_workflow = get_workflow_by_id(tenant_id, id)
 
         if existing_workflow:
             if workflow_raw == existing_workflow.workflow_raw and not force_update:
@@ -771,18 +774,25 @@ def get_all_workflows_yamls(tenant_id: str):
     return list(workflows)
 
 
-def get_workflow(tenant_id: str, workflow_id: str):
+def get_workflow_by_name(tenant_id: str, workflow_name: str):
     with Session(engine) as session:
-        query = (
+        workflow = session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
-        )
-        if validators.uuid(workflow_id):
-            query = query.where(Workflow.id == workflow_id)
-        else:
-            query = query.where(Workflow.name == workflow_id)
-        workflow = session.exec(query).first()
+        ).first()
+    return workflow
+
+
+def get_workflow_by_id(tenant_id: str, workflow_id: str):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
+        ).first()
     return workflow
 
 
@@ -2246,6 +2256,7 @@ def create_incident_for_grouping_rule(
         session.commit()
         session.refresh(incident)
     return incident
+
 
 @retry_on_db_error
 def create_incident_for_topology(
