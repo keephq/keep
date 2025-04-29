@@ -122,7 +122,7 @@ def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
-    assert len(first_provisioned) == 1  # There are 1 workflow in workflows_3 directory
+    assert len(first_provisioned) == 1  # There is 1 workflow in workflows_3 directory
     first_workflow_ids = {w.id for w in first_provisioned}
 
     # Second provisioning
