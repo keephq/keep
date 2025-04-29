@@ -220,7 +220,7 @@ export const AlertsRulesBuilder = ({
     setCELRules("");
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
-    if (shouldSetQueryParam) setQueryParam("cel", null);
+    if (shouldSetQueryParam) setQueryParam("cel", "");
     onApplyFilter();
     updateOutputCEL?.(celRules);
     setIsValidCEL(true);
