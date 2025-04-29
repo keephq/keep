@@ -1,6 +1,9 @@
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.api.core.db import get_all_provisioned_workflows
+from tests.fixtures.client import test_app  # noqa
+import pytest
 
 VALID_WORKFLOW = """
 id: retrieve-cloudwatch-logs
@@ -100,3 +103,42 @@ def test_get_workflow_meta_data_3832():
 
     assert len(providers_dto) == 1
     assert providers_dto[0].type == "cloudwatch"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_WORKFLOWS_DIRECTORY": "./tests/provision/workflows_1",
+        },
+    ],
+    indirect=True,
+)
+def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
+    """Test that workflows are not provisioned twice when provision_workflows is called multiple times."""
+    # First provisioning
+    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+
+    # Get workflows after first provisioning
+    first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
+    assert len(first_provisioned) == 3  # There are 3 workflows in workflows_1 directory
+    first_workflow_ids = {w.id for w in first_provisioned}
+
+    # Second provisioning
+    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+
+    # Get workflows after second provisioning
+    second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
+    assert len(second_provisioned) == 3  # Should still be 3 workflows
+    second_workflow_ids = {w.id for w in second_provisioned}
+
+    # Verify the workflows are the same
+    assert first_workflow_ids == second_workflow_ids
+
+    # Verify each workflow's content is unchanged
+    for first_w in first_provisioned:
+        second_w = next(w for w in second_provisioned if w.id == first_w.id)
+        assert first_w.name == second_w.name
+        assert first_w.workflow_raw == second_w.workflow_raw
+        assert first_w.provisioned_file == second_w.provisioned_file
