@@ -3,6 +3,9 @@ workflow:
   id: notify-new-trello-card
   name: Notify on new Trello card
   description: Send a slack notification when a new trello card is created
+  triggers:
+    - type: interval
+      value: 60
   steps:
     - name: trello-cards
       provider:

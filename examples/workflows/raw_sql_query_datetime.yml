@@ -3,6 +3,9 @@ workflow:
   id: mysql-datetime-monitor
   name: MySQL Datetime Monitor
   description: Monitors time differences in MySQL database entries and alerts via Slack when exceeding one hour threshold.
+  triggers:
+    - type: interval
+      value: 360
   steps:
     - name: get-max-datetime
       provider:

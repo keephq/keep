@@ -3,6 +3,9 @@ workflow:
   id: mysql-ntfy-monitor
   name: MySQL Ntfy Monitor
   description: Monitors MySQL datetime values and sends notifications through Ntfy when thresholds are exceeded.
+  triggers:
+    - type: interval
+      value: 360
   steps:
     - name: get-max-datetime
       provider:
