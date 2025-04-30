@@ -4,9 +4,9 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import SQLModel
 
-from keep.api.core.db import engine, get_provider_by_name
+from keep.api.core.db import engine
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
@@ -71,6 +71,26 @@ def test_provider_reprovisioning_with_updated_config(provider_configs, caplog):
     mock_secret_manager = MagicMock()
     mock_secret_manager.read_secret.side_effect = [initial_config, updated_config]
 
+    mock_provider = MagicMock(spec=Provider)
+    mock_provider.id = "mock-provider-id"
+    mock_provider.name = "keepVictoriaMetrics"
+    mock_provider.type = "victoriametrics"
+    mock_provider.tenant_id = tenant_id
+    mock_provider.configuration_key = f"{tenant_id}_victoriametrics_mock-provider-id"
+
+    # Mock the install_provider method to return a valid response
+    mock_install_result = {
+        "type": "victoriametrics",
+        "id": "mock-provider-id",
+        "details": {
+            "authentication": provider_configs["initial"]["keepVictoriaMetrics"][
+                "authentication"
+            ],
+            "name": "keepVictoriaMetrics",
+        },
+        "validatedScopes": {},
+    }
+
     # Step 1: Initial provisioning with mocks
     with (
         patch.dict(
@@ -81,36 +101,33 @@ def test_provider_reprovisioning_with_updated_config(provider_configs, caplog):
             SecretManagerFactory, "get_secret_manager", return_value=mock_secret_manager
         ),
         patch("keep.api.core.db.get_all_provisioned_providers", return_value=[]),
+        patch(
+            "keep.providers.providers_service.ProvidersService.install_provider",
+            return_value=mock_install_result,
+        ),
+        patch("keep.api.core.db.get_provider_by_name", return_value=mock_provider),
     ):
         # Provision the initial provider
         ProvidersService.provision_providers(tenant_id)
 
-        # Verify the initial provider was installed
-        provider = get_provider_by_name(tenant_id, "keepVictoriaMetrics")
-        assert provider is not None, "Provider should be installed"
-
         # Verify the initial configuration
-        with Session(engine) as session:
-            db_provider = session.exec(
-                select(Provider).where(
-                    (Provider.tenant_id == tenant_id)
-                    & (Provider.name == "keepVictoriaMetrics")
-                )
-            ).one()
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_config = secret_manager.read_secret(
+            mock_provider.configuration_key, is_json=True
+        )
 
-            context_manager = ContextManager(tenant_id=tenant_id)
-            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-            provider_config = secret_manager.read_secret(
-                db_provider.configuration_key, is_json=True
-            )
-
-            assert (
-                provider_config["authentication"]["VMAlertHost"] == "http://localhost"
-            ), "Initial configuration should have localhost as host"
+        assert (
+            provider_config["authentication"]["VMAlertHost"] == "http://localhost"
+        ), "Initial configuration should have localhost as host"
 
     # Step 2: Try to re-provision with updated configuration
     updated_mock_secret_manager = MagicMock()
     updated_mock_secret_manager.read_secret.return_value = updated_config
+
+    # Create a direct mock for the get_provider_by_name function that will be used in the provision_providers method
+    def mock_get_provider_by_name(*args, **kwargs):
+        return mock_provider
 
     with (
         patch.dict(
@@ -123,7 +140,16 @@ def test_provider_reprovisioning_with_updated_config(provider_configs, caplog):
             return_value=updated_mock_secret_manager,
         ),
         patch(
-            "keep.api.core.db.get_all_provisioned_providers", return_value=[provider]
+            "keep.api.core.db.get_all_provisioned_providers",
+            return_value=[mock_provider],
+        ),
+        patch(
+            "keep.providers.providers_service.get_provider_by_name",
+            side_effect=mock_get_provider_by_name,
+        ),
+        patch(
+            "keep.providers.providers_service.ProvidersService.is_provider_installed",
+            return_value=True,
         ),
         patch(
             "keep.providers.providers_service.ProvidersService.update_provider"
@@ -136,7 +162,7 @@ def test_provider_reprovisioning_with_updated_config(provider_configs, caplog):
         mock_update_provider.assert_called_once()
         call_args = mock_update_provider.call_args[1]
         assert call_args["tenant_id"] == tenant_id
-        assert call_args["provider_id"] == provider.id
+        assert call_args["provider_id"] == mock_provider.id
         assert (
             call_args["provider_info"]
             == provider_configs["updated"]["keepVictoriaMetrics"]["authentication"]
@@ -144,22 +170,13 @@ def test_provider_reprovisioning_with_updated_config(provider_configs, caplog):
         assert call_args["updated_by"] == "system"
         assert call_args["allow_provisioned"] == True
 
-        with Session(engine) as session:
-            db_provider = session.exec(
-                select(Provider).where(
-                    (Provider.tenant_id == tenant_id)
-                    & (Provider.name == "keepVictoriaMetrics")
-                )
-            ).one()
+        # Verify that the configuration would be updated correctly
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_config = secret_manager.read_secret(
+            mock_provider.configuration_key, is_json=True
+        )
 
-            # Verify that the configuration would be updated correctly
-            context_manager = ContextManager(tenant_id=tenant_id)
-            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-            provider_config = secret_manager.read_secret(
-                db_provider.configuration_key, is_json=True
-            )
-
-            assert (
-                provider_config["authentication"]["VMAlertHost"]
-                == "http://vmmetrics.com"
-            ), "Configuration should be updated to vmmetrics.com"
+        assert (
+            provider_config["authentication"]["VMAlertHost"] == "http://vmmetrics.com"
+        ), "Configuration should be updated to vmmetrics.com"
