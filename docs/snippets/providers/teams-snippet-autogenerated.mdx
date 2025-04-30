@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -25,6 +25,8 @@ actions:
         sections: {value}  # For MessageCard: Array of custom information sections. For Adaptive Cards: Array of card elements following the Adaptive Card schema. Can be provided as a JSON string or array.
         schema: {value}  # Schema URL for Adaptive Cards. Default is "http://adaptivecards.io/schemas/adaptive-card.json"
         attachments: {value}  # Custom attachments array for Adaptive Cards (overrides default attachment structure). Can be provided as a JSON string or array.
+        mentions: {value}  # List of user mentions to include in the Adaptive Card. Each mention should be a dict with 'id' (user ID, Microsoft Entra Object ID, or UPN) and 'name' (display name) keys.
+Example: [{"id": "user-id-123", "name": "John Doe"}, {"id": "john.doe@example.com", "name": "John Doe"}]
 ```
 
 
@@ -32,4 +34,5 @@ actions:
 
 Check the following workflow examples:
 - [create_jira_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_jira_ticket_upon_alerts.yml)
+- [keep-teams-adaptive-cards-with-mentions.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/keep-teams-adaptive-cards-with-mentions.yaml)
 - [keep-teams-adaptive-cards.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/keep-teams-adaptive-cards.yaml)

@@ -174,6 +174,27 @@ def test_lowercase():
     assert functions.lowercase("TEST") == "test"
 
 
+def test_capitalize():
+    """
+    Test the capitalize function
+    """
+    assert functions.capitalize("hello world") == "Hello world"
+    assert functions.capitalize("HELLO WORLD") == "Hello world"
+    assert functions.capitalize("") == ""
+    assert functions.capitalize("123 test") == "123 test"
+
+
+def test_title():
+    """
+    Test the title function
+    """
+    assert functions.title("hello world") == "Hello World"
+    assert functions.title("HELLO WORLD") == "Hello World"
+    assert functions.title("hello-world") == "Hello-World"
+    assert functions.title("") == ""
+    assert functions.title("123 test") == "123 Test"
+
+
 def test_split():
     assert functions.split("a,b,c", ",") == ["a", "b", "c"]
 
@@ -961,3 +982,136 @@ def test_dict_pop_prefix():
     }
     expected = {"other": True}
     assert functions.dict_pop_prefix(data, "prefix_") == expected
+
+
+def test_timestamp_delta_add_seconds():
+    """
+    Test adding seconds to a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, 30, "seconds")
+    assert result == datetime.datetime(2023, 1, 1, 12, 0, 30)
+
+
+def test_timestamp_delta_subtract_seconds():
+    """
+    Test subtracting seconds from a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 30)
+    result = functions.timestamp_delta(dt, -30, "seconds")
+    assert result == datetime.datetime(2023, 1, 1, 12, 0, 0)
+
+
+def test_timestamp_delta_add_minutes():
+    """
+    Test adding minutes to a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, 30, "minutes")
+    assert result == datetime.datetime(2023, 1, 1, 12, 30, 0)
+
+
+def test_timestamp_delta_subtract_minutes():
+    """
+    Test subtracting minutes from a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 30, 0)
+    result = functions.timestamp_delta(dt, -30, "minutes")
+    assert result == datetime.datetime(2023, 1, 1, 12, 0, 0)
+
+
+def test_timestamp_delta_add_hours():
+    """
+    Test adding hours to a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, 6, "hours")
+    assert result == datetime.datetime(2023, 1, 1, 18, 0, 0)
+
+
+def test_timestamp_delta_subtract_hours():
+    """
+    Test subtracting hours from a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, -6, "hours")
+    assert result == datetime.datetime(2023, 1, 1, 6, 0, 0)
+
+
+def test_timestamp_delta_add_days():
+    """
+    Test adding days to a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, 5, "days")
+    assert result == datetime.datetime(2023, 1, 6, 12, 0, 0)
+
+
+def test_timestamp_delta_subtract_days():
+    """
+    Test subtracting days from a datetime
+    """
+    dt = datetime.datetime(2023, 1, 6, 12, 0, 0)
+    result = functions.timestamp_delta(dt, -5, "days")
+    assert result == datetime.datetime(2023, 1, 1, 12, 0, 0)
+
+
+def test_timestamp_delta_add_weeks():
+    """
+    Test adding weeks to a datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, 2, "weeks")
+    assert result == datetime.datetime(2023, 1, 15, 12, 0, 0)
+
+
+def test_timestamp_delta_subtract_weeks():
+    """
+    Test subtracting weeks from a datetime
+    """
+    dt = datetime.datetime(2023, 1, 15, 12, 0, 0)
+    result = functions.timestamp_delta(dt, -2, "weeks")
+    assert result == datetime.datetime(2023, 1, 1, 12, 0, 0)
+
+
+def test_timestamp_delta_with_timezone():
+    """
+    Test timestamp_delta with timezone-aware datetime
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    result = functions.timestamp_delta(dt, 1, "days")
+    assert result == datetime.datetime(
+        2023, 1, 2, 12, 0, 0, tzinfo=datetime.timezone.utc
+    )
+    assert result.tzinfo == datetime.timezone.utc
+
+
+def test_timestamp_delta_with_float_amount():
+    """
+    Test timestamp_delta with float amount
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    result = functions.timestamp_delta(dt, 1.5, "hours")
+    assert result == datetime.datetime(2023, 1, 1, 13, 30, 0)
+
+
+def test_timestamp_delta_invalid_unit():
+    """
+    Test timestamp_delta with invalid unit raises ValueError
+    """
+    dt = datetime.datetime(2023, 1, 1, 12, 0, 0)
+    with pytest.raises(ValueError) as excinfo:
+        functions.timestamp_delta(dt, 1, "invalid_unit")
+    assert "Unsupported timestamp_unit: invalid_unit" in str(excinfo.value)
+
+
+@freeze_time("2023-01-01 12:00:00")
+def test_timestamp_delta_with_utcnow():
+    """
+    Test timestamp_delta with utcnow
+    """
+    dt = functions.utcnow()
+    result = functions.timestamp_delta(dt, 1, "hours")
+    assert result == datetime.datetime(
+        2023, 1, 1, 13, 0, 0, tzinfo=datetime.timezone.utc
+    )

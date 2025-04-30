@@ -16,7 +16,7 @@ from keep.api.core.db import (
     get_all_provisioned_workflows,
     get_all_workflows,
     get_all_workflows_yamls,
-    get_workflow,
+    get_workflow_by_id,
     get_workflow_execution,
 )
 from keep.api.core.workflows import get_workflows_with_last_executions_v2
@@ -33,8 +33,13 @@ class WorkflowStore:
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
 
-    def get_workflow_execution(self, tenant_id: str, workflow_execution_id: str):
-        return get_workflow_execution(tenant_id, workflow_execution_id)
+    def get_workflow_execution(
+        self,
+        tenant_id: str,
+        workflow_execution_id: str,
+        is_test_run: bool | None = None,
+    ):
+        return get_workflow_execution(tenant_id, workflow_execution_id, is_test_run)
 
     def create_workflow(
         self, tenant_id: str, created_by, workflow: dict, force_update: bool = True
@@ -67,7 +72,7 @@ class WorkflowStore:
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
-        workflow = get_workflow(tenant_id, workflow_id)
+        workflow = get_workflow_by_id(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404, detail=f"Workflow {workflow_id} not found"
@@ -103,7 +108,7 @@ class WorkflowStore:
                 return self._read_workflow_from_stream(file)
 
     def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
-        workflow = get_workflow(tenant_id, workflow_id)
+        workflow = get_workflow_by_id(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404,
@@ -114,7 +119,7 @@ class WorkflowStore:
         return cyaml.dump(valid_workflow_yaml, width=99999)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        workflow = get_workflow(tenant_id, workflow_id)
+        workflow = get_workflow_by_id(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404,
@@ -124,8 +129,9 @@ class WorkflowStore:
         workflow = self.parser.parse(
             tenant_id,
             workflow_yaml,
-            workflow_db_id=workflow_id,
+            workflow_db_id=workflow.id,
             workflow_revision=workflow.revision,
+            is_test=workflow.is_test,
         )
         if len(workflow) > 1:
             raise HTTPException(

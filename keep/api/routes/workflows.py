@@ -25,8 +25,9 @@ from keep.api.core.db import (
     get_alert_by_event_id,
     get_installed_providers,
     get_last_workflow_workflow_to_alert_executions,
+    get_or_create_dummy_workflow,
     get_session,
-    get_workflow,
+    get_workflow_by_id as get_workflow_by_id_db,
     get_workflow_version,
     get_workflow_versions,
     update_workflow_by_id as update_workflow_by_id_db,
@@ -476,10 +477,32 @@ async def run_workflow_from_definition(
     workflow_dict = await get_workflow_dict_from_string(workflow_raw)
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
+    workflow_id = workflow_dict.get("id")
+
+    if workflow_id:
+        # if workflow exists, use it's id for test run
+        try:
+            workflow_from_db = workflowstore.get_workflow(tenant_id, workflow_id)
+            # get_workflow looks by workflow name if id is not found, so we need to assign the final id from db
+            workflow_id = workflow_from_db.workflow_id
+        except HTTPException:
+            # if workflow_id is not found, use dummy workflow id for test run
+            workflow_id = None
+    if workflow_id is None:
+        # otherwise, ensure dummy workflow exists and use it's id for test run
+        try:
+            dummy_workflow = get_or_create_dummy_workflow(tenant_id)
+            workflow_id = dummy_workflow.id
+        except Exception as e:
+            logger.exception(
+                "Failed to create dummy workflow",
+                extra={"tenant_id": tenant_id},
+            )
+            raise HTTPException(
+                status_code=500, detail=f"Failed to create dummy workflow: {e}"
+            )
     try:
-        workflow = workflowstore.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow_dict=workflow_dict
-        )
+        workflow = workflowstore.get_workflow_from_dict(tenant_id, workflow_dict)
     except Exception as e:
         logger.exception(
             "Failed to parse workflow",
@@ -493,7 +516,7 @@ async def run_workflow_from_definition(
     try:
         event, inputs = get_event_from_body(body, tenant_id)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow.workflow_id,
+            workflow_id,
             workflow.workflow_revision,
             tenant_id,
             created_by,
@@ -715,7 +738,9 @@ async def update_workflow_by_id(
     """
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Updating workflow {workflow_id}", extra={"tenant_id": tenant_id})
-    workflow_from_db = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_from_db = get_workflow_by_id_db(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
     if not workflow_from_db:
         logger.warning(
             f"Tenant tried to update workflow {workflow_id} that does not exist",
@@ -774,7 +799,7 @@ def get_workflow_by_id(
 ):
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
@@ -881,7 +906,7 @@ def get_workflow_runs_by_id(
     ),
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
@@ -1003,7 +1028,7 @@ def get_workflow_execution_status(
             detail=f"Workflow execution {workflow_execution_id} not found",
         )
 
-    workflow = get_workflow(
+    workflow = get_workflow_by_id_db(
         tenant_id=tenant_id,
         workflow_id=workflow_execution.workflow_id,
     )
@@ -1073,7 +1098,7 @@ def toggle_workflow_state(
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Toggling workflow {workflow_id}", extra={"tenant_id": tenant_id})
 
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         logger.warning(
             f"Tenant tried to toggle workflow {workflow_id} that does not exist",
@@ -1121,7 +1146,7 @@ def write_workflow_secret(
     """
     tenant_id = authenticated_entity.tenant_id
 
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         raise HTTPException(404, "Workflow not found")
 
@@ -1163,7 +1188,7 @@ def read_workflow_secret(
     """
     tenant_id = authenticated_entity.tenant_id
 
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         raise HTTPException(404, "Workflow not found")
 
@@ -1193,7 +1218,7 @@ def delete_workflow_secret(
     """
     tenant_id = authenticated_entity.tenant_id
 
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow:
         raise HTTPException(404, "Workflow not found")
 
