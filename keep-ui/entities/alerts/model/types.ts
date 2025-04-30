@@ -58,6 +58,8 @@ export interface AlertDto {
   ticket_status?: string;
   playbook_url?: string;
   providerId?: string;
+  providerType?: string;
+  providerName?: string;
   group?: boolean;
   note?: string;
   isNoisy?: boolean;

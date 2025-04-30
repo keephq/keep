@@ -427,15 +427,22 @@ class BaseProvider(metaclass=abc.ABCMeta):
             provider_type=provider_type,
         )
 
+        # Get provider name if available
+        provider_name = None
+        if provider_instance:
+            provider_name = provider_instance.config.name
+
         if not isinstance(formatted_alert, list):
             formatted_alert.providerId = provider_id
             formatted_alert.providerType = provider_type
+            formatted_alert.providerName = provider_name
             formatted_alert = [formatted_alert]
 
         else:
             for alert in formatted_alert:
                 alert.providerId = provider_id
                 alert.providerType = provider_type
+                alert.providerName = provider_name
 
         # if there is no custom deduplication rule, return the formatted alert
         if not custom_deduplication_rule:
@@ -519,10 +526,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         with tracer.start_as_current_span(f"{self.__class__.__name__}-get_alerts"):
             alerts = self._get_alerts()
-            # enrich alerts with provider id
+            # enrich alerts with provider information
             for alert in alerts:
                 alert.providerId = self.provider_id
                 alert.providerType = self.provider_type
+                alert.providerName = self.config.name
             return alerts
 
     def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
@@ -751,6 +759,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
             url=alert_data.get("url", None),
             fingerprint=alert_data.get("fingerprint", None),
             providerId=self.provider_id,
+            providerType=self.provider_type,
+            providerName=self.config.name,
         )
         # push the alert to the provider
         url = f'{os.environ["KEEP_API_URL"]}/alerts/event'
