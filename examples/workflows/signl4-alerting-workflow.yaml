@@ -2,19 +2,19 @@ workflow:
   id: signl4-alert-notifier
   name: SIGNL4 Alert Notifier
   description: Routes alerts to SIGNL4 for mobile team alerting with customizable titles and messages.
-triggers:
-  - filters:
-      - key: source
-        value: r".*"
-    type: alert
-owners: []
-services: []
-steps: []
-actions:
-  - name: signl4-action
-    provider:
-      config: "{{ providers.SIGNL4 Alerting }}"
-      type: signl4
-      with:
-        message: Test.
-        title: Keep Alert
+  triggers:
+    - filters:
+        - key: source
+          value: r".*"
+      type: alert
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: signl4-action
+      provider:
+        config: "{{ providers.SIGNL4 Alerting }}"
+        type: signl4
+        with:
+          message: Test.
+          title: Keep Alert
