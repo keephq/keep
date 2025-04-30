@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 from keep.api.core.db import (
     add_or_update_workflow,
-    delete_workflow,
+    delete_workflow_by_id,
     delete_workflow_by_provisioned_file,
     get_all_provisioned_workflows,
     get_all_workflows,
@@ -80,7 +80,7 @@ class WorkflowStore:
         if workflow.provisioned:
             raise HTTPException(403, detail="Cannot delete a provisioned workflow")
         try:
-            delete_workflow(tenant_id, workflow_id)
+            delete_workflow_by_id(tenant_id=tenant_id, workflow_id=workflow_id)
         except Exception as e:
             self.logger.exception(f"Error deleting workflow {workflow_id}: {str(e)}")
             raise HTTPException(
@@ -311,9 +311,9 @@ class WorkflowStore:
         provisioned_workflows_dir = os.environ.get("KEEP_WORKFLOWS_DIRECTORY")
         provisioned_workflow_yaml = os.environ.get("KEEP_WORKFLOW")
 
-        if not (provisioned_workflows_dir or provisioned_workflow_yaml):
-            logger.info("No workflows for provisioning found")
-            return []
+        # Handle case when provisioned_workflow_yaml is an empty dictionary
+        if provisioned_workflow_yaml == "{}":
+            provisioned_workflow_yaml = None
 
         if (
             provisioned_workflows_dir is not None
@@ -333,6 +333,16 @@ class WorkflowStore:
         # Get all existing provisioned workflows
         provisioned_workflows = get_all_provisioned_workflows(tenant_id)
 
+        if not (provisioned_workflows_dir or provisioned_workflow_yaml):
+            logger.info("No workflows for provisioning found")
+            if provisioned_workflows:
+                logger.info("Deprovisioning all workflows")
+                for workflow in provisioned_workflows:
+                    delete_workflow_by_id(tenant_id=tenant_id, workflow_id=workflow.id)
+                    logger.info(f"Workflow {workflow.id} deprovisioned successfully")
+
+            return []
+
         ### Provisioning from env var
         if provisioned_workflow_yaml is not None:
             try:
@@ -347,12 +357,12 @@ class WorkflowStore:
 
                 # Un-provisioning other workflows.
                 for workflow in provisioned_workflows:
-                    if not workflow.id == workflow_id:
+                    if not workflow.name == workflow_name:
                         logger.info(
                             f"Deprovisioning workflow {workflow.id} as its id doesn't match the provisioned workflow provided in the env"
                         )
-                        delete_workflow_by_provisioned_file(
-                            tenant_id, workflow.provisioned_file
+                        delete_workflow_by_id(
+                            tenant_id=tenant_id, workflow_id=workflow.id
                         )
                         logger.info(
                             f"Workflow {workflow.id} deprovisioned successfully"
@@ -381,7 +391,6 @@ class WorkflowStore:
 
         ### Provisioning from the directory
         if provisioned_workflows_dir is not None:
-
             # Check for workflows that are no longer in the directory or outside the workflows_dir and delete them
             for workflow in provisioned_workflows:
                 if (
@@ -397,7 +406,7 @@ class WorkflowStore:
                         f"Deprovisioning workflow {workflow.id} as its file no longer exists or is outside the workflows directory"
                     )
                     delete_workflow_by_provisioned_file(
-                        tenant_id, workflow.provisioned_file
+                        tenant_id=tenant_id, provisioned_file=workflow.provisioned_file
                     )
                     logger.info(f"Workflow {workflow.id} deprovisioned successfully")
 
@@ -417,6 +426,7 @@ class WorkflowStore:
                                 workflow_interval,
                                 workflow_disabled,
                             ) = WorkflowStore.pre_parse_workflow_yaml(workflow_yaml)
+
                         add_or_update_workflow(
                             id=workflow_id,
                             name=workflow_name,

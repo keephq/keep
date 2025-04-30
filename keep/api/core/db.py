@@ -39,7 +39,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -567,6 +567,7 @@ def add_or_update_workflow(
                     f"Workflow {id} already exists with the same workflow_raw, skipping update"
                 )
                 return existing_workflow
+
             return update_workflow_with_values(
                 existing_workflow,
                 name=name,
@@ -1032,7 +1033,7 @@ def get_workflow_executions(
     return total_count, workflow_executions, pass_count, fail_count, avgDuration
 
 
-def delete_workflow(tenant_id, workflow_id):
+def delete_workflow_by_id(tenant_id, workflow_id):
     with Session(engine) as session:
         workflow = session.exec(
             select(Workflow)
