@@ -359,7 +359,7 @@ class WorkflowStore:
                 for workflow in provisioned_workflows:
                     if (
                         not pre_parsed_workflow
-                        or not workflow.id == pre_parsed_workflow.id
+                        or not workflow.name == pre_parsed_workflow.name
                     ):
                         if not pre_parsed_workflow:
                             logger.info(
