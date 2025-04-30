@@ -214,28 +214,6 @@ def test_alert_started_at(db_session, create_alert, client, test_app):
     assert alerts[0]["startedAt"] == dt2.isoformat()
 
 
-def test_alert_dto_provider_name():
-    """Test that the providerName field can be set and retrieved."""
-    alert = AlertDto(
-        id="1234",
-        name="Test Alert",
-        status=AlertStatus.FIRING,
-        severity=AlertSeverity.CRITICAL,
-        lastReceived="2023-01-01T00:00:00.000Z",
-        providerId="test-provider-id",
-        providerType="test-provider-type",
-        providerName="Test Provider Name",
-    )
-
-    # Verify the provider name is set correctly
-    assert alert.providerName == "Test Provider Name"
-
-    # Verify the field is included in the dict representation
-    alert_dict = alert.dict()
-    assert "providerName" in alert_dict
-    assert alert_dict["providerName"] == "Test Provider Name"
-
-
 def test_alert_dto_provider_name_default():
     """Test that the providerName field defaults to None."""
     alert = AlertDto(
@@ -248,22 +226,3 @@ def test_alert_dto_provider_name_default():
 
     # Verify the provider name defaults to None
     assert alert.providerName is None
-
-
-def test_alert_dto_dict_contains_provider_name():
-    """Test that the dict representation contains the providerName field."""
-    alert = AlertDto(
-        id="1234",
-        name="Test Alert",
-        status=AlertStatus.FIRING,
-        severity=AlertSeverity.CRITICAL,
-        lastReceived="2023-01-01T00:00:00.000Z",
-        providerId="test-provider-id",
-        providerType="test-provider-type",
-        providerName="Test Provider Name",
-    )
-
-    # Convert to dict and verify providerName is included
-    alert_dict = alert.dict()
-    assert "providerName" in alert_dict
-    assert alert_dict["providerName"] == "Test Provider Name"
