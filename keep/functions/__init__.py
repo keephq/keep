@@ -75,25 +75,6 @@ def split(string, delimeter) -> list:
     return string.strip().split(delimeter)
 
 
-def apply_str_method(string: str, method_name: str, *args, **kwargs):
-    """
-    Apply a string method to a string.
-
-    Args:
-        string (str): The string to apply the method to.
-        method_name (str): The name of the method to apply.
-        *args: Additional arguments to pass to the method.
-        **kwargs: Additional keyword arguments to pass to the method.
-
-    Returns:
-        The result of applying the method to the string.
-    """
-    method = getattr(string, method_name, None)
-    if not callable(method):
-        raise ValueError(f"'{method_name}' is not a valid string method.")
-    return method(*args, **kwargs)
-
-
 def index(iterable, index) -> any:
     if isinstance(index, str) and index.isdigit():  # Если индекс — строка с числом
         index = int(index)
