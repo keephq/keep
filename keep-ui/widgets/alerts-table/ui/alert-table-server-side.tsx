@@ -39,7 +39,12 @@ import { severityMapping } from "@/entities/alerts/model";
 import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
-import { EmptyStateCard, SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import {
+  EmptyStateCard,
+  PageTitle,
+  SeverityBorderIcon,
+  UISeverity,
+} from "@/shared/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -64,6 +69,11 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useAlertRowStyle, useAlertTableTheme } from "@/entities/alerts/model";
 import { useIsShiftKeyHeld } from "@/features/keyboard-shortcuts";
+import SettingsSelection from "./SettingsSelection";
+import EnhancedDateRangePickerV2, {
+  AllTimeFrame,
+  TimeFrameV2,
+} from "@/components/ui/DateRangePickerV2";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -126,8 +136,7 @@ export function AlertTableServerSide({
   onQueryChange,
   onLiveUpdateStateChange,
 }: Props) {
-  const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(true);
+  // const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -153,7 +162,10 @@ export function AlertTableServerSide({
   const [isSilentFacetsLoading, setIsSilentFacetsLoading] =
     useState<boolean>(false);
   const { theme } = useAlertTableTheme();
-
+  const [timeFrame, setTimeFrame] = useState<TimeFrameV2>({
+    type: "all-time",
+    isPaused: false,
+  } as AllTimeFrame);
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -190,21 +202,21 @@ export function AlertTableServerSide({
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
   const getDateRangeCel = useCallback(() => {
-    const filterArray = [];
     const currentDate = new Date();
 
-    if (timeframeDelta > 0) {
-      filterArray.push(
-        `lastReceived >= '${new Date(
-          currentDate.getTime() - timeframeDelta
-        ).toISOString()}'`
-      );
-      filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
-      return filterArray.join(" && ");
+    if (timeFrame.type === "relative") {
+      return `lastReceived >= '${new Date(
+        currentDate.getTime() - timeFrame.deltaMs
+      ).toISOString()}'`;
+    } else if (timeFrame.type === "absolute") {
+      return [
+        `lastReceived >= '${timeFrame.start.toISOString()}'`,
+        `lastReceived <= '${timeFrame.end.toISOString()}'`,
+      ].join(" && ");
     }
 
     return null;
-  }, [timeframeDelta]);
+  }, [timeFrame]);
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
 
@@ -237,18 +249,18 @@ export function AlertTableServerSide({
     onReload && onReload(alertsQueryRef.current as AlertsQuery);
   }
 
-  useEffect(() => updateAlertsCelDateRange(), [timeframeDelta]);
+  useEffect(() => updateAlertsCelDateRange(), [timeFrame]);
 
   useEffect(() => {
     // so that gap between poll is 2x of query time and minimum 3sec
     const refreshInterval = Math.max((queryTimeInSeconds || 1) * 2, 3000);
     const interval = setInterval(() => {
-      if (!isPaused && shouldRefreshDate) {
+      if (!(timeFrame as any).isPaused && shouldRefreshDate) {
         updateAlertsCelDateRange();
       }
     }, refreshInterval);
     return () => clearInterval(interval);
-  }, [isPaused, shouldRefreshDate]);
+  }, [timeFrame, shouldRefreshDate]);
 
   function updateFacetsCelDateRange() {
     if (!canRevalidate) {
@@ -268,7 +280,7 @@ export function AlertTableServerSide({
 
   useEffect(() => {
     updateFacetsCelDateRange();
-  }, [timeframeDelta]);
+  }, [timeFrame]);
   useEffect(() => {
     if (!isSilentFacetsLoading) {
       return;
@@ -281,11 +293,11 @@ export function AlertTableServerSide({
 
   useEffect(() => {
     // so that gap between poll is 20x of query time and minimum 5sec
-    const refreshInterval = timeframeDelta
+    const refreshInterval = timeFrame
       ? Math.max((queryTimeInSeconds || 1) * 20, 5000)
       : 2000;
     const interval = setInterval(() => {
-      if (!isPaused && shouldRefreshDate) {
+      if (!(timeFrame as any).isPaused && shouldRefreshDate) {
         updateFacetsCelDateRange();
       }
     }, refreshInterval);
@@ -293,7 +305,7 @@ export function AlertTableServerSide({
       clearInterval(interval);
     };
   }, [
-    isPaused,
+    timeFrame,
     getDateRangeCel,
     shouldRefreshDate,
     Math.round(queryTimeInSeconds || 1),
@@ -446,19 +458,9 @@ export function AlertTableServerSide({
     }
   }, [refreshToken]);
 
-  const timeframeChanged = useCallback(
-    (timeframe: TimeFrame | null) => {
-      if (timeframe?.paused != isPaused) {
-        onLiveUpdateStateChange && onLiveUpdateStateChange(!timeframe?.paused);
-      }
-
-      const newDiff =
-        (timeframe?.end?.getTime() || 0) - (timeframe?.start?.getTime() || 0);
-      setTimeframeDelta(newDiff);
-      setIsPaused(!!timeframe?.paused);
-    },
-    [setIsPaused, onLiveUpdateStateChange, setTimeframeDelta]
-  );
+  useEffect(() => {
+    onLiveUpdateStateChange?.((!timeFrame as any).isPaused);
+  }, [(!!timeFrame as any).isPaused]);
 
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
@@ -714,14 +716,22 @@ export function AlertTableServerSide({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex-none">
-        <TitleAndFilters
-          table={table}
-          alerts={alerts}
-          timeframeRefreshInterval={2000}
-          liveUpdateOptionEnabled={true}
-          presetName={presetName}
-          onTimeframeChange={timeframeChanged}
-        />
+        <div className="flex justify-between">
+          <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
+            <EnhancedDateRangePickerV2
+              timeFrame={timeFrame}
+              setTimeFrame={setTimeFrame}
+              hasPlay={true}
+              hasRewind={false}
+              hasForward={false}
+              hasZoomOut={false}
+              enableYearNavigation
+            />
+
+            <SettingsSelection table={table} presetName={presetName} />
+          </div>
+        </div>
       </div>
 
       {/* Make actions/presets section fixed height */}
