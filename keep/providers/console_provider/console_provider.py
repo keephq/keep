@@ -29,7 +29,7 @@ class ConsoleProvider(BaseProvider):
     def _query(self, message: str = "", **kwargs: dict):
         return self._notify(message, **kwargs)
 
-    def _notify(self, message: str = "", **kwargs: dict):
+    def _notify(self, message: str = "", logger: bool = False, severity: str = "info"):
         """
         Output alert message simply using the print method.
 
@@ -37,8 +37,7 @@ class ConsoleProvider(BaseProvider):
             alert_message (str): The alert message to be printed in to the console
         """
         self.logger.debug("Outputting alert message to console")
-        if kwargs.get("logger", False):
-            severity = kwargs.get("severity", "info")
+        if logger:
             try:
                 getattr(self.logger, severity)(message)
             except AttributeError:
