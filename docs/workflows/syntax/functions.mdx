@@ -38,6 +38,37 @@ steps:
 ```
 ---
 
+### `capitalize`
+
+**Description:** Capitalizes the first character of a string.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.capitalize("hello world") # Output: "Hello world"
+```
+
+---
+
+### `title`
+
+**Description:** Converts a string to title case (capitalizes each word).
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.title("hello world") # Output: "Hello World"
+```
+---
+
 ### `split`
 
 **Description:** Splits a string into a list using a delimiter.
@@ -418,25 +449,6 @@ steps:
       type: mock
       with:
         message: keep.add_time_to_date("2024-01-01", "%Y-%m-%d", "1w 2d") # Output: "2024-01-10"
-
-```
-
----
-
-### `apply_str_method`
-
-**Description:** Applies a string method to a string with optional arguments.
-**Example:**
-
-```yaml
-steps:
-  - name: example-step
-    provider:
-      type: mock
-      with:
-        message: keep.apply_str_method("hello world", "upper") # Output: "HELLO WORLD"
-        replace_example: keep.apply_str_method("hello world", "replace", "world", "Keep") # Output: "hello Keep"
-        split_example: keep.apply_str_method("a,b,c", "split", ",") # Output: ["a", "b", "c"]
 
 ```
 

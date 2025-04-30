@@ -174,6 +174,27 @@ def test_lowercase():
     assert functions.lowercase("TEST") == "test"
 
 
+def test_capitalize():
+    """
+    Test the capitalize function
+    """
+    assert functions.capitalize("hello world") == "Hello world"
+    assert functions.capitalize("HELLO WORLD") == "Hello world"
+    assert functions.capitalize("") == ""
+    assert functions.capitalize("123 test") == "123 test"
+
+
+def test_title():
+    """
+    Test the title function
+    """
+    assert functions.title("hello world") == "Hello World"
+    assert functions.title("HELLO WORLD") == "Hello World"
+    assert functions.title("hello-world") == "Hello-World"
+    assert functions.title("") == ""
+    assert functions.title("123 test") == "123 Test"
+
+
 def test_split():
     assert functions.split("a,b,c", ",") == ["a", "b", "c"]
 
@@ -961,71 +982,6 @@ def test_dict_pop_prefix():
     }
     expected = {"other": True}
     assert functions.dict_pop_prefix(data, "prefix_") == expected
-
-
-def test_apply_str_method_upper():
-    """
-    Test applying the upper method to a string
-    """
-    result = functions.apply_str_method("hello", "upper")
-    assert result == "HELLO"
-
-
-def test_apply_str_method_lower():
-    """
-    Test applying the lower method to a string
-    """
-    result = functions.apply_str_method("HELLO", "lower")
-    assert result == "hello"
-
-
-def test_apply_str_method_strip():
-    """
-    Test applying the strip method to a string
-    """
-    result = functions.apply_str_method("  hello  ", "strip")
-    assert result == "hello"
-
-
-def test_apply_str_method_replace():
-    """
-    Test applying the replace method to a string with arguments
-    """
-    result = functions.apply_str_method("hello world", "replace", "world", "python")
-    assert result == "hello python"
-
-
-def test_apply_str_method_split():
-    """
-    Test applying the split method to a string
-    """
-    result = functions.apply_str_method("hello,world", "split", ",")
-    assert result == ["hello", "world"]
-
-
-def test_apply_str_method_invalid_method():
-    """
-    Test applying an invalid method raises ValueError
-    """
-    with pytest.raises(ValueError) as excinfo:
-        functions.apply_str_method("hello", "invalid_method")
-    assert "'invalid_method' is not a valid string method." in str(excinfo.value)
-
-
-def test_apply_str_method_non_callable_attribute():
-    """
-    Test applying a non-callable attribute
-    """
-
-    # Create a custom string subclass with a non-callable attribute
-    class CustomStr(str):
-        non_callable_attr = "not a method"
-
-    custom_str = CustomStr("hello")
-    with pytest.raises(ValueError) as excinfo:
-        functions.apply_str_method(custom_str, "non_callable_attr")
-
-    assert "is not a valid string method" in str(excinfo.value)
 
 
 def test_timestamp_delta_add_seconds():

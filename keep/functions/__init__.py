@@ -45,6 +45,32 @@ def lowercase(string) -> str:
     return string.lower()
 
 
+def capitalize(string) -> str:
+    """
+    Capitalize the first character of a string.
+
+    Args:
+        string (str): The string to capitalize.
+
+    Returns:
+        str: The capitalized string.
+    """
+    return string.capitalize()
+
+
+def title(string) -> str:
+    """
+    Convert a string to title case (capitalize each word).
+
+    Args:
+        string (str): The string to convert to title case.
+
+    Returns:
+        str: The title-cased string.
+    """
+    return string.title()
+
+
 def split(string, delimeter) -> list:
     return string.strip().split(delimeter)
 
