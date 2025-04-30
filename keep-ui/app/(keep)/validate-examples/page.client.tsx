@@ -122,18 +122,15 @@ export function ValidateExamplesPageClient({
                       ? "bg-gray-200"
                       : ""
                   )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedWorkflow(w);
+                    setSelectedFilename(example.filename);
+                  }}
                 >
                   {result.error ? "❌" : "✅"}
                   <div className="flex flex-col gap-1">
-                    <a
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setSelectedWorkflow(w);
-                        setSelectedFilename(example.filename);
-                      }}
-                    >
-                      {w.workflow.name}
-                    </a>
+                    <b>{w.workflow.name}</b>
                     <span className="text-sm text-gray-500">
                       {example.filename}
                     </span>
