@@ -38,6 +38,7 @@ from keep.api.routes import (
     deduplications,
     extraction,
     facets,
+    cel,
     healthcheck,
     incidents,
     maintenance,
@@ -294,6 +295,8 @@ def get_app(
         deduplications.router, prefix="/deduplications", tags=["deduplications"]
     )
     app.include_router(facets.router, prefix="/{entity_name}/facets", tags=["facets"])
+    app.include_router(facets.router, prefix="/{entity_name}/facets", tags=["facets"])
+    app.include_router(cel.router, prefix="/cel", tags=["cel"])
     app.include_router(
         provider_images.router, prefix="/provider-images", tags=["provider-images"]
     )
