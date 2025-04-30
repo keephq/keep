@@ -102,42 +102,44 @@ export function ValidateExamplesPageClient({
             </Card>
           )}
         </div>
-        <div className="flex flex-col overflow-y-auto">
+        <div className="flex flex-col min-h-0">
           <header>
             Invalid {workflows.filter((w) => !w.parseResult.success).length}/{" "}
             {workflows.length}
           </header>
-          {workflows
-            .filter((w) => !w.parseResult.success)
-            .map((example, i) => {
-              const w = example.workflowJson;
-              const result = example.parseResult;
-              return (
-                <button
-                  key={w.workflow.id}
-                  type="button"
-                  className={clsx(
-                    "flex text-left gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-200",
-                    selectedWorkflow?.workflow.id === w.workflow.id
-                      ? "bg-gray-200"
-                      : ""
-                  )}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedWorkflow(w);
-                    setSelectedFilename(example.filename);
-                  }}
-                >
-                  {result.error ? "❌" : "✅"}
-                  <div className="flex flex-col gap-1">
-                    <b>{w.workflow.name}</b>
-                    <span className="text-sm text-gray-500">
-                      {example.filename}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+          <div className="flex flex-col min-h-0 overflow-y-auto">
+            {workflows
+              .filter((w) => !w.parseResult.success)
+              .map((example, i) => {
+                const w = example.workflowJson;
+                const result = example.parseResult;
+                return (
+                  <button
+                    key={w.workflow.id}
+                    type="button"
+                    className={clsx(
+                      "flex text-left gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-200",
+                      selectedWorkflow?.workflow.id === w.workflow.id
+                        ? "bg-gray-200"
+                        : ""
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSelectedWorkflow(w);
+                      setSelectedFilename(example.filename);
+                    }}
+                  >
+                    {result.error ? "❌" : "✅"}
+                    <div className="flex flex-col gap-1">
+                      <b>{w.workflow.name}</b>
+                      <span className="text-sm text-gray-500">
+                        {example.filename}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+          </div>
         </div>
       </div>
     </div>
