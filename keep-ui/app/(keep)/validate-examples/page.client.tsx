@@ -9,7 +9,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { useMemo, useState } from "react";
 import { EmptyStateCard, PageTitle, WorkflowYAMLEditor } from "@/shared/ui";
 import { YamlWorkflowDefinition } from "@/entities/workflows/model/yaml.types";
-import { Card, Title } from "@tremor/react";
+import { Card, Subtitle, Title } from "@tremor/react";
 import clsx from "clsx";
 import { saveFile } from "./save-file-action";
 
@@ -103,8 +103,8 @@ export function ValidateExamplesPageClient({
           )}
         </div>
         <div className="flex flex-col min-h-0">
-          <header>
-            Invalid {workflows.filter((w) => !w.parseResult.success).length}/{" "}
+          <header className="font-bold">
+            Invalid {workflows.filter((w) => !w.parseResult.success).length} of{" "}
             {workflows.length}
           </header>
           <div className="flex flex-col min-h-0 overflow-y-auto">
@@ -130,11 +130,17 @@ export function ValidateExamplesPageClient({
                     }}
                   >
                     {result.error ? "❌" : "✅"}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-0.5">
                       <b>{w.workflow.name}</b>
                       <span className="text-sm text-gray-500">
                         {example.filename}
                       </span>
+                      {result.error?.issues.length ? (
+                        <span className="text-sm text-red-500">
+                          {result.error.issues.length} issue
+                          {result.error.issues.length > 1 ? "s" : ""}
+                        </span>
+                      ) : null}
                     </div>
                   </button>
                 );

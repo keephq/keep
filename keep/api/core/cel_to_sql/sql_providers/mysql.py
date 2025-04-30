@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List
+from uuid import UUID
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
@@ -82,7 +83,17 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         else:
             return field_expressions[0]
 
-    def _visit_constant_node(self, value: str) -> str:
+    def _visit_constant_node(self, value: str, expected_data_type: type = None) -> str:
+        if expected_data_type is UUID:
+            str_value = str(value)
+            try:
+                # Because MySQL works with UUID without dashes, we need to convert it to a hex string
+                # Example: 123e4567-e89b-12d3-a456-426614174000 -> 123e4567e89b12d3a456426614174000
+                # Example2: 123e4567e89b12d3a456426614174000 -> 123e4567e89b12d3a456426614174000 (hex in CEL is also supported)
+                value = UUID(str_value).hex
+            except ValueError:
+                pass
+
         if isinstance(value, datetime):
             date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
             date_exp = f"CAST({date_str} as DATETIME)"
@@ -90,7 +101,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         elif isinstance(value, bool):
             return "TRUE" if value else "FALSE"
 
-        return super()._visit_constant_node(value)
+        return super()._visit_constant_node(value, expected_data_type)
 
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
