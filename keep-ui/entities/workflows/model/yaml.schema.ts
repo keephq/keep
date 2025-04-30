@@ -44,13 +44,21 @@ export const WorkflowInputSchema = z.object({
 
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
 
+const WorkflowStrategySchema = z.enum([
+  "nonparallel_with_retry",
+  "nonparallel",
+  "parallel",
+]);
+
+export type WorkflowStrategy = z.infer<typeof WorkflowStrategySchema>;
+
 const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
 });
 
 const AlertTriggerSchema = z.object({
   type: z.literal("alert"),
-  filters: z.array(z.object({ key: z.string(), value: z.string() })),
+  filters: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
 });
 
 const IntervalTriggerSchema = z.object({
@@ -169,6 +177,7 @@ export const YamlWorkflowDefinitionSchema = z.object({
     triggers: z.array(TriggerSchema).min(1),
     name: z.string().optional(),
     consts: z.record(z.string(), z.string()).optional(),
+    strategy: WorkflowStrategySchema.optional(),
   }),
 });
 
@@ -216,6 +225,7 @@ export function getYamlWorkflowDefinitionSchema(
       triggers: z.array(TriggerSchema).min(1),
       consts: z.record(z.string(), z.string()).optional(),
       inputs: z.array(WorkflowInputSchema).optional(),
+      strategy: WorkflowStrategySchema.optional(),
     }),
   });
 
