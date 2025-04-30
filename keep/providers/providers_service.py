@@ -3,7 +3,7 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +15,7 @@ from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
 from keep.api.core.config import config
 from keep.api.core.db import (
     engine,
+    existed_or_new_session,
     get_all_provisioned_providers,
     get_provider_by_name,
     get_provider_logs,
@@ -244,51 +245,62 @@ class ProvidersService:
         provider_id: str,
         provider_info: Dict[str, Any],
         updated_by: str,
-        session: Session,
+        session: Optional[Session] = None,
+        allow_provisioned=False,
     ) -> Dict[str, Any]:
-        provider = session.exec(
-            select(Provider).where(
-                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+        with existed_or_new_session(session) as session:
+            provider = session.exec(
+                select(Provider).where(
+                    (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+                )
+            ).one_or_none()
+
+            if not provider:
+                raise HTTPException(404, detail="Provider not found")
+
+            if provider.provisioned and not allow_provisioned:
+                raise HTTPException(403, detail="Cannot update a provisioned provider")
+
+            pulling_enabled = provider_info.pop("pulling_enabled", True)
+
+            # if pulling_enabled is "true" or "false" cast it to boolean
+            if isinstance(pulling_enabled, str):
+                pulling_enabled = pulling_enabled.lower() == "true"
+
+            provider_config = {
+                "authentication": provider_info,
+                "name": provider.name,
+            }
+
+            context_manager = ContextManager(tenant_id=tenant_id)
+            try:
+                provider_instance = ProvidersFactory.get_provider(
+                    context_manager, provider_id, provider.type, provider_config
+                )
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+            validated_scopes = provider_instance.validate_scopes()
+
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            secret_manager.write_secret(
+                secret_name=provider.configuration_key,
+                secret_value=json.dumps(provider_config),
             )
-        ).one_or_none()
 
-        if not provider:
-            raise HTTPException(404, detail="Provider not found")
+            provider.installed_by = updated_by
+            provider.validatedScopes = validated_scopes
+            provider.pulling_enabled = pulling_enabled
+            session.commit()
 
-        if provider.provisioned:
-            raise HTTPException(403, detail="Cannot update a provisioned provider")
-
-        pulling_enabled = provider_info.pop("pulling_enabled", True)
-
-        # if pulling_enabled is "true" or "false" cast it to boolean
-        if isinstance(pulling_enabled, str):
-            pulling_enabled = pulling_enabled.lower() == "true"
-
-        provider_config = {
-            "authentication": provider_info,
-            "name": provider.name,
-        }
-
-        context_manager = ContextManager(tenant_id=tenant_id)
-        try:
-            provider_instance = ProvidersFactory.get_provider(
-                context_manager, provider_id, provider.type, provider_config
+            logger.info(
+                "Provider updated",
+                extra={
+                    "provider_id": provider_id,
+                    "provider_type": provider.type,
+                    "tenant_id": tenant_id,
+                },
             )
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-        validated_scopes = provider_instance.validate_scopes()
-
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        secret_manager.write_secret(
-            secret_name=provider.configuration_key,
-            secret_value=json.dumps(provider_config),
-        )
-
-        provider.installed_by = updated_by
-        provider.validatedScopes = validated_scopes
-        provider.pulling_enabled = pulling_enabled
-        session.commit()
 
         return {
             "details": provider_config,
@@ -297,53 +309,57 @@ class ProvidersService:
 
     @staticmethod
     def delete_provider(
-        tenant_id: str, provider_id: str, session: Session, allow_provisioned=False
+        tenant_id: str,
+        provider_id: str,
+        session: Optional[Session] = None,
+        allow_provisioned=False,
     ):
-        provider_model: Provider = session.exec(
-            select(Provider).where(
-                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+        with existed_or_new_session(session) as session:
+            provider_model: Provider = session.exec(
+                select(Provider).where(
+                    (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+                )
+            ).one_or_none()
+
+            if not provider_model:
+                raise HTTPException(404, detail="Provider not found")
+
+            if provider_model.provisioned and not allow_provisioned:
+                raise HTTPException(403, detail="Cannot delete a provisioned provider")
+
+            context_manager = ContextManager(tenant_id=tenant_id)
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            config = secret_manager.read_secret(
+                provider_model.configuration_key, is_json=True
             )
-        ).one_or_none()
 
-        if not provider_model:
-            raise HTTPException(404, detail="Provider not found")
-
-        if provider_model.provisioned and not allow_provisioned:
-            raise HTTPException(403, detail="Cannot delete a provisioned provider")
-
-        context_manager = ContextManager(tenant_id=tenant_id)
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        config = secret_manager.read_secret(
-            provider_model.configuration_key, is_json=True
-        )
-
-        try:
-            secret_manager.delete_secret(provider_model.configuration_key)
-        except Exception:
-            logger.exception("Failed to delete the provider secret")
-
-        if provider_model.consumer:
             try:
-                event_subscriber = EventSubscriber.get_instance()
-                event_subscriber.remove_consumer(provider_model)
+                secret_manager.delete_secret(provider_model.configuration_key)
             except Exception:
-                logger.exception("Failed to unregister provider as a consumer")
+                logger.exception("Failed to delete the provider secret")
 
-        try:
-            provider = ProvidersFactory.get_provider(
-                context_manager, provider_model.id, provider_model.type, config
-            )
-            provider.clean_up()
-        except NotImplementedError:
-            logger.info(
-                "Being deleted provider of type %s does not have a clean_up method",
-                provider_model.type,
-            )
-        except Exception:
-            logger.exception(msg="Provider deleted but failed to clean up provider")
+            if provider_model.consumer:
+                try:
+                    event_subscriber = EventSubscriber.get_instance()
+                    event_subscriber.remove_consumer(provider_model)
+                except Exception:
+                    logger.exception("Failed to unregister provider as a consumer")
 
-        session.delete(provider_model)
-        session.commit()
+            try:
+                provider = ProvidersFactory.get_provider(
+                    context_manager, provider_model.id, provider_model.type, config
+                )
+                provider.clean_up()
+            except NotImplementedError:
+                logger.info(
+                    "Being deleted provider of type %s does not have a clean_up method",
+                    provider_model.type,
+                )
+            except Exception:
+                logger.exception(msg="Provider deleted but failed to clean up provider")
+
+            session.delete(provider_model)
+            session.commit()
 
     @staticmethod
     def validate_provider_scopes(
@@ -381,10 +397,14 @@ class ProvidersService:
 
     @staticmethod
     def install_webhook(
-        tenant_id: str, provider_type: str, provider_id: str, session: Session
+        tenant_id: str,
+        provider_type: str,
+        provider_id: str,
+        session: Optional[Session] = None,
     ) -> bool:
         context_manager = ContextManager(
-            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+            tenant_id=tenant_id,
+            workflow_id="",  # this is not in a workflow scope
         )
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
@@ -415,13 +435,15 @@ class ProvidersService:
         keep_webhook_incidents_api_url = (
             f"{api_url}/incidents/event/{provider_type}?provider_id={provider_id}"
         )
-        webhook_api_key = get_or_create_api_key(
-            session=session,
-            tenant_id=tenant_id,
-            created_by="system",
-            unique_api_key_id="webhook",
-            system_description="Webhooks API key",
-        )
+
+        with existed_or_new_session(session) as session:
+            webhook_api_key = get_or_create_api_key(
+                session=session,
+                tenant_id=tenant_id,
+                created_by="system",
+                unique_api_key_id="webhook",
+                system_description="Webhooks API key",
+            )
 
         try:
             if provider_class.__dict__.get("setup_incident_webhook") is not None:
@@ -455,9 +477,24 @@ class ProvidersService:
         provisioned_providers_dir = os.environ.get("KEEP_PROVIDERS_DIRECTORY")
         provisioned_providers_json = os.environ.get("KEEP_PROVIDERS")
 
+        # Get all existing provisioned providers
+        provisioned_providers = get_all_provisioned_providers(tenant_id=tenant_id)
+
         if not (provisioned_providers_dir or provisioned_providers_json):
             logger.info("No providers for provisioning found")
-            return
+
+            if provisioned_providers:
+                logger.info("Found existing provisioned providers, deleting them")
+                for provider in provisioned_providers:
+                    logger.info(f"Deprovisioning provider {provider.id}")
+                    ProvidersService.delete_provider(
+                        tenant_id=tenant_id,
+                        provider_id=provider.id,
+                        allow_provisioned=True,
+                    )
+                    logger.info(f"Provider {provider.id} deprovisioned successfully")
+
+            return []
 
         if (
             provisioned_providers_dir is not None
@@ -474,9 +511,6 @@ class ProvidersService:
                 f"Directory {provisioned_providers_dir} does not exist"
             )
 
-        # Get all existing provisioned providers
-        provisioned_providers = get_all_provisioned_providers(tenant_id)
-
         ### Provisioning from env var
         if provisioned_providers_json is not None:
             # Avoid circular import
@@ -490,24 +524,35 @@ class ProvidersService:
             # Un-provisioning other providers.
             for provider in provisioned_providers:
                 if provider.name not in env_providers:
-                    with Session(engine) as session:
-                        try:
-                            logger.info(f"Deleting provider {provider.name}")
-                            ProvidersService.delete_provider(
-                                tenant_id, provider.id, session, allow_provisioned=True
-                            )
-                            logger.info(f"Provider {provider.name} deleted")
-                        except Exception as e:
-                            logger.exception(
-                                "Failed to delete provisioned provider that does not exist in the env var",
-                                extra={"exception": e},
-                            )
-                            continue
+                    try:
+                        logger.info(f"Deleting provider {provider.name}")
+                        ProvidersService.delete_provider(
+                            tenant_id=tenant_id,
+                            provider_id=provider.id,
+                            allow_provisioned=True,
+                        )
+                    except Exception as e:
+                        logger.exception(
+                            "Failed to delete provisioned provider that does not exist in the env var",
+                            extra={"exception": e},
+                        )
 
             for provider_name, provider_config in env_providers.items():
                 logger.info(f"Provisioning provider {provider_name}")
                 if ProvidersService.is_provider_installed(tenant_id, provider_name):
-                    logger.info(f"Provider {provider_name} already installed")
+                    logger.info(
+                        f"Provider {provider_name} already installed. Updating it"
+                    )
+                    installed_provider = get_provider_by_name(
+                        tenant_id=tenant_id, provider_name=provider_name
+                    )
+                    ProvidersService.update_provider(
+                        tenant_id=tenant_id,
+                        provider_id=installed_provider.id,
+                        provider_info=provider_config["authentication"],
+                        updated_by="system",
+                        allow_provisioned=True,
+                    )
                     continue
 
                 logger.info(f"Installing provider {provider_name}")
@@ -523,10 +568,9 @@ class ProvidersService:
                         validate_scopes=False,
                     )
                     ProvidersService.install_webhook(
-                        tenant_id,
-                        installed_provider["type"],
-                        installed_provider["id"],
-                        session,
+                        tenant_id=tenant_id,
+                        provider_type=installed_provider["type"],
+                        provider_id=installed_provider["id"],
                     )
                     logger.info(f"Provider {provider_name} provisioned successfully")
                 except Exception as e:
@@ -555,11 +599,22 @@ class ProvidersService:
                                 tenant_id, provider_name
                             ):
                                 logger.info(
-                                    f"Provider {provider_name} already installed"
+                                    f"Provider {provider_name} already installed. Updating it"
                                 )
                                 # Add to installed providers list. This is necessary, otherwise the provider
                                 # will be un-provisioned on the process un-provisioning outdated providers.
                                 installed_providers.append(provider_name)
+
+                                installed_provider = get_provider_by_name(
+                                    tenant_id=tenant_id, provider_name=provider_name
+                                )
+                                ProvidersService.update_provider(
+                                    tenant_id=tenant_id,
+                                    provider_id=installed_provider.id,
+                                    provider_info=provider_config,
+                                    updated_by="system",
+                                    allow_provisioned=True,
+                                )
                                 continue
 
                             logger.info(f"Installing provider {provider_name}")
@@ -614,16 +669,15 @@ class ProvidersService:
             # Un-provisioning other providers.
             for provider in provisioned_providers:
                 if provider.name not in installed_providers:
-                    with Session(engine) as session:
-                        logger.info(
-                            f"Deprovisioning provider {provider.name} as its file no longer exists or is outside the providers directory"
-                        )
-                        ProvidersService.delete_provider(
-                            tenant_id, provider.id, session, allow_provisioned=True
-                        )
-                        logger.info(
-                            f"Provider {provider.name} deprovisioned successfully"
-                        )
+                    logger.info(
+                        f"Deprovisioning provider {provider.name} as its file no longer exists or is outside the providers directory"
+                    )
+                    ProvidersService.delete_provider(
+                        tenant_id=tenant_id,
+                        provider_id=provider.id,
+                        allow_provisioned=True,
+                    )
+                    logger.info(f"Provider {provider.name} deprovisioned successfully")
 
     @staticmethod
     def get_provider_logs(
