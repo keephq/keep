@@ -62,7 +62,7 @@ export const V2StepTriggerSchema = z.union([
 export const EnrichDisposableKeyValueSchema = z.array(
   z.object({
     key: z.string(),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
     disposable: z.boolean().optional(),
   })
 );
@@ -70,7 +70,7 @@ export const EnrichDisposableKeyValueSchema = z.array(
 export const EnrichKeyValueSchema = z.array(
   z.object({
     key: z.string(),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
   })
 );
 

@@ -96,7 +96,11 @@ export const validateMustacheVariableName = (
     if (!definition.sequence?.some((step) => step.name === stepName)) {
       return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
     }
-    if (parts[2] === "results") {
+    if (
+      parts[2] === "results" ||
+      parts[2].startsWith("results.") ||
+      parts[2].startsWith("results[")
+    ) {
       // todo: validate results properties
       return null;
     } else {

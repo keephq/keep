@@ -12,10 +12,10 @@ workflow:
           value: critical
   actions:
     - name: create-alert
+      if: "not '{{ alert.opsgenie_alert_id }}'"
       provider:
-        config: "{{ providers.opsgenie }}"
         type: opsgenie
-        if: "not '{{ alert.opsgenie_alert_id }}'"
+        config: "{{ providers.opsgenie }}"
         with:
           message: "{{ alert.name }}"
           responders:

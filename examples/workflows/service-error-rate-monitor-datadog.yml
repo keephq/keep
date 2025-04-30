@@ -27,7 +27,7 @@ workflow:
           type: threshold
           value: "{{ steps.check-error-rate.results }}"
           compare_to: 0.01
-          operator: ">"
+          compare_type: gt
       provider:
         type: slack
         config: "{{ providers.slack-demo }}"

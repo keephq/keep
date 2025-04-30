@@ -78,11 +78,13 @@ const TriggerSchema = z.union([
   IncidentTriggerSchema,
 ]);
 
-const YamlProviderSchema = z.object({
-  type: z.string(),
-  config: z.string(),
-  with: WithSchema,
-});
+const YamlProviderSchema = z
+  .object({
+    type: z.string(),
+    config: z.string(),
+    with: WithSchema,
+  })
+  .strict();
 
 function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
   // Get all valid parameter keys from the provider
@@ -124,30 +126,37 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
     ? z.string()
     : z.string().optional();
 
-  return z.object({
-    type: z.literal(provider.type),
-    with: withSchema,
-    config: configSchema,
-  });
+  return z
+    .object({
+      type: z.literal(provider.type),
+      with: withSchema,
+      config: configSchema,
+    })
+    .strict();
 }
 
-const YamlThresholdConditionSchema = z.object({
-  id: z.string().optional(),
-  name: z.string(),
-  alias: z.string().optional(),
-  type: z.literal("threshold"),
-  value: z.string(),
-  compare_to: z.string(),
-  level: z.string().optional(),
-});
+const YamlThresholdConditionSchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string(),
+    alias: z.string().optional(),
+    type: z.literal("threshold"),
+    value: z.string(),
+    compare_to: z.union([z.string(), z.number()]),
+    compare_type: z.enum(["gt", "lt"]).optional(),
+    level: z.string().optional(),
+  })
+  .strict();
 
-const YamlAssertConditionSchema = z.object({
-  id: z.string().optional(),
-  name: z.string(),
-  alias: z.string().optional(),
-  type: z.literal("assert"),
-  assert: z.string(),
-});
+const YamlAssertConditionSchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string(),
+    alias: z.string().optional(),
+    type: z.literal("assert"),
+    assert: z.string(),
+  })
+  .strict();
 
 // TODO: generate schema runtime based on the providers
 const YamlStepOrActionSchema = z
@@ -162,8 +171,16 @@ const YamlStepOrActionSchema = z
       .array(z.union([YamlThresholdConditionSchema, YamlAssertConditionSchema]))
       .optional(),
     foreach: z.string().optional(),
+    continue: z.boolean().optional(),
   })
   .strict();
+
+const OnFailureSchema = z.object({
+  retry: z.object({
+    count: z.number(),
+    interval: z.number(),
+  }),
+});
 
 export const YamlWorkflowDefinitionSchema = z.object({
   workflow: z.object({
@@ -178,6 +195,7 @@ export const YamlWorkflowDefinitionSchema = z.object({
     name: z.string().optional(),
     consts: z.record(z.string(), z.string()).optional(),
     strategy: WorkflowStrategySchema.optional(),
+    "on-failure": OnFailureSchema.optional(),
   }),
 });
 
@@ -226,6 +244,7 @@ export function getYamlWorkflowDefinitionSchema(
       consts: z.record(z.string(), z.string()).optional(),
       inputs: z.array(WorkflowInputSchema).optional(),
       strategy: WorkflowStrategySchema.optional(),
+      "on-failure": OnFailureSchema.optional(),
     }),
   });
 

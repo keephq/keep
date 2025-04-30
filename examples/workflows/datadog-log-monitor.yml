@@ -20,7 +20,7 @@ workflow:
           type: threshold
           value: "keep.len({{ steps.check-error-rate.results.logs }})"
           compare_to: 0
-          operator: ">"
+          compare_type: gt
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
