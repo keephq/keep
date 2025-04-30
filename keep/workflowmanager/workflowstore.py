@@ -593,10 +593,12 @@ class WorkflowStore:
                 return providers_dto, triggers
 
             # Parse the workflow YAML safely
-            workflow_yaml = cyaml.safe_load(workflow_raw_data)
-            if not workflow_yaml:
+            workflow_yaml_dict = cyaml.safe_load(workflow_raw_data)
+            if workflow_yaml_dict.get("workflow"):
+                workflow_yaml_dict = workflow_yaml_dict.get("workflow")
+            if not workflow_yaml_dict:
                 self.logger.error(
-                    f"Parsed workflow_yaml is empty or invalid: {workflow_raw_data}"
+                    f"Parsed workflow_yaml is empty or invalid: {workflow_yaml_dict}"
                 )
                 return providers_dto, triggers
 
@@ -611,7 +613,7 @@ class WorkflowStore:
             )  # Return empty providers and triggers in case of error
 
         try:
-            providers = self.parser.get_providers_from_workflow(workflow_yaml)
+            providers = self.parser.get_providers_from_workflow_dict(workflow_yaml_dict)
         except Exception as e:
             self.logger.error(
                 f"Failed to get providerts from workflow: {e}, workflow: {workflow}"
@@ -657,7 +659,7 @@ class WorkflowStore:
                 providers_dto.append(provider_dto)
 
         # Step 3: Extract triggers from workflow
-        triggers = self.parser.get_triggers_from_workflow(workflow_yaml)
+        triggers = self.parser.get_triggers_from_workflow_dict(workflow_yaml_dict)
 
         return providers_dto, triggers
 

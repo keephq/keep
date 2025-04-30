@@ -12,7 +12,6 @@ workflow:
   description: Retrieve CloudWatch Logs
   triggers:
     - type: manual
-
   steps:
     - name: cw-logs
       provider:
@@ -20,7 +19,7 @@ workflow:
         type: cloudwatch
         with:
           log_groups: 
-          - "meow_logs"
+            - "meow_logs"
           query: "fields @message | sort @timestamp desc | limit 20"
           hours: 4000
           remove_ptr_from_results: true
@@ -33,7 +32,6 @@ workflow:
   description: Retrieve CloudWatch Logs
   triggers:
     - type: manual
-
   steps:
     - name: cw-logs
       provider:
@@ -41,11 +39,10 @@ workflow:
         type: cloudwatch
         with:
           log_groups: 
-          - "meow_logs"
+            - "meow_logs"
           query: "fields @message | sort @timestamp desc | limit 20"
           hours: 4000
           remove_ptr_from_results: true
-
   actions:
     - name: print-logs
       if: keep.len({{ steps.cw-logs.results }}) > 0
