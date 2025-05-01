@@ -243,7 +243,7 @@ def migrate_db():
     try:
         alembic.command.upgrade(config, "head")
     except Exception as e:
-        logger.error(f"{e} it's seems like KeepHQ was rollbacked to a previous version")
+        logger.error(f"{e} it's seems like KeepHQ was rolled back to a previous version")
 
         if not os.getenv("ALLOW_DB_DOWNGRADE", "false") == "true":
             logger.error(f"ALLOW_DB_DOWNGRADE is not set to true, but the database schema ({current_revision}) doesn't match application version ({expected_revision})")
