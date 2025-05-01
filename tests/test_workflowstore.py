@@ -52,7 +52,7 @@ workflow:
 """
 
 
-def compare_workflow_raws(a, b):
+def is_workflow_raw_equal(a, b):
     return a.replace(" ", "").replace("\n", "") == b.replace(" ", "").replace("\n", "")
 
 
@@ -226,7 +226,4 @@ def test_change_workflow_provision_method(monkeypatch, db_session, test_app):
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
     assert len(second_provisioned) == 1
     assert second_provisioned[0].name == "Retrieve CloudWatch Logs"
-    assert (
-        compare_workflow_raws(second_provisioned[0].workflow_raw, VALID_WORKFLOW)
-        == True
-    )
+    assert is_workflow_raw_equal(second_provisioned[0].workflow_raw, VALID_WORKFLOW)
