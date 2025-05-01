@@ -250,7 +250,21 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         right = cast(lark.Token, tree.children[1]).value
         if self.member_access_stack:
             left: PropertyAccessNode = self.member_access_stack.pop()
+            if right.lower() in [
+                ComparisonNodeOperator.CONTAINS.value.lower(),
+                ComparisonNodeOperator.STARTS_WITH.value.lower(),
+                ComparisonNodeOperator.ENDS_WITH.value.lower(),
+            ]:
+                self.stack.append(
+                    ComparisonNode(
+                        first_operand=self.stack.pop(),
+                        operator=right,
+                        second_operand=exprlist[0],
+                    )
+                )
+                return
 
+            left: PropertyAccessNode = self.member_access_stack.pop()
             method = MethodAccessNode(member_name=right, args=[item for item in reversed(exprlist)])
             left.value = method
 

@@ -88,6 +88,9 @@ class ComparisonNodeOperator(Enum):
     EQ = "=="
     NE = "!=="
     IN = "in"
+    CONTAINS = "contains"
+    STARTS_WITH = "startsWith"
+    ENDS_WITH = "endsWith"
 
 
 class ComparisonNode(Node):

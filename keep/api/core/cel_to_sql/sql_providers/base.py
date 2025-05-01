@@ -85,8 +85,6 @@ class BaseCelToSqlProvider:
             Visits a property access node and converts it to an SQL string.
         _visit_index_property(property_path: str) -> str:
             Abstract method to handle index properties. Must be implemented in the child class.
-        _visit_method_calling(property_path: str, method_name: str, method_args: List[str]) -> str:
-            Visits a method calling node and converts it to an SQL string.
         _visit_contains_method_calling(property_path: str, method_args: List[str]) -> str:
             Abstract method to handle 'contains' method calls. Must be implemented in the child class.
         _visit_startwith_method_calling(property_path: str, method_args: List[str]) -> str:
@@ -97,7 +95,7 @@ class BaseCelToSqlProvider:
             Visits a unary node and converts it to an SQL string.
         _visit_unary_not(operand: str) -> str:
             Converts a NOT operation to an SQL string.
-        """
+    """
 
     def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
         super().__init__()
@@ -265,6 +263,11 @@ class BaseCelToSqlProvider:
     def _visit_comparison_node(self, comparison_node: ComparisonNode, stack: list[Node]) -> str:
         first_operand = None
         second_operand = None
+        should_cast = comparison_node.operator not in [
+            ComparisonNodeOperator.CONTAINS,
+            ComparisonNodeOperator.STARTS_WITH,
+            ComparisonNodeOperator.ENDS_WITH,
+        ]
 
         if comparison_node.operator == ComparisonNodeOperator.IN:
             return self._visit_in(
@@ -284,15 +287,27 @@ class BaseCelToSqlProvider:
             )
 
             if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
-                first_operand = self.cast(
-                    self.__build_sql_filter(comparison_node.first_operand, stack),
-                    from_type_to_data_type(type(comparison_node.second_operand.value)),
+                first_operand = self.__build_sql_filter(
+                    comparison_node.first_operand, stack
                 )
+                if should_cast:
+                    first_operand = self.cast(
+                        first_operand,
+                        from_type_to_data_type(
+                            type(comparison_node.second_operand.value)
+                        ),
+                    )
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
                 first_operand = self._visit_multiple_fields_node(
                     comparison_node.first_operand,
-                    from_type_to_data_type(type(comparison_node.second_operand.value)),
+                    (
+                        from_type_to_data_type(
+                            type(comparison_node.second_operand.value)
+                        )
+                        if should_cast
+                        else None
+                    ),
                     stack,
                 )
 
@@ -314,6 +329,18 @@ class BaseCelToSqlProvider:
             result = self._visit_less_than(first_operand, second_operand)
         elif comparison_node.operator == ComparisonNodeOperator.LE:
             result = self._visit_less_than_or_equal(first_operand, second_operand)
+        elif comparison_node.operator == ComparisonNodeOperator.CONTAINS:
+            result = self._visit_contains_method_calling(
+                first_operand, [comparison_node.second_operand]
+            )
+        elif comparison_node.operator == ComparisonNodeOperator.STARTS_WITH:
+            result = self._visit_starts_with_method_calling(
+                first_operand, [comparison_node.second_operand]
+            )
+        elif comparison_node.operator == ComparisonNodeOperator.ENDS_WITH:
+            result = self._visit_ends_with_method_calling(
+                first_operand, [comparison_node.second_operand]
+            )
         else:
             raise NotImplementedError(
                 f"{comparison_node.operator} comparison operator is not supported yet"
@@ -389,6 +416,27 @@ class BaseCelToSqlProvider:
 
         return final_query
 
+    def _visit_contains_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'contains' method must be implemented in the child class"
+        )
+
+    def _visit_starts_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'startsWith' method call must be implemented in the child class"
+        )
+
+    def _visit_ends_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'endsWith' method call must be implemented in the child class"
+        )
+
     # endregion
 
     def _visit_constant_node(
@@ -442,20 +490,7 @@ class BaseCelToSqlProvider:
 
     def _visit_member_access_node(self, member_access_node: MemberAccessNode, stack) -> str:
         if isinstance(member_access_node, PropertyAccessNode):
-            if member_access_node.is_function_call():
-                method_access_node = member_access_node.get_method_access_node()
-                return self._visit_method_calling(
-                   self._visit_property_access_node(member_access_node, stack),
-                    method_access_node.member_name,
-                    method_access_node.args,
-                )
-
             return self._visit_property_access_node(member_access_node, stack)
-
-        if isinstance(member_access_node, MethodAccessNode):
-            return self._visit_method_calling(
-                None, member_access_node.member_name, member_access_node.args
-            )
 
         raise NotImplementedError(
             f"{type(member_access_node).__name__} member access node is not supported yet"
@@ -471,38 +506,6 @@ class BaseCelToSqlProvider:
 
     def _visit_index_property(self, property_path: str) -> str:
         raise NotImplementedError("Index property is not supported yet")
-    # endregion
-
-    # region Method Calling Visitors
-    def _visit_method_calling(
-        self, property_path: str, method_name: str, method_args: List[str]
-    ) -> str:
-        if method_name == "contains":
-            return self._visit_contains_method_calling(property_path, method_args)
-
-        if method_name == "startsWith":
-            return self._visit_starts_with_method_calling(property_path, method_args)
-
-        if method_name == "endsWith":
-            return self._visit_ends_with_method_calling(property_path, method_args)
-
-        raise NotImplementedError(f"'{method_name}' method is not supported")
-
-    def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
-    ) -> str:
-        raise NotImplementedError("'contains' method must be implemented in the child class")
-
-    def _visit_starts_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
-    ) -> str:
-        raise NotImplementedError("'startsWith' method call must be implemented in the child class")
-
-    def _visit_ends_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
-    ) -> str:
-        raise NotImplementedError("'endsWith' method call must be implemented in the child class")
-
     # endregion
 
     # region Unary Visitors

@@ -59,6 +59,24 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
         ("fakeProp >= 'fake alert'", ComparisonNodeOperator.GE, str, "fake alert"),
         ("fakeProp < 'fake alert'", ComparisonNodeOperator.LT, str, "fake alert"),
         ("fakeProp <= 'fake alert'", ComparisonNodeOperator.LE, str, "fake alert"),
+        (
+            "fakeProp.contains('fake alert')",
+            ComparisonNodeOperator.CONTAINS,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp.startsWith('fake alert')",
+            ComparisonNodeOperator.STARTS_WITH,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp.endsWith('fake alert')",
+            ComparisonNodeOperator.ENDS_WITH,
+            str,
+            "fake alert",
+        ),
     ],
 )
 def test_simple_comparison_node(cel, operator, expected_constant_type, expected_constant_value):
@@ -149,26 +167,6 @@ def test_simple_logical_node(cel, operator):
     assert isinstance(actual.right.operand, PropertyAccessNode)
     assert actual.right.operand.member_name == "secondFakeProp"
     assert actual.right.operand.value is None
-
-@pytest.mark.parametrize("cel, method_name, args", [
-    ("fakeProp.contains('CPU')", "contains", ["CPU"]),
-    ("fakeProp.anything('string', 123, false)", "anything", ["string", 123, False]),
-])
-def test_method_access_node(cel, method_name, args):
-    actual = CelToAstConverter.convert_to_ast(cel)
-
-    # Check that the root node is a PropertyAccessNode where value is MethodAccessNode
-    assert isinstance(actual, PropertyAccessNode)
-    assert actual.member_name == "fakeProp"
-    assert isinstance(actual.value, MethodAccessNode)
-    assert actual.value.member_name == method_name
-
-    # Check that args are correct
-    for i, arg in enumerate(actual.value.args):
-        assert isinstance(arg, ConstantNode)
-        assert type(arg.value) == type(args[i])
-        assert arg.value == args[i]
-
 
 @pytest.mark.parametrize(
     "cel, operator",
