@@ -114,9 +114,7 @@ class WorkflowStore:
                 status_code=404,
                 detail=f"Workflow {workflow_id} not found",
             )
-        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
-        valid_workflow_yaml = {"workflow": workflow_yaml}
-        return cyaml.dump(valid_workflow_yaml, width=99999)
+        return self.format_workflow_yaml(workflow.workflow_raw)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_workflow_by_id(tenant_id, workflow_id)
@@ -264,6 +262,17 @@ class WorkflowStore:
                         f"Error parsing workflow from {file}", extra={"exception": e}
                     )
         return workflows
+
+    @staticmethod
+    def format_workflow_yaml(yaml_string: str) -> str:
+        yaml_content = cyaml.safe_load(yaml_string)
+        if "workflow" in yaml_content:
+            yaml_content = yaml_content["workflow"]
+        # backward compatibility
+        elif "alert" in yaml_content:
+            yaml_content = yaml_content["alert"]
+        valid_workflow_yaml = {"workflow": yaml_content}
+        return cyaml.dump(valid_workflow_yaml, width=99999)
 
     @staticmethod
     def pre_parse_workflow_yaml(yaml_content):
