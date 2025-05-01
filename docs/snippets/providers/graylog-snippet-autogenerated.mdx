@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -6,10 +6,11 @@ This provider requires authentication.
 - **graylog_user_name**: Username (required: True, sensitive: False)
 - **graylog_access_token**: Graylog Access Token (required: True, sensitive: True)
 - **deployment_url**: Deployment Url (required: True, sensitive: False)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **authenticated**: Mandatory for all operations, ensures the user is authenticated. (mandatory) 
-- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges. (mandatory) 
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated. (mandatory)
+- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges. (mandatory)
 
 
 
@@ -25,7 +26,7 @@ steps:
       provider: graylog
       config: "{{ provider.my_provider_name }}"
       with:
-        events_search_parameters: {value}  
+        events_search_parameters: {value}
 ```
 
 
@@ -68,4 +69,3 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 8. Click on "Add Notification" and select the "keep-graylog-webhook-integration" that you created in step 3.
 9. Click on "Add Notification".
 10. Click `Next` > `Update` event definition
-
