@@ -34,7 +34,9 @@ class ConsoleProvider(BaseProvider):
         Output alert message simply using the print method.
 
         Args:
-            alert_message (str): The alert message to be printed in to the console
+            message (str): The message to be printed in to the console
+            logger (bool): Whether to use the logger or not
+            severity (str): The severity of the message if logger is True
         """
         self.logger.debug("Outputting alert message to console")
         if logger:
