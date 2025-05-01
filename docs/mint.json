@@ -106,7 +106,8 @@
             "workflows/syntax/context",
             "workflows/syntax/providers",
             "workflows/syntax/foreach",
-            "workflows/syntax/enrichment"
+            "workflows/syntax/enrichment",
+            "workflows/syntax/templating"
           ]
         },
         {
