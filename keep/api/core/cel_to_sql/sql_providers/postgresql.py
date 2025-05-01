@@ -29,7 +29,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         elif to_type == DataType.BOOLEAN:
             to_type_str = "BOOLEAN"
         else:
-            raise ValueError(f"Unsupported type: {type}")
+            raise ValueError(f"Unsupported type: {to_type}")
 
         return f"({expression_to_cast})::{to_type_str}"
 
