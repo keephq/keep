@@ -24,6 +24,7 @@ services:
     volumes:
       - .:/app
       - ./state:/state
+      - ./migrations:/migrations
 
   keep-websocket-server:
     extends:

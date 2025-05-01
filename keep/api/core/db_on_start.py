@@ -16,9 +16,11 @@ for creating the database and tables, while the worker processes should only be 
 import hashlib
 import logging
 import os
+import shutil
 
 import alembic.command
 import alembic.config
+from alembic.runtime.migration import MigrationContext
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -167,6 +169,25 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
             logger.exception("Failed to create single tenant")
             pass
 
+def get_current_revision():
+    with engine.connect() as connection:
+        context = MigrationContext.configure(connection)
+        return context.get_current_revision()
+
+def copy_migrations(app_migrations_path, local_local_migrations_path):
+    """This path will be used to save migrations locally for safe downgrade purposes"""
+    
+    # If migrations folder already exists, remove it
+    if os.path.exists(local_local_migrations_path):
+        shutil.rmtree(local_local_migrations_path)
+        
+    os.mkdir(local_local_migrations_path)
+    for file in os.listdir(app_migrations_path):
+        if file.endswith(".py"):
+            shutil.copyfile(
+                os.path.join(app_migrations_path, file),
+                os.path.join(local_local_migrations_path, file),
+            )
 
 def migrate_db():
     """
@@ -176,14 +197,47 @@ def migrate_db():
         logger.info("Skipping running migrations...")
         return None
 
-    logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
     # Re-defined because alembic.ini uses relative paths which doesn't work
     # when running the app as a pyhton pakage (could happen form any path)
+
+    # This path will be used to save migrations locally for safe downgrade purposes
+    local_migrations_path = os.environ.get("MIGRATIONS_PATH", "/migrations")
+    app_migrations_path = os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations"
     config.set_main_option(
         "script_location",
-        os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations",
+        app_migrations_path,
     )
-    alembic.command.upgrade(config, "head")
+    alembic_script = alembic.script.ScriptDirectory.from_config(config)
+
+    current_revision = get_current_revision()
+    expected_revision = alembic_script.get_current_head()
+
+    # If the current revision is the same as the expected revision, we don't need to run migrations
+    if current_revision and expected_revision and current_revision == expected_revision:
+        logger.info("Database schema is up-to-date!")
+        return None
+
+    logger.info("Revision changed! Running migrations...")
+    if current_revision and expected_revision and current_revision not in alembic_script.get_revisions("head"):
+        logger.warning(f"Database schema ({current_revision}) doesn't match application version ({expected_revision})")
+
+        if not os.getenv("ALLOW_DB_DOWNGRADE", "false") == "true":
+            raise RuntimeError(
+                f"ALLOW_DB_DOWNGRADE is not set to true, but the database schema ({current_revision}) doesn't match application version ({expected_revision})"
+            )
+
+        logger.info("Downgrading database schema...")
+        config.set_main_option(
+            "script_location",
+            os.path.dirname(local_migrations_path),
+        )
+        alembic.command.downgrade(config, expected_revision)
+    else:
+        alembic.command.upgrade(config, "head")
+
+    # Copy migrations to local folder for safe downgrade purposes
+    copy_migrations(app_migrations_path, local_migrations_path)
+    
     logger.info("Finished migrations")

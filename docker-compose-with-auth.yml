@@ -10,6 +10,7 @@ services:
       - API_URL=http://keep-backend:8080
     volumes:
       - ./state:/state
+      - ./migrations:/migrations
     depends_on:
       - keep-backend
 
