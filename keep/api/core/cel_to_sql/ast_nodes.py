@@ -4,7 +4,7 @@ from typing import Any, List, Optional
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Node(BaseModel):
@@ -15,6 +15,11 @@ class Node(BaseModel):
     appear in an AST. It does not implement any specific functionality but
     provides a common interface for all AST nodes.
     """
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.node_type = self.__class__.__name__
+
+    node_type: str = Field(default=None)
 
 
 class ConstantNode(Node):
@@ -28,7 +33,7 @@ class ConstantNode(Node):
     Methods:
         __str__(): Returns the string representation of the constant value.
     """
-    value: Any
+    value: Any = Field()
 
     def __str__(self):
         return self.value
@@ -44,7 +49,7 @@ class ParenthesisNode(Node):
         __str__(): Returns a string representation of the parenthesis node.
     """
 
-    expression: Node
+    expression: Node = Field()
 
     def __str__(self):
         return f"({self.expression})"
@@ -72,9 +77,9 @@ class LogicalNode(Node):
             Returns a string representation of the logical operation in the format "left operator right".
     """
 
-    left: Node
-    operator: LogicalNodeOperator
-    right: Node
+    left: Node = Field()
+    operator: LogicalNodeOperator = Field()
+    right: Node = Field()
 
     def __str__(self):
         return f"{self.left} {self.operator} {self.right}"
@@ -110,9 +115,9 @@ class ComparisonNode(Node):
         __str__(): Returns a string representation of the comparison operation.
     """
 
-    first_operand: Optional[Node]
-    operator: ComparisonNodeOperator
-    second_operand: Optional[Node | Any]
+    first_operand: Optional[Node] = Field()
+    operator: ComparisonNodeOperator = Field()
+    second_operand: Optional[Node | Any] = Field()
 
     def __str__(self):
         return f"{self.first_operand} {self.operator} {self.second_operand}"
@@ -139,8 +144,8 @@ class UnaryNode(Node):
             Returns a string representation of the unary operation.
     """
 
-    operator: UnaryNodeOperator
-    operand: Optional[Node]
+    operator: UnaryNodeOperator = Field()
+    operand: Optional[Node] = Field()
 
     def __str__(self):
         return f"{self.operator}{self.operand}"
@@ -268,9 +273,9 @@ class PropertyAccessNode(MemberAccessNode):
             Returns a string representation of the PropertyAccessNode.
     """
 
-    member_name: str
-    value: Any
-    data_type: DataType = None
+    member_name: str = Field(default=None)
+    value: Any = Field(default=None)
+    data_type: DataType = Field(default=None)
 
     def is_function_call(self) -> bool:
         member_access_node = self.get_method_access_node()
@@ -318,8 +323,8 @@ class IndexAccessNode(PropertyAccessNode):
         __str__() -> str:
             Returns a string representation of the index access node.
     """
-    member_name: str
-    value: Any
+    member_name: str = Field()
+    value: Any = Field()
 
     def __str__(self):
         return f"[{self.member_name}]"

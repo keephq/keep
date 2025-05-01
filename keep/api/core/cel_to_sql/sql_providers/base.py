@@ -13,7 +13,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     UnaryNode,
     PropertyAccessNode,
-    MethodAccessNode,
     ParenthesisNode,
     UnaryNodeOperator,
     from_type_to_data_type,
