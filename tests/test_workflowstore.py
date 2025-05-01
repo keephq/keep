@@ -184,7 +184,7 @@ def test_unprovision_workflows(monkeypatch, db_session, test_app):
     indirect=True,
 )
 def test_invalid_workflows_dir(monkeypatch, db_session, test_app):
-    """Test exception is rased when invalid dir is passed as KEEP_WORKFLOWS_DIRECTORY."""
+    """Test exception is raised when invalid dir is passed as KEEP_WORKFLOWS_DIRECTORY."""
 
     monkeypatch.setenv("KEEP_WORKFLOWS_DIRECTORY", "./tests/provision/workflows_404")
 
