@@ -136,7 +136,6 @@ export function AlertTableServerSide({
   onQueryChange,
   onLiveUpdateStateChange,
 }: Props) {
-  // const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -201,7 +200,7 @@ export function AlertTableServerSide({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
-  const getDateRangeCel = useCallback(() => {
+  const getDateRangeCel = () => {
     const currentDate = new Date();
 
     if (timeFrame.type === "relative") {
@@ -216,7 +215,7 @@ export function AlertTableServerSide({
     }
 
     return null;
-  }, [timeFrame]);
+  };
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
 
@@ -260,7 +259,7 @@ export function AlertTableServerSide({
       }
     }, refreshInterval);
     return () => clearInterval(interval);
-  }, [timeFrame, shouldRefreshDate]);
+  }, [timeFrame, shouldRefreshDate, onPoll]);
 
   function updateFacetsCelDateRange() {
     if (!canRevalidate) {
@@ -304,12 +303,7 @@ export function AlertTableServerSide({
     return () => {
       clearInterval(interval);
     };
-  }, [
-    timeFrame,
-    getDateRangeCel,
-    shouldRefreshDate,
-    Math.round(queryTimeInSeconds || 1),
-  ]);
+  }, [timeFrame, shouldRefreshDate, Math.round(queryTimeInSeconds || 1)]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = [dateRangeCel, searchCel];

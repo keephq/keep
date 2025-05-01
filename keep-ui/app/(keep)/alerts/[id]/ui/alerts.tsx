@@ -168,8 +168,19 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     [setAlertsQueryState]
   );
 
-  const handleOnPoll = useCallback(() => setIsSilentLoading(true), []);
-  const handleOnQueryChange = useCallback(() => setIsSilentLoading(false), []);
+  const handleOnPoll = useCallback(() => {
+    console.log("Ihor setIsSilentLoading true");
+    setIsSilentLoading(true);
+  }, []);
+  const handleOnQueryChange = useCallback(() => {
+    console.log("Ihor setIsSilentLoading FALSE");
+
+    setIsSilentLoading(false);
+  }, []);
+
+  useEffect(() => {
+    console.log("Ihor", { isSilentLoading });
+  }, [isSilentLoading]);
 
   const resetUrlAfterModal = useCallback(() => {
     const currentParams = new URLSearchParams(window.location.search);
