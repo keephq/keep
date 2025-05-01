@@ -66,7 +66,6 @@ Mustache uses double curly braces for variable interpolation and does not suppor
 ```
 
 [See more in the docs](https://github.com/noahmorrison/chevron)
-—
 
 ## 🧠 Jinja2 Syntax
 
@@ -102,7 +101,6 @@ templating: jinja2
 ```
 
 [See more in the docs](https://jinja.palletsprojects.com/en/stable/)
-—
 
 ## 📦 Example: JiraOnPrem with Mustache (Default)
 
@@ -128,10 +126,7 @@ workflows:
               {{/alert.annotations.runbook_url}}
 ```
 
-—
 
-
-—
 
 ## 📦 Example: JiraOnPrem with Jinja2
 
@@ -165,7 +160,5 @@ workflows:
 - Use mustache for simple output formatting.
 - Use jinja2 if you need conditions, defaults, or filters.
 - Always wrap multiline strings with quotes and indent properly in YAML.
-- In Jinja2, use {% if %} to check for presence of values.
-- In Mustache, use {{#section}} and {{^section}} for presence/absence.
-
-—
+- In Jinja2, use `{% if %}` to check for presence of values.
+- In Mustache, use `{{#section}}` and `{{^section}}` for presence/absence.
