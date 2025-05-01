@@ -57,7 +57,9 @@ def get_rules(
     for rule in rules:
         rule["distribution"] = rules_dist.get(rule["id"], [])
         rule["incidents"] = rules_incidents.get(rule["id"], 0)
-        rule["cel_ast"] = CelToAstConverter().convert_to_ast(rule["definition_cel"])
+        rule["definition_cel_ast"] = CelToAstConverter().convert_to_ast(
+            rule["definition_cel"]
+        )
 
     return rules
 
