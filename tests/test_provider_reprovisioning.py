@@ -4,22 +4,12 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlmodel import SQLModel
 
-from keep.api.core.db import engine
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_service import ProvidersService
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
-
-
-@pytest.fixture(autouse=True)
-def setup_database():
-    """Setup database schema before each test"""
-    SQLModel.metadata.create_all(engine)
-    yield
-    SQLModel.metadata.drop_all(engine)
 
 
 @pytest.fixture
@@ -47,7 +37,9 @@ def provider_configs():
     }
 
 
-def test_provider_reprovisioning_with_updated_config(provider_configs, caplog):
+def test_provider_reprovisioning_with_updated_config(
+    db_session, provider_configs, caplog
+):
     """
     Test that demonstrates the issue with re-provisioning a provider with new configurations but the same name.
 
