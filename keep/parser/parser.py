@@ -184,7 +184,7 @@ class Parser:
         )
         workflow_interval = self.parse_interval(workflow)
         on_failure_action = self._get_on_failure_action(context_manager, workflow)
-        workflow_triggers = self.get_triggers_from_workflow(workflow)
+        workflow_triggers = self.get_triggers_from_workflow_dict(workflow)
         workflow_provider_types = (
             self._get_workflow_provider_types_from_steps_and_actions(
                 workflow_steps, workflow_actions
@@ -833,7 +833,7 @@ class Parser:
                 provider_config = {"authentication": {}}
             return config_id, provider_config
 
-    def get_providers_from_workflow(self, workflow: dict):
+    def get_providers_from_workflow_dict(self, workflow: dict):
         """extract the provider names from a worklow
 
         Args:
@@ -869,7 +869,7 @@ class Parser:
             raise
         return providers
 
-    def get_triggers_from_workflow(self, workflow: dict):
+    def get_triggers_from_workflow_dict(self, workflow: dict):
         """extract the trigger names from a worklow
 
         Args:
