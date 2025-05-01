@@ -1,53 +1,64 @@
 import datetime
 import pytest
 
-from keep.api.core.cel_to_sql.ast_nodes import ComparisonNode, ConstantNode, LogicalNode, MethodAccessNode, ParenthesisNode, PropertyAccessNode, UnaryNode
+from keep.api.core.cel_to_sql.ast_nodes import (
+    ComparisonNode,
+    ComparisonNodeOperator,
+    ConstantNode,
+    LogicalNode,
+    LogicalNodeOperator,
+    MethodAccessNode,
+    ParenthesisNode,
+    PropertyAccessNode,
+    UnaryNode,
+    UnaryNodeOperator,
+)
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 
 @pytest.mark.parametrize(
     "cel, operator, expected_constant_type, expected_constant_value",
     [
-        ("fakeProp == 'fake alert'", ComparisonNode.EQ, str, "fake alert"),
+        ("fakeProp == 'fake alert'", ComparisonNodeOperator.EQ, str, "fake alert"),
         (
             "fakeProp == 'It\\'s value with escaped single-quote'",
-            ComparisonNode.EQ,
+            ComparisonNodeOperator.EQ,
             str,
             "It's value with escaped single-quote",
         ),
         (
             'fakeProp == "It\\"s value with escaped double-quote"',
-            ComparisonNode.EQ,
+            ComparisonNodeOperator.EQ,
             str,
             'It"s value with escaped double-quote',
         ),
-        ("fakeProp == true", ComparisonNode.EQ, bool, True),
-        ("fakeProp == 12349983", ComparisonNode.EQ, int, 12349983),
-        ("fakeProp == 1234.9983", ComparisonNode.EQ, float, 1234.9983),
+        ("fakeProp == true", ComparisonNodeOperator.EQ, bool, True),
+        ("fakeProp == 12349983", ComparisonNodeOperator.EQ, int, 12349983),
+        ("fakeProp == 1234.9983", ComparisonNodeOperator.EQ, float, 1234.9983),
         (
             "fakeProp == 'MON'",
-            ComparisonNode.EQ,
+            ComparisonNodeOperator.EQ,
             str,
             "MON",
         ),  # check that day-of-week short names do not get converted to dates
-        ("fakeProp == 'mon'", ComparisonNode.EQ, str, "mon"),
+        ("fakeProp == 'mon'", ComparisonNodeOperator.EQ, str, "mon"),
         (
             "fakeProp == '2025-01-20'",
-            ComparisonNode.EQ,
+            ComparisonNodeOperator.EQ,
             datetime.datetime,
             datetime.datetime(2025, 1, 20),
         ),
         (
             "fakeProp == '2025-01-20T14:35:27.123456'",
-            ComparisonNode.EQ,
+            ComparisonNodeOperator.EQ,
             datetime.datetime,
             datetime.datetime(2025, 1, 20, 14, 35, 27, 123456),
         ),
-        ("fakeProp != 'fake alert'", ComparisonNode.NE, str, "fake alert"),
-        ("fakeProp > 'fake alert'", ComparisonNode.GT, str, "fake alert"),
-        ("fakeProp >= 'fake alert'", ComparisonNode.GE, str, "fake alert"),
-        ("fakeProp < 'fake alert'", ComparisonNode.LT, str, "fake alert"),
-        ("fakeProp <= 'fake alert'", ComparisonNode.LE, str, "fake alert"),
+        ("fakeProp != 'fake alert'", ComparisonNodeOperator.NE, str, "fake alert"),
+        ("fakeProp > 'fake alert'", ComparisonNodeOperator.GT, str, "fake alert"),
+        ("fakeProp >= 'fake alert'", ComparisonNodeOperator.GE, str, "fake alert"),
+        ("fakeProp < 'fake alert'", ComparisonNodeOperator.LT, str, "fake alert"),
+        ("fakeProp <= 'fake alert'", ComparisonNodeOperator.LE, str, "fake alert"),
     ],
 )
 def test_simple_comparison_node(cel, operator, expected_constant_type, expected_constant_value):
@@ -75,8 +86,8 @@ def test_simple_comparison_node_in(cel, args):
 
     # Check that the root node is a ComparisonNode
     assert isinstance(actual, ComparisonNode)
-    assert actual.operator == ComparisonNode.IN
-    
+    assert actual.operator == ComparisonNodeOperator.IN
+
     # Check that second operand is a list
     assert isinstance(actual.second_operand, list)
 
@@ -86,10 +97,14 @@ def test_simple_comparison_node_in(cel, args):
         assert type(arg.value) == type(args[i])
         assert arg.value == args[i]
 
-@pytest.mark.parametrize("cel, operator", [
-    ("!fakeProp", UnaryNode.NOT),
-    ("-fakeProp", UnaryNode.NEG),
-])
+
+@pytest.mark.parametrize(
+    "cel, operator",
+    [
+        ("!fakeProp", UnaryNodeOperator.NOT),
+        ("-fakeProp", UnaryNodeOperator.NEG),
+    ],
+)
 def test_simple_unary_node(cel, operator):
     actual = CelToAstConverter.convert_to_ast(cel)
 
@@ -102,10 +117,14 @@ def test_simple_unary_node(cel, operator):
     assert actual.operand.member_name == "fakeProp"
     assert actual.operand.value is None
 
-@pytest.mark.parametrize("cel, operator", [
-    ("!firstFakeProp && !secondFakeProp", LogicalNode.AND),
-    ("!firstFakeProp || !secondFakeProp", LogicalNode.OR),
-])
+
+@pytest.mark.parametrize(
+    "cel, operator",
+    [
+        ("!firstFakeProp && !secondFakeProp", LogicalNodeOperator.AND),
+        ("!firstFakeProp || !secondFakeProp", LogicalNodeOperator.OR),
+    ],
+)
 def test_simple_logical_node(cel, operator):
     actual = CelToAstConverter.convert_to_ast(cel)
 
@@ -115,7 +134,7 @@ def test_simple_logical_node(cel, operator):
 
     # Check that left is UnaryNode with NOT operator
     assert isinstance(actual.left, UnaryNode)
-    assert actual.left.operator == UnaryNode.NOT
+    assert actual.left.operator == UnaryNodeOperator.NOT
 
     # Check that left.operand is PropertyAccessNode
     assert isinstance(actual.left.operand, PropertyAccessNode)
@@ -124,7 +143,7 @@ def test_simple_logical_node(cel, operator):
 
     # Check that right is UnaryNode with NOT operator
     assert isinstance(actual.right, UnaryNode)
-    assert actual.right.operator == UnaryNode.NOT
+    assert actual.right.operator == UnaryNodeOperator.NOT
 
     # Check that left.operand is PropertyAccessNode
     assert isinstance(actual.right.operand, PropertyAccessNode)
@@ -150,10 +169,14 @@ def test_method_access_node(cel, method_name, args):
         assert type(arg.value) == type(args[i])
         assert arg.value == args[i]
 
-@pytest.mark.parametrize("cel, operator", [
-    ("!(fakeProp)", UnaryNode.NOT),
-    ("-(fakeProp)", UnaryNode.NEG),
-])
+
+@pytest.mark.parametrize(
+    "cel, operator",
+    [
+        ("!(fakeProp)", UnaryNodeOperator.NOT),
+        ("-(fakeProp)", UnaryNodeOperator.NEG),
+    ],
+)
 def test_parenthesis_node(cel, operator):
     actual = CelToAstConverter.convert_to_ast(cel)
 

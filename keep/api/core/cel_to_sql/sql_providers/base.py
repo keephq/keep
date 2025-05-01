@@ -3,8 +3,10 @@ from typing import Any, List
 from sqlalchemy import Dialect, String
 
 from keep.api.core.cel_to_sql.ast_nodes import (
+    ComparisonNodeOperator,
     ConstantNode,
     DataType,
+    LogicalNodeOperator,
     MemberAccessNode,
     Node,
     LogicalNode,
@@ -13,6 +15,7 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     PropertyAccessNode,
     MethodAccessNode,
     ParenthesisNode,
+    UnaryNodeOperator,
     from_type_to_data_type,
 )
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
@@ -241,9 +244,9 @@ class BaseCelToSqlProvider:
         left = self.__build_sql_filter(logical_node.left, stack)
         right = self.__build_sql_filter(logical_node.right, stack)
 
-        if logical_node.operator == LogicalNode.AND:
+        if logical_node.operator == LogicalNodeOperator.AND:
             return self._visit_logical_and(left, right)
-        elif logical_node.operator == LogicalNode.OR:
+        elif logical_node.operator == LogicalNodeOperator.OR:
             return self._visit_logical_or(left, right)
 
         raise NotImplementedError(
@@ -263,7 +266,7 @@ class BaseCelToSqlProvider:
         first_operand = None
         second_operand = None
 
-        if comparison_node.operator == ComparisonNode.IN:
+        if comparison_node.operator == ComparisonNodeOperator.IN:
             return self._visit_in(
                 comparison_node.first_operand,
                 (
@@ -299,17 +302,17 @@ class BaseCelToSqlProvider:
         if second_operand is None:
             second_operand = self.__build_sql_filter(comparison_node.second_operand, stack)
 
-        if comparison_node.operator == ComparisonNode.EQ:
+        if comparison_node.operator == ComparisonNodeOperator.EQ:
             result = self._visit_equal(first_operand, second_operand)
-        elif comparison_node.operator == ComparisonNode.NE:
+        elif comparison_node.operator == ComparisonNodeOperator.NE:
             result = self._visit_not_equal(first_operand, second_operand)
-        elif comparison_node.operator == ComparisonNode.GT:
+        elif comparison_node.operator == ComparisonNodeOperator.GT:
             result = self._visit_greater_than(first_operand, second_operand)
-        elif comparison_node.operator == ComparisonNode.GE:
+        elif comparison_node.operator == ComparisonNodeOperator.GE:
             result = self._visit_greater_than_or_equal(first_operand, second_operand)
-        elif comparison_node.operator == ComparisonNode.LT:
+        elif comparison_node.operator == ComparisonNodeOperator.LT:
             result = self._visit_less_than(first_operand, second_operand)
-        elif comparison_node.operator == ComparisonNode.LE:
+        elif comparison_node.operator == ComparisonNodeOperator.LE:
             result = self._visit_less_than_or_equal(first_operand, second_operand)
         else:
             raise NotImplementedError(
@@ -504,7 +507,7 @@ class BaseCelToSqlProvider:
 
     # region Unary Visitors
     def _visit_unary_node(self, unary_node: UnaryNode, stack: list[Node]) -> str:
-        if unary_node.operator == UnaryNode.NOT:
+        if unary_node.operator == UnaryNodeOperator.NOT:
             return self._visit_unary_not(self.__build_sql_filter(unary_node.operand, stack))
 
         raise NotImplementedError(

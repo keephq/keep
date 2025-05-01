@@ -1,6 +1,6 @@
 import datetime
 from types import NoneType
-from typing import Any, List
+from typing import Any, List, Optional
 
 from enum import Enum
 
@@ -71,13 +71,9 @@ class LogicalNode(Node):
         __str__() -> str:
             Returns a string representation of the logical operation in the format "left operator right".
     """
-    def __init__(self, left: Any, operator: str, right: Any):
-        self.left = left
-        self.operator = operator
-        self.right = right
 
     left: Node
-    operator: str
+    operator: LogicalNodeOperator
     right: Node
 
     def __str__(self):
@@ -111,9 +107,9 @@ class ComparisonNode(Node):
         __str__(): Returns a string representation of the comparison operation.
     """
 
-    first_operand: Node
-    operator: str
-    second_operand: Node
+    first_operand: Optional[Node]
+    operator: ComparisonNodeOperator
+    second_operand: Optional[Node | Any]
 
     def __str__(self):
         return f"{self.first_operand} {self.operator} {self.second_operand}"
@@ -140,8 +136,8 @@ class UnaryNode(Node):
             Returns a string representation of the unary operation.
     """
 
-    operator: str
-    operand: Node
+    operator: UnaryNodeOperator
+    operand: Optional[Node]
 
     def __str__(self):
         return f"{self.operator}{self.operand}"
@@ -182,10 +178,12 @@ class MethodAccessNode(MemberAccessNode):
             "member_name(arg1, arg2, ...)".
     """
     member_name: str
-    args: List[str] = None
+    args: List[ConstantNode] = None
 
     def copy(self):
-        return MethodAccessNode(self.member_name, self.args.copy() if self.args else None)
+        return MethodAccessNode(
+            member_name=self.member_name, args=self.args.copy() if self.args else None
+        )
 
     def __str__(self):
         args = []
