@@ -47,6 +47,14 @@ class ZabbixProviderAuthConfig:
             "sensitive": True,
         }
     )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+        },
+        default=True,
+    )
 
 
 class ZabbixProvider(BaseProvider):
@@ -368,7 +376,9 @@ class ZabbixProvider(BaseProvider):
             # zabbix < 6.4 compatibility
             data["auth"] = f"{self.authentication_config.auth_token}"
 
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(
+            url, json=data, headers=headers, verify=self.authentication_config.verify
+        )
 
         try:
             response.raise_for_status()
