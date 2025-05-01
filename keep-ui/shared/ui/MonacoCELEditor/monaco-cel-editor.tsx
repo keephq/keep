@@ -16,6 +16,7 @@ interface MonacoCelProps {
   className: string;
   value: string;
   fieldsForSuggestions?: string[];
+  readOnly?: boolean;
   onIsValidChange?: (isValid: boolean) => void;
   onValueChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
@@ -162,6 +163,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
         },
       }}
       options={{
+        readOnly: props.readOnly,
         lineNumbers: "off",
         minimap: { enabled: false },
         scrollbar: {

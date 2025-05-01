@@ -3,12 +3,14 @@ import { Badge, Icon } from "@tremor/react";
 import { Fragment } from "react";
 import { RuleGroupArray, RuleGroupType, RuleType } from "react-querybuilder";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { CelAst } from "@/utils/cel-ast";
 
 type FormattedQueryCellProps = {
-  query: RuleGroupType;
+  query: CelAst.Node;
 };
 
 export const FormattedQueryCell = ({ query }: FormattedQueryCellProps) => {
+  console.log("ihor", query);
   let displayedRules: any[] = query.rules;
   let rulesInTooltip: any[] = [];
 
