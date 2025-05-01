@@ -20,6 +20,7 @@ import shutil
 
 import alembic.command
 import alembic.config
+from alembic import script
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
@@ -203,11 +204,12 @@ def migrate_db():
     # when running the app as a pyhton pakage (could happen form any path)
 
     # This path will be used to save migrations locally for safe downgrade purposes
-    local_migrations_path = os.environ.get("MIGRATIONS_PATH", "/migrations")
-    app_migrations_path = os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations"
+    local_migrations_path = os.environ.get("SECRET_MANAGER_DIRECTORY", "state/") + "migrations"
+    app_script_path = os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations"
+    app_migrations_path = app_script_path + "/versions"
     config.set_main_option(
         "script_location",
-        app_migrations_path,
+        app_script_path,
     )
     alembic_script = alembic.script.ScriptDirectory.from_config(config)
 
