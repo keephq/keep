@@ -56,20 +56,28 @@ const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
 });
 
-const AlertTriggerSchema = z.object({
-  type: z.literal("alert"),
-  filters: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
-});
+const AlertTriggerSchema = z
+  .object({
+    type: z.literal("alert"),
+    filters: z
+      .array(z.object({ key: z.string(), value: z.string() }))
+      .optional(),
+  })
+  .strict();
 
-const IntervalTriggerSchema = z.object({
-  type: z.literal("interval"),
-  value: z.union([z.string(), z.number()]),
-});
+const IntervalTriggerSchema = z
+  .object({
+    type: z.literal("interval"),
+    value: z.union([z.string(), z.number()]),
+  })
+  .strict();
 
-const IncidentTriggerSchema = z.object({
-  type: z.literal("incident"),
-  events: z.array(IncidentEventEnum).min(1),
-});
+const IncidentTriggerSchema = z
+  .object({
+    type: z.literal("incident"),
+    events: z.array(IncidentEventEnum).min(1),
+  })
+  .strict();
 
 const TriggerSchema = z.union([
   ManualTriggerSchema,
@@ -183,20 +191,33 @@ const OnFailureSchema = z.object({
 });
 
 export const YamlWorkflowDefinitionSchema = z.object({
-  workflow: z.object({
-    id: z.string(),
-    disabled: z.boolean().optional(),
-    description: z.string().optional(),
-    owners: z.array(z.string()).optional(),
-    services: z.array(z.string()).optional(),
-    steps: z.array(YamlStepOrActionSchema).min(1),
-    actions: z.array(YamlStepOrActionSchema).optional(),
-    triggers: z.array(TriggerSchema).min(1),
-    name: z.string().optional(),
-    consts: z.record(z.string(), z.string()).optional(),
-    strategy: WorkflowStrategySchema.optional(),
-    "on-failure": OnFailureSchema.optional(),
-  }),
+  workflow: z
+    .object({
+      id: z.string(),
+      disabled: z.boolean().optional(),
+      description: z.string().optional(),
+      owners: z.array(z.string()).optional(),
+      services: z.array(z.string()).optional(),
+      steps: z.array(YamlStepOrActionSchema).optional(),
+      actions: z.array(YamlStepOrActionSchema).optional(),
+      triggers: z.array(TriggerSchema).min(1),
+      name: z.string().optional(),
+      consts: z.record(z.string(), z.string()).optional(),
+      strategy: WorkflowStrategySchema.optional(),
+      "on-failure": OnFailureSchema.optional(),
+      // [doe.john@example.com, doe.jane@example.com, NOC]
+      permissions: z.array(z.string()).optional(),
+    })
+    .refine(
+      (data) => {
+        const hasSteps = data.steps && data.steps.length > 0;
+        const hasActions = data.actions && data.actions.length > 0;
+        return hasSteps || hasActions;
+      },
+      {
+        message: "Workflow must have at least one step or action",
+      }
+    ),
 });
 
 export function getYamlWorkflowDefinitionSchema(

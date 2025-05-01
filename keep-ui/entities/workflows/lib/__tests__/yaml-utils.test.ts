@@ -1,4 +1,7 @@
-import { getOrderedWorkflowYamlString } from "../yaml-utils";
+import {
+  getOrderedWorkflowYamlString,
+  parseWorkflowYamlToJSON,
+} from "../yaml-utils";
 
 const unorderedClickhouseExampleYaml = `
 workflow:
@@ -117,5 +120,10 @@ describe("YAML Utils", () => {
     expect(orderedWorkflow.trim()).toEqual(
       multilineClickhouseExampleYaml.trim()
     );
+  });
+
+  it("parseWorkflowYamlToJSON should return json with workflow section if the input is not wrapped in workflow section", () => {
+    const json = parseWorkflowYamlToJSON(clickhouseExampleYaml);
+    expect(json).toHaveProperty("workflow");
   });
 });
