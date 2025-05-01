@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
@@ -56,6 +57,7 @@ def get_rules(
     for rule in rules:
         rule["distribution"] = rules_dist.get(rule["id"], [])
         rule["incidents"] = rules_incidents.get(rule["id"], 0)
+        rule["cel_ast"] = CelToAstConverter().convert_to_ast(rule["definition_cel"])
 
     return rules
 
