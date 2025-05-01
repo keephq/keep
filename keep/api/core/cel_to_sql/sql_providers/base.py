@@ -4,6 +4,7 @@ from sqlalchemy import Dialect, String
 
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
+    DataType,
     MemberAccessNode,
     Node,
     LogicalNode,
@@ -12,6 +13,7 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     PropertyAccessNode,
     MethodAccessNode,
     ParenthesisNode,
+    from_type_to_data_type,
 )
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
@@ -228,7 +230,7 @@ class BaseCelToSqlProvider:
 
         return f"COALESCE({', '.join(args)})"
 
-    def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
+    def cast(self, expression_to_cast: str, to_type: DataType, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
 
     def _visit_parentheses(self, node: str) -> str:
@@ -279,10 +281,17 @@ class BaseCelToSqlProvider:
             )
 
             if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
-                first_operand = self.cast(self.__build_sql_filter(comparison_node.first_operand, stack), type(comparison_node.second_operand.value))
+                first_operand = self.cast(
+                    self.__build_sql_filter(comparison_node.first_operand, stack),
+                    from_type_to_data_type(type(comparison_node.second_operand.value)),
+                )
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
-                first_operand = self._visit_multiple_fields_node(comparison_node.first_operand, type(comparison_node.second_operand.value), stack)
+                first_operand = self._visit_multiple_fields_node(
+                    comparison_node.first_operand,
+                    from_type_to_data_type(type(comparison_node.second_operand.value)),
+                    stack,
+                )
 
         if first_operand is None:
             first_operand = self.__build_sql_filter(comparison_node.first_operand, stack)
@@ -334,10 +343,11 @@ class BaseCelToSqlProvider:
         return f"{first_operand} <= {second_operand}"
 
     def _visit_in(self, first_operand: Node, array: list[ConstantNode], stack: list[Node]) -> str:
-        cast_to = type(array[0].value)
+        constant_value_type = type(array[0].value)
+        cast_to = from_type_to_data_type(type(array[0].value))
 
-        if not all(isinstance(item.value, cast_to) for item in array):
-            cast_to = str
+        if not all(isinstance(item.value, constant_value_type) for item in array):
+            cast_to = DataType.STRING
 
         if isinstance(first_operand, PropertyAccessNode):
             first_operand_str = self.cast(self._visit_property_access_node(first_operand, stack), cast_to)
@@ -378,7 +388,9 @@ class BaseCelToSqlProvider:
 
     # endregion
 
-    def _visit_constant_node(self, value: Any, expected_data_type: type = None) -> str:
+    def _visit_constant_node(
+        self, value: Any, expected_data_type: DataType = None
+    ) -> str:
         if value is None:
             return "NULL"
         if isinstance(value, str):
@@ -390,7 +402,7 @@ class BaseCelToSqlProvider:
 
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet. Consider implementing this support in child class.")
 
-    def _get_data_type_to_convert(self, node: Node) -> type:
+    def _get_data_type_to_convert(self, node: Node) -> DataType:
         """
         Extracts data type from node.
         The data type will be used to convert the value of constant node into the expected type (SQL type).
@@ -409,7 +421,9 @@ class BaseCelToSqlProvider:
         )
 
     # region Member Access Visitors
-    def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode, cast_to: type, stack) -> str:
+    def _visit_multiple_fields_node(
+        self, multiple_fields_node: MultipleFieldsNode, cast_to: DataType, stack
+    ) -> str:
         coalesce_args = []
 
         for item in multiple_fields_node.fields:

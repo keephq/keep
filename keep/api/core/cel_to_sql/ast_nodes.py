@@ -1,4 +1,8 @@
+import datetime
+from types import NoneType
 from typing import Any, List
+
+from enum import Enum
 
 
 class Node:
@@ -9,6 +13,7 @@ class Node:
     appear in an AST. It does not implement any specific functionality but
     provides a common interface for all AST nodes.
     """
+
 
 class ConstantNode(Node):
     """
@@ -190,6 +195,56 @@ class MethodAccessNode(MemberAccessNode):
 
         return f"{self.member_name}({', '.join(args)})"
 
+
+class DataType(Enum):
+    """
+    An enumeration representing various data types.
+
+    Attributes:
+        STRING (str): Represents a string data type.
+        UUID (str): Represents a universally unique identifier (UUID) data type.
+        INTEGER (str): Represents an integer data type.
+        FLOAT (str): Represents a floating-point number data type.
+        DATETIME (str): Represents a datetime data type.
+        BOOLEAN (str): Represents a boolean data type.
+        OBJECT (str): Represents an object data type.
+        ARRAY (str): Represents an array data type.
+    """
+
+    STRING = "string"
+    UUID = "uuid"
+    INTEGER = "integer"
+    FLOAT = "float"
+    DATETIME = "datetime"
+    BOOLEAN = "boolean"
+    OBJECT = "object"
+    ARRAY = "array"
+    NULL = "null"
+
+
+def from_type_to_data_type(_type: type) -> DataType:
+    if _type is str:
+        return DataType.STRING
+    elif _type is int:
+        return DataType.INTEGER
+    elif _type is float:
+        return DataType.FLOAT
+    elif _type is bool:
+        return DataType.BOOLEAN
+    elif _type is NoneType:
+        return DataType.NULL
+    elif _type is dict:
+        return DataType.OBJECT
+    elif _type is list:
+        return DataType.ARRAY
+    elif _type is datetime.datetime:
+        return DataType.DATETIME
+
+    raise ValueError(
+        f"There is no DataType corresponding to the provided type: {_type}"
+    )
+
+
 class PropertyAccessNode(MemberAccessNode):
     """
     Represents a node in CEL abstract syntax tree (AST) that accesses a property of an object.
@@ -212,7 +267,7 @@ class PropertyAccessNode(MemberAccessNode):
             Returns a string representation of the PropertyAccessNode.
     """
 
-    def __init__(self, member_name: str, value: Any, data_type: type = None):
+    def __init__(self, member_name: str, value: Any, data_type: DataType = None):
         self.value = value
         self.data_type = data_type
         super().__init__(member_name)

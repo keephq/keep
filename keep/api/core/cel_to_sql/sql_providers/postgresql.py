@@ -1,5 +1,4 @@
 from datetime import datetime
-from types import NoneType
 from typing import List
 from uuid import UUID
 from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
@@ -8,7 +7,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
-
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 
 class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
@@ -18,16 +17,16 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         json_property_path = " -> ".join(all_columns[:-1])
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
-    def cast(self, expression_to_cast: str, to_type, force=False):
-        if to_type is str:
+    def cast(self, expression_to_cast: str, to_type: DataType, force=False):
+        if to_type == DataType.STRING:
             to_type_str = "TEXT"
-        elif to_type is int or to_type is float:
+        elif to_type == DataType.INTEGER or to_type == DataType.FLOAT:
             to_type_str = "FLOAT"
-        elif to_type is NoneType:
+        elif to_type == DataType.NULL:
             return expression_to_cast
-        elif to_type is datetime:
+        elif to_type == DataType.DATETIME:
             to_type_str = "TIMESTAMP"
-        elif to_type is bool:
+        elif to_type == DataType.BOOLEAN:
             to_type_str = "BOOLEAN"
         else:
             raise ValueError(f"Unsupported type: {type}")
@@ -48,7 +47,10 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
                     field_mapping.json_prop, field_mapping.prop_in_json
                 )
 
-                if metadata.data_type is not str and metadata.data_type is not None:
+                if (
+                    metadata.data_type != DataType.STRING
+                    and metadata.data_type is not None
+                ):
                     json_exp = self.cast(json_exp, metadata.data_type)
                 field_expressions.append(json_exp)
                 continue
@@ -63,8 +65,10 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         else:
             return field_expressions[0]
 
-    def _visit_constant_node(self, value: str, expected_data_type: type = None) -> str:
-        if expected_data_type is UUID:
+    def _visit_constant_node(
+        self, value: str, expected_data_type: DataType = None
+    ) -> str:
+        if expected_data_type == DataType.UUID:
             str_value = str(value)
             try:
                 # Because PostgreSQL works with UUID with dashes, we need to convert it to a UUID with dashes string

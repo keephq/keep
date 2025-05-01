@@ -1,6 +1,7 @@
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ConstantNode,
+    DataType,
     LogicalNode,
     MemberAccessNode,
     MethodAccessNode,
@@ -34,7 +35,7 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         json_property_name: str,
         property_to_extract: list[str],
         method_access_node: MethodAccessNode,
-        data_type: type,
+        data_type: DataType,
     ):
         super().__init__(f"JSON({json_property_name}).{property_to_extract}", method_access_node)
         self.json_property_name = json_property_name
@@ -53,7 +54,7 @@ class MultipleFieldsNode(Node):
     Args:
         fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances to initialize the node with.
     """
-    def __init__(self, fields: list[PropertyAccessNode], data_type: type = None):
+    def __init__(self, fields: list[PropertyAccessNode], data_type: DataType = None):
         self.fields = fields
         self.data_type = data_type
 
