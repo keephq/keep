@@ -6,6 +6,8 @@ import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
+import { useUsers } from "@/entities/users/model/useUsers";
+import { MentionsInput } from "./MentionsInput";
 
 export function IncidentActivityComment({
   incident,
@@ -16,12 +18,17 @@ export function IncidentActivityComment({
 }) {
   const [comment, setComment] = useState("");
   const api = useApi();
+  const { data: users = [] } = useUsers();
 
   const onSubmit = useCallback(async () => {
     try {
+      // Extract mentioned users from comment
+      const mentionedUsers = comment.match(/@([\w.-]+@[\w.-]+)/g)?.map(mention => mention.slice(1)) || [];
+      
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,
+        mentioned_users: mentionedUsers,
       });
       toast.success("Comment added!", { position: "top-right" });
       setComment("");
@@ -53,10 +60,11 @@ export function IncidentActivityComment({
 
   return (
     <div className="flex h-full w-full relative items-center">
-      <TextInput
+      <MentionsInput
         value={comment}
         onValueChange={setComment}
-        placeholder="Add a new comment..."
+        users={users}
+        placeholder="Add a new comment... Use @ to mention users"
       />
       <Button
         color="orange"
