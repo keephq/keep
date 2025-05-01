@@ -17,11 +17,9 @@ import hashlib
 import logging
 import os
 import shutil
-import tempfile
 
 import alembic.command
 import alembic.config
-from alembic import script
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
