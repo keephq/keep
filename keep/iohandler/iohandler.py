@@ -472,7 +472,10 @@ class BaseIOHandler(IOValidatorMixin):
                 # https://github.com/keephq/keep/issues/137
                 try:
                     unescaped_token = html.unescape(
-                        token.replace("\r\n", "").replace("\n", "")
+                        token.replace("\r\n", "")
+                        .replace("\n", "")
+                        .replace("\\n", "")
+                        .replace("\r", "")
                     )
                     tree = ast.parse(unescaped_token)
                 # try best effort to parse the string

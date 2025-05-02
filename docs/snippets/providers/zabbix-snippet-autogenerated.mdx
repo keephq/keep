@@ -1,10 +1,11 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
 - **zabbix_frontend_url**: Zabbix Frontend URL (required: True, sensitive: False)
 - **auth_token**: Zabbix Auth Token (required: True, sensitive: True)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **problem.get**: The method allows to retrieve problems. (mandatory) ([Documentation](https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get))
