@@ -558,39 +558,47 @@ class ZabbixProvider(BaseProvider):
         )
         if not action_exists:
             self.logger.info("Creating action")
-            action_response = self.__send_request(
-                "action.create",
-                {
-                    "eventsource": "0",
-                    "name": action_name,
-                    "status": "0",
-                    "esc_period": "1h",
-                    "operations": {
-                        "0": {
-                            "operationtype": "1",
-                            "opcommand_hst": {"0": {"hostid": "0"}},
-                            "opcommand": {"scriptid": script_id},
-                        }
-                    },
-                    "recovery_operations": {
-                        "0": {
-                            "operationtype": "1",
-                            "opcommand_hst": {"0": {"hostid": "0"}},
-                            "opcommand": {"scriptid": script_id},
-                        }
-                    },
-                    "update_operations": {
-                        "0": {
-                            "operationtype": "1",
-                            "opcommand_hst": {"0": {"hostid": "0"}},
-                            "opcommand": {"scriptid": script_id},
-                        }
-                    },
-                    "pause_symptoms": "1",
-                    "pause_suppressed": "1",
-                    "notify_if_canceled": "1",
+            payload = {
+                "eventsource": "0",
+                "name": action_name,
+                "status": "0",
+                "esc_period": "1h",
+                "operations": {
+                    "0": {
+                        "operationtype": "1",
+                        "opcommand_hst": {"0": {"hostid": "0"}},
+                        "opcommand": {"scriptid": script_id},
+                    }
                 },
-            )
+                "recovery_operations": {
+                    "0": {
+                        "operationtype": "1",
+                        "opcommand_hst": {"0": {"hostid": "0"}},
+                        "opcommand": {"scriptid": script_id},
+                    }
+                },
+                "update_operations": {
+                    "0": {
+                        "operationtype": "1",
+                        "opcommand_hst": {"0": {"hostid": "0"}},
+                        "opcommand": {"scriptid": script_id},
+                    }
+                },
+                "pause_symptoms": "1",
+                "pause_suppressed": "1",
+                "notify_if_canceled": "1",
+            }
+            try:
+                action_response = self.__send_request(
+                    "action.create",
+                    payload,
+                )
+            except Exception:
+                payload.pop("pause_symptoms", None)
+                action_response = self.__send_request(
+                    "action.create",
+                    payload,
+                )
             self.logger.info(
                 "Created action", extra={"action_response": action_response}
             )
