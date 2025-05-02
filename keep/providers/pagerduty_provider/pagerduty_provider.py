@@ -1121,6 +1121,12 @@ class PagerdutyProvider(
             is_candidate=False,
             # This is the reference to the incident in PagerDuty
             fingerprint=original_incident_id,
+            enrichments={
+                "incident_provider": "pagerduty",
+                "pagerduty_incident_id": original_incident_id,
+                "incident_url": event.get("html_url"),
+                "service_id": event.get("service", {}).get("id", "UNKNOWN"),
+            },
         )
 
 
