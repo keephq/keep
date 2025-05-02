@@ -1,0 +1,241 @@
+on:
+  workflow_call:
+    inputs:
+      db-type:
+        required: true
+        type: string
+      redis_enabled:
+        required: true
+        type: boolean
+      python-version:
+        required: true
+        type: string
+      is-fork:
+        required: true
+        type: boolean
+      backend-image-name:
+        required: true
+        type: string
+      frontend-image-name:
+        required: true
+        type: string
+
+jobs:
+  run-migration-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REDIS: ${{ inputs.redis_enabled }}
+      REDIS_HOST: keep-redis
+      REDIS_PORT: 6379
+      OLD_BACKEND_IMAGE: keep-backend:0.42.0
+      SOURCE_BACKEND_IMAGE: ${{ inputs.backend-image-name }}
+      OLD_FRONTEND_IMAGE: keep-frontend:0.42.0
+      SOURCE_FRONTEND_IMAGE: ${{ inputs.frontend-image-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.is-fork != true }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Restore dependencies cache
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      # Only install dependencies if cache miss
+      - name: Install dependencies using poetry
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright and dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          poetry run playwright install --with-deps
+
+      # For forks: Build images locally again since they don't persist between jobs
+      - name: Set up Docker Buildx
+        if: ${{ inputs.is-fork == true }}
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Rebuild frontend image locally for fork PRs
+        if: ${{ inputs.is-fork == true }}
+        uses: docker/build-push-action@v4
+        with:
+          context: keep-ui
+          file: ./docker/Dockerfile.ui
+          push: false
+          load: true
+          tags: |
+            keep-frontend:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Rebuild backend image locally for fork PRs
+        if: ${{ inputs.is-fork == true }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile.api
+          push: false
+          load: true
+          tags: |
+            keep-backend:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      # Phase 1: Run old version
+      - name: Create docker-compose file for old version
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-old.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.OLD_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-old.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.OLD_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-old.yml
+
+      - name: Start old version services
+        run: |
+          if [[ "${{ inputs.is-fork }}" != "true" ]]; then
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml pull
+          fi
+          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml up -d
+
+      - name: Wait for old version services
+        run: |
+          # Wait for database
+          if [ "${{ inputs.db-type }}" == "mysql" ]; then
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
+          else
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml exec -T keep-database pg_isready -h localhost -U keepuser
+          fi
+          
+          # Wait for backend
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/healthcheck
+          
+          # Wait for frontend
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/
+
+      - name: Run tests against old version
+        run: |
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+
+      - name: Stop old version services
+        run: |
+          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml down
+
+      # Phase 2: Run source version
+      - name: Create docker-compose file for source version
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-source.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.SOURCE_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-source.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.SOURCE_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-source.yml
+
+      - name: Start source version services
+        run: |
+          if [[ "${{ inputs.is-fork }}" != "true" ]]; then
+            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-source.yml pull
+          fi
+          docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-source.yml up -d
+
+      - name: Wait for source version services
+        run: |
+          # Wait for database
+          if [ "${{ inputs.db-type }}" == "mysql" ]; then
+            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-source.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
+          else
+            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-source.yml exec -T keep-database pg_isready -h localhost -U keepuser
+          fi
+          
+          # Wait for backend
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/healthcheck
+          
+          # Wait for frontend
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/
+
+      - name: Run tests against source version
+        run: |
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+
+      - name: Stop source version services
+        run: |
+          docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-source.yml down
+
+      # Phase 3: Run old version again
+      - name: Start old version services again
+        run: |
+          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml up -d
+
+      - name: Wait for old version services again
+        run: |
+          # Wait for database
+          if [ "${{ inputs.db-type }}" == "mysql" ]; then
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
+          else
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml exec -T keep-database pg_isready -h localhost -U keepuser
+          fi
+          
+          # Wait for backend
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/healthcheck
+          
+          # Wait for frontend
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/
+
+      - name: Run tests against old version again
+        run: |
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+
+      - name: Stop old version services again
+        run: |
+          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml down
+
+      # Collect and upload logs
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p logs
+          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-old.yml logs > logs/old-version-logs.txt
+          docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-source.yml logs > logs/source-version-logs.txt
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-test-logs
+          path: logs/
