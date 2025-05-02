@@ -10,7 +10,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ComparisonNodeOperator,
     ConstantNode,
-    IndexAccessNode,
     LogicalNode,
     LogicalNodeOperator,
     MethodAccessNode,
@@ -238,9 +237,12 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
 
         if self.member_access_stack:
             property_member: PropertyAccessNode = self.member_access_stack.pop()
-            property_value = PropertyAccessNode(member_name=right, value=None)
-            property_member.value = property_value
-            self.member_access_stack.append(property_value)
+            new_property_access_node = PropertyAccessNode(
+                path=property_member.path + [right]
+            )
+            self.stack.pop()
+            self.stack.append(new_property_access_node)
+            self.member_access_stack.append(new_property_access_node)
 
     def member_dot_arg(self, tree: lark.Tree) -> None:
         if len(tree.children) == 3:
@@ -264,11 +266,8 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
                 )
                 return
 
-            left: PropertyAccessNode = self.member_access_stack.pop()
-            method = MethodAccessNode(member_name=right, args=[item for item in reversed(exprlist)])
-            left.value = method
+            raise NotImplementedError(f"Method '{right}' not implemented")
 
-            self.member_access_stack.append(method)
         else:
             raise ValueError("No member access stack")
 
@@ -279,15 +278,11 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         if isinstance(right, ConstantNode):
             right = right.value
 
-        prop_access_node = left
-
-        while prop_access_node.value is not None:
-            prop_access_node = prop_access_node.value
-
-        prop_access_node.value = IndexAccessNode(member_name=str(right), value=None)
-
+        prop_access_node: PropertyAccessNode = left
         self.stack.append(left)
-        self.member_access_stack.append(prop_access_node.value)
+        self.member_access_stack.append(
+            PropertyAccessNode(path=prop_access_node.path + [str(right)])
+        )
 
     def member_object(self, tree: lark.Tree) -> None:
         raise NotImplementedError("Member object not implemented")
@@ -302,7 +297,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         raise NotImplementedError("Ident arg not implemented")
 
     def ident(self, tree: lark.Tree) -> None:
-        property_member = PropertyAccessNode(member_name=cast(lark.Token, tree.children[0]).value, value=None)
+        property_member = PropertyAccessNode(
+            path=[cast(lark.Token, tree.children[0]).value]
+        )
         self.member_access_stack.clear()
         self.stack.append(property_member)
         self.member_access_stack.append(property_member)

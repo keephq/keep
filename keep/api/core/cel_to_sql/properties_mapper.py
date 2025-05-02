@@ -38,12 +38,10 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         self,
         json_property_name: str,
         property_to_extract: list[str],
-        method_access_node: MethodAccessNode,
         data_type: DataType,
     ):
         super().__init__(
             member_name=f"JSON({json_property_name}).{property_to_extract}",
-            value=method_access_node,
         )
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
@@ -230,12 +228,12 @@ class PropertiesMapper:
             and member_access_node.is_function_call()
         ):
             property_metadata = self.properties_metadata.get_property_metadata(
-                member_access_node.get_property_path()
+                member_access_node.path
             )
 
             if not property_metadata:
                 raise PropertiesMappingException(
-                    f'Missing mapping configuration for property "{member_access_node.get_property_path()}" '
+                    f'Missing mapping configuration for property "{member_access_node.path}" '
                     f'while processing the comparison node: "{member_access_node}".'
                 )
             involved_fields.append(property_metadata)
@@ -366,14 +364,12 @@ class PropertiesMapper:
             return JsonPropertyAccessNode(
                 json_property_name=mapping.json_prop,
                 property_to_extract=mapping.prop_in_json,
-                method_access_node=method_access_node,
                 data_type=data_type,
             )
 
         if isinstance(mapping, SimpleFieldMapping):
             return PropertyAccessNode(
-                member_name=mapping.map_to,
-                value=method_access_node,
+                path=[mapping.map_to],
                 data_type=data_type,
             )
 
@@ -383,12 +379,13 @@ class PropertiesMapper:
         self, property_access_node: PropertyAccessNode
     ) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
         property_metadata = self.properties_metadata.get_property_metadata(
-            property_access_node.get_property_path()
+            property_access_node.path
         )
 
         if not property_metadata:
+            joined_path = ".".join(property_access_node.path)
             raise PropertiesMappingException(
-                f'Missing mapping configuration for property "{property_access_node.get_property_path()}"'
+                f'Missing mapping configuration for property "{joined_path}"'
             )
 
         result = []

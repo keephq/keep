@@ -150,6 +150,8 @@ class UnaryNode(Node):
     def __str__(self):
         return f"{self.operator}{self.operand}"
 
+
+# TODO: To remove this class as it's not needed anymore
 class MemberAccessNode(Node):
     """
     A node representing member access in CEL abstract syntax tree (AST).
@@ -158,11 +160,13 @@ class MemberAccessNode(Node):
     Methods:
         __str__(): Returns the member name as a string.
     """
-    member_name: str
+    member_name: Optional[str]  # TODO: to remove
 
     def __str__(self):
         return self.member_name
 
+
+# TODO: To remove this class as it's not needed anymore
 class MethodAccessNode(MemberAccessNode):
     """
     Represents a method access node in CEL abstract syntax tree (AST).
@@ -258,7 +262,7 @@ class PropertyAccessNode(MemberAccessNode):
         alert.name
         alert.status
     Attributes:
-        member_name (str): The name of the member being accessed.
+        path (str): The property path being accessed.
         value (Any): The value associated with the member access, which can be another node.
     Methods:
         __init__(member_name, value: Any):
@@ -273,8 +277,7 @@ class PropertyAccessNode(MemberAccessNode):
             Returns a string representation of the PropertyAccessNode.
     """
 
-    member_name: str = Field(default=None)
-    value: Any = Field(default=None)
+    path: list[str] = Field(default=None)
     data_type: DataType = Field(default=None)
 
     def is_function_call(self) -> bool:
@@ -282,16 +285,11 @@ class PropertyAccessNode(MemberAccessNode):
 
         return member_access_node is not None
 
+    # TODO: To remove this method as it's not needed anymore
     def get_property_path(self) -> list[str]:
-        if isinstance(self.value, PropertyAccessNode) or isinstance(
-            self.value, IndexAccessNode
-        ):
-            return [self.member_name] + (
-                self.value.get_property_path() if self.value else []
-            )
+        return self.path
 
-        return [self.member_name]
-
+    # TODO: To remove this method as it's not needed anymore
     def get_method_access_node(self) -> MethodAccessNode:
         if isinstance(self.value, MethodAccessNode):
             return self.value
