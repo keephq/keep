@@ -206,7 +206,7 @@ def downgrade_db(config, expected_revision, local_migrations_path, app_migration
     shutil.rmtree(source_versions_path)
     shutil.move(source_versions_path_copy, source_versions_path)
 
-def migrate_db():
+def migrate_db(config_path: str = None, app_migrations_path: str = None):
     """
     Run migrations to make sure the DB is up-to-date.
     """
@@ -214,14 +214,14 @@ def migrate_db():
         logger.info("Skipping running migrations...")
         return None
 
-    config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
+    config_path = config_path or os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
     # Re-defined because alembic.ini uses relative paths which doesn't work
     # when running the app as a pyhton pakage (could happen form any path)
 
     # This path will be used to save migrations locally for safe downgrade purposes
     local_migrations_path = os.environ.get("SECRET_MANAGER_DIRECTORY", "/state") + "/migrations"
-    app_migrations_path = os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations"
+    app_migrations_path = app_migrations_path or os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations"
     config.set_main_option(
         "script_location",
         app_migrations_path,
