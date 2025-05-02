@@ -50,7 +50,7 @@ from alembic.config import Config
 def test_db_migrations():
     # Create a temporary directory to act as the Alembic environment
     with tempfile.TemporaryDirectory() as temp_dir:
-        shutil.copytree("./migrations", os.path.join(temp_dir, "migrations"))
+        shutil.copytree("./tests/migrations", os.path.join(temp_dir, "migrations"))
         alembic_ini_path = os.path.join(temp_dir, "migrations", "alembic.ini")
         migrations_path = os.path.join(temp_dir, "migrations")
 
