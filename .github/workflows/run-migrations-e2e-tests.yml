@@ -141,9 +141,9 @@ jobs:
         run: |
           # Wait for database
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database mysqladmin ping -h "localhost" --silent
           else
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database pg_isready -h localhost -U keepuser
           fi
           
           # Wait for backend
@@ -178,9 +178,9 @@ jobs:
         run: |
           # Wait for database
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
+            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-source-database mysqladmin ping -h "localhost" --silent
           else
-            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
+            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-source-database pg_isready -h localhost -U keepuser
           fi
           
           # Wait for backend
@@ -206,9 +206,9 @@ jobs:
         run: |
           # Wait for database
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database mysqladmin ping -h "localhost" --silent
           else
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
+            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database pg_isready -h localhost -U keepuser
           fi
           
           # Wait for backend
