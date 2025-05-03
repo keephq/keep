@@ -327,7 +327,7 @@ jobs:
     needs: [build-frontend, build-backend, prepare-test-environment]
     uses: ./.github/workflows/run-migrations-e2e-tests.yml
     with:
-      db-type: postgresql
+      db-type: postgres
       redis_enabled: false
       python-version: 3.11
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
