@@ -337,7 +337,7 @@ jobs:
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 3: Run old version again
-      - name: Create docker-compose file for source version
+      - name: Create docker-compose file for old version again
         run: |
           cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.OLD_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
