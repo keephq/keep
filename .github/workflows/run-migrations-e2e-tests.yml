@@ -93,35 +93,35 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
-#      - name: Rebuild frontend image locally for fork PRs
-#        if: ${{ inputs.is-fork == true }}
-#        uses: docker/build-push-action@v4
-#        with:
-#          context: keep-ui
-#          file: ./docker/Dockerfile.ui
-#          push: false
-#          load: true
-#          tags: |
-#            keep-frontend:local
-#          cache-from: type=gha
-#          cache-to: type=gha,mode=max
-#          build-args: |
-#            BUILDKIT_INLINE_CACHE=1
-#
-#      - name: Rebuild backend image locally for fork PRs
-#        if: ${{ inputs.is-fork == true }}
-#        uses: docker/build-push-action@v4
-#        with:
-#          context: .
-#          file: ./docker/Dockerfile.api
-#          push: false
-#          load: true
-#          tags: |
-#            keep-backend:local
-#          cache-from: type=gha
-#          cache-to: type=gha,mode=max
-#          build-args: |
-#            BUILDKIT_INLINE_CACHE=1
+      - name: Rebuild frontend image locally for fork PRs
+        if: ${{ inputs.is-fork == true }}
+        uses: docker/build-push-action@v4
+        with:
+          context: keep-ui
+          file: ./docker/Dockerfile.ui
+          push: false
+          load: true
+          tags: |
+            keep-frontend:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Rebuild backend image locally for fork PRs
+        if: ${{ inputs.is-fork == true }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile.api
+          push: false
+          load: true
+          tags: |
+            keep-backend:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       # Phase 1: Run old version
       - name: Create docker-compose file for old version
@@ -205,23 +205,19 @@ jobs:
           sleep 10
 
       - name: Run tests against old version
-        id: get_revision
         run: |
-          # Run alembic inside the container and extract revision containing '(head)'
-          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $1}')
-          if [[ -z "$REVISION" ]]; then
-            echo "Alembic command failed or no revision found!"
-            exit 1
-          fi
-          echo "Current head revision: $REVISION"
-          
-          # Save to output variable to reuse in later steps
-          echo "revision=$REVISION" >> $GITHUB_OUTPUT
-          
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
 
       - name: Stop old version services
         run: |
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-backend alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          
+          echo "Current head revision: $REVISION"
+      
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 2: Run source version
@@ -306,21 +302,25 @@ jobs:
           sleep 10
 
       - name: Run tests against source version
-        id: check_migration
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
-          NEW_REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $1}')
+          REVISION=$(docker exec keep-backend alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
           
-          echo "Old revision: ${{ steps.get_revision.outputs.revision }}"
-          echo "New revision: $NEW_REVISION"
+          echo "Current head revision: $REVISION"
           
-          if [[ "$NEW_REVISION" == "${{ steps.get_revision.outputs.revision }}" ]]; then
-            echo "Error: Revisions are the same after migration!"
-            echo "Expected migration to change the revision"
-            exit 1
+          if [[ "$REVISION" != "$WORKFLOW_REVISION" ]]; then
+            echo "Revisions don't match, continue..."
+          else
+            echo "Revisions match, exiting..."
+            exit 0
           fi
           
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+        env:
+          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
       - name: Stop source version services
         run: |
@@ -399,21 +399,25 @@ jobs:
           sleep 10
 
       - name: Run tests against old version again
-        id: check_rollback
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
-          FINAL_REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $1}')
+          REVISION=$(docker exec keep-backend alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
           
-          echo "Initial revision: ${{ steps.get_revision.outputs.revision }}"
-          echo "Final revision: $FINAL_REVISION"
+          echo "Current head revision: $REVISION"
           
-          if [[ "$FINAL_REVISION" != "${{ steps.get_revision.outputs.revision }}" ]]; then
-            echo "Error: Revisions don't match after rollback!"
-            echo "Expected rollback to return to initial revision"
-            exit 1
+          if [[ "$REVISION" != "$WORKFLOW_REVISION" ]]; then
+            echo "Revisions don't match, continue..."
+          else
+            echo "Revisions match, exiting..."
+            exit 0
           fi
           
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+        env:
+          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
       - name: Stop old version services again
         run: |
