@@ -17,7 +17,6 @@ class Node(BaseModel):
     """
     def __init__(self, **data):
         super().__init__(**data)
-        self.node_type = self.__class__.__name__
 
     node_type: str = Field(default=None)
 
@@ -33,6 +32,7 @@ class ConstantNode(Node):
     Methods:
         __str__(): Returns the string representation of the constant value.
     """
+    node_type: str = Field(default="ConstantNode", const=True)
     value: Any = Field()
 
     def __str__(self):
@@ -48,7 +48,7 @@ class ParenthesisNode(Node):
     Methods:
         __str__(): Returns a string representation of the parenthesis node.
     """
-
+    node_type: str = Field(default="ParenthesisNode", const=True)
     expression: Node = Field()
 
     def __str__(self):
@@ -76,7 +76,7 @@ class LogicalNode(Node):
         __str__() -> str:
             Returns a string representation of the logical operation in the format "left operator right".
     """
-
+    node_type: str = Field(default="LogicalNode", const=True)
     left: Node = Field()
     operator: LogicalNodeOperator = Field()
     right: Node = Field()
@@ -114,7 +114,7 @@ class ComparisonNode(Node):
     Methods:
         __str__(): Returns a string representation of the comparison operation.
     """
-
+    node_type: str = Field(default="ComparisonNode", const=True)
     first_operand: Optional[Node] = Field()
     operator: ComparisonNodeOperator = Field()
     second_operand: Optional[Node | Any] = Field()
@@ -143,7 +143,7 @@ class UnaryNode(Node):
         __str__() -> str:
             Returns a string representation of the unary operation.
     """
-
+    node_type: str = Field(default="UnaryNode", const=True)
     operator: UnaryNodeOperator = Field()
     operand: Optional[Node] = Field()
 
@@ -160,6 +160,7 @@ class MemberAccessNode(Node):
     Methods:
         __str__(): Returns the member name as a string.
     """
+    node_type: str = Field(default="MemberAccessNode", const=True)
     member_name: Optional[str]  # TODO: to remove
 
     def __str__(self):
@@ -189,6 +190,7 @@ class MethodAccessNode(MemberAccessNode):
             Returns a string representation of the method access node in the format:
             "member_name(arg1, arg2, ...)".
     """
+    node_type: str = Field(default="MethodAccessNode", const=True)
     member_name: str
     args: List[ConstantNode] = None
 
@@ -276,7 +278,7 @@ class PropertyAccessNode(MemberAccessNode):
         __str__() -> str:
             Returns a string representation of the PropertyAccessNode.
     """
-
+    node_type: str = Field(default="PropertyAccessNode", const=True)
     path: list[str] = Field(default=None)
     data_type: DataType = Field(default=None)
 
@@ -304,35 +306,3 @@ class PropertyAccessNode(MemberAccessNode):
             return f"{self.member_name}.{self.value}"
 
         return self.member_name
-
-class IndexAccessNode(PropertyAccessNode):
-    """
-    Represents an index access node in CEL abstract syntax tree (AST).
-    This node is used to represent access to a property or method via an index.
-    Examples:
-        alert['name']
-        alert['status']
-    Attributes:
-        member_name (str): The name of the member being accessed.
-        value (Any): The value associated with the member, which can be another node.
-    Methods:
-        get_property_path() -> str:
-            Returns the property path as a string, including the member name and any nested method access.
-        __str__() -> str:
-            Returns a string representation of the index access node.
-    """
-    member_name: str = Field()
-    value: Any = Field()
-
-    def __str__(self):
-        return f"[{self.member_name}]"
-
-    def get_property_path(self) -> list[str]:
-        if isinstance(self.value, PropertyAccessNode) or isinstance(
-            self.value, IndexAccessNode
-        ):
-            return [self.member_name] + (
-                self.value.get_property_path() if self.value else []
-            )
-
-        return [self.member_name]
