@@ -212,8 +212,8 @@ jobs:
       - name: Stop old version services
         run: |
           # Prepare alembic config
-          cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
-          sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
+          docker exec keep-backend cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
+          docker exec keep-backend sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
           
           # Run alembic inside the container and extract revision containing '(head)'
           REVISION=$(docker exec keep-backend alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
@@ -310,8 +310,8 @@ jobs:
       - name: Run tests against source version
         run: |
           # Prepare alembic config
-          cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
-          sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
+          docker exec keep-backend cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
+          docker exec keep-backend sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
           
           # Run alembic inside the container and extract revision containing '(head)'
           REVISION=$(docker exec keep-backend alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
@@ -418,8 +418,8 @@ jobs:
       - name: Run tests against old version again
         run: |
           # Prepare alembic config
-          cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
-          sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
+          docker exec keep-backend cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
+          docker exec keep-backend sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
           
           # Run alembic inside the container and extract revision containing '(head)'
           REVISION=$(docker exec keep-backend alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
