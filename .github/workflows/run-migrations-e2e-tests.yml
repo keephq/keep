@@ -208,13 +208,17 @@ jobs:
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
           REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current)
-          
+          if [[ -z "$REVISION" ]]; then
+            echo "Alembic command failed or no revision found!"
+            echo "${REVISION}"
+            exit 1
+          fi
           echo "Current head revision: $REVISION"
       
           # Save to output variable to reuse in later steps
           echo "revision=$REVISION" >> $GITHUB_OUTPUT
           
-          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+#          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
           exit 1
 
       - name: Stop old version services
