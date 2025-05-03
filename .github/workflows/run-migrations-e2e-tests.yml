@@ -139,18 +139,70 @@ jobs:
 
       - name: Wait for old version services
         run: |
-          # Wait for database
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+          
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR ON ERROR EXIT $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+          
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+          
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+          
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          
+            # last time, print logs using docker compose
+            if [ ! -z "$compose_service" ]; then
+              echo "===== FINAL LOGS FOR $compose_service ====="
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+              echo "=========================================="
+            fi
+          }
+          
+          # Database checks
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
-          else
-            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ inputs.db-type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
           
-          # Wait for backend
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/healthcheck
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
           
-          # Wait for frontend
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
 
       - name: Run tests against old version
         run: |
@@ -176,18 +228,70 @@ jobs:
 
       - name: Wait for source version services
         run: |
-          # Wait for database
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+          
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR ON ERROR EXIT $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+          
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+          
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+          
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          
+            # last time, print logs using docker compose
+            if [ ! -z "$compose_service" ]; then
+              echo "===== FINAL LOGS FOR $compose_service ====="
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+              echo "=========================================="
+            fi
+          }
+          
+          # Database checks
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
-          else
-            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ inputs.db-type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
           
-          # Wait for backend
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/healthcheck
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
           
-          # Wait for frontend
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
 
       - name: Run tests against source version
         run: |
@@ -204,18 +308,70 @@ jobs:
 
       - name: Wait for old version services again
         run: |
-          # Wait for database
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+          
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR ON ERROR EXIT $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+          
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+          
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+          
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          
+            # last time, print logs using docker compose
+            if [ ! -z "$compose_service" ]; then
+              echo "===== FINAL LOGS FOR $compose_service ====="
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+              echo "=========================================="
+            fi
+          }
+          
+          # Database checks
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
-          else
-            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ inputs.db-type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
           fi
           
-          # Wait for backend
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/healthcheck
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
           
-          # Wait for frontend
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000/
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
 
       - name: Run tests against old version again
         run: |
