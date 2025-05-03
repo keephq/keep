@@ -207,7 +207,7 @@ jobs:
       - name: Run tests against old version
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
-          docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current > alembic_output.log 2>&1
+          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $1}') > alembic_output.log 2>&1
           if [[ -z "$REVISION" ]]; then
             echo "Alembic command failed or no revision found!"
             echo "Log content:"
