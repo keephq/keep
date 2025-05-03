@@ -335,11 +335,11 @@ jobs:
       - name: Add dummy migration
         run: |
           # Add dummy migration script to container
-          docker cp ./tests/e2e_tests/add_dummy_migration.sh keep-keep-backend-1:./add_dummy_migration.py
+          docker cp ./tests/e2e_tests/add_dummy_migration.sh keep-keep-backend-1:./add_dummy_migration.sh 
           
           # Run script inside the container
-          docker exec keep-keep-backend-1 chmod +x ./add_dummy_migration.py
-          docker exec keep-keep-backend-1 ./add_dummy_migration.py
+          docker exec keep-keep-backend-1 chmod +x ./add_dummy_migration.sh
+          docker exec keep-keep-backend-1 ./add_dummy_migration.sh
 
       - name: Stop source version services
         run: |
