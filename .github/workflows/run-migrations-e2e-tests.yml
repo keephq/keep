@@ -219,7 +219,7 @@ jobs:
           # Save to output variable to reuse in later steps
           echo "revision=$REVISION" >> $GITHUB_OUTPUT
           
-#          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
           exit 1
 
       - name: Stop old version services
