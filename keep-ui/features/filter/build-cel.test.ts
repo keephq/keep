@@ -6,6 +6,9 @@ describe("buildCel", () => {
     facet3: {
       uncheckedByDefaultOptionValues: ["uncheckedOption5", "uncheckedOption6"],
     },
+    facet4: {
+      canHitEmptyState: true,
+    },
   };
 
   it("should return an empty string if facetOptions is null", () => {
@@ -72,6 +75,39 @@ describe("buildCel", () => {
     );
 
     expect(result).toBe("(path1 in ['value1']) && (path2 in ['value4'])");
+  });
+
+  it("should include facet option with 0 matches count if the facet can hit empty state", () => {
+    const facets: FacetDto[] = [
+      { id: "facet1", property_path: "path1" } as FacetDto,
+      { id: "facet4", property_path: "path4" } as FacetDto,
+    ];
+    const facetOptions: { [key: string]: FacetOptionDto[] } = {
+      facet1: [
+        { display_name: "option1", value: "value1", matches_count: 1 },
+        { display_name: "option2", value: "value2", matches_count: 0 },
+      ],
+      facet4: [
+        { display_name: "option3", value: "value3", matches_count: 1 },
+        { display_name: "option4", value: "value4", matches_count: 1 },
+        { display_name: "option5", value: "value5", matches_count: 0 },
+      ],
+    };
+    const facetsState: FacetState = {
+      facet1: new Set(["option2"]),
+      facet4: new Set(["option3"]),
+    };
+
+    const result = buildCel(
+      facets,
+      facetOptions,
+      facetsState,
+      facetsConfigIdBased
+    );
+
+    expect(result).toBe(
+      "(path1 in ['value1']) && (path4 in ['value4', 'value5'])"
+    );
   });
 
   it("should not include options with 0 matches count to filter", () => {

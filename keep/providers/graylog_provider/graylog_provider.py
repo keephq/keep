@@ -56,6 +56,14 @@ class GraylogProviderAuthConfig:
             "validation": "any_http_url",
         },
     )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+        },
+        default=True,
+    )
 
 
 class GraylogProvider(BaseProvider):
@@ -186,6 +194,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             headers=self._headers,
             auth=self._auth,
             json=search_body,
+            verify=self.authentication_config.verify,
         )
         search_request.raise_for_status()
         search_id = search_request.json().get("id")
@@ -193,6 +202,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             url=self.__get_url(paths=["views", "search", search_id, "execute"]),
             headers=self._headers,
             auth=self._auth,
+            verify=self.authentication_config.verify,
         )
         execute_request.raise_for_status()
         response = execute_request.json()
@@ -224,7 +234,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             )
             requests.get(
                 f"https://{self.authentication_config.deployment_url}",
-                verify=False,
+                verify=self.authentication_config.verify,
             )
             self.logger.info("HTTPS protocol confirmed")
             self._host = f"https://{self.authentication_config.deployment_url}"
@@ -279,6 +289,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 ),
                 headers=self._headers,
                 auth=self._auth,
+                verify=self.authentication_config.verify,
             )
             self.logger.debug("User information request sent")
             if user_response.status_code != 200:
@@ -308,7 +319,11 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     def __get_graylog_version(self) -> str:
         self.logger.info("Getting graylog version info")
         try:
-            version_response = requests.get(url=self.__get_url(), headers=self._headers)
+            version_response = requests.get(
+                url=self.__get_url(),
+                headers=self._headers,
+                verify=self.authentication_config.verify,
+            )
             if version_response.status_code != 200:
                 raise Exception(version_response.text)
             version = version_response.json()["version"].strip()
@@ -327,6 +342,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 headers=self._headers,
                 auth=self._auth,
                 timeout=10,
+                verify=self.authentication_config.verify,
             )
             if whitelist_response.status_code != 200:
                 raise Exception(whitelist_response.text)
@@ -346,6 +362,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 headers=self._headers,
                 auth=self._auth,
                 json=whitelist,
+                verify=self.authentication_config.verify,
             )
             if whitelist_response.status_code != 204:
                 raise Exception(whitelist_response.text)
@@ -366,6 +383,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 headers=self._headers,
                 auth=self._auth,
                 params={"page": page, "per_page": per_page},
+                verify=self.authentication_config.verify,
             )
 
             if events_response.status_code != 200:
@@ -390,6 +408,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 json=event,
                 auth=self._auth,
                 headers=self._headers,
+                verify=self.authentication_config.verify,
             )
 
             if event_update_response.status_code != 200:
@@ -417,6 +436,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 headers=self._headers,
                 timeout=10,
+                verify=self.authentication_config.verify,
             )
             if notifications_response.status_code != 200:
                 raise Exception(notifications_response.text)
@@ -438,6 +458,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 url=self.__get_url(paths=["events", "notifications", notification_id]),
                 auth=self._auth,
                 headers=self._headers,
+                verify=self.authentication_config.verify,
             )
             if notification_delete_response.status_code != 204:
                 raise Exception(notification_delete_response.text)
@@ -462,6 +483,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 timeout=10,
                 json=notification_body,
+                verify=self.authentication_config.verify,
             )
             if notification_creation_response.status_code != 200:
                 raise Exception(notification_creation_response.text)
@@ -486,6 +508,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 timeout=10,
                 json=notification_body,
+                verify=self.authentication_config.verify,
             )
             if notification_update_response.status_code != 200:
                 raise Exception(notification_update_response.text)
@@ -717,6 +740,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 timeout=10,
                 json=json_data,
+                verify=self.authentication_config.verify,
             )
 
             if alert_response.status_code != 200:

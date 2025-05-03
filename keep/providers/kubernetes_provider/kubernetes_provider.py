@@ -172,6 +172,14 @@ class KubernetesProvider(BaseProvider):
                 pretty=True,
             )
             return logs.splitlines()
+        except UnicodeEncodeError:
+            logs = core_v1.read_namespaced_pod_log(
+                name=pod_name,
+                namespace=namespace,
+                container=container_name,
+                tail_lines=tail_lines,
+            )
+            return logs.splitlines()
         except ApiException as e:
             self.logger.error(f"Error getting logs for pod {pod_name}: {e}")
             raise Exception(f"Error getting logs for pod {pod_name}: {e}")
