@@ -41,6 +41,7 @@ services:
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+      - ALLOW_DB_DOWNGRADE=true
     depends_on:
       - keep-database
 

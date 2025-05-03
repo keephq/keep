@@ -11,6 +11,7 @@ services:
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - SENTRY_DISABLED=true
+      - ALLOW_DB_DOWNGRADE=true
     depends_on:
       - keep-backend
 
