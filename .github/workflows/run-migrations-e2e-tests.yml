@@ -133,17 +133,17 @@ jobs:
       - name: Start old version services
         run: |
           if [[ "${{ inputs.is-fork }}" != "true" ]]; then
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
           fi
-          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
       - name: Wait for old version services
         run: |
           # Wait for database
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database mysqladmin ping -h "localhost" --silent
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
           else
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database pg_isready -h localhost -U keepuser
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
           fi
           
           # Wait for backend
@@ -158,7 +158,7 @@ jobs:
 
       - name: Stop old version services
         run: |
-          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 2: Run source version
       - name: Create docker-compose file for source version
@@ -170,17 +170,17 @@ jobs:
       - name: Start source version services
         run: |
           if [[ "${{ inputs.is-fork }}" != "true" ]]; then
-            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
           fi
-          docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
       - name: Wait for source version services
         run: |
           # Wait for database
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-source-database mysqladmin ping -h "localhost" --silent
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
           else
-            docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-source-database pg_isready -h localhost -U keepuser
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
           fi
           
           # Wait for backend
@@ -195,20 +195,20 @@ jobs:
 
       - name: Stop source version services
         run: |
-          docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 3: Run old version again
       - name: Start old version services again
         run: |
-          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
       - name: Wait for old version services again
         run: |
           # Wait for database
           if [ "${{ inputs.db-type }}" == "mysql" ]; then
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database mysqladmin ping -h "localhost" --silent
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h "localhost" --silent
           else
-            docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-old-database pg_isready -h localhost -U keepuser
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser
           fi
           
           # Wait for backend
@@ -223,15 +223,15 @@ jobs:
 
       - name: Stop old version services again
         run: |
-          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Collect and upload logs
       - name: Collect logs
         if: always()
         run: |
           mkdir -p logs
-          docker compose -p keep-old --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs > logs/old-version-logs.txt
-          docker compose -p keep-source --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs > logs/source-version-logs.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs > logs/old-version-logs.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs > logs/source-version-logs.txt
 
       - name: Upload logs
         if: always()
