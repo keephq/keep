@@ -12,7 +12,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     LogicalNode,
     LogicalNodeOperator,
-    MethodAccessNode,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
@@ -251,7 +250,6 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             exprlist = []
         right = cast(lark.Token, tree.children[1]).value
         if self.member_access_stack:
-            left: PropertyAccessNode = self.member_access_stack.pop()
             if right.lower() in [
                 ComparisonNodeOperator.CONTAINS.value.lower(),
                 ComparisonNodeOperator.STARTS_WITH.value.lower(),

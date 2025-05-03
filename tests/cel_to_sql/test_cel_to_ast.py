@@ -7,7 +7,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     LogicalNode,
     LogicalNodeOperator,
-    MethodAccessNode,
     ParenthesisNode,
     PropertyAccessNode,
     UnaryNode,
