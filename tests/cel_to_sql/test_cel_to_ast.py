@@ -84,7 +84,7 @@ def test_simple_comparison_node(cel, operator, expected_constant_type, expected_
     # Check that the root node is a ComparisonNode
     assert isinstance(actual, ComparisonNode)
     assert actual.operator == operator
-    
+
     # Check that second operand is a ConstantNode
     assert isinstance(actual.second_operand, ConstantNode)
     assert isinstance(actual.second_operand.value, expected_constant_type)
@@ -92,8 +92,7 @@ def test_simple_comparison_node(cel, operator, expected_constant_type, expected_
 
     # Check that first operand is a PropertyAccessNode
     assert isinstance(actual.first_operand, PropertyAccessNode)
-    assert actual.first_operand.member_name == "fakeProp"
-    assert actual.first_operand.value is None
+    assert actual.first_operand.path == ["fakeProp"]
 
 @pytest.mark.parametrize("cel, args", [
     ("fakeProp in ['string', 12345, true]", ["string", 12345, True]),
@@ -131,8 +130,7 @@ def test_simple_unary_node(cel, operator):
 
     # Check that first operand is a PropertyAccessNode
     assert isinstance(actual.operand, PropertyAccessNode)
-    assert actual.operand.member_name == "fakeProp"
-    assert actual.operand.value is None
+    assert actual.operand.path == ["fakeProp"]
 
 
 @pytest.mark.parametrize(
@@ -155,8 +153,7 @@ def test_simple_logical_node(cel, operator):
 
     # Check that left.operand is PropertyAccessNode
     assert isinstance(actual.left.operand, PropertyAccessNode)
-    assert actual.left.operand.member_name == "firstFakeProp"
-    assert actual.left.operand.value is None
+    assert actual.left.operand.path == ["firstFakeProp"]
 
     # Check that right is UnaryNode with NOT operator
     assert isinstance(actual.right, UnaryNode)
@@ -164,8 +161,7 @@ def test_simple_logical_node(cel, operator):
 
     # Check that left.operand is PropertyAccessNode
     assert isinstance(actual.right.operand, PropertyAccessNode)
-    assert actual.right.operand.member_name == "secondFakeProp"
-    assert actual.right.operand.value is None
+    assert actual.right.operand.path == ["secondFakeProp"]
 
 @pytest.mark.parametrize(
     "cel, operator",
@@ -186,5 +182,4 @@ def test_parenthesis_node(cel, operator):
 
     # Check that the operand.expression is PropertyAccessNode
     assert isinstance(actual.operand.expression, PropertyAccessNode)
-    assert actual.operand.expression.member_name == "fakeProp"
-    assert actual.operand.expression.value is None
+    assert actual.operand.expression.path == ["fakeProp"]
