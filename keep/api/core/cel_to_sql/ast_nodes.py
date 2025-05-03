@@ -91,7 +91,7 @@ class ComparisonNodeOperator(Enum):
     GT = ">"
     GE = ">="
     EQ = "=="
-    NE = "!=="
+    NE = "!="
     IN = "in"
     CONTAINS = "contains"
     STARTS_WITH = "startsWith"
