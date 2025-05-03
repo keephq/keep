@@ -16,6 +16,12 @@ function mapOperator(op: string): string {
       return ">=";
     case "<=":
       return "<=";
+    case "contains":
+      return "contains";
+    case "startsWith":
+      return "beginsWith";
+    case "endsWith":
+      return "endsWith";
     default:
       return op;
   }
@@ -41,13 +47,13 @@ export function convertCelAstToQueryBuilderAst(
 
       const rules = [];
 
-      if (left.combinator == combinator) {
+      if (left.combinator == combinator || left.rules.length <= 1) {
         rules.push(...left.rules);
       } else {
         rules.push(left);
       }
 
-      if (right.combinator == combinator) {
+      if (right.combinator == combinator || right.rules.length <= 1) {
         rules.push(...right.rules);
       } else {
         rules.push(right);
@@ -70,7 +76,7 @@ export function convertCelAstToQueryBuilderAst(
         (node as CelAst.ComparisonNode)
           .first_operand as CelAst.PropertyAccessNode
       )?.path.join(".");
-      const operator = mapOperator((node as CelAst.ComparisonNode).operator);
+      const operator = (node as CelAst.ComparisonNode).operator;
       const value = (
         (node as CelAst.ComparisonNode).second_operand as CelAst.ConstantNode
       )?.value;
@@ -80,7 +86,6 @@ export function convertCelAstToQueryBuilderAst(
         queryBuilderField = {
           field,
           operator: "notNull",
-          value,
           id: uuidv4(),
         } as any;
       } else if (
@@ -90,13 +95,12 @@ export function convertCelAstToQueryBuilderAst(
         queryBuilderField = {
           field,
           operator: "null",
-          value,
           id: uuidv4(),
         } as any;
       } else {
         queryBuilderField = {
           field,
-          operator,
+          operator: mapOperator((node as CelAst.ComparisonNode).operator),
           value,
           id: uuidv4(),
         } as any;

@@ -10,7 +10,7 @@ export namespace CelAst {
     GT = ">",
     GE = ">=",
     EQ = "==",
-    NE = "!==",
+    NE = "!=",
     IN = "in",
     CONTAINS = "contains",
     STARTS_WITH = "startsWith",
