@@ -210,6 +210,14 @@ jobs:
 
       - name: Stop old version services
         run: |
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-backend alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          
+          echo "Current head revision: $REVISION"
+      
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 2: Run source version
@@ -295,7 +303,24 @@ jobs:
 
       - name: Run tests against source version
         run: |
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-backend alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          
+          echo "Current head revision: $REVISION"
+          
+          if [[ "$REVISION" != "$WORKFLOW_REVISION" ]]; then
+            echo "Revisions don't match, continue..."
+          else
+            echo "Revisions match, exiting..."
+            exit 0
+          fi
+          
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+        env:
+          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
       - name: Stop source version services
         run: |
@@ -375,7 +400,24 @@ jobs:
 
       - name: Run tests against old version again
         run: |
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-backend alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          
+          echo "Current head revision: $REVISION"
+          
+          if [[ "$REVISION" != "$WORKFLOW_REVISION" ]]; then
+            echo "Revisions don't match, continue..."
+          else
+            echo "Revisions match, exiting..."
+            exit 0
+          fi
+          
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+        env:
+          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
       - name: Stop old version services again
         run: |
