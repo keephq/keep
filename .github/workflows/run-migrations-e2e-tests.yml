@@ -72,7 +72,6 @@ jobs:
       - name: Get Playwright version from poetry.lock
         id: playwright-version
         run: |
-          echo "$(find ./)"
           PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
 
@@ -336,7 +335,7 @@ jobs:
       - name: Add dummy migration
         run: |
           # Add dummy migration script to container
-          docker cp keep/tests/e2e_tests/add_dummy_migration.py keep-keep-backend-1:./add_dummy_migration.py
+          docker cp ./tests/e2e_tests/add_dummy_migration.sh keep-keep-backend-1:./add_dummy_migration.py
           
           # Run script inside the container
           docker exec keep-keep-backend-1 chmod +x ./add_dummy_migration.py
