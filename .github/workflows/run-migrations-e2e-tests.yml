@@ -211,7 +211,7 @@ jobs:
       - name: Stop old version services
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
-          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)')
           
           echo "Current head revision: $REVISION"
       
@@ -304,7 +304,7 @@ jobs:
       - name: Run tests against source version
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
-          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)')
           
           echo "Current head revision: $REVISION"
           
@@ -401,7 +401,7 @@ jobs:
       - name: Run tests against old version again
         run: |
           # Run alembic inside the container and extract revision containing '(head)'
-          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)' | awk '{print $2}')
+          REVISION=$(docker exec keep-keep-backend-1 alembic -c keep/alembic.ini current | grep '(head)')
           
           echo "Current head revision: $REVISION"
           
