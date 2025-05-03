@@ -3,6 +3,7 @@ Site24x7Provider is a class that allows to install webhooks and get alerts in Si
 """
 
 import dataclasses
+import json
 from typing import List
 from urllib.parse import urlencode, urljoin
 
@@ -224,7 +225,7 @@ class Site24X7Provider(BaseProvider):
     ) -> AlertDto:
         return AlertDto(
             url=event.get("MONITORURL", ""),
-            lastReceived=event.get("INCIDENT_TIME", ""),
+            lastReceived=event.get("INCIDENT_TIME_ISO", ""),
             description=event.get("INCIDENT_REASON", ""),
             name=event.get("MONITORNAME", ""),
             id=event.get("MONITOR_ID", ""),
