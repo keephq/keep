@@ -335,7 +335,7 @@ jobs:
       - name: Add dummy migration
         run: |
           # Add dummy migration script to container
-          docker copy keep/tests/e2e_tests/add_dummy_migration.py keep-keep-backend-1:./add_dummy_migration.py
+          docker cp keep/tests/e2e_tests/add_dummy_migration.py keep-keep-backend-1:./add_dummy_migration.py
           
           # Run script inside the container
           docker exec keep-keep-backend-1 chmod +x ./add_dummy_migration.py
