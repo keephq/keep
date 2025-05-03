@@ -8,7 +8,9 @@ echo "SENTRY_DISABLED: ${SENTRY_DISABLED}"
 if [ -n "${NEXTAUTH_SECRET}" ]; then
     echo "NEXTAUTH_SECRET is set"
 else
-    echo "‼️ WARNING: NEXTAUTH_SECRET is not set"
+    echo "‼️ WARNING: NEXTAUTH_SECRET is not set, setting default value (INSECURE)"
+    export NEXTAUTH_SECRET=secret
+    echo "NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}"
 fi
 
 # Check Azure AD environment variables if AUTH_TYPE is "azuread"
