@@ -171,7 +171,7 @@ export const useAlerts = () => {
     const requestUrl = `/alerts/query`;
     const swrKey = () =>
       // adding "/alerts/query" so global revalidation works
-      api.isReady()
+      api.isReady() && query
         ? requestUrl +
           Object.entries(queryToPost)
             .sort(([fstKey], [scdKey]) => fstKey.localeCompare(scdKey))
@@ -199,9 +199,9 @@ export const useAlerts = () => {
       data: swrValue.data?.queryResult?.results as AlertDto[],
       queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
       isLoading: swrValue.isLoading || !swrValue.data?.queryResult,
-      totalCount: swrValue.data?.queryResult?.count,
-      limit: swrValue.data?.queryResult?.limit,
-      offset: swrValue.data?.queryResult?.offset,
+      totalCount: swrValue.data?.queryResult?.count as number,
+      limit: swrValue.data?.queryResult?.limit as number,
+      offset: swrValue.data?.queryResult?.offset as number,
     };
   };
 
