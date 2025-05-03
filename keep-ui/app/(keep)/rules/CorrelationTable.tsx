@@ -9,7 +9,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Rule } from "utils/hooks/useRules";
 import { CorrelationSidebar } from "./CorrelationSidebar";
 import {
@@ -18,23 +18,12 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { DefaultRuleGroupType } from "react-querybuilder";
-import { parseCEL } from "react-querybuilder/parseCEL";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
-import { CorrelationFormType } from "./CorrelationSidebar/types";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { GroupedByCell } from "./GroupedByCel";
 import CelInput from "@/features/cel-input/cel-input";
-
-const TIMEFRAME_UNITS_FROM_SECONDS = {
-  seconds: (amount: number) => amount,
-  minutes: (amount: number) => amount / 60,
-  hours: (amount: number) => amount / 3600,
-  days: (amount: number) => amount / 86400,
-} as const;
 
 const columnHelper = createColumnHelper<Rule>();
 
@@ -99,9 +88,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         header: "Description",
         cell: (context) => {
           let cel = context.getValue();
-          if (cel.startsWith("(") && cel.endsWith(")")) {
-            cel = cel.slice(1, -1);
-          }
+
           return (
             <div
               onClick={(e) => {
