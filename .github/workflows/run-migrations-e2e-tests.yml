@@ -72,6 +72,7 @@ jobs:
       - name: Get Playwright version from poetry.lock
         id: playwright-version
         run: |
+          echo "$(find ./)"
           PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
 
