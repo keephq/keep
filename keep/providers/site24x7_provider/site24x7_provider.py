@@ -3,7 +3,6 @@ Site24x7Provider is a class that allows to install webhooks and get alerts in Si
 """
 
 import dataclasses
-import json
 from typing import List
 from urllib.parse import urlencode, urljoin
 
