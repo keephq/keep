@@ -31,7 +31,10 @@ export const CorrelationGroups = () => {
         render={({ field: { value, onChange } }) => (
           <QueryBuilder
             query={value}
-            onQueryChange={onChange}
+            onQueryChange={(query) => {
+              console.log("Ihor", query);
+              onChange(query);
+            }}
             addRuleToNewGroups
             controlElements={{
               ruleGroup: RuleGroup,

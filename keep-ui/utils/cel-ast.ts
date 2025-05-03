@@ -63,20 +63,9 @@ export namespace CelAst {
     operand?: Node;
   }
 
-  export interface MemberAccessNode extends Node {
-    member_name: string;
-  }
-
-  export interface MethodAccessNode extends MemberAccessNode {
-    args?: ConstantNode[];
-  }
-
-  export interface PropertyAccessNode extends MemberAccessNode {
+  export interface PropertyAccessNode extends Node {
+    path: string[];
     value?: any;
     data_type?: DataType;
-  }
-
-  export interface IndexAccessNode extends PropertyAccessNode {
-    // Same as PropertyAccessNode
   }
 }
