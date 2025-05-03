@@ -332,23 +332,25 @@ jobs:
         env:
           WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
+      - name: Add dummy migration
+        run: |
+          # Add dummy migration script to container
+          docker copy keep/tests/e2e_tests/add_dummy_migration.py keep-keep-backend-1:./add_dummy_migration.py
+          
+          # Run script inside the container
+          docker exec keep-keep-backend-1 chmod +x ./add_dummy_migration.py
+          docker exec keep-keep-backend-1 ./add_dummy_migration.py
+
       - name: Stop source version services
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
-      # Phase 3: Run old version again
-      - name: Create docker-compose file for old version again
-        run: |
-          cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.OLD_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
-          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.OLD_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
-          cat tests/e2e_tests/docker-compose-modified.yml
-
+      # Phase 3: Run source version without dummy migration again
       - name: Start old version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
-      - name: Wait for old version services again
+      - name: Wait for source version services again
         run: |
           # Function for exponential backoff
           function wait_for_service() {
