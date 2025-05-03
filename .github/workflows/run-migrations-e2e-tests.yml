@@ -129,6 +129,7 @@ jobs:
           cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.OLD_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.OLD_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          cat tests/e2e_tests/docker-compose-modified.yml
 
       - name: Start old version services
         run: |
@@ -230,6 +231,7 @@ jobs:
           cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.SOURCE_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
           sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.SOURCE_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          cat tests/e2e_tests/docker-compose-modified.yml
 
       - name: Start source version services
         run: |
@@ -335,6 +337,13 @@ jobs:
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 3: Run old version again
+      - name: Create docker-compose file for source version
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.OLD_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.OLD_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          cat tests/e2e_tests/docker-compose-modified.yml
+
       - name: Start old version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
