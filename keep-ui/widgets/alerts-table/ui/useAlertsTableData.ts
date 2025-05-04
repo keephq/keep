@@ -58,11 +58,9 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   }, [canRevalidate]);
 
   const getDateRangeCel = () => {
-    const currentDate = new Date();
-
     if (query?.timeFrame.type === "relative") {
       return `lastReceived >= '${new Date(
-        currentDate.getTime() - query.timeFrame.deltaMs
+        new Date().getTime() - query.timeFrame.deltaMs
       ).toISOString()}'`;
     } else if (query?.timeFrame.type === "absolute") {
       return [
