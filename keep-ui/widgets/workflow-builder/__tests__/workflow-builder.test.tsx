@@ -196,7 +196,6 @@ const mockConfig: InternalConfig = {
   READ_ONLY: false,
   OPEN_AI_API_KEY_SET: false,
   NOISY_ALERTS_ENABLED: false,
-  FRIGADE_DISABLED: "false",
   KEEP_DOCS_URL: "https://docs.keephq.dev",
   KEEP_CONTACT_US_URL: "https://docs.keephq.dev/slack",
   SENTRY_DISABLED: "true",

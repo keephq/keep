@@ -22,7 +22,6 @@ ENV PYTHONPATH="/app:${PYTHONPATH}"
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 ENV POSTHOG_DISABLED="true"
-ENV FRIGADE_DISABLED="true"
 
 ENTRYPOINT ["/app/keep/entrypoint.sh"]
 

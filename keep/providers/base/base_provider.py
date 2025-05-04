@@ -167,6 +167,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         return {}
 
+    def get_provider_metadata(self) -> dict:
+        """
+        Get provider metadata. E.g. Provider Version.
+
+        Should be implemented by the provider.
+
+        Returns:
+            dict: The provider metadata.
+        """
+        return {}
+
     def notify(self, **kwargs):
         """
         Output alert message.
@@ -287,19 +298,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 "audit_enabled": audit_enabled,
             }
 
-            # enrich the alert with _enrichments
-            enrichments_bl.enrich_entity(
-                enrichments=_enrichments,
-                action_description=f"Workflow enriched the alert with {enrichment_string}",
-                **common_kwargs,
-            )
+            if _enrichments:
+                # enrich the alert with _enrichments
+                enrichments_bl.enrich_entity(
+                    enrichments=_enrichments,
+                    action_description=f"Workflow enriched the alert with {enrichment_string}",
+                    **common_kwargs,
+                )
 
-            # enrich with disposable enrichments
-            enrichments_bl.disposable_enrich_entity(
-                enrichments=disposable_enrichments,
-                action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
-                **common_kwargs,
-            )
+            if disposable_enrichments:
+                # enrich with disposable enrichments
+                enrichments_bl.disposable_enrich_entity(
+                    enrichments=disposable_enrichments,
+                    action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
+                    **common_kwargs,
+                )
 
             should_check_incidents_resolution = (
                 _enrichments.get("status", None) == "resolved"

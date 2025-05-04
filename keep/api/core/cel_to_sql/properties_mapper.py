@@ -1,12 +1,18 @@
+from typing import Optional
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
+    ComparisonNodeOperator,
     ConstantNode,
+    DataType,
     LogicalNode,
+    LogicalNodeOperator,
     MemberAccessNode,
+    MethodAccessNode,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
     UnaryNode,
+    UnaryNodeOperator,
 )
 
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -31,20 +37,19 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         self,
         json_property_name: str,
         property_to_extract: list[str],
-        data_type: type,
+        data_type: DataType,
     ):
         super().__init__(
-            f"JSON({json_property_name}).{property_to_extract}",
-            None,
-            data_type,
+            member_name=f"JSON({json_property_name}).{property_to_extract}",
         )
         self.json_property_name = json_property_name
         self.property_to_extract = property_to_extract
         self.data_type = data_type
 
-    def __str__(self):
-        return f"JSON({self.json_property_name}).{'.'.join(self.property_to_extract)}"
-
+    json_property_name: Optional[str]
+    property_to_extract: Optional[list[str]]
+    method_access_node: Optional[MethodAccessNode]
+    data_type: Optional[DataType]
 
 class MultipleFieldsNode(Node):
     """
@@ -57,10 +62,8 @@ class MultipleFieldsNode(Node):
     Args:
         fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances to initialize the node with.
     """
-    def __init__(self, fields: list[PropertyAccessNode], data_type: type = None):
-        self.fields = fields
-        self.data_type = data_type
-
+    fields: list[PropertyAccessNode]
+    data_type: Optional[DataType]
 
     def __str__(self):
         return f"[{', '.join(['.'.join(field.get_property_path()) for field in self.fields])}]"
@@ -144,11 +147,13 @@ class PropertiesMapper:
             operand = self.__visit_nodes(abstract_node.operand, involved_fields)
 
             if operand is None:
-                return UnaryNode(abstract_node.operator, ConstantNode(True))
+                return UnaryNode(
+                    operator=abstract_node.operator, operand=ConstantNode(value=True)
+                )
 
             return UnaryNode(
-                abstract_node.operator,
-                self.__visit_nodes(abstract_node.operand, involved_fields),
+                operator=abstract_node.operator,
+                operand=self.__visit_nodes(abstract_node.operand, involved_fields),
             )
 
         if isinstance(abstract_node, ConstantNode):
@@ -171,9 +176,9 @@ class PropertiesMapper:
         )
         involved_fields.append(property_metadata)
         comparison_node = ComparisonNode(
-            first_operand,
-            comparison_node.operator,
-            comparison_node.second_operand,
+            first_operand=first_operand,
+            operator=comparison_node.operator,
+            second_operand=comparison_node.second_operand,
         )
         return self._modify_comparison_node_based_on_mapping(
             comparison_node, property_metadata
@@ -215,45 +220,53 @@ class PropertiesMapper:
             ComparisonNode: The modified comparison node, or the original comparison
             node if no modifications are necessary.
         """
+        if not isinstance(comparison_node.second_operand, ConstantNode):
+            return comparison_node
+
         if mapping.enum_values:
             if comparison_node.operator in [
-                ComparisonNode.GE,
-                ComparisonNode.GT,
-                ComparisonNode.LE,
-                ComparisonNode.LT,
+                ComparisonNodeOperator.GE,
+                ComparisonNodeOperator.GT,
+                ComparisonNodeOperator.LE,
+                ComparisonNodeOperator.LT,
             ]:
                 if comparison_node.second_operand.value not in mapping.enum_values:
                     if comparison_node.operator in [
-                        ComparisonNode.LT,
-                        ComparisonNode.LE,
+                        ComparisonNodeOperator.LT,
+                        ComparisonNodeOperator.LE,
                     ]:
                         return UnaryNode(
-                            UnaryNode.NOT,
-                            ComparisonNode(
-                                comparison_node.first_operand,
-                                ComparisonNode.IN,
-                                [ConstantNode(item) for item in mapping.enum_values],
+                            operator=UnaryNodeOperator.NOT,
+                            operand=ComparisonNode(
+                                first_operand=comparison_node.first_operand,
+                                operator=ComparisonNodeOperator.IN,
+                                second_operand=[
+                                    ConstantNode(value=item)
+                                    for item in mapping.enum_values
+                                ],
                             ),
                         )
                     else:
                         return ComparisonNode(
-                            comparison_node.first_operand,
-                            ComparisonNode.IN,
-                            [ConstantNode(item) for item in mapping.enum_values],
+                            first_operand=comparison_node.first_operand,
+                            operator=ComparisonNodeOperator.IN,
+                            second_operand=[
+                                ConstantNode(value=item) for item in mapping.enum_values
+                            ],
                         )
 
                 index = mapping.enum_values.index(comparison_node.second_operand.value)
                 ranges = {
-                    ComparisonNode.GT: [index + 1, None],
-                    ComparisonNode.GE: [index, None],
-                    ComparisonNode.LT: [index, None],
-                    ComparisonNode.LE: [index + 1, None],
+                    ComparisonNodeOperator.GT: [index + 1, None],
+                    ComparisonNodeOperator.GE: [index, None],
+                    ComparisonNodeOperator.LT: [index, None],
+                    ComparisonNodeOperator.LE: [index + 1, None],
                 }
 
                 start_index, end_index = ranges[comparison_node.operator]
 
                 if (
-                    comparison_node.operator == ComparisonNode.LE
+                    comparison_node.operator == ComparisonNodeOperator.LE
                     and start_index >= len(mapping.enum_values)
                 ):
                     # it handles the case when queried value is the last in enum
@@ -262,24 +275,27 @@ class PropertiesMapper:
                     return None
 
                 if (
-                    comparison_node.operator == ComparisonNode.GT
+                    comparison_node.operator == ComparisonNodeOperator.GT
                     and start_index >= len(mapping.enum_values)
                 ):
                     # nothig could be greater than the last value in enum
                     # so it will always return False
-                    return ConstantNode(False)
+                    return ConstantNode(value=False)
 
                 result = ComparisonNode(
-                    comparison_node.first_operand,
-                    ComparisonNode.IN,
-                    [
-                        ConstantNode(item)
+                    first_operand=comparison_node.first_operand,
+                    operator=ComparisonNodeOperator.IN,
+                    second_operand=[
+                        ConstantNode(value=item)
                         for item in mapping.enum_values[start_index:end_index]
                     ],
                 )
 
-                if comparison_node.operator in [ComparisonNode.LT, ComparisonNode.LE]:
-                    result = UnaryNode(UnaryNode.NOT, result)
+                if comparison_node.operator in [
+                    ComparisonNodeOperator.LT,
+                    ComparisonNodeOperator.LE,
+                ]:
+                    result = UnaryNode(operator=UnaryNodeOperator.NOT, operand=result)
                 return result
 
         return comparison_node
@@ -294,8 +310,7 @@ class PropertiesMapper:
 
         if isinstance(mapping, SimpleFieldMapping):
             return PropertyAccessNode(
-                member_name=mapping.map_to,
-                value=None,
+                path=[mapping.map_to],
                 data_type=data_type,
             )
 
@@ -305,12 +320,13 @@ class PropertiesMapper:
         self, property_access_node: PropertyAccessNode
     ) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
         property_metadata = self.properties_metadata.get_property_metadata(
-            property_access_node.get_property_path()
+            property_access_node.path
         )
 
         if not property_metadata:
+            joined_path = ".".join(property_access_node.path)
             raise PropertiesMappingException(
-                f'Missing mapping configuration for property "{property_access_node.get_property_path()}"'
+                f'Missing mapping configuration for property "{joined_path}"'
             )
 
         result = []
@@ -321,7 +337,7 @@ class PropertiesMapper:
             )
             result.append(property_access_node)
         return (
-            MultipleFieldsNode(result, property_metadata.data_type)
+            MultipleFieldsNode(fields=result, data_type=property_metadata.data_type)
             if len(result) > 1
             else result[0]
         ), property_metadata

@@ -218,6 +218,7 @@ scripts/keep_slack_bot.py
 providers_cache.json
 
 tests/provision/*
+!tests/provision/workflows*
 grafana/*
 !grafana/provisioning/
 !grafana/dashboards/

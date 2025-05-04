@@ -2,6 +2,7 @@ import json
 import logging
 from sqlalchemy import func, literal, literal_column, select, text
 from sqlalchemy.exc import OperationalError
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     JsonFieldMapping,
@@ -118,7 +119,7 @@ def build_facets_data_query(
             elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
                 facet_value.append(item.map_to)
 
-        casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, str) for item in facet_value])}"
+        casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
         facet_sub_query = (
             select(
                 literal(facet.id).label("facet_id"),

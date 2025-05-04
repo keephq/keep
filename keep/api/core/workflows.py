@@ -215,6 +215,7 @@ def build_workflows_query(
             and_(
                 Workflow.id == literal_column("entity_id"),
                 Workflow.tenant_id == tenant_id,
+                Workflow.is_test == False,
             ),
         )
         .outerjoin(

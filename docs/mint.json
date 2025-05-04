@@ -202,7 +202,6 @@
             "providers/documentation/linearb-provider",
             "providers/documentation/litellm-provider",
             "providers/documentation/llamacpp-provider",
-            "providers/documentation/mailchimp-provider",
             "providers/documentation/mailgun-provider",
             "providers/documentation/mattermost-provider",
             "providers/documentation/microsoft-planner-provider",

@@ -18,7 +18,7 @@ from keep.api.core.db import (
     get_previous_execution_id,
     get_timeouted_workflow_exections,
 )
-from keep.api.core.db import get_workflow as get_workflow_db
+from keep.api.core.db import get_workflow_by_id as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.core.metrics import (
     workflow_execution_errors_total,

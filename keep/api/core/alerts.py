@@ -3,12 +3,12 @@ import json
 import logging
 import os
 from typing import Tuple
-from uuid import UUID
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, text
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
@@ -40,34 +40,42 @@ alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 50000))
 
 alert_field_configurations = [
     FieldMappingConfiguration(
-        map_from_pattern="id", map_to="lastalert.alert_id", data_type=UUID
+        map_from_pattern="id", map_to="lastalert.alert_id", data_type=DataType.UUID
     ),
     FieldMappingConfiguration(
-        map_from_pattern="source", map_to="alert.provider_type", data_type=str
+        map_from_pattern="source",
+        map_to="alert.provider_type",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="providerId", map_to="alert.provider_id", data_type=str
+        map_from_pattern="providerId",
+        map_to="alert.provider_id",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="providerType", map_to="alert.provider_type", data_type=str
+        map_from_pattern="providerType",
+        map_to="alert.provider_type",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="timestamp",
         map_to="lastalert.timestamp",
-        data_type=datetime.datetime,
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="fingerprint", map_to="lastalert.fingerprint", data_type=str
+        map_from_pattern="fingerprint",
+        map_to="lastalert.fingerprint",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="startedAt", map_to="startedAt", data_type=datetime.datetime
+        map_from_pattern="startedAt", map_to="startedAt", data_type=DataType.DATETIME
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.id",
         map_to=[
             "incident.id",
         ],
-        data_type=UUID,
+        data_type=DataType.UUID,
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.name",
@@ -75,7 +83,7 @@ alert_field_configurations = [
             "incident.user_generated_name",
             "incident.ai_generated_name",
         ],
-        data_type=str,
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="severity",
@@ -90,7 +98,7 @@ alert_field_configurations = [
                 key=lambda s: s.order,
             )
         ],
-        data_type=str,
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="lastReceived",
@@ -98,7 +106,7 @@ alert_field_configurations = [
             "JSON(alertenrichment.enrichments).*",
             "JSON(alert.event).*",
         ],
-        data_type=datetime.datetime,
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
         map_from_pattern="status",
@@ -107,7 +115,7 @@ alert_field_configurations = [
             "JSON(alert.event).*",
         ],
         enum_values=list(reversed([item.value for _, item in enumerate(AlertStatus)])),
-        data_type=str,
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="firingCounter",
@@ -115,7 +123,7 @@ alert_field_configurations = [
             "JSON(alertenrichment.enrichments).*",
             "JSON(alert.event).*",
         ],
-        data_type=int,
+        data_type=DataType.INTEGER,
     ),
     FieldMappingConfiguration(
         map_from_pattern="dismissed",
@@ -131,7 +139,7 @@ alert_field_configurations = [
             "JSON(alertenrichment.enrichments).*",
             "JSON(alert.event).*",
         ],
-        data_type=str,
+        data_type=DataType.STRING,
     ),
 ]
 

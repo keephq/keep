@@ -716,6 +716,8 @@ class EnrichmentsBl:
         alert_id = UUIDType(binary=False).process_bind_param(
             last_alert.alert_id, self.db_session.bind.dialect
         )
+        # For elastic we do not save instance-level enrichments
+        common_kwargs["should_exist"] = False
         self.enrich_entity(fingerprint=alert_id, audit_enabled=False, **common_kwargs)
 
     def enrich_entity(

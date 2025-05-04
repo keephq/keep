@@ -276,12 +276,8 @@ export const AlertsRulesBuilder = ({
   }, []);
 
   useEffect(() => {
-    if (defaultQuery === "") {
-      handleClearInput();
-    } else {
-      setCELRules(defaultQuery);
-    }
-  }, [defaultQuery, handleClearInput]);
+    setCELRules(defaultQuery);
+  }, [defaultQuery]);
 
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
@@ -324,25 +320,6 @@ export const AlertsRulesBuilder = ({
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
-      // You can now use `target` which is asserted to be an HTMLTextAreaElement
-
-      // check if the CEL is valid by comparing the parsed query with the original CEL
-      // remove spaces so that "a && b" is the same as "a&&b"
-      const celQuery = formatQuery(parsedCELRulesToQuery, "cel");
-      /*
-      SHAHAR: this is the old way of checking if the CEL is valid
-              I think its over complicated so let's just check if the query is "1 == 1" (which is parse error)
-              I'll leave the old code here for reference
-
-      const isValidCEL =
-        celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
-        celRules === "";
-      */
-
-      // SHAHAR: new way of checking if the CEL is valid
-      const isValidCEL = celRules == "" || celQuery !== "1 == 1";
-      setIsValidCEL(isValidCEL);
-
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
@@ -468,6 +445,7 @@ export const AlertsRulesBuilder = ({
                   value={celRules}
                   fieldsForSuggestions={alertFields}
                   onValueChange={onValueChange}
+                  onIsValidChange={setIsValidCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
