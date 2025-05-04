@@ -345,7 +345,7 @@ class WorkflowManager:
                                     "workflow_id": workflow_model.id,
                                     "tenant_id": tenant_id,
                                     "cel": trigger["cel"],
-                                    "deprecated_filters": trigger["filters"],
+                                    "deprecated_filters": trigger.get("filters"),
                                 },
                             )
                             continue
@@ -358,7 +358,7 @@ class WorkflowManager:
                                 "workflow_id": workflow_model.id,
                                 "tenant_id": tenant_id,
                                 "cel": trigger["cel"],
-                                "deprecated_filters": trigger["filters"],
+                                "deprecated_filters": trigger.get("filters"),
                             },
                         )
                         continue

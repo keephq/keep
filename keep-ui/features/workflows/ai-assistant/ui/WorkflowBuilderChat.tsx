@@ -383,7 +383,7 @@ export function WorkflowBuilderChat({
       }
 
       const properties = {
-        alert: { cel: args.args.alertFilters },
+        cel: args.args.alertFilters,
       };
 
       const trigger = getTriggerDefinitionFromCopilotAction(

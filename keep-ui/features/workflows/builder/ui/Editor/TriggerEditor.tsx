@@ -1,6 +1,10 @@
 import { Button, TextInput } from "@/components/ui";
 import { useWorkflowStore } from "@/entities/workflows";
-import { BackspaceIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import {
+  BackspaceIcon,
+  FunnelIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
 import { Text, Subtitle, Icon, Switch } from "@tremor/react";
 import { EditorLayout } from "./StepEditor";
 import { capitalize } from "@/utils/helpers";
@@ -10,6 +14,7 @@ import { useCallback } from "react";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
 import { AlertsCountBadge } from "@/features/presets/create-or-update-preset/ui/alerts-count-badge";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function TriggerEditor() {
   const {
@@ -19,6 +24,10 @@ export function TriggerEditor() {
     selectedNode,
     validationErrors,
   } = useWorkflowStore();
+
+  const { data: config } = useConfig();
+
+  const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keep.dev";
 
   const saveNodeDataDebounced = useCallback(
     debounce((key: string, value: string | Record<string, any>) => {
@@ -39,9 +48,9 @@ export function TriggerEditor() {
     if (!currentProperties.filters) {
       currentProperties.filters = {};
     }
-    currentProperties.filters[filter] = value;
-    updateV2Properties({ alert: currentProperties });
-    saveNodeDataDebounced("properties", currentProperties);
+    const newProperties = { ...currentProperties, [filter]: value };
+    updateV2Properties({ alert: newProperties });
+    saveNodeDataDebounced("properties", newProperties);
   };
 
   const updateAlertCel = (value: string) => {
@@ -105,22 +114,28 @@ export function TriggerEditor() {
               </Text>
             )}
             <div>
-              <Subtitle className="mt-2.5">CEL Expression</Subtitle>
+              <div className="flex  items-center">
+                <Subtitle>CEL Expression</Subtitle>
+                <Icon
+                  icon={QuestionMarkCircleIcon}
+                  variant="simple"
+                  color="gray"
+                  className="cursor-pointer"
+                  size="sm"
+                  onClick={() => {
+                    window.open(`${docsUrl}/overview/cel`, "_blank");
+                  }}
+                  tooltip="Read more about CEL expressions"
+                />
+              </div>
               <div className="flex items-center mt-1 relative">
                 <CelInput
                   staticPositionForSuggestions={true}
                   value={properties.alert.cel}
-                  placeholder="Use CEL to filter alerts that trigger this workflow. e.g. source.contains('kibana')"
+                  placeholder="CEL expression based trigger"
                   onValueChange={(value: string) => updateAlertCel(value)}
                   onClearValue={() => updateAlertCel("")}
                   fieldsForSuggestions={alertFields}
-                />
-                <Icon
-                  icon={BackspaceIcon}
-                  className="cursor-pointer"
-                  color="red"
-                  tooltip={`Clear CEL expression`}
-                  onClick={() => updateAlertCel("")}
                 />
               </div>
               <div className="mt-4">
