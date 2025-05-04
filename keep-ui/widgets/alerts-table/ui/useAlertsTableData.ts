@@ -3,7 +3,6 @@ import { AlertDto, AlertsQuery, useAlerts } from "@/entities/alerts/model";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 
 export interface AlertsTableDataQuery {
   searchCel: string;
@@ -187,20 +186,14 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     setAlertsToReturn(alertsLoading ? undefined : alerts);
   }, [isPaused, alertsLoading, alerts]);
 
-  const [debouncedFacetsCel] = useDebouncedValue(mainCelQuery, 4000);
-  const [debouncedFacetsPanelRefreshToken] = useDebouncedValue(
-    facetsPanelRefreshToken,
-    4000
-  );
-
   return {
     alerts: alertsToReturn,
     totalCount,
     alertsLoading: !isPolling && alertsLoading,
-    facetsCel: debouncedFacetsCel,
-    facetsPanelRefreshToken: debouncedFacetsPanelRefreshToken,
+    facetsCel: mainCelQuery,
     alertsChangeToken: alertsChangeToken,
     alertsError: alertsError,
     mutateAlerts,
+    facetsPanelRefreshToken,
   };
 };
