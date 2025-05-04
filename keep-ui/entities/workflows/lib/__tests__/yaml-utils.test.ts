@@ -123,7 +123,8 @@ describe("YAML Utils", () => {
   });
 
   it("parseWorkflowYamlToJSON should return json with workflow section if the input is not wrapped in workflow section", () => {
-    const json = parseWorkflowYamlToJSON(clickhouseExampleYaml);
-    expect(json).toHaveProperty("workflow");
+    const parsed = parseWorkflowYamlToJSON(clickhouseExampleYaml);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveProperty("workflow");
   });
 });
