@@ -56,7 +56,7 @@ export function TriggerEditor() {
     const currentFilters = properties.alert || {};
     updateV2Properties({ alert: { ...currentFilters, cel: value } });
     saveNodeDataDebounced("properties", {
-      alert: { ...currentFilters, cel: value },
+      { ...currentFilters, cel: value }
     });
   };
 
