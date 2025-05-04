@@ -347,29 +347,29 @@ jobs:
             NEW_MIGRATION=\$(ls -t migrations/versions/*.py | head -n1) &&
 
             cat > \"\$NEW_MIGRATION\" << EOF
-            \"\"\"test_dummy_migration
-      
-            Revision ID: \$(basename \"\$NEW_MIGRATION\" .py)
-            Revises: \$(basename \"\$LAST_MIGRATION\" .py)
-            Create Date: \$(date +\"%Y-%m-%d %H:%M:%S\")
-      
-            \"\"\"
-            from alembic import op
-            import sqlalchemy as sa
-      
-            # revision identifiers, used by Alembic.
-            revision = '\$(basename \"\$NEW_MIGRATION\" .py)'
-            down_revision = '\$(basename \"\$LAST_MIGRATION\" .py)'
-            branch_labels = None
-            depends_on = None
-      
-            def upgrade() -> None:
-              # Empty upgrade operation
-              pass
-      
-            def downgrade() -> None:
-              # Empty downgrade operation
-              pass
+          \"\"\"test_dummy_migration
+    
+          Revision ID: \$(basename \"\$NEW_MIGRATION\" .py)
+          Revises: \$(basename \"\$LAST_MIGRATION\" .py)
+          Create Date: \$(date +\"%Y-%m-%d %H:%M:%S\")
+    
+          \"\"\"
+          from alembic import op
+          import sqlalchemy as sa
+    
+          # revision identifiers, used by Alembic.
+          revision = '\$(basename \"\$NEW_MIGRATION\" .py)'
+          down_revision = '\$(basename \"\$LAST_MIGRATION\" .py)'
+          branch_labels = None
+          depends_on = None
+    
+          def upgrade() -> None:
+            # Empty upgrade operation
+            pass
+    
+          def downgrade() -> None:
+            # Empty downgrade operation
+            pass
             EOF
             
             alembic -c /home/app/alembic_temp.ini upgrade head
