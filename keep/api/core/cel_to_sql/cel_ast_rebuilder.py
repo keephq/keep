@@ -170,8 +170,18 @@ class CelAstRebuilder:
             return self._visit_in(comparison_node)
 
         if isinstance(comparison_node.first_operand, MultipleFieldsNode):
-            return self._handle_mutliple_fields_node(
-                comparison_node.first_operand.fields,
+            fields = comparison_node.first_operand.fields
+
+            # in case it's comparison with null, no reason to check all fields
+            # if it's null, we can just check the last field in the list
+            if (
+                isinstance(comparison_node.second_operand, ConstantNode)
+                and comparison_node.second_operand.value is None
+            ):
+                fields = fields[-1:]
+
+            result = self._handle_mutliple_fields_node(
+                fields,
                 lambda field_node, is_first, is_last: self._visit_comparison_node(
                     ComparisonNode(
                         first_operand=field_node,
@@ -180,6 +190,7 @@ class CelAstRebuilder:
                     )
                 ),
             )
+            return result
 
         return comparison_node
 
