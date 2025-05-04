@@ -56,7 +56,7 @@ def test_db_migrations():
             os.path.join(temp_dir, "migrations"),
             ignore=shutil.ignore_patterns("versions")
         )
-        shutil.copy(".keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
+        shutil.copy("./keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
         alembic_ini_path = os.path.join(temp_dir, "migrations", "alembic.ini")
         migrations_path = os.path.join(temp_dir, "migrations")
 
