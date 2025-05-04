@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertDto, CommentMentionDto } from "@/entities/alerts/model";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useUsers } from "@/entities/users/model/useUsers";
 import UserAvatar from "@/components/navbar/UserAvatar";
@@ -20,12 +20,13 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 
 // TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
 
-interface IncidentActivity {
+export interface IncidentActivity {
   id: string;
   type: "comment" | "alert" | "newcomment" | "statuschange" | "assign";
   text?: string;
   timestamp: string;
   initiator?: string | AlertDto;
+  mentions?: CommentMentionDto[];
 }
 
 const ACTION_TYPES = [
@@ -139,6 +140,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
                 ? auditEvent.description
                 : "",
             timestamp: auditEvent.timestamp,
+            mentions: auditEvent.mentions,
           } as IncidentActivity;
         }) || []
     );

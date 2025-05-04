@@ -46,7 +46,10 @@ from keep.api.core.incidents import (
 )
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
-from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.alert import (
+    AlertAudit,
+    CommentMention,
+)
 from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.incident import (
@@ -893,26 +896,91 @@ def add_comment(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ) -> AlertAudit:
     extra = {
         "tenant_id": authenticated_entity.tenant_id,
         "commenter": authenticated_entity.email,
         "comment": change.comment,
         "incident_id": str(incident_id),
+        "tagged_users": change.tagged_users
     }
     logger.info("Adding comment to incident", extra=extra)
+
+    # Extract mentions from the comment
+    mentions = []
+    if change.comment:
+        # Find all email mentions in both formats:
+        # 1. @email
+        # 2. @DisplayName <email>
+        import re
+        # Pattern for direct email mentions
+        email_pattern = r'@([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+        # Pattern for name with email format
+        name_email_pattern = r'@[^<>]+ <([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})>'
+
+        # Find mentions in both formats
+        direct_mentions = re.findall(email_pattern, change.comment)
+        name_mentions = re.findall(name_email_pattern, change.comment)
+
+        # Combine both types of mentions
+        mentions = direct_mentions + name_mentions
+        if mentions:
+            logger.info(f"Found mentions in comment: {mentions}", extra=extra)
+
+    # Add tagged users from the frontend
+    if change.tagged_users:
+        # Combine regex-detected mentions with explicitly tagged users
+        for user_email in change.tagged_users:
+            if user_email not in mentions:
+                mentions.append(user_email)
+        logger.info(f"Combined mentions: {mentions}", extra=extra)
+
     comment = add_audit(
         authenticated_entity.tenant_id,
         str(incident_id),
         authenticated_entity.email,
         ActionType.INCIDENT_COMMENT,
         change.comment,
+        session=session,
+        commit=False
     )
 
+    # Add mentions to the comment
+    if mentions:
+        for user_email in mentions:
+            mention = CommentMention(
+                comment_id=comment.id,
+                mentioned_user_id=user_email,
+                tenant_id=authenticated_entity.tenant_id
+            )
+            session.add(mention)
+
+    session.commit()
+    session.refresh(comment)
+
+    # Trigger pusher event for the comment
     if pusher_client:
+        # Trigger general comment event
         pusher_client.trigger(
             f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
         )
+
+        # Trigger specific mention events for each mentioned user
+        for mentioned_email in mentions:
+            try:
+                pusher_client.trigger(
+                    f"private-{authenticated_entity.tenant_id}-{mentioned_email}",
+                    "incident-mention",
+                    {
+                        "incident_id": str(incident_id),
+                        "mentioned_by": authenticated_entity.email,
+                        "comment": change.comment,
+                    }
+                )
+                logger.info(f"Triggered mention notification for {mentioned_email}", extra=extra)
+            except Exception as e:
+                logger.error(f"Failed to trigger mention notification for {mentioned_email}: {str(e)}", extra=extra)
 
     logger.info("Added comment to incident", extra=extra)
     return comment

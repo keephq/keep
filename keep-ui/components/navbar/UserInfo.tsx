@@ -14,6 +14,7 @@ import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
+import { NotificationCenterWrapper } from "@/components/notifications/NotificationCenterWrapper";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -118,7 +119,10 @@ export const UserInfo = ({ session }: UserInfoProps) => {
         </li>
         <div className="flex items-center justify-between">
           {session && <UserDropdown session={session} />}
-          <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
+          <div className="flex items-center">
+            <NotificationCenterWrapper />
+            <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
+          </div>
         </div>
       </ul>
     </>
