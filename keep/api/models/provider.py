@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -55,3 +55,4 @@ class Provider(BaseModel):
     default_fingerprint_fields: list[str] | None = None
     provisioned: bool = False
     health: bool = False
+    provider_metadata: dict[str, Any] | None = Field(default_factory=dict)
