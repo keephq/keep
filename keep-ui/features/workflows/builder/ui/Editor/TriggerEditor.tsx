@@ -35,9 +35,20 @@ export function TriggerEditor() {
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
-    const updatedFilters = { ...currentFilters, [filter]: value };
-    updateV2Properties({ alert: updatedFilters });
-    saveNodeDataDebounced("properties", { alert: updatedFilters });
+    if (!currentFilters.filters) {
+      currentFilters.filters = {};
+    }
+    currentFilters.filters[filter] = value;
+    updateV2Properties({ alert: currentFilters });
+    saveNodeDataDebounced("properties", { alert: currentFilters });
+  };
+
+  const updateAlertCel = (value: string) => {
+    const currentFilters = properties.alert || {};
+    updateV2Properties({ alert: { ...currentFilters, cel: value } });
+    saveNodeDataDebounced("properties", {
+      alert: { ...currentFilters, cel: value },
+    });
   };
 
   const addFilter = () => {
@@ -49,7 +60,7 @@ export function TriggerEditor() {
 
   const deleteFilter = (filter: string) => {
     const currentFilters = { ...properties.alert };
-    delete currentFilters[filter];
+    delete currentFilters.filters[filter];
     updateV2Properties({ alert: currentFilters });
   };
 
@@ -66,11 +77,6 @@ export function TriggerEditor() {
 
   const renderTriggerContent = () => {
     const { data: alertFields } = useFacetPotentialFields("alerts");
-    const alertKeys = properties.alert ? Object.keys(properties.alert) : [];
-    const sortedAlertKeys = [
-      ...(alertKeys.includes("cel") ? ["cel"] : []),
-      ...alertKeys.filter((key) => key !== "cel"),
-    ];
 
     switch (selectedTriggerKey) {
       case "manual":
@@ -111,21 +117,49 @@ export function TriggerEditor() {
                 Add Filter
               </Button>
             </div>
-            {properties.alert &&
-              sortedAlertKeys.map((filter) =>
-                filter === "cel" ? (
+            <div>
+              <Subtitle className="mt-2.5">CEL Expression</Subtitle>
+              <div className="flex items-center mt-1 relative">
+                <CelInput
+                  staticPositionForSuggestions={true}
+                  value={properties.alert.cel}
+                  placeholder="Use CEL to filter alerts that trigger this workflow. e.g. source.contains('kibana')"
+                  onValueChange={(value: string) => updateAlertCel(value)}
+                  onClearValue={() => updateAlertCel("")}
+                  fieldsForSuggestions={alertFields}
+                />
+                <Icon
+                  icon={BackspaceIcon}
+                  className="cursor-pointer"
+                  color="red"
+                  tooltip={`Clear CEL expression`}
+                  onClick={() => updateAlertCel("")}
+                />
+              </div>
+            </div>
+            {properties.alert.filters &&
+              Object.keys(properties.alert.filters ?? {}).map((filter) => (
+                <>
+                  <Subtitle className="mt-2.5">
+                    Alert filter (deprecated)
+                  </Subtitle>
+                  <Text className="text-sm text-gray-500">
+                    Please convert your alert filters to CEL expressions to
+                    ensure stability and performance.
+                  </Text>
                   <div key={filter}>
-                    <Subtitle className="mt-2.5">CEL Expression</Subtitle>
-                    <div className="flex items-center mt-1 relative">
-                      <CelInput
-                        staticPositionForSuggestions={true}
-                        value={(properties.alert as any)[filter] || ""}
-                        placeholder="Use CEL to filter alerts that trigger this workflow. e.g. source.contains('kibana')"
-                        onValueChange={(value: string) =>
-                          updateAlertFilter(filter, value)
+                    <Subtitle className="mt-2.5">{filter}</Subtitle>
+                    <div className="flex items-center mt-1">
+                      <TextInput
+                        key={filter}
+                        placeholder={`Set alert ${filter}`}
+                        onChange={(e: any) =>
+                          updateAlertFilter(filter, e.target.value)
                         }
-                        onClearValue={() => updateAlertFilter(filter, "")}
-                        fieldsForSuggestions={alertFields}
+                        value={
+                          (properties.alert.filters as any)[filter] ||
+                          ("" as string)
+                        }
                       />
                       <Icon
                         icon={BackspaceIcon}
@@ -136,40 +170,8 @@ export function TriggerEditor() {
                       />
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <Subtitle className="mt-2.5">
-                      Alert filter (deprecated)
-                    </Subtitle>
-                    <Text className="text-sm text-gray-500">
-                      Please convert your alert filters to CEL expressions to
-                      ensure stability and performance.
-                    </Text>
-                    <div key={filter}>
-                      <Subtitle className="mt-2.5">{filter}</Subtitle>
-                      <div className="flex items-center mt-1">
-                        <TextInput
-                          key={filter}
-                          placeholder={`Set alert ${filter}`}
-                          onChange={(e: any) =>
-                            updateAlertFilter(filter, e.target.value)
-                          }
-                          value={
-                            (properties.alert as any)[filter] || ("" as string)
-                          }
-                        />
-                        <Icon
-                          icon={BackspaceIcon}
-                          className="cursor-pointer"
-                          color="red"
-                          tooltip={`Remove ${filter} filter`}
-                          onClick={() => deleteFilter(filter)}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )
-              )}
+                </>
+              ))}
           </>
         );
 

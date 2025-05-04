@@ -29,12 +29,11 @@ export const V2StepAlertTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("alert"),
   properties: z
     .object({
-      alert: AlertTriggerValueSchema,
-      source: z.string().optional(),
+      filters: z.record(z.string(), z.string()).optional(),
       cel: z.string().optional(),
+      only_on_change: z.array(z.string()).optional(),
     })
     .optional(),
-  only_on_change: z.array(z.string()).optional(),
 });
 
 export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);

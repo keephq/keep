@@ -190,7 +190,7 @@ function WorkflowNode({ id, data }: FlowNode) {
                 <NodeTriggerIcon
                   key={
                     data?.type === "alert"
-                      ? data?.properties?.alert?.source
+                      ? data?.properties?.filters?.source
                       : data?.id
                   }
                   nodeData={data}

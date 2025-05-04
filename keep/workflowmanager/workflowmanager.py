@@ -221,6 +221,12 @@ class WorkflowManager:
                             cel_regex.append(f'{key} != ""')
                         else:
                             cel_regex.append(f'{key} == ""')
+                    elif value.startswith(".*") and value.endswith(".*"):
+                        # for example: r".*prometheus.*"
+                        if exclude:
+                            cel_regex.append(f'!{key}.contains("{value[2:-2]}")')
+                        else:
+                            cel_regex.append(f'{key}.contains("{value[2:-2]}")')
                     elif value.endswith(".*"):
                         # for example: r"2025-01-30T09:.*"
                         if exclude:
