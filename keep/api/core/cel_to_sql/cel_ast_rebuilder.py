@@ -1,5 +1,4 @@
 from keep.api.core.cel_to_sql.ast_nodes import (
-    CoalesceNode,
     ComparisonNodeOperator,
     ConstantNode,
     LogicalNodeOperator,
@@ -74,20 +73,23 @@ class CelAstRebuilder:
             f"{type(abstract_node).__name__} node type is not supported yet"
         )
 
-    def _process_logical_node_side(self, side: Node) -> Node:
+    def _process_logical_node_side(self, side: Node, value: bool) -> Node:
         if isinstance(side, MultipleFieldsNode):
-            return ComparisonNode(
-                first_operand=CoalesceNode(
-                    properties=side.fields,
+            return self._handle_mutliple_fields_node(
+                side.fields,
+                lambda field_node, is_first, is_last: self._visit_unary_not_node(
+                    ComparisonNode(
+                        first_operand=field_node,
+                        operator=ComparisonNodeOperator.EQ,
+                        second_operand=ConstantNode(value=value),
+                    )
                 ),
-                operator=ComparisonNodeOperator.EQ,
-                second_operand=ConstantNode(value=True),
             )
         elif isinstance(side, PropertyAccessNode):
             return ComparisonNode(
                 first_operand=side,
                 operator=ComparisonNodeOperator.EQ,
-                second_operand=ConstantNode(value=True),
+                second_operand=ConstantNode(value=value),
             )
 
         return self.__visit_ast(side)
@@ -103,45 +105,18 @@ class CelAstRebuilder:
             current_node = current_node.operand
             depth += 1
 
+        if isinstance(current_node, PropertyAccessNode) or isinstance(
+            current_node, MultipleFieldsNode
+        ):
+            if depth % 2 != 0:
+                return self._process_logical_node_side(current_node, False)
+
+            return self._process_logical_node_side(current_node, True)
+
         if depth % 2 != 0:
-            current_node = UnaryNode(
-                operator=UnaryNodeOperator.NOT,
-                operand=current_node,
-            )
+            return UnaryNode(operator=UnaryNodeOperator.NOT, operand=current_node)
 
-        operand_node = None
-
-        if isinstance(current_node, PropertyAccessNode) or (
-            isinstance(current_node, UnaryNode)
-            and isinstance(current_node.operand, PropertyAccessNode)
-        ):
-            operand_node = (
-                current_node.operand
-                if isinstance(current_node, UnaryNode)
-                else current_node
-            )
-        elif isinstance(current_node, MultipleFieldsNode) or (
-            isinstance(current_node, UnaryNode)
-            and isinstance(current_node.operand, MultipleFieldsNode)
-        ):
-            operand_node = CoalesceNode(
-                properties=(
-                    current_node.operand.fields
-                    if isinstance(current_node, UnaryNode)
-                    else current_node.fields
-                )
-            )
-
-        if operand_node:
-            return ComparisonNode(
-                first_operand=operand_node,
-                operator=ComparisonNodeOperator.EQ,
-                second_operand=ConstantNode(
-                    value=not isinstance(current_node, UnaryNode)
-                ),
-            )
-
-        return unary_node
+        return current_node
 
     def _handle_mutliple_fields_node(
         self,
@@ -161,7 +136,7 @@ class CelAstRebuilder:
                     right=current_node,
                 )
 
-        return final_node
+        return ParenthesisNode(expression=final_node)
 
     # region Comparison Visitors
     def _visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
@@ -176,11 +151,12 @@ class CelAstRebuilder:
             # if it's null, we can just check the last field in the list
             if (
                 isinstance(comparison_node.second_operand, ConstantNode)
+                and comparison_node.operator == ComparisonNodeOperator.EQ
                 and comparison_node.second_operand.value is None
             ):
                 fields = fields[-1:]
 
-            result = self._handle_mutliple_fields_node(
+            return self._handle_mutliple_fields_node(
                 fields,
                 lambda field_node, is_first, is_last: self._visit_comparison_node(
                     ComparisonNode(
@@ -190,7 +166,6 @@ class CelAstRebuilder:
                     )
                 ),
             )
-            return result
 
         return comparison_node
 
@@ -246,4 +221,4 @@ class CelAstRebuilder:
                 right=query,
             )
 
-        return final_node
+        return ParenthesisNode(expression=final_node)
