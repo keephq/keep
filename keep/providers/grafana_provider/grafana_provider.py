@@ -1352,23 +1352,31 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                             )
 
                             # Create AlertDto
-                            alert_dto = AlertDto(
-                                id=alert.get("fingerprint", str(i)),
-                                fingerprint=alert.get("fingerprint"),
-                                name=alert_name,
-                                status=alert_status,
-                                severity=alert_severity,
-                                environment=labels.get("environment", "unknown"),
-                                description=annotations.get(
-                                    "description", annotations.get("summary", "")
-                                ),
-                                lastReceived=alert.get("startsAt"),
-                                rule_id=labels.get("ruleId"),
-                                condition="",
-                                labels=labels,
-                                source=["grafana"],
-                            )
-                            alertmanager_alerts.append(alert_dto)
+                            try:
+                                alert_dto = AlertDto(
+                                    id=alert.get("fingerprint", str(i)),
+                                    fingerprint=alert.get("fingerprint"),
+                                    name=alert_name,
+                                    status=alert_status,
+                                    severity=alert_severity,
+                                    environment=labels.get("environment", "unknown"),
+                                    description=annotations.get(
+                                        "description", annotations.get("summary", "")
+                                    ),
+                                    lastReceived=alert.get("startsAt"),
+                                    rule_id=labels.get("ruleId"),
+                                    condition="",
+                                    labels=labels,
+                                    source=["grafana"],
+                                )
+                                alertmanager_alerts.append(alert_dto)
+                            except Exception:
+                                self.logger.exception(
+                                    f"Error creating AlertDto for Alertmanager alert {i}",
+                                    extra={
+                                        "alert": alert,
+                                    },
+                                )
                         except Exception as e:
                             self.logger.error(
                                 f"Error processing Alertmanager alert {i}",
