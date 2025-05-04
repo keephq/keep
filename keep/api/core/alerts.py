@@ -131,7 +131,7 @@ alert_field_configurations = [
             "JSON(alertenrichment.enrichments).*",
             "JSON(alert.event).*",
         ],
-        data_type=bool,
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
         map_from_pattern="*",

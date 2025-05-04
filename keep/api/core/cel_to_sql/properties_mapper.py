@@ -332,8 +332,11 @@ class PropertiesMapper:
                 mapping, property_metadata.data_type
             )
             result.append(property_access_node)
-        return (
-            MultipleFieldsNode(fields=result, data_type=property_metadata.data_type)
-            if len(result) > 1
-            else result[0]
-        ), property_metadata
+        try:
+            return (
+                MultipleFieldsNode(fields=result, data_type=property_metadata.data_type)
+                if len(result) > 1
+                else result[0]
+            ), property_metadata
+        except Exception as e:
+            raise e

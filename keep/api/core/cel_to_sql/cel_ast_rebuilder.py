@@ -80,13 +80,13 @@ class CelAstRebuilder:
                 first_operand=CoalesceNode(
                     properties=side.fields,
                 ),
-                operator=ComparisonNode.EQ,
+                operator=ComparisonNodeOperator.EQ,
                 second_operand=ConstantNode(value=True),
             )
         elif isinstance(side, PropertyAccessNode):
             return ComparisonNode(
                 first_operand=side,
-                operator=ComparisonNode.EQ,
+                operator=ComparisonNodeOperator.EQ,
                 second_operand=ConstantNode(value=True),
             )
 
@@ -133,7 +133,7 @@ class CelAstRebuilder:
         if operand_node:
             return ComparisonNode(
                 first_operand=operand_node,
-                operator=ComparisonNode.EQ,
+                operator=ComparisonNodeOperator.EQ,
                 second_operand=ConstantNode(
                     value=not isinstance(current_node, UnaryNode)
                 ),
@@ -218,7 +218,7 @@ class CelAstRebuilder:
         if is_none_in_args and not skip_null_check:
             nodes.append(
                 ComparisonNode(
-                    operator=ComparisonNode.EQ,
+                    operator=ComparisonNodeOperator.EQ,
                     first_operand=in_node.first_operand,
                     second_operand=ConstantNode(value=None),
                 )
