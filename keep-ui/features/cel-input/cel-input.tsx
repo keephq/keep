@@ -32,7 +32,7 @@ const CelInput: FC<CelInputProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full truncate">
+    <div className="flex-1 h-9 border rounded-md pl-9 relative bg-white w-full">
       <MonacoCelEditor
         editorId={id}
         className={`h-20 relative ${
