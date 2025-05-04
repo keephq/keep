@@ -1135,7 +1135,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                                     rule_id=rule_id,
                                     condition=condition,
                                     labels=event_labels,
-                                    source=["grafana_history"],
+                                    source=["grafana"],
                                 )
                                 history_alerts.append(alert_dto)
                             except Exception as e:
@@ -1360,7 +1360,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                                 rule_id=labels.get("ruleId"),
                                 condition="",
                                 labels=labels,
-                                source=["alertmanager"],
+                                source=["grafana"],
                             )
                             alertmanager_alerts.append(alert_dto)
                         except Exception as e:
