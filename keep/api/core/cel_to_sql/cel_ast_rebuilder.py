@@ -1,12 +1,15 @@
 from keep.api.core.cel_to_sql.ast_nodes import (
     CoalesceNode,
+    ComparisonNodeOperator,
     ConstantNode,
+    LogicalNodeOperator,
     Node,
     LogicalNode,
     ComparisonNode,
     PropertyAccessNode,
     UnaryNode,
     ParenthesisNode,
+    UnaryNodeOperator,
 )
 
 from keep.api.core.cel_to_sql.properties_mapper import (
@@ -50,7 +53,7 @@ class CelAstRebuilder:
             result = abstract_node
 
         if isinstance(abstract_node, UnaryNode):
-            if abstract_node.operator == UnaryNode.NOT:
+            if abstract_node.operator == UnaryNodeOperator.NOT:
                 result = self._visit_unary_not_node(abstract_node)
             else:
                 result = UnaryNode(
@@ -78,13 +81,13 @@ class CelAstRebuilder:
                     properties=side.fields,
                 ),
                 operator=ComparisonNode.EQ,
-                second_operand=ConstantNode(True),
+                second_operand=ConstantNode(value=True),
             )
         elif isinstance(side, PropertyAccessNode):
             return ComparisonNode(
                 first_operand=side,
                 operator=ComparisonNode.EQ,
-                second_operand=ConstantNode(True),
+                second_operand=ConstantNode(value=True),
             )
 
         return self.__visit_ast(side)
@@ -102,7 +105,7 @@ class CelAstRebuilder:
 
         if depth % 2 != 0:
             current_node = UnaryNode(
-                operator=UnaryNode.NOT,
+                operator=UnaryNodeOperator.NOT,
                 operand=current_node,
             )
 
@@ -129,9 +132,11 @@ class CelAstRebuilder:
 
         if operand_node:
             return ComparisonNode(
-                operand_node,
-                ComparisonNode.EQ,
-                ConstantNode(not isinstance(current_node, UnaryNode)),
+                first_operand=operand_node,
+                operator=ComparisonNode.EQ,
+                second_operand=ConstantNode(
+                    value=not isinstance(current_node, UnaryNode)
+                ),
             )
 
         return unary_node
@@ -150,7 +155,7 @@ class CelAstRebuilder:
             else:
                 final_node = LogicalNode(
                     left=final_node,
-                    operator=LogicalNode.OR,
+                    operator=LogicalNodeOperator.OR,
                     right=current_node,
                 )
 
@@ -159,7 +164,7 @@ class CelAstRebuilder:
     # region Comparison Visitors
     def _visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
 
-        if comparison_node.operator == ComparisonNode.IN:
+        if comparison_node.operator == ComparisonNodeOperator.IN:
             return self._visit_in(comparison_node)
 
         if isinstance(comparison_node.first_operand, MultipleFieldsNode):
@@ -179,7 +184,7 @@ class CelAstRebuilder:
     def _visit_in(self, in_node: ComparisonNode, skip_null_check=False) -> Node:
         if isinstance(in_node.first_operand, MultipleFieldsNode):
             return self._handle_mutliple_fields_node(
-                in_node.first_operand,
+                in_node.first_operand.fields,
                 lambda field_node, is_first, is_last: self._visit_in(
                     in_node=ComparisonNode(
                         first_operand=field_node,
@@ -204,7 +209,7 @@ class CelAstRebuilder:
         if len(filtered_args) > 0:
             nodes.append(
                 ComparisonNode(
-                    operator=ComparisonNode.IN,
+                    operator=ComparisonNodeOperator.IN,
                     first_operand=in_node.first_operand,
                     second_operand=filtered_args,
                 )
@@ -224,7 +229,7 @@ class CelAstRebuilder:
         for query in nodes[1:]:
             final_node = LogicalNode(
                 left=final_node,
-                operator=LogicalNode.OR,
+                operator=LogicalNodeOperator.OR,
                 right=query,
             )
 

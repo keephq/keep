@@ -138,7 +138,7 @@ class ComparisonNode(Node):
     def __str__(self):
         operand_value = None
 
-        if self.operator == ComparisonNode.IN:
+        if self.operator == ComparisonNodeOperator.IN:
             operand_value = (
                 f"[{', '.join([str(item) for item in self.second_operand])}]"
             )
@@ -190,48 +190,6 @@ class MemberAccessNode(Node):
 
     def __str__(self):
         return self.member_name
-
-
-# TODO: To remove this class as it's not needed anymore
-class MethodAccessNode(MemberAccessNode):
-    """
-    Represents a method access node in CEL abstract syntax tree (AST).
-    Examples:
-        alert.name.contains('error')
-        alert.name.startsWith('sys')
-        alert.name.endsWith('log')
-    Inherits from:
-        MemberAccessNode
-
-    Attributes:
-        member_name (str): The name of the member being accessed.
-        args (List[str], optional): A list of arguments for the method. Defaults to None.
-
-    Methods:
-        copy() -> MethodAccessNode:
-            Creates a copy of the current MethodAccessNode instance.
-        
-        __str__() -> str:
-            Returns a string representation of the method access node in the format:
-            "member_name(arg1, arg2, ...)".
-    """
-    node_type: str = Field(default="MethodAccessNode", const=True)
-    member_name: str
-    args: List[ConstantNode] = None
-
-    def copy(self):
-        return MethodAccessNode(
-            member_name=self.member_name, args=self.args.copy() if self.args else None
-        )
-
-    def __str__(self):
-        args = []
-
-        for arg_node in self.args or []:
-            args.append(str(arg_node))
-
-        return f"{self.member_name}({', '.join(args)})"
-
 
 class DataType(Enum):
     """
@@ -350,7 +308,7 @@ class CoalesceNode(Node):
     """
 
     node_type: str = Field(default="CoalesceNode", const=True)
-    properties = Field(default=None)
+    properties: list[PropertyAccessNode] = Field(default=None)
 
     def __str__(self):
         return f"coalesce({', '.join([str(prop) for prop in self.properties])})"

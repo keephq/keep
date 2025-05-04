@@ -5,9 +5,7 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     DataType,
     LogicalNode,
-    LogicalNodeOperator,
     MemberAccessNode,
-    MethodAccessNode,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
@@ -48,7 +46,6 @@ class JsonPropertyAccessNode(PropertyAccessNode):
 
     json_property_name: Optional[str]
     property_to_extract: Optional[list[str]]
-    method_access_node: Optional[MethodAccessNode]
     data_type: Optional[DataType]
 
 class MultipleFieldsNode(Node):
@@ -96,7 +93,7 @@ class PropertiesMapper:
             Visits and processes a member access node, mapping properties as needed.
         _modify_comparison_node_based_on_mapping(comparison_node: ComparisonNode, mapping: PropertyMetadataInfo) -> Node:
             Modifies a comparison node based on the provided property metadata mapping.
-        _create_property_access_node(mapping, method_access_node: MethodAccessNode) -> Node:
+        _create_property_access_node(mapping) -> Node:
             Creates a property access node based on the given mapping and method access node.
         _map_property(property_access_node: PropertyAccessNode) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
             Maps a property access node to its corresponding database fields based on the metadata.
