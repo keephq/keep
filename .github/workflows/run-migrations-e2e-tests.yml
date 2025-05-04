@@ -333,8 +333,9 @@ jobs:
           WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
       - name: Add dummy migration
-        run: |
+        run: |          
           docker exec keep-keep-backend-1 bash -c "
+            pip install black
             cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini &&
             sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini &&
 
@@ -369,7 +370,7 @@ jobs:
           def downgrade() -> None:
             # Empty downgrade operation
             pass
-            EOF
+          EOF
             
             alembic -c /home/app/alembic_temp.ini upgrade head
             "
