@@ -547,6 +547,7 @@ export function AlertTableServerSide({
         <AlertsTableBody
           table={table}
           showSkeleton={showSkeleton}
+          pageSize={paginationState.pageSize}
           theme={theme}
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}

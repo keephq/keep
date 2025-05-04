@@ -435,23 +435,14 @@ export default function EnhancedDateRangePickerV2({
   const handleCalendarSelect = (date: DateRange | Date | undefined) => {
     if (date && "from" in date) {
       setCalendarRange(date);
-      if (date.from && date.to) {
+      if (date.from && date.to && date.from.getTime() !== date.to.getTime()) {
         setTimeFrame({
           type: "absolute",
           start: date.from,
           end: date.to,
         } as AbsoluteTimeFrame);
-        if (date.from.getTime() !== date.to.getTime()) {
-          setIsOpen(false);
-          setShowCalendar(false);
-        }
-      } else if (date.from) {
-        setTimeFrame({
-          type: "relative",
-          deltaMs: 0,
-          isPaused: true,
-          name: "Custom Range",
-        } as RelativeTimeFrame);
+        setIsOpen(false);
+        setShowCalendar(false);
       }
     }
   };
