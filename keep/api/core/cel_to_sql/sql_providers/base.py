@@ -309,7 +309,7 @@ class BaseCelToSqlProvider:
             if isinstance(comparison_node.first_operand, CoalesceNode):
                 first_operand = self.cast(
                     self.__build_sql_filter(comparison_node.first_operand, stack),
-                    type(comparison_node.second_operand.value),
+                    from_type_to_data_type(type(comparison_node.second_operand.value)),
                 )
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
