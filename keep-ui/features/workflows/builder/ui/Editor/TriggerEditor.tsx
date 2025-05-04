@@ -9,6 +9,7 @@ import { debounce } from "lodash";
 import { useCallback } from "react";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
+import { AlertsCountBadge } from "@/features/presets/create-or-update-preset/ui/alerts-count-badge";
 
 export function TriggerEditor() {
   const {
@@ -34,21 +35,19 @@ export function TriggerEditor() {
   };
 
   const updateAlertFilter = (filter: string, value: string) => {
-    const currentFilters = properties.alert || {};
-    if (!currentFilters.filters) {
-      currentFilters.filters = {};
+    const currentProperties = properties.alert || {};
+    if (!currentProperties.filters) {
+      currentProperties.filters = {};
     }
-    currentFilters.filters[filter] = value;
-    updateV2Properties({ alert: currentFilters });
-    saveNodeDataDebounced("properties", { alert: currentFilters });
+    currentProperties.filters[filter] = value;
+    updateV2Properties({ alert: currentProperties });
+    saveNodeDataDebounced("properties", currentProperties);
   };
 
   const updateAlertCel = (value: string) => {
-    const currentFilters = properties.alert || {};
-    updateV2Properties({ alert: { ...currentFilters, cel: value } });
-    saveNodeDataDebounced("properties", {
-      alert: { ...currentFilters, cel: value },
-    });
+    const currentProperties = properties.alert || {};
+    updateV2Properties({ alert: { ...currentProperties, cel: value } });
+    saveNodeDataDebounced("properties", { ...currentProperties, cel: value });
   };
 
   const addFilter = () => {
@@ -59,9 +58,9 @@ export function TriggerEditor() {
   };
 
   const deleteFilter = (filter: string) => {
-    const currentFilters = { ...properties.alert };
-    delete currentFilters.filters[filter];
-    updateV2Properties({ alert: currentFilters });
+    const currentProperties = { ...properties.alert };
+    delete currentProperties.filters[filter];
+    updateV2Properties({ alert: currentProperties });
   };
 
   const triggerKeys = ["alert", "incident", "interval", "manual"];
@@ -105,18 +104,6 @@ export function TriggerEditor() {
                 {Array.isArray(error) ? error[0] : error}
               </Text>
             )}
-            <div className="w-1/2">
-              <Button
-                onClick={addFilter}
-                size="xs"
-                className="ml-1 mt-1"
-                variant="light"
-                color="gray"
-                icon={FunnelIcon}
-              >
-                Add Filter
-              </Button>
-            </div>
             <div>
               <Subtitle className="mt-2.5">CEL Expression</Subtitle>
               <div className="flex items-center mt-1 relative">
@@ -136,17 +123,35 @@ export function TriggerEditor() {
                   onClick={() => updateAlertCel("")}
                 />
               </div>
+              <div className="mt-4">
+                <AlertsCountBadge
+                  vertical
+                  presetCEL={properties.alert.cel}
+                  isDebouncing={false}
+                  description="The number of alerts from the past that would have triggered this workflow"
+                />
+              </div>
             </div>
-            {properties.alert.filters &&
-              Object.keys(properties.alert.filters ?? {}).map((filter) => (
-                <>
-                  <Subtitle className="mt-2.5">
-                    Alert filter (deprecated)
-                  </Subtitle>
-                  <Text className="text-sm text-gray-500">
-                    Please convert your alert filters to CEL expressions to
-                    ensure stability and performance.
-                  </Text>
+            <div>
+              <Subtitle className="mt-2.5">Alert filter (deprecated)</Subtitle>
+              <Text className="text-sm text-gray-500">
+                Please convert your alert filters to CEL expressions to ensure
+                stability and performance.
+              </Text>
+              <div className="w-1/2">
+                <Button
+                  onClick={addFilter}
+                  size="xs"
+                  className="ml-1 mt-1"
+                  variant="light"
+                  color="gray"
+                  icon={FunnelIcon}
+                >
+                  Add Filter
+                </Button>
+              </div>
+              {properties.alert.filters &&
+                Object.keys(properties.alert.filters ?? {}).map((filter) => (
                   <div key={filter}>
                     <Subtitle className="mt-2.5">{filter}</Subtitle>
                     <div className="flex items-center mt-1">
@@ -170,8 +175,8 @@ export function TriggerEditor() {
                       />
                     </div>
                   </div>
-                </>
-              ))}
+                ))}
+            </div>
           </>
         );
 
