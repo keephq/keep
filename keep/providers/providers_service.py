@@ -181,6 +181,12 @@ class ProvidersService:
         else:
             validated_scopes = {}
 
+        try:
+            provider_metadata = provider.get_provider_metadata()
+        except Exception:
+            logger.exception("Failed to get provider metadata")
+            provider_metadata = {}
+
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
@@ -201,6 +207,7 @@ class ProvidersService:
                 consumer=provider.is_consumer,
                 provisioned=provisioned,
                 pulling_enabled=pulling_enabled,
+                provider_metadata=provider_metadata,
             )
             try:
                 session.add(provider_model)

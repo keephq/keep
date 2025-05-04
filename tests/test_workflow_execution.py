@@ -18,7 +18,7 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.incident import Incident, IncidentStatus
-from keep.api.models.db.workflow import Workflow
+from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -92,7 +92,7 @@ actions:
 MAX_WAIT_COUNT = 30
 
 
-def wait_for_workflow_execution(tenant_id, workflow_id):
+def wait_for_workflow_execution(tenant_id, workflow_id, exclude_ids=None):
     # Wait for the workflow execution to complete
     workflow_execution = None
     count = 0
@@ -101,7 +101,7 @@ def wait_for_workflow_execution(tenant_id, workflow_id):
     ) and count < MAX_WAIT_COUNT:
         try:
             workflow_execution = get_last_workflow_execution_by_workflow_id(
-                tenant_id, workflow_id
+                tenant_id, workflow_id, exclude_ids=exclude_ids
             )
         except Exception as e:
             print(
@@ -1590,19 +1590,18 @@ def test_workflow_executions_after_reprovisioning(
     assert len(first_provisioned) == 1  # There is 1 workflow in workflows_3 directory
 
     # Create and execute an alert to trigger the workflow
-    create_alert("fp1", AlertStatus.FIRING, datetime.now(tz=pytz.utc))
-    current_alert = AlertDto(
+    first_alert = AlertDto(
         id="grafana-1",
         source=["grafana"],
-        name="server-is-down",
-        message="Grafana is down",
+        name="server-is-under-the-weather",
+        message="Grafana is under the weather",
         status=AlertStatus.FIRING,
         severity="critical",
         fingerprint="fp1",
     )
 
     # Insert the alert into workflow manager to trigger execution
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [first_alert])
 
     # Wait for workflow execution to complete
     workflow_execution = wait_for_workflow_execution(
@@ -1620,6 +1619,7 @@ def test_workflow_executions_after_reprovisioning(
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
     assert len(second_provisioned) == 1  # Should still be 1 workflow
+    assert second_provisioned[0].id == first_provisioned[0].id
 
     # Verify the workflow execution is still attached
     workflow_execution = get_workflow_execution(SINGLE_TENANT_UUID, first_execution_id)
@@ -1628,31 +1628,30 @@ def test_workflow_executions_after_reprovisioning(
     assert workflow_execution.workflow_id == second_provisioned[0].id
 
     # Execute another alert to verify the workflow still works
-    create_alert("fp2", AlertStatus.FIRING, datetime.now(tz=pytz.utc))
-    current_alert = AlertDto(
+    second_alert = AlertDto(
         id="grafana-2",
         source=["grafana"],
-        name="server-is-down",
-        message="Grafana is down again",
+        name="server-is-under-the-weather",
+        message="Grafana is under the weather again",
         status=AlertStatus.FIRING,
         severity="critical",
         fingerprint="fp2",
     )
 
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [second_alert])
 
     # Wait for second workflow execution
-    workflow_execution = wait_for_workflow_execution(
-        SINGLE_TENANT_UUID, second_provisioned[0].id
+    second_workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID,
+        second_provisioned[0].id,
+        exclude_ids=[first_execution_id],
     )
 
     # Verify second execution was also successful
-    assert workflow_execution is not None
-    assert workflow_execution.status == "success"
-
-    # Note: In some test environments, the workflow execution ID might be the same
-    # due to how the test is set up. What's important is that the execution works.
-    # assert workflow_execution.id != first_execution_id  # Different execution ID
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+    assert second_workflow_execution is not None
+    assert second_workflow_execution.status == "success"
+    assert second_workflow_execution.id != first_execution_id  # Different execution ID
     assert (
-        workflow_execution.workflow_id == second_provisioned[0].id
+        second_workflow_execution.workflow_id == second_provisioned[0].id
     )  # Same workflow ID
