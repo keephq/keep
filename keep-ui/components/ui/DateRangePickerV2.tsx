@@ -304,6 +304,7 @@ export default function EnhancedDateRangePickerV2({
     setIsOpen(false);
     setSelectedCategory(null);
     setShowMoreOptions(false);
+    setCalendarRange(undefined);
   };
 
   const togglePlayPause = () => {
@@ -312,66 +313,16 @@ export default function EnhancedDateRangePickerV2({
   };
 
   const handleRewind = () => {
-    // if (!timeFrame.start || !timeFrame.end) {
-    //   return;
-    // }
-    // const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-    // setTimeFrame({
-    //   start: new Date(timeFrame.start.getTime() - duration),
-    //   end: new Date(timeFrame.start.getTime()),
-    //   paused: true,
-    // });
-    // setIsPaused(true);
+    // TODO: Implement the rewind functionality
   };
 
   const handleForward = () => {
-    // if (!timeFrame.start || !timeFrame.end) {
-    //   return;
-    // }
-    // const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-    // setTimeFrame({
-    //   start: new Date(timeFrame.end.getTime()),
-    //   end: new Date(timeFrame.end.getTime() + duration),
-    //   paused: true,
-    // });
-    // setIsPaused(true);
+    // TODO: Implement the forward functionality
   };
 
   const handleZoomOut = () => {
-    // if (!timeFrame.start || !timeFrame.end) {
-    //   return;
-    // }
-    // const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-    // setTimeFrame({
-    //   start: new Date(timeFrame.start.getTime() - duration / 2),
-    //   end: new Date(timeFrame.end.getTime() + duration / 2),
-    //   paused: true,
-    // });
-    // setIsPaused(true);
+    // TODO: Implement the zoom out functionality
   };
-
-  // useEffect(() => {
-  //   let interval: NodeJS.Timeout;
-  //   if (!isPaused) {
-  //     interval = setInterval(() => {
-  //       if (!timeFrame.start || !timeFrame.end) {
-  //         setTimeFrame({
-  //           start: null,
-  //           end: null,
-  //           paused: false,
-  //         });
-  //         return;
-  //       }
-  //       const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-  //       setTimeFrame({
-  //         start: new Date(Date.now() - duration),
-  //         end: new Date(),
-  //         paused: false,
-  //       });
-  //     }, timeframeRefreshInterval);
-  //   }
-  //   return () => clearInterval(interval);
-  // }, [isPaused, timeFrame, setTimeFrame, timeframeRefreshInterval]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -433,6 +384,8 @@ export default function EnhancedDateRangePickerV2({
   }, [timeFrame, relativePresetsMapped]);
 
   const handleCalendarSelect = (date: DateRange | Date | undefined) => {
+    setCalendarRange(undefined);
+
     if (date && "from" in date) {
       setCalendarRange(date);
       if (date.from && date.to && date.from.getTime() !== date.to.getTime()) {
