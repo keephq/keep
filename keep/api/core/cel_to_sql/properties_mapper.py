@@ -5,7 +5,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     DataType,
     LogicalNode,
-    MemberAccessNode,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
@@ -63,7 +62,7 @@ class MultipleFieldsNode(Node):
     data_type: Optional[DataType]
 
     def __str__(self):
-        return f"[{', '.join(['.'.join(field.get_property_path()) for field in self.fields])}]"
+        return f"[{', '.join(['.'.join(field.path) for field in self.fields])}]"
 
 
 class PropertiesMappingException(Exception):
@@ -89,7 +88,7 @@ class PropertiesMapper:
             Recursively visits and processes nodes in the AST, mapping properties as needed.
         __visit_comparison_node(comparison_node: ComparisonNode, involved_fields: list[PropertyMetadataInfo]) -> Node:
             Visits and processes a comparison node, mapping properties as needed.
-        _visit_member_access_node(member_access_node: MemberAccessNode, involved_fields: list[PropertyMetadataInfo]) -> Node:
+        _visit_property_access_node(property_access_node: PropertyAccessNode, involved_fields: list[PropertyMetadataInfo]) -> Node:
             Visits and processes a member access node, mapping properties as needed.
         _modify_comparison_node_based_on_mapping(comparison_node: ComparisonNode, mapping: PropertyMetadataInfo) -> Node:
             Modifies a comparison node based on the provided property metadata mapping.
@@ -137,8 +136,8 @@ class PropertiesMapper:
         if isinstance(abstract_node, ComparisonNode):
             return self.__visit_comparison_node(abstract_node, involved_fields)
 
-        if isinstance(abstract_node, MemberAccessNode):
-            return self._visit_member_access_node(abstract_node, involved_fields)
+        if isinstance(abstract_node, PropertyAccessNode):
+            return self._visit_property_access_node(abstract_node, involved_fields)
 
         if isinstance(abstract_node, UnaryNode):
             operand = self.__visit_nodes(abstract_node.operand, involved_fields)
@@ -181,15 +180,15 @@ class PropertiesMapper:
             comparison_node, property_metadata
         )
 
-    def _visit_member_access_node(
+    def _visit_property_access_node(
         self,
-        member_access_node: MemberAccessNode,
+        property_access_node: PropertyAccessNode,
         involved_fields: list[PropertyMetadataInfo],
     ) -> Node:
         # in case expression is just property access node
         # it will behave like !!property in JS
         # converting queried property to boolean and evaluate as boolean
-        mapped_prop, property_metadata = self._map_property(member_access_node)
+        mapped_prop, property_metadata = self._map_property(property_access_node)
         involved_fields.append(property_metadata)
         return mapped_prop
 

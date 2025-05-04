@@ -8,7 +8,6 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
     DataType,
     LogicalNodeOperator,
-    MemberAccessNode,
     Node,
     LogicalNode,
     ComparisonNode,
@@ -79,9 +78,9 @@ class BaseCelToSqlProvider:
             Converts a constant value to an SQL string.
         _visit_multiple_fields_node(multiple_fields_node: MultipleFieldsNode) -> str:
             Visits a multiple fields node and converts it to an SQL string.
-        _visit_member_access_node(member_access_node: MemberAccessNode) -> str:
-            Visits a member access node and converts it to an SQL string.
         _visit_property_access_node(property_access_node: PropertyAccessNode) -> str:
+            Visits a member access node and converts it to an SQL string.
+        _visit_property_access_node(sproperty_access_node: PropertyAccessNode) -> str:
             Visits a property access node and converts it to an SQL string.
         _visit_index_property(property_path: str) -> str:
             Abstract method to handle index properties. Must be implemented in the child class.
@@ -203,8 +202,8 @@ class BaseCelToSqlProvider:
         if isinstance(abstract_node, ComparisonNode):
             result = self._visit_comparison_node(abstract_node, stack)
 
-        if isinstance(abstract_node, MemberAccessNode):
-            result = self._visit_member_access_node(abstract_node, stack)
+        if isinstance(abstract_node, PropertyAccessNode):
+            result = self._visit_property_access_node(abstract_node, stack)
 
         if isinstance(abstract_node, UnaryNode):
             result = self._visit_unary_node(abstract_node, stack)
@@ -499,12 +498,14 @@ class BaseCelToSqlProvider:
 
         return self.coalesce(coalesce_args)
 
-    def _visit_member_access_node(self, member_access_node: MemberAccessNode, stack) -> str:
-        if isinstance(member_access_node, PropertyAccessNode):
-            return self._visit_property_access_node(member_access_node, stack)
+    def _visit_property_access_node(
+        self, property_access_node: PropertyAccessNode, stack
+    ) -> str:
+        if isinstance(property_access_node, PropertyAccessNode):
+            return self._visit_property_access_node(property_access_node, stack)
 
         raise NotImplementedError(
-            f"{type(member_access_node).__name__} member access node is not supported yet"
+            f"{type(property_access_node).__name__} member access node is not supported yet"
         )
 
     def _visit_property_access_node(self, property_access_node: PropertyAccessNode, stack: list[Node]) -> str:

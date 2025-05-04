@@ -176,21 +176,6 @@ class UnaryNode(Node):
         return f"{self.operator}{self.operand}"
 
 
-# TODO: To remove this class as it's not needed anymore
-class MemberAccessNode(Node):
-    """
-    A node representing member access in CEL abstract syntax tree (AST).
-    Attributes:
-        member_name (str): The name of the member being accessed.
-    Methods:
-        __str__(): Returns the member name as a string.
-    """
-    node_type: str = Field(default="MemberAccessNode", const=True)
-    member_name: Optional[str]  # TODO: to remove
-
-    def __str__(self):
-        return self.member_name
-
 class DataType(Enum):
     """
     An enumeration representing various data types.
@@ -240,7 +225,7 @@ def from_type_to_data_type(_type: type) -> DataType:
     )
 
 
-class PropertyAccessNode(MemberAccessNode):
+class PropertyAccessNode(Node):
     """
     Represents a node in CEL abstract syntax tree (AST) that accesses a property of an object.
     Examples:
@@ -252,43 +237,20 @@ class PropertyAccessNode(MemberAccessNode):
     Methods:
         __init__(member_name, value: Any):
             Initializes the PropertyAccessNode with the given member name and value.
-        is_function_call() -> bool:
-            Determines if the member access represents a function call.
-        get_property_path() -> str:
-            Constructs and returns the property path as a string.
-        get_method_access_node() -> MethodAccessNode:
-            Retrieves the MethodAccessNode if the value represents a method access.
         __str__() -> str:
             Returns a string representation of the PropertyAccessNode.
     """
+
     node_type: str = Field(default="PropertyAccessNode", const=True)
     path: list[str] = Field(default=None)
     data_type: DataType = Field(default=None)
-
-    def is_function_call(self) -> bool:
-        member_access_node = self.get_method_access_node()
-
-        return member_access_node is not None
-
-    # TODO: To remove this method as it's not needed anymore
-    def get_property_path(self) -> list[str]:
-        return self.path
-
-    # TODO: To remove this method as it's not needed anymore
-    def get_method_access_node(self) -> MethodAccessNode:
-        if isinstance(self.value, MethodAccessNode):
-            return self.value
-
-        if isinstance(self.value, PropertyAccessNode):
-            return self.value.get_method_access_node()
-
-        return None
 
     def __str__(self):
         if self.value:
             return f"{self.member_name}.{self.value}"
 
         return self.member_name
+
 
 class CoalesceNode(Node):
     """
