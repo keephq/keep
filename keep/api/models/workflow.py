@@ -146,3 +146,11 @@ class WorkflowVersionDTO(BaseModel):
 
 class WorkflowVersionListDTO(BaseModel):
     versions: List[WorkflowVersionDTO]
+
+
+class PreparsedWorkflowDTO(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = "Workflow file doesn't contain description"
+    interval: int | None = None
+    disabled: bool = False
