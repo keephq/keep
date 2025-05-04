@@ -98,7 +98,7 @@ class LogicalNode(Node):
     right: Node = Field()
 
     def __str__(self):
-        return f"{self.left} {self.operator} {self.right }"
+        return f"{self.left} {self.operator.value} {self.right }"
 
 
 class ComparisonNodeOperator(Enum):
@@ -142,10 +142,16 @@ class ComparisonNode(Node):
             operand_value = (
                 f"[{', '.join([str(item) for item in self.second_operand])}]"
             )
+        elif self.operator in [
+            ComparisonNodeOperator.CONTAINS,
+            ComparisonNodeOperator.STARTS_WITH,
+            ComparisonNodeOperator.ENDS_WITH,
+        ]:
+            return f"{self.first_operand}.{self.operator.value}({self.second_operand})"
         else:
             operand_value = str(self.second_operand)
 
-        return f"{self.first_operand} {self.operator} {operand_value}"
+        return f"{self.first_operand} {self.operator.value} {operand_value}"
 
 
 class UnaryNodeOperator(Enum):
@@ -173,7 +179,7 @@ class UnaryNode(Node):
     operand: Optional[Node] = Field()
 
     def __str__(self):
-        return f"{self.operator}{self.operand}"
+        return f"{self.operator.value}{self.operand}"
 
 
 class DataType(Enum):
@@ -246,10 +252,7 @@ class PropertyAccessNode(Node):
     data_type: DataType = Field(default=None)
 
     def __str__(self):
-        if self.value:
-            return f"{self.member_name}.{self.value}"
-
-        return self.member_name
+        return ".".join(self.path)
 
 
 class CoalesceNode(Node):
