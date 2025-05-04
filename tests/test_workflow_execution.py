@@ -26,8 +26,8 @@ from keep.identitymanager.identity_managers.db.db_authverifier import (  # noqa
     DbAuthVerifier,
 )
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.workflowmanager.workflowstore import WorkflowStore
 from tests.fixtures.client import client, test_app  # noqa
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 # This workflow definition is used to test the execution of workflows based on alert firing times.
 # It defines two actions:
