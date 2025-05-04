@@ -1,0 +1,13 @@
+workflow:
+  id: 62090939-16b3-409f-99af-b763d0a6329c
+  name: console-example
+  description: Print alert message to console
+  triggers:
+    - type: alert
+  steps:
+    - name: console-alert
+      provider:
+        type: console
+        config: "{{ providers.default-console }}"
+        with:
+          message: "Alert received: {{ alert.message }}"
