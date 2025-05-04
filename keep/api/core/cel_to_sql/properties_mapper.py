@@ -186,77 +186,40 @@ class PropertiesMapper:
         member_access_node: MemberAccessNode,
         involved_fields: list[PropertyMetadataInfo],
     ) -> Node:
-        if (
-            isinstance(member_access_node, PropertyAccessNode)
-            and not member_access_node.is_function_call()
-        ):
-            # in case expression is just property access node
-            # it will behave like !!property in JS
-            # converting queried property to boolean and evaluate as boolean
-            mapped_prop, property_metadata = self._map_property(member_access_node)
-            involved_fields.append(property_metadata)
-            return LogicalNode(
+        # in case expression is just property access node
+        # it will behave like !!property in JS
+        # converting queried property to boolean and evaluate as boolean
+        mapped_prop, property_metadata = self._map_property(member_access_node)
+        involved_fields.append(property_metadata)
+        return LogicalNode(
+            left=ComparisonNode(
+                first_operand=mapped_prop,
+                operator=ComparisonNodeOperator.NE,
+                second_operand=ConstantNode(value=None),
+            ),
+            operator=LogicalNodeOperator.AND,
+            right=LogicalNode(
                 left=ComparisonNode(
                     first_operand=mapped_prop,
                     operator=ComparisonNodeOperator.NE,
-                    second_operand=ConstantNode(value=None),
+                    second_operand=ConstantNode(value="0"),
                 ),
                 operator=LogicalNodeOperator.AND,
                 right=LogicalNode(
                     left=ComparisonNode(
                         first_operand=mapped_prop,
                         operator=ComparisonNodeOperator.NE,
-                        second_operand=ConstantNode(value="0"),
+                        second_operand=ConstantNode(value=False),
                     ),
                     operator=LogicalNodeOperator.AND,
-                    right=LogicalNode(
-                        left=ComparisonNode(
-                            first_operand=mapped_prop,
-                            operator=ComparisonNodeOperator.NE,
-                            second_operand=ConstantNode(value=False),
-                        ),
-                        operator=LogicalNodeOperator.AND,
-                        right=ComparisonNode(
-                            first_operand=mapped_prop,
-                            operator=ComparisonNodeOperator.NE,
-                            second_operand=ConstantNode(value=""),
-                        ),
+                    right=ComparisonNode(
+                        first_operand=mapped_prop,
+                        operator=ComparisonNodeOperator.NE,
+                        second_operand=ConstantNode(value=""),
                     ),
                 ),
-            )
-
-        if (
-            isinstance(member_access_node, PropertyAccessNode)
-            and member_access_node.is_function_call()
-        ):
-            property_metadata = self.properties_metadata.get_property_metadata(
-                member_access_node.path
-            )
-
-            if not property_metadata:
-                raise PropertiesMappingException(
-                    f'Missing mapping configuration for property "{member_access_node.path}" '
-                    f'while processing the comparison node: "{member_access_node}".'
-                )
-            involved_fields.append(property_metadata)
-            result = None
-            for mapping in property_metadata.field_mappings:
-                method_access_node = member_access_node.get_method_access_node().copy()
-                current_node_result = self._create_property_access_node(
-                    mapping, property_metadata.data_type, method_access_node
-                )
-
-                if result is None:
-                    result = current_node_result
-                    continue
-
-                result = LogicalNode(
-                    left=result,
-                    operator=LogicalNodeOperator.OR,
-                    right=current_node_result,
-                )
-
-            return result
+            ),
+        )
 
         return member_access_node
 
