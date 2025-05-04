@@ -341,10 +341,9 @@ jobs:
             LAST_MIGRATION=\$(ls -t /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/*.py | head -n1) &&
             echo \"Last migration: \$LAST_MIGRATION\" &&
 
-            cd /venv/lib/python3.11/site-packages/keep/api/models/db/ &&
-            alembic -c /home/app/alembic_temp.ini revision -m \"test_dummy_migration\" &&
+            alembic -c ./alembic_temp.ini revision -m \"test_dummy_migration\" &&
 
-            NEW_MIGRATION=\$(ls -t migrations/versions/*.py | head -n1) &&
+            NEW_MIGRATION=\$(ls -t /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/*.py | head -n1) &&
 
             cat > \"\$NEW_MIGRATION\" << EOF
           \"\"\"test_dummy_migration
