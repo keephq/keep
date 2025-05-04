@@ -44,7 +44,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   const suggestionsShownRef = useRef<boolean>();
   const [value, setValue] = useState<string>(props.value);
 
-  const validationErrors = useCelValidation(value);
+  const validationErrors = useCelValidation(props.readOnly ? undefined : value);
 
   useEffect(() => {
     if (!isEditorMounted) {

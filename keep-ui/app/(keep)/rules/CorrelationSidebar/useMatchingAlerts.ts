@@ -11,7 +11,7 @@ export function useMatchingAlerts(rules: RuleGroupType | undefined) {
     if (rules) {
       setAlertsQuery({
         cel: formatQuery(debouncedRules as RuleGroupType, "cel"),
-        limit: 20,
+        limit: 1000,
         offset: 0,
       });
     }

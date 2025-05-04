@@ -50,9 +50,7 @@ export const CorrelationSidebarBody = ({
     data: alertsFound = [],
     totalCount: totalAlertsFound,
     isLoading,
-  } = useMatchingAlerts(
-    methods.formState.isValid ? methods.watch("query") : undefined
-  );
+  } = useMatchingAlerts(methods.watch("query"));
 
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
