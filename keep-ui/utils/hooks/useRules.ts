@@ -1,5 +1,6 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { CelAst } from "../cel-ast";
 
 export type Rule = {
   id: string;
@@ -8,6 +9,7 @@ export type Rule = {
   group_description: string | null;
   grouping_criteria: string[];
   definition_cel: string;
+  definition_cel_ast: CelAst.Node;
   definition: { sql: string; params: {} };
   timeframe: number;
   timeunit: "minutes" | "seconds" | "hours" | "days";

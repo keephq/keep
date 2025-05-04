@@ -1,8 +1,8 @@
 import json
 import os
-from uuid import UUID
 import pytest
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
@@ -13,7 +13,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 
 fake_field_configurations = [
     FieldMappingConfiguration(
-        map_from_pattern="id", map_to=["entityId"], data_type=UUID
+        map_from_pattern="id", map_to=["entityId"], data_type=DataType.UUID
     ),
     FieldMappingConfiguration(
         map_from_pattern="name", map_to=["user_generated_name", "ai_generated_name"]
@@ -29,6 +29,19 @@ fake_field_configurations = [
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.provider_type", map_to="incident_alert_provider_type"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="alert.isActive", map_to="alert_is_active"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="dismissed",
+        map_to=["JSON(alert_event).dismissed"],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="deleted",
+        map_to=["JSON(alert_event).deleted"],
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.tags.*",

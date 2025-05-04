@@ -2,6 +2,7 @@ import json
 import os
 import pytest
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
@@ -11,22 +12,24 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 )
 
 fake_field_configurations = [
-    FieldMappingConfiguration("floatNumberColumn", "float_number_column", float),
-    FieldMappingConfiguration("intNumberColumn", "int_number_column", int),
+    FieldMappingConfiguration(
+        "floatNumberColumn", "float_number_column", DataType.FLOAT
+    ),
+    FieldMappingConfiguration("intNumberColumn", "int_number_column", DataType.INTEGER),
     FieldMappingConfiguration(
         map_from_pattern="floatNumberColumnFromJson",
         map_to=["JSON(json_column).*"],
-        data_type=float,
+        data_type=DataType.FLOAT,
     ),
     FieldMappingConfiguration(
         map_from_pattern="intNumberColumnFromJson",
         map_to=["JSON(json_column).*"],
-        data_type=int,
+        data_type=DataType.INTEGER,
     ),
     FieldMappingConfiguration(
         map_from_pattern="intNumberColumnFromMultipleJson",
         map_to=["JSON(json_column_first).*", "JSON(json_column_second).*"],
-        data_type=int,
+        data_type=DataType.INTEGER,
     ),
     FieldMappingConfiguration(
         map_from_pattern="jsonPropWithoutType",
@@ -36,7 +39,7 @@ fake_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="stringJsonProp",
         map_to=["JSON(json_column_first).*"],
-        data_type=str,
+        data_type=DataType.STRING,
     ),
 ]
 properties_metadata = PropertiesMetadata(fake_field_configurations)

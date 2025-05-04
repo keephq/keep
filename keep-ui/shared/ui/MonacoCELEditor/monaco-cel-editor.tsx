@@ -16,6 +16,7 @@ interface MonacoCelProps {
   className: string;
   value: string;
   fieldsForSuggestions?: string[];
+  readOnly?: boolean;
   onIsValidChange?: (isValid: boolean) => void;
   onValueChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
@@ -43,7 +44,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   const suggestionsShownRef = useRef<boolean>();
   const [value, setValue] = useState<string>(props.value);
 
-  const validationErrors = useCelValidation(value);
+  const validationErrors = useCelValidation(props.readOnly ? undefined : value);
 
   useEffect(() => {
     if (!isEditorMounted) {
@@ -74,6 +75,26 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       (modelRef.current as any).editorId = props.editorId;
     }
   }, [props.fieldsForSuggestions, props.editorId, isEditorMounted]);
+
+  useEffect(() => {
+    if (!editorRef.current) {
+      return;
+    }
+
+    const model = editorRef.current.getModel();
+
+    if (!model) {
+      return;
+    }
+
+    if (model?.getValue() !== props.value) {
+      model.setValue(props.value);
+      editorRef.current?.setPosition({
+        lineNumber: model.getLineCount(),
+        column: model.getLineMaxColumn(model.getLineCount()),
+      });
+    }
+  }, [props.value]);
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
@@ -162,6 +183,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
         },
       }}
       options={{
+        readOnly: props.readOnly,
         lineNumbers: "off",
         minimap: { enabled: false },
         scrollbar: {

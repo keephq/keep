@@ -1,0 +1,222 @@
+from keep.api.core.cel_to_sql.ast_nodes import (
+    CoalesceNode,
+    ComparisonNodeOperator,
+    ConstantNode,
+    LogicalNodeOperator,
+    Node,
+    LogicalNode,
+    ComparisonNode,
+    PropertyAccessNode,
+    UnaryNode,
+    ParenthesisNode,
+    UnaryNodeOperator,
+)
+
+from keep.api.core.cel_to_sql.properties_mapper import (
+    MultipleFieldsNode,
+)
+
+
+class CelAstRebuilder:
+    def __init__(self, cel_ast: Node):
+        self.cel_ast = cel_ast
+        super().__init__()
+
+    def rebuild(self) -> Node:
+        self.stack = []
+        result = self.__visit_ast(self.cel_ast)
+        self.stack = []
+        return result
+
+    def __visit_ast(self, abstract_node: Node) -> Node:
+        result = None
+
+        if abstract_node is None:
+            return None
+
+        if isinstance(abstract_node, ParenthesisNode):
+            result = ParenthesisNode(
+                expression=self.__visit_ast(abstract_node.left),
+            )
+
+        if isinstance(abstract_node, LogicalNode):
+            result = LogicalNode(
+                left=self._process_logical_node_side(abstract_node.left, True),
+                operator=abstract_node.operator,
+                right=self._process_logical_node_side(abstract_node.right, True),
+            )
+
+        if isinstance(abstract_node, ComparisonNode):
+            result = self._visit_comparison_node(abstract_node)
+
+        if isinstance(abstract_node, PropertyAccessNode):
+            result = abstract_node
+
+        if isinstance(abstract_node, UnaryNode):
+            if abstract_node.operator == UnaryNodeOperator.NOT:
+                result = self._visit_unary_not_node(abstract_node)
+            else:
+                result = UnaryNode(
+                    operator=abstract_node.operator,
+                    operand=self.__visit_ast(abstract_node.operand),
+                )
+
+        if isinstance(abstract_node, ConstantNode):
+            result = abstract_node
+
+        if isinstance(abstract_node, MultipleFieldsNode):
+            result = abstract_node
+
+        if result:
+            return result
+
+        raise NotImplementedError(
+            f"{type(abstract_node).__name__} node type is not supported yet"
+        )
+
+    def _process_logical_node_side(self, side: Node, value: bool) -> Node:
+        if isinstance(side, MultipleFieldsNode):
+            return ComparisonNode(
+                first_operand=CoalesceNode(
+                    properties=side.fields,
+                ),
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=ConstantNode(value=value),
+            )
+        elif isinstance(side, PropertyAccessNode):
+            return ComparisonNode(
+                first_operand=side,
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=ConstantNode(value=value),
+            )
+
+        return self.__visit_ast(side)
+
+    def _visit_parentheses(self, node: str) -> Node:
+        return f"({node})"
+
+    def _visit_unary_not_node(self, unary_node: UnaryNode) -> Node:
+        current_node: Node = unary_node
+        depth = 0
+
+        while isinstance(current_node, UnaryNode):
+            current_node = current_node.operand
+            depth += 1
+
+        if isinstance(current_node, PropertyAccessNode) or isinstance(
+            current_node, MultipleFieldsNode
+        ):
+            if depth % 2 != 0:
+                return self._process_logical_node_side(current_node, False)
+
+            return self._process_logical_node_side(current_node, True)
+
+        if depth % 2 != 0:
+            return UnaryNode(operator=UnaryNodeOperator.NOT, operand=current_node)
+
+        return current_node
+
+    def _handle_mutliple_fields_node(
+        self,
+        fields: list[PropertyAccessNode],
+        callback: lambda field_node, is_first, is_last: Node,
+    ) -> Node:
+        final_node = None
+        current_node = None
+        for index, field in enumerate(fields):
+            current_node = callback(field, index == 0, index == len(fields) - 1)
+            if final_node is None:
+                final_node = current_node
+            else:
+                final_node = LogicalNode(
+                    left=final_node,
+                    operator=LogicalNodeOperator.OR,
+                    right=current_node,
+                )
+
+        return ParenthesisNode(expression=final_node)
+
+    # region Comparison Visitors
+    def _visit_comparison_node(self, comparison_node: ComparisonNode) -> Node:
+
+        if comparison_node.operator == ComparisonNodeOperator.IN:
+            return self._visit_in(comparison_node)
+
+        if isinstance(comparison_node.first_operand, MultipleFieldsNode):
+            fields = comparison_node.first_operand.fields
+
+            # in case it's comparison with null, no reason to check all fields
+            # if it's null, we can just check the last field in the list
+            if (
+                isinstance(comparison_node.second_operand, ConstantNode)
+                and comparison_node.operator == ComparisonNodeOperator.EQ
+                and comparison_node.second_operand.value is None
+            ):
+                fields = fields[-1:]
+
+            return self._handle_mutliple_fields_node(
+                fields,
+                lambda field_node, is_first, is_last: self._visit_comparison_node(
+                    ComparisonNode(
+                        first_operand=field_node,
+                        operator=comparison_node.operator,
+                        second_operand=comparison_node.second_operand,
+                    )
+                ),
+            )
+
+        return comparison_node
+
+    def _visit_in(self, in_node: ComparisonNode, skip_null_check=False) -> Node:
+        if isinstance(in_node.first_operand, MultipleFieldsNode):
+            return self._handle_mutliple_fields_node(
+                in_node.first_operand.fields,
+                lambda field_node, is_first, is_last: self._visit_in(
+                    in_node=ComparisonNode(
+                        first_operand=field_node,
+                        operator=in_node.operator,
+                        second_operand=in_node.second_operand,
+                    ),
+                    skip_null_check=not is_last,
+                ),
+            )
+        is_none_in_args = None in in_node.second_operand
+        filtered_args = []
+        nodes = []
+
+        for item in in_node.second_operand:
+            is_none_in_args = item.value is None
+
+            if item.value is not None:
+                filtered_args.append(item)
+
+        nodes = []
+
+        if len(filtered_args) > 0:
+            nodes.append(
+                ComparisonNode(
+                    operator=ComparisonNodeOperator.IN,
+                    first_operand=in_node.first_operand,
+                    second_operand=filtered_args,
+                )
+            )
+
+        if is_none_in_args and not skip_null_check:
+            nodes.append(
+                ComparisonNode(
+                    operator=ComparisonNodeOperator.EQ,
+                    first_operand=in_node.first_operand,
+                    second_operand=ConstantNode(value=None),
+                )
+            )
+
+        final_node = nodes[0]
+
+        for query in nodes[1:]:
+            final_node = LogicalNode(
+                left=final_node,
+                operator=LogicalNodeOperator.OR,
+                right=query,
+            )
+
+        return ParenthesisNode(expression=final_node)

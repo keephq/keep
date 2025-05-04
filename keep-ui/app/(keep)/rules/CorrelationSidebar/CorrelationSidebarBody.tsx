@@ -10,13 +10,13 @@ import { Link } from "@/components/ui";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import { useRules } from "utils/hooks/useRules";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { showErrorToast } from "@/shared/ui";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
+import { useMatchingAlerts } from "./useMatchingAlerts";
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
@@ -46,10 +46,11 @@ export const CorrelationSidebarBody = ({
   const searchParams = useSearchParams();
   const selectedId = searchParams ? searchParams.get("id") : null;
 
-  const { data: alertsFound = [], isLoading } = useSearchAlerts({
-    query: methods.watch("query"),
-    timeframe: timeframeInSeconds,
-  });
+  const {
+    data: alertsFound = [],
+    totalCount: totalAlertsFound,
+    isLoading,
+  } = useMatchingAlerts(methods.watch("query"));
 
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
@@ -85,7 +86,7 @@ export const CorrelationSidebarBody = ({
       celQuery: formatQuery(query, "cel"),
       timeframeInSeconds,
       timeUnit: timeUnit,
-      groupingCriteria: alertsFound.length ? groupedAttributes : [],
+      groupingCriteria: totalAlertsFound ? groupedAttributes : [],
       requireApprove: requireApprove,
       resolveOn: resolveOn,
       createOn: createOn,
@@ -169,8 +170,9 @@ export const CorrelationSidebarBody = ({
             <CorrelationGroups />
           </div>
           <div className="flex flex-col border-t-2">
-            {alertsFound.length > 0 && (
+            {totalAlertsFound > 0 && (
               <AlertsFoundBadge
+                totalAlertsFound={totalAlertsFound}
                 alertsFound={alertsFound}
                 isLoading={false}
                 role={"correlationRuleConditions"}
