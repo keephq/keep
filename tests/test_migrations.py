@@ -51,7 +51,12 @@ def test_db_migrations():
     # Create a temporary directory to act as the Alembic environment
     with tempfile.TemporaryDirectory() as temp_dir:
         os.environ["SECRET_MANAGER_DIRECTORY"] = os.path.join(temp_dir, "state")
-        shutil.copytree("./keep/api/models/db/migrations", os.path.join(temp_dir, "migrations"))
+        shutil.copytree(
+            "./keep/api/models/db/migrations",
+            os.path.join(temp_dir, "migrations"),
+            ignore=shutil.ignore_patterns("versions")
+        )
+        shutil.copy(".keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
         alembic_ini_path = os.path.join(temp_dir, "migrations", "alembic.ini")
         migrations_path = os.path.join(temp_dir, "migrations")
 
