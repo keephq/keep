@@ -956,7 +956,6 @@ workflow_definition_routing = """workflow:
       provider:
         type: console
         with:
-          channel: prod-infra-alerts
           message: |
             "Infrastructure Production Alert
             Team: {{ alert.team }}
@@ -968,7 +967,6 @@ workflow_definition_routing = """workflow:
       provider:
         type: console
         with:
-          channel: backend-team-alerts
           message: |
             "HTTP API Error Alert
             Monitor: {{ alert.monitor_name }}

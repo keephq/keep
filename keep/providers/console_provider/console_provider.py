@@ -26,8 +26,8 @@ class ConsoleProvider(BaseProvider):
         # No need to dispose of anything, so just do nothing.
         pass
 
-    def _query(self, message: str = "", **kwargs: dict):
-        return self._notify(message, **kwargs)
+    def _query(self, message: str = "", logger: bool = False, severity: str = "info"):
+        return self._notify(message, logger, severity)
 
     def _notify(self, message: str = "", logger: bool = False, severity: str = "info"):
         """
