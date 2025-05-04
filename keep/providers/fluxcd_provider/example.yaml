@@ -1,0 +1,8 @@
+apiVersion: keep.sh/v1
+kind: Provider
+metadata:
+  name: flux-cd
+spec:
+  type: fluxcd
+  authentication:
+    namespace: flux-system
