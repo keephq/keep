@@ -1,4 +1,5 @@
 from keep.api.core.cel_to_sql.ast_nodes import (
+    CoalesceNode,
     ComparisonNodeOperator,
     ConstantNode,
     LogicalNodeOperator,
@@ -75,15 +76,12 @@ class CelAstRebuilder:
 
     def _process_logical_node_side(self, side: Node, value: bool) -> Node:
         if isinstance(side, MultipleFieldsNode):
-            return self._handle_mutliple_fields_node(
-                side.fields,
-                lambda field_node, is_first, is_last: self._visit_unary_not_node(
-                    ComparisonNode(
-                        first_operand=field_node,
-                        operator=ComparisonNodeOperator.EQ,
-                        second_operand=ConstantNode(value=value),
-                    )
+            return ComparisonNode(
+                first_operand=CoalesceNode(
+                    properties=side.fields,
                 ),
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=ConstantNode(value=value),
             )
         elif isinstance(side, PropertyAccessNode):
             return ComparisonNode(

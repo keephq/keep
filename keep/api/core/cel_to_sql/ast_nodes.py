@@ -253,3 +253,27 @@ class PropertyAccessNode(Node):
 
     def __str__(self):
         return ".".join(self.path)
+
+
+class CoalesceNode(Node):
+    """
+    Represents a Coalesce node in an abstract syntax tree (AST).
+
+    A CoalesceNode is used to represent a coalesce operation, which evaluates
+    a list of properties and returns the first non-null value.
+
+    Attributes:
+        properties (List[PropertyAccessNode]): A list of PropertyAccessNode
+            objects representing the properties to be evaluated in the coalesce
+            operation.
+
+    Methods:
+        __str__(): Returns a string representation of the coalesce operation
+            in the format "coalesce(prop1, prop2, ...)".
+    """
+
+    node_type: str = Field(default="CoalesceNode", const=True)
+    properties: list[PropertyAccessNode] = Field(default=None)
+
+    def __str__(self):
+        return f"coalesce({', '.join([str(prop) for prop in self.properties])})"

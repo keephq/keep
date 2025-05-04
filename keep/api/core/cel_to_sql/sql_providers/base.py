@@ -3,6 +3,7 @@ from typing import Any, List
 from sqlalchemy import Dialect, String
 
 from keep.api.core.cel_to_sql.ast_nodes import (
+    CoalesceNode,
     ComparisonNodeOperator,
     ConstantNode,
     DataType,
@@ -213,6 +214,14 @@ class BaseCelToSqlProvider:
         if isinstance(abstract_node, MultipleFieldsNode):
             result = self._visit_multiple_fields_node(abstract_node, None, stack)
 
+        if isinstance(abstract_node, CoalesceNode):
+            result = self.coalesce(
+                [
+                    self.__build_sql_filter(coalesce_arg, stack)
+                    for coalesce_arg in abstract_node.properties
+                ]
+            )
+
         if result:
             stack.pop()
             return result
@@ -296,6 +305,12 @@ class BaseCelToSqlProvider:
                             type(comparison_node.second_operand.value)
                         ),
                     )
+
+            if isinstance(comparison_node.first_operand, CoalesceNode):
+                first_operand = self.cast(
+                    self.__build_sql_filter(comparison_node.first_operand, stack),
+                    from_type_to_data_type(type(comparison_node.second_operand.value)),
+                )
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
                 first_operand = self._visit_multiple_fields_node(
@@ -458,6 +473,9 @@ class BaseCelToSqlProvider:
 
         if isinstance(node, ComparisonNode):
             return self._get_data_type_to_convert(node.first_operand)
+
+        if isinstance(node, CoalesceNode):
+            return None
 
         raise NotImplementedError(
             f"Cannot find data type to convert for {type(node).__name__} node"
