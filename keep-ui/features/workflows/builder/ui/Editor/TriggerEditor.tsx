@@ -66,6 +66,12 @@ export function TriggerEditor() {
 
   const renderTriggerContent = () => {
     const { data: alertFields } = useFacetPotentialFields("alerts");
+    const alertKeys = properties.alert ? Object.keys(properties.alert) : [];
+    const sortedAlertKeys = [
+      ...(alertKeys.includes("cel") ? ["cel"] : []),
+      ...alertKeys.filter((key) => key !== "cel"),
+    ];
+
     switch (selectedTriggerKey) {
       case "manual":
         return (
@@ -88,7 +94,6 @@ export function TriggerEditor() {
       case "alert":
         return (
           <>
-            <Subtitle className="mt-2.5">Alert filter</Subtitle>
             {error && (
               <Text className="text-red-500 mb-1.5">
                 {Array.isArray(error) ? error[0] : error}
@@ -107,7 +112,7 @@ export function TriggerEditor() {
               </Button>
             </div>
             {properties.alert &&
-              Object.keys(properties.alert ?? {}).map((filter) =>
+              sortedAlertKeys.map((filter) =>
                 filter === "cel" ? (
                   <div key={filter}>
                     <Subtitle className="mt-2.5">CEL Expression</Subtitle>
@@ -132,28 +137,37 @@ export function TriggerEditor() {
                     </div>
                   </div>
                 ) : (
-                  <div key={filter}>
-                    <Subtitle className="mt-2.5">{filter}</Subtitle>
-                    <div className="flex items-center mt-1">
-                      <TextInput
-                        key={filter}
-                        placeholder={`Set alert ${filter}`}
-                        onChange={(e: any) =>
-                          updateAlertFilter(filter, e.target.value)
-                        }
-                        value={
-                          (properties.alert as any)[filter] || ("" as string)
-                        }
-                      />
-                      <Icon
-                        icon={BackspaceIcon}
-                        className="cursor-pointer"
-                        color="red"
-                        tooltip={`Remove ${filter} filter`}
-                        onClick={() => deleteFilter(filter)}
-                      />
+                  <>
+                    <Subtitle className="mt-2.5">
+                      Alert filter (deprecated)
+                    </Subtitle>
+                    <Text className="text-sm text-gray-500">
+                      Please convert your alert filters to CEL expressions to
+                      ensure stability and performance.
+                    </Text>
+                    <div key={filter}>
+                      <Subtitle className="mt-2.5">{filter}</Subtitle>
+                      <div className="flex items-center mt-1">
+                        <TextInput
+                          key={filter}
+                          placeholder={`Set alert ${filter}`}
+                          onChange={(e: any) =>
+                            updateAlertFilter(filter, e.target.value)
+                          }
+                          value={
+                            (properties.alert as any)[filter] || ("" as string)
+                          }
+                        />
+                        <Icon
+                          icon={BackspaceIcon}
+                          className="cursor-pointer"
+                          color="red"
+                          tooltip={`Remove ${filter} filter`}
+                          onClick={() => deleteFilter(filter)}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )
               )}
           </>

@@ -2,10 +2,13 @@ import { z } from "zod";
 
 const ManualTriggerValueSchema = z.literal("true");
 
-export const V2StepManualTriggerSchema = z.object({
+const TriggerSchemaBase = z.object({
   id: z.string(),
   name: z.string(),
   componentType: z.literal("trigger"),
+});
+
+export const V2StepManualTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("manual"),
   properties: z.object({
     manual: ManualTriggerValueSchema,
@@ -14,10 +17,7 @@ export const V2StepManualTriggerSchema = z.object({
 
 const IntervalTriggerValueSchema = z.union([z.string(), z.number()]);
 
-export const V2StepIntervalTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
+export const V2StepIntervalTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("interval"),
   properties: z.object({
     interval: IntervalTriggerValueSchema,
@@ -25,16 +25,15 @@ export const V2StepIntervalTriggerSchema = z.object({
 });
 
 const AlertTriggerValueSchema = z.record(z.string(), z.string());
-export const V2StepAlertTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
+export const V2StepAlertTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("alert"),
-  properties: z.object({
-    alert: AlertTriggerValueSchema,
-    source: z.string().optional(),
-    cel: z.string().optional(),
-  }),
+  properties: z
+    .object({
+      alert: AlertTriggerValueSchema,
+      source: z.string().optional(),
+      cel: z.string().optional(),
+    })
+    .optional(),
   only_on_change: z.array(z.string()).optional(),
 });
 
@@ -43,10 +42,8 @@ export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
 const IncidentTriggerValueSchema = z.object({
   events: z.array(IncidentEventEnum),
 });
-export const V2StepIncidentTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
+
+export const V2StepIncidentTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("incident"),
   properties: z.object({
     incident: IncidentTriggerValueSchema,

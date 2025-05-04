@@ -779,10 +779,11 @@ def get_all_workflows(tenant_id: str, exclude_disabled: bool = False) -> List[Wo
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
             .where(Workflow.is_test == False)
+        )
 
         if exclude_disabled:
             query = query.where(Workflow.is_disabled == False)
-          
+
         workflows = session.exec(query).all()
     return workflows
 
