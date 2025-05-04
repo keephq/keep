@@ -111,8 +111,18 @@ class CelAstRebuilder:
 
         operand_node = None
 
-        if isinstance(current_node, MultipleFieldsNode) or isinstance(
-            current_node.operand, MultipleFieldsNode
+        if isinstance(current_node, PropertyAccessNode) or (
+            isinstance(current_node, UnaryNode)
+            and isinstance(current_node.operand, PropertyAccessNode)
+        ):
+            operand_node = (
+                current_node.operand
+                if isinstance(current_node, UnaryNode)
+                else current_node
+            )
+        elif isinstance(current_node, MultipleFieldsNode) or (
+            isinstance(current_node, UnaryNode)
+            and isinstance(current_node.operand, MultipleFieldsNode)
         ):
             operand_node = CoalesceNode(
                 properties=(
@@ -120,14 +130,6 @@ class CelAstRebuilder:
                     if isinstance(current_node, UnaryNode)
                     else current_node.fields
                 )
-            )
-        elif isinstance(current_node, PropertyAccessNode) or isinstance(
-            current_node.operand, PropertyAccessNode
-        ):
-            operand_node = (
-                current_node.operand
-                if isinstance(current_node, UnaryNode)
-                else current_node
             )
 
         if operand_node:

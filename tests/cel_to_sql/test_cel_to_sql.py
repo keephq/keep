@@ -34,6 +34,16 @@ fake_field_configurations = [
         map_from_pattern="alert.isActive", map_to="alert_is_active"
     ),
     FieldMappingConfiguration(
+        map_from_pattern="dismissed",
+        map_to=["JSON(alert_event).dismissed"],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="deleted",
+        map_to=["JSON(alert_event).deleted"],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="alert.tags.*",
         map_to=["JSON(alert_event).tagsContainer.*"],
     ),
