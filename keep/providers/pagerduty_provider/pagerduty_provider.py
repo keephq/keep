@@ -1089,7 +1089,16 @@ class PagerdutyProvider(
         event = event["event"]["data"]
 
         # This will be the same for the same incident
-        original_incident_id = event.get("id", "ping")
+        original_incident_id = event.get("id")
+        # https://github.com/keephq/keep/issues/4681
+        if not original_incident_id:
+            logger.warning(
+                "No incident id found in the event",
+                extra={
+                    "event": event,
+                },
+            )
+            return []
 
         incident_id = PagerdutyProvider._get_incident_id(original_incident_id)
 
@@ -1107,6 +1116,16 @@ class PagerdutyProvider(
             created_at = datetime.datetime.fromisoformat(created_at)
         else:
             created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        title = event.get("title")
+        if not title:
+            logger.warning(
+                "No title found in the event",
+                extra={
+                    "event": event,
+                },
+            )
+            return []
 
         return IncidentDto(
             id=incident_id,
