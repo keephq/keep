@@ -710,21 +710,27 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    tenant_id: str, workflow_id: str, status: str = None
+    tenant_id: str,
+    workflow_id: str,
+    status: str | None = None,
+    exclude_ids: list[str] | None = None,
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         query = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.workflow_id == workflow_id)
-            .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
-            .order_by(WorkflowExecution.started.desc())
+            select(WorkflowExecution)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
+            .order_by(col(WorkflowExecution.started).desc())
         )
 
         if status:
-            query = query.filter(WorkflowExecution.status == status)
+            query = query.where(WorkflowExecution.status == status)
 
-        workflow_execution = query.first()
+        if exclude_ids:
+            query = query.where(col(WorkflowExecution.id).notin_(exclude_ids))
+
+        workflow_execution = session.exec(query).first()
     return workflow_execution
 
 
