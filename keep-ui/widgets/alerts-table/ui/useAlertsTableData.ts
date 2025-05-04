@@ -1,18 +1,19 @@
 import { TimeFrameV2 } from "@/components/ui/DateRangePickerV2";
 import { AlertDto, AlertsQuery, useAlerts } from "@/entities/alerts/model";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
-
+import { v4 as uuidv4 } from "uuid";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface AlertsTableDataQuery {
+  searchCel: string;
+  filterCel: string;
   limit: number;
   offset: number;
   sortOptions?: { sortBy: string; sortDirection?: "ASC" | "DESC" }[];
-  filterCel: string;
   timeFrame: TimeFrameV2;
 }
 
-export const useAlertsTableData = (query: AlertsTableDataQuery) => {
+export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   const { useLastAlerts } = useAlerts();
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
 
@@ -23,9 +24,16 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
     AlertsQuery | undefined
   >(undefined);
   const incidentsQueryStateRef = useRef(alertsQueryState);
+  const [facetsPanelRefreshToken, setFacetsPanelRefreshToken] = useState<
+    string | undefined
+  >(undefined);
   incidentsQueryStateRef.current = alertsQueryState;
 
   const isPaused = useMemo(() => {
+    if (!query) {
+      return false;
+    }
+
     switch (query.timeFrame.type) {
       case "absolute":
         return false;
@@ -36,7 +44,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
       default:
         return true;
     }
-  }, [query.timeFrame]);
+  }, [query]);
 
   useEffect(() => {
     if (canRevalidate) {
@@ -52,11 +60,11 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
   const getDateRangeCel = () => {
     const currentDate = new Date();
 
-    if (query.timeFrame.type === "relative") {
+    if (query?.timeFrame.type === "relative") {
       return `lastReceived >= '${new Date(
         currentDate.getTime() - query.timeFrame.deltaMs
       ).toISOString()}'`;
-    } else if (query.timeFrame.type === "absolute") {
+    } else if (query?.timeFrame.type === "absolute") {
       return [
         `lastReceived >= '${query.timeFrame.start.toISOString()}'`,
         `lastReceived <= '${query.timeFrame.end.toISOString()}'`,
@@ -68,7 +76,6 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
 
   function updateAlertsCelDateRange() {
     const dateRangeCel = getDateRangeCel();
-    setIsPolling(true);
 
     setDateRangeCel(dateRangeCel);
 
@@ -77,12 +84,13 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
     }
 
     // if date does not change, just reload the data
+    setFacetsPanelRefreshToken(uuidv4());
     mutateAlerts();
   }
 
-  useEffect(() => updateAlertsCelDateRange(), [query.timeFrame]);
+  useEffect(() => updateAlertsCelDateRange(), [query?.timeFrame]);
 
-  const { data: alertsChangeToken } = useAlertPolling(isPaused);
+  const { data: alertsChangeToken } = useAlertPolling(!isPaused);
 
   useEffect(() => {
     // When refresh token comes, this code allows polling for certain time and then stops.
@@ -106,31 +114,45 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
     const refreshInterval = Math.max((queryTimeInSeconds || 1000) * 2, 6000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
+        setIsPolling(true);
         updateAlertsCelDateRange();
       }
     }, refreshInterval);
     return () => clearInterval(interval);
   }, [isPaused, shouldRefreshDate]);
 
+  useEffect(() => {
+    setIsPolling(false);
+  }, [JSON.stringify(query)]);
+
   const mainCelQuery = useMemo(() => {
-    const filterArray = ["is_candidate == false", dateRangeCel];
+    const filterArray = [query?.searchCel, dateRangeCel];
 
     return filterArray.filter(Boolean).join(" && ");
-  }, [dateRangeCel]);
+  }, [query?.searchCel, dateRangeCel]);
 
   useEffect(() => {
-    setAlertsQueryState({
+    if (!query) {
+      setAlertsQueryState(undefined);
+      return;
+    }
+
+    const alertsQuery: AlertsQuery = {
       limit: query.limit,
       offset: query.offset,
       sortOptions: query.sortOptions,
       cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
-    });
+    };
+
+    (alertsQuery as any).source = "useAlertsTableData"; // TODO: TO REMOVE
+
+    setAlertsQueryState(alertsQuery);
   }, [
-    query.sortOptions,
-    query.filterCel,
-    query.limit,
-    query.offset,
     mainCelQuery,
+    query?.filterCel,
+    query?.sortOptions,
+    query?.limit,
+    query?.offset,
   ]);
 
   const {
@@ -142,7 +164,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
     queryTimeInSeconds,
   } = useLastAlerts(alertsQueryState, {
     revalidateOnFocus: false,
-    revalidateOnMount: false,
+    revalidateOnMount: true,
   });
 
   const [alertsToReturn, setAlertsToReturn] = useState<
@@ -171,5 +193,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery) => {
     facetsCel: mainCelQuery,
     alertsChangeToken: alertsChangeToken,
     alertsError: alertsError,
+    mutateAlerts,
+    facetsPanelRefreshToken,
   };
 };

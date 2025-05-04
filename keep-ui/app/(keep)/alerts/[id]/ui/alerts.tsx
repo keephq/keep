@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  useAlerts,
-  type AlertDto,
-  type AlertsQuery,
-} from "@/entities/alerts/model";
+import { type AlertDto, type AlertsQuery } from "@/entities/alerts/model";
 import { usePresets, type Preset } from "@/entities/presets/model";
 import { AlertHistoryModal } from "@/features/alerts/alert-history";
 import { AlertAssignTicketModal } from "@/features/alerts/alert-assign-ticket";
@@ -20,10 +16,13 @@ import { EnrichAlertSidePanel } from "@/features/alerts/enrich-alert";
 import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
-import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { useProviders } from "@/utils/hooks/useProviders";
+import {
+  useAlertsTableData,
+  AlertsTableDataQuery,
+} from "@/widgets/alerts-table/ui/useAlertsTableData";
 
 const defaultPresets: Preset[] = [
   {
@@ -49,10 +48,8 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
   >();
-  const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(false);
-  const [isSilentLoading, setIsSilentLoading] = useState(false);
-  const [alerts, setAlerts] = useState<AlertDto[] | undefined>(undefined);
-  const { useLastAlerts } = useAlerts();
+  const [alertsTableDataQuery, setAlertsTableDataQuery] =
+    useState<AlertsTableDataQuery>();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
 
@@ -68,7 +65,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
   const [dismissModalAlert, setDismissModalAlert] = useState<
@@ -90,27 +86,15 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  const { data: pollAlertsRefreshToken } = useAlertPolling(true);
   const {
-    data: fetchedAlerts = [],
+    alerts,
+    alertsLoading,
+    mutateAlerts,
+    alertsError: alertsError,
     totalCount,
-    isLoading: isAsyncLoading,
-    mutate: mutateAlerts,
-    error: alertsError,
-    queryTimeInSeconds,
-  } = useLastAlerts(alertsQueryState);
-
-  useEffect(() => {
-    if (isLiveUpdateEnabled) {
-      if (!isAsyncLoading) {
-        setAlerts(fetchedAlerts);
-      }
-
-      return;
-    }
-
-    setAlerts(isAsyncLoading ? undefined : fetchedAlerts);
-  }, [isLiveUpdateEnabled, isAsyncLoading, fetchedAlerts]);
+    facetsCel,
+    facetsPanelRefreshToken,
+  } = useAlertsTableData(alertsTableDataQuery);
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
@@ -139,15 +123,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     }
   }, [searchParams, alerts]);
 
-  useEffect(
-    function setNewRefreshToken() {
-      if (pollAlertsRefreshToken) {
-        setRefreshToken(pollAlertsRefreshToken);
-      }
-    },
-    [setRefreshToken, pollAlertsRefreshToken]
-  );
-
   const alertsQueryStateRef = useRef(alertsQueryState);
 
   const reloadAlerts = useCallback(
@@ -167,20 +142,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     },
     [setAlertsQueryState]
   );
-
-  const handleOnPoll = useCallback(() => {
-    console.log("Ihor setIsSilentLoading true");
-    setIsSilentLoading(true);
-  }, []);
-  const handleOnQueryChange = useCallback(() => {
-    console.log("Ihor setIsSilentLoading FALSE");
-
-    setIsSilentLoading(false);
-  }, []);
-
-  useEffect(() => {
-    console.log("Ihor", { isSilentLoading });
-  }, [isSilentLoading]);
 
   const resetUrlAfterModal = useCallback(() => {
     const currentParams = new URLSearchParams(window.location.search);
@@ -215,11 +176,12 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       <AlertTableTabPanelServerSide
         initialFacets={initialFacets}
         key={selectedPreset.name}
-        refreshToken={refreshToken}
+        facetsPanelRefreshToken={facetsPanelRefreshToken}
         preset={selectedPreset}
         alerts={alerts || []}
         alertsTotalCount={totalCount}
-        isAsyncLoading={!isSilentLoading && isAsyncLoading}
+        facetsCel={facetsCel}
+        isAsyncLoading={alertsLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
@@ -227,10 +189,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
         onReload={reloadAlerts}
-        onPoll={handleOnPoll}
-        onQueryChange={handleOnQueryChange}
-        onLiveUpdateStateChange={setIsLiveUpdateEnabled}
-        queryTimeInSeconds={queryTimeInSeconds}
+        onQueryChange={setAlertsTableDataQuery}
       />
       <AlertHistoryModal
         alerts={alerts || []}

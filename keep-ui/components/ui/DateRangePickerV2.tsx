@@ -85,10 +85,6 @@ export default function EnhancedDateRangePickerV2({
       : undefined
   );
 
-  useEffect(() => {
-    console.log("Ihor", timeFrame);
-  }, [timeFrame]);
-
   const quickPresets = useMemo(
     () =>
       [
