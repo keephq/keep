@@ -247,6 +247,9 @@ class PropertiesMapper:
             ComparisonNode: The modified comparison node, or the original comparison
             node if no modifications are necessary.
         """
+        if not isinstance(comparison_node.second_operand, ConstantNode):
+            return comparison_node
+
         if mapping.enum_values:
             if comparison_node.operator in [
                 ComparisonNodeOperator.GE,

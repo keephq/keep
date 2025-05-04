@@ -76,6 +76,26 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     }
   }, [props.fieldsForSuggestions, props.editorId, isEditorMounted]);
 
+  useEffect(() => {
+    if (!editorRef.current) {
+      return;
+    }
+
+    const model = editorRef.current.getModel();
+
+    if (!model) {
+      return;
+    }
+
+    if (model?.getValue() !== props.value) {
+      model.setValue(props.value);
+      editorRef.current?.setPosition({
+        lineNumber: model.getLineCount(),
+        column: model.getLineMaxColumn(model.getLineCount()),
+      });
+    }
+  }, [props.value]);
+
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
     monaco: typeof import("monaco-editor")
