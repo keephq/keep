@@ -40,9 +40,9 @@ class CelAstRebuilder:
 
         if isinstance(abstract_node, LogicalNode):
             result = LogicalNode(
-                left=self._process_logical_node_side(abstract_node.left),
+                left=self._process_logical_node_side(abstract_node.left, True),
                 operator=abstract_node.operator,
-                right=self._process_logical_node_side(abstract_node.right),
+                right=self._process_logical_node_side(abstract_node.right, True),
             )
 
         if isinstance(abstract_node, ComparisonNode):
