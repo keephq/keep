@@ -648,8 +648,8 @@ class KibanaProvider(BaseProvider):
 
         # Process tags and labels (works for both old and new formats)
         labels = {}
-        tags = event.get("ruleTags", [])
-        for tag in tags:
+        ruleTags = event.get("ruleTags", [])
+        for tag in ruleTags:
             if "=" in tag:
                 key, value = tag.split("=", 1)
                 labels[key] = value
@@ -682,7 +682,6 @@ class KibanaProvider(BaseProvider):
         return AlertDto(
             environment=environment,
             labels=labels,
-            tags=tags,
             source=["kibana"],
             **event,
         )
