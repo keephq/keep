@@ -120,7 +120,12 @@ export type AuditEvent = {
   description: string;
   timestamp: string;
   fingerprint: string;
+  mentions?: CommentMentionDto[];
 };
+
+export interface CommentMentionDto {
+  mentioned_user_id: string;
+}
 
 export interface AlertsQuery {
   cel?: string;

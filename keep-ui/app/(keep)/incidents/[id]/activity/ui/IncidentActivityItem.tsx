@@ -1,10 +1,14 @@
 import { AlertSeverity } from "@/entities/alerts/ui";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertDto, CommentMentionDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
+import { useUsers } from "@/entities/users/model/useUsers";
+import { User } from "@/app/(keep)/settings/models";
+import { CommentWithMentions } from "./CommentWithMentions";
 
 // TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
 
 export function IncidentActivityItem({ activity }: { activity: any }) {
+  const { data: users = [] } = useUsers();
   const title =
     typeof activity.initiator === "string"
       ? activity.initiator
@@ -32,7 +36,11 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
         </span>
       </div>
       {activity.text && (
-        <div className="font-light text-gray-800">{activity.text}</div>
+        activity.type === "comment" ? (
+          <CommentWithMentions text={activity.text} users={users} />
+        ) : (
+          <div className="font-light text-gray-800">{activity.text}</div>
+        )
       )}
     </div>
   );
