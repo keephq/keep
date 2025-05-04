@@ -1013,6 +1013,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 labels.pop("severity", None)
                 annotations = alert.get("annotations", {})
 
+                description = annotations.get("description", annotations.get("summary"))
                 try:
                     alert_dto = AlertDto(
                         name=alertname,
@@ -1021,7 +1022,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                         source=["grafana"],
                         labels=labels,
                         annotations=annotations,
+                        datasource=alert.get("datasource"),
+                        datasource_type=alert.get("datasource_type"),
+                        value=alert.get("value"),
                     )
+                    if description:
+                        alert_dto.description = description
                     formatted_alerts.append(alert_dto)
                 except Exception:
                     self.logger.exception(
