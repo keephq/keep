@@ -144,7 +144,9 @@ class PropertiesMapper:
             operand = self.__visit_nodes(abstract_node.operand, involved_fields)
 
             if operand is None:
-                return UnaryNode(abstract_node.operator, ConstantNode(True))
+                return UnaryNode(
+                    operator=abstract_node.operator, operand=ConstantNode(value=True)
+                )
 
             return UnaryNode(
                 operator=abstract_node.operator,
@@ -195,29 +197,29 @@ class PropertiesMapper:
             involved_fields.append(property_metadata)
             return LogicalNode(
                 left=ComparisonNode(
-                    mapped_prop,
-                    ComparisonNodeOperator.NE,
-                    ConstantNode(None),
+                    first_operand=mapped_prop,
+                    operator=ComparisonNodeOperator.NE,
+                    second_operand=ConstantNode(value=None),
                 ),
                 operator=LogicalNodeOperator.AND,
                 right=LogicalNode(
                     left=ComparisonNode(
-                        mapped_prop,
-                        ComparisonNodeOperator.NE,
-                        ConstantNode("0"),
+                        first_operand=mapped_prop,
+                        operator=ComparisonNodeOperator.NE,
+                        second_operand=ConstantNode(value="0"),
                     ),
                     operator=LogicalNodeOperator.AND,
                     right=LogicalNode(
                         left=ComparisonNode(
-                            mapped_prop,
-                            ComparisonNodeOperator.NE,
-                            ConstantNode(value=False),
+                            first_operand=mapped_prop,
+                            operator=ComparisonNodeOperator.NE,
+                            second_operand=ConstantNode(value=False),
                         ),
                         operator=LogicalNodeOperator.AND,
                         right=ComparisonNode(
-                            mapped_prop,
-                            ComparisonNodeOperator.NE,
-                            ConstantNode(""),
+                            first_operand=mapped_prop,
+                            operator=ComparisonNodeOperator.NE,
+                            second_operand=ConstantNode(value=""),
                         ),
                     ),
                 ),
@@ -295,11 +297,11 @@ class PropertiesMapper:
                         ComparisonNodeOperator.LE,
                     ]:
                         return UnaryNode(
-                            UnaryNodeOperator.NOT,
-                            ComparisonNode(
-                                comparison_node.first_operand,
-                                ComparisonNodeOperator.IN,
-                                [
+                            operator=UnaryNodeOperator.NOT,
+                            operand=ComparisonNode(
+                                first_operand=comparison_node.first_operand,
+                                operator=ComparisonNodeOperator.IN,
+                                second_operand=[
                                     ConstantNode(value=item)
                                     for item in mapping.enum_values
                                 ],
@@ -307,9 +309,11 @@ class PropertiesMapper:
                         )
                     else:
                         return ComparisonNode(
-                            comparison_node.first_operand,
-                            ComparisonNodeOperator.IN,
-                            [ConstantNode(value=item) for item in mapping.enum_values],
+                            first_operand=comparison_node.first_operand,
+                            operator=ComparisonNodeOperator.IN,
+                            second_operand=[
+                                ConstantNode(value=item) for item in mapping.enum_values
+                            ],
                         )
 
                 index = mapping.enum_values.index(comparison_node.second_operand.value)
