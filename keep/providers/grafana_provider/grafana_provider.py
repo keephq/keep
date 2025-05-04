@@ -1256,7 +1256,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                                                         rule_id=rule_uid,
                                                         condition=condition,
                                                         labels=event_labels,
-                                                        source=["grafana_rule_history"],
+                                                        source=["grafana"],
                                                     )
                                                     history_alerts.append(alert_dto)
                                                 except Exception as e:
