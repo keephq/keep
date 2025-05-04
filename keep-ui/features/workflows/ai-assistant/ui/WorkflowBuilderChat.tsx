@@ -31,7 +31,6 @@ import {
 import { Button } from "@/components/ui";
 import { GENERAL_INSTRUCTIONS } from "@/features/workflows/ai-assistant/lib/constants";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
-import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { AddTriggerUI } from "./AddTriggerUI";
 import { SuggestionResult } from "./SuggestionStatus";
 import { AddStepUI } from "./AddStepUI";
@@ -43,8 +42,10 @@ import {
 import { AddTriggerOrStepSkeleton } from "./AddTriggerOrStepSkeleton";
 import { foreachTemplate, getTriggerTemplate } from "../../builder/lib/utils";
 import { capture } from "@/shared/lib/capture";
+import { useConfig } from "@/utils/hooks/useConfig";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
+
 export interface WorkflowBuilderChatProps {
   definition: DefinitionV2;
   installedProviders: Provider[];
@@ -54,6 +55,7 @@ export function WorkflowBuilderChat({
   definition,
   installedProviders,
 }: WorkflowBuilderChatProps) {
+  const { data: config } = useConfig();
   const {
     nodes,
     edges,
@@ -1053,7 +1055,7 @@ Example: 'node_123__empty_true'`,
       }
     >
       {/* Debug info */}
-      {WF_DEBUG_INFO && (
+      {config?.KEEP_WORKFLOW_DEBUG && (
         <div className="">
           <div className="flex">
             <Button
