@@ -83,6 +83,7 @@ When using Adaptive Cards (`typeCard="message"`):
 - `themeColor` is ignored for Adaptive Cards
 - If no sections are provided, the message will be displayed as a simple text block
 - Both `sections` and `attachments` can be provided as JSON strings or arrays
+- You can mention users in your Adaptive Cards using the `mentions` parameter
 
 ### Workflow Example
 
@@ -112,7 +113,11 @@ actions:
         message: ""
         sections: '[{"type": "TextBlock", "text": "{{alert.name}}"}, {"type": "TextBlock", "text": "Tal from Keep"}]'
         typeCard: message
+        # Optional: Add mentions to notify specific users
+        # mentions: '[{"id": "user@example.com", "name": "User Name"}]'
 ```
+
+You can also find an example with user mentions in our [examples](https://github.com/keephq/keep/tree/main/examples/workflows/keep-teams-adaptive-cards-with-mentions.yaml) folder.
 
 <Note>
     The sections parameter is a JSON string that follows the Adaptive Cards schema, but can also be an object.
@@ -157,6 +162,71 @@ provider.notify(
         }
     }]
 )
+```
+
+### Using User Mentions in Adaptive Cards
+
+You can mention users in your Adaptive Cards using the `mentions` parameter. The text in your card should include the mention in the format `<at>User Name</at>`, and you need to provide the user's ID and name in the `mentions` parameter.
+
+Teams supports three types of user IDs for mentions:
+- Teams User ID (format: `29:1234...`)
+- Microsoft Entra Object ID (format: `49c4641c-ab91-4248-aebb-6a7de286397b`)
+- User Principal Name (UPN) (format: `user@example.com`)
+
+```python
+provider.notify(
+    typeCard="message",
+    sections=[
+        {
+            "type": "TextBlock",
+            "text": "Hello <at>John Doe</at>, please review this alert!"
+        }
+    ],
+    mentions=[
+        {
+            "id": "john.doe@example.com",  # Can be UPN, Microsoft Entra Object ID, or Teams User ID
+            "name": "John Doe"
+        }
+    ]
+)
+```
+
+You can also mention multiple users in a single card:
+
+```python
+provider.notify(
+    typeCard="message",
+    sections=[
+        {
+            "type": "TextBlock",
+            "text": "Hello <at>John Doe</at> and <at>Jane Smith</at>, please review this alert!"
+        }
+    ],
+    mentions=[
+        {
+            "id": "john.doe@example.com",
+            "name": "John Doe"
+        },
+        {
+            "id": "49c4641c-ab91-4248-aebb-6a7de286397b",  # Microsoft Entra Object ID
+            "name": "Jane Smith"
+        }
+    ]
+)
+```
+
+In YAML workflows, you can provide the mentions as a JSON string:
+
+```yaml
+actions:
+  - name: teams-action
+    provider:
+      config: "{{ providers.teams }}"
+      type: teams
+      with:
+        typeCard: message
+        sections: '[{"type": "TextBlock", "text": "Hello <at>John Doe</at>, please review this alert!"}]'
+        mentions: '[{"id": "john.doe@example.com", "name": "John Doe"}]'
 ```
 
 ## Useful Links

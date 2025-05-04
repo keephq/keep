@@ -679,7 +679,14 @@ async def receive_event(
     # Parse the raw body
     t = time.time()
     logger.debug("Parsing event raw body")
-    event = provider_class.parse_event_raw_body(event)
+    try:
+        event = provider_class.parse_event_raw_body(event)
+    except Exception:
+        logger.exception(
+            "Failed to parse event raw body",
+            extra={"tenant_id": authenticated_entity.tenant_id, "event": event},
+        )
+        raise HTTPException(status_code=400, detail="Malformed event")
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
 
     # If provider_name is provided, try to get provider_id from it

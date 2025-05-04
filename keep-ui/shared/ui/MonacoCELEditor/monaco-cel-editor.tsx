@@ -7,6 +7,7 @@ import { setupCustomCellanguage } from "./cel-support";
 import { MonacoCelBase } from "./MonacoCel";
 import { editor, Token } from "monaco-editor";
 import "./editor.scss";
+import { useCelValidation } from "./validation-hook";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
@@ -15,6 +16,7 @@ interface MonacoCelProps {
   className: string;
   value: string;
   fieldsForSuggestions?: string[];
+  onIsValidChange?: (isValid: boolean) => void;
   onValueChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
@@ -23,10 +25,15 @@ interface MonacoCelProps {
 export function MonacoCelEditor(props: MonacoCelProps) {
   const [error, setError] = useState<Error | null>(null);
   const [isEditorMounted, setIsEditorMounted] = useState(false);
+  const monacoInstanceRef = useRef<typeof import("monaco-editor") | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const modelRef = useRef<editor.ITextModel | null>(null);
   const onKeyDownRef = useRef<MonacoCelProps["onKeyDown"]>(props.onKeyDown);
   onKeyDownRef.current = props.onKeyDown;
+  const onIsValidChangeRef = useRef<MonacoCelProps["onIsValidChange"]>(
+    props.onIsValidChange
+  );
+  onIsValidChangeRef.current = props.onIsValidChange;
   const onFocusRef = useRef<MonacoCelProps["onFocus"]>(props.onFocus);
   onFocusRef.current = props.onFocus;
   const fieldsForSuggestionsRef =
@@ -34,10 +41,27 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   fieldsForSuggestionsRef.current = props.fieldsForSuggestions;
   const enteredTokensRef = useRef<Token[]>([]);
   const suggestionsShownRef = useRef<boolean>();
+  const [value, setValue] = useState<string>(props.value);
+
+  const validationErrors = useCelValidation(value);
+
+  useEffect(() => {
+    if (!isEditorMounted) {
+      return;
+    }
+
+    monacoInstanceRef.current?.editor.setModelMarkers(
+      editorRef.current?.getModel()!,
+      "cel",
+      validationErrors
+    );
+    onIsValidChangeRef.current?.(validationErrors.length === 0);
+  }, [isEditorMounted, validationErrors]);
 
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")
   ) {
+    monacoInstanceRef.current = monacoInstance;
     setupCustomCellanguage(monacoInstance);
   }
 
@@ -118,13 +142,17 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onMonacoLoaded={monacoLoadedCallback}
       onMonacoLoadFailure={setError}
       onMount={handleEditorDidMount}
-      onChange={(val) => props.onValueChange(val || "")}
+      onChange={(val) => {
+        val = val || "";
+        setValue(val);
+        props.onValueChange(val);
+      }}
       className={`${props.editorId ? props.editorId + " " : ""}monaco-cel-editor ${props.className}`}
       language="cel"
       defaultLanguage="cel"
       theme="vs"
       loading={Loader}
-      value={props.value}
+      value={value}
       wrapperProps={{
         style: {
           backgroundColor: "transparent", // ✅ wrapper transparency
