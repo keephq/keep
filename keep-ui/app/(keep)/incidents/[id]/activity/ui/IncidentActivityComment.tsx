@@ -6,7 +6,7 @@ import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
-import { MentionsInput } from "./MentionsInput";
+import { QuillMentionsInput } from "./QuillMentionsInput";
 import { useUsers } from "@/entities/users/model/useUsers";
 
 export function IncidentActivityComment({
@@ -58,27 +58,30 @@ export function IncidentActivityComment({
   }, [comment, handleKeyDown]);
 
   return (
-    <div className="flex h-full w-full relative items-center">
-      <MentionsInput
-        value={comment}
-        onValueChange={setComment}
-        placeholder="Add a new comment... Use @ to mention users"
-        users={users}
-        onTagUser={(email) => {
-          if (!taggedUsers.includes(email)) {
-            setTaggedUsers([...taggedUsers, email]);
-          }
-        }}
-      />
-      <Button
-        color="orange"
-        variant="secondary"
-        className="ml-2.5"
-        disabled={!comment}
-        onClick={onSubmit}
-      >
-        Comment
-      </Button>
+    <div className="flex flex-col h-full w-full relative">
+      <div className="w-full mb-3">
+        <QuillMentionsInput
+          value={comment}
+          onValueChange={setComment}
+          placeholder="Add a new comment... Use @ to mention users"
+          users={users}
+          onTagUser={(email) => {
+            if (!taggedUsers.includes(email)) {
+              setTaggedUsers([...taggedUsers, email]);
+            }
+          }}
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button
+          color="orange"
+          variant="secondary"
+          disabled={!comment}
+          onClick={onSubmit}
+        >
+          Comment
+        </Button>
+      </div>
     </div>
   );
 }
