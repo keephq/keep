@@ -59,6 +59,7 @@ function Calendar({
   const [internalSelected, setInternalSelected] = React.useState<
     Date | DateRange | undefined
   >(selected);
+  const today = new Date();
 
   React.useEffect(() => {
     setInternalSelected(selected);
@@ -176,6 +177,9 @@ function Calendar({
         internalSelected && "from" in internalSelected && internalSelected.to
           ? [internalSelected.to]
           : [],
+      past: { before: today },
+      future: { after: today },
+      today: today,
     },
     modifiersStyles: {
       ...props.modifiersStyles,
@@ -192,6 +196,15 @@ function Calendar({
         backgroundColor: "rgb(63 63 70)",
         borderTopRightRadius: "4px",
         borderBottomRightRadius: "4px",
+      },
+      today: {
+        color: "green",
+        fontWeight: "bold",
+      },
+      future: {
+        opacity: 0.3,
+        background: "#dedbdb",
+        fontWeight: "normal",
       },
     },
   };
