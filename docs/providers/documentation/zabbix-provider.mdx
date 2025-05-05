@@ -30,7 +30,19 @@ First, login in to your Zabbix account (the provided `zabbix_frontend_url`) with
 - This is because some of the scopes we need are available to `Super Admin` user type only. [See here](https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/create)
 
 5. Remove all the checkboxes from everything, except 1 random `Access to UI elemets` which is required for any role.
-6. In the `API methods` section, select `Allow list` and fill in the scopes as [mentioned below](./zabbix-provider#scopes), in the Scopes section.
+6. In the `API methods` section, select `Allow list` and fill with these scopes:
+- `action.create`
+- `action.get`
+- `event.acknowledge`
+- `mediatype.create`
+- `mediatype.get`
+- `mediatype.update`
+- `problem.get`
+- `script.create`
+- `script.get`
+- `script.update`
+- `user.get`
+- `user.update`
 
 <img height="200" src="/images/zabbix_role.png" />
 
