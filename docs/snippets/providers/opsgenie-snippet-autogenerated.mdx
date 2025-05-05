@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -7,7 +7,7 @@ This provider requires authentication.
 - **integration_name**: OpsGenie integration name (required: True, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **opsgenie:create**: Create OpsGenie alerts (mandatory) 
+- **opsgenie:create**: Create OpsGenie alerts (mandatory)
 
 
 
@@ -23,8 +23,8 @@ steps:
       provider: opsgenie
       config: "{{ provider.my_provider_name }}"
       with:
-        query_type: {value}  
-        query: {value}  
+        query_type: {value}
+        query: {value}
 ```
 
 
@@ -58,6 +58,7 @@ actions:
 Check the following workflow examples:
 - [failed-to-login-workflow.yml](https://github.com/keephq/keep/blob/main/examples/workflows/failed-to-login-workflow.yml)
 - [opsgenie-close-alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-close-alert.yml)
+- [opsgenie-create-alert-cel.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-create-alert-cel.yml)
 - [opsgenie-create-alert.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie-create-alert.yml)
 - [opsgenie_open_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opsgenie_open_alerts.yml)
 
@@ -68,4 +69,3 @@ The provider exposes the following [Provider Methods](/providers/provider-method
 - **close_alert** Close an alert (action, scopes: opsgenie:create)
 
 - **comment_alert** Comment an alert (action, scopes: opsgenie:create)
-
