@@ -24,6 +24,8 @@ type IncidentFilter = {
 type AlertFilter = {
   type: "alert";
   filters: Filter[];
+  cel: string;
+  only_on_change: string[];
 };
 
 type IntervalFilter = {

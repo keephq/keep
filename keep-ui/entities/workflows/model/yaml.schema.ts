@@ -50,7 +50,9 @@ const ManualTriggerSchema = z.object({
 
 const AlertTriggerSchema = z.object({
   type: z.literal("alert"),
-  filters: z.array(z.object({ key: z.string(), value: z.string() })),
+  filters: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
+  cel: z.string().optional(),
+  only_on_change: z.array(z.string()).optional(),
 });
 
 const IntervalTriggerSchema = z.object({

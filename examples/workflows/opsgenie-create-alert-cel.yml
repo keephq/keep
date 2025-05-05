@@ -1,0 +1,22 @@
+workflow:
+  id: opsgenie-critical-alert-creator-cel
+  name: OpsGenie Critical Alert Creator (CEL)
+  description: Creates OpsGenie alerts for critical Coralogix issues with team assignment and alert enrichment tracking using CEL filters.
+  triggers:
+    - type: manual
+    - type: alert
+      cel: source.contains("coralogix") && severity == "critical"
+  actions:
+    - name: create-alert
+      provider:
+        config: "{{ providers.opsgenie }}"
+        type: opsgenie
+        if: "not '{{ alert.opsgenie_alert_id }}'"
+        with:
+          message: "{{ alert.name }}"
+          responders:
+            - name: "{{ alert.team }}"
+              type: team
+          enrich_alert:
+            - key: opsgenie_alert_id
+              value: results.alertId
