@@ -1,7 +1,6 @@
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
-import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
-import { getProviders } from "@/shared/api/providers";
-import { createServerApiClient } from "@/shared/api/server";
+import { fromError, fromZodError } from "zod-validation-error";
+import { parseWorkflowYamlToJSON } from "../entities/workflows/lib/yaml-utils";
+import { getYamlWorkflowDefinitionSchema } from "../entities/workflows/model/yaml.schema";
 import fs from "fs";
 import path from "path";
 
@@ -15,29 +14,37 @@ function getWorkflowExamplesFiles() {
 }
 
 async function validateWorkflowExamples() {
-  const api = await createServerApiClient();
-
-  const providersResponse = await getProviders(api);
-  const providers = providersResponse.providers;
+  console.log("Loading providers list");
+  // providers_list.json should be generated with "python3 scripts/save_providers_list.py" from the root of the repo
+  const providers = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../../providers_list.json"), "utf8")
+  );
+  console.log(`Providers list loaded, ${providers.length} providers found`);
   const zodSchema = getYamlWorkflowDefinitionSchema(providers);
   const workflowFiles = getWorkflowExamplesFiles();
+
+  let validWorkflows = 0;
+  let invalidWorkflows = 0;
 
   workflowFiles.forEach((file) => {
     const workflowYaml = fs.readFileSync(
       path.join(__dirname, "../../examples/workflows", file),
       "utf8"
     );
-    const workflowYamlObject = parseWorkflowYamlStringToJSON(workflowYaml);
-    const name = workflowYamlObject.name;
+    const result = parseWorkflowYamlToJSON(workflowYaml, zodSchema);
 
-    const result = zodSchema.safeParse(workflowYamlObject);
     if (!result.success) {
-      console.error(`${name} is invalid`);
-      console.error(result.error.format());
+      console.log(`\n========== ${file} is invalid ==========`);
+      console.log(fromZodError(result.error).toString());
+      invalidWorkflows++;
     } else {
-      console.log(`${name} is valid`);
+      validWorkflows++;
     }
   });
+
+  console.log(`\n========================================= `);
+  console.log(`Valid workflows: ${validWorkflows}`);
+  console.log(`Invalid workflows: ${invalidWorkflows}`);
 }
 
 validateWorkflowExamples();
