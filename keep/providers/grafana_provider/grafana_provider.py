@@ -181,6 +181,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 validated_scopes[scope.name] = "Missing scope"
         return validated_scopes
 
+    def get_provider_metadata(self) -> dict:
+        version = self._get_grafana_version()
+        return {
+            "version": version,
+        }
+
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
@@ -1622,6 +1628,7 @@ if __name__ == "__main__":
         provider_type="grafana",
         provider_config=config,
     )
+    version = provider.get_provider_metadata()
     alerts = provider.get_alerts()
     alerts = provider.setup_webhook(
         "test", "http://localhost:3000/alerts/event/grafana", "some-api-key", True

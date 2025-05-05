@@ -23,6 +23,9 @@ class Provider(SQLModel, table=True):
     pulling_enabled: bool = True
     last_pull_time: Optional[datetime]
     provisioned: bool = Field(default=False)
+    provider_metadata: dict = Field(
+        sa_column=Column(JSON)
+    )  # metadata about the provider, e.g: {"version": "1.0.0"}
 
     class Config:
         orm_mode = True
