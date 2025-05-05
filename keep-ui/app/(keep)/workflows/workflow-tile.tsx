@@ -41,6 +41,7 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
       {trigger.type === "interval" && <span>{trigger.value} seconds</span>}
       {trigger.type === "alert" && (
         <span className="text-sm text-right">
+          {trigger.cel && <Fragment>CEL = {trigger.cel}</Fragment>}
           {trigger.filters &&
             trigger.filters.map((filter) => (
               <Fragment key={filter.key}>

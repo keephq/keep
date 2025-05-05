@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -33,11 +33,11 @@ steps:
       provider: cloudwatch
       config: "{{ provider.my_provider_name }}"
       with:
-        log_group: {value}  
-        log_groups: {value}  
-        remove_ptr_from_results: {value}  
-        query: {value}  
-        hours: {value}  
+        log_group: {value}
+        log_groups: {value}
+        remove_ptr_from_results: {value}
+        query: {value}
+        hours: {value}
 ```
 
 
@@ -47,3 +47,4 @@ steps:
 Check the following workflow examples:
 - [retrieve_cloudwatch_logs.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/retrieve_cloudwatch_logs.yaml)
 - [slack_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml)
+- [slack_basic_cel.yml](https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic_cel.yml)
