@@ -1,6 +1,6 @@
 import * as React from "react";
 import { DayPicker, DateRange } from "react-day-picker";
-import "./Calendar.css";
+import "./Calendar.scss";
 
 export function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -181,6 +181,11 @@ function Calendar({
       future: { after: today },
       today: today,
     },
+    modifiersClassNames: {
+      today: "rdp-today",
+      past: "rdp-past",
+      future: "rdp-future",
+    },
     modifiersStyles: {
       ...props.modifiersStyles,
       hover: { backgroundColor: "rgb(243 244 246)" },
@@ -196,15 +201,6 @@ function Calendar({
         backgroundColor: "rgb(63 63 70)",
         borderTopRightRadius: "4px",
         borderBottomRightRadius: "4px",
-      },
-      today: {
-        color: "green",
-        fontWeight: "bold",
-      },
-      future: {
-        opacity: 0.3,
-        background: "#dedbdb",
-        fontWeight: "normal",
       },
     },
   };

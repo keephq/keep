@@ -1,0 +1,19 @@
+.rdp-month_grid {
+  width: 100% !important;
+}
+
+.rdp-day_button {
+  td:not(.rdp-future) &:hover {
+    @apply bg-gray-200 text-gray-900;
+  }
+
+  @apply flex items-center justify-center w-full h-full;
+}
+
+.rdp-today {
+  @apply font-bold text-green-600;
+}
+
+.rdp-future {
+  @apply opacity-30 bg-gray-200 font-normal;
+}

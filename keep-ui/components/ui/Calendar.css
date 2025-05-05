@@ -1,7 +1,0 @@
-.rdp-month_grid {
-  width: 100% !important;
-}
-
-.rdp-day_button {
-  @apply flex items-center justify-center w-full h-full;
-}
