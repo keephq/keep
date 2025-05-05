@@ -648,8 +648,8 @@ class KibanaProvider(BaseProvider):
 
         # Process tags and labels (works for both old and new formats)
         labels = {}
-        tags = event.get("ruleTags", [])
-        for tag in tags:
+        ruleTags = event.get("ruleTags", [])
+        for tag in ruleTags:
             if "=" in tag:
                 key, value = tag.split("=", 1)
                 labels[key] = value
@@ -676,13 +676,16 @@ class KibanaProvider(BaseProvider):
             if not event.get("url"):
                 event.pop("url", None)
 
-        if "name" not in event:
-            event["name"] = event.get("rule.name")
+        event["name"] = event.get(
+            "name", event.get("rule.name", event.get("ruleId", event.get("message")))
+        )
+        # if its still empty, set a default name
+        if not event.get("name"):
+            event["name"] = "Kibana Alert [Could not extract name]"
 
         return AlertDto(
             environment=environment,
             labels=labels,
-            tags=tags,
             source=["kibana"],
             **event,
         )

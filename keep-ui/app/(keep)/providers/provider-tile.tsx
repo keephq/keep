@@ -203,7 +203,14 @@ export default function ProviderTile({ provider, onClick }: Props) {
         )}
         {provider.installed ? (
           <Text color={"green"} className="flex text-xs">
-            Connected
+            {provider.provider_metadata &&
+            provider.provider_metadata.version ? (
+              <span>
+                Connected | Version: {provider.provider_metadata.version}
+              </span>
+            ) : (
+              <span>Connected</span>
+            )}
           </Text>
         ) : null}
         {provider.linked ? (
