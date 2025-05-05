@@ -131,10 +131,15 @@ def test_simple_logical_node(cel, operator):
     assert actual.right.operand.member_name == "secondFakeProp"
     assert actual.right.operand.value is None
 
-@pytest.mark.parametrize("cel, method_name, args", [
-    ("fakeProp.contains('CPU')", "contains", ["CPU"]),
-    ("fakeProp.anything('string', 123, false)", "anything", ["string", 123, False]),
-])
+
+@pytest.mark.parametrize(
+    "cel, method_name, args",
+    [
+        ("fakeProp.contains('\\'±CPU±\\'')", "contains", ["'±CPU±'"]),
+        ('fakeProp.contains("\\"±CPU±\\"")', "contains", ['"±CPU±"']),
+        ("fakeProp.anything('string', 123, false)", "anything", ["string", 123, False]),
+    ],
+)
 def test_method_access_node(cel, method_name, args):
     actual = CelToAstConverter.convert_to_ast(cel)
 

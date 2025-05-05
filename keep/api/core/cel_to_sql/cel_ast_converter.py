@@ -338,7 +338,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
                 value = parse(value)
             else:
                 # this code is to handle the case when string literal contains escaped single/double quotes
-                value = value.encode("utf-8").decode("unicode_escape")
+                value = re.sub(r'\\(["\'])', r"\1", value)
         elif value == 'true' or value == 'false':
             value = value == 'true'
         elif '.' in value and self.is_float(value):
