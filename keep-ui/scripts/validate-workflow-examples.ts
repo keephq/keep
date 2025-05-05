@@ -48,12 +48,23 @@ function validateWorkflowExamples() {
   console.log(`\n========================================= `);
   if (invalidWorkflows.length > 0) {
     console.log(
-      `❌ ${invalidWorkflows.length} workflows are invalid out of ${workflowFiles.length} examples`
+      `❌ VALIDATION FAILED: ${invalidWorkflows.length}/${workflowFiles.length} workflows invalid`
     );
-    console.log("Please fix the following workflow files:");
+    console.log("\nINVALID FILES:");
     invalidWorkflows.forEach((file) => {
       console.log(`- ${file}`);
     });
+    console.log("\nDetailed errors are shown above for each file.");
+    console.log("\nHOW TO FIX:");
+    console.log(
+      "1. UI Editor: http://localhost:3000/workflows/ - Shows errors in real-time with highlighting"
+    );
+    console.log(
+      "2. Schema: keep-ui/entities/workflows/model/yaml.schema.ts - Check if schema needs updates"
+    );
+    console.log(
+      "3. Issues: https://github.com/keephq/keep/issues - Report if you believe it's a schema bug"
+    );
     process.exit(1);
   } else {
     console.log(
