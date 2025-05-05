@@ -3,7 +3,7 @@
 }
 
 .rdp-day_button {
-  td:not(.rdp-future) &:hover {
+  td:not(.rdp-future, .rdp-range_start.rdp-range_end) &:hover {
     @apply bg-gray-200 text-gray-900;
   }
 
