@@ -93,10 +93,11 @@ export const validateMustacheVariableName = (
       return `Variable: '${variableName}' - You can't access the results of an action from a step.`;
     }
 
-    if (!definition.sequence?.some((step) => step.name === stepName)) {
-      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
-    }
-    if (parts[2] === "results") {
+    if (
+      parts[2] === "results" ||
+      parts[2].startsWith("results.") ||
+      parts[2].startsWith("results[")
+    ) {
       // todo: validate results properties
       return null;
     } else {
@@ -132,7 +133,9 @@ export const validateAllMustacheVariablesInString = (
   return errors;
 };
 
-export const checkProviderNeedsInstallation = (providerObject: Provider) => {
+export const checkProviderNeedsInstallation = (
+  providerObject: Pick<Provider, "type" | "config">
+) => {
   return providerObject.config && Object.keys(providerObject.config).length > 0;
 };
 
