@@ -13,7 +13,7 @@ function getWorkflowExamplesFiles() {
   );
 }
 
-async function validateWorkflowExamples() {
+function validateWorkflowExamples() {
   console.log("Loading providers list");
   // providers_list.json should be generated with "python3 scripts/save_providers_list.py" from the root of the repo
   const providers = JSON.parse(
