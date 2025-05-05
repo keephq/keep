@@ -1,0 +1,74 @@
+name: Test workflow examples
+on:
+  push:
+    paths:
+      - 'keep/providers/**'
+      - 'examples/workflows/**'
+      - 'keep-ui/entities/workflows/model/yaml.schema.ts'
+      - 'keep-ui/scripts/validate-workflow-examples.ts'
+  pull_request:
+    paths:
+      - 'keep/providers/**'
+      - 'examples/workflows/**'
+      - 'keep-ui/entities/workflows/model/yaml.schema.ts'
+      - 'keep-ui/scripts/validate-workflow-examples.ts'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}-${{ github.job }}
+  cancel-in-progress: true
+env:
+  NODE_VERSION: 20
+  PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+
+jobs:
+  test-workflow-examples:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Save providers list
+        run: |
+          poetry run python ./scripts/save_providers_list.py
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: keep-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: keep-ui
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: keep-ui
+        run: npm run test:workflow-examples
