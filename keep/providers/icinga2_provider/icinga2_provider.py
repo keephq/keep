@@ -1,170 +1,262 @@
-import logging
-import requests
-from typing import Any, Dict, List, Optional
-from datetime import datetime
+"""
+Icinga2 Provider is a class that provides a way to receive alerts from Icinga2 using webhooks.
+"""
 
+import dataclasses
+import pydantic
+import requests
+
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from keep.api.models.alert import Alert, AlertSeverity, AlertStatus
 
-logger = logging.getLogger(__name__)
-
+@pydantic.dataclasses.dataclass
 class Icinga2ProviderAuthConfig:
-    """Icinga2 Authentication Configuration"""
-    api_url: str #Icinga2
-    username: str
-    password: str
-    verify_ssl: bool = True
+    """
+    Allows User Authentication with Icinga2 API.
+
+    config params:
+    - host_url: Base URL of Icinga2 instance
+    - api_user: Username for API authentication
+    - api_password: Password for API authentication
+    """
+    host_url: pydantic.AnyHttpUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Icinga2 Host URL",
+            "hint": "e.g. https://icinga2.example.com",
+            "sensitive": False,
+            "validation": "any_http_url",
+        }
+    )
+
+    api_user: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Icinga2 API User",
+            "sensitive": False,
+        }
+    )
+
+    api_password: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Icinga2 API Password",
+            "sensitive": True,
+        }
+    )
 
 class Icinga2Provider(BaseProvider):
     """
-    Provider for Icinga2 Integration
-    """
-    PROVIDER_TYPE = "icinga2"
-    PROVIDER_NAME = "icinga2"
+    Get alerts from Icinga2 into Keep primarily via webhooks.
 
+    feat:
+    - Fetching alerts from Icinga2 services & hosts
+    - Mapping Icinga2 states to Keep alert status and severity
+    - Formatting alerts according to Keep's alert model
+    - Supporting webhook integration for real-time alerts
+    """
+
+    webhook_documentation_here_differs_from_general_documentation = True
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """
+    
+To send alerts from Icinga2 to Keep, configure a new notification command:
+
+1. In Icinga2, create a new notification command
+2. Set the webhook URL as: {keep_webhook_api_url}
+3. Add header "X-API-KEY" with your Keep API key (webhook role)
+4. Configure notification rules to use this command
+5. For detailed setup instructions, see [Keep documentation](https://docs.keephq.dev/providers/documentation/icinga2-provider)
+    """
+
+    PROVIDER_DISPLAY_NAME = "Icinga2"
+    PROVIDER_TAGS = ["alert", "monitoring"]
+    PROVIDER_CATEGORY = ["Monitoring"]
+    WEBHOOK_INSTALLATION_REQUIRED = True
+    PROVIDER_ICON = "icinga2-icon.png"
+
+    # Define provider scopes
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="write",
-            description="Write access to Icinga2 (acknowledge, Schedule Downtimes)",
-            mandatory=False
+            name="read_alerts",
+            description="Read alerts from Icinga2",
         ),
-        ProviderScope(
-            name="read",
-            description="Read Access to Icinga2 Monitoring Data",
-            mandatory=True
-        )
     ]
 
-    def __init__(self, context_manager, provider_id: str, config: ProviderConfig):
+    # Icinga2 states Mapping to Keep alert states ...
+    STATUS_MAP = {
+        "OK": AlertStatus.RESOLVED,
+        "WARNING": AlertStatus.FIRING,
+        "CRITICAL": AlertStatus.FIRING,
+        "UNKNOWN": AlertStatus.FIRING,
+        "UP": AlertStatus.RESOLVED,
+        "DOWN": AlertStatus.FIRING,
+    }
+
+    # Mapping Icinga2 states to Keep alert severities
+    SEVERITY_MAP = {
+        "OK": AlertSeverity.INFO,
+        "WARNING": AlertSeverity.WARNING,
+        "CRITICAL": AlertSeverity.CRITICAL,
+        "UNKNOWN": AlertSeverity.INFO,
+        "UP": AlertSeverity.INFO,
+        "DOWN": AlertSeverity.CRITICAL,
+    }
+
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
         super().__init__(context_manager, provider_id, config)
-        self.api_url = config.authentication.get("api_url").rstrip('/')
-        self.username = config.authentication.get("username")
-        self.password = config.authentication.get("password")
-        self.verify_ssl = config.authentication.get("verify_ssl", True)
-        self.session = requests.Session()
-        self.session.auth = (self.username, self.password)
-        self.session.verify = self.verify_ssl
-        self.session.headers.update({
-            'Accept': 'application/json'
-        })
 
-    def validate_scopes(self) -> dict:
-        """Validate Provider Scopes"""
-        validated_scopes = {}
+    def validate_config(self):
+        """
+        Validates required configuration for Icinga2 provider.
+        Affirms all required authentication parameters are present.
+        """
+        self.authentication_config = Icinga2ProviderAuthConfig(
+            **self.config.authentication
+        )
+
+    def validate_scopes(self):
+        """
+        Validate provider scopes by testing API connectivity.
+        Attempts to fetch Icinga2 status to verify credentials.
+        """
+        self.logger.info("Validating Icinga2 provider")
         try:
-            # Get Status Summary to Test API Access
-            response = self.session.get(f"{self.api_url}/v1/status")
-            response.raise_for_status()
-            validated_scopes["write"] = True
+            response = requests.get(
+                url=f"{self.authentication_config.host_url}/v1/status",
+                auth=(
+                    self.authentication_config.api_user,
+                    self.authentication_config.api_password,
+                ),
+                verify=True,
+            )
 
-            # Try getting actions for write Access Test
-            write_response = self.session.get(f"{self.api_url}/v1/actions")
-            write_response.raise_for_status()
-            validated_scopes["write"] = True
+            if response.status_code != 200:
+                response.raise_for_status()
+
+            self.logger.info(
+                "Scopes Validation is successful",
+                extra={"response": response.json()}
+            )
+
+            return {"read_alerts": True}
 
         except Exception as e:
-            validated_scopes["read"] = str(e)
-            validated_scopes["write"] = str(e)
-        return validated_scopes
+            self.logger.exception("Failed to validate scopes", extra={"error": e})
+            return {"read_alerts": str(e)}
     
-    def _severity_to_alert_severity(self, state: str) -> AlertSeverity:
-        """Map Icinga2 state to Keep Alert Severity"""
-        SEVERITY_MAP = {
-            'OK': AlertSeverity.INFO,
-            'WARNING': AlertSeverity.WARNING,
-            'CRITICAL': AlertSeverity.CRITICAL,
-            'UNKNOWN': AlertSeverity.WARNING,
-            'UP': AlertSeverity.INFO,
-            'DOWN': AlertSeverity.CRITICAL
-        }
-        return SEVERITY_MAP.get(state, AlertSeverity.WARNING)
-    
-    def get_alerts(self, params: Optional[Dict[str, Any]] = None) -> List[Alert]:
-        """Gets Alerts from Icinga2"""
-        alerts = []
+    def _get_alerts(self) -> list[AlertDto]:
+        """
+        Get alerts from Icinga2 via API.
+        
+        Returns:
+            list[AlertDto]: List of alerts in Keep format
+        """
+        self.logger.info("Getting alerts from Icinga2")
+
         try:
-            # getting all non-OK states...
-            response = self.session.get(
-                f"{self.api_url}/v1/objects/services",
-                params={
-                    "attrs": ["name", "state", "last_check_result", "host_name", "display_name", "acknowledgement"]
-                }
+            response = requests.get(
+                url=f"{self.authentication_config.host_url}/v1/services?attrs=name,display_name,state,last_state_change",
+                auth=(
+                    self.authentication_config.api_user,
+                    self.authentication_config.api_password,
+                ),
+                verify=True,
             )
-            response.raise_for_status()
-            services = response.json().get('results', [])
 
-            for service in services:
-                attrs = service.get('attrs', {})
-                last_check = attrs.get('last_check_result', {})
+            if response.status_code != 200:
+                response.raise_for_status()
 
-                alert = Alert(
-                    id=f"{attrs.get('host_name')}_{attrs.get('name')}",
-                    source=self.PROVIDER_TYPE,
-                    severity=self._severity_to_alert_severity(attrs.get('state')),
-                    status=AlertStatus.RESOLVED if attrs.get('state') == 'OK' else AlertStatus.FIRING,
-                    timestamp=datetime.utcnow().isoformat(),
-                    name=attrs.get('display_name'),
-                    description=last_check.get('output', ''),
-                    labels={
-                        "host": attrs.get('host_name'),
-                        "service": attrs.get('name'),
-                        "state": attrs.get('state'),
-                        "acknowledged": bool(attrs.get('acknowledgement'))
-                    }
+            services = response.json()["results"]
+
+            return [
+                AlertDto(
+                    id=service.get("name"),
+                    name=service.get("display_name"),
+                    status=self.STATUS_MAP.get(service.get("state"), AlertStatus.FIRING),
+                    severity=self.SEVERITY_MAP.get(service.get("state"), AlertSeverity.INFO),
+                    timestamp=service.get("last_state_change"),
+                    source=["icinga2"]
                 )
-                alerts.append(alert)
-
+                for service in services
+            ]
+        
         except Exception as e:
-            logger.error(f"Error fetching alerts from Icinga2: {str(e)}")
-            raise
-
-        return alerts
+            self.logger.exception("Failed to get alerts from Icinga2")
+            raise Exception(f"Failed to get alerts from Icinga2: {str(e)}")
     
-    def acknowledge_alerts(self, alert_id: str, **kwargs) -> dict:
-        """Acknowledge an alert in Icinga2"""
-        try:
-            host, service = alert_id.split('_', 1)
+    @staticmethod
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
+        """
+        Format Icinga2 webhook payload into Keep alert format.
 
-            data = {
-                "type": "Service",
-                "filter": f'service.name=="{service}" && host.name=="{host}"',
-                "author": kwargs.get("author", "keep"),
-                "comment": kwargs.get("comment", "Acknowledged via Keep"),
-                "notify": kwargs.get("notify", True),
-                "sticky": kwargs.get("sticky", True)
-            }
+        Args:
+            event (dict): Raw alert data from Icinga2
+            provider_instance (BaseProvider, optional): Provider instance
+            
+        Returns:
+            AlertDto: Formatted alert in Keep format
+        """
+        check_result = event.get("check_result", {})
+        service = event.get("service", {})
+        host = event.get("host", {})
 
-            response = self.session.post(
-                f"{self.api_url}./v1/actions/acknowledge-problem",
-                json=data
-            )
-            response.raise_for_status()
-            return {"status": "success", "message": "Alert acknowledged"}
+        status = check_result.get("exit_status", 0)
+        state = check_result.get("state", "UNKNOWN")
+        output = check_result.get("output", "No output provided")
 
-        except Exception as x:
-            logger.error(f"Error acknowledging alert in Icinga2: {str(x)}")
-            raise
+        alert = AlertDto(
+            id=service.get("name") or host.get("name"),
+            name=service.get("display_name") or host.get("display_name"),
+            status=Icinga2Provider.STATUS_MAP.get(state, AlertStatus.FIRING),
+            severity=Icinga2Provider.SEVERITY_MAP.get(state, AlertSeverity.INFO),
+            timestamp=check_result.get("execution_start"),
+            lastReceived=check_result.get("execution_end"),
+            description=output,
+            source=["icinga2"],
+            hostname=host.get("name"),
+            service_name=service.get("name"),
+            check_command=service.get("check_command") or host.get("check_command"),
+            state=state,
+            state_type=check_result.get("state_type"),
+            attempt=check_result.get("attempt"),
+            acknowledgement=service.get("acknowledgement") or host.get("acknowledgement"),
+            downtime_depth=service.get("downtime_depth") or host.get("downtime_depth"),
+            flapping=service.get("flapping") or host.get("flapping"),
+            execution_time=check_result.get("execution_time"),
+            latency=check_result.get("latency"),
+            raw_output=output,
+        )
 
-    def close_alert(self, alert_id: str, **kwargs) -> dict:
-        """Removes acknowledgement for an Alert in Icinga2"""
-        try:
-            host, service = alert_id.split('_', 1)
+        return alert
 
-            data = {
-                "type": "Service",
-                "filter": f'service.name=="{service}" && host.name=="{host}"',
-                "author": kwargs.get("author", "Keep"),
-                "comment": kwargs.get("comment", "Removed acknowledgement via Keep")
-            }
+if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
 
-            response = self.session.post(
-                f"{self.api_url}/v1/actions/remove-acknowledgement",
-                json=data
-            )
-            response.raise_for_status()
-            return {"status": "success", "message": "Alert acknowledgement removed"}
+    import os
+    icinga2_api_user = os.getenv("ICINGA2_API_USER")
+    icinga2_api_password = os.getenv("ICINGA2_API_PASSWORD")
 
-        except Exception as x:
-            logger.error(f"Error removing acknowledgement in Icinga2: {str(x)}")
-            raise
+    config = ProviderConfig(
+        description="Icinga2 Provider",
+        authentication={
+            "host_url": "https://icinga2.example.com",
+            "api_user": icinga2_api_user,
+            "api_password": icinga2_api_password,
+        },
+    )
+
+    provider = Icinga2Provider(context_manager, "icinga2", config)
