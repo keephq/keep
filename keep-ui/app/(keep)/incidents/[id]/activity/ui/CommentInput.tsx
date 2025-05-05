@@ -5,20 +5,20 @@ import { useCallback, useMemo } from "react";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
-interface MentionsInputProps {
+interface CommentInputProps {
   value: string;
   onValueChange: (value: string) => void;
   users: User[];
   placeholder?: string;
 }
 
-export function MentionsInput({
+export function CommentInput({
   value,
   onValueChange,
   users,
   placeholder = "Add a new comment... Use @ to mention users",
-}: MentionsInputProps) {
-  const mentionSuggestions = useMemo(() => {
+}: CommentInputProps) {
+  const commentSuggestions = useMemo(() => {
     return users.map((user) => ({
       id: user.email,
       value: user.name || user.email,
@@ -36,7 +36,7 @@ export function MentionsInput({
         allowedChars: /^[A-Za-z\sÅÄÖåäö]*$/,
         mentionDenotationChars: ["@"],
         source: function (searchTerm: string, renderList: Function) {
-          const matches = mentionSuggestions.filter((item) =>
+          const matches = commentSuggestions.filter((item) =>
             item.value.toLowerCase().includes(searchTerm.toLowerCase())
           );
           renderList(matches, searchTerm);
@@ -46,7 +46,7 @@ export function MentionsInput({
         },
       },
     }),
-    [mentionSuggestions]
+    [commentSuggestions]
   );
 
   const formats = ["bold", "italic", "underline", "list", "bullet", "link", "mention"];

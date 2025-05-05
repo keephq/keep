@@ -7,7 +7,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
 import { useUsers } from "@/entities/users/model/useUsers";
-import { MentionsInput } from "./MentionsInput";
+import { CommentInput } from "./CommentInput";
 
 export function IncidentActivityComment({
   incident,
@@ -62,7 +62,7 @@ export function IncidentActivityComment({
 
   return (
     <div className="flex h-full w-full relative items-center">
-      <MentionsInput
+      <CommentInput
         value={comment}
         onValueChange={setComment}
         users={users}
