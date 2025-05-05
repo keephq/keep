@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
-from uuid import UUID
 
 from sqlalchemy import and_, case, func, select
 from sqlmodel import Session, col, text
