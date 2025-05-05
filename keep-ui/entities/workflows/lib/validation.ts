@@ -136,7 +136,9 @@ export const validateAllMustacheVariablesInString = (
   return errors;
 };
 
-export const checkProviderNeedsInstallation = (providerObject: Provider) => {
+export const checkProviderNeedsInstallation = (
+  providerObject: Pick<Provider, "type" | "config">
+) => {
   return providerObject.config && Object.keys(providerObject.config).length > 0;
 };
 

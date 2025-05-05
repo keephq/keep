@@ -46,16 +46,19 @@ async function validateWorkflowExamples() {
   });
 
   console.log(`\n========================================= `);
-  console.log(
-    `${invalidWorkflows.length} workflows are invalid out of ${workflowFiles.length} examples`
-  );
-
   if (invalidWorkflows.length > 0) {
+    console.log(
+      `❌ ${invalidWorkflows.length} workflows are invalid out of ${workflowFiles.length} examples`
+    );
     console.log("Please fix the following workflow files:");
     invalidWorkflows.forEach((file) => {
       console.log(`- ${file}`);
     });
     process.exit(1);
+  } else {
+    console.log(
+      `✅ All ${workflowFiles.length} workflows are valid according to the schema. Nice!`
+    );
   }
 }
 

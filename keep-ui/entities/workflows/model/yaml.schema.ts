@@ -8,28 +8,61 @@ import {
 import { Provider } from "@/shared/api/providers";
 import { checkProviderNeedsInstallation } from "../lib/validation";
 
-const mockProvider: Provider = {
-  id: "mock",
-  display_name: "Mock",
-  tags: [],
+type ProviderMetadataForValidation = Pick<
+  Provider,
+  | "type"
+  | "config"
+  | "can_query"
+  | "can_notify"
+  | "query_params"
+  | "notify_params"
+>;
+
+const mockProvider: ProviderMetadataForValidation = {
   type: "mock",
+  config: {},
   can_query: true,
   can_notify: true,
   query_params: [],
   notify_params: [],
-  config: {},
-  installed: false,
-  linked: false,
-  last_alert_received: "",
-  details: {
-    authentication: {},
+};
+
+const githubStarsProvider: ProviderMetadataForValidation = {
+  type: "github.stars",
+  config: {
+    access_token: {
+      required: true,
+      description: "GitHub Access Token",
+      sensitive: true,
+      default: null,
+    },
   },
-  pulling_available: false,
-  validatedScopes: {},
-  pulling_enabled: false,
-  categories: [],
-  coming_soon: false,
-  health: false,
+  can_query: true,
+  can_notify: false,
+  query_params: ["previous_stars_count", "last_stargazer", "repository"],
+};
+
+const auth0LogsProvider: ProviderMetadataForValidation = {
+  type: "auth0.logs",
+  config: {
+    domain: {
+      required: true,
+      description: "Auth0 Domain",
+      hint: "https://tenantname.us.auth0.com",
+      validation: "https_url",
+      default: null,
+    },
+    token: {
+      required: true,
+      sensitive: true,
+      description: "Auth0 API Token",
+      hint: "https://manage.auth0.com/dashboard/us/YOUR_ACCOUNT/apis/management/explorer",
+      default: null,
+    },
+  },
+  can_query: true,
+  can_notify: false,
+  query_params: ["log_type", "previous_users"],
 };
 
 export const WorkflowInputSchema = z.object({
@@ -92,7 +125,10 @@ const YamlProviderSchema = z
   })
   .strict();
 
-function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
+function getYamlProviderSchema(
+  provider: ProviderMetadataForValidation,
+  type: "step" | "action"
+) {
   // Get all valid parameter keys from the provider
   const validKeys = [
     ...(type === "step"
@@ -100,6 +136,7 @@ function getYamlProviderSchema(provider: Provider, type: "step" | "action") {
       : provider.notify_params || []),
   ].filter((key) => key !== "kwargs");
 
+  // TODO: use the correct type from the provider methods _query and _notify
   const valueSchema = z.union([
     z.string(),
     z.number(),
@@ -225,13 +262,19 @@ export function getYamlWorkflowDefinitionSchema(
   let stepSchema: z.ZodSchema = YamlStepOrActionSchema;
   let actionSchema: z.ZodSchema = YamlStepOrActionSchema;
   // Only update schemas if there are providers
-  const providersWithMock = [mockProvider, ...providers];
+  const providersWithMock = [
+    mockProvider,
+    // TODO: move github and auth0 providers to the providers list from backend, once we have them at /providers endpoint
+    githubStarsProvider,
+    auth0LogsProvider,
+    ...providers,
+  ];
   const uniqueProviders = providersWithMock.reduce((acc, provider) => {
     if (!acc.find((p) => p.type === provider.type)) {
       acc.push(provider);
     }
     return acc;
-  }, [] as Provider[]);
+  }, [] as ProviderMetadataForValidation[]);
   const providerStepSchemas = uniqueProviders
     .filter((provider) => provider.can_query)
     .map((provider) => getYamlProviderSchema(provider, "step"));
