@@ -1,5 +1,5 @@
 import { IncidentDto } from "@/entities/incidents/model";
-import { TextInput, Button } from "@tremor/react";
+import { Button } from "@tremor/react";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
@@ -22,8 +22,10 @@ export function IncidentActivityComment({
 
   const onSubmit = useCallback(async () => {
     try {
-      // Extract mentioned users from comment
-      const mentionedUsers = comment.match(/@([\w.-]+@[\w.-]+)/g)?.map(mention => mention.slice(1)) || [];
+      // Extract mentioned users from Quill-formatted comment
+      const mentionedUsers = (comment.match(/@[^>]+<([^>]+)>/g) || [])
+        .map(mention => mention.match(/<([^>]+)>/)?.[1])
+        .filter(Boolean) as string[];
       
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,

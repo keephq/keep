@@ -51,6 +51,21 @@ def test_incident_comment_with_mentions(browser: Page):
     expect(mentioned_users).to_have_count(2)
     expect(mentioned_users.first).to_have_class("mentioned-user")
 
+    # Verify notification creation
+    notifications_url = f"{KEEP_API_URL}/notifications"
+    notifications_response = browser.request.get(notifications_url)
+    expect(notifications_response).to_be_ok()
+    notifications = notifications_response.json()
+    mentioned_emails = ["rohit.dash@example.com", "oz.rooh@example.com"]
+    assert any(n["recipient"] in mentioned_emails and "mention" in n["type"] for n in notifications), "Missing mention notifications"
+
+    # Verify workflow execution
+    workflow_executions_url = f"{KEEP_API_URL}/workflows/executions"
+    executions_response = browser.request.get(workflow_executions_url)
+    expect(executions_response).to_be_ok()
+    executions = executions_response.json()
+    assert any(e["workflow_id"] == "user-mention-notification" and e["status"] == "success" for e in executions), "Missing workflow execution"
+
     # Test editing a comment with mentions
     browser.locator("[data-testid='edit-comment-button']").first.click()
     edit_input = browser.locator("[data-testid='edit-comment-input']")
