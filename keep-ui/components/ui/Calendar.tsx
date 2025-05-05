@@ -94,19 +94,37 @@ function Calendar({
   };
 
   const handleDaySelect = (value: Date | DateRange | undefined) => {
-    setInternalSelected(value);
-    if (
-      mode === "single" &&
-      !(value instanceof Date) &&
-      "from" in (value || {})
-    ) {
-      (onSelect as (date: Date | undefined) => void)?.(
-        (value as DateRange)?.from
-      );
-    } else if (mode === "range" && (value instanceof Date || !value)) {
-      (onSelect as (date: DateRange | undefined) => void)?.(undefined);
-    } else {
-      (onSelect as any)?.(value);
+    if (mode === "single") {
+      if (!(value instanceof Date) && "from" in (value || {})) {
+        (onSelect as (date: Date | undefined) => void)?.(
+          (value as DateRange)?.from
+        );
+      }
+
+      setInternalSelected(value);
+    }
+
+    if (mode === "range") {
+      if (value instanceof Date || !value) {
+        (onSelect as (date: DateRange | undefined) => void)?.(undefined);
+        setInternalSelected(undefined);
+      } else if (
+        (internalSelected as any)?.from.getTime() !==
+        (internalSelected as any)?.to.getTime()
+      ) {
+        // when the range is already selected and user clicks another date,
+        // it should be treated as a new range selection
+        setInternalSelected({
+          from: (internalSelected as any)?.to,
+          to: (internalSelected as any)?.to,
+        });
+      } else if (
+        (value as any)?.from.getTime() !== (value as any)?.to.getTime()
+      ) {
+        // emit value to outside only when from and to do not match (i.e. range selected)
+        (onSelect as any)?.(value);
+        setInternalSelected(value);
+      }
     }
   };
 
