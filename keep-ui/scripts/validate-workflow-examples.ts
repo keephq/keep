@@ -21,10 +21,13 @@ async function validateWorkflowExamples() {
   );
   console.log(`Providers list loaded, ${providers.length} providers found`);
   const zodSchema = getYamlWorkflowDefinitionSchema(providers);
+  console.log(`Zod schema loaded`);
   const workflowFiles = getWorkflowExamplesFiles();
 
-  let validWorkflows = 0;
-  let invalidWorkflows = 0;
+  const invalidWorkflows: string[] = [];
+  let validWorkflowsCount = 0;
+
+  console.log(`Found ${workflowFiles.length} workflow files to validate`);
 
   workflowFiles.forEach((file) => {
     const workflowYaml = fs.readFileSync(
@@ -36,15 +39,24 @@ async function validateWorkflowExamples() {
     if (!result.success) {
       console.log(`\n========== ${file} is invalid ==========`);
       console.log(fromZodError(result.error).toString());
-      invalidWorkflows++;
+      invalidWorkflows.push(file);
     } else {
-      validWorkflows++;
+      validWorkflowsCount++;
     }
   });
 
   console.log(`\n========================================= `);
-  console.log(`Valid workflows: ${validWorkflows}`);
-  console.log(`Invalid workflows: ${invalidWorkflows}`);
+  console.log(
+    `${invalidWorkflows.length} workflows are invalid out of ${workflowFiles.length} examples`
+  );
+
+  if (invalidWorkflows.length > 0) {
+    console.log("Please fix the following workflow files:");
+    invalidWorkflows.forEach((file) => {
+      console.log(`- ${file}`);
+    });
+    process.exit(1);
+  }
 }
 
 validateWorkflowExamples();
