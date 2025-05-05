@@ -219,13 +219,19 @@ export function parseWorkflow(
       const currType = curr.type;
       let value = curr.value;
       if (currType === "alert") {
+        value = {};
         if (curr.filters) {
-          value = curr.filters.reduce((prev: any, curr: any) => {
+          const filters = curr.filters.reduce((prev: any, curr: any) => {
             prev[curr.key] = curr.value;
             return prev;
           }, {});
-        } else {
-          value = {};
+          value["filters"] = filters;
+        }
+        if (curr.cel) {
+          value["cel"] = curr.cel;
+        }
+        if (curr.only_on_change) {
+          value["only_on_change"] = curr.only_on_change;
         }
       } else if (currType === "manual") {
         value = "true";
@@ -487,20 +493,24 @@ export function getYamlWorkflowDefinition(
 
   const triggers = [];
   if (alert.properties.manual === "true") triggers.push({ type: "manual" });
-  if (
-    alert.properties.alert &&
-    Object.keys(alert.properties.alert).length > 0
-  ) {
-    const filters = Object.keys(alert.properties.alert).map((key) => {
-      return {
-        key: key,
-        value: (alert.properties.alert as any)[key],
-      };
-    });
-    triggers.push({
-      type: "alert",
-      filters: filters,
-    });
+  if (alert.properties.alert) {
+    const alertTrigger: any = { type: "alert" };
+    if (alert.properties.alert.filters) {
+      const filters = Object.keys(alert.properties.alert.filters).map((key) => {
+        return {
+          key: key,
+          value: (alert.properties.alert as any)[key],
+        };
+      });
+      alertTrigger["filters"] = filters;
+    }
+    if (alert.properties.alert.cel) {
+      alertTrigger["cel"] = alert.properties.alert.cel;
+    }
+    if (alert.properties.alert.only_on_change) {
+      alertTrigger["only_on_change"] = alert.properties.alert.only_on_change;
+    }
+    triggers.push(alertTrigger);
   }
   if (alert.properties.interval) {
     triggers.push({

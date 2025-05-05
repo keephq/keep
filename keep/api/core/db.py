@@ -39,7 +39,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -778,14 +778,19 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     return result
 
 
-def get_all_workflows(tenant_id: str):
+def get_all_workflows(tenant_id: str, exclude_disabled: bool = False) -> List[Workflow]:
     with Session(engine) as session:
-        workflows = session.exec(
+        query = (
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
             .where(Workflow.is_test == False)
-        ).all()
+        )
+
+        if exclude_disabled:
+            query = query.where(Workflow.is_disabled == False)
+
+        workflows = session.exec(query).all()
     return workflows
 
 

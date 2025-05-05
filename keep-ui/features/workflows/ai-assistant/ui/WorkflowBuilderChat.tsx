@@ -31,7 +31,6 @@ import {
 import { Button } from "@/components/ui";
 import { GENERAL_INSTRUCTIONS } from "@/features/workflows/ai-assistant/lib/constants";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
-import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { AddTriggerUI } from "./AddTriggerUI";
 import { SuggestionResult } from "./SuggestionStatus";
 import { AddStepUI } from "./AddStepUI";
@@ -43,8 +42,10 @@ import {
 import { AddTriggerOrStepSkeleton } from "./AddTriggerOrStepSkeleton";
 import { foreachTemplate, getTriggerTemplate } from "../../builder/lib/utils";
 import { capture } from "@/shared/lib/capture";
+import { useConfig } from "@/utils/hooks/useConfig";
 import "@copilotkit/react-ui/styles.css";
 import "./chat.css";
+
 export interface WorkflowBuilderChatProps {
   definition: DefinitionV2;
   installedProviders: Provider[];
@@ -54,6 +55,7 @@ export function WorkflowBuilderChat({
   definition,
   installedProviders,
 }: WorkflowBuilderChatProps) {
+  const { data: config } = useConfig();
   const {
     nodes,
     edges,
@@ -360,23 +362,17 @@ export function WorkflowBuilderChat({
   useCopilotAction({
     name: "addAlertTrigger",
     description:
-      "Add an alert trigger to the workflow. There could be only one alert trigger in the workflow, if you need more combine them into one alert trigger.",
+      "Add an alert trigger to the workflow. There could be only one alert trigger in the workflow, if you need more combine them into one alert trigger, using the CEL expression.",
     parameters: [
       {
         name: "alertFilters",
-        description: "The filters of the alert trigger",
-        type: "object[]",
+        description: "The filters of the alert trigger as a CEL expression",
+        type: "string",
         required: true,
         attributes: [
           {
-            name: "attribute",
-            description: `One of alert properties`,
-            type: "string",
-            required: true,
-          },
-          {
             name: "value",
-            description: "The value of the alert filter",
+            description: "The value of the alert filter in CEL expression",
             type: "string",
             required: true,
           },
@@ -389,13 +385,7 @@ export function WorkflowBuilderChat({
       }
 
       const properties = {
-        alert: args.args.alertFilters.reduce(
-          (acc, filter) => {
-            acc[filter.attribute] = filter.value;
-            return acc;
-          },
-          {} as Record<string, string>
-        ),
+        cel: args.args.alertFilters,
       };
 
       const trigger = getTriggerDefinitionFromCopilotAction(
@@ -480,7 +470,9 @@ export function WorkflowBuilderChat({
     parameters: [
       {
         name: "incidentEvents",
-        description: `The events of the incident trigger, one of: ${IncidentEventEnum.options.map((o) => `"${o}"`).join(", ")}`,
+        description: `The events of the incident trigger, one of: ${IncidentEventEnum.options
+          .map((o) => `"${o}"`)
+          .join(", ")}`,
         type: "string[]",
         required: true,
       },
@@ -1063,7 +1055,7 @@ Example: 'node_123__empty_true'`,
       }
     >
       {/* Debug info */}
-      {WF_DEBUG_INFO && (
+      {config?.KEEP_WORKFLOW_DEBUG && (
         <div className="">
           <div className="flex">
             <Button
