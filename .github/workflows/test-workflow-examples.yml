@@ -57,7 +57,7 @@ jobs:
       # Save list of providers to providers_list.json, because we don't have backend endpoint to get it
       - name: Save providers list
         run: |
-          PYTHONPATH=${{ github.workspace }} poetry run python ./scripts/save_providers_list.py
+          PYTHONPATH="${{ github.workspace }}" poetry run python ./scripts/save_providers_list.py
 
       - name: Set up Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v3
