@@ -7,11 +7,11 @@ import datetime
 import importlib
 import inspect
 import json
+import keyword
 import logging
 import os
 import types
 import typing
-import keyword
 from dataclasses import fields
 from typing import get_args
 
@@ -502,6 +502,7 @@ class ProvidersFactory:
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
             provider_copy.installed = True
+            provider_copy.provider_metadata = p.provider_metadata
             try:
                 provider_auth = {"name": p.name}
                 if include_details:
