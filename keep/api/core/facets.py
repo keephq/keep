@@ -34,6 +34,9 @@ def build_facet_selects(properties_metadata, facets):
         property_metadata = properties_metadata.get_property_metadata_for_str(
             facet.property_path
         )
+        if property_metadata is None:
+            continue
+
         select_field = ("facet_" + facet.property_path.replace(".", "_")).lower()
 
         new_fields_config.append(

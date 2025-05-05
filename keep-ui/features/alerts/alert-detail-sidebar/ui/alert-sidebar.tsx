@@ -9,6 +9,7 @@ import { TopologyMap } from "@/app/(keep)/topology/ui/map";
 import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchContext";
 import { FieldHeader, SeverityLabel, UISeverity, Tooltip } from "@/shared/ui";
 import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
+import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { Link } from "@/components/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
@@ -16,6 +17,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { toast } from "react-toastify";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -160,12 +162,41 @@ export const AlertSidebar = ({
                             </Link>
                           </>
                         }
-                        className="z-50"
+                        className="z-[100]"
                       >
                         <QuestionMarkCircleIcon className="w-4 h-4" />
                       </Tooltip>
                     </FieldHeader>
-                    {alert.fingerprint}
+                    <div className="flex items-center gap-2">
+                      <span className="truncate max-w-[calc(100%-40px)] inline-block">
+                        {alert.fingerprint}
+                      </span>
+                      <Button
+                        icon={ClipboardDocumentIcon}
+                        size="xs"
+                        color="orange"
+                        variant="light"
+                        onClick={() => {
+                          navigator.clipboard
+                            .writeText(alert.fingerprint)
+                            .then(() => {
+                              toast.success(
+                                "Fingerprint copied to clipboard!",
+                                {
+                                  position: "top-left",
+                                }
+                              );
+                            })
+                            .catch((err) => {
+                              console.error("Failed to copy fingerprint:", err);
+                              toast.error("Failed to copy fingerprint", {
+                                position: "top-left",
+                              });
+                            });
+                        }}
+                        tooltip="Copy fingerprint"
+                      />
+                    </div>
                   </p>
                 </div>
                 <AlertTimeline

@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
+from uuid import UUID
 
 from sqlalchemy import and_, case, func, select
 from sqlmodel import Session, col, text
@@ -34,6 +35,9 @@ from keep.api.models.query import SortOptionsDto
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
+    FieldMappingConfiguration(
+        map_from_pattern="id", map_to=["incident.id"], data_type=UUID
+    ),
     FieldMappingConfiguration(
         map_from_pattern="name",
         map_to=["incident.user_generated_name", "incident.ai_generated_name"],

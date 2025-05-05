@@ -55,7 +55,6 @@ export function getConfig(): InternalConfig {
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
-    FRIGADE_DISABLED: process.env.FRIGADE_DISABLED,
     READ_ONLY: process.env.KEEP_READ_ONLY === "true",
     OPEN_AI_API_KEY_SET:
       !!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY,
@@ -67,5 +66,6 @@ export function getConfig(): InternalConfig {
       process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
     KEEP_HIDE_SENSITIVE_FIELDS:
       process.env.KEEP_HIDE_SENSITIVE_FIELDS === "true",
+    KEEP_WORKFLOW_DEBUG: process.env.KEEP_WORKFLOW_DEBUG === "true",
   };
 }

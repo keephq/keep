@@ -1,8 +1,12 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, Index, PrimaryKeyConstraint
+from sqlalchemy import TEXT, DateTime, Index, PrimaryKeyConstraint, func
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
+
+
+def get_dummy_workflow_id(tenant_id: str) -> str:
+    return f"system-dummy-workflow-{tenant_id}"
 
 
 class Workflow(SQLModel, table=True):
@@ -18,9 +22,18 @@ class Workflow(SQLModel, table=True):
     is_deleted: bool = Field(default=False)
     is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            name="last_updated",
+            onupdate=func.now(),
+            server_default=func.now(),
+            nullable=False,
+        )
+    )
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
+    is_test: bool = Field(default=False)
 
     executions: List["WorkflowExecution"] = Relationship(back_populates="workflow")
     versions: List["WorkflowVersion"] = Relationship(back_populates="workflow")
@@ -36,7 +49,15 @@ class WorkflowVersion(SQLModel, table=True):
     revision: int = Field(primary_key=True)
     workflow_raw: str = Field(sa_column=Column(TEXT))
     updated_by: str
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            name="updated_at",
+            onupdate=func.now(),
+            server_default=func.now(),
+            nullable=False,
+        )
+    )
     is_valid: bool = Field(default=False)
     is_current: bool = Field(default=False)
     comment: Optional[str] = None
@@ -118,6 +139,7 @@ class WorkflowExecution(SQLModel, table=True):
     error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
+    is_test_run: bool = Field(default=False)
 
     workflow: "Workflow" = Relationship(
         back_populates="executions",

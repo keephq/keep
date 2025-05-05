@@ -6,8 +6,8 @@ import { normalizeStepType } from "../../builder/lib/utils";
 import { stringify } from "yaml";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 import { getYamlFromStep } from "../lib/utils";
-import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { JsonCard, MonacoEditor } from "@/shared/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 function getStepIconUrl(data: V2Step | V2StepTrigger) {
   const { type } = data || {};
@@ -25,6 +25,7 @@ export const StepPreview = ({
   step: V2Step | V2StepTrigger;
   className?: string;
 }) => {
+  const { data: config } = useConfig();
   const yamlDefinition = getYamlFromStep(step);
   const yaml = yamlDefinition ? stringify(yamlDefinition) : null;
 
@@ -33,7 +34,7 @@ export const StepPreview = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {WF_DEBUG_INFO && <JsonCard title="step" json={step} />}
+      {config?.KEEP_WORKFLOW_DEBUG && <JsonCard title="step" json={step} />}
       <div
         className={clsx(
           "max-w-[250px] flex shadow-md bg-white border-2 border-stone-400 px-4 py-2 flex-1 flex-row items-center justify-between gap-2 flex-wrap text-sm",

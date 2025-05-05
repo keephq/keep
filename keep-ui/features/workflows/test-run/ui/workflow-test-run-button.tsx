@@ -38,6 +38,10 @@ export function WorkflowTestRunButton({
     const workflow = getYamlWorkflowDefinition(definition.value);
     // NOTE: prevent the workflow from being disabled, so test run doesn't fail
     workflow.disabled = false;
+    if (workflowId) {
+      // if existing workflow, use it's real id for test run
+      workflow.id = workflowId;
+    }
     const body = getBodyFromStringOrDefinitionOrObject({
       workflow,
     });

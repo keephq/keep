@@ -1,5 +1,4 @@
 from typing import Any, List
-from types import NoneType
 
 from sqlalchemy import Dialect, String
 
@@ -185,12 +184,6 @@ class BaseCelToSqlProvider:
     def _get_order_by_field(self, cel_sort_by: str) -> str:
         return self.get_field_expression(cel_sort_by)
 
-    def _get_default_value_for_type(self, type: type) -> str:
-        if type is str or type is NoneType:
-            return "'__@NULL@__'" # This is a workaround for handling NULL values in SQL
-
-        return "NULL"
-
     def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
         stack.append(abstract_node)
         result = None
@@ -229,8 +222,11 @@ class BaseCelToSqlProvider:
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
-    def coalesce(self, args: List[str]) -> str:
-        raise NotImplementedError("COALESCE is not implemented. Must be implemented in the child class.")
+    def coalesce(self, args):
+        if len(args) == 1:
+            return args[0]
+
+        return f"COALESCE({', '.join(args)})"
 
     def cast(self, expression_to_cast: str, to_type: type, force=False) -> str:
         raise NotImplementedError("CAST is not implemented. Must be implemented in the child class.")
@@ -277,7 +273,10 @@ class BaseCelToSqlProvider:
             )
 
         if isinstance(comparison_node.second_operand, ConstantNode):
-            second_operand = self._visit_constant_node(comparison_node.second_operand.value)
+            second_operand = self._visit_constant_node(
+                comparison_node.second_operand.value,
+                self._get_data_type_to_convert(comparison_node),
+            )
 
             if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
                 first_operand = self.cast(self.__build_sql_filter(comparison_node.first_operand, stack), type(comparison_node.second_operand.value))
@@ -311,6 +310,9 @@ class BaseCelToSqlProvider:
         return result
 
     def _visit_equal(self, first_operand: str, second_operand: str) -> str:
+        if second_operand == "NULL":
+            return f"{first_operand} IS NULL"
+
         return f"{first_operand} = {second_operand}"
 
     def _visit_not_equal(self, first_operand: str, second_operand: str) -> str:
@@ -344,13 +346,41 @@ class BaseCelToSqlProvider:
         else:
             first_operand_str = self.__build_sql_filter(first_operand, stack)
 
-        return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
+        constant_nodes_without_none = []
+        is_none_found = False
+
+        for item in array:
+            if isinstance(item, ConstantNode):
+                if item.value is None:
+                    is_none_found = True
+                    continue
+                constant_nodes_without_none.append(item)
+
+        or_queries = []
+
+        if len(constant_nodes_without_none) > 0:
+            or_queries.append(
+                f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value, self._get_data_type_to_convert(first_operand)) for c in constant_nodes_without_none])})"
+            )
+
+        if is_none_found:
+            or_queries.append(self._visit_equal(first_operand_str, "NULL"))
+
+        if len(or_queries) == 0:
+            return self._visit_constant_node(False)
+
+        final_query = or_queries[0]
+
+        for query in or_queries[1:]:
+            final_query = self._visit_logical_or(final_query, query)
+
+        return final_query
 
     # endregion
 
-    def _visit_constant_node(self, value: str) -> str:
+    def _visit_constant_node(self, value: Any, expected_data_type: type = None) -> str:
         if value is None:
-            return self._get_default_value_for_type(NoneType)
+            return "NULL"
         if isinstance(value, str):
             return self.literal_proc(value)
         if isinstance(value, bool):
@@ -359,6 +389,24 @@ class BaseCelToSqlProvider:
             return str(value)
 
         raise NotImplementedError(f"{type(value).__name__} constant type is not supported yet. Consider implementing this support in child class.")
+
+    def _get_data_type_to_convert(self, node: Node) -> type:
+        """
+        Extracts data type from node.
+        The data type will be used to convert the value of constant node into the expected type (SQL type).
+        """
+        if isinstance(node, PropertyAccessNode):
+            return node.data_type
+
+        if isinstance(node, MultipleFieldsNode):
+            return node.data_type
+
+        if isinstance(node, ComparisonNode):
+            return self._get_data_type_to_convert(node.first_operand)
+
+        raise NotImplementedError(
+            f"Cannot find data type to convert for {type(node).__name__} node"
+        )
 
     # region Member Access Visitors
     def _visit_multiple_fields_node(self, multiple_fields_node: MultipleFieldsNode, cast_to: type, stack) -> str:
@@ -372,8 +420,6 @@ class BaseCelToSqlProvider:
 
         if len(coalesce_args) == 1:
             return coalesce_args[0]
-
-        coalesce_args.append(self._get_default_value_for_type(cast_to))
 
         return self.coalesce(coalesce_args)
 

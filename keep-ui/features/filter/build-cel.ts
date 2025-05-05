@@ -44,7 +44,8 @@ export function buildCel(
         .filter(
           (facetOption) =>
             !facetsState[facet.id]?.has(facetOption.display_name) &&
-            facetOption.matches_count > 0
+            (facetsConfigIdBased[facet.id]?.canHitEmptyState ||
+              facetOption.matches_count > 0)
         )
         .map((option) => {
           if (typeof option.value === "string") {

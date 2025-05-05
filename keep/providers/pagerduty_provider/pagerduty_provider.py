@@ -886,6 +886,7 @@ class PagerdutyProvider(
                     "offset": offset,
                     "limit": limit,
                     "total": total,
+                    "sort_by": ["created_at:desc"],
                 }
                 if not incident_id and self.authentication_config.service_id:
                     params["service_ids[]"] = [self.authentication_config.service_id]
@@ -1046,11 +1047,22 @@ class PagerdutyProvider(
             incident_alerts = self.__get_all_incidents_or_alerts(
                 incident_id=incident_dto.fingerprint
             )
-            incident_alerts = [
-                PagerdutyProvider._format_alert(alert, None, force_new_format=True)
-                for alert in incident_alerts
-            ]
-            incident_dto._alerts = incident_alerts
+            try:
+                incident_alerts = [
+                    PagerdutyProvider._format_alert(alert, None, force_new_format=True)
+                    for alert in incident_alerts
+                ]
+                incident_dto._alerts = incident_alerts
+            except Exception:
+                self.logger.exception(
+                    "Failed to format incident alerts",
+                    extra={
+                        "provider_id": self.provider_id,
+                        "source_incident_id": incident_dto.fingerprint,
+                        "tenant_id": self.context_manager.tenant_id,
+                        "alerts": incident_alerts,
+                    },
+                )
             incidents.append(incident_dto)
         return incidents
 
@@ -1077,7 +1089,16 @@ class PagerdutyProvider(
         event = event["event"]["data"]
 
         # This will be the same for the same incident
-        original_incident_id = event.get("id", "ping")
+        original_incident_id = event.get("id")
+        # https://github.com/keephq/keep/issues/4681
+        if not original_incident_id:
+            logger.warning(
+                "No incident id found in the event",
+                extra={
+                    "event": event,
+                },
+            )
+            return []
 
         incident_id = PagerdutyProvider._get_incident_id(original_incident_id)
 
@@ -1095,6 +1116,16 @@ class PagerdutyProvider(
             created_at = datetime.datetime.fromisoformat(created_at)
         else:
             created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        title = event.get("title")
+        if not title:
+            logger.warning(
+                "No title found in the event",
+                extra={
+                    "event": event,
+                },
+            )
+            return []
 
         return IncidentDto(
             id=incident_id,
