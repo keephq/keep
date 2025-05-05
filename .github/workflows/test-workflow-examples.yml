@@ -54,6 +54,7 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
 
+      # Save list of providers to providers_list.json, because we don't have backend endpoint to get it
       - name: Save providers list
         run: |
           PYTHONPATH=${{ github.workspace }} poetry run python ./scripts/save_providers_list.py
@@ -69,6 +70,6 @@ jobs:
         working-directory: keep-ui
         run: npm ci
 
-      - name: Run frontend tests
+      - name: Run workflow examples validation
         working-directory: keep-ui
         run: npm run test:workflow-examples
