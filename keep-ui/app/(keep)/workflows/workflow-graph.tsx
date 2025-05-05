@@ -151,10 +151,13 @@ export default function WorkflowGraph({
 
   return (
     <div
-      className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}
+      className={clsx(
+        "flex flex-row items-end justify-start flex-nowrap w-full",
+        height
+      )}
     >
       {showLastExecutionStatus && <div>{getIcon()}</div>}
-      <div className={`overflow-hidden ${height} w-full`}>
+      <div className={clsx("overflow-hidden", height, "w-full")}>
         <Bar data={chartData} options={chartOptions} />
       </div>
     </div>

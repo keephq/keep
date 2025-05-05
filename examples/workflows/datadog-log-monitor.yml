@@ -23,7 +23,7 @@ workflow:
           compare_type: gt
       provider:
         type: slack
-        config: " {{ providers.slack-demo }} "
+        config: "{{ providers.slack-demo }}"
         with:
           channel: db-is-down
           # Message is always mandatory

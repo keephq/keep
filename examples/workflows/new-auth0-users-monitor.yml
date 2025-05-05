@@ -5,7 +5,7 @@ workflow:
   description: Tracks new Auth0 user signups and sends Slack notifications with detailed user information, maintaining state between runs.
   triggers:
     - type: interval
-      value: 3600
+      value: 3600 # every hour
   steps:
     - name: get-auth0-users
       provider:

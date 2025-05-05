@@ -125,6 +125,12 @@ describe("YAML Utils", () => {
   });
 
   it("parseWorkflowYamlToJSON should return json with workflow section if the input is not wrapped in workflow section", () => {
+    const parsed = parseWorkflowYamlToJSON(clickhouseExampleYaml);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveProperty("workflow");
+  });
+
+  it("parseWorkflowYamlToJSON should parse the workflow with mock providers", () => {
     const mockProviders: Provider[] = [
       {
         id: "clickhouse",

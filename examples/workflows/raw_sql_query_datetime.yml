@@ -5,7 +5,7 @@ workflow:
   description: Monitors time differences in MySQL database entries and alerts via Slack when exceeding one hour threshold.
   triggers:
     - type: interval
-      value: 360
+      value: 300 # every 5 minutes
   steps:
     - name: get-max-datetime
       provider:

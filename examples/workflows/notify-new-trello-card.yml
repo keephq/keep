@@ -22,7 +22,7 @@ workflow:
     - name: trigger-slack
       provider:
         type: slack
-        config: " {{ providers.slack-demo }} "
+        config: "{{ providers.slack-demo }}"
         with:
           channel: some-channel-that-youll-decide-later
           # Message is always mandatory

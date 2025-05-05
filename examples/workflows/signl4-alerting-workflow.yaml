@@ -13,7 +13,7 @@ workflow:
   actions:
     - name: signl4-action
       provider:
-        config: "{{ providers.SIGNL4 Alerting }}"
+        config: "{{ providers.signl4-alerting }}"
         type: signl4
         with:
           message: Test.

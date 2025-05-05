@@ -5,6 +5,7 @@ workflow:
   disabled: false
   triggers:
     - type: manual
+    - type: alert
   consts: {}
   owners: []
   services: []
@@ -13,7 +14,7 @@ workflow:
     - name: send-slack-alert
       if: "not '{{ alert.slack_timestamp }}'"
       provider:
-        config: " {{ providers.slack-prod }} "
+        config: "{{ providers.slack-prod }}"
         type: slack
         with:
           blocks:

@@ -11,7 +11,7 @@ workflow:
         - key: status
           value: resolved
   actions:
-    - name: create-alert
+    - name: close-alert
       # run only if we have an opsgenie alert id
       if: "'{{ alert.opsgenie_alert_id }}'"
       provider:

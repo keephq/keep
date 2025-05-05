@@ -5,7 +5,7 @@ workflow:
   description: Monitors MySQL datetime values and sends notifications through Ntfy when thresholds are exceeded.
   triggers:
     - type: interval
-      value: 360
+      value: 300 # every 5 minutes
   steps:
     - name: get-max-datetime
       provider:

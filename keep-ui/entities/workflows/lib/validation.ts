@@ -93,9 +93,6 @@ export const validateMustacheVariableName = (
       return `Variable: '${variableName}' - You can't access the results of an action from a step.`;
     }
 
-    if (!definition.sequence?.some((step) => step.name === stepName)) {
-      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
-    }
     if (
       parts[2] === "results" ||
       parts[2].startsWith("results.") ||
