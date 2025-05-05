@@ -1,0 +1,112 @@
+---
+title: "Icinga2 Provider"
+sidebarTitle: "Icinga2"
+---
+
+import ProviderLogo from '@components/ProviderLogo';
+
+<ProviderLogo src="/icons/icinga2-icon.png" alt="Icinga2 Logo" />
+
+# Icinga2 Provider
+
+The Icinga2 provider allows you to receive alerts from Icinga2 monitoring system within Keep.
+Icinga2 provider supports 2 methods for recieving alerts; Webhooks & API Polling.
+
+The recommended and primary method for receiving alerts is via Webhooks.
+
+## Setup
+
+### Prerequisites
+1. Access to an Icinga2 instance
+2. API user with relevant permissions
+3. Keep instance with webhook capability
+
+### Configuration
+
+The provider requires the following configuration:
+
+```yaml
+authentication:
+  host_url: "https://icinga2.example.com"  # Your Icinga2 instance URL
+  api_user: "your-api-user"                # Icinga2 API username
+  api_password: "your-api-password"        # Icinga2 API password
+```
+
+### Webhook Configuration
+To configure Icinga2 to send alerts to Keep via webhooks:
+
+1. Navigate to your Icinga2 configuration directory
+2. Create or edit the ```eventcommands.conf``` file
+3. Add the following event command configuration:
+
+```plaintext
+object EventCommand "keep-notification" {
+  command = [ "curl" ]
+  arguments = {
+    "-X" = "POST"
+    "-H" = "Content-Type: application/json"
+    "-H" = "X-API-KEY: ${keep_api_key}"
+    "--data" = "{
+      \"host\": {
+        \"name\": \"$host.name$\",
+        \"display_name\": \"$host.display_name$\",
+        \"check_command\": \"$host.check_command$\",
+        \"acknowledgement\": \"$host.acknowledgement$\",
+        \"downtime_depth\": \"$host.downtime_depth$\",
+        \"flapping\": \"$host.flapping$\"
+      },
+      \"service\": {
+        \"name\": \"$service.name$\",
+        \"display_name\": \"$service.display_name$\",
+        \"check_command\": \"$service.check_command$\",
+        \"acknowledgement\": \"$service.acknowledgement$\",
+        \"downtime_depth\": \"$service.downtime_depth$\",
+        \"flapping\": \"$service.flapping$\"
+      },
+      \"check_result\": {
+        \"exit_status\": \"$service.state$\",
+        \"state\": \"$service.state_text$\",
+        \"output\": \"$service.output$\",
+        \"execution_start\": \"$service.last_check$\",
+        \"execution_end\": \"$service.last_check$\",
+        \"state_type\": \"$service.state_type$\",
+        \"attempt\": \"$service.check_attempt$\",
+        \"execution_time\": \"$service.execution_time$\",
+        \"latency\": \"$service.latency$\"
+      }
+    }"
+    "${keep_webhook_url}" = {
+      required = true
+    }
+  }
+}
+```
+4. Define variables in your Icinga2 Configuration:
+    - ```keep_api_key```: Your Keep API key with webhook role
+    - ```keep_webhook_url```: Your Keep Webhook URL
+5. Create a notification rule that uses this event command
+6. Restart Icinga2 to apply changes
+
+### State Mapping
+
+By Default, Icinga2 states are automatically mapped to Keep alert severities & statuses as follows:
+
+#### Status Mapping
+| Icinga2 State | Keep Status |
+|---------------|-------------|
+| OK            | RESOLVED    |
+| WARNING       | FIRING      |
+| CRITICAL      | FIRING      |
+| UNKNOWN       | FIRING      |
+| UP            | RESOLVED    |
+| DOWN          | FIRING      |
+
+#### Severity Mapping
+| Icinga2 State | Keep Severity |
+|---------------|---------------|
+| OK            | INFO         |
+| WARNING       | WARNING      |
+| CRITICAL      | CRITICAL     |
+| UNKNOWN       | INFO         |
+| UP            | INFO         |
+| DOWN          | CRITICAL     |
