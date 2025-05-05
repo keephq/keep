@@ -56,7 +56,7 @@ jobs:
 
       - name: Save providers list
         run: |
-          poetry run python ./scripts/save_providers_list.py
+          PYTHONPATH=${{ github.workspace }} poetry run python ./scripts/save_providers_list.py
 
       - name: Set up Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v3
