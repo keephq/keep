@@ -27,9 +27,7 @@ workflow:
       provider:
         type: keep
         with:
-          filters:
-          - key: ticket_type
-            value: servicenow
+          cel: ticket_type == "servicenow"
   actions:
     - name: update-ticket
       foreach: "{{ steps.get-alerts.results }}"

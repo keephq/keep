@@ -134,6 +134,9 @@ export interface Provider {
   categories: TProviderCategory[];
   coming_soon: boolean;
   health: boolean;
+  provider_metadata?: {
+    [key: string]: string;
+  };
 }
 
 export type Providers = Provider[];

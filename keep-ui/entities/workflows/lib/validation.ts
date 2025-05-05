@@ -175,17 +175,6 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
     errors.push(["interval", "Workflow interval cannot be empty."]);
   }
 
-  const alertSources = Object.values(definition.properties.alert || {}).filter(
-    Boolean
-  );
-  if (
-    definition?.properties &&
-    definition.properties["alert"] &&
-    alertSources.length == 0
-  ) {
-    errors.push(["alert", "Alert trigger should have at least one filter."]);
-  }
-
   const incidentEvents = definition.properties.incident?.events;
   if (
     definition?.properties &&

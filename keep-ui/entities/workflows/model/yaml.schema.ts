@@ -56,14 +56,12 @@ const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
 });
 
-const AlertTriggerSchema = z
-  .object({
-    type: z.literal("alert"),
-    filters: z
-      .array(z.object({ key: z.string(), value: z.string() }))
-      .optional(),
-  })
-  .strict();
+const AlertTriggerSchema = z.object({
+  type: z.literal("alert"),
+  filters: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
+  cel: z.string().optional(),
+  only_on_change: z.array(z.string()).optional(),
+});
 
 const IntervalTriggerSchema = z
   .object({

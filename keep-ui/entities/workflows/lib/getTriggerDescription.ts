@@ -40,10 +40,13 @@ export function getTriggerDescriptionFromStep(trigger: V2StepTrigger) {
         return `Every ${getHumanReadableInterval(trigger.properties.interval)} (${trigger.properties.interval} seconds)`;
       }
       case "alert": {
-        const alertProperties = trigger.properties?.alert
-          ? trigger.properties.alert
-          : trigger.properties;
-        return `${Object.entries(alertProperties)
+        if (trigger.properties?.cel) {
+          return `CEL: ${trigger.properties.cel}`;
+        }
+        const alertFilters = trigger.properties?.filters
+          ? trigger.properties.filters
+          : {};
+        return `${Object.entries(alertFilters)
           .map(([key, value]) => `${key}=${value}`)
           .join(", ")}`;
       }
