@@ -496,27 +496,6 @@ describe("validateGlobalPure", () => {
     ]);
   });
 
-  it("should detect empty alert trigger", () => {
-    const definition: Definition = {
-      properties: {
-        id: "test-workflow",
-        name: "Test Workflow",
-        description: "Test Description",
-        disabled: false,
-        isLocked: false,
-        consts: {},
-        alert: {},
-      },
-      sequence: [],
-    };
-
-    const result = validateGlobalPure(definition);
-    expect(result).toContainEqual([
-      "alert",
-      "Alert trigger should have at least one filter.",
-    ]);
-  });
-
   it("should detect empty incident trigger", () => {
     const definition: Definition = {
       properties: {

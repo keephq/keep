@@ -2,29 +2,25 @@ workflow:
   id: s3-workflow-sync
   name: S3 Workflow Sync
   description: Synchronizes Keep workflows from S3 bucket storage with optional full sync capabilities.
-
-triggers:
-  - type: manual
-
-steps:
-  - name: s3-dump
-    provider:
-      config: "{{ providers.s3 }}"
-      type: s3
-      with:
-        bucket: "keep-workflows"
-
-actions:
-  # optional: delete all other workflows before updating for full sync
-  # - name: delete-all-other-workflows
-  #   provider:
-  #     type: keep
-  #     with:
-  #       delete_all_other_workflows: true
-
-  - name: update
-    foreach: "{{ steps.s3-dump.results }}"
-    provider:
-      type: keep
-      with:
-        workflow_to_update_yaml: "raw_render_without_execution({{ foreach.value }})"
+  triggers:
+    - type: manual
+  steps:
+    - name: s3-dump
+      provider:
+        config: "{{ providers.s3 }}"
+        type: s3
+        with:
+          bucket: "keep-workflows"
+  actions:
+    # optional: delete all other workflows before updating for full sync
+    # - name: delete-all-other-workflows
+    #   provider:
+    #     type: keep
+    #     with:
+    #       delete_all_other_workflows: true
+    - name: update
+      foreach: "{{ steps.s3-dump.results }}"
+      provider:
+        type: keep
+        with:
+          workflow_to_update_yaml: "raw_render_without_execution({{ foreach.value }})"

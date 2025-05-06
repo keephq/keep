@@ -11,7 +11,8 @@ import {
 } from "yaml";
 import { Definition } from "../model/types";
 import { getYamlWorkflowDefinition } from "./parser";
-
+import { YamlWorkflowDefinitionSchema } from "../model/yaml.schema";
+import { z } from "zod";
 const YAML_STRINGIFY_OPTIONS = {
   indent: 2,
   lineWidth: -1,
@@ -193,12 +194,26 @@ export function getOrderedWorkflowYamlStringFromJSON(json: any) {
 }
 
 export function parseWorkflowYamlStringToJSON(yamlString: string) {
+  // todo: use zod schema to parse and have type safety
   const content = yamlString.startsWith('"')
     ? JSON.parse(yamlString)
     : yamlString;
   return parseDocument(content).toJSON();
 }
 
+export function parseWorkflowYamlToJSON(
+  yamlString: string,
+  schema: z.ZodSchema = YamlWorkflowDefinitionSchema
+) {
+  const doc = parseDocument(yamlString);
+  let json = doc.toJSON();
+  if (!json.workflow) {
+    json = {
+      workflow: json,
+    };
+  }
+  return schema.safeParse(json);
+}
 export function getCurrentPath(document: Document, absolutePosition: number) {
   let path: (string | number)[] = [];
   if (!document.contents) return [];
