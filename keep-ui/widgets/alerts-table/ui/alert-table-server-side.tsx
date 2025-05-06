@@ -39,7 +39,12 @@ import { severityMapping } from "@/entities/alerts/model";
 import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
-import { EmptyStateCard, SeverityBorderIcon, UISeverity } from "@/shared/ui";
+import {
+  EmptyStateCard,
+  PageTitle,
+  SeverityBorderIcon,
+  UISeverity,
+} from "@/shared/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
@@ -64,6 +69,12 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useAlertRowStyle, useAlertTableTheme } from "@/entities/alerts/model";
 import { useIsShiftKeyHeld } from "@/features/keyboard-shortcuts";
+import SettingsSelection from "./SettingsSelection";
+import EnhancedDateRangePickerV2, {
+  AllTimeFrame,
+  TimeFrameV2,
+} from "@/components/ui/DateRangePickerV2";
+import { AlertsTableDataQuery } from "./useAlertsTableData";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -83,7 +94,6 @@ interface Tab {
 }
 
 interface Props {
-  refreshToken: string | null;
   alerts: AlertDto[];
   initialFacets: FacetDto[];
   alertsTotalCount: number;
@@ -93,28 +103,26 @@ interface Props {
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
-  queryTimeInSeconds?: number;
+  facetsCel: string;
+  facetsPanelRefreshToken: string | undefined;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
   onReload?: (query: AlertsQuery) => void;
-  onPoll?: () => void;
-  onQueryChange?: () => void;
-  onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
+  onQueryChange?: (query: AlertsTableDataQuery) => void;
 }
 
 export function AlertTableServerSide({
-  refreshToken,
   alerts,
   alertsTotalCount,
   columns,
   initialFacets,
   isAsyncLoading = false,
   presetName,
-  queryTimeInSeconds,
-  presetTabs = [],
+  facetsCel,
+  facetsPanelRefreshToken,
   isRefreshAllowed = true,
   setDismissedModalAlert,
   mutateAlerts,
@@ -122,23 +130,14 @@ export function AlertTableServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   onReload,
-  onPoll,
   onQueryChange,
-  onLiveUpdateStateChange,
 }: Props) {
-  const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(true);
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
   const [grouping, setGrouping] = useState<GroupingState>([]);
-  const [facetsPanelRefreshToken, setFacetsPanelRefreshToken] = useState<
-    string | undefined
-  >(undefined);
-  const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [filterCel, setFilterCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string>("");
-  const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
   const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string | null>(
     ""
   );
@@ -150,10 +149,11 @@ export function AlertTableServerSide({
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
-  const [isSilentFacetsLoading, setIsSilentFacetsLoading] =
-    useState<boolean>(false);
   const { theme } = useAlertTableTheme();
-
+  const [timeFrame, setTimeFrame] = useState<TimeFrameV2>({
+    type: "all-time",
+    isPaused: false,
+  } as AllTimeFrame);
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -189,155 +189,28 @@ export function AlertTableServerSide({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
-  const getDateRangeCel = useCallback(() => {
-    const filterArray = [];
-    const currentDate = new Date();
-
-    if (timeframeDelta > 0) {
-      filterArray.push(
-        `lastReceived >= '${new Date(
-          currentDate.getTime() - timeframeDelta
-        ).toISOString()}'`
-      );
-      filterArray.push(`lastReceived <= '${currentDate.toISOString()}'`);
-      return filterArray.join(" && ");
-    }
-
-    return null;
-  }, [timeframeDelta]);
-
-  const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (canRevalidate) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setCanRevalidate(true);
-    }, 3000);
-    return () => clearTimeout(timeout);
-  }, [canRevalidate]);
-
-  function updateAlertsCelDateRange() {
-    if (!canRevalidate) {
-      return;
-    }
-
-    const dateRangeCel = getDateRangeCel();
-    onPoll && onPoll();
-
-    setDateRangeCel(dateRangeCel);
-
-    if (dateRangeCel) {
-      return;
-    }
-
-    // if date does not change, just reload the data
-    onReload && onReload(alertsQueryRef.current as AlertsQuery);
-  }
-
-  useEffect(() => updateAlertsCelDateRange(), [timeframeDelta]);
-
-  useEffect(() => {
-    // so that gap between poll is 2x of query time and minimum 3sec
-    const refreshInterval = Math.max((queryTimeInSeconds || 1) * 2, 3000);
-    const interval = setInterval(() => {
-      if (!isPaused && shouldRefreshDate) {
-        updateAlertsCelDateRange();
-      }
-    }, refreshInterval);
-    return () => clearInterval(interval);
-  }, [isPaused, shouldRefreshDate]);
-
-  function updateFacetsCelDateRange() {
-    if (!canRevalidate) {
-      return;
-    }
-
-    const dateRangeCel = getDateRangeCel();
-    setIsSilentFacetsLoading(true);
-    setFacetsDateRangeCel(dateRangeCel);
-
-    if (dateRangeCel) {
-      return;
-    }
-
-    setFacetsPanelRefreshToken(uuidV4());
-  }
-
-  useEffect(() => {
-    updateFacetsCelDateRange();
-  }, [timeframeDelta]);
-  useEffect(() => {
-    if (!isSilentFacetsLoading) {
-      return;
-    }
-    const timeout = setTimeout(() => {
-      setIsSilentFacetsLoading(false);
-    }, 1000);
-    () => clearTimeout(timeout);
-  }, [isSilentFacetsLoading, setIsSilentFacetsLoading]);
-
-  useEffect(() => {
-    // so that gap between poll is 20x of query time and minimum 5sec
-    const refreshInterval = timeframeDelta
-      ? Math.max((queryTimeInSeconds || 1) * 20, 5000)
-      : 2000;
-    const interval = setInterval(() => {
-      if (!isPaused && shouldRefreshDate) {
-        updateFacetsCelDateRange();
-      }
-    }, refreshInterval);
-    return () => {
-      clearInterval(interval);
-    };
-  }, [
-    isPaused,
-    getDateRangeCel,
-    shouldRefreshDate,
-    Math.round(queryTimeInSeconds || 1),
-  ]);
-
-  const mainCelQuery = useMemo(() => {
-    const filterArray = [dateRangeCel, searchCel];
-    return filterArray.filter(Boolean).join(" && ");
-  }, [searchCel, dateRangeCel]);
-
-  const facetsCel = useMemo(() => {
-    const filterArray = [facetsDateRangeCel, searchCel];
-    return filterArray.filter(Boolean).join(" && ");
-  }, [searchCel, facetsDateRangeCel]);
-
-  const alertsQuery = useMemo(
+  useEffect(
     function whenQueryChange() {
-      let resultCel = [mainCelQuery, filterCel].filter(Boolean).join(" && ");
-
-      const limit = paginationState.pageSize;
-      const offset = limit * paginationState.pageIndex;
-      const alertsQuery: AlertsQuery = {
-        cel: resultCel,
-        offset,
-        limit,
-        sortOptions: sorting.map((s) => ({
-          sortBy: s.id,
-          sortDirection: s.desc ? "DESC" : "ASC",
-        })),
-      };
-
-      alertsQueryRef.current = alertsQuery;
-      return alertsQuery;
+      if (onQueryChange) {
+        const limit = paginationState.pageSize;
+        const offset = limit * paginationState.pageIndex;
+        const query: AlertsTableDataQuery = {
+          filterCel: filterCel,
+          searchCel: searchCel,
+          timeFrame: timeFrame,
+          limit,
+          offset,
+          sortOptions: sorting.map((s) => ({
+            sortBy: s.id,
+            sortDirection: s.desc ? "DESC" : "ASC",
+          })),
+        };
+        onQueryChange(query);
+      }
     },
-    [filterCel, mainCelQuery, paginationState, sorting]
+    [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange]
   );
 
-  useEffect(() => {
-    onQueryChange && onQueryChange();
-  }, [filterCel, searchCel, paginationState, sorting, onQueryChange]);
-
-  useEffect(() => {
-    onReload && onReload(alertsQueryRef.current as AlertsQuery);
-  }, [alertsQuery, onReload]);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
@@ -431,34 +304,6 @@ export function AlertTableServerSide({
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
   };
-
-  useEffect(() => {
-    // When refresh token comes, this code allows polling for certain time and then stops.
-    // Will start polling again when new refresh token comes.
-    // Why? Because events are throttled on BE side but we want to refresh the data frequently
-    // when keep gets ingested with data, and it requires control when to refresh from the UI side.
-    if (refreshToken) {
-      setShouldRefreshDate(true);
-      const timeout = setTimeout(() => {
-        setShouldRefreshDate(false);
-      }, 15000);
-      return () => clearTimeout(timeout);
-    }
-  }, [refreshToken]);
-
-  const timeframeChanged = useCallback(
-    (timeframe: TimeFrame | null) => {
-      if (timeframe?.paused != isPaused) {
-        onLiveUpdateStateChange && onLiveUpdateStateChange(!timeframe?.paused);
-      }
-
-      const newDiff =
-        (timeframe?.end?.getTime() || 0) - (timeframe?.start?.getTime() || 0);
-      setTimeframeDelta(newDiff);
-      setIsPaused(!!timeframe?.paused);
-    },
-    [setIsPaused, onLiveUpdateStateChange, setTimeframeDelta]
-  );
 
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
@@ -702,6 +547,7 @@ export function AlertTableServerSide({
         <AlertsTableBody
           table={table}
           showSkeleton={showSkeleton}
+          pageSize={paginationState.pageSize}
           theme={theme}
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
@@ -714,14 +560,22 @@ export function AlertTableServerSide({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex-none">
-        <TitleAndFilters
-          table={table}
-          alerts={alerts}
-          timeframeRefreshInterval={2000}
-          liveUpdateOptionEnabled={true}
-          presetName={presetName}
-          onTimeframeChange={timeframeChanged}
-        />
+        <div className="flex justify-between">
+          <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
+            <EnhancedDateRangePickerV2
+              timeFrame={timeFrame}
+              setTimeFrame={setTimeFrame}
+              hasPlay={true}
+              hasRewind={false}
+              hasForward={false}
+              hasZoomOut={false}
+              enableYearNavigation
+            />
+
+            <SettingsSelection table={table} presetName={presetName} />
+          </div>
+        </div>
       </div>
 
       {/* Make actions/presets section fixed height */}
@@ -761,7 +615,7 @@ export function AlertTableServerSide({
               facetsConfig={facetsConfig}
               onCelChange={setFilterCel}
               revalidationToken={facetsPanelRefreshToken}
-              isSilentReloading={isSilentFacetsLoading}
+              isSilentReloading={isAsyncLoading}
             />
           </div>
 

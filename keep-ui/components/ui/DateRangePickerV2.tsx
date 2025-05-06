@@ -20,16 +20,28 @@ const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * ONE_MINUTE;
 const ONE_DAY = 24 * ONE_HOUR;
 
-export interface TimeFrame {
-  start: Date | null;
-  end: Date | null;
-  paused?: boolean;
-  isFromCalendar?: boolean;
+export interface AllTimeFrame {
+  type: "all-time";
+  isPaused: boolean;
 }
+
+export interface RelativeTimeFrame {
+  type: "relative";
+  deltaMs: number;
+  isPaused: boolean;
+}
+
+export interface AbsoluteTimeFrame {
+  type: "absolute";
+  start: Date;
+  end: Date;
+}
+
+export type TimeFrameV2 = AllTimeFrame | RelativeTimeFrame | AbsoluteTimeFrame;
 interface TimePreset {
   badge: string;
   label: string;
-  value: () => TimeFrame;
+  value: () => AbsoluteTimeFrame | RelativeTimeFrame;
 }
 
 interface CategoryPreset {
@@ -37,9 +49,9 @@ interface CategoryPreset {
   options: TimePreset[];
 }
 
-interface EnhancedDateRangePickerProps {
-  timeFrame: TimeFrame;
-  setTimeFrame: (timeFrame: TimeFrame) => void;
+interface EnhancedDateRangePickerV2Props {
+  timeFrame: TimeFrameV2;
+  setTimeFrame: (timeFrame: TimeFrameV2) => void;
   className?: string;
   timeframeRefreshInterval?: number;
   disabled?: boolean;
@@ -51,61 +63,10 @@ interface EnhancedDateRangePickerProps {
   pausedByDefault?: boolean;
 }
 
-export function isQuickPresetRange(timeFrame: TimeFrame): boolean {
-  if (!timeFrame.start || !timeFrame.end) {
-    return false;
-  }
-  // If it's explicitly marked as from calendar, return false
-  if (timeFrame.isFromCalendar) {
-    return false;
-  }
-
-  const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-  const endDiff = Date.now() - timeFrame.end.getTime();
-
-  // Quick preset durations
-  const quickPresetDurations = [
-    15 * ONE_MINUTE, // 15m
-    45 * ONE_MINUTE, // 45m
-    ONE_HOUR, // 1h
-    4 * ONE_HOUR, // 4h
-    ONE_DAY, // 1d
-    2 * ONE_DAY, // 2d
-    3 * ONE_DAY, // 3d
-    7 * ONE_DAY, // 7d
-    15 * ONE_DAY, // 15d
-    30 * ONE_DAY, // 30d
-  ];
-
-  // Check if this is a "live" or relative time range
-  const isLiveRange = Math.abs(endDiff) < 1000; // End time within 1 second of now
-
-  if (isLiveRange) {
-    return quickPresetDurations.some(
-      (presetDuration) => Math.abs(duration - presetDuration) < 1000 // Allow 1 second tolerance
-    );
-  }
-
-  // Check if this is a fixed time range (today or this week)
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const startOfWeek = new Date();
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  const isToday = timeFrame.start.getTime() === startOfToday.getTime();
-  const isThisWeek = timeFrame.start.getTime() === startOfWeek.getTime();
-
-  return isToday || isThisWeek;
-}
-
-/** @deprecated Use EnhancedDateRangePicker instead. Will be removed soon */
-export default function EnhancedDateRangePicker({
+export default function EnhancedDateRangePickerV2({
   timeFrame,
   setTimeFrame,
   className = "",
-  timeframeRefreshInterval = 1000,
   disabled = false,
   hasPlay = true,
   hasRewind = true,
@@ -113,19 +74,14 @@ export default function EnhancedDateRangePicker({
   hasZoomOut = false,
   pausedByDefault = true,
   enableYearNavigation = false,
-}: EnhancedDateRangePickerProps) {
-  const [isPaused, setIsPaused] = useState(timeFrame.paused ?? pausedByDefault);
+}: EnhancedDateRangePickerV2Props) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<TimePreset | null>(null);
   const [calendarRange, setCalendarRange] = useState<DateRange | undefined>(
-    timeFrame.start && timeFrame.end
-      ? {
-          from: timeFrame.start,
-          to: timeFrame.end,
-        }
+    timeFrame.type === "absolute"
+      ? { from: timeFrame.start, to: timeFrame.end }
       : undefined
   );
 
@@ -135,83 +91,101 @@ export default function EnhancedDateRangePicker({
         {
           badge: "15m",
           label: "Past 15 minutes",
-          value: () => ({
-            start: new Date(Date.now() - 15 * ONE_MINUTE),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 15 * ONE_MINUTE,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "1h",
           label: "Past hour",
-          value: () => ({
-            start: new Date(Date.now() - ONE_HOUR),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: ONE_HOUR,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "4h",
           label: "Past 4 hours",
-          value: () => ({
-            start: new Date(Date.now() - 4 * ONE_HOUR),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 4 * ONE_HOUR,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "1d",
           label: "Past day",
-          value: () => ({
-            start: new Date(Date.now() - ONE_DAY),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: ONE_DAY,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "2d",
           label: "Past 2 days",
-          value: () => ({
-            start: new Date(Date.now() - 2 * ONE_DAY),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 2 * ONE_DAY,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "3d",
           label: "Past 3 days",
-          value: () => ({
-            start: new Date(Date.now() - 3 * ONE_DAY),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 3 * ONE_DAY,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "7d",
           label: "Past 7 days",
-          value: () => ({
-            start: new Date(Date.now() - 7 * ONE_DAY),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 7 * ONE_DAY,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "15d",
           label: "Past 15 days",
-          value: () => ({
-            start: new Date(Date.now() - 15 * ONE_DAY),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 15 * ONE_DAY,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "30d",
           label: "Past 30 days",
-          value: () => ({
-            start: new Date(Date.now() - 30 * ONE_DAY),
-            end: new Date(),
-          }),
+          value: () =>
+            ({
+              type: "relative",
+              deltaMs: 30 * ONE_DAY,
+              isPaused: true,
+            }) as RelativeTimeFrame,
         },
         {
           badge: "all",
           label: "All time",
-          value: () => ({
-            start: null,
-            end: null,
-            paused: true,
-          }),
+          value: () =>
+            ({
+              type: "all-time",
+              isPaused: true,
+            }) as AllTimeFrame,
         },
       ] as TimePreset[],
     []
@@ -226,48 +200,60 @@ export default function EnhancedDateRangePicker({
             badge: "30m",
             label: "Past 30 minutes",
             value: () => ({
-              start: new Date(Date.now() - 30 * ONE_MINUTE),
-              end: new Date(),
+              type: "relative",
+              deltaMs: 30 * ONE_MINUTE,
+              name: "Past 30 minutes",
+              isPaused: true,
             }),
           },
           {
             badge: "45m",
             label: "Past 45 minutes",
             value: () => ({
-              start: new Date(Date.now() - 45 * ONE_MINUTE),
-              end: new Date(),
+              type: "relative",
+              deltaMs: 45 * ONE_MINUTE,
+              name: "Past 45 minutes",
+              isPaused: true,
             }),
           },
           {
             badge: "2h",
             label: "Past 2 hours",
             value: () => ({
-              start: new Date(Date.now() - 2 * ONE_HOUR),
-              end: new Date(),
+              type: "relative",
+              deltaMs: 2 * ONE_HOUR,
+              name: "Past 2 hours",
+              isPaused: true,
             }),
           },
           {
             badge: "6h",
             label: "Past 6 hours",
             value: () => ({
-              start: new Date(Date.now() - 6 * ONE_HOUR),
-              end: new Date(),
+              type: "relative",
+              deltaMs: 6 * ONE_HOUR,
+              name: "Past 6 hours",
+              isPaused: true,
             }),
           },
           {
             badge: "6d",
             label: "Past 6 days",
             value: () => ({
-              start: new Date(Date.now() - 6 * ONE_DAY),
-              end: new Date(),
+              type: "relative",
+              deltaMs: 6 * ONE_DAY,
+              name: "Past 6 days",
+              isPaused: true,
             }),
           },
           {
             badge: "60d",
             label: "Past 60 days",
             value: () => ({
-              start: new Date(Date.now() - 60 * ONE_DAY),
-              end: new Date(),
+              type: "relative",
+              deltaMs: 60 * ONE_DAY,
+              name: "Past 60 days",
+              isPaused: true,
             }),
           },
         ],
@@ -278,20 +264,22 @@ export default function EnhancedDateRangePicker({
           {
             badge: "today",
             label: "Today",
-            value: () => ({
-              start: new Date(new Date().setHours(0, 0, 0, 0)),
-              end: new Date(),
-            }),
+            value: () =>
+              ({
+                type: "absolute",
+                start: new Date(new Date().setHours(0, 0, 0, 0)),
+                end: new Date(new Date().setHours(23, 59, 59, 999)),
+              }) as AbsoluteTimeFrame,
           },
           {
             badge: "week",
             label: "This Week",
-            value: () => ({
-              start: new Date(
-                new Date().setDate(new Date().getDate() - new Date().getDay())
-              ),
-              end: new Date(),
-            }),
+            value: () =>
+              ({
+                type: "absolute",
+                start: new Date(new Date().setDate(new Date().getDate() - 7)),
+                end: new Date(),
+              }) as AbsoluteTimeFrame,
           },
         ],
       },
@@ -299,98 +287,42 @@ export default function EnhancedDateRangePicker({
     []
   );
 
-  // set initial preset and notify parent
-  useEffect(() => {
-    setTimeout(() => {
-      handlePresetSelect(
-        quickPresets.find((preset) => preset.badge === "all") as TimePreset,
-        pausedByDefault
+  const relativePresetsMapped = useMemo(() => {
+    return categories
+      .flatMap((categoryPreset) => categoryPreset.options)
+      .filter((timePreset) => timePreset.value().type === "relative")
+      .concat(quickPresets)
+      .reduce(
+        (result, current) =>
+          result.set((current.value() as RelativeTimeFrame).deltaMs, current),
+        new Map<number, TimePreset>()
       );
-    }, 100);
-  }, []);
+  }, [quickPresets, categories]);
 
   const handlePresetSelect = (preset: TimePreset, isPaused = true) => {
-    setSelectedPreset(preset);
-    setTimeFrame({
-      ...preset.value(),
-      paused: isPaused,
-      isFromCalendar: false,
-    });
-    setIsPaused(isPaused);
+    setTimeFrame(preset.value());
     setIsOpen(false);
     setSelectedCategory(null);
     setShowMoreOptions(false);
+    setCalendarRange(undefined);
   };
 
   const togglePlayPause = () => {
-    setIsPaused(!isPaused);
-    setTimeFrame({
-      ...timeFrame,
-      paused: !isPaused,
-    });
+    const current = timeFrame as RelativeTimeFrame | AllTimeFrame;
+    setTimeFrame({ ...current, isPaused: !current.isPaused } as any);
   };
 
   const handleRewind = () => {
-    if (!timeFrame.start || !timeFrame.end) {
-      return;
-    }
-    const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-    setTimeFrame({
-      start: new Date(timeFrame.start.getTime() - duration),
-      end: new Date(timeFrame.start.getTime()),
-      paused: true,
-    });
-    setIsPaused(true);
+    // TODO: Implement the rewind functionality
   };
 
   const handleForward = () => {
-    if (!timeFrame.start || !timeFrame.end) {
-      return;
-    }
-    const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-    setTimeFrame({
-      start: new Date(timeFrame.end.getTime()),
-      end: new Date(timeFrame.end.getTime() + duration),
-      paused: true,
-    });
-    setIsPaused(true);
+    // TODO: Implement the forward functionality
   };
 
   const handleZoomOut = () => {
-    if (!timeFrame.start || !timeFrame.end) {
-      return;
-    }
-    const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-    setTimeFrame({
-      start: new Date(timeFrame.start.getTime() - duration / 2),
-      end: new Date(timeFrame.end.getTime() + duration / 2),
-      paused: true,
-    });
-    setIsPaused(true);
+    // TODO: Implement the zoom out functionality
   };
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (!isPaused) {
-      interval = setInterval(() => {
-        if (!timeFrame.start || !timeFrame.end) {
-          setTimeFrame({
-            start: null,
-            end: null,
-            paused: false,
-          });
-          return;
-        }
-        const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
-        setTimeFrame({
-          start: new Date(Date.now() - duration),
-          end: new Date(),
-          paused: false,
-        });
-      }, timeframeRefreshInterval);
-    }
-    return () => clearInterval(interval);
-  }, [isPaused, timeFrame, setTimeFrame, timeframeRefreshInterval]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -417,59 +349,53 @@ export default function EnhancedDateRangePicker({
     }
   };
 
-  const getSelectedOptionText = () => {
-    if (!selectedPreset) {
-      return quickPresets.find((preset) => preset.badge === "all")?.label;
+  const selectedTimeFrameInfo = useMemo(() => {
+    switch (timeFrame.type) {
+      case "relative": {
+        const timePreset = relativePresetsMapped.get(timeFrame.deltaMs);
+        let optionText = timePreset?.label || "custom";
+        let badgeText = timePreset?.badge || "custom";
+
+        if (!timeFrame.isPaused) {
+          badgeText = "Live";
+        }
+
+        return { badgeText, optionText };
+      }
+
+      case "absolute":
+        const absoluteTimeFrame = timeFrame as AbsoluteTimeFrame;
+        return {
+          badgeText: formatDuration(
+            absoluteTimeFrame.start,
+            absoluteTimeFrame.end
+          ),
+          optionText: `${format(absoluteTimeFrame.start, "MMM d, yyyy HH:mm")} - ${format(
+            absoluteTimeFrame.end,
+            "MMM d, yyyy HH:mm"
+          )}`,
+        };
+      case "all-time":
+        return {
+          badgeText: "All",
+          optionText: "All time",
+        };
     }
-
-    if (!isPaused && selectedPreset) {
-      return selectedPreset.label;
-    }
-
-    if (!timeFrame.start || !timeFrame.end) {
-      return "All time";
-    }
-
-    return `${format(timeFrame.start, "MMM d, yyyy HH:mm")} - ${format(
-      timeFrame.end,
-      "MMM d, yyyy HH:mm"
-    )}`;
-  };
-
-  const getSelectedBadgeText = () => {
-    if (!isPaused || !selectedPreset) {
-      return "Live";
-    }
-
-    if (!timeFrame.start || !timeFrame.end) {
-      return "All";
-    }
-
-    return formatDuration(timeFrame.start, timeFrame.end);
-  };
+  }, [timeFrame, relativePresetsMapped]);
 
   const handleCalendarSelect = (date: DateRange | Date | undefined) => {
+    setCalendarRange(undefined);
+
     if (date && "from" in date) {
       setCalendarRange(date);
-      if (date.from && date.to) {
+      if (date.from && date.to && date.from.getTime() !== date.to.getTime()) {
         setTimeFrame({
+          type: "absolute",
           start: date.from,
           end: date.to,
-          paused: true,
-          isFromCalendar: true,
-        });
-        if (date.from.getTime() !== date.to.getTime()) {
-          setIsPaused(true);
-          setIsOpen(false);
-          setShowCalendar(false);
-        }
-      } else if (date.from) {
-        setTimeFrame({
-          start: date.from,
-          end: null,
-          paused: true,
-          isFromCalendar: true,
-        });
+        } as AbsoluteTimeFrame);
+        setIsOpen(false);
+        setShowCalendar(false);
       }
     }
   };
@@ -489,15 +415,21 @@ export default function EnhancedDateRangePicker({
           >
             <div className="flex items-center w-full">
               <Badge
-                color={isPaused ? "gray" : "green"}
+                color={
+                  "isPaused" in timeFrame && !(timeFrame as any).isPaused
+                    ? "green"
+                    : "gray"
+                }
                 className={`mr-2 min-w-14 justify-center ${
-                  isPaused ? "" : "bg-green-700"
+                  "isPaused" in timeFrame && !(timeFrame as any).isPaused
+                    ? "bg-green-700"
+                    : ""
                 }`}
               >
-                {getSelectedBadgeText()}
+                {selectedTimeFrameInfo.badgeText}
               </Badge>
               <span className="text-gray-900 text-left translate-y-[1px] min-w-[300px]">
-                <Text>{getSelectedOptionText()}</Text>
+                <Text>{selectedTimeFrameInfo.optionText}</Text>
               </span>
               <ChevronDown className="w-4 h-4 ml-auto text-gray-500" />
             </div>
@@ -602,7 +534,9 @@ export default function EnhancedDateRangePicker({
                   disabled={{ after: new Date() }}
                   className="w-full bg-white"
                   defaultMonth={
-                    timeFrame.start ? new Date(timeFrame.start) : undefined
+                    timeFrame.type === "absolute"
+                      ? new Date(timeFrame.start)
+                      : undefined
                   }
                 />
               </div>
@@ -613,17 +547,19 @@ export default function EnhancedDateRangePicker({
 
       <div className="flex items-center relative z-0 gap-x-2 ml-2 h-full">
         <div className="flex h-full">
-          {hasPlay && (
-            <Button
-              size="xs"
-              color="gray"
-              variant="secondary"
-              className="justify-start rounded-none first:rounded-l last:rounded-r border-b border-gray-200 h-full"
-              onClick={togglePlayPause}
-              disabled={disabled}
-              icon={isPaused ? Play : Pause}
-            />
-          )}
+          {hasPlay &&
+            (timeFrame.type === "relative" ||
+              timeFrame.type === "all-time") && (
+              <Button
+                size="xs"
+                color="gray"
+                variant="secondary"
+                className="justify-start rounded-none first:rounded-l last:rounded-r border-b border-gray-200 h-full"
+                onClick={togglePlayPause}
+                disabled={disabled}
+                icon={timeFrame.isPaused ? Play : Pause}
+              />
+            )}
 
           {hasRewind && (
             <Button

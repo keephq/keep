@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertDto, AlertsQuery, AuditEvent } from "./types";
 import useSWR, { SWRConfiguration } from "swr";
 import { toDateObjectWithFallback } from "@/utils/helpers";
@@ -194,9 +194,19 @@ export const useAlerts = () => {
       options
     );
 
+    const [results, setResults] = useState<AlertDto[]>([]);
+
+    useEffect(() => {
+      if (swrValue.isLoading) {
+        return;
+      }
+
+      setResults(swrValue.data?.queryResult?.results || []);
+    }, [swrValue.data, swrValue.isLoading]);
+
     return {
       ...swrValue,
-      data: swrValue.data?.queryResult?.results as AlertDto[],
+      data: results,
       queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
       isLoading: swrValue.isLoading || !swrValue.data?.queryResult,
       totalCount: swrValue.data?.queryResult?.count as number,
