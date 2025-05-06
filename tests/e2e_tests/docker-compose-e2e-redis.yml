@@ -29,7 +29,7 @@ services:
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
     volumes:
-      - /app:/app
+      - /app/migrations:/app/migrations
     depends_on:
       - keep-redis
 
