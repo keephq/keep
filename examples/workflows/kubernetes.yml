@@ -14,6 +14,7 @@ workflow:
     - name: get-logs
       provider:
         type: kubernetes
+        config: "{{ providers.kubernetes-prod }}"
         with:
           command_type: get_logs
           namespace: "{{ alert.namespace }}"
@@ -23,6 +24,7 @@ workflow:
     - name: get-events
       provider:
         type: kubernetes
+        config: "{{ providers.kubernetes-prod }}"
         with:
           command_type: get_events
           namespace: "{{ alert.namespace }}"
@@ -30,6 +32,7 @@ workflow:
     - name: get-pod-details
       provider:
         type: kubernetes
+        config: "{{ providers.kubernetes-prod }}"
         with:
           command_type: get_pods
           namespace: "{{ alert.namespace }}"
@@ -37,6 +40,7 @@ workflow:
     - name: check-node-pressure
       provider:
         type: kubernetes
+        config: "{{ providers.kubernetes-prod }}"
         with:
           command_type: get_node_pressure
   # Filter events to check if the pod is in CrashLoopBackOff state
@@ -48,6 +52,7 @@ workflow:
         '{{ steps.check-node-pressure.results | selectattr("conditions[].type", "equalto", "MemoryPressure") | selectattr("conditions[].status", "equalto", "True") | count }}' == '0'
       provider:
         type: kubernetes
+        config: "{{ providers.kubernetes-prod }}"
         with:
           action: restart_pod
           namespace: "{{ alert.namespace }}"
@@ -59,6 +64,7 @@ workflow:
         '{{ steps.get-pod-details.results | select(attribute="metadata.ownerReferences[].kind", equals="ReplicaSet") | count > 0 }}' == 'True'
       provider:
         type: kubernetes
+        config: "{{ providers.kubernetes-prod }}"
         with:
           action: rollout_restart
           kind: deployment
@@ -69,6 +75,7 @@ workflow:
       if: '{{ steps.get-events.results | select(attribute="reason", equals="BackOff") | count > 0 }}'
       provider:
         type: slack
+        config: "{{ providers.slack-prod }}"
         with:
           channel: "#alerts"
           message: |
