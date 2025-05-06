@@ -9,6 +9,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     PropertiesMetadata,
     SimpleFieldMapping,
 )
+from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
@@ -68,6 +69,47 @@ def build_facet_selects(properties_metadata, facets):
     }
 
 
+def build_facet_subquery_for_column(
+    base_query,
+    facets_cel_to_sql_instance: BaseCelToSqlProvider,
+    facet: Facet,
+    facets_properties_metadata: PropertiesMetadata,
+    facet_filter: str,
+):
+    metadata = facets_properties_metadata.get_property_metadata_for_str(
+        facet.property_path
+    )
+    facet_value = []
+
+    for item in metadata.field_mappings:
+        if isinstance(item, JsonFieldMapping):
+            facet_value.append(
+                facets_cel_to_sql_instance.json_extract_as_text(
+                    item.json_prop, item.prop_in_json
+                )
+            )
+        elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
+            facet_value.append(item.map_to)
+
+    casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
+    return (
+        select(
+            literal(facet.id).label("facet_id"),
+            literal_column("facet_value"),
+            func.count().label("matches_count"),
+        )
+        .select_from(
+            select(
+                func.distinct(literal_column("entity_id")),
+                literal_column(casted).label("facet_value"),
+            )
+            .select_from(base_query)
+            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
+        )
+        .group_by(literal_column("facet_id"), literal_column("facet_value"))
+    )
+
+
 def build_facets_data_query(
     base_query,
     facets: list[FacetDto],
@@ -104,43 +146,12 @@ def build_facets_data_query(
     facets_cel_to_sql_instance = get_cel_to_sql_provider(facets_properties_metadata)
 
     for facet in facets:
-        metadata = facets_properties_metadata.get_property_metadata_for_str(
-            facet.property_path
-        )
-        facet_value = []
-
-        for item in metadata.field_mappings:
-            if isinstance(item, JsonFieldMapping):
-                facet_value.append(
-                    facets_cel_to_sql_instance.json_extract_as_text(
-                        item.json_prop, item.prop_in_json
-                    )
-                )
-            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                facet_value.append(item.map_to)
-
-        casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
-        facet_sub_query = (
-            select(
-                literal(facet.id).label("facet_id"),
-                literal_column("facet_value"),
-                func.count().label("matches_count"),
-            )
-            .select_from(
-                select(
-                    func.distinct(literal_column("entity_id")),
-                    literal_column(casted).label("facet_value"),
-                )
-                .select_from(base_query)
-                .filter(
-                    text(
-                        facets_cel_to_sql_instance.convert_to_sql_str(
-                            facet_options_query.facet_queries[facet.id]
-                        )
-                    )
-                )
-            )
-            .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        facet_sub_query = build_facet_subquery_for_column(
+            base_query,
+            facets_cel_to_sql_instance,
+            facet,
+            facets_properties_metadata,
+            facet_options_query.facet_queries[facet.id],
         )
 
         # For SQLite we can't limit the subquery
