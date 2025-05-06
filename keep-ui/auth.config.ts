@@ -318,6 +318,7 @@ export const config = {
           token.role = user.role || "user";
 
           // New code: Check if multi-org mode is enabled
+          // New code: Check if multi-org mode is enabled
           if (process.env.KEYCLOAK_ROLES_FROM_GROUPS === "true") {
             try {
               // Fetch organizations from backend API
@@ -332,23 +333,41 @@ export const config = {
               if (response.ok) {
                 const orgDict = await response.json();
 
-                // Convert dictionary to array of tenant objects using only tenant_id and tenant_name
-                const tenantIds = Object.entries(orgDict).map(
-                  ([org_name, orgData]) => ({
+                // Create a properly typed array (not undefined)
+                const tenantArr: {
+                  tenant_id: string;
+                  tenant_name: string;
+                  tenant_logo_url?: string;
+                }[] = [];
+
+                // Populate the array with tenant data, handling null/undefined values
+                Object.entries(orgDict).forEach(([org_name, orgData]) => {
+                  const tenantObject: {
+                    tenant_id: string;
+                    tenant_name: string;
+                    tenant_logo_url?: string;
+                  } = {
                     tenant_id: String((orgData as any).tenant_id),
                     tenant_name: `${org_name}`,
-                    tenant_logo_url: (orgData as any).tenant_logo_url,
-                  })
-                );
+                  };
 
-                // Store all tenant IDs for tenant switching
-                if (tenantIds.length > 0) {
-                  token.tenantIds = tenantIds;
+                  // Only add tenant_logo_url if it exists and is not null
+                  const logoUrl = (orgData as any).tenant_logo_url;
+                  if (logoUrl !== null && logoUrl !== undefined) {
+                    tenantObject.tenant_logo_url = logoUrl;
+                  }
+
+                  tenantArr.push(tenantObject);
+                });
+
+                // Only assign if we have entries (avoids undefined)
+                if (tenantArr.length > 0) {
+                  token.tenantIds = tenantArr;
 
                   // Set default tenant to the first one if available
-                  token.tenantId = tenantIds[0].tenant_id || token.tenantId;
+                  token.tenantId = tenantArr[0].tenant_id || token.tenantId;
 
-                  console.log("Successfully processed user orgs:", tenantIds);
+                  console.log("Successfully processed user orgs:", tenantArr);
                 } else {
                   console.warn("No orgs returned from /auth/user/orgs");
                 }
