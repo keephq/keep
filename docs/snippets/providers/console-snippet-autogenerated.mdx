@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
 Do not edit it manually, as it will be overwritten */}
 
 
@@ -14,7 +14,9 @@ steps:
       provider: console
       config: "{{ provider.my_provider_name }}"
       with:
-        message: {value}
+        message: {value}  
+        logger: {value}  
+        severity: {value}  
 ```
 
 
@@ -25,8 +27,9 @@ actions:
       provider: console
       config: "{{ provider.my_provider_name }}"
       with:
-        message: {value}
-        alert_message: {value}  # The alert message to be printed in to the console
+        message: {value}  # The message to be printed in to the console
+        logger: {value}  # Whether to use the logger or not
+        severity: {value}  # The severity of the message if logger is True
 ```
 
 
@@ -38,7 +41,6 @@ Check the following workflow examples:
 - [complex-conditions-cel.yml](https://github.com/keephq/keep/blob/main/examples/workflows/complex-conditions-cel.yml)
 - [console_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/console_example.yml)
 - [consts_and_dict.yml](https://github.com/keephq/keep/blob/main/examples/workflows/consts_and_dict.yml)
-- [cron-digest-alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/cron-digest-alerts.yml)
 - [eks_advanced.yml](https://github.com/keephq/keep/blob/main/examples/workflows/eks_advanced.yml)
 - [eks_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/eks_basic.yml)
 - [gke.yml](https://github.com/keephq/keep/blob/main/examples/workflows/gke.yml)

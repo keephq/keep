@@ -2,25 +2,25 @@ workflow:
   id: opsgenie-critical-alert-creator
   name: OpsGenie Critical Alert Creator
   description: Creates OpsGenie alerts for critical Coralogix issues with team assignment and alert enrichment tracking.
-triggers:
-  - type: manual
-  - type: alert
-    filters:
-      - key: source
-        value: coralogix
-      - key: severity
-        value: critical
-actions:
-  - name: create-alert
-    provider:
-      config: "{{ providers.opsgenie }}"
-      type: opsgenie
+  triggers:
+    - type: manual
+    - type: alert
+      filters:
+        - key: source
+          value: coralogix
+        - key: severity
+          value: critical
+  actions:
+    - name: create-alert
       if: "not '{{ alert.opsgenie_alert_id }}'"
-      with:
-        message: "{{ alert.name }}"
-        responders:
-          - name: "{{ alert.team }}"
-            type: team
-        enrich_alert:
-          - key: opsgenie_alert_id
-            value: results.alertId
+      provider:
+        type: opsgenie
+        config: "{{ providers.opsgenie }}"
+        with:
+          message: "{{ alert.name }}"
+          responders:
+            - name: "{{ alert.team }}"
+              type: team
+          enrich_alert:
+            - key: opsgenie_alert_id
+              value: results.alertId
