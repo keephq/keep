@@ -28,6 +28,8 @@ services:
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
+    volumes:
+      - /app:/app
     depends_on:
       - keep-redis
 
