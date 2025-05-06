@@ -59,22 +59,22 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
         ("fakeProp < 'fake alert'", ComparisonNodeOperator.LT, str, "fake alert"),
         ("fakeProp <= 'fake alert'", ComparisonNodeOperator.LE, str, "fake alert"),
         (
-            "fakeProp.contains('fake alert')",
+            "fakeProp.contains('\\'±CPU±\\'')",
             ComparisonNodeOperator.CONTAINS,
             str,
-            "fake alert",
+            "'±CPU±'",
         ),
         (
-            "fakeProp.startsWith('fake alert')",
+            "fakeProp.startsWith('\\'±CPU±\\'')",
             ComparisonNodeOperator.STARTS_WITH,
             str,
-            "fake alert",
+            "'±CPU±'",
         ),
         (
-            "fakeProp.endsWith('fake alert')",
+            "fakeProp.endsWith('\\'±CPU±\\'')",
             ComparisonNodeOperator.ENDS_WITH,
             str,
-            "fake alert",
+            "'±CPU±'",
         ),
     ],
 )
