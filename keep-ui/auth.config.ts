@@ -318,7 +318,6 @@ export const config = {
           token.role = user.role || "user";
 
           // New code: Check if multi-org mode is enabled
-          // New code: Check if multi-org mode is enabled
           if (process.env.KEYCLOAK_ROLES_FROM_GROUPS === "true") {
             try {
               // Fetch organizations from backend API
