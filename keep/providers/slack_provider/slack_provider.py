@@ -306,13 +306,15 @@ if __name__ == "__main__":
     )
     provider.notify(
         channel="C04P7QSG692",
-        blocks=[
+        attachments=[
             {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Check out this <https://example.com|important link>!",
-                },
+                "fallback": "Plain-text summary of the attachment.",
+                "color": "#2eb886",
+                "title": "Slack API Documentation",
+                "title_link": "https://api.slack.com/",
+                "text": "Optional text that appears within the attachment",
+                "footer": "Slack API",
+                "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
             }
         ],
     )
