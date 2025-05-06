@@ -530,7 +530,7 @@ def test_get_pods_foreach(mocked_context_manager):
     iohandler = Jinja2IOHandler(mocked_context_manager)
     template = (
         "Pod status report:"
-        "{% for pod in steps['get-pods'].results %}\n"
+        "{% for pod in steps.get-pods.results %}\n"
         "Pod name: {{ pod.metadata.name }} || Namespace: {{ pod.metadata.namespace }} || Status: {{ pod.status.phase }}"
         "{% endfor %}"
     )
