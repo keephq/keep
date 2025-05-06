@@ -24,12 +24,12 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=sqlite:///./newdb.db?check_same_thread=False
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/appֿ
+      - SECRET_MANAGER_DIRECTORY=/state
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
     volumes:
-      - /app/migrations:/app/migrations
+      - /state:/state
     depends_on:
       - keep-redis
 

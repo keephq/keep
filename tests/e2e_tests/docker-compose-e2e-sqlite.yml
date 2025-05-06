@@ -21,12 +21,12 @@ services:
     environment:
       - AUTH_TYPE=NO_AUTH
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/app
+      - SECRET_MANAGER_DIRECTORY=/state
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
     volumes:
-      - /app/migrations:/app/migrations
+      - /state:/state
     ports:
       - "8080:8080"
 

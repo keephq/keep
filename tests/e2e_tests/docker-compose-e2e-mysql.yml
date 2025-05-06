@@ -41,12 +41,12 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/app
+      - SECRET_MANAGER_DIRECTORY=/state
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
     volumes:
-      - /app/migrations:/app/migrations
+      - /state:/state
     depends_on:
       keep-database:
         condition: service_healthy
