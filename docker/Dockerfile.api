@@ -47,8 +47,7 @@ COPY --from=builder /app/unknown-icon.png unknown-icon.png
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app && \
     chown -R keep:keep /app && \
-    chown -R keep:keep /venv && \
-    chmod -R u+w /app
+    chown -R keep:keep /venv
 USER keep
 
 ENTRYPOINT ["/venv/lib/python3.11/site-packages/keep/entrypoint.sh"]
