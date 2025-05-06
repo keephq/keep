@@ -7,8 +7,9 @@ workflow:
   id: disk-defect-tracker
   name: Disk Defect Tracker
   description: Monitors disk defects and creates tiered alerts in PostgreSQL based on defect percentage thresholds.
-alert:
-  id: DiskGrownDefectsRule
+  triggers:
+    - type: interval
+      value: 60
   steps:
     - name: check-disk-defects
       provider:
@@ -32,11 +33,11 @@ alert:
           query: >-
             INSERT INTO alert (alert_level, alert_message)
             VALUES ('{{ foreach.level }}', 'Disk defects: {{ foreach.value[13] }} | Disk name: {{ foreach.value[1] }}')
-providers:
-  postgres-server:
-    description: The postgres server (sql)
-    authentication:
-      username: "{{ env.POSTGRES_USER }}"
-      password: "{{ env.POSTGRES_PASSWORD }}"
-      database: "{{ env.POSTGRES_DATABASE }}"
-      host: "{{ env.POSTGRES_HOST }}"
+  providers:
+    postgres-server:
+      description: The postgres server (sql)
+      authentication:
+        username: "{{ env.POSTGRES_USER }}"
+        password: "{{ env.POSTGRES_PASSWORD }}"
+        database: "{{ env.POSTGRES_DATABASE }}"
+        host: "{{ env.POSTGRES_HOST }}"

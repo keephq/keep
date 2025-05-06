@@ -1,4 +1,9 @@
-import { getOrderedWorkflowYamlString } from "../yaml-utils";
+import { Provider } from "@/shared/api/providers";
+import { getYamlWorkflowDefinitionSchema } from "../../model/yaml.schema";
+import {
+  getOrderedWorkflowYamlString,
+  parseWorkflowYamlToJSON,
+} from "../yaml-utils";
 
 const unorderedClickhouseExampleYaml = `
 workflow:
@@ -117,5 +122,86 @@ describe("YAML Utils", () => {
     expect(orderedWorkflow.trim()).toEqual(
       multilineClickhouseExampleYaml.trim()
     );
+  });
+
+  it("parseWorkflowYamlToJSON should return json with workflow section if the input is not wrapped in workflow section", () => {
+    const parsed = parseWorkflowYamlToJSON(clickhouseExampleYaml);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveProperty("workflow");
+  });
+
+  it("parseWorkflowYamlToJSON should parse the workflow with mock providers", () => {
+    const mockProviders: Provider[] = [
+      {
+        id: "clickhouse",
+        type: "clickhouse",
+        config: {},
+        installed: true,
+        linked: true,
+        last_alert_received: "",
+        details: {
+          authentication: {},
+        },
+        display_name: "Mock Clickhouse Provider",
+        can_query: true,
+        query_params: ["query", "single_row"],
+        can_notify: false,
+        validatedScopes: {},
+        tags: [],
+        pulling_available: true,
+        pulling_enabled: true,
+        categories: [],
+        coming_soon: false,
+        health: false,
+      },
+      {
+        id: "ntfy",
+        type: "ntfy",
+        config: {},
+        installed: true,
+        linked: true,
+        can_query: false,
+        can_notify: true,
+        notify_params: ["message", "topic"],
+        details: {
+          authentication: {},
+        },
+        display_name: "Mock Ntfy Provider",
+        validatedScopes: {},
+        tags: [],
+        pulling_available: true,
+        pulling_enabled: true,
+        last_alert_received: "",
+        categories: [],
+        coming_soon: false,
+        health: false,
+      },
+      {
+        id: "slack",
+        type: "slack",
+        config: {},
+        installed: true,
+        linked: true,
+        last_alert_received: "",
+        details: {
+          authentication: {},
+        },
+        display_name: "Mock Slack Provider",
+        can_query: false,
+        can_notify: true,
+        notify_params: ["message"],
+        validatedScopes: {},
+        tags: [],
+        pulling_available: true,
+        pulling_enabled: true,
+        categories: [],
+        coming_soon: false,
+        health: false,
+      },
+    ];
+    const zodSchema = getYamlWorkflowDefinitionSchema(mockProviders);
+    const parsed = parseWorkflowYamlToJSON(clickhouseExampleYaml, zodSchema);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveProperty("workflow");
   });
 });

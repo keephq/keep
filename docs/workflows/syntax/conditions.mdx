@@ -42,7 +42,7 @@ actions:
           type: threshold
           value: "{{ steps.some-step.results.some_value }}"
           compare_to: 10
-          operator: ">"
+          compare_type: lt
 ```
 
 ## Supported Condition Types
@@ -61,7 +61,7 @@ condition:
 ```
 
 ### threshold
-Compares a value to a threshold using operators like `>`, `<`,`==`, or `!=`.
+Compares a value to a threshold using operators like `>` (gt) and `<` (lt), defaults to `>` (gt).
 
 ```yaml
 condition:
@@ -69,7 +69,7 @@ condition:
     type: threshold
     value: "{{ steps.get-data.results.value }}"
     compare_to: 100
-    operator: ">"
+    compare_type: gt
 ```
 
 
@@ -102,7 +102,7 @@ actions:
           type: threshold
           value: "{{ steps.get-data.results.value }}"
           compare_to: 100
-          operator: ">"
+          compare_type: gt
       with:
         message: "The value exceeded the threshold!"
 ```

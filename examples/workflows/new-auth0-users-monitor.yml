@@ -1,7 +1,11 @@
 # Alert when there are new Auth0 users
-alert:
-  id: new-auth0-users
-  description: Get new users logged in to the platform
+workflow:
+  id: new-auth0-users-monitor
+  name: New Auth0 Users Monitor
+  description: Tracks new Auth0 user signups and sends Slack notifications with detailed user information, maintaining state between runs.
+  triggers:
+    - type: interval
+      value: 3600 # every hour
   steps:
     - name: get-auth0-users
       provider:
@@ -34,8 +38,3 @@ alert:
                   - {{user_name}}
                   {{/steps.get-auth0-users.results.new_users}}
                 emoji: true
-
-workflow:
-  id: auth0-user-monitor
-  name: Auth0 User Monitor
-  description: Tracks new Auth0 user signups and sends Slack notifications with detailed user information, maintaining state between runs.

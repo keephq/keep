@@ -14,10 +14,10 @@ import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import { FiExternalLink, FiSave } from "react-icons/fi";
 import { AlertDto } from "@/entities/alerts/model";
-import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import { components, GroupBase, MenuListProps } from "react-select";
-import { MonacoEditor, Select } from "@/shared/ui";
+import { Select } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { IoSearchOutline } from "react-icons/io5";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -360,8 +360,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-      ? customFields
-      : [];
+    ? customFields
+    : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);

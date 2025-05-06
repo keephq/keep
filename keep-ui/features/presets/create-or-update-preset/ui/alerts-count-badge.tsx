@@ -6,12 +6,14 @@ interface AlertsCountBadgeProps {
   presetCEL: string;
   isDebouncing: boolean;
   vertical?: boolean;
+  description?: string;
 }
 
 export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
   presetCEL,
   isDebouncing,
   vertical = false,
+  description,
 }) => {
   console.log("AlertsCountBadge::presetCEL", presetCEL);
   const { useLastAlerts } = useAlerts();
@@ -26,7 +28,7 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
   // Show loading state when searching or debouncing
   if (isSearching || isDebouncing) {
     return (
-      <Card className="mt-4">
+      <Card className="px-2 py-3">
         <div className="flex justify-center">
           <div
             className={`flex ${
@@ -36,7 +38,7 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
             <Badge size="xl" color="orange">
               ...
             </Badge>
-            <Text className="text-gray-500 text-sm">Searching...</Text>
+            <Text className="text-sm">Searching...</Text>
           </div>
         </div>
       </Card>
@@ -49,7 +51,7 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
   }
 
   return (
-    <Card className="mt-4">
+    <Card className="px-2 py-3">
       <div className="flex justify-center">
         <div
           className={`flex ${
@@ -59,14 +61,14 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
           <Badge size="xl" color="orange">
             {totalCount}
           </Badge>
-          <Text className="text-gray-500 text-sm">
+          <Text className="text-sm">
             {totalCount === 1 ? "Alert" : "Alerts"} found
           </Text>
         </div>
       </div>
-      <Text className="text-center text-xs mt-2">
-        These are the alerts that would match your preset
-      </Text>
+      {description && (
+        <Text className="text-center text-gray-500 mt-2">{description}</Text>
+      )}
     </Card>
   );
 };

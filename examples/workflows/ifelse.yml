@@ -10,14 +10,15 @@ workflow:
       # stop the workflow if it's business hours
       continue: false
       provider:
-        type: mock
+        type: console
         with:
           message: "Alert during business hours, exiting"
 
     - name: infra-prod-slack
       if: "'{{ alert.team }}' == 'infra' and '{{ alert.env }}' == 'prod'"
       provider:
-        type: console
+        type: slack
+        config: "{{ providers.slack-prod }}"
         with:
           channel: prod-infra-alerts
           message: |
@@ -29,7 +30,8 @@ workflow:
     - name: http-api-errors-slack
       if: "'{{ alert.monitor_name }}' == 'Http API Errors'"
       provider:
-        type: console
+        type: slack
+        config: "{{ providers.slack-prod }}"
         with:
           channel: backend-team-alerts
           message: |

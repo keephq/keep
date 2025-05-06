@@ -28,4 +28,6 @@ export interface InternalConfig {
   KEEP_CONTACT_US_URL: string;
   // Hide sensitive fields
   KEEP_HIDE_SENSITIVE_FIELDS: boolean;
+  // Show debug info in workflow builder UI
+  KEEP_WORKFLOW_DEBUG: boolean;
 }

@@ -3,48 +3,48 @@ workflow:
   name: OpenAI Alert Enrichment
   description: Enriches Prometheus alerts using GPT-4 structured output to determine environment and impacted customer information with strict schema validation.
 
-triggers:
-  - type: alert
-    filters:
-      - key: source
-        value: prometheus
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: prometheus
 
-steps:
-  - name: get-enrichments
-    provider:
-      config: "{{ providers.my_openai }}"
-      type: openai  # Could be also LiteLLM
-      with:
-        prompt: "You received such an alert {{alert}}, generate missing fields."
-        model: "gpt-4o-mini" # This model supports structured output
-        structured_output_format: # We limit what model could return
-          type: json_schema
-          json_schema:
-            name: missing_fields
-            schema:
-              type: object
-              properties:
-                environment:
-                  type: string
-                  enum:
-                    - "production"
-                    - "pre-prod"
-                    - "debug"
-                  description: "Be pessimistic, return pre-prod or production only if you see evidence in the alert body."
-                impacted_customer_name:
-                  type: string
-                  description: "Return undefined if you are not sure about the customer."
-              required: ["environment", "impacted_customer_name"]
-              additionalProperties: false
-            strict: true
+  steps:
+    - name: get-enrichments
+      provider:
+        config: "{{ providers.my_openai }}"
+        type: openai  # Could be also LiteLLM
+        with:
+          prompt: "You received such an alert {{alert}}, generate missing fields."
+          model: "gpt-4o-mini" # This model supports structured output
+          structured_output_format: # We limit what model could return
+            type: json_schema
+            json_schema:
+              name: missing_fields
+              schema:
+                type: object
+                properties:
+                  environment:
+                    type: string
+                    enum:
+                      - "production"
+                      - "pre-prod"
+                      - "debug"
+                    description: "Be pessimistic, return pre-prod or production only if you see evidence in the alert body."
+                  impacted_customer_name:
+                    type: string
+                    description: "Return undefined if you are not sure about the customer."
+                required: ["environment", "impacted_customer_name"]
+                additionalProperties: false
+              strict: true
 
-actions:
-  - name: enrich-alert
-    provider:
-      type: mock
-      with:
-        enrich_alert:
-          - key: environment
-            value: "{{ steps.get-enrichments.results.response.environment }}"
-          - key: impacted_customer_name
-            value: "{{ steps.get-enrichments.results.response.impacted_customer_name }}"
+  actions:
+    - name: enrich-alert
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: environment
+              value: "{{ steps.get-enrichments.results.response.environment }}"
+            - key: impacted_customer_name
+              value: "{{ steps.get-enrichments.results.response.impacted_customer_name }}"

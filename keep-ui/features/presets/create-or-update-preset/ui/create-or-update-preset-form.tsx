@@ -233,13 +233,12 @@ export function CreateOrUpdatePresetForm({
 
       {/* Add alerts count card before the save buttons */}
       {presetData.CEL && (
-        <div className="mt-4">
-          <AlertsCountBadge
-            presetCEL={presetData.CEL}
-            isDebouncing={false}
-            vertical={true}
-          />
-        </div>
+        <AlertsCountBadge
+          presetCEL={presetData.CEL}
+          isDebouncing={false}
+          vertical={true}
+          description="These are the alerts that would match your preset"
+        />
       )}
 
       <div className="flex justify-end space-x-2.5">

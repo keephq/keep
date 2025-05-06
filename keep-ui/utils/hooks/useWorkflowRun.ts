@@ -33,7 +33,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
         const parsedWorkflow = parseWorkflowYamlStringToJSON(
           workflow.workflow_raw
         );
-        const inputs = parsedWorkflow.workflow.inputs || [];
+        const inputs = parsedWorkflow?.workflow?.inputs || [];
         setWorkflowInputs(inputs);
       } catch (error) {
         console.error("Failed to parse workflow YAML:", error);

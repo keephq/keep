@@ -39,7 +39,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
@@ -710,21 +710,27 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    tenant_id: str, workflow_id: str, status: str = None
+    tenant_id: str,
+    workflow_id: str,
+    status: str | None = None,
+    exclude_ids: list[str] | None = None,
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         query = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.workflow_id == workflow_id)
-            .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
-            .order_by(WorkflowExecution.started.desc())
+            select(WorkflowExecution)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
+            .order_by(col(WorkflowExecution.started).desc())
         )
 
         if status:
-            query = query.filter(WorkflowExecution.status == status)
+            query = query.where(WorkflowExecution.status == status)
 
-        workflow_execution = query.first()
+        if exclude_ids:
+            query = query.where(col(WorkflowExecution.id).notin_(exclude_ids))
+
+        workflow_execution = session.exec(query).first()
     return workflow_execution
 
 
@@ -772,14 +778,19 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     return result
 
 
-def get_all_workflows(tenant_id: str):
+def get_all_workflows(tenant_id: str, exclude_disabled: bool = False) -> List[Workflow]:
     with Session(engine) as session:
-        workflows = session.exec(
+        query = (
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
             .where(Workflow.is_test == False)
-        ).all()
+        )
+
+        if exclude_disabled:
+            query = query.where(Workflow.is_disabled == False)
+
+        workflows = session.exec(query).all()
     return workflows
 
 

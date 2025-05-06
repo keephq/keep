@@ -16,6 +16,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 interface Props {
   table: Table<AlertDto>;
   showSkeleton: boolean;
+  pageSize?: number;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   lastViewedAlert: string | null;
@@ -29,6 +30,7 @@ export function AlertsTableBody({
   onRowClick,
   lastViewedAlert,
   presetName,
+  pageSize,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
   const { isRowExpanded } = useExpandedRows(presetName);
@@ -51,7 +53,7 @@ export function AlertsTableBody({
   if (showSkeleton) {
     return (
       <TableBody>
-        {Array.from({ length: 20 }).map((_, index) => (
+        {Array.from({ length: pageSize || 20 }).map((_, index) => (
           <TableRow
             key={index}
             className={getRowClassName(

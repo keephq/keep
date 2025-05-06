@@ -34,4 +34,8 @@
   .monaco-editor .margin {
     @apply hidden !important;
   }
+    &.suggestions-static-position .suggest-widget {
+      @apply w-72 !important;
+      left: unset !important;
+    }
 }

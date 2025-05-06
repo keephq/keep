@@ -18,6 +18,7 @@ import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 import { toast } from "react-toastify";
+import { IncidentDto } from "@/entities/incidents/model";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -199,6 +200,22 @@ export const AlertSidebar = ({
                     </div>
                   </p>
                 </div>
+                {alert.incident_dto && <div>
+                  <FieldHeader>Incidents</FieldHeader>
+                  {alert.incident_dto.map((incident: IncidentDto) => {
+                    const title =
+                      incident.user_generated_name || incident.ai_generated_name;
+                    return (
+                      <Link
+                        key={incident.id}
+                        href={`/incidents/${incident.id}`}
+                        title={title}
+                      >
+                        {title}
+                      </Link>
+                    );
+                  })}
+                </div>}
                 <AlertTimeline
                   key={auditData ? auditData.length : 1}
                   alert={alert}

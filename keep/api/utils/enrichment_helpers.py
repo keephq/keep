@@ -12,6 +12,7 @@ from keep.api.models.alert import (
     AlertWithIncidentLinkMetadataDto,
 )
 from keep.api.models.db.alert import Alert, LastAlertToIncident
+from keep.api.models.incident import IncidentDto
 
 tracer = trace.get_tracer(__name__)
 logger = logging.getLogger(__name__)
@@ -156,6 +157,9 @@ def convert_db_alerts_to_dto_alerts(
                         alert.event["incident"] = ",".join(
                             str(incident.id) for incident in alert._incidents
                         )
+                        alert.event['incident_dto'] = [
+                            IncidentDto.from_db_incident(incident) for incident in alert._incidents
+                        ]
                 try:
                     if alert_to_incident is not None:
                         alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(

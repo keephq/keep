@@ -63,6 +63,7 @@ export interface AlertDto {
   isNoisy?: boolean;
   enriched_fields: string[];
   incident?: string;
+  incident_dto?: any[];
   alert_query?: string;
 
   // From AlertWithIncidentLinkMetadataDto

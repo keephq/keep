@@ -8,15 +8,16 @@ import {
   getTabsFromPreset,
 } from "@/entities/alerts/model";
 import { Preset } from "@/entities/presets/model/types";
+import { AlertsTableDataQuery } from "@/widgets/alerts-table/ui/useAlertsTableData";
 
 interface Props {
-  refreshToken: string | null;
   initialFacets: FacetDto[];
   alerts: AlertDto[];
   alertsTotalCount: number;
+  facetsCel: string;
+  facetsPanelRefreshToken: string | undefined;
   preset: Preset;
   isAsyncLoading: boolean;
-  queryTimeInSeconds: number;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
@@ -24,17 +25,16 @@ interface Props {
   setChangeStatusAlert: (alert: AlertDto | null) => void;
   mutateAlerts: () => void;
   onReload?: (query: AlertsQuery) => void;
-  onPoll?: () => void;
-  onQueryChange?: () => void;
-  onLiveUpdateStateChange?: (isLiveUpdateEnabled: boolean) => void;
+  onQueryChange?: (query: AlertsTableDataQuery) => void;
 }
 
 export default function AlertTableTabPanelServerSide({
-  refreshToken,
   initialFacets,
   alerts,
   alertsTotalCount,
   preset,
+  facetsCel,
+  facetsPanelRefreshToken,
   isAsyncLoading,
   setTicketModalAlert,
   setNoteModalAlert,
@@ -43,10 +43,7 @@ export default function AlertTableTabPanelServerSide({
   setChangeStatusAlert,
   mutateAlerts,
   onReload,
-  onPoll,
   onQueryChange,
-  onLiveUpdateStateChange,
-  queryTimeInSeconds,
 }: Props) {
   const additionalColsToGenerate = [
     ...new Set(
@@ -87,7 +84,8 @@ export default function AlertTableTabPanelServerSide({
 
   return (
     <AlertTableServerSide
-      refreshToken={refreshToken}
+      facetsCel={facetsCel}
+      facetsPanelRefreshToken={facetsPanelRefreshToken}
       initialFacets={initialFacets}
       alerts={alerts}
       alertsTotalCount={alertsTotalCount}
@@ -96,15 +94,12 @@ export default function AlertTableTabPanelServerSide({
       isAsyncLoading={isAsyncLoading}
       presetName={preset.name}
       presetTabs={presetTabs}
-      queryTimeInSeconds={queryTimeInSeconds}
       mutateAlerts={mutateAlerts}
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}
       setDismissModalAlert={setDismissModalAlert}
       setChangeStatusAlert={setChangeStatusAlert}
       onReload={onReload}
-      onPoll={onPoll}
       onQueryChange={onQueryChange}
-      onLiveUpdateStateChange={onLiveUpdateStateChange}
     />
   );
 }

@@ -6,8 +6,8 @@ import { Button } from "@tremor/react";
 import "@xyflow/react/dist/style.css";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
-import { WF_DEBUG_INFO } from "./debug-settings";
 import { edgeCanHaveAddButton } from "../lib/utils";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function DebugEdgeInfo({
   id,
@@ -21,7 +21,8 @@ export function DebugEdgeInfo({
   labelY: number;
   isLayouted: boolean;
 }) {
-  if (!WF_DEBUG_INFO) {
+  const { data: config } = useConfig();
+  if (!config?.KEEP_WORKFLOW_DEBUG) {
     return null;
   }
   return (

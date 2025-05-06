@@ -229,6 +229,9 @@ class ElasticClient:
 
         actions = []
         for alert in alerts:
+            if hasattr(alert, "incident_dto"):
+                alert.incident_dto = [incident.json() for incident in alert.incident_dto]
+
             action = {
                 "_index": self.alerts_index,
                 "_id": alert.fingerprint,  # use fingerprint as the document ID

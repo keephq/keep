@@ -1,3 +1,5 @@
+import type { ApiClient } from "./ApiClient";
+
 export interface ProviderAuthConfig {
   description: string;
   hint?: string;
@@ -169,3 +171,7 @@ export type ProviderFormValue =
   | undefined;
 export type ProviderFormData = Record<string, ProviderFormValue>;
 export type ProviderInputErrors = Record<string, string>;
+
+export const getProviders = async (api: ApiClient) => {
+  return await api.get<ProvidersResponse>("/providers");
+};

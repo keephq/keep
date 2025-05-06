@@ -1,3 +1,5 @@
+import pytest
+
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.workflow import Workflow as WorkflowDB
@@ -604,22 +606,10 @@ triggers:
             lastReceived="2025-01-30T09:19:02.519Z",
         ),
     ]
-
-    workflow_manager.insert_events(
-        SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
-    )
-    assert len(workflow_manager.scheduler.workflows_to_run) == 2
-
-    triggered_alerts = [
-        w.get("event") for w in workflow_manager.scheduler.workflows_to_run
-    ]
-    assert any(
-        a.id == "alert-1" and a.name == "error.database.critical"
-        for a in triggered_alerts
-    )
-    assert any(
-        a.id == "alert-2" and a.name == "error.api.warning" for a in triggered_alerts
-    )
+    with pytest.raises(Exception, match="Unsupported regex"):
+        workflow_manager.insert_events(
+            SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
+        )
 
 
 def test_time_based_filters(db_session):
@@ -898,16 +888,12 @@ triggers:
         ),
     ]
 
-    workflow_manager.insert_events(
-        SINGLE_TENANT_UUID, matching_alerts + excluded_alerts
-    )
-    assert len(workflow_manager.scheduler.workflows_to_run) == 2
-
-    triggered_alerts = [
-        w.get("event") for w in workflow_manager.scheduler.workflows_to_run
-    ]
-    assert any(a.id == "alert-1" and "database" not in a.name for a in triggered_alerts)
-    assert any(a.id == "alert-2" and "database" not in a.name for a in triggered_alerts)
+    # Deprecated complex regex should raise an exception.
+    # We encourage users to use CEL instead.
+    with pytest.raises(Exception, match="Unsupported regex"):
+        workflow_manager.insert_events(
+            SINGLE_TENANT_UUID, matching_alerts + excluded_alerts
+        )
 
 
 def test_exclusion_with_source_list(db_session):
@@ -992,3 +978,177 @@ triggers:
     ]
     assert any(a.id == "alert-1" and a.source == ["grafana"] for a in triggered_alerts)
     assert any(a.id == "alert-2" and a.source == ["custom"] for a in triggered_alerts)
+
+
+def test_regex_dotstar_substring_match(db_session):
+    """Test that r".*abc.*" matches any alert name containing 'abc' anywhere in the string."""
+    workflow_manager = WorkflowManager()
+    workflow_definition = """workflow:
+id: dotstar-substring-check
+triggers:
+- type: alert
+  filters:
+  - key: name
+    value: r".*abc.*"
+  - key: severity
+    value: critical
+"""
+    workflow = WorkflowDB(
+        id="dotstar-substring-check",
+        name="dotstar-substring-check",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Match alerts where name contains 'abc'",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    matching_alerts = [
+        AlertDto(
+            id="alert-1",
+            source=["grafana"],
+            name="abc",
+            status="firing",
+            severity="critical",
+            fingerprint="fp1",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+        AlertDto(
+            id="alert-2",
+            source=["grafana"],
+            name="prefix-abc-suffix",
+            status="firing",
+            severity="critical",
+            fingerprint="fp2",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+        AlertDto(
+            id="alert-3",
+            source=["grafana"],
+            name="somethingabc",
+            status="firing",
+            severity="critical",
+            fingerprint="fp3",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+        AlertDto(
+            id="alert-4",
+            source=["grafana"],
+            name="abc-something",
+            status="firing",
+            severity="critical",
+            fingerprint="fp4",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+    ]
+
+    non_matching_alerts = [
+        AlertDto(
+            id="alert-5",
+            source=["grafana"],
+            name="def",
+            status="firing",
+            severity="critical",
+            fingerprint="fp5",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+        AlertDto(
+            id="alert-6",
+            source=["grafana"],
+            name="prefix-abc-suffix",
+            status="firing",
+            severity="warning",
+            fingerprint="fp6",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+    ]
+
+    workflow_manager.insert_events(
+        SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
+    )
+    assert len(workflow_manager.scheduler.workflows_to_run) == 4
+    triggered_alerts = [
+        w.get("event") for w in workflow_manager.scheduler.workflows_to_run
+    ]
+    assert all("abc" in a.name for a in triggered_alerts)
+    assert all(a.severity == "critical" for a in triggered_alerts)
+    assert not any(a.id == "alert-5" for a in triggered_alerts)
+    assert not any(a.id == "alert-6" for a in triggered_alerts)
+
+
+def test_cel_expression_filter(db_session):
+    """Test CEL expression filter for alert name and severity."""
+    workflow_manager = WorkflowManager()
+    workflow_definition = """workflow:
+id: cel-expression-check
+triggers:
+- type: alert
+  cel: 'name.contains("abc") && severity == "critical"'
+"""
+    workflow = WorkflowDB(
+        id="cel-expression-check",
+        name="cel-expression-check",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Match alerts using CEL expression",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    matching_alerts = [
+        AlertDto(
+            id="alert-1",
+            source=["grafana"],
+            name="abc",
+            status="firing",
+            severity="critical",
+            fingerprint="fp1",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+        AlertDto(
+            id="alert-2",
+            source=["grafana"],
+            name="prefix-abc-suffix",
+            status="firing",
+            severity="critical",
+            fingerprint="fp2",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+    ]
+
+    non_matching_alerts = [
+        AlertDto(
+            id="alert-3",
+            source=["grafana"],
+            name="def",
+            status="firing",
+            severity="critical",
+            fingerprint="fp3",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+        AlertDto(
+            id="alert-4",
+            source=["grafana"],
+            name="abc",
+            status="firing",
+            severity="warning",
+            fingerprint="fp4",
+            lastReceived="2025-01-30T09:19:02.519Z",
+        ),
+    ]
+
+    workflow_manager.insert_events(
+        SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
+    )
+    assert len(workflow_manager.scheduler.workflows_to_run) == 2
+    triggered_alerts = [
+        w.get("event") for w in workflow_manager.scheduler.workflows_to_run
+    ]
+    assert all("abc" in a.name for a in triggered_alerts)
+    assert all(a.severity == "critical" for a in triggered_alerts)
+    assert not any(a.id == "alert-3" for a in triggered_alerts)
+    assert not any(a.id == "alert-4" for a in triggered_alerts)

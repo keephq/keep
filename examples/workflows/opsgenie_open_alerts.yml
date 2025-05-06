@@ -2,6 +2,9 @@ workflow:
   id: opsgenie-alert-monitor
   name: OpsGenie Alert Monitor
   description: Monitors open alerts in OpsGenie and sends detailed Slack notifications with priority levels and timestamps.
+  triggers:
+    - type: interval
+      value: 60
   steps:
     - name: get-open-alerts
       provider:

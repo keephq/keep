@@ -1,7 +1,8 @@
 # Database disk space is low (<10%)
-alert:
-  id: db-disk-space
-  description: Check that the DB has enough disk space
+workflow:
+  id: database-disk-space-monitor
+  name: Database Disk Space Monitor
+  description: Monitors database disk space usage and sends detailed Slack notifications with interactive components when space is low.
   owners:
     - github-shahargl
     - slack-talboren
@@ -9,7 +10,9 @@ alert:
     - db
     - api
   # Run every 60 seconds
-  #interval: 60
+  triggers: 
+    - type: interval
+      value: 60
   steps:
     - name: db-no-space
       provider:
@@ -123,13 +126,7 @@ alert:
                     emoji: true
                   value: click_me_123
                   url: https://google.com
-
-providers:
-  db-server-mock:
-    description: Paper DB Server
-    authentication:
-
-workflow:
-  id: database-disk-space-monitor
-  name: Database Disk Space Monitor
-  description: Monitors database disk space usage and sends detailed Slack notifications with interactive components when space is low.
+  providers:
+    db-server-mock:
+      description: Paper DB Server
+      authentication:

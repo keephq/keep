@@ -1,7 +1,11 @@
 # Alert if a result queried from the DB is above a certain thershold.
-alert:
-  id: raw-sql-query
-  description: Monitor that time difference is no more than 1 hour
+workflow:
+  id: mysql-ntfy-monitor
+  name: MySQL Ntfy Monitor
+  description: Monitors MySQL datetime values and sends notifications through Ntfy when thresholds are exceeded.
+  triggers:
+    - type: interval
+      value: 300 # every 5 minutes
   steps:
     - name: get-max-datetime
       provider:
@@ -30,8 +34,3 @@ alert:
             fingerprint: "{{ alert.fingerprint }}"
             some_customized_field: "{{ keep.strip(alert.some_attribute) }}"
           url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"
-
-workflow:
-  id: mysql-ntfy-monitor
-  name: MySQL Ntfy Monitor
-  description: Monitors MySQL datetime values and sends notifications through Ntfy when thresholds are exceeded.

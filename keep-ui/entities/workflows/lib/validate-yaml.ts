@@ -354,7 +354,11 @@ export const validateMustacheVariableNameForYAML = (
         "error",
       ];
     }
-    if (parts[2] === "results") {
+    if (
+      parts[2] === "results" ||
+      parts[2].startsWith("results.") ||
+      parts[2].startsWith("results[")
+    ) {
       // todo: validate results properties
       return null;
     } else {

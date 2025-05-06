@@ -20,7 +20,7 @@ import {
   getColors,
   chartOptions,
 } from "./workflow-utils";
-
+import clsx from "clsx";
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -37,7 +37,7 @@ export default function WorkflowGraph({
   workflow,
   limit = 15,
   showAll,
-  size,
+  size = "md",
 }: {
   showLastExecutionStatus?: boolean;
   workflow: Partial<Workflow>;
@@ -45,6 +45,21 @@ export default function WorkflowGraph({
   size?: string;
   showAll?: boolean;
 }) {
+  let height;
+  switch (size) {
+    case "sm":
+      height = "h-24";
+      break;
+    case "md":
+      height = "h-36";
+      break;
+    case "lg":
+      height = "h-48";
+      break;
+    default:
+      height = "h-36";
+  }
+
   const lastExecutions = useMemo(() => {
     let executions = workflow?.last_executions?.slice(0, limit) || [];
     if (showAll) {
@@ -123,34 +138,26 @@ export default function WorkflowGraph({
   }
   if (hasNoData && show_real_data) {
     return (
-      <div className="flex justify-center items-center text-gray-400 h-36">
+      <div
+        className={clsx(
+          "flex justify-center items-center text-gray-400",
+          height
+        )}
+      >
         No data available
       </div>
     );
   }
 
-  let height = "h-36";
-  switch (size) {
-    case "sm":
-      height = "h-24";
-      break;
-    case "md":
-      height = "h-36";
-
-      break;
-    case "lg":
-      height = "h-48";
-      break;
-    default:
-      height = "h-36";
-  }
-
   return (
     <div
-      className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}
+      className={clsx(
+        "flex flex-row items-end justify-start flex-nowrap w-full",
+        height
+      )}
     >
       {showLastExecutionStatus && <div>{getIcon()}</div>}
-      <div className={`overflow-hidden ${height} w-full`}>
+      <div className={clsx("overflow-hidden", height, "w-full")}>
         <Bar data={chartData} options={chartOptions} />
       </div>
     </div>

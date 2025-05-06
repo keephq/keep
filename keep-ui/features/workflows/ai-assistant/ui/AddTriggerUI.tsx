@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWorkflowStore } from "@/entities/workflows";
-import { WF_DEBUG_INFO } from "../../builder/ui/debug-settings";
 import { Button } from "@/components/ui";
 import { JsonCard } from "@/shared/ui";
 import { StepPreview } from "./StepPreview";
 import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
 import { getErrorMessage } from "../lib/utils";
 import { V2StepTrigger } from "@/entities/workflows/model/types";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 type AddTriggerUIPropsCommon = {
   trigger: V2StepTrigger;
@@ -34,6 +34,7 @@ export const AddTriggerUI = ({
 }: AddTriggerUIProps) => {
   const [isAddingTrigger, setIsAddingTrigger] = useState(false);
   const { addNodeBetween, getNextEdge } = useWorkflowStore();
+  const { data: config } = useConfig();
 
   const handleAddTrigger = useCallback(() => {
     if (isAddingTrigger) {
@@ -85,7 +86,9 @@ export const AddTriggerUI = ({
   if (status === "complete") {
     return (
       <div className="flex flex-col gap-1 my-2">
-        {WF_DEBUG_INFO && <JsonCard title="trigger" json={trigger} />}
+        {config?.KEEP_WORKFLOW_DEBUG && (
+          <JsonCard title="trigger" json={trigger} />
+        )}
         <p>Do you want to add this trigger to the workflow?</p>
         <StepPreview step={trigger} />
         <SuggestionStatus status={result?.status} message={result?.message} />
@@ -94,7 +97,9 @@ export const AddTriggerUI = ({
   }
   return (
     <div>
-      {WF_DEBUG_INFO && <JsonCard title="trigger" json={trigger} />}
+      {config?.KEEP_WORKFLOW_DEBUG && (
+        <JsonCard title="trigger" json={trigger} />
+      )}
       <p>Do you want to add this trigger to the workflow?</p>
       <div className="flex flex-col gap-2 my-2">
         <StepPreview step={trigger} />
