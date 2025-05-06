@@ -336,13 +336,13 @@ jobs:
         run: |          
           docker exec keep-keep-backend-1 bash -c "
             pip install black
-            cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini &&
-            sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini &&
+            cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini &&
+            sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' /app/alembic_temp.ini &&
 
             LAST_MIGRATION=\$(ls -t /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/*.py | head -n1) &&
             echo \"Last migration: \$LAST_MIGRATION\" &&
 
-            alembic -c ./alembic_temp.ini revision -m \"test_dummy_migration\" &&
+            alembic -c /app/alembic_temp.ini revision -m \"test_dummy_migration\" &&
 
             NEW_MIGRATION=\$(ls -t /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/*.py | head -n1) &&
 
@@ -372,7 +372,7 @@ jobs:
             pass
           EOF
             
-            alembic -c /home/app/alembic_temp.ini upgrade head
+            alembic -c /app/alembic_temp.ini upgrade head
             "
           echo "Dummy migration added"
 
