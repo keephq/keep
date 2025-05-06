@@ -23,6 +23,7 @@ workflow:
     - name: send-status-notification
       provider:
         type: slack
+        config: "{{ providers.slack-operations }}"
         with:
           channel: "#operations"
           message: |

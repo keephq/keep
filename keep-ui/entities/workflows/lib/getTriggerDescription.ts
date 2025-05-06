@@ -12,6 +12,9 @@ export function getTriggerDescription(trigger: Trigger) {
         return `Every ${getHumanReadableInterval(trigger.value)} (${trigger.value} seconds)`;
       }
       case "alert": {
+        if (!trigger.filters) {
+          return "On any alert";
+        }
         return `${trigger.filters.map((f) => `${f.key}=${f.value}`).join(", ")}`;
       }
       case "incident": {
