@@ -33,70 +33,40 @@ class IOValidatorMixin:
         Checks whether the template matches the expected template engine.
 
         Args:
-            template (str): The template text to be checked.
+            template (str): The template text to validate.
 
         Returns:
-            bool: True if the template matches the expected engine.
+            bool: True if the template matches the selected engine.
 
         Raises:
-            RenderException: If the template contains syntax from a different engine.
+            RenderException: If syntax from the wrong engine is detected.
         """
-        # Patterns specific to Jinja2
-        jinja2_patterns = {
-            'statement': r'{%[^%}]+%}',  # {% if something %}
-            'comment': r'{#[^#}]+#}',  # {# comment #}
-            'filters': r'\{\{[^}]+\|[^}]+\}\}',  # {{ variable|filter }}
-            'blocks': r'{%\s*(end)?(if|for|block|macro|set)[^%}]*%}',  # {% endif %}, {% endfor %}, etc.
+        patterns_by_engine = {
+            'JINJA2': [
+                r'{%[^%}]+%}',  # Jinja2 statements (e.g., {% if something %})
+                r'{#[^#}]+#}',  # Jinja2 comments (e.g., {# comment #})
+                r'\{\{[^}]+\|[^}]+\}\}',  # Jinja2 filters (e.g., {{ variable|filter }})
+                r'{%\s*(end)?(if|for|block|macro|set)[^%}]*%}', # Jinja2 block control (e.g., {% endif %}, {% block name %})
+            ],
+            'MUSTACHE': [
+                r'{{#[^}]+}}',  # Mustache section start (e.g., {{#section}})
+                r'{{(\^|\^!)[^}]+}}',  # Mustache inverted section (e.g., {{^section}} or {{^!section}})
+                r'{{/[^}]+}}',  # Mustache section end (e.g., {{/section}})
+                r'{{{[^}]+}}}',  # Mustache unescaped variable (e.g., {{{ variable }}})
+                r'{{![^}]+}}',  # Mustache comment (e.g., {{! comment }})
+                r'{{>[^}]+}}'  # Mustache partials (e.g., {{> partial }})
+            ]
         }
 
-        # Patterns specific to Mustache
-        mustache_patterns = {
-            'section': r'{{#[^}]+}}',  # {{#section}}
-            'inverted': r'{{(\^|\^!)[^}]+}}',  # {{^section}} or {{^!section}}
-            'end_section': r'{{/[^}]+}}',  # {{/section}}
-            'unescaped': r'{{{[^}]+}}}',  # {{{ variable }}}
-            'comment': r'{{![^}]+}}',  # {{! comment }}
-            'partial': r'{{>[^}]+}}',  # {{> partial }}
-        }
-
-        has_jinja2 = False
-        has_mustache = False
-
-        # Check for Jinja2 patterns
-        for pattern in jinja2_patterns.values():
-            if re.search(pattern, template):
-                has_jinja2 = True
-                if self.template_engine == TemplateEngine.MUSTACHE:
-                    raise RenderException(
-                        "You selected Mustache as the template engine, but Jinja2 syntax was found",
-                    )
-
-        # Check for Mustache patterns
-        for pattern in mustache_patterns.values():
-            if re.search(pattern, template):
-                has_mustache = True
-                if self.template_engine == TemplateEngine.JINJA2:
-                    raise RenderException(
-                        "You selected Jinja2 as the template engine, but Mustache syntax was found",
-                    )
-
-        # Check for simple variable placeholders
-        simple_vars = re.findall(r'{{[^{#/>!\^][^}]+}}', template)
-
-        # If no specific patterns found, but simple variables are present
-        if simple_vars and not (has_jinja2 or has_mustache):
-            # Determine based on filter usage or spacing
-            for var in simple_vars:
-                if '|' in var or var.startswith('{{ '):
-                    has_jinja2 = True
-                elif ' ' not in var.strip('{}'):
-                    has_mustache = True
-
-        # Validate against expected engine
-        if self.template_engine == TemplateEngine.JINJA2:
-            return has_jinja2 or not has_mustache
-        else:  # TemplateEngine.MUSTACHE
-            return has_mustache or not has_jinja2
+        for engine, patterns in patterns_by_engine.items():
+            if self.template_engine.name != engine:
+                for pattern in patterns:
+                    if re.search(pattern, template):
+                        raise RenderException(
+                            f"You selected {self.template_engine.name}, "
+                            f"but {engine} syntax was found."
+                        )
+        return True
 
 class BaseIOHandler(IOValidatorMixin):
     template_engine: TemplateEngine = None
