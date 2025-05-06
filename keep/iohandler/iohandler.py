@@ -840,8 +840,25 @@ class Jinja2IOHandler(BaseIOHandler):
 
         return missing_keys, TrackingUndefined
 
+    def _convert_to_jinja_safe(self, template: str) -> str:
+        def replace_match(match):
+            expr = match.group(1).strip()
+            parts = expr.split('.')
+            safe_expr = parts[0]
+            for part in parts[1:]:
+                if re.match(r'^[a-zA-Z_]\w*$', part):  # valid identifier
+                    safe_expr += f'.{part}'
+                else:
+                    safe_expr += f'["{part}"]'
+            return f'{{{{ {safe_expr} }}}}'
+
+        # Replace all {{ ... }} expressions
+        return re.sub(r'\{\{\s*(.*?)\s*\}\}', replace_match, template)
+
     def _render_template(self, template, context):
         undefined, undefined_cls = self._undefined_collector()
+
+        template = self._convert_to_jinja_safe(template)
 
         env = jinja2.Environment(undefined=undefined_cls, keep_trailing_newline=True)
         template = env.from_string(template)

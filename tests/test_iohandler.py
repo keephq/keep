@@ -551,7 +551,6 @@ def test_resend_python_service_condition(mocked_context_manager):
 
     # Jinja2
     iohandler = Jinja2IOHandler(mocked_context_manager)
-    condition = "{{ steps['run-script'].results.return_code }} == 0"
     assert eval(iohandler.render(condition)) is True
 
 
@@ -582,7 +581,7 @@ def test_blogpost_workflow_enrich_alert(mocked_context_manager):
 
     # Jinja2
     iohandler = Jinja2IOHandler(mocked_context_manager)
-    template = "Customer details: Name: {{ steps['get-more-details'].results.name }}, Email: {{ steps['get-more-details'].results.email }}, Tier: {{ steps['get-more-details'].results.tier }}"
+    template = "Customer details: Name: {{ steps.get-more-details.results.name }}, Email: {{ steps.get-more-details.results.email }}, Tier: {{ steps.get-more-details.results.tier }}"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
@@ -632,7 +631,7 @@ def test_db_disk_space_alert(mocked_context_manager):
 
     # Jinja2
     iohandler = Jinja2IOHandler(mocked_context_manager)
-    template = "Number of logs: keep.len({{ steps['check-error-rate'].results.logs }})"
+    template = "Number of logs: keep.len({{ steps.check-error-rate.results.logs }})"
     rendered = iohandler.render(template)
     assert rendered == expected_output
 
@@ -655,7 +654,7 @@ def test_query_bigquery_for_customer_tier(mocked_context_manager):
 
     # Jinja2
     iohandler = Jinja2IOHandler(mocked_context_manager)
-    condition = "'{{ steps['get-customer-tier-by-id'].result.tier }}' == 'enterprise'"
+    condition = "'{{ steps.get-customer-tier-by-id.result.tier }}' == 'enterprise'"
     assert eval(iohandler.render(condition)) is True
 
 
