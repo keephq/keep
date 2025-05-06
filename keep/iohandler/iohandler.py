@@ -841,25 +841,8 @@ class Jinja2IOHandler(BaseIOHandler):
         return missing_keys, TrackingUndefined
 
     def _convert_to_jinja_safe(self, template: str) -> str:
-        def is_valid(part):
-            return re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', part)
-
-        def fix_expr(expr):
-            # Split by first | if it exists
-            if '|' in expr:
-                var, rest = expr.split('|', 1)
-                suffix = '|' + rest
-            else:
-                var = expr
-                suffix = ''
-
-            parts = var.strip().split('.')
-            out = parts[0]
-            for p in parts[1:]:
-                out += f'.{p}' if is_valid(p) else f'["{p}"]'
-            return out + suffix
-
-        return re.sub(r'\{\{\s*(.*?)\s*\}\}', lambda m: f'{{{{ {fix_expr(m.group(1))} }}}}', template)
+        # Replace vars with hyphens with bracket notation ( '.some-var' => '["some-var]' )
+        return re.sub(r'\.(?!\d)([a-zA-Z_]\w*-(?:\w+-?)*)', r'["\1"]', template)
 
     def _render_template(self, template, context):
         undefined, undefined_cls = self._undefined_collector()
