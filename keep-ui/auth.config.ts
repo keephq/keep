@@ -334,9 +334,10 @@ export const config = {
 
                 // Convert dictionary to array of tenant objects using only tenant_id and tenant_name
                 const tenantIds = Object.entries(orgDict).map(
-                  ([org_name, tenant_id]) => ({
-                    tenant_id: String(tenant_id),
+                  ([org_name, orgData]) => ({
+                    tenant_id: String((orgData as any).tenant_id),
                     tenant_name: `${org_name}`,
+                    tenant_logo_url: (orgData as any).tenant_logo_url,
                   })
                 );
 

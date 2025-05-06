@@ -86,7 +86,7 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         self.roles_from_groups = config(
             "KEYCLOAK_ROLES_FROM_GROUPS", default=False, cast=bool
         )
-        self.groups_claims = config("KEYCLOAK_GROUPS_CLAIM", default="group-keeps")
+        self.groups_claims = config("KEYCLOAK_GROUPS_CLAIM", default="groups")
         self.groups_claims_admin = config(
             "KEYCLOAK_GROUPS_CLAIM_ADMIN", default="admin"
         )
@@ -97,6 +97,11 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         self.groups_org_prefix = config(
             "KEYCLOAK_GROUPS_ORG_PREFIX", default="keep"
         ).lower()
+        self.keycloak_roles = {
+            self.groups_claims_admin: Roles.ADMIN,
+            self.groups_claims_noc: Roles.NOC,
+            self.groups_claims_webhook: Roles.WEBHOOK,
+        }
         if self.roles_from_groups:
             self.keycloak_multi_org = True
         else:
@@ -108,13 +113,19 @@ class KeycloakAuthVerifier(AuthVerifierBase):
     def tenants(self):
         if not self._tenants:
             tenants = get_tenants()
-            self._tenants = {tenant.name: tenant.id for tenant in tenants}
+            self._tenants = {
+                tenant.name: {
+                    "tenant_id": tenant.id,
+                    "tenant_logo_url": tenant.configuration.get("logo_url"),
+                }
+                for tenant in tenants
+            }
 
         return self._tenants
 
     def get_org_name_by_tenant_id(self, tenant_id):
         for org_name, org_tenant_id in self.tenants.items():
-            if org_tenant_id == tenant_id:
+            if org_tenant_id.get("tenant_id") == tenant_id:
                 return org_name
 
         self.logger.error("Tenant id not found", extra={"tenant_id": tenant_id})
@@ -127,11 +138,21 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         ) and not group_name.startswith("/" + self.groups_org_prefix):
             return False
 
-        # it also must end with a role
-        for role in Roles:
-            if role.value in group_name:
-                return True
+        # TODO: dynamic roles + orgs
 
+        # admin
+        if self.groups_claims_admin in group_name:
+            return True
+
+        # noc
+        if self.groups_claims_noc in group_name:
+            return True
+
+        # webhook
+        if self.groups_claims_webhook in group_name:
+            return True
+
+        # if not, its not a group that represents an org
         return False
 
     def _get_org_name(self, group_name):
@@ -148,11 +169,11 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         # for the org_name (e.g. keep-org-a) iterate over the groups and find the role
         # e.g. /org-a-admin, /org-a-noc, /org-a-webhook
         # we want to iterate from the "strongest" to the "weakest" role
-        for role in ["admin", "noc", "webhook"]:
+        for role, keep_role in self.keycloak_roles.items():
             for group in user_groups:
                 group_lower = group.lower()
                 if org_name in group_lower and role in group_lower:
-                    return role
+                    return keep_role.value
         return None
 
     def _verify_bearer_token(
@@ -202,13 +223,17 @@ class KeycloakAuthVerifier(AuthVerifierBase):
                     # check if its the configuration
                     org_name = self._get_org_name(group_lower)
                     groups_that_represent_orgs.append(group_lower)
-                    user_orgs[org_name] = self.tenants.get(org_name)
                     if org_name not in self.tenants:
                         self.logger.info("Creating tenant")
                         org_tenant_id = create_tenant(tenant_name=org_name)
                         # so it won't be
-                        self.tenants[org_name] = org_tenant_id
+                        self.tenants[org_name] = {
+                            "tenant_id": org_tenant_id,
+                            "tenant_logo_url": None,
+                        }
                         self.logger.info("Tenant created")
+                    # this will be returned to the UI
+                    user_orgs[org_name] = self.tenants.get(org_name)
 
             # TODO: fix
             if active_tenant:
@@ -225,7 +250,7 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             else:
                 current_tenant_group = groups_that_represent_orgs[0]
                 org_name = self._get_org_name(current_tenant_group)
-                tenant_id = self.tenants.get(org_name)
+                tenant_id = self.tenants.get(org_name).get("tenant_id")
                 if self.groups_claims_admin in current_tenant_group:
                     role = "admin"
                 elif self.groups_claims_noc in current_tenant_group:
