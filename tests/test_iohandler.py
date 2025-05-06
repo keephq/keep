@@ -551,6 +551,7 @@ def test_resend_python_service_condition(mocked_context_manager):
 
     # Jinja2
     iohandler = Jinja2IOHandler(mocked_context_manager)
+    condition = "{{ steps.run-script.results.return_code }} == 0"
     assert eval(iohandler.render(condition)) is True
 
 
@@ -1476,7 +1477,7 @@ def test_keep_respect_jinja_comments(context_manager):
     iohandler = Jinja2IOHandler(context_manager)
 
     template = (
-        "Some test{% hello keep.len({{ steps.some_list }}) %} text"
+        "Some test{# hello keep.len({{ steps.some_list }}) #} text"
     )
     s = iohandler.render(template)
 
