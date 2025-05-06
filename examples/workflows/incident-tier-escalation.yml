@@ -5,9 +5,9 @@ workflow:
   triggers:
     # when an incident is created or updated with a new alert
     - type: incident
-      on:
-        - create
-        - update
+      events:
+        - created
+        - updated
   actions:
     - name: send-slack-message-tier-0
       # send tier0 if this is a new incident (no tier set) or if the incident is tier0 but the alert is alert2

@@ -224,7 +224,7 @@ class Site24X7Provider(BaseProvider):
     ) -> AlertDto:
         return AlertDto(
             url=event.get("MONITORURL", ""),
-            lastReceived=event.get("INCIDENT_TIME", ""),
+            lastReceived=event.get("INCIDENT_TIME_ISO", ""),
             description=event.get("INCIDENT_REASON", ""),
             name=event.get("MONITORNAME", ""),
             id=event.get("MONITOR_ID", ""),

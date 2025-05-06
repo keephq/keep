@@ -25,9 +25,7 @@ const alertTriggerTemplate: V2StepTrigger = {
   name: "Alert",
   id: "alert",
   properties: {
-    alert: {
-      source: "",
-    },
+    cel: "",
   },
 };
 

@@ -21,7 +21,7 @@ workflow:
           value: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
           compare_to: 0.0050
           alias: A
-          operator: ">"
+          compare_type: gt
       provider:
         type: slack
         config: "{{ providers.slack }}"

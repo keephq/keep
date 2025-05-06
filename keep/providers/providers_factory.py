@@ -7,12 +7,12 @@ import datetime
 import importlib
 import inspect
 import json
+import keyword
 import logging
 import os
 import types
 import typing
-import keyword
-from dataclasses import fields
+from dataclasses import _MISSING_TYPE, fields
 from typing import get_args
 
 from keep.api.core.config import config
@@ -30,7 +30,7 @@ from keep.providers.base.base_provider import (
     BaseProvider,
     BaseTopologyProvider,
 )
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -502,6 +502,7 @@ class ProvidersFactory:
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
             provider_copy.installed = True
+            provider_copy.provider_metadata = p.provider_metadata
             try:
                 provider_auth = {"name": p.name}
                 if include_details:
@@ -685,3 +686,15 @@ class ProvidersFactory:
 
         ProvidersFactory._loaded_deduplication_rules_cache = default_deduplications
         return default_deduplications
+
+
+# Custom JSON encoder for Provider objects, to be used for providers cache
+class ProviderEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, ProviderScope):
+            dct = o.__dict__
+            dct.pop("__pydantic_initialised__", None)
+            return dct
+        elif isinstance(o, _MISSING_TYPE):
+            return None
+        return o.dict()
