@@ -4,8 +4,10 @@ import os
 from fastapi import Depends, HTTPException
 
 from keep.api.core.config import config
+from keep.api.core.db import create_tenant, get_tenants
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
+from keep.identitymanager.rbac import Roles
 from keycloak import KeycloakOpenID, KeycloakOpenIDConnection
 from keycloak.connection import ConnectionManager
 from keycloak.keycloak_uma import KeycloakUMA
@@ -92,12 +94,78 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         self.groups_claims_webhook = config(
             "KEYCLOAK_GROUPS_CLAIM_WEBHOOK", default="webhook"
         )
+        self.groups_org_prefix = config(
+            "KEYCLOAK_GROUPS_ORG_PREFIX", default="keep"
+        ).lower()
+        if self.roles_from_groups:
+            self.keycloak_multi_org = True
+        else:
+            self.keycloak_multi_org = False
+
+        self._tenants = []
+
+    @property
+    def tenants(self):
+        if not self._tenants:
+            tenants = get_tenants()
+            self._tenants = {tenant.name: tenant.id for tenant in tenants}
+
+        return self._tenants
+
+    def get_org_name_by_tenant_id(self, tenant_id):
+        for org_name, org_tenant_id in self.tenants.items():
+            if org_tenant_id == tenant_id:
+                return org_name
+
+        self.logger.error("Tenant id not found", extra={"tenant_id": tenant_id})
+        raise Exception("Org not found")
+
+    def _check_if_group_represents_org(self, group_name: str):
+        # if must start with the group prefix
+        if not group_name.startswith(
+            self.groups_org_prefix
+        ) and not group_name.startswith("/" + self.groups_org_prefix):
+            return False
+
+        # it also must end with a role
+        for role in Roles:
+            if role.value in group_name:
+                return True
+
+        return False
+
+    def _get_org_name(self, group_name):
+        # first, keycloak groups starts with "/"
+        if group_name.startswith("/"):
+            group_name = group_name[1:]
+
+        # second, trim the role
+        org_name = "-".join(group_name.split("-")[0:-1])
+
+        return org_name
+
+    def _get_role_in_org(self, user_groups, org_name):
+        # for the org_name (e.g. keep-org-a) iterate over the groups and find the role
+        # e.g. /org-a-admin, /org-a-noc, /org-a-webhook
+        # we want to iterate from the "strongest" to the "weakest" role
+        for role in ["admin", "noc", "webhook"]:
+            for group in user_groups:
+                group_lower = group.lower()
+                if org_name in group_lower and role in group_lower:
+                    return role
+        return None
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
     ) -> AuthenticatedEntity:
         # verify keycloak token
         try:
+            # more than one tenant support
+            if token.startswith("keepActiveTenant"):
+                active_tenant, token = token.split("&")
+                active_tenant = active_tenant.split("=")[1]
+            else:
+                active_tenant = None
             payload = self.keycloak_client.decode_token(token, validate=True)
         except Exception as e:
             if "Expired" in str(e):
@@ -114,6 +182,7 @@ class KeycloakAuthVerifier(AuthVerifierBase):
 
         # this allows more than one tenant to be configured in the same keycloak realm
         # todo: support dynamic roles
+        user_orgs = {}
         if self.roles_from_groups:
             self.logger.info("Using roles from groups")
             # get roles from groups
@@ -124,18 +193,51 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             # "/org-users"
             # ],
             groups = payload.get(self.groups_claims, [])
+            groups_that_represent_orgs = []
+            # first, create tenants if they are not exists (should be happen once, new group)
             for group in groups:
-                if self.groups_claims_admin in groups:
+                # first, check if its an org group (e.g. keep-org-a)
+                group_lower = group.lower()
+                if self._check_if_group_represents_org(group_name=group_lower):
+                    # check if its the configuration
+                    org_name = self._get_org_name(group_lower)
+                    groups_that_represent_orgs.append(group_lower)
+                    user_orgs[org_name] = self.tenants.get(org_name)
+                    if org_name not in self.tenants:
+                        self.logger.info("Creating tenant")
+                        org_tenant_id = create_tenant(tenant_name=org_name)
+                        # so it won't be
+                        self.tenants[org_name] = org_tenant_id
+                        self.logger.info("Tenant created")
+
+            # TODO: fix
+            if active_tenant:
+                # get the active_tenant grou
+                org_name = self.get_org_name_by_tenant_id(active_tenant)
+                tenant_id = active_tenant
+                role = self._get_role_in_org(groups, org_name)
+                if not role:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Invalid Keycloak token - could not find any group that represents the org and the role",
+                    )
+            # if no active tenant, we take the first
+            else:
+                current_tenant_group = groups_that_represent_orgs[0]
+                org_name = self._get_org_name(current_tenant_group)
+                tenant_id = self.tenants.get(org_name)
+                if self.groups_claims_admin in current_tenant_group:
                     role = "admin"
-                elif self.groups_claims_noc in groups:
+                elif self.groups_claims_noc in current_tenant_group:
                     role = "noc"
-                elif self.groups_claims_webhook in groups:
+                elif self.groups_claims_webhook in current_tenant_group:
                     role = "webhook"
                 else:
                     raise HTTPException(
                         status_code=401,
                         detail="Invalid Keycloak token - no role in groups",
                     )
+        # Keycloak single tenant
         else:
             role = (
                 payload.get("resource_access", {})
@@ -152,7 +254,7 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             role = role[0]
 
         # finally, check if the role is in the allowed roles
-        return AuthenticatedEntity(
+        authenticated_entity = AuthenticatedEntity(
             tenant_id,
             email,
             None,
@@ -161,9 +263,18 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             org_realm=org_realm,
             token=token,
         )
+        if user_orgs:
+            authenticated_entity.user_orgs = user_orgs
+
+        return authenticated_entity
 
     def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:
-        # use Keycloak's UMA to authorize
+
+        # multi org does not support UMA for now:
+        if self.keycloak_multi_org:
+            return super()._authorize(authenticated_entity)
+
+        # for single tenant Keycloaks, use Keycloak's UMA to authorize
         try:
             permission = UMAPermission(
                 resource=self.protected_resource,
@@ -175,11 +286,11 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             )
             self.logger.info(f"Permission check result: {allowed}")
             if not allowed:
-                raise HTTPException(status_code=401, detail="Permission check failed")
+                raise HTTPException(status_code=403, detail="Permission check failed")
         # secure fallback
         except Exception as e:
             raise HTTPException(
-                status_code=401, detail="Permission check failed - " + str(e)
+                status_code=403, detail="Permission check failed - " + str(e)
             )
         return allowed
 

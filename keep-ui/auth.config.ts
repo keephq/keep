@@ -193,49 +193,12 @@ const baseProviderConfigs = {
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER,
-      authorization: { params: { scope: "openid email profile" } },
-      profile(profile, tokens) {
-        // Get the groups claim name from environment variable or use default
-        const groupsClaimName = process.env.KEYCLOAK_GROUPS_CLAIM || "groups";
-
-        // Parse tenant information from groups using the configured claim name
-        let tenantIds = [];
-        if (profile[groupsClaimName]) {
-          tenantIds = profile[groupsClaimName]
-            .map((group: string) => {
-              // Parse group name to extract tenant_id and role
-              // Assuming format like "org-a-admin"
-              const lastDashIndex = group.lastIndexOf("-");
-              if (lastDashIndex > 0) {
-                return {
-                  tenant_id: group.substring(0, lastDashIndex),
-                  role: group.substring(lastDashIndex + 1),
-                };
-              }
-              return null;
-            })
-            .filter(Boolean);
-        }
-
-        // Default tenant is the first one if available
-        const defaultTenant =
-          tenantIds.length > 0 ? tenantIds[0].tenant_id : "keep";
-        j;
-
-        return {
-          id: profile.sub,
-          name: profile.name || profile.preferred_username || "",
-          email: profile.email || "",
-          // Store all tenant IDs for tenant switching
-          tenantIds: tenantIds,
-          // Set default tenant
-          tenantId: defaultTenant,
-          // Default role from the first tenant
-          role: tenantIds.length > 0 ? tenantIds[0].role : "user",
-          // Ensure accessToken is always a string
-          accessToken: tokens.access_token || "",
-        };
+      authorization: {
+        params: {
+          scope: "openid email profile",
+        },
       },
+      checks: ["pkce"],
     }),
   ],
   [AuthType.AZUREAD]: [
@@ -354,6 +317,50 @@ export const config = {
           token.tenantId = user.tenantId || "keep";
           token.role = user.role || "user";
 
+          // New code: Check if multi-org mode is enabled
+          if (process.env.KEYCLOAK_ROLES_FROM_GROUPS === "true") {
+            try {
+              // Fetch organizations from backend API
+              const response = await fetch(`${getApiURL()}/auth/user/orgs`, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              });
+
+              if (response.ok) {
+                const orgDict = await response.json();
+
+                // Convert dictionary to array of tenant objects using only tenant_id and tenant_name
+                const tenantIds = Object.entries(orgDict).map(
+                  ([org_name, tenant_id]) => ({
+                    tenant_id: String(tenant_id),
+                    tenant_name: `${org_name}`,
+                  })
+                );
+
+                // Store all tenant IDs for tenant switching
+                if (tenantIds.length > 0) {
+                  token.tenantIds = tenantIds;
+
+                  // Set default tenant to the first one if available
+                  token.tenantId = tenantIds[0].tenant_id || token.tenantId;
+
+                  console.log("Successfully processed user orgs:", tenantIds);
+                } else {
+                  console.warn("No orgs returned from /auth/user/orgs");
+                }
+              } else {
+                console.error(
+                  "Failed to fetch user orgs:",
+                  response.statusText
+                );
+              }
+            } catch (error) {
+              console.error("Error fetching user orgs:", error);
+            }
+          }
           // Refresh token logic
           token.refreshToken = account.refresh_token;
           token.accessTokenExpires =
