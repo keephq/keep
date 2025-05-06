@@ -44,6 +44,7 @@ import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side
 import { InitialFacetsData } from "@/features/filter/api";
 import { v4 as uuidV4 } from "uuid";
 import { PaginationState } from "@/features/filter/pagination";
+import CreateWorkflowModal from "./create-workflow-modal/create-workflow-modal";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
@@ -100,6 +101,8 @@ export function WorkflowsPage({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateWorkflowModalOpen, setIsCreateWorkflowModalOpen] =
+    useState(false);
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -380,7 +383,7 @@ export function WorkflowsPage({
                 color="orange"
                 size="md"
                 variant="primary"
-                onClick={() => router.push("/workflows/builder")}
+                onClick={() => setIsCreateWorkflowModalOpen(true)}
                 icon={PlusIcon}
               >
                 Create Workflow
@@ -438,9 +441,6 @@ export function WorkflowsPage({
               </div>
             </div>
           )}
-        </div>
-        <div className="flex flex-col gap-4">
-          <WorkflowTemplates />
         </div>
       </main>
       <Modal
@@ -534,6 +534,11 @@ export function WorkflowsPage({
           </div>
         </div>
       </Modal>
+      {isCreateWorkflowModalOpen && (
+        <CreateWorkflowModal
+          onClose={() => setIsCreateWorkflowModalOpen(false)}
+        />
+      )}
     </>
   );
 }
