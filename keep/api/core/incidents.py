@@ -84,9 +84,13 @@ incident_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="alert.providerType", map_to="alert.provider_type"
     ),
-    FieldMappingConfiguration(map_from_pattern="sources", map_to="incident.sources"),
     FieldMappingConfiguration(
-        map_from_pattern="affectedServices", map_to="incident.affected_services"
+        map_from_pattern="sources", map_to="incident.sources", data_type=DataType.ARRAY
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="affectedServices",
+        map_to="incident.affected_services",
+        data_type=DataType.ARRAY,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
