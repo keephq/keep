@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
@@ -320,10 +320,42 @@ class AlertAudit(SQLModel, table=True):
     # what
     action: str = Field(nullable=False)
     description: str = Field(sa_column=Column(TEXT))
+    
+    mentions: list["CommentMention"] = Relationship(
+        back_populates="alert_audit",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
 
     __table_args__ = (
         Index("ix_alert_audit_tenant_id", "tenant_id"),
         Index("ix_alert_audit_fingerprint", "fingerprint"),
         Index("ix_alert_audit_tenant_id_fingerprint", "tenant_id", "fingerprint"),
         Index("ix_alert_audit_timestamp", "timestamp"),
+    )
+
+
+class CommentMention(SQLModel, table=True):
+    """Many-to-many relationship table for users mentioned in comments."""
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    comment_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("alertaudit.id", ondelete="CASCADE"),
+            nullable=False
+        )
+    )
+    mentioned_user_id: str = Field(nullable=False)
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    
+    alert_audit: AlertAudit = Relationship(
+        back_populates="mentions",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+    __table_args__ = (
+        Index("ix_comment_mention_comment_id", "comment_id"),
+        Index("ix_comment_mention_mentioned_user_id", "mentioned_user_id"),
+        Index("ix_comment_mention_tenant_id", "tenant_id"),
+        UniqueConstraint("comment_id", "mentioned_user_id", name="uq_comment_mention"),
     )
