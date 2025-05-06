@@ -45,6 +45,7 @@ def build_facet_selects(properties_metadata, facets):
             FieldMappingConfiguration(
                 map_from_pattern=facet.property_path,
                 map_to=[select_field],
+                data_type=property_metadata.data_type,
             )
         )
         coalla = []
@@ -73,25 +74,9 @@ def build_facet_subquery_for_column(
     base_query,
     facets_cel_to_sql_instance: BaseCelToSqlProvider,
     facet: Facet,
-    facets_properties_metadata: PropertiesMetadata,
+    column_name: str,
     facet_filter: str,
 ):
-    metadata = facets_properties_metadata.get_property_metadata_for_str(
-        facet.property_path
-    )
-    facet_value = []
-
-    for item in metadata.field_mappings:
-        if isinstance(item, JsonFieldMapping):
-            facet_value.append(
-                facets_cel_to_sql_instance.json_extract_as_text(
-                    item.json_prop, item.prop_in_json
-                )
-            )
-        elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-            facet_value.append(item.map_to)
-
-    casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
     return (
         select(
             literal(facet.id).label("facet_id"),
@@ -101,7 +86,32 @@ def build_facet_subquery_for_column(
         .select_from(
             select(
                 func.distinct(literal_column("entity_id")),
-                literal_column(casted).label("facet_value"),
+                literal_column(column_name).label("facet_value"),
+            )
+            .select_from(base_query)
+            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
+        )
+        .group_by(literal_column("facet_id"), literal_column("facet_value"))
+    )
+
+
+def build_facet_subquery_for_json_array(
+    base_query,
+    facets_cel_to_sql_instance: BaseCelToSqlProvider,
+    facet: Facet,
+    column_name: str,
+    facet_filter: str,
+):
+    return (
+        select(
+            literal(facet.id).label("facet_id"),
+            literal_column("facet_value"),
+            func.count().label("matches_count"),
+        )
+        .select_from(
+            select(
+                func.distinct(literal_column("entity_id")),
+                literal_column(column_name).label("facet_value"),
             )
             .select_from(base_query)
             .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
@@ -146,13 +156,39 @@ def build_facets_data_query(
     facets_cel_to_sql_instance = get_cel_to_sql_provider(facets_properties_metadata)
 
     for facet in facets:
-        facet_sub_query = build_facet_subquery_for_column(
-            base_query,
-            facets_cel_to_sql_instance,
-            facet,
-            facets_properties_metadata,
-            facet_options_query.facet_queries[facet.id],
+        metadata = facets_properties_metadata.get_property_metadata_for_str(
+            facet.property_path
         )
+        facet_value = []
+
+        for item in metadata.field_mappings:
+            if isinstance(item, JsonFieldMapping):
+                facet_value.append(
+                    facets_cel_to_sql_instance.json_extract_as_text(
+                        item.json_prop, item.prop_in_json
+                    )
+                )
+            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
+                facet_value.append(item.map_to)
+
+        column_name = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
+
+        if metadata.data_type == DataType.ARRAY:
+            facet_sub_query = build_facet_subquery_for_json_array(
+                base_query,
+                facets_cel_to_sql_instance,
+                facet,
+                column_name,
+                facet_options_query.facet_queries[facet.id],
+            )
+        else:
+            facet_sub_query = build_facet_subquery_for_column(
+                base_query,
+                facets_cel_to_sql_instance,
+                facet,
+                column_name,
+                facet_options_query.facet_queries[facet.id],
+            )
 
         # For SQLite we can't limit the subquery
         # so we limit the result after the result is fetched in get_facet_options
