@@ -79,19 +79,11 @@ def build_facet_subquery_for_column(
 ):
     return (
         select(
-            literal(facet.id).label("facet_id"),
-            literal_column("facet_value"),
-            func.count().label("matches_count"),
+            func.distinct(literal_column("entity_id")),
+            literal_column(column_name).label("facet_value"),
         )
-        .select_from(
-            select(
-                func.distinct(literal_column("entity_id")),
-                literal_column(column_name).label("facet_value"),
-            )
-            .select_from(base_query)
-            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
-        )
-        .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        .select_from(base_query)
+        .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
     )
 
 
@@ -102,13 +94,24 @@ def build_facet_subquery_for_json_array(
     column_name: str,
     facet_filter: str,
 ):
-    return (
-        select(
-            literal(facet.id).label("facet_id"),
-            literal_column("facet_value"),
-            func.count().label("matches_count"),
+    if engine.dialect.name == "sqlite":
+        return build_facet_subquery_for_column(
+            base_query,
+            facets_cel_to_sql_instance,
+            facet,
+            column_name,
+            facet_filter,
         )
-        .select_from(
+    elif engine.dialect.name == "postgresql":
+        return build_facet_subquery_for_column(
+            base_query,
+            facets_cel_to_sql_instance,
+            facet,
+            column_name,
+            facet_filter,
+        )
+    elif engine.dialect.name == "mysql":
+        return (
             select(
                 func.distinct(literal_column("entity_id")),
                 literal_column(column_name).label("facet_value"),
@@ -116,8 +119,6 @@ def build_facet_subquery_for_json_array(
             .select_from(base_query)
             .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
         )
-        .group_by(literal_column("facet_id"), literal_column("facet_value"))
-    )
 
 
 def build_facets_data_query(
@@ -172,9 +173,9 @@ def build_facets_data_query(
                 facet_value.append(item.map_to)
 
         column_name = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
-
+        facet_source_subquery = None
         if metadata.data_type == DataType.ARRAY:
-            facet_sub_query = build_facet_subquery_for_json_array(
+            facet_source_subquery = build_facet_subquery_for_json_array(
                 base_query,
                 facets_cel_to_sql_instance,
                 facet,
@@ -182,13 +183,23 @@ def build_facets_data_query(
                 facet_options_query.facet_queries[facet.id],
             )
         else:
-            facet_sub_query = build_facet_subquery_for_column(
+            facet_source_subquery = build_facet_subquery_for_column(
                 base_query,
                 facets_cel_to_sql_instance,
                 facet,
                 column_name,
                 facet_options_query.facet_queries[facet.id],
             )
+
+        facet_sub_query = (
+            select(
+                literal(facet.id).label("facet_id"),
+                literal_column("facet_value"),
+                func.count().label("matches_count"),
+            )
+            .select_from(facet_source_subquery)
+            .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        )
 
         # For SQLite we can't limit the subquery
         # so we limit the result after the result is fetched in get_facet_options
