@@ -810,8 +810,15 @@ class Jinja2IOHandler(BaseIOHandler):
                 text = text.replace("{% raw %}", "").replace("{% endraw %}", "")
             return text
 
+        def _delete_comment_blocks(text):
+            comment_pattern = re.compile(r"{#.*?#}", re.DOTALL)
+            return comment_pattern.sub("", text)
+
         # Extract jinja2 raw blocks
         string = _extract_raw_blocks(string)
+
+        # Remove Jinja2 comments
+        string = _delete_comment_blocks(string)
 
         # Now parse a string
         parsed_string = super().parse(string, safe=False, default="", additional_context=None)
