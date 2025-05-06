@@ -84,6 +84,10 @@ incident_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="alert.providerType", map_to="alert.provider_type"
     ),
+    FieldMappingConfiguration(map_from_pattern="sources", map_to="incident.sources"),
+    FieldMappingConfiguration(
+        map_from_pattern="affectedServices", map_to="incident.affected_services"
+    ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
         map_to=["JSON(alertenrichment.enrichments).*", "JSON(alert.event).*"],
@@ -116,14 +120,14 @@ static_facets = [
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.providerType",
+        property_path="sources",
         name="Source",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="alert.service",
+        property_path="affectedServices",
         name="Service",
         is_static=True,
         type=FacetType.str,
