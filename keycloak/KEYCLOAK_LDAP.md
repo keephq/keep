@@ -28,6 +28,7 @@
 
 ```
 ldapadd -c -x -D "cn=admin,dc=keep,dc=com" -w admin_password -f ./ldif/ldap_orgs.ldif -H ldap://localhost:389
+ldapadd -c -x -D "cn=admin,dc=keep,dc=com" -w admin_password -f ./ldif/ldap_orgs_new.ldif -H ldap://localhost:389
 ```
 
 # Create the LDAP in Keycloak
