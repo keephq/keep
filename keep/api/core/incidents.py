@@ -60,13 +60,19 @@ incident_field_configurations = [
         map_from_pattern="last_seen_time", map_to="incident.last_seen_time"
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_predicted", map_to="incident.is_predicted"
+        map_from_pattern="is_predicted",
+        map_to="incident.is_predicted",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_candidate", map_to="incident.is_candidate"
+        map_from_pattern="is_candidate",
+        map_to="incident.is_candidate",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_visible", map_to="incident.is_visible"
+        map_from_pattern="is_visible",
+        map_to="incident.is_visible",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alerts_count", map_to="incident.alerts_count"
