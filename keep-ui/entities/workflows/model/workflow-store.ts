@@ -906,8 +906,8 @@ export function useWorkflowEditorChangesSaved() {
     lastDeployedAt !== null &&
     lastChangedAt !== null &&
     lastDeployedAt >= lastChangedAt;
-  const isChangesSaved =
+  return (
     isEditorSyncedWithNodes &&
-    (isDeployedAndChangesSaved || isDeployedAndUntouched);
-  return isChangesSaved;
+    (isDeployedAndChangesSaved || isDeployedAndUntouched)
+  );
 }

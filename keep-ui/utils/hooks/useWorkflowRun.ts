@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/shared/api/workflows";
@@ -6,8 +6,13 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
 import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
-import { WorkflowInput } from "@/entities/workflows/ui/WorkflowInputFields";
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { YamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
+import {
+  useWorkflowEditorChangesSaved,
+  useWorkflowStore,
+} from "@/entities/workflows/model/workflow-store";
+import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
 
 const noop = () => {};
 
@@ -21,28 +26,46 @@ export const useWorkflowRun = (workflow: Workflow) => {
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
-  const [workflowInputs, setWorkflowInputs] = useState<WorkflowInput[]>([]);
   const { revalidateForWorkflow } = useWorkflowExecutionsRevalidation();
   const { data: providersData } = useProviders();
   const providers = providersData?.providers ?? [];
 
+  const { isInitialized: isWorkflowEditorInitialized } = useWorkflowStore();
+  const isCurrentWorkflowChangesSaved = useWorkflowEditorChangesSaved();
+
+  const { hasUnsavedChanges: hasYamlEditorUnsavedChanges } =
+    useWorkflowYAMLEditorStore();
+
   // Check if workflow has inputs defined
-  useEffect(() => {
-    if (workflow?.workflow_raw) {
-      try {
-        const parsedWorkflow = parseWorkflowYamlStringToJSON(
-          workflow.workflow_raw
-        );
-        const inputs = parsedWorkflow?.workflow?.inputs || [];
-        setWorkflowInputs(inputs);
-      } catch (error) {
-        console.error("Failed to parse workflow YAML:", error);
-        setWorkflowInputs([]);
-      }
-    } else {
-      setWorkflowInputs([]);
+  const workflowInputs = useMemo(() => {
+    if (!workflow?.workflow_raw) {
+      return [];
     }
+    const parsed = parseWorkflowYamlToJSON(
+      workflow.workflow_raw,
+      YamlWorkflowDefinitionSchema
+    );
+    if (!parsed?.data) {
+      console.error("Failed to parse workflow YAML", parsed.error);
+      return [];
+    }
+    return parsed.data.workflow.inputs || [];
   }, [workflow]);
+
+  const hasInputs = workflowInputs.length > 0;
+
+  const notInstalledProviders = useMemo(
+    () =>
+      workflow?.providers
+        ?.filter(
+          (workflowProvider) =>
+            !isProviderInstalled(workflowProvider, providers)
+        )
+        .map((provider) => provider.type),
+    [workflow?.providers, providers]
+  );
+  const uniqueNotInstalledProviders = [...new Set(notInstalledProviders)];
+  const allProvidersInstalled = notInstalledProviders.length === 0;
 
   if (!workflow) {
     return {
@@ -56,15 +79,6 @@ export const useWorkflowRun = (workflow: Workflow) => {
     };
   }
 
-  const notInstalledProviders = workflow?.providers
-    ?.filter(
-      (workflowProvider) => !isProviderInstalled(workflowProvider, providers)
-    )
-    .map((provider) => provider.type);
-  const uniqueNotInstalledProviders = [...new Set(notInstalledProviders)];
-
-  const allProvidersInstalled = notInstalledProviders.length === 0;
-
   // Check if there is a manual trigger
   const hasManualTrigger = workflow?.triggers?.some(
     (trigger) => trigger.type === "manual"
@@ -73,8 +87,6 @@ export const useWorkflowRun = (workflow: Workflow) => {
   const hasAlertTrigger = workflow?.triggers?.some(
     (trigger) => trigger.type === "alert"
   );
-
-  const hasInputs = workflowInputs.length > 0;
 
   const isWorkflowDisabled = !!workflow?.disabled;
 
@@ -140,6 +152,15 @@ export const useWorkflowRun = (workflow: Workflow) => {
 
   const handleRunClick = async () => {
     if (!workflow) {
+      return;
+    }
+
+    if (
+      (isWorkflowEditorInitialized && !isCurrentWorkflowChangesSaved) ||
+      hasYamlEditorUnsavedChanges
+    ) {
+      // TODO: replace with saving
+      alert("You have unsaved changes in your workflow");
       return;
     }
 

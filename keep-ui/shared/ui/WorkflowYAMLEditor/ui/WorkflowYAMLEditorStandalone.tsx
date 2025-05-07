@@ -8,9 +8,9 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { WorkflowYamlEditorHeader } from "./WorkflowYamlEditorHeader";
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
-import { YamlValidationError } from "../model/types";
 import { Button } from "@tremor/react";
 import { WorkflowTestRunButton } from "@/features/workflows/test-run";
+import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
 
 export function WorkflowYAMLEditorStandalone({
   workflowId,
@@ -23,15 +23,23 @@ export function WorkflowYAMLEditorStandalone({
 }) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
-  const [validationErrors, setValidationErrors] = useState<
-    YamlValidationError[]
-  >([]);
   const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [lastDeployedAt, setLastDeployedAt] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
   const [definition, setDefinition] = useState<DefinitionV2 | null>(null);
+
+  const {
+    setWorkflowId,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    validationErrors,
+    setValidationErrors,
+  } = useWorkflowYAMLEditorStore();
+
+  useEffect(() => {
+    setWorkflowId(workflowId);
+  }, [workflowId, setWorkflowId]);
 
   const isValid = validationErrors?.length === 0;
 
@@ -59,7 +67,7 @@ export function WorkflowYAMLEditorStandalone({
     if (!value) {
       return;
     }
-    setHasChanges(value !== originalContent);
+    setHasUnsavedChanges(value !== originalContent);
     parseYamlToDefinition(value);
   };
 
@@ -83,7 +91,7 @@ export function WorkflowYAMLEditorStandalone({
       await updateWorkflow(workflowId, content);
 
       setOriginalContent(content);
-      setHasChanges(false);
+      setHasUnsavedChanges(false);
     } catch (err) {
       console.error("Failed to save workflow:", err);
     } finally {
@@ -113,7 +121,7 @@ export function WorkflowYAMLEditorStandalone({
         workflowId={workflowId}
         isInitialized={isEditorMounted}
         lastDeployedAt={lastDeployedAt}
-        hasChanges={hasChanges}
+        hasChanges={hasUnsavedChanges}
       >
         <WorkflowTestRunButton
           workflowId={workflowId}
@@ -125,7 +133,7 @@ export function WorkflowYAMLEditorStandalone({
           color="orange"
           size="sm"
           className="min-w-28 relative disabled:opacity-70"
-          disabled={!hasChanges || isSaving}
+          disabled={!hasUnsavedChanges || isSaving}
           onClick={handleSaveWorkflow}
           data-testid="wf-yaml-editor-save-button"
         >

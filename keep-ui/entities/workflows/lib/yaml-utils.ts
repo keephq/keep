@@ -12,7 +12,6 @@ import {
 import { Definition } from "../model/types";
 import { getYamlWorkflowDefinition } from "./parser";
 import { YamlWorkflowDefinitionSchema } from "../model/yaml.schema";
-import { z } from "zod";
 const YAML_STRINGIFY_OPTIONS = {
   indent: 2,
   lineWidth: -1,
@@ -203,7 +202,7 @@ export function parseWorkflowYamlStringToJSON(yamlString: string) {
 
 export function parseWorkflowYamlToJSON(
   yamlString: string,
-  schema: z.ZodSchema = YamlWorkflowDefinitionSchema
+  schema: typeof YamlWorkflowDefinitionSchema = YamlWorkflowDefinitionSchema
 ) {
   const doc = parseDocument(yamlString);
   let json = doc.toJSON();
@@ -212,6 +211,7 @@ export function parseWorkflowYamlToJSON(
       workflow: json,
     };
   }
+  // TODO: infer output types
   return schema.safeParse(json);
 }
 export function getCurrentPath(document: Document, absolutePosition: number) {

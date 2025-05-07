@@ -238,6 +238,7 @@ export const YamlWorkflowDefinitionSchema = z.object({
       triggers: z.array(TriggerSchema).min(1),
       name: z.string().optional(),
       consts: z.record(z.string(), z.string()).optional(),
+      inputs: z.array(WorkflowInputSchema).optional(),
       strategy: WorkflowStrategySchema.optional(),
       "on-failure": OnFailureSchema.optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
