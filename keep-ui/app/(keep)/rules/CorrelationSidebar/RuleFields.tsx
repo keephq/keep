@@ -18,11 +18,11 @@ import {
 } from "react-querybuilder";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useFormContext } from "react-hook-form";
-import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 import { useDeduplicationFields } from "@/utils/hooks/useDeduplicationRules";
 import { get } from "lodash";
+import { useMatchingAlerts } from "./useMatchingAlerts";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
@@ -50,7 +50,7 @@ const OPERATORS_FORCE_TYPE_CAST = {
   "<=": "number",
   "<": "number",
   ">": "number",
-}
+};
 
 const DEFAULT_FIELDS: QueryField[] = [
   { name: "source", label: "source", datatype: "text" },
@@ -117,9 +117,13 @@ const Field = ({
   };
 
   const castValueToOperationType = (value: string) => {
-    const castTo: string = get(OPERATORS_FORCE_TYPE_CAST, ruleField.operator, "text");
+    const castTo: string = get(
+      OPERATORS_FORCE_TYPE_CAST,
+      ruleField.operator,
+      "text"
+    );
     return castTo === "number" ? Number(value) : value;
-  }
+  };
 
   return (
     <div key={ruleField.id}>
@@ -158,7 +162,9 @@ const Field = ({
           {isValueEnabled && (
             <div>
               <TextInput
-                onValueChange={(newValue) => onFieldChange("value", castValueToOperationType(newValue))}
+                onValueChange={(newValue) =>
+                  onFieldChange("value", castValueToOperationType(newValue))
+                }
                 defaultValue={ruleField.value}
                 required
                 error={!ruleField.value}
@@ -279,10 +285,11 @@ export const RuleFields = ({
     ? TIMEFRAME_UNITS_TO_SECONDS[watch("timeUnit")](+watch("timeAmount"))
     : 0;
 
-  const { data: alertsFound = [], isLoading } = useSearchAlerts({
-    query: { combinator: "and", rules: ruleFields },
-    timeframe: timeframeInSeconds,
-  });
+  const {
+    data: alertsFound = [],
+    totalCount: totalAlertsFound,
+    isLoading,
+  } = useMatchingAlerts({ combinator: "and", rules: ruleFields });
 
   return (
     <div key={rule.id} className="bg-gray-100 px-4 py-3 rounded space-y-2">
@@ -346,6 +353,7 @@ export const RuleFields = ({
         </div>
 
         <AlertsFoundBadge
+          totalAlertsFound={totalAlertsFound}
           alertsFound={alertsFound}
           isLoading={isLoading}
           role={"ruleCondition"}

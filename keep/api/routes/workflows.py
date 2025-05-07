@@ -882,10 +882,7 @@ def get_workflow_by_id(
         providers_dto, triggers = [], []  # Default in case of failure
 
     try:
-        workflow_yaml = cyaml.safe_load(workflow_raw)
-        valid_workflow_yaml = {"workflow": workflow_yaml}
-        final_workflow_raw = cyaml.dump(valid_workflow_yaml, width=99999)
-
+        final_workflow_raw = workflowstore.format_workflow_yaml(workflow_raw)
     except cyaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")

@@ -8,14 +8,15 @@ from dateutil.parser import parse
 
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
+    ComparisonNodeOperator,
     ConstantNode,
-    IndexAccessNode,
     LogicalNode,
-    MethodAccessNode,
+    LogicalNodeOperator,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
     UnaryNode,
+    UnaryNodeOperator,
 )
 
 # Matches such strings:
@@ -74,11 +75,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             right = self.stack.pop()
             left = self.stack.pop()
-            self.stack.append(LogicalNode(
-                left = left,
-                operator = LogicalNode.OR,
-                right = right
-            ))
+            self.stack.append(
+                LogicalNode(left=left, operator=LogicalNodeOperator.OR, right=right)
+            )
 
     def conditionaland(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
@@ -86,11 +85,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             right = self.stack.pop()
             left = self.stack.pop()
-            self.stack.append(LogicalNode(
-                left = left,
-                operator = LogicalNode.AND,
-                right = right
-            ))
+            self.stack.append(
+                LogicalNode(left=left, operator=LogicalNodeOperator.AND, right=right)
+            )
 
     def relation(self, tree: lark.Tree) -> None:
         # self.member_access_stack.clear()
@@ -106,63 +103,63 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     def relation_lt(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.LT,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.LT,
+                second_operand=None,
             )
         )
 
     def relation_le(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.LE,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.LE,
+                second_operand=None,
             )
         )
 
     def relation_gt(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.GT,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.GT,
+                second_operand=None,
             )
         )
 
     def relation_ge(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.GE,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.GE,
+                second_operand=None,
             )
         )
 
     def relation_eq(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.EQ,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=None,
             )
         )
 
     def relation_ne(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.NE,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.NE,
+                second_operand=None,
             )
         )
 
     def relation_in(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.IN,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.IN,
+                second_operand=None,
             )
         )
 
@@ -229,23 +226,22 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             self.stack.append(unaryNode)
 
     def unary_not(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            UnaryNode(operator=UnaryNode.NOT, operand=None)
-        )
+        self.stack.append(UnaryNode(operator=UnaryNodeOperator.NOT, operand=None))
 
     def unary_neg(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            UnaryNode(operator=UnaryNode.NEG, operand=None)
-        )
+        self.stack.append(UnaryNode(operator=UnaryNodeOperator.NEG, operand=None))
 
     def member_dot(self, tree: lark.Tree) -> None:
         right = cast(lark.Token, tree.children[1]).value
 
         if self.member_access_stack:
             property_member: PropertyAccessNode = self.member_access_stack.pop()
-            property_value = PropertyAccessNode(member_name=right, value=None)
-            property_member.value = property_value
-            self.member_access_stack.append(property_value)
+            new_property_access_node = PropertyAccessNode(
+                path=property_member.path + [right]
+            )
+            self.stack.pop()
+            self.stack.append(new_property_access_node)
+            self.member_access_stack.append(new_property_access_node)
 
     def member_dot_arg(self, tree: lark.Tree) -> None:
         if len(tree.children) == 3:
@@ -254,12 +250,22 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             exprlist = []
         right = cast(lark.Token, tree.children[1]).value
         if self.member_access_stack:
-            left: PropertyAccessNode = self.member_access_stack.pop()
+            if right.lower() in [
+                ComparisonNodeOperator.CONTAINS.value.lower(),
+                ComparisonNodeOperator.STARTS_WITH.value.lower(),
+                ComparisonNodeOperator.ENDS_WITH.value.lower(),
+            ]:
+                self.stack.append(
+                    ComparisonNode(
+                        first_operand=self.stack.pop(),
+                        operator=right,
+                        second_operand=exprlist[0],
+                    )
+                )
+                return
 
-            method = MethodAccessNode(member_name=right, args=[item for item in reversed(exprlist)])
-            left.value = method
+            raise NotImplementedError(f"Method '{right}' not implemented")
 
-            self.member_access_stack.append(method)
         else:
             raise ValueError("No member access stack")
 
@@ -270,15 +276,12 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         if isinstance(right, ConstantNode):
             right = right.value
 
-        prop_access_node = left
-
-        while prop_access_node.value is not None:
-            prop_access_node = prop_access_node.value
-
-        prop_access_node.value = IndexAccessNode(str(right), None)
-
-        self.stack.append(left)
-        self.member_access_stack.append(prop_access_node.value)
+        prop_access_node: PropertyAccessNode = left
+        new_property_access_node = PropertyAccessNode(
+            path=prop_access_node.path + [str(right)]
+        )
+        self.stack.append(new_property_access_node)
+        self.member_access_stack.append(new_property_access_node)
 
     def member_object(self, tree: lark.Tree) -> None:
         raise NotImplementedError("Member object not implemented")
@@ -293,7 +296,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         raise NotImplementedError("Ident arg not implemented")
 
     def ident(self, tree: lark.Tree) -> None:
-        property_member = PropertyAccessNode(member_name=cast(lark.Token, tree.children[0]).value, value=None)
+        property_member = PropertyAccessNode(
+            path=[cast(lark.Token, tree.children[0]).value]
+        )
         self.member_access_stack.clear()
         self.stack.append(property_member)
         self.member_access_stack.append(property_member)

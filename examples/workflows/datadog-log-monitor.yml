@@ -20,10 +20,10 @@ workflow:
           type: threshold
           value: "keep.len({{ steps.check-error-rate.results.logs }})"
           compare_to: 0
-          operator: ">"
+          compare_type: gt
       provider:
         type: slack
-        config: " {{ providers.slack-demo }} "
+        config: "{{ providers.slack-demo }}"
         with:
           channel: db-is-down
           # Message is always mandatory
@@ -39,12 +39,11 @@ workflow:
                   Number of logs: keep.len({{ steps.check-error-rate.results.logs }})
                   From: {{ steps.check-error-rate.provider_parameters.from }}
                   To: {{ steps.check-error-rate.provider_parameters.to }}
-
-providers:
-  db-server-mock:
-    description: Paper DB Server
-    authentication:
-  datadog:
-    authentication:
-      api_key: "{{ env.DATADOG_API_KEY }}"
-      app_key: "{{ env.DATADOG_APP_KEY }}"
+  providers:
+    db-server-mock:
+      description: Paper DB Server
+      authentication:
+    datadog:
+      authentication:
+        api_key: "{{ env.DATADOG_API_KEY }}"
+        app_key: "{{ env.DATADOG_APP_KEY }}"
