@@ -91,9 +91,10 @@ object EventCommand "keep-notification" {
 
 By Default, Icinga2 states are automatically mapped to Keep alert severities & statuses as follows:
 
+<TableWrapper>
 #### Status Mapping
 | Icinga2 State | Keep Status |
-|---------------|-------------|
+|:--------------|:------------|
 | OK            | RESOLVED    |
 | WARNING       | FIRING      |
 | CRITICAL      | FIRING      |
@@ -101,12 +102,17 @@ By Default, Icinga2 states are automatically mapped to Keep alert severities & s
 | UP            | RESOLVED    |
 | DOWN          | FIRING      |
 
+</TableWrapper>
+
+<TableWrapper>
 #### Severity Mapping
 | Icinga2 State | Keep Severity |
-|---------------|---------------|
-| OK            | INFO         |
-| WARNING       | WARNING      |
-| CRITICAL      | CRITICAL     |
-| UNKNOWN       | INFO         |
-| UP            | INFO         |
-| DOWN          | CRITICAL     |
+|:--------------|:--------------|
+| OK            | INFO          |
+| WARNING       | WARNING       |
+| CRITICAL      | CRITICAL      |
+| UNKNOWN       | INFO          |
+| UP            | INFO          |
+| DOWN          | CRITICAL      |
+
+</TableWrapper>
