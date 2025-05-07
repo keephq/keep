@@ -100,6 +100,7 @@ export function isQuickPresetRange(timeFrame: TimeFrame): boolean {
   return isToday || isThisWeek;
 }
 
+/** @deprecated Use EnhancedDateRangePicker instead. Will be removed soon */
 export default function EnhancedDateRangePicker({
   timeFrame,
   setTimeFrame,

@@ -66,9 +66,9 @@
     "input_cel": "alert.some_json_prop.contains('lorem')",
     "description": "Contains operator with field refering to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "sqlite": "(json_extract(alert_enrichments, '$.\"some_json_prop\"') IS NOT NULL AND json_extract(alert_enrichments, '$.\"some_json_prop\"') LIKE '%lorem%' OR json_extract(alert_event, '$.\"some_json_prop\"') IS NOT NULL AND json_extract(alert_event, '$.\"some_json_prop\"') LIKE '%lorem%')",
-      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"'))) LIKE '%lorem%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"'))) LIKE '%lorem%')",
-      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' ILIKE '%lorem%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' ILIKE '%lorem%')"
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"some_json_prop\"'), json_extract(alert_event, '$.\"some_json_prop\"')) IS NOT NULL AND COALESCE(json_extract(alert_enrichments, '$.\"some_json_prop\"'), json_extract(alert_event, '$.\"some_json_prop\"')) LIKE '%lorem%'",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"'))) IS NOT NULL AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"')))) LIKE '%lorem%'",
+      "postgresql": "COALESCE((alert_enrichments) ->> 'some_json_prop', (alert_event) ->> 'some_json_prop') IS NOT NULL AND COALESCE((alert_enrichments) ->> 'some_json_prop', (alert_event) ->> 'some_json_prop') ILIKE '%lorem%'"
     }
   },
   {
@@ -84,9 +84,9 @@
     "input_cel": "alert.some_json_prop.contains(100500)",
     "description": "Contains operator with arg not string",
     "expected_sql_dialect_based": {
-      "sqlite": "(json_extract(alert_enrichments, '$.\"some_json_prop\"') IS NOT NULL AND json_extract(alert_enrichments, '$.\"some_json_prop\"') LIKE '%100500%' OR json_extract(alert_event, '$.\"some_json_prop\"') IS NOT NULL AND json_extract(alert_event, '$.\"some_json_prop\"') LIKE '%100500%')",
-      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"'))) LIKE '%100500%' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"')) IS NOT NULL AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"'))) LIKE '%100500%')",
-      "postgresql": "((alert_enrichments) ->> 'some_json_prop' IS NOT NULL AND (alert_enrichments) ->> 'some_json_prop' ILIKE '%100500%' OR (alert_event) ->> 'some_json_prop' IS NOT NULL AND (alert_event) ->> 'some_json_prop' ILIKE '%100500%')"
+      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"some_json_prop\"'), json_extract(alert_event, '$.\"some_json_prop\"')) IS NOT NULL AND COALESCE(json_extract(alert_enrichments, '$.\"some_json_prop\"'), json_extract(alert_event, '$.\"some_json_prop\"')) LIKE '%100500%'",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"'))) IS NOT NULL AND LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"some_json_prop\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"some_json_prop\"')))) LIKE '%100500%'",
+      "postgresql": "COALESCE((alert_enrichments) ->> 'some_json_prop', (alert_event) ->> 'some_json_prop') IS NOT NULL AND COALESCE((alert_enrichments) ->> 'some_json_prop', (alert_event) ->> 'some_json_prop') ILIKE '%100500%'"
     }
   },
   {

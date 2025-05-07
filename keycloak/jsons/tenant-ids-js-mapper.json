@@ -1,0 +1,14 @@
+{
+  "name": "Keep Tenants IDs",
+  "protocol": "openid-connect",
+  "protocolMapper": "oidc-script-based-protocol-mapper",
+  "config": {
+    "id.token.claim": "true",
+    "access.token.claim": "true",
+    "userinfo.token.claim": "true",
+    "script": "/**\n * Available variables:\n * user - the current user\n * realm - the current realm\n * token - the current token\n * userSession - the current userSession\n * keycloakSession - the current keycloakSession\n */\n\n// Access the environment variables\nvar enableRolesFromGroups = java.lang.System.getenv('KEYCLOAK_ROLES_FROM_GROUPS') === 'true';\nvar groupsClaimName = java.lang.System.getenv('KEYCLOAK_GROUPS_CLAIM') || 'group-keeps';\nvar adminSuffix = java.lang.System.getenv('KEYCLOAK_GROUPS_CLAIM_ADMIN_SUFFIX') || 'admin';\nvar nocSuffix = java.lang.System.getenv('KEYCLOAK_GROUPS_CLAIM_NOC_SUFFIX') || 'noc';\nvar webhookSuffix = java.lang.System.getenv('KEYCLOAK_GROUPS_CLAIM_WEBHOOK_SUFFIX') || 'webhook';\n\nvar groups = user.getGroups();\nvar tenants = [];\n\nfor (var i = 0; i < groups.size(); i++) {\n  var group = groups.get(i);\n  var groupName = group.getName();\n  \n  // Try to identify tenant_id and role from group name\n  var role = null;\n  var tenant_id = groupName;\n  \n  // Check for admin groups\n  if (groupName.endsWith('-' + adminSuffix)) {\n    tenant_id = groupName.substring(0, groupName.length - adminSuffix.length - 1);\n    role = 'admin';\n  }\n  // Check for NOC groups\n  else if (groupName.endsWith('-' + nocSuffix)) {\n    tenant_id = groupName.substring(0, groupName.length - nocSuffix.length - 1);\n    role = 'noc';\n  }\n  // Check for webhook groups\n  else if (groupName.endsWith('-' + webhookSuffix)) {\n    tenant_id = groupName.substring(0, groupName.length - webhookSuffix.length - 1);\n    role = 'webhook';\n  }\n  \n  if (role !== null) {\n    tenants.push({\n      \"tenant_id\": tenant_id,\n      \"role\": role\n    });\n  }\n}\n\nexports = tenants;",
+    "claim.name": "keep_tenants_ids",
+    "multivalued": "true",
+    "jsonType.label": "JSON"
+  }
+}

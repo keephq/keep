@@ -3,12 +3,14 @@ import { AlertDto } from "@/entities/alerts/model";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
 type AlertsFoundBadgeProps = {
+  totalAlertsFound: number;
   alertsFound: AlertDto[];
   isLoading: boolean;
   role: "ruleCondition" | "correlationRuleConditions";
 };
 
 export const AlertsFoundBadge = ({
+  totalAlertsFound,
   alertsFound,
   isLoading,
   role,
@@ -17,15 +19,15 @@ export const AlertsFoundBadge = ({
     if (role === "ruleCondition") {
       return (
         <>
-          {alertsFound.length} alert{alertsFound.length > 1 ? "s" : ""} were
-          found matching this condition
+          {totalAlertsFound} alert{totalAlertsFound > 1 ? "s" : ""} were found
+          matching this condition
         </>
       );
     }
 
     return (
       <>
-        {alertsFound.length} alert{alertsFound.length > 1 ? "s" : ""} were found
+        {totalAlertsFound} alert{totalAlertsFound > 1 ? "s" : ""} were found
         matching correlation rule conditions
       </>
     );
@@ -39,7 +41,7 @@ export const AlertsFoundBadge = ({
     return "No alerts were found with these correlation rule conditions. Please try something else.";
   }
 
-  if (alertsFound.length === 0) {
+  if (totalAlertsFound === 0) {
     return (
       <Badge className="mt-3 w-full" color="gray">
         {isLoading ? "Getting your alerts..." : getNotFoundText()}

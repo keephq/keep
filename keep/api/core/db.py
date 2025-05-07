@@ -3418,6 +3418,12 @@ def update_action(
     return found_action
 
 
+def get_tenants():
+    with Session(engine) as session:
+        tenants = session.exec(select(Tenant)).all()
+        return tenants
+
+
 def get_tenants_configurations(only_with_config=False) -> dict:
     with Session(engine) as session:
         try:
@@ -5706,6 +5712,41 @@ def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> No
                 stmt = stmt.where(AlertRaw.id == alert_id)
         session.exec(stmt)
         session.commit()
+
+
+def create_tenant(tenant_name: str) -> str:
+    with Session(engine) as session:
+        try:
+            # check if the tenant exist:
+            logger.info("Checking if tenant exists")
+            tenant = session.exec(
+                select(Tenant).where(Tenant.name == tenant_name)
+            ).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                tenant_id = str(uuid4())
+                logger.info(
+                    "Creating tenant",
+                    extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
+                )
+                session.add(Tenant(id=tenant_id, name=tenant_name))
+            else:
+                logger.warning("Tenant already exists")
+
+            # commit the changes
+            session.commit()
+            logger.info(
+                "Tenant created",
+                extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
+            )
+            return tenant_id
+        except IntegrityError:
+            # Tenant already exists
+            logger.exception("Failed to create tenant")
+            raise
+        except Exception:
+            logger.exception("Failed to create tenant")
+            pass
 
 
 def create_single_tenant_for_e2e(tenant_id: str) -> None:
