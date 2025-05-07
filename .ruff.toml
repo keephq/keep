@@ -1,6 +1,5 @@
 [lint]
 ignore = ["F405", "F811", "E712", "E711", "F403"]
 
-[lint.extend-exclude]
-# Exclude all YAML files
-glob = ["*.yml", "*.yaml", "*.mdx"]
+# Exclude all YAML and MDX files
+extend-exclude = ["*.yml", "*.yaml", "*.mdx"]
