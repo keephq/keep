@@ -1,15 +1,6 @@
 import json
 import logging
-from sqlalchemy import (
-    Column,
-    String,
-    func,
-    literal,
-    literal_column,
-    select,
-    text,
-    union_all,
-)
+from sqlalchemy import Column, String, func, literal, literal_column, select, text
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -120,6 +111,7 @@ def build_facet_subquery_for_json_array(
             facet_filter,
         )
     elif engine.dialect.name == "mysql":
+        # MySQL throws errors due to JSON_TABLE without LIMIT
         base_query_cte = base_query.limit(1_000_000).cte(f"{column_name}_base_query")
         json_table_join = func.json_table(
             literal_column(column_name), Column("value", String(127))
@@ -270,11 +262,6 @@ def get_facet_options(
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
                 )
-                # strq = str(
-                #     db_query.compile(
-                #         compile_kwargs={"literal_binds": True}, dialect=engine.dialect
-                #     )
-                # )
 
                 data = session.exec(db_query).all()
             except OperationalError as e:
