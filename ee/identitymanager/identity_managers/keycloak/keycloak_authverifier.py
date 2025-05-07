@@ -107,21 +107,34 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         else:
             self.keycloak_multi_org = False
 
+        self.groups_separator = os.environ.get("KEYCLOAK_GROUPS_SEPERATOR", "-").lower()
         self._tenants = []
 
     @property
     def tenants(self):
         if not self._tenants:
             tenants = get_tenants()
+
             self._tenants = {
                 tenant.name: {
                     "tenant_id": tenant.id,
-                    "tenant_logo_url": tenant.configuration.get("logo_url"),
+                    "tenant_logo_url": (
+                        tenant.configuration.get("logo_url")
+                        if tenant.configuration
+                        else None
+                    ),
                 }
                 for tenant in tenants
             }
 
         return self._tenants
+
+    def _reload_tenants(self):
+        self._tenants = []
+        # access the property to reload the tenants
+        tenants = self.tenants
+        # log
+        self.logger.info("Reloaded tenants", extra={"tenants": tenants})
 
     def get_org_name_by_tenant_id(self, tenant_id):
         for org_name, org_tenant_id in self.tenants.items():
@@ -141,15 +154,15 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         # TODO: dynamic roles + orgs
 
         # admin
-        if self.groups_claims_admin in group_name:
+        if group_name.endswith(self.groups_claims_admin):
             return True
 
         # noc
-        if self.groups_claims_noc in group_name:
+        if group_name.endswith(self.groups_claims_noc):
             return True
 
         # webhook
-        if self.groups_claims_webhook in group_name:
+        if group_name.endswith(self.groups_claims_webhook):
             return True
 
         # if not, its not a group that represents an org
@@ -161,7 +174,9 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             group_name = group_name[1:]
 
         # second, trim the role
-        org_name = "-".join(group_name.split("-")[0:-1])
+        org_name = self.groups_separator.join(
+            group_name.split(self.groups_separator)[0:-1]
+        )
 
         return org_name
 
@@ -240,6 +255,22 @@ class KeycloakAuthVerifier(AuthVerifierBase):
                 # get the active_tenant grou
                 org_name = self.get_org_name_by_tenant_id(active_tenant)
                 tenant_id = active_tenant
+                if not tenant_id:
+                    self.logger.warning(
+                        "Tenant id not found, reloading tenants from db"
+                    )
+                    self._reload_tenants()
+                    tenant_id = self.get_org_name_by_tenant_id(active_tenant)
+                    # if still
+                    if not tenant_id:
+                        self.logger.error(
+                            "Tenant id not found, raising exception",
+                            extra={"org_name": org_name},
+                        )
+                        raise HTTPException(
+                            status_code=401,
+                            detail="Invalid Keycloak token - could not find any group that represents the org and the role",
+                        )
                 role = self._get_role_in_org(groups, org_name)
                 if not role:
                     raise HTTPException(
@@ -251,6 +282,22 @@ class KeycloakAuthVerifier(AuthVerifierBase):
                 current_tenant_group = groups_that_represent_orgs[0]
                 org_name = self._get_org_name(current_tenant_group)
                 tenant_id = self.tenants.get(org_name).get("tenant_id")
+                if not tenant_id:
+                    self.logger.warning(
+                        "Tenant id not found, reloading tenants from db"
+                    )
+                    self._reload_tenants()
+                    tenant_id = self.tenants.get(org_name).get("tenant_id")
+                    # if still
+                    if not tenant_id:
+                        self.logger.error(
+                            "Tenant id not found, raising exception",
+                            extra={"org_name": org_name},
+                        )
+                        raise HTTPException(
+                            status_code=401,
+                            detail="Invalid Keycloak token - could not find any group that represents the org and the role",
+                        )
                 if self.groups_claims_admin in current_tenant_group:
                     role = "admin"
                 elif self.groups_claims_noc in current_tenant_group:
