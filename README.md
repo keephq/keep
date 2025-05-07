@@ -700,6 +700,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/fluxcd-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/fluxcd.png" alt="Flux CD"/><br/>
+            Flux CD
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/gke-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/gke-icon.png" alt="GKE"/><br/>
             GKE

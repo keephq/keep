@@ -1,0 +1,36 @@
+apiVersion: keep.sh/v1
+kind: Provider
+metadata:
+  name: flux-cd
+spec:
+  type: fluxcd
+  authentication:
+    # Option 1: Using kubeconfig file content
+    kubeconfig: |
+      apiVersion: v1
+      kind: Config
+      clusters:
+      - name: my-cluster
+        cluster:
+          server: https://kubernetes.example.com
+          certificate-authority-data: BASE64_ENCODED_CA_CERT
+      users:
+      - name: my-user
+        user:
+          token: MY_TOKEN
+      contexts:
+      - name: my-context
+        context:
+          cluster: my-cluster
+          user: my-user
+      current-context: my-context
+    context: my-context
+    namespace: flux-system
+
+    # Option 2: Using API server and token
+    # api_server: https://kubernetes.example.com
+    # token: MY_TOKEN
+    # namespace: flux-system
+
+    # Option 3: Using in-cluster configuration (when running inside Kubernetes)
+    # namespace: flux-system
