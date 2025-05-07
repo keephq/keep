@@ -1,51 +1,54 @@
-id: fluxcd-example
-description: "Example workflow that retrieves Flux CD resources and creates alerts for failed deployments"
-trigger:
-  type: schedule
-  cron: "*/30 * * * *"  # Run every 30 minutes
-steps:
-  - name: get-fluxcd-resources
-    provider: fluxcd
-    method: get_topology
-    authentication:
-      kubeconfig: "{{ env.KUBECONFIG }}"
-      namespace: "flux-system"
-    output: fluxcd_resources
+workflow:
+  id: fluxcd-example
+  name: "FluxCD Resource Monitor"
+  description: "Example workflow that retrieves Flux CD resources and creates alerts for failed deployments"
+  triggers:
+    - type: interval
+      value: 1800  # 30 minutes in seconds
+  steps:
+    - name: get-fluxcd-resources
+      provider:
+        type: fluxcd
+        with:
+          kubeconfig: "{{ env.KUBECONFIG }}"
+          namespace: "flux-system"
+      output: fluxcd_resources
 
-  - name: check-for-failed-deployments
-    provider: console
-    method: log
-    input: |
-      Found {{ fluxcd_resources.kustomizations | length }} Kustomizations and {{ fluxcd_resources.helm_releases | length }} HelmReleases
+    - name: check-for-failed-deployments
+      provider:
+        type: console
+        with:
+          message: |
+            Found {{ fluxcd_resources.kustomizations | length }} Kustomizations and {{ fluxcd_resources.helm_releases | length }} HelmReleases
 
-  - name: create-alerts-for-failed-kustomizations
-    provider: keep
-    method: create_alert
-    foreach: "{{ fluxcd_resources.kustomizations }}"
-    condition: "{{ item.status.conditions[0].status == 'False' }}"
-    input:
-      name: "FluxCD Kustomization {{ item.metadata.name }} failed"
-      description: "Kustomization {{ item.metadata.name }} in namespace {{ item.metadata.namespace }} failed with message: {{ item.status.conditions[0].message }}"
-      severity: "critical"
-      fingerprint: "fluxcd-kustomization-{{ item.metadata.name }}-{{ item.metadata.namespace }}"
-      source: "fluxcd"
-      labels:
-        namespace: "{{ item.metadata.namespace }}"
-        name: "{{ item.metadata.name }}"
-        type: "kustomization"
+    - name: create-alerts-for-failed-kustomizations
+      foreach: "{{ fluxcd_resources.kustomizations }}"
+      if: "{{ item.status.conditions[0].status == 'False' }}"
+      provider:
+        type: keep
+        with:
+          alert_name: "FluxCD Kustomization {{ item.metadata.name }} failed"
+          alert_description: "Kustomization {{ item.metadata.name }} in namespace {{ item.metadata.namespace }} failed with message: {{ item.status.conditions[0].message }}"
+          alert_severity: "critical"
+          alert_fingerprint: "fluxcd-kustomization-{{ item.metadata.name }}-{{ item.metadata.namespace }}"
+          alert_source: "fluxcd"
+          alert_labels:
+            namespace: "{{ item.metadata.namespace }}"
+            name: "{{ item.metadata.name }}"
+            type: "kustomization"
 
-  - name: create-alerts-for-failed-helmreleases
-    provider: keep
-    method: create_alert
-    foreach: "{{ fluxcd_resources.helm_releases }}"
-    condition: "{{ item.status.conditions[0].status == 'False' }}"
-    input:
-      name: "FluxCD HelmRelease {{ item.metadata.name }} failed"
-      description: "HelmRelease {{ item.metadata.name }} in namespace {{ item.metadata.namespace }} failed with message: {{ item.status.conditions[0].message }}"
-      severity: "critical"
-      fingerprint: "fluxcd-helmrelease-{{ item.metadata.name }}-{{ item.metadata.namespace }}"
-      source: "fluxcd"
-      labels:
-        namespace: "{{ item.metadata.namespace }}"
-        name: "{{ item.metadata.name }}"
-        type: "helmrelease"
+    - name: create-alerts-for-failed-helmreleases
+      foreach: "{{ fluxcd_resources.helm_releases }}"
+      if: "{{ item.status.conditions[0].status == 'False' }}"
+      provider:
+        type: keep
+        with:
+          alert_name: "FluxCD HelmRelease {{ item.metadata.name }} failed"
+          alert_description: "HelmRelease {{ item.metadata.name }} in namespace {{ item.metadata.namespace }} failed with message: {{ item.status.conditions[0].message }}"
+          alert_severity: "critical"
+          alert_fingerprint: "fluxcd-helmrelease-{{ item.metadata.name }}-{{ item.metadata.namespace }}"
+          alert_source: "fluxcd"
+          alert_labels:
+            namespace: "{{ item.metadata.namespace }}"
+            name: "{{ item.metadata.name }}"
+            type: "helmrelease"
