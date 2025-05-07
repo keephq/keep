@@ -267,7 +267,8 @@ class BaseCelToSqlProvider:
             ComparisonNodeOperator.STARTS_WITH,
             ComparisonNodeOperator.ENDS_WITH,
         ]
-        data_type_to_cast_to = None
+        first_operand_data_type = None
+        second_operand_data_type = None
 
         if comparison_node.operator == ComparisonNodeOperator.IN:
             if (
@@ -305,13 +306,14 @@ class BaseCelToSqlProvider:
             )
 
         if should_cast:
-            if isinstance(comparison_node.second_operand, ConstantNode):
-                data_type_to_cast_to = from_type_to_data_type(
-                    type(comparison_node.second_operand.value)
-                )
+            if isinstance(comparison_node.first_operand, PropertyAccessNode):
+                first_operand_data_type = comparison_node.first_operand.data_type
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
-                data_type_to_cast_to = from_type_to_data_type(
+                first_operand_data_type = comparison_node.first_operand.data_type
+
+            if isinstance(comparison_node.second_operand, ConstantNode):
+                second_operand_data_type = from_type_to_data_type(
                     type(comparison_node.second_operand.value)
                 )
 
@@ -323,10 +325,13 @@ class BaseCelToSqlProvider:
                 comparison_node.second_operand, stack
             )
 
-        if data_type_to_cast_to:
+        if (
+            first_operand_data_type
+            and first_operand_data_type != second_operand_data_type
+        ):
             first_operand = self.cast(
                 first_operand,
-                data_type_to_cast_to,
+                second_operand_data_type,
             )
 
         if comparison_node.operator == ComparisonNodeOperator.EQ:
