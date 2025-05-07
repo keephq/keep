@@ -166,7 +166,7 @@ class FluxcdProvider(BaseTopologyProvider):
             self.logger.error(
                 "Error initializing Kubernetes client", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def validate_scopes(self) -> dict[str, bool | str]:
         self.logger.info("Validating user scopes for FluxCD provider")
