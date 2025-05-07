@@ -701,7 +701,7 @@
     </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/fluxcd-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/fluxcd.png" alt="Flux CD"/><br/>
+            <img width="40" src="keep-ui/public/icons/fluxcd-icon.png" alt="Flux CD"/><br/>
             Flux CD
         </a>
     </td>
