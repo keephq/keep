@@ -31,7 +31,7 @@ def validate_overview_is_complete(documented_providers):
         for provider in documented_providers:
             if provider not in overview_content:
                 print(
-                    f"""Provider {provider} is not in the docs/providers/overview.md file,
+                    f"""Provider {provider} is not in the docs/providers/overview.mdx file,
 use scripts/docs_get_providers_list.py to generate recent providers list and update the file."""
                 )
                 exit(1)

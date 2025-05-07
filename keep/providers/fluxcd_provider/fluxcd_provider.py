@@ -3,15 +3,13 @@ FluxCD Provider is a class that allows to get Flux CD resources and map them to 
 """
 
 import dataclasses
-import uuid
-from typing import List, Dict, Any, Optional
-from urllib.parse import urljoin
+import os
+import tempfile
 
 import pydantic
-import requests
-import kubernetes
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+from kubernetes.config import kube_config
 
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -67,6 +65,14 @@ class FluxcdProviderAuthConfig:
             "sensitive": True,
         },
     )
+    insecure: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "required": False,
+            "description": "Skip TLS verification",
+            "hint": "Set to true to skip TLS verification",
+        },
+    )
 
 
 class FluxcdProvider(BaseTopologyProvider):
@@ -105,8 +111,9 @@ class FluxcdProvider(BaseTopologyProvider):
         Validates required configuration for FluxCD provider.
         """
         self.logger.debug("Validating configuration for FluxCD provider")
+        auth_config = self.config.authentication or {}
         self.authentication_config = FluxcdProviderAuthConfig(
-            **self.config.authentication
+            **auth_config
         )
 
     @property
@@ -121,10 +128,6 @@ class FluxcdProvider(BaseTopologyProvider):
             # Try to load from kubeconfig content
             if self.authentication_config.kubeconfig:
                 self.logger.debug("Loading Kubernetes client from kubeconfig content")
-                from kubernetes.config import kube_config
-                import tempfile
-                import os
-
                 # Create a temporary file with the kubeconfig content
                 with tempfile.NamedTemporaryFile(delete=False) as temp:
                     temp.write(self.authentication_config.kubeconfig.encode())
@@ -147,7 +150,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 configuration = client.Configuration()
                 configuration.host = self.authentication_config.api_server
                 configuration.api_key = {"authorization": f"Bearer {self.authentication_config.token}"}
-                configuration.verify_ssl = False
+                configuration.verify_ssl = not self.authentication_config.insecure
                 client.Configuration.set_default(configuration)
                 self._k8s_client = client.CustomObjectsApi()
 
@@ -197,7 +200,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing GitRepository resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __list_helm_repositories(self):
         """
@@ -216,7 +219,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing HelmRepository resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __list_helm_charts(self):
         """
@@ -235,7 +238,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing HelmChart resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __list_oci_repositories(self):
         """
@@ -254,7 +257,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing OCIRepository resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __list_buckets(self):
         """
@@ -273,7 +276,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing Bucket resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __list_kustomizations(self):
         """
@@ -292,7 +295,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing Kustomization resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __list_helm_releases(self):
         """
@@ -311,7 +314,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing HelmRelease resources",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __get_resource_events(self, resource_name, resource_kind):
         """
