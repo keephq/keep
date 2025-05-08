@@ -89,6 +89,7 @@ workflow:
   disabled: false
   triggers:
     - type: manual
+  inputs: []
   consts: {}
   owners: []
   services: []
@@ -147,6 +148,32 @@ workflow:
         with:
           message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
           topic: ezhil
+`;
+
+const workflowWithInputs = `
+workflow:
+  id: input-example
+  name: Input Example
+  description: Simple workflow demonstrating input functionality with customizable messages.
+  disabled: false
+  triggers:
+    - type: manual
+  inputs:
+    - name: message
+      description: The message to log to the console
+      type: string
+      default: Hey
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: console-step
+      provider:
+        type: console
+        config: "{{ providers.console }}"
+        with:
+          message: "{{ inputs.message }}"
+  actions: []
 `;
 
 describe("Workflow Parser", () => {
@@ -571,6 +598,19 @@ workflow:
   describe("round trip should not change the workflow", () => {
     it("should not change the workflow", () => {
       const workflowYaml = workflowWithConditionsAndAliases;
+      const result = parseWorkflow(workflowYaml, mockProviders);
+      const resultYamlObject = {
+        workflow: getYamlWorkflowDefinition(result),
+      };
+      const resultYamlString =
+        getOrderedWorkflowYamlStringFromJSON(resultYamlObject);
+      expect(resultYamlString.trim()).toEqual(workflowYaml.trim());
+    });
+  });
+
+  describe("getYamlWorkflowDefinition with inputs", () => {
+    it("should not change the workflow", () => {
+      const workflowYaml = workflowWithInputs;
       const result = parseWorkflow(workflowYaml, mockProviders);
       const resultYamlObject = {
         workflow: getYamlWorkflowDefinition(result),
