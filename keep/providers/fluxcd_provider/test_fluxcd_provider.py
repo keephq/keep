@@ -5,8 +5,18 @@ Tests for the FluxCD provider.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from keep.providers.fluxcd_provider.fluxcd_provider import FluxcdProvider
-from keep.providers.models.provider_config import ProviderConfig
+# Use relative imports to make testing easier
+try:
+    from keep.providers.fluxcd_provider.fluxcd_provider import FluxcdProvider
+    from keep.providers.models.provider_config import ProviderConfig
+except ImportError:
+    # For local testing
+    from fluxcd_provider import FluxcdProvider
+
+    # Mock ProviderConfig for local testing
+    class ProviderConfig:
+        def __init__(self, authentication=None):
+            self.authentication = authentication or {}
 
 
 class TestFluxcdProvider(unittest.TestCase):
@@ -46,6 +56,28 @@ class TestFluxcdProvider(unittest.TestCase):
         """
         self.provider.validate_config()
         self.assertEqual(self.provider.authentication_config.namespace, "flux-system")
+
+    def test_api_server_with_hyphen(self):
+        """
+        Test that the provider handles api-server parameter with hyphen.
+        """
+        config = ProviderConfig(
+            authentication={
+                "namespace": "flux-system",
+                "api-server": "https://kubernetes.example.com",
+                "token": "test-token",
+            }
+        )
+
+        provider = FluxcdProvider(
+            context_manager=self.context_manager,
+            provider_id=self.provider_id,
+            config=config,
+        )
+
+        provider.validate_config()
+        self.assertEqual(provider.authentication_config.api_server, "https://kubernetes.example.com")
+        self.assertEqual(provider.authentication_config.token, "test-token")
 
     def test_list_git_repositories(self):
         """
@@ -189,6 +221,180 @@ class TestFluxcdProvider(unittest.TestCase):
         self.assertIn("name", resource)
         self.assertIn("kind", resource)
         self.assertIn("namespace", resource)
+
+    def test_get_fluxcd_resources(self):
+        """
+        Test the get_fluxcd_resources method.
+        """
+        # Mock the responses from the Kubernetes API
+        self.k8s_client_mock.list_namespaced_custom_object.side_effect = [
+            # GitRepositories
+            {
+                "items": [
+                    {
+                        "metadata": {
+                            "name": "test-repo",
+                            "namespace": "flux-system",
+                            "uid": "git-repo-uid",
+                        },
+                        "kind": "GitRepository",
+                        "spec": {
+                            "url": "https://github.com/test/repo",
+                        },
+                    }
+                ]
+            },
+            # HelmRepositories
+            {"items": []},
+            # HelmCharts
+            {"items": []},
+            # OCIRepositories
+            {"items": []},
+            # Buckets
+            {"items": []},
+            # Kustomizations
+            {
+                "items": [
+                    {
+                        "metadata": {
+                            "name": "test-kustomization",
+                            "namespace": "flux-system",
+                            "uid": "kustomization-uid",
+                        },
+                        "kind": "Kustomization",
+                        "spec": {
+                            "sourceRef": {
+                                "kind": "GitRepository",
+                                "name": "test-repo",
+                            },
+                        },
+                    }
+                ]
+            },
+            # HelmReleases
+            {"items": []},
+        ]
+
+        # Call the method
+        resources = self.provider.get_fluxcd_resources()
+
+        # Verify the result
+        self.assertIn("git_repositories", resources)
+        self.assertIn("kustomizations", resources)
+        self.assertEqual(len(resources["git_repositories"]), 1)
+        self.assertEqual(len(resources["kustomizations"]), 1)
+        self.assertEqual(resources["git_repositories"][0]["metadata"]["name"], "test-repo")
+        self.assertEqual(resources["kustomizations"][0]["metadata"]["name"], "test-kustomization")
+
+    def test_no_kubernetes_cluster(self):
+        """
+        Test behavior when no Kubernetes cluster is available.
+        """
+        # Create a provider with no Kubernetes client
+        provider = FluxcdProvider(
+            context_manager=self.context_manager,
+            provider_id=self.provider_id,
+            config=self.config,
+        )
+        provider._k8s_client = None
+
+        # Test pull_topology
+        services, metadata = provider.pull_topology()
+        self.assertEqual(len(services), 0)
+        self.assertEqual(metadata, {})
+
+        # Test _get_alerts
+        alerts = provider._get_alerts()
+        self.assertEqual(len(alerts), 0)
+
+        # Test validate_scopes
+        scopes = provider.validate_scopes()
+        self.assertEqual(scopes["authenticated"], "No Kubernetes cluster available")
+
+        # Test get_fluxcd_resources
+        resources = provider.get_fluxcd_resources()
+        self.assertEqual(resources, {
+            "git_repositories": [],
+            "helm_repositories": [],
+            "helm_charts": [],
+            "oci_repositories": [],
+            "buckets": [],
+            "kustomizations": [],
+            "helm_releases": []
+        })
+
+    def test_flux_not_installed(self):
+        """
+        Test behavior when Flux CD is not installed in the cluster.
+        """
+        # Create a provider with a mocked Kubernetes client
+        provider = FluxcdProvider(
+            context_manager=self.context_manager,
+            provider_id=self.provider_id,
+            config=self.config,
+        )
+
+        # Mock the __check_flux_installed method to return False
+        provider._FluxcdProvider__check_flux_installed = MagicMock(return_value=False)
+
+        # Test validate_scopes
+        scopes = provider.validate_scopes()
+        self.assertEqual(scopes["authenticated"], "Flux CD is not installed in the cluster")
+
+    def test_check_flux_health(self):
+        """
+        Test the check_flux_health method.
+        """
+        # Create a provider with a mocked Kubernetes client
+        provider = FluxcdProvider(
+            context_manager=self.context_manager,
+            provider_id=self.provider_id,
+            config=self.config,
+        )
+
+        # Mock the k8s_client property to return None
+        provider._k8s_client = None
+
+        # Test check_flux_health with no Kubernetes client
+        health = provider.check_flux_health()
+        self.assertFalse(health["healthy"])
+        self.assertEqual(health["error"], "No Kubernetes client available")
+
+        # Create a mock for the AppsV1Api
+        mock_apps_v1 = MagicMock()
+        mock_deployment = MagicMock()
+        mock_deployment.metadata.name = "source-controller"
+        mock_deployment.spec.replicas = 1
+        mock_deployment.status.available_replicas = 1
+
+        mock_deployments = MagicMock()
+        mock_deployments.items = [mock_deployment]
+
+        mock_apps_v1.list_namespaced_deployment.return_value = mock_deployments
+
+        # Mock the client.AppsV1Api to return our mock
+        with patch("kubernetes.client.AppsV1Api", return_value=mock_apps_v1):
+            # Mock the k8s_client property to return a mock client
+            provider._k8s_client = MagicMock()
+
+            # Test check_flux_health with a healthy deployment
+            health = provider.check_flux_health()
+            self.assertTrue(health["healthy"])
+            self.assertEqual(len(health["components"]), 1)
+            self.assertTrue(health["components"]["source-controller"]["healthy"])
+
+            # Test check_flux_health with an unhealthy deployment
+            mock_deployment.status.available_replicas = 0
+            health = provider.check_flux_health()
+            self.assertFalse(health["healthy"])
+            self.assertEqual(len(health["components"]), 1)
+            self.assertFalse(health["components"]["source-controller"]["healthy"])
+
+    def test_has_health_report(self):
+        """
+        Test the has_health_report method.
+        """
+        self.assertTrue(FluxcdProvider.has_health_report())
 
 
 if __name__ == "__main__":
