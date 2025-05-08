@@ -29,6 +29,8 @@ import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { PiClockCounterClockwise } from "react-icons/pi";
 import { WorkflowVersions } from "./workflow-versions";
+import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
+import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
 
 const TABS_KEYS = ["overview", "builder", "yaml", "versions", "secrets"];
 
@@ -83,13 +85,32 @@ export default function WorkflowDetailPage({
     }
   };
 
+  const isUIBuilderSaved = useWorkflowEditorChangesSaved();
+  const hasUIBuilderUnsavedChanges = !isUIBuilderSaved;
+  const { hasUnsavedChanges: hasYamlUnsavedChanges } =
+    useWorkflowYAMLEditorStore();
+
   return (
     <div className="flex flex-col gap-4">
       <TabGroup index={tabIndex} onIndexChange={handleTabChange}>
         <TabList>
           <Tab icon={AiOutlineSwap}>Overview</Tab>
-          <Tab icon={WrenchIcon}>Builder</Tab>
-          <Tab icon={CodeBracketIcon}>YAML Definition</Tab>
+          <Tab icon={WrenchIcon}>
+            <div className="flex items-center gap-2">
+              Builder{" "}
+              {hasUIBuilderUnsavedChanges ? (
+                <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
+              ) : null}
+            </div>
+          </Tab>
+          <Tab icon={CodeBracketIcon}>
+            <div className="flex items-center gap-2">
+              YAML Definition{" "}
+              {hasYamlUnsavedChanges ? (
+                <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
+              ) : null}
+            </div>
+          </Tab>
           <Tab icon={PiClockCounterClockwise}>Versions</Tab>
           <Tab icon={KeyIcon}>Secrets</Tab>
           <TabNavigationLink

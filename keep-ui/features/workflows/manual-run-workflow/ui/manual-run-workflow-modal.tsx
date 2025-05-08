@@ -1,3 +1,5 @@
+"use client";
+
 import { Button, Callout, Text, Title } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useEffect, useState } from "react";
@@ -27,16 +29,16 @@ interface Props {
   alert?: AlertDto | null | undefined;
   incident?: IncidentDto | null | undefined;
   workflow?: Workflow | null | undefined;
-  handleClose: () => void;
+  onClose: () => void;
   isOpen?: boolean;
-  onSubmit?: (inputs: Record<string, any>) => void;
+  onSubmit?: ({ inputs }: { inputs: Record<string, any> }) => void;
 }
 
 export function ManualRunWorkflowModal({
   alert,
   incident,
   workflow,
-  handleClose,
+  onClose,
   isOpen: propIsOpen,
   onSubmit,
 }: Props) {
@@ -110,7 +112,7 @@ export function ManualRunWorkflowModal({
     }
     setWorkflowInputs([]);
     setInputValues({});
-    handleClose();
+    onClose();
   };
 
   const handleInputChange = (name: string, value: any) => {
@@ -124,7 +126,7 @@ export function ManualRunWorkflowModal({
     try {
       if (onSubmit) {
         // If onSubmit prop is provided, use it (for WorkflowDetailHeader usage)
-        onSubmit(inputValues);
+        onSubmit({ inputs: inputValues });
       } else if (effectiveWorkflow) {
         // Direct API call for alert/incident context
         const responseData = await api.post(

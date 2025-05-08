@@ -251,7 +251,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       />
       <ManualRunWorkflowModal
         alert={runWorkflowModalAlert}
-        handleClose={() => setRunWorkflowModalAlert(null)}
+        onClose={() => setRunWorkflowModalAlert(null)}
       />
       <ViewAlertModal
         alert={viewAlertModal}

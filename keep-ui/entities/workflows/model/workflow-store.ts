@@ -739,6 +739,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         selectedNode: null,
         isLayouted: false,
         changes: get().changes + 1,
+        lastChangedAt: Date.now(),
         editorOpen: true,
       });
       get().onLayout({ direction: "DOWN" });
@@ -893,6 +894,8 @@ function initializeWorkflow(
     isDeployed: workflowId !== null,
     // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
     editorOpen: !workflowId || (isUpdatingExistingState && get().editorOpen),
+    lastChangedAt: null,
+    lastDeployedAt: null,
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { TextInput, Button, Text } from "@tremor/react";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -21,7 +23,7 @@ interface Field {
   value: string;
 }
 
-export default function AlertTriggerModal({
+export function AlertTriggerModal({
   isOpen,
   onClose,
   onSubmit,
@@ -160,7 +162,7 @@ export default function AlertTriggerModal({
     payload["fingerprint"] = `test-workflow-fingerprint-${randomNum}`;
 
     onClose();
-    onSubmit(payload);
+    onSubmit({ type: "alert", body: payload });
   };
 
   return (

@@ -120,7 +120,7 @@ const TriggerSchema = z.union([
 const YamlProviderSchema = z
   .object({
     type: z.string(),
-    config: z.string(),
+    config: z.string().optional(),
     with: WithSchema,
   })
   .strict();
