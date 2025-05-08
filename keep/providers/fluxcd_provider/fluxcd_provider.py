@@ -986,6 +986,21 @@ class FluxcdProvider(BaseTopologyProvider):
             # Return empty topology to make the provider more robust
             return [], {"error": f"{error_type}: {error_message}"}
 
+    def _query(self, **_) -> Dict[str, Any]:
+        """
+        Query Flux CD resources.
+
+        This method is a wrapper around get_fluxcd_resources to make the provider compatible
+        with the workflow system.
+
+        Args:
+            **_: Additional arguments (ignored)
+
+        Returns:
+            Dict[str, Any]: A dictionary containing all Flux CD resources
+        """
+        return self.get_fluxcd_resources()
+
     def get_fluxcd_resources(self) -> Dict[str, Any]:
         """
         Get resources from Flux CD.
