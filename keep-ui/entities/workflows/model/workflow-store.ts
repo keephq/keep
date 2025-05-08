@@ -317,7 +317,8 @@ export const useWorkflowStore = create<WorkflowState>()(
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
-    setLastDeployedAt: (deployedAt) => set({ lastDeployedAt: deployedAt }),
+    setLastDeployedAt: (deployedAt) =>
+      set({ lastDeployedAt: deployedAt, changes: 0 }),
     setSelectedEdge: (id) => {
       const edge = get().edges.find((edge) => edge.id === id);
       if (!edge) {
@@ -901,21 +902,7 @@ function initializeWorkflow(
   get().updateDefinition();
 }
 
-export function getWorkflowEditorChangesSaved(store: WorkflowState) {
-  const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
-    store;
-  const isDeployedAndUntouched = lastChangedAt === null && isDeployed;
-  const isDeployedAndChangesSaved =
-    lastDeployedAt !== null &&
-    lastChangedAt !== null &&
-    lastDeployedAt >= lastChangedAt;
-  return (
-    isEditorSyncedWithNodes &&
-    (isDeployedAndChangesSaved || isDeployedAndUntouched)
-  );
-}
-
-export function useWorkflowEditorChangesSaved() {
-  const store = useWorkflowStore();
-  return getWorkflowEditorChangesSaved(store);
+export function useUIBuilderUnsavedChanges() {
+  const { changes } = useWorkflowStore();
+  return changes !== 0;
 }

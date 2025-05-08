@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useProviders } from "../../../../utils/hooks/useProviders";
 import { Workflow } from "@/shared/api/workflows";
@@ -9,8 +9,7 @@ import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-execution
 import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
 import { YamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
 import {
-  getWorkflowEditorChangesSaved,
-  useWorkflowEditorChangesSaved,
+  useUIBuilderUnsavedChanges,
   useWorkflowStore,
 } from "@/entities/workflows/model/workflow-store";
 import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
@@ -26,18 +25,20 @@ export const useWorkflowRun = (workflow: Workflow) => {
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
   const {
-    openManualInputModal,
+    openInputsModal,
     openAlertDependenciesModal,
     openIncidentDependenciesModal,
     openUnsavedChangesModal,
     closeUnsavedChangesModal,
+    closeInputsModal,
+    closeAlertDependenciesModal,
+    closeIncidentDependenciesModal,
   } = useWorkflowModals();
   const { revalidateForWorkflow } = useWorkflowExecutionsRevalidation();
   const { data: providersData } = useProviders();
   const providers = providersData?.providers ?? [];
-  const { isInitialized: isWorkflowEditorInitialized } = useWorkflowStore();
-  const isCurrentWorkflowChangesSaved = useWorkflowEditorChangesSaved();
-  const { hasUnsavedChanges: hasYamlEditorUnsavedChanges } =
+  const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
+  const { hasUnsavedChanges: isYamlEditorUnsaved } =
     useWorkflowYAMLEditorStore();
   const { triggerSave: triggerSaveUIBuilder } = useWorkflowStore();
   const { requestSave: requestSaveYamlEditor } = useWorkflowYAMLEditorStore();
@@ -193,98 +194,126 @@ export const useWorkflowRun = (workflow: Workflow) => {
     }
   };
 
+  /**
+   * Orchestrates the workflow execution process by handling pre-run validations and data collection:
+   * 1. Ensures all changes are saved to prevent data loss
+   * 2. Collects required workflow inputs from user
+   * 3. Gathers alert/incident context if workflow depends on them
+   *
+   * The function may trigger multiple modals in sequence before actually running the workflow,
+   * with each modal's response feeding into subsequent calls until all required data is collected.
+   */
   const handleRunClick = async ({
     skipUnsavedChangesModal = false,
+    inputsValues = null,
+    alertValues = null,
+    incidentValues = null,
   }: {
     skipUnsavedChangesModal?: boolean;
+    inputsValues?: Record<string, any> | null;
+    alertValues?: Record<string, any> | null;
+    incidentValues?: Record<string, any> | null;
   } = {}) => {
-    console.log("handleRunClick", {
-      skipUnsavedChangesModal,
-      isWorkflowEditorInitialized,
-      isCurrentWorkflowChangesSaved,
-      hasYamlEditorUnsavedChanges,
-    });
     if (!workflow) {
       return;
     }
 
+    // Prevent potential data loss by prompting to save changes before running
     if (
-      ((isWorkflowEditorInitialized && !isCurrentWorkflowChangesSaved) ||
-        hasYamlEditorUnsavedChanges) &&
+      (isUIBuilderUnsaved || isYamlEditorUnsaved) &&
       !skipUnsavedChangesModal
     ) {
       openUnsavedChangesModal({
         onSaveYaml: () => {
           requestSaveYamlEditor();
-          useWorkflowYAMLEditorStore.subscribe((state) => {
-            console.log(
-              "subscribtion called in onSaveYaml; isRunning=",
-              isRunning
-            );
-            if (!state.hasUnsavedChanges) {
-              console.log(
-                "subscribtion called in onSaveYaml; isRunning=",
-                isRunning
-              );
-              closeUnsavedChangesModal();
-              handleRunClick({ skipUnsavedChangesModal: true });
+          // Re-run workflow once YAML changes are saved
+          const unsubscribe = useWorkflowYAMLEditorStore.subscribe(
+            (state, prevState) => {
+              if (!state.hasUnsavedChanges && prevState.hasUnsavedChanges) {
+                handleRunClick({ skipUnsavedChangesModal: true });
+                closeUnsavedChangesModal();
+                unsubscribe();
+              }
             }
-          });
+          );
         },
         onSaveUIBuilder: () => {
           triggerSaveUIBuilder();
-          useWorkflowStore.subscribe((state) => {
-            if (getWorkflowEditorChangesSaved(state)) {
-              console.log(
-                "subscribtion called in onSaveUIBuilder; isRunning=",
-                isRunning
-              );
-              closeUnsavedChangesModal();
+          // Re-run workflow once UI Builder changes are saved
+          const unsubscribe = useWorkflowStore.subscribe((state, prevState) => {
+            if (state.changes === 0 && prevState.changes !== 0) {
               handleRunClick({ skipUnsavedChangesModal: true });
+              closeUnsavedChangesModal();
+              unsubscribe();
             }
           });
         },
         onRunWithoutSaving: () => {
-          console.log("onRunWithoutSaving called; isRunning=", isRunning);
           handleRunClick({ skipUnsavedChangesModal: true });
+          closeUnsavedChangesModal();
         },
       });
       return;
     }
 
-    // First, check if workflow has inputs
-    if (hasInputs) {
-      openManualInputModal({
-        workflow,
-        onSubmit: runWorkflow,
+    // Collect required workflow inputs before execution
+    if (hasInputs && !inputsValues) {
+      openInputsModal({
+        inputs: workflowInputs,
+        onSubmit: (inputs) => {
+          closeInputsModal();
+          // Re-run with collected inputs to proceed with next validation step
+          handleRunClick({ skipUnsavedChangesModal, inputsValues: inputs });
+        },
       });
       return;
     }
 
-    // if it has dependencies, open the alert modal
-    if (dependencies && dependencies.alert.length > 0) {
+    // If workflow needs alert context, collect it through modal
+    if (dependencies && dependencies.alert.length > 0 && !alertValues) {
       openAlertDependenciesModal({
         workflow,
         staticFields: alertStaticFields,
         dependencies: dependencies.alert,
-        onSubmit: runWorkflow,
+        onSubmit: (payload) => {
+          closeAlertDependenciesModal();
+          // Re-run with collected alert context to proceed with next validation step
+          handleRunClick({
+            skipUnsavedChangesModal,
+            alertValues: payload,
+            inputsValues,
+          });
+        },
       });
       return;
     }
 
-    if (dependencies && dependencies.incident.length > 0) {
+    // If workflow needs incident context, collect it through modal
+    if (dependencies && dependencies.incident.length > 0 && !incidentValues) {
       openIncidentDependenciesModal({
         workflow,
         dependencies: dependencies.incident,
         staticFields: incidentStaticFields,
-        onSubmit: runWorkflow,
+        onSubmit: (payload) => {
+          closeIncidentDependenciesModal();
+          // Re-run with collected incident context to proceed with execution
+          handleRunClick({
+            skipUnsavedChangesModal,
+            incidentValues: payload,
+            inputsValues,
+          });
+        },
       });
       return;
     }
 
-    // else, no dependencies or inputs, just run it
+    // All required data collected, execute the workflow
     else {
-      runWorkflow({});
+      runWorkflow({
+        ...(inputsValues || {}),
+        ...(alertValues || {}),
+        ...(incidentValues || {}),
+      });
     }
   };
 

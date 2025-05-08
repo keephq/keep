@@ -29,7 +29,7 @@ import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { PiClockCounterClockwise } from "react-icons/pi";
 import { WorkflowVersions } from "./workflow-versions";
-import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
+import { useUIBuilderUnsavedChanges } from "@/entities/workflows/model/workflow-store";
 import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
 
 const TABS_KEYS = ["overview", "builder", "yaml", "versions", "secrets"];
@@ -85,9 +85,8 @@ export default function WorkflowDetailPage({
     }
   };
 
-  const isUIBuilderSaved = useWorkflowEditorChangesSaved();
-  const hasUIBuilderUnsavedChanges = !isUIBuilderSaved;
-  const { hasUnsavedChanges: hasYamlUnsavedChanges } =
+  const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
+  const { hasUnsavedChanges: isYamlEditorUnsaved } =
     useWorkflowYAMLEditorStore();
 
   return (
@@ -98,7 +97,7 @@ export default function WorkflowDetailPage({
           <Tab icon={WrenchIcon}>
             <div className="flex items-center gap-2">
               Builder{" "}
-              {hasUIBuilderUnsavedChanges ? (
+              {isUIBuilderUnsaved ? (
                 <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
               ) : null}
             </div>
@@ -106,7 +105,7 @@ export default function WorkflowDetailPage({
           <Tab icon={CodeBracketIcon}>
             <div className="flex items-center gap-2">
               YAML Definition{" "}
-              {hasYamlUnsavedChanges ? (
+              {isYamlEditorUnsaved ? (
                 <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
               ) : null}
             </div>

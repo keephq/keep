@@ -187,14 +187,7 @@ export function WorkflowInputFields({
     }
   };
 
-  return (
-    <div className="mt-4">
-      <Title className="text-lg mb-2">Workflow Inputs</Title>
-      <div className="border p-3 rounded">
-        {workflowInputs.map(renderInputField)}
-      </div>
-    </div>
-  );
+  return workflowInputs.map(renderInputField);
 }
 
 export function areRequiredInputsFilled(

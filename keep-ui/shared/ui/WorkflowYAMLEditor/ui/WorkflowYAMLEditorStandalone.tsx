@@ -153,6 +153,7 @@ export function WorkflowYAMLEditorStandalone({
         workflowId={workflowId}
         onMount={handleEditorDidMount}
         onChange={handleContentChange}
+        // @ts-ignore TODO: fix types
         onValidationErrors={setValidationErrors}
         data-testid={dataTestId}
       />

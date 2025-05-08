@@ -2,39 +2,47 @@
 
 import { createContext, useContext, useState } from "react";
 import { Workflow } from "@/shared/api/workflows";
-import { IncidentDto } from "@/entities/incidents/model";
-import { AlertDto } from "@/entities/alerts/model";
-import { ManualRunWorkflowModal } from "../ui/manual-run-workflow-modal";
-import { AlertTriggerModal } from "../ui/workflow-run-with-alert-modal";
-import { IncidentDependenciesModal } from "../ui/IncidentDependenciesModal";
-import { WorkflowUnsavedChangesModal } from "../ui/WorkflowUnsavedChangesModal";
+import { WorkflowUnsavedChangesForm } from "../ui/WorkflowUnsavedChangesForm";
+import Modal from "@/components/ui/Modal";
+import { WorkflowAlertIncidentDependenciesForm } from "../../test-run/ui/workflow-alert-incident-dependencies-form";
+import clsx from "clsx";
+import { WorkflowInputsForm } from "../ui/WorkflowInputsForm";
+import { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
+
+type InputsModalProps = {
+  inputs: WorkflowInput[];
+  onSubmit: (inputs: Record<string, any>) => void;
+};
+
+type AlertDependenciesModalProps = {
+  workflow: Workflow;
+  staticFields: any[];
+  dependencies: string[];
+  onSubmit: (inputs: Record<string, any>) => void;
+};
+
+type IncidentDependenciesModalProps = {
+  workflow: Workflow;
+  staticFields: any[];
+  dependencies: string[];
+  onSubmit: (inputs: Record<string, any>) => void;
+};
+
+type UnsavedChangesModalProps = {
+  onSaveYaml: () => void;
+  onSaveUIBuilder: () => void;
+  onRunWithoutSaving: () => void;
+};
 
 type WorkflowModalContextType = {
-  openManualInputModal: (props: {
-    workflow: Workflow;
-    alert?: AlertDto;
-    incident?: IncidentDto;
-    onSubmit: ({ inputs }: { inputs: Record<string, any> }) => void;
-  }) => void;
-  openAlertDependenciesModal: (props: {
-    workflow: Workflow;
-    staticFields: any[];
-    dependencies: string[];
-    onSubmit: (payload: any) => void;
-  }) => void;
-  openIncidentDependenciesModal: (props: {
-    workflow: Workflow;
-    staticFields: any[];
-    dependencies: string[];
-    onSubmit: (payload: any) => void;
-  }) => void;
-  openUnsavedChangesModal: (props: {
-    onSaveYaml: () => void;
-    onSaveUIBuilder: () => void;
-    onRunWithoutSaving: () => void;
-  }) => void;
+  openInputsModal: (props: InputsModalProps) => void;
+  openAlertDependenciesModal: (props: AlertDependenciesModalProps) => void;
+  openIncidentDependenciesModal: (
+    props: IncidentDependenciesModalProps
+  ) => void;
+  openUnsavedChangesModal: (props: UnsavedChangesModalProps) => void;
   closeUnsavedChangesModal: () => void;
-  closeManualInputModal: () => void;
+  closeInputsModal: () => void;
   closeAlertDependenciesModal: () => void;
   closeIncidentDependenciesModal: () => void;
 };
@@ -47,19 +55,20 @@ export function WorkflowModalProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [manualModalProps, setManualModalProps] = useState<any>(null);
-  const [alertModalProps, setAlertModalProps] = useState<any>(null);
-  const [incidentModalProps, setIncidentModalProps] = useState<any>(null);
+  const [inputsModalProps, setInputsModalProps] =
+    useState<InputsModalProps | null>(null);
+  const [alertModalProps, setAlertModalProps] =
+    useState<AlertDependenciesModalProps | null>(null);
+  const [incidentModalProps, setIncidentModalProps] =
+    useState<IncidentDependenciesModalProps | null>(null);
   const [unsavedChangesModalProps, setUnsavedChangesModalProps] =
     useState<any>(null);
 
-  const openManualInputModal = (props: {
-    workflow: Workflow;
-    alert?: AlertDto;
-    incident?: IncidentDto;
+  const openInputsModal = (props: {
+    inputs: Record<string, any>;
     onSubmit: ({ inputs }: { inputs: Record<string, any> }) => void;
   }) => {
-    setManualModalProps(props);
+    setInputsModalProps(props);
   };
 
   const openAlertDependenciesModal = (props: {
@@ -92,8 +101,8 @@ export function WorkflowModalProvider({
     setUnsavedChangesModalProps(null);
   };
 
-  const closeManualInputModal = () => {
-    setManualModalProps(null);
+  const closeInputsModal = () => {
+    setInputsModalProps(null);
   };
 
   const closeAlertDependenciesModal = () => {
@@ -104,52 +113,73 @@ export function WorkflowModalProvider({
     setIncidentModalProps(null);
   };
 
+  const closeAllModals = () => {
+    setInputsModalProps(null);
+    setAlertModalProps(null);
+    setIncidentModalProps(null);
+    setUnsavedChangesModalProps(null);
+  };
+
+  const isSomeModalOpen =
+    inputsModalProps ||
+    alertModalProps ||
+    incidentModalProps ||
+    unsavedChangesModalProps;
+
   return (
     <WorkflowModalContext.Provider
       value={{
-        openManualInputModal,
+        openInputsModal,
         openAlertDependenciesModal,
         openIncidentDependenciesModal,
         openUnsavedChangesModal,
         closeUnsavedChangesModal,
-        closeManualInputModal,
+        closeInputsModal,
         closeAlertDependenciesModal,
         closeIncidentDependenciesModal,
       }}
     >
       {children}
 
-      {/* Render modals here, just once */}
-      {manualModalProps && (
-        <ManualRunWorkflowModal
-          {...manualModalProps}
+      {isSomeModalOpen && (
+        <Modal
           isOpen={true}
-          onClose={closeManualInputModal}
-        />
-      )}
+          className={clsx(
+            alertModalProps || incidentModalProps ? "max-w-5xl" : ""
+          )}
+          onClose={closeAllModals}
+          title="Run Workflow"
+        >
+          {unsavedChangesModalProps && (
+            <WorkflowUnsavedChangesForm
+              {...unsavedChangesModalProps}
+              onClose={closeUnsavedChangesModal}
+            />
+          )}
+          {inputsModalProps && (
+            <WorkflowInputsForm
+              workflowInputs={inputsModalProps.inputs}
+              onSubmit={inputsModalProps.onSubmit}
+              onCancel={closeInputsModal}
+            />
+          )}
 
-      {alertModalProps && (
-        <AlertTriggerModal
-          {...alertModalProps}
-          isOpen={true}
-          onClose={closeAlertDependenciesModal}
-        />
-      )}
+          {alertModalProps && (
+            <WorkflowAlertIncidentDependenciesForm
+              type="alert"
+              {...alertModalProps}
+              onCancel={closeAlertDependenciesModal}
+            />
+          )}
 
-      {incidentModalProps && (
-        <IncidentDependenciesModal
-          {...incidentModalProps}
-          isOpen={true}
-          onClose={closeIncidentDependenciesModal}
-        />
-      )}
-
-      {unsavedChangesModalProps && (
-        <WorkflowUnsavedChangesModal
-          {...unsavedChangesModalProps}
-          isOpen={true}
-          onClose={closeUnsavedChangesModal}
-        />
+          {incidentModalProps && (
+            <WorkflowAlertIncidentDependenciesForm
+              type="incident"
+              {...incidentModalProps}
+              onCancel={closeIncidentDependenciesModal}
+            />
+          )}
+        </Modal>
       )}
     </WorkflowModalContext.Provider>
   );
