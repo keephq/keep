@@ -304,8 +304,8 @@ class ServicenowProvider(BaseTopologyProvider):
         )
 
         if not cmdb_response.ok:
-            self.logger.error(
-                "Failed to pull topology",
+            self.logger.info(
+                "Failed to pull topology with cmdb_params, retrying with no params.",
                 extra={
                     "tenant_id": self.context_manager.tenant_id,
                     "status_code": cmdb_response.status_code,
@@ -314,7 +314,25 @@ class ServicenowProvider(BaseTopologyProvider):
                     "provider_id": self.provider_id,
                 },
             )
-            return topology, {}
+            # Retry without params, may happen because of lack of permissions. 
+            # The following code is tolerant to missing data.
+            cmdb_response = requests.get(
+                f"{self.authentication_config.service_now_base_url}/api/now/table/cmdb_ci",
+                headers=headers,
+                auth=auth,
+            )
+            if not cmdb_response.ok:
+                self.logger.error(
+                    "Failed to pull topology without params.",
+                    extra={
+                        "tenant_id": self.context_manager.tenant_id,
+                        "status_code": cmdb_response.status_code,
+                        "response_body": cmdb_response.text,
+                        "using_access_token": self._access_token is not None,
+                        "provider_id": self.provider_id,
+                    },
+                )
+                return topology, {}
 
         cmdb_data = cmdb_response.json().get("result", [])
         self.logger.info(
