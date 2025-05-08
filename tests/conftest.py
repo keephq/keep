@@ -423,7 +423,7 @@ def elastic_container(docker_ip, docker_services):
         print("Exception occurred while waiting for MySQL to be responsive")
         raise
     finally:
-        print("Tearing down ElasticSearch")
+        print("Tearing down Elasticsearch")
 
 
 @pytest.fixture
