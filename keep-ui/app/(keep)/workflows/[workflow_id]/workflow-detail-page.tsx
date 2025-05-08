@@ -56,6 +56,10 @@ export default function WorkflowDetailPage({
   );
   const router = useRouter();
 
+  const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
+  const { hasUnsavedChanges: isYamlEditorUnsaved } =
+    useWorkflowYAMLEditorStore();
+
   // Set initial tab based on URL query param
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -84,10 +88,6 @@ export default function WorkflowDetailPage({
       router.push(`${basePath}?tab=${tabKey}`);
     }
   };
-
-  const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
-  const { hasUnsavedChanges: isYamlEditorUnsaved } =
-    useWorkflowYAMLEditorStore();
 
   return (
     <div className="flex flex-col gap-4">
