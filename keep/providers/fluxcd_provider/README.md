@@ -1,4 +1,13 @@
-# Instructions for setting up Flux CD Provider
+# FluxCD Provider for Keep
+
+This provider allows Keep to integrate with [Flux CD](https://fluxcd.io/), a GitOps tool for Kubernetes.
+
+## Features
+
+- **Topology Integration**: Pull topology information from Flux CD resources to visualize your GitOps deployment structure
+- **Alert Integration**: Get alerts from Flux CD resources when deployments fail or have issues
+- **Resource Monitoring**: Monitor Flux CD resources for failures and track their status
+- **GitOps Insights**: Gain insights into your GitOps workflow and deployment process
 
 ## Setting up Flux CD
 
@@ -95,7 +104,7 @@
             kubernetes.io/service-account.name: flux-reader
         type: kubernetes.io/service-account-token
         EOF
-        
+
         # Get the token
         kubectl get secret flux-reader-token -n flux-system -o jsonpath='{.data.token}' | base64 -d
         ```
@@ -107,3 +116,59 @@
 1. Provider Name: Choose a name for your provider
 2. Authentication: Use one of the methods described above
 3. Namespace: The namespace where Flux CD is installed (default: flux-system)
+
+## Usage in Workflows
+
+You can use the FluxCD provider in your Keep workflows to retrieve Flux CD resources and create alerts for failed deployments:
+
+```yaml
+workflow:
+  id: fluxcd-monitor
+  name: "FluxCD Resource Monitor"
+  description: "Monitor Flux CD resources and create alerts for failed deployments"
+  triggers:
+    - type: interval
+      value: 1800  # 30 minutes in seconds
+
+steps:
+  - name: get-fluxcd-resources
+    provider:
+      type: fluxcd
+      with:
+        kubeconfig: "{{ env.KUBECONFIG }}"
+        namespace: "flux-system"
+    output: fluxcd_resources
+
+  - name: check-resources
+    run: |
+      echo "Found {{ fluxcd_resources.kustomizations | length }} Kustomizations and {{ fluxcd_resources.helm_releases | length }} HelmReleases"
+
+  - name: create-alerts-for-failed-kustomizations
+    foreach: "{{ fluxcd_resources.kustomizations }}"
+    if: '{{ item.status.conditions | selectattr("type", "equalto", "Ready") | selectattr("status", "equalto", "False") | list | length > 0 }}'
+    alert:
+      name: "Kustomization {{ item.metadata.name }} failed"
+      description: "{{ item.status.conditions | selectattr('type', 'equalto', 'Ready') | map(attribute='message') | join(' ') }}"
+      severity: high
+      source: "fluxcd-kustomization"
+```
+
+See the [fluxcd_example.yml](../../examples/workflows/fluxcd_example.yml) file for a complete workflow example.
+
+## Supported Resources
+
+The provider can retrieve and monitor the following Flux CD resources:
+
+- GitRepository
+- HelmRepository
+- HelmChart
+- OCIRepository
+- Bucket
+- Kustomization
+- HelmRelease
+
+## Requirements
+
+- Kubernetes cluster with Flux CD installed
+- Kubernetes client version 24.2.0 or higher
+- Access to the Kubernetes API server

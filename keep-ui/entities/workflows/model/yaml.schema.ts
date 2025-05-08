@@ -65,6 +65,21 @@ const auth0LogsProvider: ProviderMetadataForValidation = {
   query_params: ["log_type", "previous_users"],
 };
 
+const fluxcdProvider: ProviderMetadataForValidation = {
+  type: "fluxcd",
+  config: {
+    kubeconfig: {
+      required: false,
+      description: "Kubernetes config file content",
+      sensitive: true,
+      default: null,
+    },
+  },
+  can_query: true,
+  can_notify: false,
+  query_params: ["kubeconfig", "namespace"],
+};
+
 export const WorkflowInputSchema = z.object({
   name: z.string(),
   type: z.string(),
@@ -267,6 +282,7 @@ export function getYamlWorkflowDefinitionSchema(
     // TODO: move github and auth0 providers to the providers list from backend, once we have them at /providers endpoint
     githubStarsProvider,
     auth0LogsProvider,
+    fluxcdProvider,
     ...providers,
   ];
   const uniqueProviders = providersWithMock.reduce((acc, provider) => {
