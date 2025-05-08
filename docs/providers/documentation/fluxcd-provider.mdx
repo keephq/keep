@@ -100,10 +100,12 @@ metadata:
 spec:
   type: fluxcd
   authentication:
-    api_server: https://kubernetes.example.com
+    api-server: https://kubernetes.example.com
     token: MY_TOKEN
     namespace: flux-system
 ```
+
+> Note: Both `api-server` and `api_server` formats are supported for backward compatibility.
 
 ### Using In-Cluster Configuration
 

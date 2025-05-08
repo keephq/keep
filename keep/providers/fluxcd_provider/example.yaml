@@ -28,7 +28,7 @@ spec:
     namespace: flux-system
 
     # Option 2: Using API server and token
-    # api_server: https://kubernetes.example.com
+    # api-server: https://kubernetes.example.com
     # token: MY_TOKEN
     # namespace: flux-system
 

@@ -25,10 +25,10 @@ class TestFluxcdProvider(unittest.TestCase):
                 "namespace": "flux-system",
             }
         )
-        
+
         # Mock the Kubernetes client
         self.k8s_client_mock = MagicMock()
-        
+
         # Create the provider with mocked dependencies
         with patch("kubernetes.config.load_incluster_config"):
             with patch("kubernetes.client.CustomObjectsApi") as mock_custom_objects_api:
@@ -76,14 +76,14 @@ class TestFluxcdProvider(unittest.TestCase):
                 }
             ]
         }
-        
+
         # Call the method
         result = self.provider._FluxcdProvider__list_git_repositories()
-        
+
         # Verify the result
         self.assertEqual(len(result["items"]), 1)
         self.assertEqual(result["items"][0]["metadata"]["name"], "test-repo")
-        
+
         # Verify the API call
         self.k8s_client_mock.list_namespaced_custom_object.assert_called_once_with(
             group="source.toolkit.fluxcd.io",
@@ -144,13 +144,13 @@ class TestFluxcdProvider(unittest.TestCase):
             # HelmReleases
             {"items": []},
         ]
-        
+
         # Call the method
         services, _ = self.provider.pull_topology()
-        
+
         # Verify the result
         self.assertEqual(len(services), 2)
-        
+
         # Find the GitRepository service
         git_repo_service = next(
             (s for s in services if s.service == "git-repo-uid"), None
@@ -158,7 +158,7 @@ class TestFluxcdProvider(unittest.TestCase):
         self.assertIsNotNone(git_repo_service)
         self.assertEqual(git_repo_service.display_name, "GitRepository/test-repo")
         self.assertEqual(git_repo_service.repository, "https://github.com/test/repo")
-        
+
         # Find the Kustomization service
         kustomization_service = next(
             (s for s in services if s.service == "kustomization-uid"), None
@@ -166,6 +166,29 @@ class TestFluxcdProvider(unittest.TestCase):
         self.assertIsNotNone(kustomization_service)
         self.assertEqual(kustomization_service.display_name, "Kustomization/test-kustomization")
         self.assertEqual(kustomization_service.dependencies.get("git-repo-uid"), "source")
+
+    def test_simulate_alert(self):
+        """
+        Test the simulate_alert method.
+        """
+        alert = FluxcdProvider.simulate_alert()
+
+        # Verify the alert structure
+        self.assertIsInstance(alert, dict)
+        self.assertIn("id", alert)
+        self.assertIn("name", alert)
+        self.assertIn("description", alert)
+        self.assertIn("status", alert)
+        self.assertIn("severity", alert)
+        self.assertIn("source", alert)
+        self.assertIn("resource", alert)
+        self.assertIn("timestamp", alert)
+
+        # Verify the resource structure
+        resource = alert["resource"]
+        self.assertIn("name", resource)
+        self.assertIn("kind", resource)
+        self.assertIn("namespace", resource)
 
 
 if __name__ == "__main__":

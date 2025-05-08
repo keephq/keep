@@ -54,6 +54,7 @@ class FluxcdProviderAuthConfig:
             "required": False,
             "description": "Kubernetes API server URL",
             "hint": "Example: https://kubernetes.example.com",
+            "alias": "api-server",
         },
     )
     token: str = dataclasses.field(
@@ -93,6 +94,26 @@ class FluxcdProvider(BaseTopologyProvider):
             alias="Authenticated",
         ),
     ]
+
+    @staticmethod
+    def simulate_alert():
+        """
+        Simulate a Flux CD alert for testing purposes.
+        """
+        return {
+            "id": "git-repo-uid-Ready",
+            "name": "GitRepository test-repo - Ready",
+            "description": "Repository is not ready: failed to clone git repository",
+            "status": "firing",
+            "severity": "critical",
+            "source": "fluxcd-gitrepository",
+            "resource": {
+                "name": "test-repo",
+                "kind": "GitRepository",
+                "namespace": "flux-system",
+            },
+            "timestamp": "2025-05-08T12:00:00Z",
+        }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -156,9 +177,17 @@ class FluxcdProvider(BaseTopologyProvider):
 
             # Try to load from in-cluster configuration
             else:
-                self.logger.debug("Loading Kubernetes client from in-cluster configuration")
-                config.load_incluster_config()
-                self._k8s_client = client.CustomObjectsApi()
+                try:
+                    self.logger.debug("Loading Kubernetes client from in-cluster configuration")
+                    config.load_incluster_config()
+                    self._k8s_client = client.CustomObjectsApi()
+                except config.config_exception.ConfigException:
+                    self.logger.warning(
+                        "Not running inside a Kubernetes cluster and no explicit configuration provided. "
+                        "The provider will not be able to connect to a Kubernetes cluster."
+                    )
+                    # Return None instead of raising an exception
+                    return None
 
             return self._k8s_client
 
@@ -166,14 +195,19 @@ class FluxcdProvider(BaseTopologyProvider):
             self.logger.error(
                 "Error initializing Kubernetes client", extra={"exception": str(e)}
             )
-            raise
+            # Return None instead of raising an exception
+            return None
 
     def validate_scopes(self) -> dict[str, bool | str]:
         self.logger.info("Validating user scopes for FluxCD provider")
         authenticated = True
         try:
-            # Try to list GitRepositories to validate authentication
-            self.__list_git_repositories()
+            # Check if we have a Kubernetes client
+            if self.k8s_client is None:
+                authenticated = "No Kubernetes cluster available"
+            else:
+                # Try to list GitRepositories to validate authentication
+                self.__list_git_repositories()
         except Exception as e:
             self.logger.error(
                 "Error while validating scope for FluxCD", extra={"exception": str(e)}
@@ -188,6 +222,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List GitRepository resources from Flux CD.
         """
         self.logger.info("Listing GitRepository resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="source.toolkit.fluxcd.io",
@@ -207,6 +245,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List HelmRepository resources from Flux CD.
         """
         self.logger.info("Listing HelmRepository resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="source.toolkit.fluxcd.io",
@@ -226,6 +268,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List HelmChart resources from Flux CD.
         """
         self.logger.info("Listing HelmChart resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="source.toolkit.fluxcd.io",
@@ -245,6 +291,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List OCIRepository resources from Flux CD.
         """
         self.logger.info("Listing OCIRepository resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="source.toolkit.fluxcd.io",
@@ -264,6 +314,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List Bucket resources from Flux CD.
         """
         self.logger.info("Listing Bucket resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="source.toolkit.fluxcd.io",
@@ -283,6 +337,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List Kustomization resources from Flux CD.
         """
         self.logger.info("Listing Kustomization resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="kustomize.toolkit.fluxcd.io",
@@ -302,6 +360,10 @@ class FluxcdProvider(BaseTopologyProvider):
         List HelmRelease resources from Flux CD.
         """
         self.logger.info("Listing HelmRelease resources from Flux CD")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return {"items": []}
+
         try:
             return self.k8s_client.list_namespaced_custom_object(
                 group="helm.toolkit.fluxcd.io",
@@ -321,6 +383,10 @@ class FluxcdProvider(BaseTopologyProvider):
         Get events for a specific resource.
         """
         self.logger.info(f"Getting events for {resource_kind}/{resource_name}")
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available")
+            return []
+
         try:
             field_selector = f"involvedObject.name={resource_name},involvedObject.kind={resource_kind}"
             events = client.CoreV1Api().list_namespaced_event(
@@ -413,6 +479,10 @@ class FluxcdProvider(BaseTopologyProvider):
         self.logger.info("Getting alerts from Flux CD")
         alerts = []
 
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available, returning empty alerts list")
+            return alerts
+
         try:
             # Get all resources
             git_repositories = self.__list_git_repositories().get("items", [])
@@ -458,6 +528,10 @@ class FluxcdProvider(BaseTopologyProvider):
         """
         self.logger.info("Pulling topology from Flux CD")
         service_topology = {}
+
+        if self.k8s_client is None:
+            self.logger.warning("No Kubernetes client available, returning empty topology")
+            return [], []
 
         try:
             # Get all source resources
