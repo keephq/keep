@@ -694,3 +694,6 @@ class ProvidersService:
             raise HTTPException(404, detail="Provider logs are not enabled")
 
         return get_provider_logs(tenant_id, provider_id)
+
+
+# trigger CI
