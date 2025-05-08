@@ -13,17 +13,18 @@ workflow:
         with:
           kubeconfig: "{{ env.KUBECONFIG }}"
           namespace: "flux-system"
-          output: fluxcd_resources
+      vars:
+        fluxcd_resources: "{{ steps.get-fluxcd-resources.results }}"
 
     - name: check-for-failed-deployments
       provider:
         type: console
         with:
           message: |
-            Found {{ fluxcd_resources.kustomizations | length }} Kustomizations and {{ fluxcd_resources.helm_releases | length }} HelmReleases
+            Found {{ vars.fluxcd_resources.kustomizations | length }} Kustomizations and {{ vars.fluxcd_resources.helm_releases | length }} HelmReleases
 
     - name: create-alerts-for-failed-kustomizations
-      foreach: "{{ fluxcd_resources.kustomizations }}"
+      foreach: "{{ vars.fluxcd_resources.kustomizations }}"
       if: "{{ item.status.conditions[0].status == 'False' }}"
       provider:
         type: keep
@@ -39,7 +40,7 @@ workflow:
             type: "kustomization"
 
     - name: create-alerts-for-failed-helmreleases
-      foreach: "{{ fluxcd_resources.helm_releases }}"
+      foreach: "{{ vars.fluxcd_resources.helm_releases }}"
       if: "{{ item.status.conditions[0].status == 'False' }}"
       provider:
         type: keep
