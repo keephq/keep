@@ -9,10 +9,11 @@ workflow:
     - name: get-fluxcd-resources
       provider:
         type: fluxcd
+        config: "{{ providers.fluxcd }}"
         with:
           kubeconfig: "{{ env.KUBECONFIG }}"
           namespace: "flux-system"
-      output: fluxcd_resources
+          output: fluxcd_resources
 
     - name: check-for-failed-deployments
       provider:
