@@ -56,6 +56,16 @@ export const V2StepTriggerSchema = z.union([
   V2StepIncidentTriggerSchema,
 ]);
 
+export const WorkflowInputSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string().optional(),
+  default: z.any().optional(),
+  required: z.boolean().optional(),
+  options: z.array(z.string()).optional(),
+  visuallyRequired: z.boolean().optional(),
+});
+
 export const EnrichDisposableKeyValueSchema = z.array(
   z.object({
     key: z.string(),
@@ -203,4 +213,5 @@ export const WorkflowPropertiesSchema = z.object({
   manual: ManualTriggerValueSchema.optional(),
   services: z.array(z.string()).optional(),
   owners: z.array(z.string()).optional(),
+  inputs: z.array(WorkflowInputSchema).optional(),
 });
