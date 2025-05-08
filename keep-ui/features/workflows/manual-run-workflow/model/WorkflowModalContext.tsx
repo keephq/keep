@@ -33,6 +33,10 @@ type WorkflowModalContextType = {
     onSaveUIBuilder: () => void;
     onRunWithoutSaving: () => void;
   }) => void;
+  closeUnsavedChangesModal: () => void;
+  closeManualInputModal: () => void;
+  closeAlertDependenciesModal: () => void;
+  closeIncidentDependenciesModal: () => void;
 };
 const WorkflowModalContext = createContext<WorkflowModalContextType | null>(
   null
@@ -84,6 +88,22 @@ export function WorkflowModalProvider({
     setUnsavedChangesModalProps(props);
   };
 
+  const closeUnsavedChangesModal = () => {
+    setUnsavedChangesModalProps(null);
+  };
+
+  const closeManualInputModal = () => {
+    setManualModalProps(null);
+  };
+
+  const closeAlertDependenciesModal = () => {
+    setAlertModalProps(null);
+  };
+
+  const closeIncidentDependenciesModal = () => {
+    setIncidentModalProps(null);
+  };
+
   return (
     <WorkflowModalContext.Provider
       value={{
@@ -91,6 +111,10 @@ export function WorkflowModalProvider({
         openAlertDependenciesModal,
         openIncidentDependenciesModal,
         openUnsavedChangesModal,
+        closeUnsavedChangesModal,
+        closeManualInputModal,
+        closeAlertDependenciesModal,
+        closeIncidentDependenciesModal,
       }}
     >
       {children}
@@ -100,7 +124,7 @@ export function WorkflowModalProvider({
         <ManualRunWorkflowModal
           {...manualModalProps}
           isOpen={true}
-          onClose={() => setManualModalProps(null)}
+          onClose={closeManualInputModal}
         />
       )}
 
@@ -108,7 +132,7 @@ export function WorkflowModalProvider({
         <AlertTriggerModal
           {...alertModalProps}
           isOpen={true}
-          onClose={() => setAlertModalProps(null)}
+          onClose={closeAlertDependenciesModal}
         />
       )}
 
@@ -116,7 +140,7 @@ export function WorkflowModalProvider({
         <IncidentDependenciesModal
           {...incidentModalProps}
           isOpen={true}
-          onClose={() => setIncidentModalProps(null)}
+          onClose={closeIncidentDependenciesModal}
         />
       )}
 
@@ -124,7 +148,7 @@ export function WorkflowModalProvider({
         <WorkflowUnsavedChangesModal
           {...unsavedChangesModalProps}
           isOpen={true}
-          onClose={() => setUnsavedChangesModalProps(null)}
+          onClose={closeUnsavedChangesModal}
         />
       )}
     </WorkflowModalContext.Provider>

@@ -901,9 +901,9 @@ function initializeWorkflow(
   get().updateDefinition();
 }
 
-export function useWorkflowEditorChangesSaved() {
+export function getWorkflowEditorChangesSaved(store: WorkflowState) {
   const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
-    useWorkflowStore();
+    store;
   const isDeployedAndUntouched = lastChangedAt === null && isDeployed;
   const isDeployedAndChangesSaved =
     lastDeployedAt !== null &&
@@ -913,4 +913,9 @@ export function useWorkflowEditorChangesSaved() {
     isEditorSyncedWithNodes &&
     (isDeployedAndChangesSaved || isDeployedAndUntouched)
   );
+}
+
+export function useWorkflowEditorChangesSaved() {
+  const store = useWorkflowStore();
+  return getWorkflowEditorChangesSaved(store);
 }

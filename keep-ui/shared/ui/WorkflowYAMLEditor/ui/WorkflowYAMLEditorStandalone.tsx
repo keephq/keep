@@ -35,6 +35,7 @@ export function WorkflowYAMLEditorStandalone({
     setHasUnsavedChanges,
     validationErrors,
     setValidationErrors,
+    saveRequestCount,
   } = useWorkflowYAMLEditorStore();
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export function WorkflowYAMLEditorStandalone({
     setOriginalContent(getOrderedWorkflowYamlString(yamlString));
   }, [yamlString]);
 
-  const handleSaveWorkflow = async () => {
+  const handleSaveWorkflow = useCallback(async () => {
     if (!editorRef.current) {
       return;
     }
@@ -98,7 +99,13 @@ export function WorkflowYAMLEditorStandalone({
       setLastDeployedAt(Date.now());
       setIsSaving(false);
     }
-  };
+  }, [workflowId, updateWorkflow]);
+
+  useEffect(() => {
+    if (saveRequestCount > 0) {
+      handleSaveWorkflow();
+    }
+  }, [saveRequestCount]);
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,
