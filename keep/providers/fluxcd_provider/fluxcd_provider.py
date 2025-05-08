@@ -138,7 +138,7 @@ class FluxcdProvider(BaseTopologyProvider):
 
     PROVIDER_DISPLAY_NAME = "Flux CD"
 
-    PROVIDER_TAGS = ["gitops", "kubernetes", "topology"]
+    PROVIDER_TAGS = ["topology", "alert"]
 
     PROVIDER_COMING_SOON = False
 

@@ -102,7 +102,8 @@ class SlackProvider(BaseProvider):
 
         team_name = response_json.get("team", {}).get("name")
         if team_name:
-            new_provider_info["provider_name"] = team_name
+            # replacing dots to prevent problems in workflows
+            new_provider_info["provider_name"] = team_name.replace(".", "")
 
         return new_provider_info
 
