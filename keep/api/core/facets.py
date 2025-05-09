@@ -1,6 +1,6 @@
 import json
 import logging
-from sqlalchemy import Column, String, func, literal, literal_column, select, text
+from sqlalchemy import Column, String, cast, func, literal, literal_column, select, text
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -21,6 +21,7 @@ from sqlmodel import Session
 
 from keep.api.core.db import engine
 from keep.api.models.db.facet import Facet, FacetType
+from sqlalchemy.dialects.postgresql import JSONB
 
 logger = logging.getLogger(__name__)
 
@@ -95,20 +96,31 @@ def build_facet_subquery_for_json_array(
     facet_filter: str,
 ):
     if engine.dialect.name == "sqlite":
-        return build_facet_subquery_for_column(
-            base_query,
-            facets_cel_to_sql_instance,
-            facet,
-            column_name,
-            facet_filter,
+        base_query_cte = base_query.cte(f"{column_name}_base_query")
+        json_table_join = func.json_each(literal_column(column_name)).table_valued(
+            "value"
+        )
+        return (
+            select(
+                func.distinct(base_query_cte.c.entity_id),
+                json_table_join.c.value.label("facet_value"),
+            )
+            .select_from(base_query_cte)
+            .join(json_table_join, text("TRUE"))
+            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
         )
     elif engine.dialect.name == "postgresql":
-        return build_facet_subquery_for_column(
-            base_query,
-            facets_cel_to_sql_instance,
-            facet,
-            column_name,
-            facet_filter,
+        base_query_cte = base_query.cte(f"{column_name}_base_query")
+        json_table_join = func.jsonb_array_elements_text(
+            cast(literal_column(column_name), JSONB)
+        ).table_valued("value")
+        return (
+            select(
+                func.distinct(base_query_cte.c.entity_id),
+                json_table_join.c.value.label("facet_value"),
+            )
+            .select_from(base_query_cte, json_table_join)
+            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
         )
     elif engine.dialect.name == "mysql":
         # MySQL throws errors due to JSON_TABLE without LIMIT
