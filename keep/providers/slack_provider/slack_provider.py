@@ -254,6 +254,32 @@ class SlackProvider(BaseProvider):
                 )
 
             response_json = response.json()
+
+            if not response_json.get("ok"):
+                if response_json.get("error") == "not_authed":
+                    self.logger.warning(
+                        "Not authenticated, trying again with Bearer token",
+                        extra={"payload": payload},
+                    )
+                    if payload.get("attachments", None):
+                        response = requests.post(
+                            f"{SlackProvider.SLACK_API}/{method}",
+                            data={"payload": json.dumps(payload)},
+                            headers={
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "Authorization": f"Bearer {self.authentication_config.access_token}",
+                            },
+                        )
+                    else:
+                        response = requests.post(
+                            f"{SlackProvider.SLACK_API}/{method}",
+                            data=payload,
+                            headers={
+                                "Authorization": f"Bearer {self.authentication_config.access_token}",
+                            },
+                        )
+
+            response_json = response.json()
             if not response.ok or not response_json.get("ok"):
                 raise ProviderException(
                     f"Failed to notify alert message to Slack: {response_json.get('error')}"
