@@ -269,6 +269,7 @@ class BaseCelToSqlProvider:
         ]
         first_operand_data_type = None
         second_operand_data_type = None
+        force_cast = False
 
         if comparison_node.operator == ComparisonNodeOperator.IN:
             if (
@@ -309,8 +310,15 @@ class BaseCelToSqlProvider:
             if isinstance(comparison_node.first_operand, PropertyAccessNode):
                 first_operand_data_type = comparison_node.first_operand.data_type
 
+            if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
+                first_operand_data_type = comparison_node.first_operand.data_type
+                force_cast = True
+
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
                 first_operand_data_type = comparison_node.first_operand.data_type
+                force_cast = isinstance(
+                    comparison_node.first_operand.fields[0], JsonPropertyAccessNode
+                )
 
             if isinstance(comparison_node.second_operand, ConstantNode):
                 second_operand_data_type = from_type_to_data_type(
@@ -325,7 +333,7 @@ class BaseCelToSqlProvider:
                 comparison_node.second_operand, stack
             )
 
-        if (
+        if force_cast or (
             first_operand_data_type
             and first_operand_data_type != second_operand_data_type
         ):
