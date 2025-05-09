@@ -46,7 +46,7 @@ services:
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
     volumes:
-      - migrations_volume:/app/migrations
+      - migrations_volume:/app
     depends_on:
       keep-database:
         condition: service_healthy
