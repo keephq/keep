@@ -277,10 +277,11 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             right = right.value
 
         prop_access_node: PropertyAccessNode = left
-        self.stack.append(left)
-        self.member_access_stack.append(
-            PropertyAccessNode(path=prop_access_node.path + [str(right)])
+        new_property_access_node = PropertyAccessNode(
+            path=prop_access_node.path + [str(right)]
         )
+        self.stack.append(new_property_access_node)
+        self.member_access_stack.append(new_property_access_node)
 
     def member_object(self, tree: lark.Tree) -> None:
         raise NotImplementedError("Member object not implemented")
@@ -342,7 +343,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
                 value = parse(value)
             else:
                 # this code is to handle the case when string literal contains escaped single/double quotes
-                value = value.encode("utf-8").decode("unicode_escape")
+                value = re.sub(r'\\(["\'])', r"\1", value)
         elif value == 'true' or value == 'false':
             value = value == 'true'
         elif '.' in value and self.is_float(value):

@@ -5,6 +5,7 @@ Slack provider is an interface for Slack messages.
 import dataclasses
 import json
 import os
+from typing import OrderedDict
 
 import pydantic
 import requests
@@ -102,7 +103,8 @@ class SlackProvider(BaseProvider):
 
         team_name = response_json.get("team", {}).get("name")
         if team_name:
-            new_provider_info["provider_name"] = team_name
+            # replacing dots to prevent problems in workflows
+            new_provider_info["provider_name"] = team_name.replace(".", "")
 
         return new_provider_info
 
@@ -182,9 +184,11 @@ class SlackProvider(BaseProvider):
                 raise ProviderException(
                     "Message is required - see for example https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml#L16"
                 )
-        payload = {
-            "channel": channel,
-        }
+        payload = OrderedDict(
+            {
+                "channel": channel,
+            }
+        )
         if message:
             payload["text"] = message
         if blocks:
@@ -227,6 +231,17 @@ class SlackProvider(BaseProvider):
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
+            self.logger.info(
+                "Adding access token to payload",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "workflow_id": self.context_manager.workflow_id,
+                    "provider_id": self.provider_id,
+                    "access_token_truncated": self.authentication_config.access_token[
+                        :5
+                    ],
+                },
+            )
             payload["token"] = self.authentication_config.access_token
             if slack_timestamp == "" and thread_timestamp == "":
                 self.logger.info("Sending a new message to Slack")
@@ -242,6 +257,16 @@ class SlackProvider(BaseProvider):
 
             if payload.get("attachments", None):
                 payload["attachments"] = attachments
+                if "token" not in payload:
+                    self.logger.warning(
+                        "Token is not in payload, adding it",
+                        extra={
+                            "tenant_id": self.context_manager.tenant_id,
+                            "workflow_id": self.context_manager.workflow_id,
+                            "provider_id": self.provider_id,
+                        },
+                    )
+                    payload["token"] = self.authentication_config.access_token
                 response = requests.post(
                     f"{SlackProvider.SLACK_API}/{method}",
                     data={"payload": json.dumps(payload)},
@@ -251,6 +276,36 @@ class SlackProvider(BaseProvider):
                 response = requests.post(
                     f"{SlackProvider.SLACK_API}/{method}", data=payload
                 )
+
+            response_json = response.json()
+
+            if not response_json.get("ok"):
+                if response_json.get("error") == "not_authed":
+                    self.logger.warning(
+                        "Not authenticated, trying again with Bearer token",
+                        extra={
+                            "tenant_id": self.context_manager.tenant_id,
+                            "workflow_id": self.context_manager.workflow_id,
+                            "provider_id": self.provider_id,
+                        },
+                    )
+                    if payload.get("attachments", None):
+                        response = requests.post(
+                            f"{SlackProvider.SLACK_API}/{method}",
+                            data={"payload": json.dumps(payload)},
+                            headers={
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "Authorization": f"Bearer {self.authentication_config.access_token}",
+                            },
+                        )
+                    else:
+                        response = requests.post(
+                            f"{SlackProvider.SLACK_API}/{method}",
+                            data=payload,
+                            headers={
+                                "Authorization": f"Bearer {self.authentication_config.access_token}",
+                            },
+                        )
 
             response_json = response.json()
             if not response.ok or not response_json.get("ok"):
