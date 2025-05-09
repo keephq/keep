@@ -1,6 +1,7 @@
 import asyncio
 import importlib
 import sys
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -157,12 +158,44 @@ def test_reprovision_workflow(monkeypatch, db_session, client, test_app):
     assert len(provisioned_workflows) == 2
 
 
+VICTORIA_METRICS_PROVIDER = {
+    "type": "victoriametrics",
+    "authentication": {"VMAlertHost": "http://localhost", "VMAlertPort": 1234},
+}
+
+CLICKHOUSE_PROVIDER = {
+    "type": "clickhouse",
+    "authentication": {
+        "host": "http://localhost",
+        "port": 1234,
+        "username": "keep",
+        "password": "keep",
+        "database": "keep-db",
+    },
+}
+
+PROMETHEUS_PROVIDER = {
+    "type": "prometheus",
+    "authentication": {"url": "http://localhost", "port": 9090},
+}
+
+AIRFLOW_PROVIDER = {
+    "type": "airflow",
+}
+
+
 @pytest.mark.parametrize(
     "test_app",
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":1234,"username":"keep","password":"keep","database":"keep-db"}}}',
+            "KEEP_PROVIDERS": json.dumps(
+                {
+                    "keepVictoriaMetrics": VICTORIA_METRICS_PROVIDER,
+                    "keepClickhouse1": CLICKHOUSE_PROVIDER,
+                    "keepAirflow": AIRFLOW_PROVIDER,
+                }
+            ),
         },
     ],
     indirect=True,
@@ -170,12 +203,11 @@ def test_reprovision_workflow(monkeypatch, db_session, client, test_app):
 def test_provision_provider(db_session, client, test_app):
     response = client.get("/providers", headers={"x-api-key": "someapikey"})
     assert response.status_code == 200
-    # 3 workflows and 3 provisioned workflows
     providers = response.json()
     provisioned_providers = [
         p for p in providers.get("installed_providers") if p.get("provisioned")
     ]
-    assert len(provisioned_providers) == 2
+    assert len(provisioned_providers) == 3
 
 
 @pytest.mark.parametrize(
@@ -183,7 +215,12 @@ def test_provision_provider(db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":1234,"username":"keep","password":"keep","database":"keep-db"}}}',
+            "KEEP_PROVIDERS": json.dumps(
+                {
+                    "keepVictoriaMetrics": VICTORIA_METRICS_PROVIDER,
+                    "keepClickhouse1": CLICKHOUSE_PROVIDER,
+                }
+            ),
         },
     ],
     indirect=True,
@@ -201,7 +238,11 @@ def test_reprovision_provider(monkeypatch, db_session, client, test_app):
     # Step 2: Change environment variables (simulating new provisioning)
     monkeypatch.setenv(
         "KEEP_PROVIDERS",
-        '{"keepPrometheus":{"type":"prometheus","authentication":{"url":"http://localhost","port":9090}}}',
+        json.dumps(
+            {
+                "keepPrometheus": PROMETHEUS_PROVIDER,
+            }
+        ),
     )
 
     # Reload the app to apply the new environment changes
@@ -324,7 +365,11 @@ def test_reprovision_dashboard(monkeypatch, db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
-            "KEEP_PROVIDERS": '{"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}}}',
+            "KEEP_PROVIDERS": json.dumps(
+                {
+                    "keepVictoriaMetrics": VICTORIA_METRICS_PROVIDER,
+                }
+            ),
         },
     ],
     indirect=True,

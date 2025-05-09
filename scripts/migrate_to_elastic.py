@@ -1,4 +1,4 @@
-# Description: Script to migrate data from the database to ElasticSearch
+# Description: Script to migrate data from the database to Elasticsearch
 import os
 
 from dateutil import parser

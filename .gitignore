@@ -224,3 +224,5 @@ grafana/*
 !grafana/provisioning/
 !grafana/dashboards/
 keep/providers/grafana_provider/grafana/png/*
+topology.sh
+posthog.py

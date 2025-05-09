@@ -1,0 +1,169 @@
+# Root entry for the domain
+dn: dc=keep,dc=com
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: Keep Organization
+dc: keep
+
+# Administrator user
+dn: cn=admin,dc=keep,dc=com
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+userPassword: admin_password
+description: LDAP administrator
+
+# Groups
+dn: ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: groups
+
+# Organization Groups
+dn: cn=ORG-A,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-A
+uniqueMember: cn=admin,dc=keep,dc=com
+
+dn: cn=ORG-B,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-B
+uniqueMember: cn=admin,dc=keep,dc=com
+
+dn: cn=ORG-C,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-C
+uniqueMember: cn=admin,dc=keep,dc=com
+
+# Role Groups for ORG-A
+dn: cn=ORG-A-ADMINS,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-A-ADMINS
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=jane.smith,ou=users,dc=keep,dc=com
+memberOf: cn=ORG-A,ou=groups,dc=keep,dc=com
+
+dn: cn=ORG-A-USERS,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-A-USERS
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=john.doe,ou=users,dc=keep,dc=com
+memberOf: cn=ORG-A,ou=groups,dc=keep,dc=com
+
+# Role Groups for ORG-B
+dn: cn=ORG-B-ADMINS,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-B-ADMINS
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=alice.bob,ou=users,dc=keep,dc=com
+memberOf: cn=ORG-B,ou=groups,dc=keep,dc=com
+
+dn: cn=ORG-B-USERS,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-B-USERS
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=john.doe,ou=users,dc=keep,dc=com
+uniqueMember: uid=alice.johnson,ou=users,dc=keep,dc=com
+memberOf: cn=ORG-B,ou=groups,dc=keep,dc=com
+
+# Role Groups for ORG-C
+dn: cn=ORG-C-ADMINS,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-C-ADMINS
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=jane.smith,ou=users,dc=keep,dc=com
+memberOf: cn=ORG-C,ou=groups,dc=keep,dc=com
+
+dn: cn=ORG-C-USERS,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: ORG-C-USERS
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=alice.johnson,ou=users,dc=keep,dc=com
+uniqueMember: uid=alice.bob,ou=users,dc=keep,dc=com
+memberOf: cn=ORG-C,ou=groups,dc=keep,dc=com
+
+# General organization group (not related to the application)
+dn: cn=org-users,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: org-users
+uniqueMember: uid=john.doe,ou=users,dc=keep,dc=com
+uniqueMember: uid=jane.smith,ou=users,dc=keep,dc=com
+uniqueMember: uid=alice.johnson,ou=users,dc=keep,dc=com
+uniqueMember: uid=alice.bob,ou=users,dc=keep,dc=com
+
+# Users
+dn: ou=users,dc=keep,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: users
+
+dn: uid=john.doe,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: john.doe
+sn: Doe
+givenName: John
+cn: John Doe
+displayName: John Doe
+userPassword: password123
+mail: john.doe@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=ORG-A-USERS,ou=groups,dc=keep,dc=com
+memberOf: cn=ORG-B-USERS,ou=groups,dc=keep,dc=com
+memberOf: cn=org-users,ou=groups,dc=keep,dc=com
+
+dn: uid=jane.smith,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: jane.smith
+sn: Smith
+givenName: Jane
+cn: Jane Smith
+displayName: Jane Smith
+userPassword: password123
+mail: jane.smith@keep.com
+o: Keep Organization
+employeeType: Manager
+memberOf: cn=ORG-A-ADMINS,ou=groups,dc=keep,dc=com
+memberOf: cn=ORG-C-ADMINS,ou=groups,dc=keep,dc=com
+memberOf: cn=org-users,ou=groups,dc=keep,dc=com
+
+dn: uid=alice.johnson,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: alice.johnson
+sn: Johnson
+givenName: Alice
+cn: Alice Johnson
+displayName: Alice Johnson
+userPassword: password123
+mail: alice.johnson@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=ORG-B-USERS,ou=groups,dc=keep,dc=com
+memberOf: cn=ORG-C-USERS,ou=groups,dc=keep,dc=com
+memberOf: cn=org-users,ou=groups,dc=keep,dc=com
+
+dn: uid=alice.bob,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: alice.bob
+sn: Bob
+givenName: Alice
+cn: Alice Bob
+displayName: Alice Bob
+userPassword: password123
+mail: alice.bob@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=ORG-B-ADMINS,ou=groups,dc=keep,dc=com
+memberOf: cn=ORG-C-USERS,ou=groups,dc=keep,dc=com
+memberOf: cn=org-users,ou=groups,dc=keep,dc=com

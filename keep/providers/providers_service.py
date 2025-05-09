@@ -545,6 +545,7 @@ class ProvidersService:
                         )
 
             for provider_name, provider_config in env_providers.items():
+                provider_info = provider_config.get("authentication", {})
                 logger.info(f"Provisioning provider {provider_name}")
                 if ProvidersService.is_provider_installed(tenant_id, provider_name):
                     logger.info(
@@ -556,7 +557,7 @@ class ProvidersService:
                     ProvidersService.update_provider(
                         tenant_id=tenant_id,
                         provider_id=installed_provider.id,
-                        provider_info=provider_config["authentication"],
+                        provider_info=provider_info,
                         updated_by="system",
                         allow_provisioned=True,
                     )
@@ -570,7 +571,7 @@ class ProvidersService:
                         provider_id=provider_config["type"],
                         provider_name=provider_name,
                         provider_type=provider_config["type"],
-                        provider_config=provider_config["authentication"],
+                        provider_config=provider_info,
                         provisioned=True,
                         validate_scopes=False,
                     )

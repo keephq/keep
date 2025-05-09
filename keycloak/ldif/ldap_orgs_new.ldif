@@ -1,0 +1,169 @@
+# Root entry for the domain
+dn: dc=keep,dc=com
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: Keep Organization
+dc: keep
+
+# Administrator user
+dn: cn=admin,dc=keep,dc=com
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+userPassword: admin_password
+description: LDAP administrator
+
+# Groups
+dn: ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: groups
+
+# Organization Groups
+dn: cn=OrgA,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgA
+uniqueMember: cn=admin,dc=keep,dc=com
+
+dn: cn=OrgB,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgB
+uniqueMember: cn=admin,dc=keep,dc=com
+
+dn: cn=OrgC,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgC
+uniqueMember: cn=admin,dc=keep,dc=com
+
+# Role Groups for OrgA
+dn: cn=OrgAKeepAdmin,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgAKeepAdmin
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=michael.chen,ou=users,dc=keep,dc=com
+memberOf: cn=OrgA,ou=groups,dc=keep,dc=com
+
+dn: cn=OrgAKeepUser,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgAKeepUser
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=sarah.patel,ou=users,dc=keep,dc=com
+memberOf: cn=OrgA,ou=groups,dc=keep,dc=com
+
+# Role Groups for OrgB
+dn: cn=OrgBKeepAdmin,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgBKeepAdmin
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=david.rodriguez,ou=users,dc=keep,dc=com
+memberOf: cn=OrgB,ou=groups,dc=keep,dc=com
+
+dn: cn=OrgBKeepUser,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgBKeepUser
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=sarah.patel,ou=users,dc=keep,dc=com
+uniqueMember: uid=emma.wilson,ou=users,dc=keep,dc=com
+memberOf: cn=OrgB,ou=groups,dc=keep,dc=com
+
+# Role Groups for OrgC
+dn: cn=OrgCKeepAdmin,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgCKeepAdmin
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=michael.chen,ou=users,dc=keep,dc=com
+memberOf: cn=OrgC,ou=groups,dc=keep,dc=com
+
+dn: cn=OrgCKeepUser,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgCKeepUser
+uniqueMember: cn=admin,dc=keep,dc=com
+uniqueMember: uid=emma.wilson,ou=users,dc=keep,dc=com
+uniqueMember: uid=david.rodriguez,ou=users,dc=keep,dc=com
+memberOf: cn=OrgC,ou=groups,dc=keep,dc=com
+
+# General organization group (not related to the application)
+dn: cn=OrgKeepUsers,ou=groups,dc=keep,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+cn: OrgKeepUsers
+uniqueMember: uid=sarah.patel,ou=users,dc=keep,dc=com
+uniqueMember: uid=michael.chen,ou=users,dc=keep,dc=com
+uniqueMember: uid=emma.wilson,ou=users,dc=keep,dc=com
+uniqueMember: uid=david.rodriguez,ou=users,dc=keep,dc=com
+
+# Users
+dn: ou=users,dc=keep,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: users
+
+dn: uid=sarah.patel,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: sarah.patel
+sn: Patel
+givenName: Sarah
+cn: Sarah Patel
+displayName: Sarah Patel
+userPassword: password123
+mail: sarah.patel@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=OrgAKeepUser,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgBKeepUser,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgKeepUsers,ou=groups,dc=keep,dc=com
+
+dn: uid=michael.chen,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: michael.chen
+sn: Chen
+givenName: Michael
+cn: Michael Chen
+displayName: Michael Chen
+userPassword: password123
+mail: michael.chen@keep.com
+o: Keep Organization
+employeeType: Manager
+memberOf: cn=OrgAKeepAdmin,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgCKeepAdmin,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgKeepUsers,ou=groups,dc=keep,dc=com
+
+dn: uid=emma.wilson,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: emma.wilson
+sn: Wilson
+givenName: Emma
+cn: Emma Wilson
+displayName: Emma Wilson
+userPassword: password123
+mail: emma.wilson@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=OrgBKeepUser,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgCKeepUser,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgKeepUsers,ou=groups,dc=keep,dc=com
+
+dn: uid=david.rodriguez,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: david.rodriguez
+sn: Rodriguez
+givenName: David
+cn: David Rodriguez
+displayName: David Rodriguez
+userPassword: password123
+mail: david.rodriguez@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=OrgBKeepAdmin,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgCKeepUser,ou=groups,dc=keep,dc=com
+memberOf: cn=OrgKeepUsers,ou=groups,dc=keep,dc=com

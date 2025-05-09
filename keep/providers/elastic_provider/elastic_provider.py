@@ -120,7 +120,7 @@ class ElasticProvider(BaseProvider):
 
     def __initialize_client(self) -> Elasticsearch:
         """
-        Initialize the ElasticSearch client for the provider.
+        Initialize the Elasticsearch client for the provider.
         """
         api_key = self.authentication_config.api_key
         username = self.authentication_config.username
@@ -171,7 +171,7 @@ class ElasticProvider(BaseProvider):
             es.info()
         except Exception as e:
             raise ProviderConnectionFailed(
-                f"Failed to connect to ElasticSearch: {str(e)}"
+                f"Failed to connect to Elasticsearch: {str(e)}"
             )
 
         return es
@@ -215,7 +215,7 @@ class ElasticProvider(BaseProvider):
         try:
             self.client.close()
         except Exception:
-            self.logger.exception("Failed to close ElasticSearch client")
+            self.logger.exception("Failed to close Elasticsearch client")
 
     def _query(self, query: str | dict, index: str = None) -> list[str]:
         """
