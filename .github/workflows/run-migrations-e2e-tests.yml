@@ -381,7 +381,7 @@ jobs:
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
       # Phase 3: Run source version without dummy migration again
-      - name: Start old version services again
+      - name: Start source version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
@@ -452,7 +452,7 @@ jobs:
           echo "Giving services additional time to stabilize..."
           sleep 10
 
-      - name: Run tests against old version again
+      - name: Run tests against source version again
         run: |
           # Prepare alembic config
           docker exec keep-keep-backend-1  cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
@@ -477,7 +477,7 @@ jobs:
         env:
           WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
-      - name: Stop old version services again
+      - name: Stop source version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
 
