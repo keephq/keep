@@ -3,12 +3,8 @@ from typing import List
 from uuid import UUID
 
 from keep.api.core.cel_to_sql.ast_nodes import (
-    ComparisonNode,
-    ComparisonNodeOperator,
     ConstantNode,
     DataType,
-    LogicalNode,
-    LogicalNodeOperator,
     Node,
     PropertyAccessNode,
 )
