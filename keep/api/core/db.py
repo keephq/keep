@@ -519,6 +519,7 @@ def update_workflow_with_values(
             # TODO: check if valid
             is_valid=True,
             is_current=True,
+            updated_at=datetime.now(),
         )
         session.add(version)
 
