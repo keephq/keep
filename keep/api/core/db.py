@@ -495,8 +495,8 @@ def update_workflow_with_values(
         # Get the latest revision number for this workflow
         latest_version = session.exec(
             select(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
-            .order_by(WorkflowVersion.revision.desc())
+            .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
+            .order_by(col(WorkflowVersion.revision).desc())
             .limit(1)
         ).first()
 
@@ -505,7 +505,7 @@ def update_workflow_with_values(
         # Update all existing versions to not be current
         session.exec(
             update(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
             .values(is_current=False)  # type: ignore[attr-defined]
         )
 
