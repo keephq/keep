@@ -45,6 +45,8 @@ services:
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+    volumes:
+      - migrations_volume:/app/migrations
     depends_on:
       keep-database:
         condition: service_healthy
@@ -148,3 +150,4 @@ services:
 volumes:
   mysql-data:
   grafana-storage: {}
+  migrations_volume:
