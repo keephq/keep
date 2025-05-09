@@ -398,13 +398,15 @@ class BaseCelToSqlProvider:
 
     def _visit_in(self, first_operand: Node, array: list[ConstantNode], stack: list[Node]) -> str:
         constant_value_type = type(array[0].value)
-        cast_to = from_type_to_data_type(type(array[0].value))
+        cast_to = None
 
         if not all(isinstance(item.value, constant_value_type) for item in array):
             cast_to = DataType.STRING
 
         if isinstance(first_operand, PropertyAccessNode):
-            first_operand_str = self.cast(self._visit_property_access_node(first_operand, stack), cast_to)
+            first_operand_str = self._visit_property_access_node(first_operand, stack)
+            if cast_to:
+                first_operand_str = self.cast(first_operand_str, cast_to)
         elif isinstance(first_operand, MultipleFieldsNode):
             first_operand_str = self._visit_multiple_fields_node(first_operand, cast_to, stack)
         else:
