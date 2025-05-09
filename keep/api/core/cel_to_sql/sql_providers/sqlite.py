@@ -122,22 +122,11 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
     def _visit_in_for_array_datatype(
         self, first_operand: Node, array: list[ConstantNode], stack: list[Node]
     ) -> str:
-        node = None
-        for item in array:
-            current_node = ComparisonNode(
-                first_operand=first_operand,
-                operator=ComparisonNodeOperator.EQ,
-                second_operand=item,
-            )
+        in_opratation = self._visit_in(
+            PropertyAccessNode(path=["json_array", "value"]), array, stack
+        )
+        column = self._visit_property_access_node(first_operand, [])
 
-            if not node:
-                node = current_node
-                continue
-
-            node = LogicalNode(
-                left=node,
-                operator=LogicalNodeOperator.OR,
-                right=current_node,
-            )
-
-        return self._build_sql_filter(node, stack)
+        return (
+            f"(SELECT 1 FROM json_each({column}) as json_array WHERE {in_opratation})"
+        )
