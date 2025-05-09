@@ -2,7 +2,16 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
-from keep.api.core.cel_to_sql.ast_nodes import ConstantNode, DataType
+from keep.api.core.cel_to_sql.ast_nodes import (
+    ComparisonNode,
+    ComparisonNodeOperator,
+    ConstantNode,
+    DataType,
+    LogicalNode,
+    LogicalNodeOperator,
+    Node,
+    PropertyAccessNode,
+)
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
@@ -91,3 +100,44 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
         return f"{property_path} IS NOT NULL AND {property_path} LIKE '%{unquoted_literal}'"
+
+    def _visit_equal_for_array_datatype(
+        self, first_operand: Node, second_operand: Node
+    ) -> str:
+        if not isinstance(first_operand, PropertyAccessNode):
+            raise NotImplementedError(
+                f"Array datatype comparison is not supported for {type(first_operand).__name__} node"
+            )
+
+        if not isinstance(second_operand, ConstantNode):
+            raise NotImplementedError(
+                f"Array datatype comparison is not supported for {type(second_operand).__name__} node"
+            )
+
+        prop = self._visit_property_access_node(first_operand, [])
+        value = self._visit_constant_node(second_operand.value)[1:-1]
+
+        return f"(SELECT 1 FROM json_each({prop}) as json_array WHERE json_array.value = '{value}')"
+
+    def _visit_in_for_array_datatype(
+        self, first_operand: Node, array: list[ConstantNode], stack: list[Node]
+    ) -> str:
+        node = None
+        for item in array:
+            current_node = ComparisonNode(
+                first_operand=first_operand,
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=item,
+            )
+
+            if not node:
+                node = current_node
+                continue
+
+            node = LogicalNode(
+                left=node,
+                operator=LogicalNodeOperator.OR,
+                right=current_node,
+            )
+
+        return self._build_sql_filter(node, stack)
