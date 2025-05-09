@@ -104,34 +104,34 @@
     "expected_sql_dialect_based": {
       "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"randomDate\"'), json_extract(alert_event, '$.\"randomDate\"')) >= datetime('2025-01-30 10:00:09')",
       "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"randomDate\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"randomDate\"'))) >= CAST('2025-01-30 10:00:09' as DATETIME)",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'randomDate')::TIMESTAMP, ((alert_event) ->> 'randomDate')::TIMESTAMP) >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
+      "postgresql": "(COALESCE((alert_enrichments) ->> 'randomDate', (alert_event) ->> 'randomDate'))::TIMESTAMP >= CAST('2025-01-30 10:00:09' as TIMESTAMP)"
     }
   },
   {
     "input_cel": "alert.count > 7.84",
     "description": "Greater than with float",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"count\"') as REAL), CAST(json_extract(alert_event, '$.\"count\"') as REAL)) > 7.84",
+      "sqlite": "CAST(COALESCE(json_extract(alert_enrichments, '$.\"count\"'), json_extract(alert_event, '$.\"count\"')) as REAL) > 7.84",
       "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"count\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"count\"'))) > 7.84",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT) > 7.84"
+      "postgresql": "(COALESCE((alert_enrichments) ->> 'count', (alert_event) ->> 'count'))::FLOAT > 7.84"
     }
   },
   {
     "input_cel": "severity >= 'medium'",
     "description": "Greater than or equal comparison operator with enum",
     "expected_sql_dialect_based": {
-      "sqlite": "CAST(severity as TEXT) in ('medium', 'high', 'critical')",
+      "sqlite": "severity in ('medium', 'high', 'critical')",
       "mysql": "severity in ('medium', 'high', 'critical')",
-      "postgresql": "(severity)::TEXT in ('medium', 'high', 'critical')"
+      "postgresql": "severity in ('medium', 'high', 'critical')"
     }
   },
   {
     "input_cel": "severity > 'medium'",
     "description": "Greater than comparison operator with enum",
     "expected_sql_dialect_based": {
-      "sqlite": "CAST(severity as TEXT) in ('high', 'critical')",
+      "sqlite": "severity in ('high', 'critical')",
       "mysql": "severity in ('high', 'critical')",
-      "postgresql": "(severity)::TEXT in ('high', 'critical')"
+      "postgresql": "severity in ('high', 'critical')"
     }
   },
   {
@@ -174,27 +174,27 @@
     "input_cel": "alert.count <= 100",
     "description": "Less than or equal with integer",
     "expected_sql_dialect_based": {
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"count\"') as REAL), CAST(json_extract(alert_event, '$.\"count\"') as REAL)) <= 100",
+      "sqlite": "CAST(COALESCE(json_extract(alert_enrichments, '$.\"count\"'), json_extract(alert_event, '$.\"count\"')) as REAL) <= 100",
       "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"count\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"count\"'))) <= 100",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'count')::FLOAT, ((alert_event) ->> 'count')::FLOAT) <= 100"
+      "postgresql": "(COALESCE((alert_enrichments) ->> 'count', (alert_event) ->> 'count'))::FLOAT <= 100"
     }
   },
   {
     "input_cel": "severity < 'medium'",
     "description": "Less than comparison operator with enum",
     "expected_sql_dialect_based": {
-      "sqlite": "NOT (CAST(severity as TEXT) in ('medium', 'high', 'critical'))",
+      "sqlite": "NOT (severity in ('medium', 'high', 'critical'))",
       "mysql": "NOT (severity in ('medium', 'high', 'critical'))",
-      "postgresql": "NOT ((severity)::TEXT in ('medium', 'high', 'critical'))"
+      "postgresql": "NOT (severity in ('medium', 'high', 'critical'))"
     }
   },
   {
     "input_cel": "severity <= 'medium'",
     "description": "Less than or equal comparison operator with enum",
     "expected_sql_dialect_based": {
-      "sqlite": "NOT (CAST(severity as TEXT) in ('high', 'critical'))",
+      "sqlite": "NOT (severity in ('high', 'critical'))",
       "mysql": "NOT (severity in ('high', 'critical'))",
-      "postgresql": "NOT ((severity)::TEXT in ('high', 'critical'))"
+      "postgresql": "NOT (severity in ('high', 'critical'))"
     }
   },
   {

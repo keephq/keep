@@ -324,6 +324,10 @@ class BaseCelToSqlProvider:
                 second_operand_data_type = from_type_to_data_type(
                     type(comparison_node.second_operand.value)
                 )
+                second_operand = self._visit_constant_node(
+                    comparison_node.second_operand.value,
+                    self._get_data_type_to_convert(comparison_node),
+                )
 
         if first_operand is None:
             first_operand = self._build_sql_filter(comparison_node.first_operand, stack)
