@@ -13,8 +13,8 @@
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
       "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"'))) = 'HIGH'",
-      "postgresql": "COALESCE(((alert_enrichments) ->> 'severity')::TEXT, ((alert_event) ->> 'severity')::TEXT) = 'HIGH'",
-      "sqlite": "COALESCE(CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT), CAST(json_extract(alert_event, '$.\"severity\"') as TEXT)) = 'HIGH'"
+      "postgresql": "(COALESCE((alert_enrichments) ->> 'severity', (alert_event) ->> 'severity'))::TEXT = 'HIGH'",
+      "sqlite": "CAST(COALESCE(json_extract(alert_enrichments, '$.\"severity\"'), json_extract(alert_event, '$.\"severity\"')) as TEXT) = 'HIGH'"
     }
   },
   {
