@@ -259,7 +259,11 @@ class SlackProvider(BaseProvider):
                 if response_json.get("error") == "not_authed":
                     self.logger.warning(
                         "Not authenticated, trying again with Bearer token",
-                        extra={"payload": payload},
+                        extra={
+                            "tenant_id": self.context_manager.tenant_id,
+                            "workflow_id": self.context_manager.workflow_id,
+                            "provider_id": self.provider_id,
+                        },
                     )
                     if payload.get("attachments", None):
                         response = requests.post(
