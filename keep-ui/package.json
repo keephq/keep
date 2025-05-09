@@ -11,7 +11,8 @@
     "lint": "next lint",
     "start": "next start",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:workflow-examples": "ts-node -P tsconfig.scripts.json scripts/validate-workflow-examples.ts"
   },
   "dependencies": {
     "@auth/core": "^0.38.0",
@@ -58,7 +59,7 @@
     "monaco-editor": "^0.52.2",
     "monaco-yaml": "^5.3.1",
     "next": "^15.3.1",
-    "next-auth": "^5.0.0-beta.25",
+    "next-auth": "^5.0.0-beta.27",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",
     "pusher-js": "^8.4.0",

@@ -38,6 +38,11 @@ declare module "next-auth/jwt" {
     accessToken: string;
     tenantId?: string;
     role?: string;
+    tenantIds?: {
+      tenant_id: string;
+      tenant_name: string;
+      tenant_logo_url?: string;
+    }[];
   }
 }
 

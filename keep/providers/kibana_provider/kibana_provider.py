@@ -199,6 +199,8 @@ class KibanaProvider(BaseProvider):
             dict[str, bool | str]: A dictionary of scopes and whether they are valid or not
         """
         validated_scopes = {}
+        connector = None
+        alert = None
         for scope in self.PROVIDER_SCOPES:
             try:
                 if scope.name == "rulesSettings:read":
@@ -209,7 +211,9 @@ class KibanaProvider(BaseProvider):
                     alert = self.request(
                         "POST", "api/alerting/rule", json=self.MOCK_ALERT_PAYLOAD
                     )
-                    self.request("DELETE", f"api/alerting/rule/{alert['id']}")
+                    if not alert:
+                        raise Exception("Failed validating rulesSettings:write")
+                    self.request("DELETE", f"api/alerting/rule/{alert.get('id')}")
                 elif scope.name == "actions:read":
                     self.request("GET", "api/actions/connectors")
                 elif scope.name == "actions:write":
@@ -218,13 +222,37 @@ class KibanaProvider(BaseProvider):
                         "api/actions/connector",
                         json=self.MOCK_CONNECTOR_PAYLOAD,
                     )
-                    self.request("DELETE", f"api/actions/connector/{connector['id']}")
+                    if not connector:
+                        raise Exception("Failed validating actions:write")
+                    self.request(
+                        "DELETE", f"api/actions/connector/{connector.get('id')}"
+                    )
             except HTTPException as e:
+                self.logger.exception(
+                    "Failed validating scope",
+                    extra={
+                        "scope": scope.name,
+                        "error": e.detail,
+                        "tenant_id": self.context_manager.tenant_id,
+                        "connector": connector,
+                        "alert": alert,
+                    },
+                )
                 if e.status_code == 403 or e.status_code == 401:
                     validated_scopes[scope.name] = e.detail
                 # this means we faild on something else which is not permissions and it's probably ok.
                 pass
             except Exception as e:
+                self.logger.exception(
+                    "Failed validating scope",
+                    extra={
+                        "scope": scope.name,
+                        "error": e,
+                        "tenant_id": self.context_manager.tenant_id,
+                        "connector": connector,
+                        "alert": alert,
+                    },
+                )
                 validated_scopes[scope.name] = str(e)
                 continue
             validated_scopes[scope.name] = True

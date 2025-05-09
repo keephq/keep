@@ -225,7 +225,7 @@ config.callbacks.session = async (params) => {
 
   // Also copy tenantIds from user object if available
   if (params.user && "tenantIds" in params.user) {
-    session.user.tenantIds = params.user.tenantIds;
+    session.user.tenantIds = params.user.tenantIds || session.user.tenantIds;
   }
 
   return session;
