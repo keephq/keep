@@ -1,11 +1,13 @@
 import { IncidentDto } from "@/entities/incidents/model";
-import { TextInput, Button } from "@tremor/react";
+import { Button } from "@tremor/react";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
+import { useUsers } from "@/entities/users/model/useUsers";
+import { CommentInput } from "./CommentInput";
 
 export function IncidentActivityComment({
   incident,
@@ -16,12 +18,19 @@ export function IncidentActivityComment({
 }) {
   const [comment, setComment] = useState("");
   const api = useApi();
+  const { data: users = [] } = useUsers();
 
   const onSubmit = useCallback(async () => {
     try {
+      // Extract mentioned users from Quill-formatted comment
+      const mentionedUsers = (comment.match(/@[^>]+<([^>]+)>/g) || [])
+        .map(mention => mention.match(/<([^>]+)>/)?.[1])
+        .filter(Boolean) as string[];
+      
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,
+        mentioned_users: mentionedUsers,
       });
       toast.success("Comment added!", { position: "top-right" });
       setComment("");
@@ -53,10 +62,11 @@ export function IncidentActivityComment({
 
   return (
     <div className="flex h-full w-full relative items-center">
-      <TextInput
+      <CommentInput
         value={comment}
         onValueChange={setComment}
-        placeholder="Add a new comment..."
+        users={users}
+        placeholder="Add a new comment... Use @ to mention users"
       />
       <Button
         color="orange"
