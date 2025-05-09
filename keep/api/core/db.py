@@ -539,6 +539,21 @@ def update_workflow_with_values(
         return existing_workflow
 
 
+def is_equal_workflow_dicts(a: dict, b: dict):
+    return (
+        a.get("workflow_raw") == b.get("workflow_raw")
+        and a.get("tenant_id") == b.get("tenant_id")
+        and a.get("is_test") == b.get("is_test")
+        and a.get("is_deleted") == b.get("is_deleted")
+        and a.get("is_disabled") == b.get("is_disabled")
+        and a.get("name") == b.get("name")
+        and a.get("description") == b.get("description")
+        and a.get("interval") == b.get("interval")
+        and a.get("provisioned") == b.get("provisioned")
+        and a.get("provisioned_file") == b.get("provisioned_file")
+    )
+
+
 def add_or_update_workflow(
     id: str,
     name: str,
@@ -551,7 +566,7 @@ def add_or_update_workflow(
     updated_by: str,
     provisioned: bool = False,
     provisioned_file: str | None = None,
-    force_update: bool = True,
+    force_update: bool = False,
     is_test: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -563,9 +578,25 @@ def add_or_update_workflow(
             existing_workflow = get_workflow_by_id(tenant_id, id)
 
         if existing_workflow:
-            if workflow_raw == existing_workflow.workflow_raw and not force_update:
+            existing_workflow_dict = existing_workflow.model_dump()
+            workflow_dict = dict(
+                tenant_id=tenant_id,
+                name=name,
+                description=description,
+                interval=interval,
+                workflow_raw=workflow_raw,
+                is_disabled=is_disabled,
+                is_test=is_test,
+                is_deleted=False,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
+            )
+            if (
+                is_equal_workflow_dicts(existing_workflow_dict, workflow_dict)
+                and not force_update
+            ):
                 logger.info(
-                    f"Workflow {id} already exists with the same workflow_raw, skipping update"
+                    f"Workflow {id} already exists with the same workflow properties, skipping update"
                 )
                 return existing_workflow
             return update_workflow_with_values(
