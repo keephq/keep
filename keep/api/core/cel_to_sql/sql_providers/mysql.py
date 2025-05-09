@@ -170,9 +170,13 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             )
 
         prop = self._visit_property_access_node(first_operand, [])
-        value = self._visit_constant_node(second_operand.value)[1:-1]
+        constant_node_value = self._visit_constant_node(second_operand.value)
 
-        return f"JSON_CONTAINS({prop}, '[\"{value}\"]')"
+        if constant_node_value == "NULL":
+            return f"(JSON_CONTAINS({prop}, '[null]') OR {prop} IS NULL)"
+        elif constant_node_value.startswith("'") and constant_node_value.endswith("'"):
+            constant_node_value = constant_node_value[1:-1]
+        return f"JSON_CONTAINS({prop}, '[\"{constant_node_value}\"]')"
 
     def _visit_in_for_array_datatype(
         self, first_operand: Node, array: list[ConstantNode], stack: list[Node]

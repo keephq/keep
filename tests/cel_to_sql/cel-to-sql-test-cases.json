@@ -9,6 +9,15 @@
     }
   },
   {
+    "input_cel": "severity == 'medium' && jsonArray == 'Sam Byron'",
+    "description": "Equality with JSON array column",
+    "expected_sql_dialect_based": {
+      "mysql": "(severity = 'medium' AND JSON_CONTAINS(entity.jsonArray, '[\"Sam Byron\"]'))",
+      "postgresql": "(severity = 'medium' AND entity.jsonArray::jsonb @> '[\"Sam Byron\"]')",
+      "sqlite": "(severity = 'medium' AND (SELECT 1 FROM json_each(entity.jsonArray) as json_array WHERE json_array.value = 'Sam Byron'))"
+    }
+  },
+  {
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
@@ -42,6 +51,15 @@
       "mysql": "NOT ((COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL))",
       "postgresql": "NOT ((COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL))",
       "sqlite": "NOT ((COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL))"
+    }
+  },
+  {
+    "input_cel": "severity == 'medium' && (jsonArray in ['grafana', 'datadog', 'prometheus', null])",
+    "description": "IN operator along with ARRAY datatype",
+    "expected_sql_dialect_based": {
+      "mysql": "(severity = 'medium' AND (((JSON_CONTAINS(entity.jsonArray, '[\"grafana\"]') OR JSON_CONTAINS(entity.jsonArray, '[\"datadog\"]')) OR JSON_CONTAINS(entity.jsonArray, '[\"prometheus\"]')) OR (JSON_CONTAINS(entity.jsonArray, '[null]') OR entity.jsonArray IS NULL)))",
+      "postgresql": "(severity = 'medium' AND (((entity.jsonArray::jsonb @> '[\"grafana\"]' OR entity.jsonArray::jsonb @> '[\"datadog\"]') OR entity.jsonArray::jsonb @> '[\"prometheus\"]') OR entity.jsonArray::jsonb @> '[null]' OR entity.jsonArray IS NULL))",
+      "sqlite": "(severity = 'medium' AND (SELECT 1 FROM json_each(entity.jsonArray) as json_array WHERE (CAST(json_array.value as TEXT) in ('grafana', 'datadog', 'prometheus') OR CAST(json_array.value as TEXT) IS NULL)))"
     }
   },
   {
