@@ -42,6 +42,8 @@ services:
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
       - ALLOW_DB_DOWNGRADE=true
+    volumes:
+      - ./app:/app
     depends_on:
       - keep-database
 
