@@ -13,6 +13,7 @@ import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { PostHogPageView } from "@/shared/ui/PostHogPageView";
+import { MentionNotificationsProvider } from "./MentionNotificationsProvider";
 
 // If loading a variable font, you don't need to specify the font weight
 const mulish = Mulish({
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                 <main className="page-container flex flex-col col-start-3 overflow-auto">
                   {/* Add the banner here, before the navbar */}
                   {config.READ_ONLY && <ReadOnlyBanner />}
+                  <MentionNotificationsProvider />
                   <div className="flex-1">{children}</div>
                   {/** footer */}
                   {process.env.GIT_COMMIT_HASH &&
