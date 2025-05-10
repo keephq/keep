@@ -1,5 +1,3 @@
-import pytest
-
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.workflow import Workflow as WorkflowDB
@@ -540,7 +538,7 @@ triggers:
     assert triggered_alert.severity == "critical"
 
 
-def test_nested_regex_patterns(db_session):
+def test_nested_regex_patterns(db_session, caplog):
     """Test nested regex patterns with special characters"""
     workflow_manager = WorkflowManager()
     workflow_definition = """workflow:
@@ -606,10 +604,10 @@ triggers:
             lastReceived="2025-01-30T09:19:02.519Z",
         ),
     ]
-    with pytest.raises(Exception, match="Unsupported regex"):
-        workflow_manager.insert_events(
-            SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
-        )
+    workflow_manager.insert_events(
+        SINGLE_TENANT_UUID, matching_alerts + non_matching_alerts
+    )
+    assert any("Unsupported regex" in message for message in caplog.text.splitlines())
 
 
 def test_time_based_filters(db_session):
@@ -818,7 +816,7 @@ triggers:
     assert triggered_alert.status == "firing"
 
 
-def test_regex_exclusion_patterns(db_session):
+def test_regex_exclusion_patterns(db_session, caplog):
     """Test regex patterns with exclusion"""
     workflow_manager = WorkflowManager()
     workflow_definition = """workflow:
@@ -890,10 +888,10 @@ triggers:
 
     # Deprecated complex regex should raise an exception.
     # We encourage users to use CEL instead.
-    with pytest.raises(Exception, match="Unsupported regex"):
-        workflow_manager.insert_events(
-            SINGLE_TENANT_UUID, matching_alerts + excluded_alerts
-        )
+    workflow_manager.insert_events(
+        SINGLE_TENANT_UUID, matching_alerts + excluded_alerts
+    )
+    assert any("Unsupported regex" in message for message in caplog.text.splitlines())
 
 
 def test_exclusion_with_source_list(db_session):

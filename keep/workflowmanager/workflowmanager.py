@@ -325,10 +325,21 @@ class WorkflowManager:
                         # backward compatibility for filter. should be removed in the future
                         # if triggers and cel are set, we override the cel with filters.
                         if "filters" in trigger:
-                            # this is old format, so let's convert it to CEL
-                            trigger["cel"] = self._convert_filters_to_cel(
-                                trigger["filters"]
-                            )
+                            try:
+                                # this is old format, so let's convert it to CEL
+                                trigger["cel"] = self._convert_filters_to_cel(
+                                    trigger["filters"]
+                                )
+                            except Exception:
+                                self.logger.exception(
+                                    "Failed to convert filters to CEL, workflow will not run",
+                                    extra={
+                                        "trigger": trigger,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                    },
+                                )
+                                continue
 
                         compiled_ast = self.cel_environment.compile(trigger["cel"])
                         program = self.cel_environment.program(compiled_ast)
