@@ -390,7 +390,7 @@ jobs:
             cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini &&
             sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' /app/alembic_temp.ini &&
             mkdir /app/migrations
-            cp /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions /app/migrations
+            cp /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions /app/migrations/
             
             LAST_MIGRATION=\$(ls -t /app/migrations/versions/*.py | head -n1) &&
             echo \"Last migration: \$LAST_MIGRATION\" &&
