@@ -373,11 +373,7 @@ jobs:
             
             alembic -c /app/alembic_temp.ini upgrade head
             "
-          echo "Dummy migration added"
-
-      - name: Copy migrations
-        run: | 
-          docker cp keep-keep-backend-1:/app/migrations ./migrations      
+          echo "Dummy migration added"    
 
       - name: Stop source version services
         run: |
@@ -387,10 +383,6 @@ jobs:
       - name: Start source version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
-
-      - name: Restore migrations
-        run: |
-          docker cp ./migrations keep-keep-backend-1:/app
 
       - name: Wait for source version services again
         run: |
