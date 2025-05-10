@@ -46,22 +46,24 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
     ) -> AuthenticatedEntity:
         # If we have an api key or an authorization header, we need to authenticate using that
         if api_key or request.headers.get("Authorization"):
-            api_key = self._extract_api_key(request, api_key, authorization)
-            # HACK for cloudwatch without api key for self hosted deployments
-            if isinstance(api_key, AuthenticatedEntity):
-                return api_key
+            try:
+                api_key = self._extract_api_key(request, api_key, authorization)
 
-            if api_key:
-                self.logger.debug("Attempting to authenticate with API key")
-                try:
-                    return self._verify_api_key(request, api_key, authorization)
-                except HTTPException:
-                    raise
-                except Exception:
-                    self.logger.exception("Failed to validate API Key")
-                    raise HTTPException(
-                        status_code=401, detail="Invalid authentication credentials"
-                    )
+                if api_key:
+                    self.logger.info("Attempting to authenticate with API key")
+                    try:
+                        return self._verify_api_key(request, api_key, authorization)
+                    except HTTPException:
+                        raise
+                    except Exception:
+                        self.logger.exception("Failed to validate API Key")
+                        raise HTTPException(
+                            status_code=401, detail="Invalid authentication credentials"
+                        )
+            except Exception:
+                # If we fail to validate the API key, we need to try to authenticate with the user and role headers
+                # We will either way return a 401 status code if it fails, so we don't need to handle it here
+                pass
 
         # https://github.com/keephq/keep/issues/1203
         # get user name
