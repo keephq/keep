@@ -60,13 +60,19 @@ incident_field_configurations = [
         map_from_pattern="last_seen_time", map_to="incident.last_seen_time"
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_predicted", map_to="incident.is_predicted"
+        map_from_pattern="is_predicted",
+        map_to="incident.is_predicted",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_candidate", map_to="incident.is_candidate"
+        map_from_pattern="is_candidate",
+        map_to="incident.is_candidate",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_visible", map_to="incident.is_visible"
+        map_from_pattern="is_visible",
+        map_to="incident.is_visible",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alerts_count", map_to="incident.alerts_count"
@@ -83,6 +89,14 @@ incident_field_configurations = [
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.providerType", map_to="alert.provider_type"
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="sources", map_to="incident.sources", data_type=DataType.ARRAY
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="affectedServices",
+        map_to="incident.affected_services",
+        data_type=DataType.ARRAY,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
@@ -116,14 +130,14 @@ static_facets = [
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.providerType",
+        property_path="sources",
         name="Source",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="alert.service",
+        property_path="affectedServices",
         name="Service",
         is_static=True,
         type=FacetType.str,
