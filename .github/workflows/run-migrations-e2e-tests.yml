@@ -424,10 +424,8 @@ jobs:
             # Empty downgrade operation
             pass
           EOF
-            
-            alembic -c /app/alembic_temp.ini upgrade head
             "
-          echo "Dummy migration added"
+          echo "Dummy migration restored"
 
       - name: Wait for source version services again
         run: |
