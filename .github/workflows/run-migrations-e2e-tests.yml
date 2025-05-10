@@ -375,6 +375,10 @@ jobs:
             "
           echo "Dummy migration added"
 
+      - name: Copy migrations
+        run: | 
+          docker cp keep-keep-backend-1:/app/migrations ./migrations      
+
       - name: Stop source version services
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
@@ -385,46 +389,8 @@ jobs:
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
 
       - name: Restore migrations
-        run: |          
-          docker exec keep-keep-backend-1 bash -c "
-            # Создаем директории с правильными правами
-            mkdir -p /app/migrations/versions
-            chown -R keep:keep /app/migrations
-            
-            
-            # Копируем конфигурацию alembic
-            cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini
-            sed -i 's|script_location.*|script_location = /app/migrations|' /app/alembic_temp.ini
-            
-            # Проверяем исходные миграции
-            echo 'Checking source migrations:'
-            ls -la /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/
-            
-            # Рекурсивно копируем миграции
-            cp -r /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/* /app/migrations/versions/
-            
-            # Устанавливаем правильные права
-            chown -R keep:keep /app/migrations/versions
-            
-            # Проверяем скопированные миграции
-            echo 'Checking target migrations:'
-            ls -la /app/migrations/versions/
-            
-            # Создаем новую миграцию
-            LAST_MIGRATION=\$(ls -t /app/migrations/versions/*.py | head -n1)
-            echo \"Last migration: \$LAST_MIGRATION\"
-            
-            # Создаем новую миграцию без форматирования
-            alembic -c /app/alembic_temp.ini revision -m \"test_dummy_migration\" --autogenerate
-            
-            # Получаем путь к новой миграции
-            NEW_MIGRATION=\$(ls -t /app/migrations/versions/*.py | head -n1)
-            echo \"New migration: \$NEW_MIGRATION\"
-            
-            # Применяем миграции
-            alembic -c /app/alembic_temp.ini upgrade head
-          "
-          echo "Dummy migration restored"
+        run: |
+          docker cp ./migrations keep-keep-backend-1:/app
 
       - name: Wait for source version services again
         run: |
