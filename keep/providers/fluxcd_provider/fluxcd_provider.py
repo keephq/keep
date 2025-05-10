@@ -5,6 +5,8 @@ FluxCD Provider is a class that allows to get Flux CD resources and map them to 
 import os
 import tempfile
 import logging
+import dataclasses
+import pydantic
 from typing import Dict, List, Any, Optional, Union, Tuple  # noqa: F401 - Used for type hints
 from unittest.mock import MagicMock  # For testing
 
@@ -66,26 +68,59 @@ except ImportError as e:
 from keep.providers.models.provider_method import ProviderMethodDTO
 
 
-# Create a simple class instead of using dataclass for better compatibility
+@pydantic.dataclasses.dataclass
 class FluxcdProviderAuthConfig:
     """
     FluxCD authentication configuration.
     """
-    def __init__(self, **kwargs):
-        self.kubeconfig = kwargs.get('kubeconfig')
-        self.context = kwargs.get('context')
-        self.namespace = kwargs.get('namespace', 'flux-system')
-        self.api_server = kwargs.get('api_server')
-        self.token = kwargs.get('token')
-        self.insecure = kwargs.get('insecure', False)
-
-    # Field metadata is kept as comments for documentation purposes
-    # kubeconfig: Kubeconfig file content (required: False, sensitive: True)
-    # context: Kubernetes context to use (required: False, sensitive: False)
-    # namespace: Namespace where Flux CD is installed (required: False, sensitive: False)
-    # api_server: Kubernetes API server URL (required: False, sensitive: False)
-    # token: Kubernetes API token (required: False, sensitive: True)
-    # insecure: Skip TLS verification (required: False, sensitive: False)
+    kubeconfig: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Kubeconfig file content",
+            "sensitive": True,
+        }
+    )
+    context: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Kubernetes context to use",
+            "sensitive": False,
+        }
+    )
+    namespace: str = dataclasses.field(
+        default="flux-system",
+        metadata={
+            "required": False,
+            "description": "Namespace where Flux CD is installed",
+            "sensitive": False,
+        }
+    )
+    api_server: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Kubernetes API server URL",
+            "sensitive": False,
+        }
+    )
+    token: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Kubernetes API token",
+            "sensitive": True,
+        }
+    )
+    insecure: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "required": False,
+            "description": "Skip TLS verification",
+            "sensitive": False,
+        }
+    )
 
 
 class FluxcdProvider(BaseTopologyProvider):
