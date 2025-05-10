@@ -215,10 +215,23 @@ jobs:
           REVISION=$(docker exec keep-keep-backend-1  alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
           
           echo "Current head revision: $REVISION"
-      
+          
           # Save to output variable to reuse in later steps
           echo "revision=$REVISION" >> $GITHUB_OUTPUT
           
+          # Сохраняем миграции как артефакт после первого этапа
+          docker cp keep-keep-backend-1:/app/migrations ./migrations_step1
+          tar -czf migrations_step1.tar.gz migrations_step1/
+
+      - name: Upload migrations artifact from step 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations-artifact-step1
+          path: migrations_step1.tar.gz
+          retention-days: 7
+
+      - name: Run tests
+        run: |
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
 
       - name: Stop old version services
@@ -239,6 +252,23 @@ jobs:
             docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
           fi
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+
+      - name: Download migrations artifact from step 1
+        uses: actions/download-artifact@v4
+        with:
+          name: migrations-artifact-step1
+          path: .
+
+      - name: Restore migrations from step 1
+        run: |
+          # Распаковываем миграции
+          tar -xzf migrations_step1.tar.gz
+          
+          # Копируем миграции в контейнер
+          docker cp migrations_step1/. keep-keep-backend-1:/app/migrations/
+          
+          # Устанавливаем правильные права
+          docker exec keep-keep-backend-1 chown -R root:root /app/migrations
 
       - name: Wait for source version services
         run: |
@@ -328,9 +358,20 @@ jobs:
           # Save to output variable to reuse in later steps
           echo "revision=$REVISION" >> $GITHUB_OUTPUT
           
+          # Сохраняем миграции как артефакт после второго этапа
+          docker cp keep-keep-backend-1:/app/migrations ./migrations_step2
+          tar -czf migrations_step2.tar.gz migrations_step2/
+
+      - name: Upload migrations artifact from step 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations-artifact-step2
+          path: migrations_step2.tar.gz
+          retention-days: 7
+
+      - name: Run tests
+        run: |
           poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
-        env:
-          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
       - name: Add dummy migration
         run: |          
@@ -384,6 +425,23 @@ jobs:
       - name: Start source version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+
+      - name: Download migrations artifact from step 2
+        uses: actions/download-artifact@v4
+        with:
+          name: migrations-artifact-step2
+          path: .
+
+      - name: Restore migrations from step 2
+        run: |
+          # Распаковываем миграции
+          tar -xzf migrations_step2.tar.gz
+          
+          # Копируем миграции в контейнер
+          docker cp migrations_step2/. keep-keep-backend-1:/app/migrations/
+          
+          # Устанавливаем правильные права
+          docker exec keep-keep-backend-1 chown -R root:root /app/migrations
 
       - name: Wait for source version services again
         run: |
