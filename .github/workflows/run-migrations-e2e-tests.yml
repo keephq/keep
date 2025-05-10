@@ -383,8 +383,6 @@ jobs:
       - name: Start source version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
-      
-            - name: Add dummy migration
 
       - name: Restore migrations
         run: |          
