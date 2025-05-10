@@ -54,7 +54,7 @@ def test_with_function(context_manager):
         ("res keep.eq(1, 2)", "res False"),
     ]
 )
-def test_with_arithmetic_function(context_manager, test_input, expected_output):
+def test_with_arithmetic_functions(context_manager, test_input, expected_output):
     iohandler = IOHandler(context_manager)
     s = iohandler.render(test_input)
     assert s == expected_output
