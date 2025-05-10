@@ -80,12 +80,12 @@ class FluxcdProviderAuthConfig:
         self.insecure = kwargs.get('insecure', False)
 
     # Field metadata is kept as comments for documentation purposes
-    # kubeconfig: Kubeconfig file content (sensitive)
-    # context: Kubernetes context to use
-    # namespace: Namespace where Flux CD is installed (default: flux-system)
-    # api_server: Kubernetes API server URL (alias: api-server)
-    # token: Kubernetes API token (sensitive)
-    # insecure: Skip TLS verification (default: False)
+    # kubeconfig: Kubeconfig file content (required: False, sensitive: True)
+    # context: Kubernetes context to use (required: False, sensitive: False)
+    # namespace: Namespace where Flux CD is installed (required: False, sensitive: False)
+    # api_server: Kubernetes API server URL (required: False, sensitive: False)
+    # token: Kubernetes API token (required: False, sensitive: True)
+    # insecure: Skip TLS verification (required: False, sensitive: False)
 
 
 class FluxcdProvider(BaseTopologyProvider):
