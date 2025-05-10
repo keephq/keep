@@ -45,6 +45,61 @@ def test_functions_diff(test_description, given, expected):
         functions.diff(given) == expected
     ), f"{test_description}: Expected {given} to return {expected}"
 
+def test_keep_add_function():
+    """
+    Test the add function
+    """
+    assert functions.add(1, 2) == 3
+    assert functions.add(1, 2, 3) == 6
+
+def test_keep_sub_function():
+    """
+    Test the subtract function
+    """
+    assert functions.sub(1, 2) == -1
+    assert functions.sub(1, 2, 3) == -4
+
+def test_keep_mul_function():
+    """
+    Test the multiply function
+    """
+    assert functions.mul(1, 2) == 2
+    assert functions.mul(1, 2, 3) == 6
+
+def test_keep_div_function():
+    """
+    Test the divide function
+    """
+    assert functions.div(6, 2) == 3
+    assert functions.div(6, 2, 3) == 1
+
+def test_keep_mod_function():
+    """
+    Test the mod function
+    """
+    assert functions.mod(1, 2) == 1
+    assert functions.mod(1, 2, 3) == 1
+
+def test_keep_exp_function():
+    """
+    Test the exp function
+    """
+    assert functions.exp(1, 2) == 1
+    assert functions.exp(1, 2, 3) == 1
+
+def test_keep_fdiv_function():
+    """
+    Test the fdiv function
+    """
+    assert functions.fdiv(10, 3) == 3
+    assert functions.fdiv(10, 3, 2) == 1
+
+def test_keep_eq_function():
+    """
+    Test the eq function
+    """
+    assert functions.eq(1, 2) == False
+    assert functions.eq(1, 1) == True
 
 def test_keep_len_function():
     """
