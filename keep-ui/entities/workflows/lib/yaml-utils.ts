@@ -50,7 +50,10 @@ function orderDocument(doc: Document) {
     "inputs",
     "consts",
     "owners",
+    "permissions",
+    "strategy",
     "services",
+    "on-failure",
     "steps",
     "actions",
   ];

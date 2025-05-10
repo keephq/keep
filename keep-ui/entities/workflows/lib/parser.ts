@@ -14,10 +14,9 @@ import {
   YamlAssertCondition,
   YamlStepOrAction,
   YamlThresholdCondition,
-  YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
 import { parseWorkflowYamlStringToJSON } from "./yaml-utils";
-import { WorkflowInput } from "../model/yaml.schema";
+import { WorkflowInput, YamlWorkflowDefinition } from "../model/yaml.schema";
 
 type StepOrActionWithType = YamlStepOrAction & { type: "step" | "action" };
 
@@ -119,7 +118,8 @@ export function getWorkflowDefinition(
   consts: Record<string, string>,
   steps: V2Step[],
   conditions: V2Step[],
-  triggers: { [key: string]: { [key: string]: string } } = {}
+  triggers: { [key: string]: { [key: string]: string } } = {},
+  inputs: WorkflowInput[] = []
 ): Definition {
   /**
    * Generate the workflow definition
@@ -134,6 +134,7 @@ export function getWorkflowDefinition(
       disabled: disabled,
       isLocked: true,
       consts: consts,
+      inputs: inputs,
       ...triggers,
     },
   };
@@ -147,6 +148,7 @@ export function getWorkflowDefinition(
 // 1. Parse the yaml file to get YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition
 // 2. Convert YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition to V2StepStep, V2ActionStep, V2StepConditionAssert, V2StepConditionThreshold
 
+// TODO: use zod to validate the input, use yaml as a source of truth
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]
@@ -250,7 +252,8 @@ export function parseWorkflow(
     workflow.consts,
     steps,
     conditions,
-    triggers
+    triggers,
+    workflow?.inputs ?? []
   );
 }
 
@@ -426,7 +429,7 @@ export function getYamlActionFromAction(
  */
 export function getYamlWorkflowDefinition(
   definition: Definition
-): YamlWorkflowDefinition {
+): YamlWorkflowDefinition["workflow"] {
   const alert = definition;
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
@@ -527,9 +530,10 @@ export function getYamlWorkflowDefinition(
   return {
     id: alertId,
     name: name,
-    triggers: triggers,
     description: description,
     disabled: Boolean(disabled),
+    triggers: triggers,
+    inputs: alert.properties.inputs,
     owners: owners,
     services: services,
     consts: consts,
