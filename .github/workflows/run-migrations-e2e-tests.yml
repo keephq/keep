@@ -335,7 +335,6 @@ jobs:
       - name: Add dummy migration
         run: |          
           docker exec keep-keep-backend-1 bash -c "
-            pip install black
             cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini &&
             sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' /app/alembic_temp.ini &&
 
@@ -384,6 +383,53 @@ jobs:
       - name: Start source version services again
         run: |
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+      
+            - name: Add dummy migration
+
+      - name: Restore migrations
+        run: |          
+          docker exec keep-keep-backend-1 bash -c "
+            cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini &&
+            sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' /app/alembic_temp.ini &&
+            mkdir /app/migrations
+            cp /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions /app/migrations
+            
+            LAST_MIGRATION=\$(ls -t /app/migrations/versions/*.py | head -n1) &&
+            echo \"Last migration: \$LAST_MIGRATION\" &&
+
+            alembic -c /app/alembic_temp.ini revision -m \"test_dummy_migration\" &&
+
+            NEW_MIGRATION=\$(ls -t /app/migrations/versions/*.py | head -n1) &&
+
+            cat > \"\$NEW_MIGRATION\" << EOF
+          \"\"\"test_dummy_migration
+    
+          Revision ID: \$(basename \"\$NEW_MIGRATION\" .py)
+          Revises: \$(basename \"\$LAST_MIGRATION\" .py)
+          Create Date: \$(date +\"%Y-%m-%d %H:%M:%S\")
+    
+          \"\"\"
+          from alembic import op
+          import sqlalchemy as sa
+    
+          # revision identifiers, used by Alembic.
+          revision = '\$(basename \"\$NEW_MIGRATION\" .py)'
+          down_revision = '\$(basename \"\$LAST_MIGRATION\" .py)'
+          branch_labels = None
+          depends_on = None
+    
+          def upgrade() -> None:
+            # Empty upgrade operation
+            pass
+    
+          def downgrade() -> None:
+            # Empty downgrade operation
+            pass
+          EOF
+            
+            alembic -c /app/alembic_temp.ini upgrade head
+            "
+          echo "Dummy migration added"
 
       - name: Wait for source version services again
         run: |
