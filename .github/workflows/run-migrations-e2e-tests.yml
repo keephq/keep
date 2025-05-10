@@ -1,0 +1,496 @@
+on:
+  workflow_call:
+    inputs:
+      db-type:
+        required: true
+        type: string
+      redis_enabled:
+        required: true
+        type: boolean
+      python-version:
+        required: true
+        type: string
+      is-fork:
+        required: true
+        type: boolean
+      backend-image-name:
+        required: true
+        type: string
+      frontend-image-name:
+        required: true
+        type: string
+
+jobs:
+  run-migration-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REDIS: ${{ inputs.redis_enabled }}
+      REDIS_HOST: keep-redis
+      REDIS_PORT: 6379
+      OLD_BACKEND_IMAGE: us-central1-docker.pkg.dev/keephq/keep/keep-api:0.42.0
+      SOURCE_BACKEND_IMAGE: ${{ inputs.backend-image-name }}
+      OLD_FRONTEND_IMAGE: us-central1-docker.pkg.dev/keephq/keep/keep-ui:0.42.0
+      SOURCE_FRONTEND_IMAGE: ${{ inputs.frontend-image-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.is-fork != true }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Restore dependencies cache
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      # Only install dependencies if cache miss
+      - name: Install dependencies using poetry
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright and dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          poetry run playwright install --with-deps
+
+      # For forks: Build images locally again since they don't persist between jobs
+      - name: Set up Docker Buildx
+        if: ${{ inputs.is-fork == true }}
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Rebuild frontend image locally for fork PRs
+        if: ${{ inputs.is-fork == true }}
+        uses: docker/build-push-action@v4
+        with:
+          context: keep-ui
+          file: ./docker/Dockerfile.ui
+          push: false
+          load: true
+          tags: |
+            keep-frontend:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Rebuild backend image locally for fork PRs
+        if: ${{ inputs.is-fork == true }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile.api
+          push: false
+          load: true
+          tags: |
+            keep-backend:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      # Phase 1: Run old version
+      - name: Create docker-compose file for old version
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.OLD_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.OLD_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          cat tests/e2e_tests/docker-compose-modified.yml
+
+      - name: Start old version services
+        run: |
+          if [[ "${{ inputs.is-fork }}" != "true" ]]; then
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+          fi
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+
+      - name: Wait for old version services
+        run: |
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+          
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR ON ERROR EXIT $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+          
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+          
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+          
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          
+            # last time, print logs using docker compose
+            if [ ! -z "$compose_service" ]; then
+              echo "===== FINAL LOGS FOR $compose_service ====="
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+              echo "=========================================="
+            fi
+          }
+          
+          # Database checks
+          if [ "${{ inputs.db-type }}" == "mysql" ]; then
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ inputs.db-type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
+          fi
+          
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
+          
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
+
+      - name: Run tests against old version
+        run: |
+          # Prepare alembic config
+          docker exec keep-keep-backend-1  cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
+          docker exec keep-keep-backend-1  sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
+          
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-keep-backend-1  alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
+          
+          echo "Current head revision: $REVISION"
+      
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+
+      - name: Stop old version services
+        run: |
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+
+      # Phase 2: Run source version
+      - name: Create docker-compose file for source version
+        run: |
+          cp tests/e2e_tests/docker-compose-e2e-${{ inputs.db-type }}.yml tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPFRONTEND_IMAGE%|${{ env.SOURCE_FRONTEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          sed -i "s|%KEEPBACKEND_IMAGE%|${{ env.SOURCE_BACKEND_IMAGE }}|g" tests/e2e_tests/docker-compose-modified.yml
+          cat tests/e2e_tests/docker-compose-modified.yml
+
+      - name: Start source version services
+        run: |
+          if [[ "${{ inputs.is-fork }}" != "true" ]]; then
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
+          fi
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+
+      - name: Wait for source version services
+        run: |
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+          
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR ON ERROR EXIT $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+          
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+          
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+          
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          
+            # last time, print logs using docker compose
+            if [ ! -z "$compose_service" ]; then
+              echo "===== FINAL LOGS FOR $compose_service ====="
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+              echo "=========================================="
+            fi
+          }
+          
+          # Database checks
+          if [ "${{ inputs.db-type }}" == "mysql" ]; then
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ inputs.db-type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
+          fi
+          
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
+          
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
+
+      - name: Run tests against source version
+        run: |
+          # Prepare alembic config
+          docker exec keep-keep-backend-1  cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
+          docker exec keep-keep-backend-1  sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
+          
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-keep-backend-1  alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
+          
+          echo "Current head revision: $REVISION"
+          
+          if [[ "$REVISION" != "$WORKFLOW_REVISION" ]]; then
+            echo "Revisions don't match, continue..."
+          else
+            echo "Revisions match, exiting..."
+            exit 1
+          fi
+          
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+        env:
+          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
+
+      - name: Add dummy migration
+        run: |          
+          docker exec keep-keep-backend-1 bash -c "
+            cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini &&
+            sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' /app/alembic_temp.ini &&
+
+            LAST_MIGRATION=\$(ls -t /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/*.py | head -n1) &&
+            echo \"Last migration: \$LAST_MIGRATION\" &&
+
+            alembic -c /app/alembic_temp.ini revision -m \"test_dummy_migration\" &&
+
+            NEW_MIGRATION=\$(ls -t /venv/lib/python3.11/site-packages/keep/api/models/db/migrations/versions/*.py | head -n1) &&
+
+            cat > \"\$NEW_MIGRATION\" << EOF
+          \"\"\"test_dummy_migration
+    
+          Revision ID: \$(basename \"\$NEW_MIGRATION\" .py)
+          Revises: \$(basename \"\$LAST_MIGRATION\" .py)
+          Create Date: \$(date +\"%Y-%m-%d %H:%M:%S\")
+    
+          \"\"\"
+          from alembic import op
+          import sqlalchemy as sa
+    
+          # revision identifiers, used by Alembic.
+          revision = '\$(basename \"\$NEW_MIGRATION\" .py)'
+          down_revision = '\$(basename \"\$LAST_MIGRATION\" .py)'
+          branch_labels = None
+          depends_on = None
+    
+          def upgrade() -> None:
+            # Empty upgrade operation
+            pass
+    
+          def downgrade() -> None:
+            # Empty downgrade operation
+            pass
+          EOF
+            
+            alembic -c /app/alembic_temp.ini upgrade head
+            "
+          echo "Dummy migration added"    
+
+      - name: Stop source version services
+        run: |
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+
+      # Phase 3: Run source version without dummy migration again
+      - name: Start source version services again
+        run: |
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+
+      - name: Wait for source version services again
+        run: |
+          # Function for exponential backoff
+          function wait_for_service() {
+            local service_name=$1
+            local check_command=$2
+            local max_attempts=$3
+            local compose_service=$4  # Docker Compose service name
+            local attempt=0
+            local wait_time=1
+          
+            echo "Waiting for $service_name to be ready..."
+            until eval "$check_command"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "Max attempts reached, exiting..."
+                # Show final logs before exiting
+                if [ ! -z "$compose_service" ]; then
+                  echo "===== FINAL LOGS FOR ON ERROR EXIT $compose_service ====="
+                  docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service
+                  echo "=========================================="
+                fi
+                exit 1
+              fi
+          
+              echo "Waiting for $service_name... (Attempt: $((attempt+1)), waiting ${wait_time}s)"
+          
+              # Print logs using docker compose
+              if [ ! -z "$compose_service" ]; then
+                echo "===== RECENT LOGS FOR $compose_service ====="
+                docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+                echo "=========================================="
+              fi
+          
+              attempt=$((attempt+1))
+              sleep $wait_time
+              # Exponential backoff with max of 8 seconds
+              wait_time=$((wait_time * 2 > 8 ? 8 : wait_time * 2))
+            done
+            echo "$service_name is ready!"
+          
+            # last time, print logs using docker compose
+            if [ ! -z "$compose_service" ]; then
+              echo "===== FINAL LOGS FOR $compose_service ====="
+              docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs $compose_service --tail 100
+              echo "=========================================="
+            fi
+          }
+          
+          # Database checks
+          if [ "${{ inputs.db-type }}" == "mysql" ]; then
+            wait_for_service "MySQL Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database mysqladmin ping -h \"localhost\" --silent" 10 "keep-database"
+            wait_for_service "MySQL Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth mysqladmin ping -h \"localhost\" --silent" 10 "keep-database-db-auth"
+          elif [ "${{ inputs.db-type }}" == "postgres" ]; then
+            wait_for_service "Postgres Database" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database pg_isready -h localhost -U keepuser" 10 "keep-database"
+            wait_for_service "Postgres Database (DB AUTH)" "docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml exec -T keep-database-db-auth pg_isready -h localhost -U keepuser" 10 "keep-database-db-auth"
+          fi
+          
+          # Wait for services with health checks
+          wait_for_service "Keep backend" "curl --output /dev/null --silent --fail http://localhost:8080/healthcheck" 15 "keep-backend"
+          wait_for_service "Keep backend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:8081/healthcheck" 15 "keep-backend-db-auth"
+          wait_for_service "Keep frontend" "curl --output /dev/null --silent --fail http://localhost:3000/" 15 "keep-frontend"
+          wait_for_service "Keep frontend (DB AUTH)" "curl --output /dev/null --silent --fail http://localhost:3001/" 15 "keep-frontend-db-auth"
+          
+          # Give everything a bit more time to stabilize
+          echo "Giving services additional time to stabilize..."
+          sleep 10
+
+      - name: Run tests against source version again
+        run: |
+          # Prepare alembic config
+          docker exec keep-keep-backend-1  cp /venv/lib/python3.11/site-packages/keep/alembic.ini ./alembic_temp.ini
+          docker exec keep-keep-backend-1  sed -i 's|script_location.*|script_location = /venv/lib/python3.11/site-packages/keep/api/models/db/migrations|' ./alembic_temp.ini
+          
+          # Run alembic inside the container and extract revision containing '(head)'
+          REVISION=$(docker exec keep-keep-backend-1  alembic -c ./alembic_temp.ini current | grep '(head)' | awk '{print $1}')
+          
+          echo "Current head revision: $REVISION"
+          
+          if [[ "$REVISION" != "$WORKFLOW_REVISION" ]]; then
+            echo "Revisions don't match, continue..."
+          else
+            echo "Revisions match, exiting..."
+            exit 1
+          fi
+          
+          # Save to output variable to reuse in later steps
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+          
+          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+        env:
+          WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
+
+      - name: Stop source version services again
+        run: |
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+
+      # Collect and upload logs
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p logs
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs > logs/old-version-logs.txt
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs > logs/source-version-logs.txt
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-test-logs
+          path: logs/
