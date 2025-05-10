@@ -39,11 +39,23 @@ except ImportError as e:
         from fluxcd_provider import FluxcdProvider
     except ImportError:
         print("Could not import FluxcdProvider directly")
+        # Try with a different path
+        try:
+            import sys
+            import os
+            sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+            from keep.providers.fluxcd_provider.fluxcd_provider import FluxcdProvider
+            from keep.providers.models.provider_config import ProviderConfig
+        except ImportError:
+            print("Still could not import FluxcdProvider")
 
-    # Mock ProviderConfig for local testing
-    class ProviderConfig:
-        def __init__(self, authentication=None):
-            self.authentication = authentication or {}
+    # Mock ProviderConfig for local testing if needed
+    try:
+        ProviderConfig
+    except NameError:
+        class ProviderConfig:
+            def __init__(self, authentication=None):
+                self.authentication = authentication or {}
 
 
 class TestFluxcdProvider(unittest.TestCase):

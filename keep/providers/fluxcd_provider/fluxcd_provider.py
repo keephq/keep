@@ -199,11 +199,11 @@ class FluxcdProvider(BaseTopologyProvider):
             provider_id: The provider ID
             config: The provider configuration
         """
-        super().__init__(context_manager, provider_id, config)
         self._k8s_client = None
 
-        # Initialize authentication_config with default values
-        auth_config = dict(self.config.authentication or {})
+        # Initialize authentication_config with default values before super().__init__
+        # This ensures it's available when validate_config is called by the parent class
+        auth_config = dict(config.authentication or {})
 
         # Handle api-server parameter for backward compatibility
         if 'api-server' in auth_config:
@@ -213,6 +213,9 @@ class FluxcdProvider(BaseTopologyProvider):
 
         # Initialize with default values
         self.authentication_config = FluxcdProviderAuthConfig(**auth_config)
+
+        # Call the parent class constructor which will call validate_config
+        super().__init__(context_manager, provider_id, config)
 
         # Check Kubernetes client version for compatibility
         try:
@@ -248,22 +251,18 @@ class FluxcdProvider(BaseTopologyProvider):
         """
         Validates required configuration for FluxCD provider.
 
-        This method validates the authentication configuration and creates a
-        FluxcdProviderAuthConfig object with the provided values.
+        This method validates the authentication configuration.
+        The authentication_config attribute is already initialized in __init__.
 
         Raises:
             ValueError: If the configuration is invalid.
         """
         self.logger.debug("Validating configuration for FluxCD provider")
-        # The authentication_config is already initialized in __init__
-        # This method is now just for validation
 
         # Log the current configuration for debugging
         self.logger.debug(f"Using namespace: {self.authentication_config.namespace}")
-        if self.authentication_config.api_server:
+        if hasattr(self.authentication_config, 'api_server') and self.authentication_config.api_server:
             self.logger.debug(f"Using API server: {self.authentication_config.api_server}")
-
-        # No need to re-initialize authentication_config
 
     @property
     def k8s_client(self) -> Any:
