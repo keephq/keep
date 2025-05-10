@@ -42,6 +42,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
+from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
@@ -4263,7 +4264,6 @@ def get_alerts_data_for_incident(
             "sources": set(sources),
             "services": set(services),
             "max_severity": max(severities) if severities else IncidentSeverity.LOW,
-            "count": len(alerts_data),
         }
 
 
@@ -4337,10 +4337,6 @@ def add_alerts_to_incident(
             if not new_fingerprints:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(
-                tenant_id, new_fingerprints, session
-            )
-
             alert_to_incident_entries = [
                 LastAlertToIncident(
                     fingerprint=str(fingerprint),  # it may sometime be UUID...
@@ -4363,18 +4359,22 @@ def add_alerts_to_incident(
                     session.flush()
             session.commit()
 
-            incident.sources = list(
+            alerts_data_for_incident = get_alerts_data_for_incident(
+                tenant_id, new_fingerprints, session
+            )
+
+            new_sources = list(
                 set(incident.sources if incident.sources else [])
                 | set(alerts_data_for_incident["sources"])
             )
-            incident.affected_services = list(
+            new_affected_services = list(
                 set(incident.affected_services if incident.affected_services else [])
                 | set(alerts_data_for_incident["services"])
             )
             if not incident.forced_severity:
                 # If incident has alerts already, use the max severity between existing and new alerts,
                 # otherwise use the new alerts max severity
-                incident.severity = (
+                new_severity = (
                     max(
                         incident.severity,
                         alerts_data_for_incident["max_severity"].order,
@@ -4382,11 +4382,20 @@ def add_alerts_to_incident(
                     if incident.alerts_count
                     else alerts_data_for_incident["max_severity"].order
                 )
+            else:
+                new_severity = incident.severity
 
             if not override_count:
-                incident.alerts_count += alerts_data_for_incident["count"]
+                alerts_count = (
+                    select(count(LastAlertToIncident.fingerprint))
+                    .where(
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                        LastAlertToIncident.tenant_id == tenant_id,
+                        LastAlertToIncident.incident_id == incident.id,
+                    )
+                ).subquery()
             else:
-                incident.alerts_count = alerts_data_for_incident["count"]
+                alerts_count = alerts_data_for_incident["count"]
 
             last_received_field = get_json_extract_field(
                 session, Alert.event, "lastReceived"
@@ -4414,12 +4423,24 @@ def add_alerts_to_incident(
             if isinstance(last_seen_at, str):
                 last_seen_at = parse(last_seen_at)
 
-            incident.start_time = started_at
-            incident.last_seen_time = last_seen_at
             incident_id = incident.id
+
             for attempt in range(max_retries):
                 try:
-                    session.add(incident)
+                    session.exec(
+                        update(Incident)
+                        .where(
+                            Incident.id == incident_id,
+                            Incident.tenant_id == tenant_id,
+                        ).values(
+                            alerts_count = alerts_count,
+                            last_seen_time = last_seen_at,
+                            start_time = started_at,
+                            affected_services = new_affected_services,
+                            severity = new_severity,
+                            sources = new_sources,
+                        )
+                    )
                     session.commit()
                     break
                 except StaleDataError as ex:
@@ -4431,6 +4452,7 @@ def add_alerts_to_incident(
                         continue
                     else:
                         raise
+            session.add(incident)
             session.refresh(incident)
 
             return incident
@@ -4626,22 +4648,23 @@ def remove_alerts_to_incident_by_incident_id(
         ).one()
 
         # filtering removed entities from affected services and sources in the incident
-        incident.affected_services = [
+        new_affected_services = [
             service
             for service in incident.affected_services
             if service not in services_to_remove
         ]
-        incident.sources = [
+        new_sources = [
             source for source in incident.sources if source not in sources_to_remove
         ]
 
-        incident.alerts_count -= alerts_data_for_incident["count"]
         if not incident.forced_severity:
-            incident.severity = (
+            new_severity = (
                 max(updated_severities)
                 if updated_severities
                 else IncidentSeverity.LOW.order
             )
+        else:
+            new_severity = incident.severity
 
         if isinstance(started_at, str):
             started_at = parse(started_at)
@@ -4649,11 +4672,32 @@ def remove_alerts_to_incident_by_incident_id(
         if isinstance(last_seen_at, str):
             last_seen_at = parse(last_seen_at)
 
-        incident.start_time = started_at
-        incident.last_seen_time = last_seen_at
+        alerts_count = (
+            select(count(LastAlertToIncident.fingerprint))
+            .where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                LastAlertToIncident.tenant_id == tenant_id,
+                LastAlertToIncident.incident_id == incident.id,
+            )
+        ).subquery()
 
-        session.add(incident)
+        session.exec(
+            update(Incident)
+            .where(
+                Incident.id == incident_id,
+                Incident.tenant_id == tenant_id,
+            ).values(
+                alerts_count=alerts_count,
+                last_seen_time=last_seen_at,
+                start_time=started_at,
+                affected_services=new_affected_services,
+                severity=new_severity,
+                sources=new_sources,
+            )
+        )
         session.commit()
+        session.add(incident)
+        session.refresh(incident)
 
         return deleted
 
