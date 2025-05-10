@@ -29,6 +29,8 @@ import { WorkflowYAMLEditorStandalone } from "@/shared/ui/WorkflowYAMLEditor/ui/
 import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-utils";
 import { PiClockCounterClockwise } from "react-icons/pi";
 import { WorkflowVersions } from "./workflow-versions";
+import { useUIBuilderUnsavedChanges } from "@/entities/workflows/model/workflow-store";
+import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
 
 const TABS_KEYS = ["overview", "builder", "yaml", "versions", "secrets"];
 
@@ -53,6 +55,10 @@ export default function WorkflowDetailPage({
     getTabIndex(searchParams.get("tab") ?? "")
   );
   const router = useRouter();
+
+  const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
+  const { hasUnsavedChanges: isYamlEditorUnsaved } =
+    useWorkflowYAMLEditorStore();
 
   // Set initial tab based on URL query param
   useEffect(() => {
@@ -88,8 +94,22 @@ export default function WorkflowDetailPage({
       <TabGroup index={tabIndex} onIndexChange={handleTabChange}>
         <TabList>
           <Tab icon={AiOutlineSwap}>Overview</Tab>
-          <Tab icon={WrenchIcon}>Builder</Tab>
-          <Tab icon={CodeBracketIcon}>YAML Definition</Tab>
+          <Tab icon={WrenchIcon}>
+            <div className="flex items-center gap-2">
+              Builder{" "}
+              {isUIBuilderUnsaved ? (
+                <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
+              ) : null}
+            </div>
+          </Tab>
+          <Tab icon={CodeBracketIcon}>
+            <div className="flex items-center gap-2">
+              YAML Definition{" "}
+              {isYamlEditorUnsaved ? (
+                <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
+              ) : null}
+            </div>
+          </Tab>
           <Tab icon={PiClockCounterClockwise}>Versions</Tab>
           <Tab icon={KeyIcon}>Secrets</Tab>
           <TabNavigationLink

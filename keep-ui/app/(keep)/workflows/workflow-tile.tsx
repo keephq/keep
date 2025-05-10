@@ -15,20 +15,19 @@ import {
   Title,
 } from "@tremor/react";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
-import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import WorkflowGraph from "./workflow-graph";
 import Modal from "@/components/ui/Modal";
-import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
+import { useWorkflowRun } from "@/features/workflows/manual-run-workflow/model/useWorkflowRun";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { useToggleWorkflow } from "@/features/workflows/enable-disable/model";
-import "./workflow-tile.css";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 import Link from "next/link";
 import { WorkflowPermissionsBadge } from "@/entities/workflows/ui/WorkflowPermissionsBadge";
 import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
 import { useWorkflowZodSchema } from "@/entities/workflows/lib/useWorkflowZodSchema";
+import "./workflow-tile.css";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -73,13 +72,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     [workflowYamlJSON]
   );
 
-  const {
-    isRunning,
-    handleRunClick,
-    getTriggerModalProps,
-    isRunButtonDisabled,
-    message,
-  } = useWorkflowRun(workflow!);
+  const { isRunning, handleRunClick, isRunButtonDisabled, message } =
+    useWorkflowRun(workflow!);
 
   const handleDeleteClick = async () => {
     deleteWorkflow(workflow.id);
@@ -271,9 +265,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       </Card>
 
-      {!!getTriggerModalProps && (
-        <AlertTriggerModal {...getTriggerModalProps()} />
-      )}
       <Modal
         isOpen={openTriggerModal}
         onClose={() => {

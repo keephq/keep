@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Subtitle, Text } from "@tremor/react";
+import { Button, Text } from "@tremor/react";
 import { TextInput } from "@/components/ui";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { JsonCard } from "@/shared/ui/JsonCard";
@@ -176,7 +176,7 @@ export function WorkflowAlertIncidentDependenciesForm({
       dependencyValues,
       staticFields
     );
-    onSubmit(payload);
+    onSubmit({ type, body: payload });
   };
 
   const keyClassName = "w-2/6 font-mono";

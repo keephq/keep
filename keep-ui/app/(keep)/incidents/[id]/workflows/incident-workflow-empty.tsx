@@ -41,7 +41,7 @@ export function IncidentWorkflowsEmptyState({
 
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
-        handleClose={() => setRunWorkflowModalIncident(null)}
+        onClose={() => setRunWorkflowModalIncident(null)}
       />
     </>
   );

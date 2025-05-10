@@ -12,7 +12,7 @@ import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflo
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import clsx from "clsx";
 import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-button";
-import { useWorkflowEditorChangesSaved } from "@/entities/workflows/model/workflow-store";
+import { useUIBuilderUnsavedChanges } from "@/entities/workflows/model/workflow-store";
 
 export interface WorkflowBuilderWidgetProps {
   workflowRaw: string | undefined;
@@ -40,7 +40,8 @@ export function WorkflowBuilderWidget({
     v2Properties,
     definition,
   } = useWorkflowStore();
-  const isChangesSaved = useWorkflowEditorChangesSaved();
+  const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
+  const isChangesSaved = !isUIBuilderUnsaved;
 
   const isValid = useWorkflowStore((state) => !!state.definition?.isValid);
 

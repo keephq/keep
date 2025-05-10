@@ -79,7 +79,7 @@ export function WorkflowVersions({
   }
 
   // showing loader if loading is not yet started to avoid flash of content
-  if (isLoading || !data) {
+  if (isLoading || !data || !workflow) {
     return (
       <div className="flex justify-center items-center h-48">
         <KeepLoader

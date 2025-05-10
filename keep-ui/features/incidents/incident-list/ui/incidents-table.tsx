@@ -403,7 +403,7 @@ export default function IncidentsTable({
       </div>
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
-        handleClose={() => setRunWorkflowModalIncident(null)}
+        onClose={() => setRunWorkflowModalIncident(null)}
       />
       {mergeOptions && (
         <MergeIncidentsModal

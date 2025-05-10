@@ -1,4 +1,4 @@
-import { act, fireEvent, getByText, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { WorkflowsPage } from "../workflows.client";
 import { useWorkflowsV2 } from "@/entities/workflows/model/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
@@ -21,6 +21,17 @@ jest.mock("@/entities/workflows/model/useWorkflowActions", () => ({
     updateWorkflow: jest.fn(),
     deleteWorkflow: jest.fn(),
     uploadWorkflowFiles: jest.fn(),
+  }),
+}));
+
+jest.mock("@/features/workflows/manual-run-workflow", () => ({
+  useWorkflowRun: jest.fn(),
+  useWorkflowModals: jest.fn().mockReturnValue({
+    openInputsModal: jest.fn(),
+    openAlertDependenciesModal: jest.fn(),
+    openIncidentDependenciesModal: jest.fn(),
+    openUnsavedChangesModal: jest.fn(),
+    closeAllModals: jest.fn(),
   }),
 }));
 

@@ -11,11 +11,11 @@ export type WorkflowYamlDependencies = {
 export function extractWorkflowYamlDependencies(
   workflowYaml: string
 ): WorkflowYamlDependencies {
-  const providers: string[] = [];
-  const secrets: string[] = [];
-  const inputs: string[] = [];
-  const alert: string[] = [];
-  const incident: string[] = [];
+  const providers: Set<string> = new Set();
+  const secrets: Set<string> = new Set();
+  const inputs: Set<string> = new Set();
+  const alert: Set<string> = new Set();
+  const incident: Set<string> = new Set();
 
   const variables = extractMustacheVariables(workflowYaml);
   variables.forEach((variable) => {
@@ -24,28 +24,28 @@ export function extractWorkflowYamlDependencies(
     const rest = parts.slice(1).join(".");
     switch (firstPart) {
       case "providers":
-        providers.push(rest);
+        providers.add(rest);
         break;
       case "secrets":
-        secrets.push(rest);
+        secrets.add(rest);
         break;
       case "alert":
-        alert.push(rest);
+        alert.add(rest);
         break;
       case "incident":
-        incident.push(rest);
+        incident.add(rest);
         break;
       case "inputs":
-        inputs.push(rest);
+        inputs.add(rest);
         break;
     }
   });
 
   return {
-    providers: [...new Set(providers)],
-    secrets: [...new Set(secrets)],
-    inputs: [...new Set(inputs)],
-    alert: [...new Set(alert)],
-    incident: [...new Set(incident)],
+    providers: Array.from(providers),
+    secrets: Array.from(secrets),
+    inputs: Array.from(inputs),
+    alert: Array.from(alert),
+    incident: Array.from(incident),
   };
 }
