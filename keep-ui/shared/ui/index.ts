@@ -27,4 +27,6 @@ export { WorkflowYAMLEditor } from "./WorkflowYAMLEditor";
 export { showErrorToast } from "./utils/showErrorToast";
 export { showSuccessToast } from "./utils/showSuccessToast";
 export { DebugJSON } from "./DebugJSON";
+export { getIconForStatusString } from "./utils/getIconForStatusString";
+
 export type { UISeverity } from "./utils/severity-utils";

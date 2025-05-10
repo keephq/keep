@@ -23,7 +23,7 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
   );
 
   const sortedOptions = useMemo(() => {
-    return data?.toSorted((first, second) => {
+    return data?.slice().sort((first, second) => {
       const inSetA = selectedColumnsState.has(first);
       const inSetB = selectedColumnsState.has(second);
 

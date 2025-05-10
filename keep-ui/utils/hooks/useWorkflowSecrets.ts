@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
 
-export function useWorkflowSecrets(workflowId: string | null) {
+export function useWorkflowSecrets(workflowId: string | null | undefined) {
   const api = useApi();
   const [error, setError] = useState<string>("");
 

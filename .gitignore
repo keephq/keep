@@ -216,9 +216,13 @@ oauth2.cfg
 scripts/keep_slack_bot.py
 *.db
 providers_cache.json
+providers_list.json
 
 tests/provision/*
+!tests/provision/workflows*
 grafana/*
 !grafana/provisioning/
 !grafana/dashboards/
 keep/providers/grafana_provider/grafana/png/*
+topology.sh
+posthog.py

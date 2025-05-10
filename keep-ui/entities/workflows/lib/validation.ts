@@ -48,6 +48,15 @@ export const validateMustacheVariableName = (
     }
     return null;
   }
+  if (parts[0] === "consts") {
+    const constName = parts[1];
+    if (!constName) {
+      return `Variable: '${variableName}' - To access a constant, you need to specify the constant name.`;
+    }
+    if (!definition.properties.consts?.[constName]) {
+      return `Variable: '${variableName}' - Constant '${constName}' not found.`;
+    }
+  }
   if (parts[0] === "steps") {
     const stepName = parts[1];
     if (!stepName) {
@@ -84,10 +93,11 @@ export const validateMustacheVariableName = (
       return `Variable: '${variableName}' - You can't access the results of an action from a step.`;
     }
 
-    if (!definition.sequence?.some((step) => step.name === stepName)) {
-      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
-    }
-    if (parts[2] === "results") {
+    if (
+      parts[2] === "results" ||
+      parts[2].startsWith("results.") ||
+      parts[2].startsWith("results[")
+    ) {
       // todo: validate results properties
       return null;
     } else {
@@ -123,7 +133,9 @@ export const validateAllMustacheVariablesInString = (
   return errors;
 };
 
-export const checkProviderNeedsInstallation = (providerObject: Provider) => {
+export const checkProviderNeedsInstallation = (
+  providerObject: Pick<Provider, "type" | "config">
+) => {
   return providerObject.config && Object.keys(providerObject.config).length > 0;
 };
 
@@ -160,17 +172,6 @@ export function validateGlobalPure(definition: Definition): ValidationResult[] {
     !definition.properties.interval
   ) {
     errors.push(["interval", "Workflow interval cannot be empty."]);
-  }
-
-  const alertSources = Object.values(definition.properties.alert || {}).filter(
-    Boolean
-  );
-  if (
-    definition?.properties &&
-    definition.properties["alert"] &&
-    alertSources.length == 0
-  ) {
-    errors.push(["alert", "Alert trigger should have at least one filter."]);
   }
 
   const incidentEvents = definition.properties.incident?.events;

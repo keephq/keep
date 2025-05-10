@@ -172,17 +172,34 @@ class KubernetesProvider(BaseProvider):
                 pretty=True,
             )
             return logs.splitlines()
+        except UnicodeEncodeError:
+            logs = core_v1.read_namespaced_pod_log(
+                name=pod_name,
+                namespace=namespace,
+                container=container_name,
+                tail_lines=tail_lines,
+            )
+            return logs.splitlines()
         except ApiException as e:
             self.logger.error(f"Error getting logs for pod {pod_name}: {e}")
             raise Exception(f"Error getting logs for pod {pod_name}: {e}")
 
-    def __get_events(self, api_client, namespace, pod_name=None, **kwargs):
+    def __get_events(
+        self, api_client, namespace, pod_name=None, sort_by=None, **kwargs
+    ):
         """
         Get events for a namespace or specific pod.
         """
         self.logger.info(
             f"Getting events in namespace {namespace}"
-            + (f" for pod {pod_name}" if pod_name else "")
+            + (f" for pod {pod_name}" if pod_name else ""),
+            extra={
+                "pod_name": pod_name,
+                "namespace": namespace,
+                "sort_by": sort_by,
+                "tenant_id": self.context_manager.tenant_id,
+                "workflow_id": self.context_manager.workflow_id,
+            },
         )
 
         core_v1 = client.CoreV1Api(api_client)
@@ -198,14 +215,42 @@ class KubernetesProvider(BaseProvider):
             events = core_v1.list_namespaced_event(
                 namespace=namespace,
                 field_selector=field_selector,
-                sort_by="lastTimestamp",
             )
+
+            if sort_by:
+                self.logger.info(
+                    f"Sorting events by {sort_by}",
+                    extra={"sort_by": sort_by, "events_count": len(events.items)},
+                )
+                try:
+                    sorted_events = sorted(
+                        events.items,
+                        key=lambda event: getattr(event, sort_by, None),
+                        reverse=True,
+                    )
+                    return sorted_events
+                except Exception:
+                    self.logger.exception(
+                        f"Error sorting events by {sort_by}",
+                        extra={
+                            "sort_by": sort_by,
+                            "events_count": len(events.items),
+                            "tenant_id": self.context_manager.tenant_id,
+                            "workflow_id": self.context_manager.workflow_id,
+                        },
+                    )
 
             # Convert events to dict
             return [event.to_dict() for event in events.items]
         except ApiException as e:
-            self.logger.error(f"Error getting events: {e}")
-            raise Exception(f"Error getting events: {e}")
+            self.logger.exception(
+                "Error getting events",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "workflow_id": self.context_manager.workflow_id,
+                },
+            )
+            raise Exception(f"Error getting events: {e}") from e
 
     def __get_pods(self, api_client, namespace=None, label_selector=None, **kwargs):
         """

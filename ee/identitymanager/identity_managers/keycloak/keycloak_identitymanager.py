@@ -9,6 +9,7 @@ from starlette.routing import Route
 from ee.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
     KeycloakAuthVerifier,
 )
+from keep.api.core.config import config
 from keep.api.core.db import get_resource_ids_by_resource_type
 from keep.api.models.user import Group, PermissionEntity, ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
@@ -80,6 +81,10 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 os.environ.get("KEYCLOAK_ABAC_ENABLED", "true") == "true"
             )
 
+            self.keycloak_multi_org = config(
+                "KEYCLOAK_ROLES_FROM_GROUPS", default=False, cast=bool
+            )
+
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -134,6 +139,31 @@ class KeycloakIdentityManager(BaseIdentityManager):
             )
             self.logger.info("Resource created for route: %s", route.path)
 
+            # another thing we need to do is to add a /auth/user/orgs endpoint that will
+            # return the orgs of the user for TenantSwitcher in the UI
+            if self.keycloak_multi_org:
+                self.logger.info("Creating /auth/user/orgs endpoint")
+                from fastapi import Depends
+
+                from keep.identitymanager.identitymanagerfactory import (
+                    IdentityManagerFactory,
+                )
+
+                # we want to add it only once to skip endless loop
+                current_routes = [route.path for route in app.routes]
+                if "/auth/user/orgs" not in current_routes:
+                    self.logger.info("Adding /auth/user/orgs endpoint")
+
+                    # add the endpoint
+                    @app.get("/auth/user/orgs")
+                    def tenant(
+                        authenticated_entity: AuthenticatedEntity = Depends(
+                            IdentityManagerFactory.get_auth_verifier([])
+                        ),
+                    ):
+                        tenants = authenticated_entity.user_orgs
+                        return tenants
+
         # create resource for each object
         if self.abac_enabled:
             for resource_type, resource_type_data in self.RESOURCES.items():
@@ -172,6 +202,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 (scope for scope in all_scopes if scope["name"] == scope_name),
                 None,
             )
+            if not scope:
+                self.logger.error(
+                    "Scope %s not found in Keycloak",
+                    scope_name,
+                    extra={"scopes": all_scopes},
+                )
+                return []
             return [scope["id"]]
 
     def get_permission_by_name(self, permission_name):

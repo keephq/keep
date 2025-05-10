@@ -44,6 +44,24 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         authorization: Optional[HTTPAuthorizationCredentials],
         token: Optional[str],
     ) -> AuthenticatedEntity:
+        # If we have an api key or an authorization header, we need to authenticate using that
+        if api_key or request.headers.get("Authorization"):
+            api_key = self._extract_api_key(request, api_key, authorization)
+            # HACK for cloudwatch without api key for self hosted deployments
+            if isinstance(api_key, AuthenticatedEntity):
+                return api_key
+
+            if api_key:
+                self.logger.debug("Attempting to authenticate with API key")
+                try:
+                    return self._verify_api_key(request, api_key, authorization)
+                except HTTPException:
+                    raise
+                except Exception:
+                    self.logger.exception("Failed to validate API Key")
+                    raise HTTPException(
+                        status_code=401, detail="Invalid authentication credentials"
+                    )
 
         # https://github.com/keephq/keep/issues/1203
         # get user name

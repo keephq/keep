@@ -16,7 +16,6 @@ from packaging.version import Version
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import (
     BaseProvider,
     BaseTopologyProvider,
@@ -71,6 +70,21 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
     FINGERPRINT_FIELDS = ["fingerprint"]
+
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """If your Grafana is unreachable from Keep, you can use the following webhook url to configure Grafana to send alerts to Keep:
+
+    1. In Grafana, go to the Alerting tab in the Grafana dashboard.
+    2. Click on Contact points in the left sidebar and create a new one.
+    3. Give it a name and select Webhook as kind of contact point with webhook url as {keep_webhook_api_url}.
+    4. Add 'X-API-KEY' as the request header {api_key}.
+    5. Save the webhook.
+    6. Click on Notification policies in the left sidebar
+    7. Click on "New child policy" under the "Default policy"
+    8. Remove all matchers until you see the following: "If no matchers are specified, this notification policy will handle all alert instances."
+    9. Chose the webhook contact point you have just created under Contact point and click "Save Policy"
+    """
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -166,6 +180,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             else:
                 validated_scopes[scope.name] = "Missing scope"
         return validated_scopes
+
+    def get_provider_metadata(self) -> dict:
+        version = self._get_grafana_version()
+        return {
+            "version": version,
+        }
 
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
@@ -364,6 +384,26 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         )
         return [alert_dto]
 
+    def _get_grafana_version(self) -> str:
+        """Get the Grafana version."""
+        try:
+            headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+            health_url = f"{self.authentication_config.host}/api/health"
+
+            resp = requests.get(health_url, verify=False, headers=headers, timeout=5)
+
+            if resp.ok:
+                health_data = resp.json()
+                return health_data.get("version", "unknown")
+            else:
+                self.logger.warning(
+                    f"Failed to get Grafana version: {resp.status_code}"
+                )
+                return "unknown"
+        except Exception as e:
+            self.logger.error(f"Error getting Grafana version: {str(e)}")
+            return "unknown"
+
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
@@ -396,11 +436,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         # therefor we need to add the api_key as a query param instead of the normal digest token
         self.logger.info("Getting Grafana version")
         try:
-            health_api = f"{self.authentication_config.host}/api/health"
-            health_response = requests.get(
-                health_api, verify=False, headers=headers
-            ).json()
-            grafana_version = health_response["version"]
+            grafana_version = self._get_grafana_version()
         except Exception:
             self.logger.exception("Failed to get Grafana version")
             raise
@@ -816,62 +852,554 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                         continue
         return alert_dtos
 
+    def _get_alerts_datasource(self) -> list:
+        """
+        Get raw alerts from all available datasources (Prometheus, Loki, Grafana, Alertmanager).
+        Returns a list of raw alert dictionaries, or an empty list if there are errors.
+        """
+        self.logger.info("Starting to fetch alerts from Grafana datasources")
+
+        headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+        all_alerts = []
+
+        # Step 1: Get all datasources
+        try:
+            self.logger.info("Fetching list of datasources")
+            datasources_url = f"{self.authentication_config.host}/api/datasources"
+            datasources_resp = requests.get(
+                datasources_url, headers=headers, timeout=5, verify=False
+            )
+
+            if datasources_resp.status_code != 200:
+                self.logger.error(
+                    f"Failed to get datasources: {datasources_resp.status_code}",
+                    extra={"response_text": datasources_resp.text[:500]},
+                )
+                return []
+
+            self.logger.info(
+                f"Successfully fetched datasources, got {len(datasources_resp.json())} datasources"
+            )
+        except Exception as e:
+            self.logger.error(f"Error fetching datasources list: {str(e)}")
+            return []
+
+        # Step 2: Extract relevant datasources (Prometheus, Loki, Mimir)
+        alert_datasources = []
+        try:
+            for ds in datasources_resp.json():
+                if (
+                    ds.get("type") in ["prometheus", "loki"]
+                    or "mimir" in ds.get("name", "").lower()
+                ):
+                    alert_datasources.append(
+                        {
+                            "uid": ds.get("uid"),
+                            "name": ds.get("name"),
+                            "type": ds.get("type"),
+                        }
+                    )
+
+            self.logger.info(
+                f"Found {len(alert_datasources)} alert-capable datasources"
+            )
+        except Exception as e:
+            self.logger.error(f"Error parsing datasources: {str(e)}")
+            return []
+
+        # Step 3: Query alerts from each datasource
+        for ds in alert_datasources:
+            try:
+                # Log the datasource we're about to query
+                self.logger.info(
+                    f"Querying alerts for datasource: {ds.get('name')}",
+                    extra={"datasource": ds},
+                )
+
+                # Different endpoint based on datasource type
+                if ds.get("type") == "loki":
+                    # For Loki, use the Prometheus-compatible alerts endpoint
+                    alert_url = f"{self.authentication_config.host}/api/datasources/proxy/uid/{ds.get('uid')}/prometheus/api/v1/alerts"
+                else:
+                    # For Prometheus/Mimir, use the standard alerts endpoint
+                    alert_url = f"{self.authentication_config.host}/api/datasources/proxy/uid/{ds.get('uid')}/api/v1/alerts"
+
+                # Query the alerts endpoint
+                self.logger.info(f"Querying {ds.get('name')} alerts at: {alert_url}")
+                resp = requests.get(alert_url, headers=headers, timeout=8, verify=False)
+
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("status") == "success" and "alerts" in data.get(
+                        "data", {}
+                    ):
+                        ds_alerts = data["data"]["alerts"]
+
+                        if ds_alerts:  # Only process non-empty alert lists
+                            self.logger.info(
+                                f"Found {len(ds_alerts)} alerts in {ds.get('name')}"
+                            )
+
+                            for alert in ds_alerts:
+                                # Tag with source name and type
+                                alert["datasource"] = ds.get("name")
+                                alert["datasource_type"] = ds.get("type")
+
+                            all_alerts.extend(ds_alerts)
+                        else:
+                            self.logger.info(f"No alerts found for {ds.get('name')}")
+                    else:
+                        self.logger.info(
+                            f"No alerts data found in response from {ds.get('name')}",
+                            extra={
+                                "status": data.get("status"),
+                                "has_data": "data" in data,
+                                "has_alerts": "data" in data
+                                and "alerts" in data.get("data", {}),
+                            },
+                        )
+                else:
+                    self.logger.warning(
+                        f"Failed to get alerts for {ds.get('name')}: {resp.status_code}",
+                        extra={"response": resp.text[:500]},  # Limit response log size
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error querying alerts for {ds.get('name')}: {str(e)}",
+                    exc_info=True,
+                )
+                # Continue to the next datasource
+                continue
+
+        # Step 4: Process and format the alerts
+        formatted_alerts = []
+        for alert in all_alerts:
+            try:
+                # Format the alert using the existing method
+                alertname = alert.get(
+                    "name",
+                    alert.get("alertname", alert.get("labels", {}).get("alertname")),
+                )
+                if not alertname:
+                    logger.warning(
+                        "Alert name not found, using default",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    alertname = "Grafana Alert [Unknown]"
+                severity = alert.get(
+                    "severity", alert.get("labels", {}).get("severity")
+                )
+                if not severity:
+                    logger.warning(
+                        "Alert severity not found, using default",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    severity = "info"
+                severity = GrafanaProvider.SEVERITIES_MAP.get(
+                    severity, AlertSeverity.INFO
+                )
+
+                status = alert.get("state")
+                if not status:
+                    logger.warning(
+                        "Alert status not found, using default",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    status = "firing"
+                status = GrafanaProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+
+                labels = alert.get("labels", {})
+                # pop severity from labels to avoid duplication
+                labels.pop("severity", None)
+                annotations = alert.get("annotations", {})
+
+                description = annotations.get("description", annotations.get("summary"))
+                try:
+                    alert_dto = AlertDto(
+                        name=alertname,
+                        status=status,
+                        severity=severity,
+                        source=["grafana"],
+                        labels=labels,
+                        annotations=annotations,
+                        datasource=alert.get("datasource"),
+                        datasource_type=alert.get("datasource_type"),
+                        value=alert.get("value"),
+                    )
+                    if description:
+                        alert_dto.description = description
+                    formatted_alerts.append(alert_dto)
+                except Exception:
+                    self.logger.exception(
+                        "Failed to format datasoruce alert",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    continue
+            except Exception as e:
+                self.logger.error(
+                    f"Error formatting alert: {str(e)}", extra={"alert": alert}
+                )
+
+        self.logger.info(
+            f"Total alerts found across all datasources: {len(formatted_alerts)}"
+        )
+        return formatted_alerts
+
     def _get_alerts(self) -> list[AlertDto]:
+        self.logger.info("Starting to fetch alerts from Grafana")
+
+        # First get alerts from datasources directly
+        datasource_alerts = self._get_alerts_datasource()
+        self.logger.info(f"Found {len(datasource_alerts)} alerts from datasources")
+
+        # Get Grafana version to determine best approach for history API
+        grafana_version = self._get_grafana_version()
+        self.logger.info(f"Detected Grafana version: {grafana_version}")
+
+        history_alerts = []
+
+        # Calculate time range (7 days ago to now)
         week_ago = int(
             (datetime.datetime.now() - datetime.timedelta(days=7)).timestamp()
         )
         now = int(datetime.datetime.now().timestamp())
-        api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=0"
+        self.logger.info(
+            f"Using time range for alerts: from={week_ago} to={now}",
+            extra={"from_timestamp": week_ago, "to_timestamp": now},
+        )
+
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = requests.get(api_endpoint, verify=False, headers=headers, timeout=3)
-        if not response.ok:
-            raise ProviderException("Failed to get alerts from Grafana")
-        events_history = response.json()
-        events_data = events_history.get("data", [])
-        if events_data:
-            events_data_values = events_data.get("values")
-            if events_data_values:
-                events = events_data_values[1]
-                events_time = events_data_values[0]
-                alerts = []
-                for i in range(0, len(events)):
-                    event = events[i]
-                    event_labels = event.get("labels", {})
-                    alert_name = event_labels.get("alertname")
-                    alert_status = event_labels.get("alertstate", event.get("current"))
-                    alert_status = GrafanaProvider.STATUS_MAP.get(
-                        alert_status, AlertStatus.FIRING
+
+        # First try the general history API (works in older Grafana versions)
+        try:
+            api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=0"
+            self.logger.info(f"Querying Grafana history API endpoint: {api_endpoint}")
+
+            response = requests.get(
+                api_endpoint, verify=False, headers=headers, timeout=5
+            )
+            self.logger.info(
+                f"Received response from Grafana history API with status code: {response.status_code}"
+            )
+
+            if response.ok:
+                # Process the response
+                events_history = response.json()
+                events_data = events_history.get("data", {})
+
+                if events_data and "values" in events_data:
+                    events_data_values = events_data.get("values")
+                    if events_data_values and len(events_data_values) >= 2:
+                        # If we have values, extract the events and timestamps
+                        events = events_data_values[1]
+                        events_time = events_data_values[0]
+
+                        self.logger.info(f"Found {len(events)} events in history API")
+
+                        for i in range(0, len(events)):
+                            event = events[i]
+                            try:
+                                event_labels = event.get("labels", {})
+                                alert_name = event_labels.get("alertname")
+                                alert_status = event_labels.get(
+                                    "alertstate", event.get("current")
+                                )
+
+                                # Map status to Keep format
+                                alert_status = GrafanaProvider.STATUS_MAP.get(
+                                    alert_status, AlertStatus.FIRING
+                                )
+
+                                # Extract other fields
+                                alert_severity = event_labels.get("severity")
+                                alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
+                                    alert_severity, AlertSeverity.INFO
+                                )
+                                environment = event_labels.get("environment", "unknown")
+                                fingerprint = event_labels.get("fingerprint")
+                                description = event.get("error", "")
+                                rule_id = event.get("ruleUID")
+                                condition = event.get("condition")
+
+                                # Convert timestamp
+                                timestamp = datetime.datetime.fromtimestamp(
+                                    events_time[i] / 1000
+                                ).isoformat()
+
+                                # Create AlertDto
+                                alert_dto = AlertDto(
+                                    id=str(i),
+                                    fingerprint=fingerprint,
+                                    name=alert_name,
+                                    status=alert_status,
+                                    severity=alert_severity,
+                                    environment=environment,
+                                    description=description,
+                                    lastReceived=timestamp,
+                                    rule_id=rule_id,
+                                    condition=condition,
+                                    labels=event_labels,
+                                    source=["grafana"],
+                                )
+                                history_alerts.append(alert_dto)
+                            except Exception as e:
+                                self.logger.error(
+                                    f"Error processing event {i+1}",
+                                    extra={"event": event, "error": str(e)},
+                                )
+
+                self.logger.info(
+                    f"Successfully processed {len(history_alerts)} alerts from Grafana history API"
+                )
+            else:
+                # If general API fails with 'ruleUID is required' error in newer Grafana versions
+                if "ruleUID is required" in response.text:
+                    self.logger.info(
+                        "Grafana version requires ruleUID parameter, trying per-rule approach"
                     )
-                    alert_severity = event_labels.get("severity")
-                    alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
-                        alert_severity, AlertSeverity.INFO
+
+                    # Get all rules first
+                    rules_endpoint = (
+                        f"{self.authentication_config.host}/api/alerting/rules"
                     )
-                    environment = event_labels.get("environment", "unknown")
-                    fingerprint = event_labels.get("fingerprint")
-                    description = event.get("error", "")
-                    rule_id = event.get("ruleUID")
-                    condition = event.get("condition")
-                    timestamp = datetime.datetime.fromtimestamp(
-                        events_time[i] / 1000
-                    ).isoformat()
-                    alerts.append(
-                        AlertDto(
-                            id=str(i),
-                            fingerprint=fingerprint,
-                            name=alert_name,
-                            status=alert_status,
-                            severity=alert_severity,
-                            environment=environment,
-                            description=description,
-                            lastReceived=timestamp,
-                            rule_id=rule_id,
-                            condition=condition,
-                            labels=event_labels,
-                            source=["grafana"],
+                    self.logger.info(f"Fetching alert rules from: {rules_endpoint}")
+
+                    rules_response = requests.get(
+                        rules_endpoint, verify=False, headers=headers, timeout=5
+                    )
+
+                    if rules_response.ok:
+                        rules_data = rules_response.json()
+                        rule_uids = []
+
+                        # Extract all rule UIDs
+                        for group in rules_data.get("data", {}).get("groups", []):
+                            for rule in group.get("rules", []):
+                                if "uid" in rule:
+                                    rule_uids.append(rule["uid"])
+
+                        self.logger.info(f"Found {len(rule_uids)} rule UIDs")
+
+                        # For each rule UID, get its history
+                        for rule_uid in rule_uids:
+                            rule_history_url = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=100&ruleUID={rule_uid}"
+
+                            try:
+                                rule_resp = requests.get(
+                                    rule_history_url,
+                                    verify=False,
+                                    headers=headers,
+                                    timeout=5,
+                                )
+
+                                if rule_resp.ok:
+                                    rule_history = rule_resp.json()
+                                    rule_data = rule_history.get("data", {})
+
+                                    if rule_data and "values" in rule_data:
+                                        rule_values = rule_data.get("values")
+                                        if rule_values and len(rule_values) >= 2:
+                                            rule_events = rule_values[1]
+                                            rule_times = rule_values[0]
+
+                                            self.logger.info(
+                                                f"Found {len(rule_events)} events for rule {rule_uid}"
+                                            )
+
+                                            for i in range(0, len(rule_events)):
+                                                event = rule_events[i]
+                                                try:
+                                                    event_labels = event.get(
+                                                        "labels", {}
+                                                    )
+                                                    alert_name = event_labels.get(
+                                                        "alertname", f"Rule {rule_uid}"
+                                                    )
+                                                    alert_status = event_labels.get(
+                                                        "alertstate",
+                                                        event.get("current"),
+                                                    )
+                                                    alert_status = (
+                                                        GrafanaProvider.STATUS_MAP.get(
+                                                            alert_status,
+                                                            AlertStatus.FIRING,
+                                                        )
+                                                    )
+                                                    alert_severity = event_labels.get(
+                                                        "severity"
+                                                    )
+                                                    alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
+                                                        alert_severity,
+                                                        AlertSeverity.INFO,
+                                                    )
+                                                    environment = event_labels.get(
+                                                        "environment", "unknown"
+                                                    )
+                                                    fingerprint = event_labels.get(
+                                                        "fingerprint", rule_uid
+                                                    )
+                                                    description = event.get("error", "")
+                                                    condition = event.get("condition")
+
+                                                    # Convert timestamp
+                                                    timestamp = (
+                                                        datetime.datetime.fromtimestamp(
+                                                            rule_times[i] / 1000
+                                                        ).isoformat()
+                                                    )
+
+                                                    alert_dto = AlertDto(
+                                                        id=f"{rule_uid}_{i}",
+                                                        fingerprint=fingerprint,
+                                                        name=alert_name,
+                                                        status=alert_status,
+                                                        severity=alert_severity,
+                                                        environment=environment,
+                                                        description=description,
+                                                        lastReceived=timestamp,
+                                                        rule_id=rule_uid,
+                                                        condition=condition,
+                                                        labels=event_labels,
+                                                        source=["grafana"],
+                                                    )
+                                                    history_alerts.append(alert_dto)
+                                                except Exception as e:
+                                                    self.logger.error(
+                                                        f"Error processing event for rule {rule_uid}",
+                                                        extra={
+                                                            "event": event,
+                                                            "error": str(e),
+                                                        },
+                                                    )
+                            except Exception as e:
+                                self.logger.error(
+                                    f"Error processing history for rule {rule_uid}",
+                                    extra={"error": str(e)},
+                                )
+                    # if response is 404, it means the API is not available
+                    elif rules_response.status_code == 404:
+                        # if legacy alerting is not enabled, we can assume the API is not available
+                        self.logger.error("Grafana history API not available")
+                    else:
+                        self.logger.error(
+                            "Failed to get alerts from Grafana history API",
+                            extra={
+                                "status_code": response.status_code,
+                                "response_text": response.text,
+                                "api_endpoint": api_endpoint,
+                            },
                         )
+                    self.logger.info(
+                        f"Processed {len(history_alerts)} alerts from per-rule history API"
                     )
-                return alerts
-        return []
+                else:
+                    self.logger.error(
+                        "Failed to get alerts from Grafana history API",
+                        extra={
+                            "status_code": response.status_code,
+                            "response_text": response.text,
+                            "api_endpoint": api_endpoint,
+                        },
+                    )
+        except Exception as e:
+            self.logger.error(
+                "Error querying Grafana history API", extra={"error": str(e)}
+            )
+
+        # Also try to get alerts from Alertmanager
+        alertmanager_alerts = []
+        try:
+            alertmanager_url = f"{self.authentication_config.host}/api/alertmanager/grafana/api/v2/alerts"
+            self.logger.info(f"Querying Alertmanager at: {alertmanager_url}")
+
+            am_resp = requests.get(
+                alertmanager_url, verify=False, headers=headers, timeout=5
+            )
+
+            if am_resp.ok:
+                am_alerts_data = am_resp.json()
+
+                if am_alerts_data:
+                    self.logger.info(
+                        f"Found {len(am_alerts_data)} alerts in Alertmanager"
+                    )
+
+                    for i, alert in enumerate(am_alerts_data):
+                        try:
+                            # Extract alert properties
+                            labels = alert.get("labels", {})
+                            annotations = alert.get("annotations", {})
+
+                            # Extract alert name
+                            alert_name = labels.get("alertname", f"Alert_{i}")
+
+                            # Determine status
+                            alert_status = AlertStatus.FIRING
+                            if alert.get("status", {}).get("state") == "suppressed":
+                                alert_status = AlertStatus.SUPPRESSED
+                            elif (
+                                alert.get("endsAt")
+                                and alert.get("endsAt") != "0001-01-01T00:00:00Z"
+                            ):
+                                alert_status = AlertStatus.RESOLVED
+
+                            # Extract severity
+                            alert_severity = labels.get("severity", "info")
+                            alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
+                                alert_severity, AlertSeverity.INFO
+                            )
+
+                            # Create AlertDto
+                            try:
+                                alert_dto = AlertDto(
+                                    id=alert.get("fingerprint", str(i)),
+                                    fingerprint=alert.get("fingerprint"),
+                                    name=alert_name,
+                                    status=alert_status,
+                                    severity=alert_severity,
+                                    environment=labels.get("environment", "unknown"),
+                                    description=annotations.get(
+                                        "description", annotations.get("summary", "")
+                                    ),
+                                    lastReceived=alert.get("startsAt"),
+                                    rule_id=labels.get("ruleId"),
+                                    condition="",
+                                    labels=labels,
+                                    source=["grafana"],
+                                )
+                                alertmanager_alerts.append(alert_dto)
+                            except Exception:
+                                self.logger.exception(
+                                    f"Error creating AlertDto for Alertmanager alert {i}",
+                                    extra={
+                                        "alert": alert,
+                                    },
+                                )
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error processing Alertmanager alert {i}",
+                                extra={"alert": alert, "error": str(e)},
+                            )
+            else:
+                self.logger.warning(
+                    f"Failed to get alerts from Alertmanager: {am_resp.status_code}"
+                )
+        except Exception as e:
+            self.logger.error("Error querying Alertmanager", extra={"error": str(e)})
+
+        # Combine all alert sources
+        all_alerts = datasource_alerts + history_alerts + alertmanager_alerts
+        self.logger.info(f"Total alerts found from all sources: {len(all_alerts)}")
+
+        return all_alerts
 
     @classmethod
     def simulate_alert(cls, **kwargs) -> dict:
@@ -1100,6 +1628,8 @@ if __name__ == "__main__":
         provider_type="grafana",
         provider_config=config,
     )
+    version = provider.get_provider_metadata()
+    alerts = provider.get_alerts()
     alerts = provider.setup_webhook(
         "test", "http://localhost:3000/alerts/event/grafana", "some-api-key", True
     )

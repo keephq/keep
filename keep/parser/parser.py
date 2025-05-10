@@ -60,6 +60,8 @@ class Parser:
         providers_file: str = None,
         actions_file: str = None,
         workflow_db_id: str = None,
+        workflow_revision: int = None,
+        is_test: bool = False,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -82,10 +84,12 @@ class Parser:
                     tenant_id,
                     workflow,
                     providers_file,
+                    workflow_revision,
                     workflow_providers,
                     actions_file,
                     workflow_actions,
                     workflow_db_id,
+                    is_test,
                 )
                 for workflow in raw_workflows
             ]
@@ -98,9 +102,12 @@ class Parser:
                 tenant_id,
                 raw_workflow,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
+                workflow_db_id,
+                is_test,
             )
             workflows = [workflow]
         # else, if it stored in the db, it stored without the "workflow" key
@@ -109,10 +116,12 @@ class Parser:
                 tenant_id,
                 parsed_workflow_yaml,
                 providers_file,
+                workflow_revision,
                 workflow_providers,
                 actions_file,
                 workflow_actions,
                 workflow_db_id=workflow_db_id,
+                is_test=is_test,
             )
             workflows = [workflow]
         return workflows
@@ -139,10 +148,12 @@ class Parser:
         tenant_id,
         workflow: dict,
         providers_file: str,
+        workflow_revision: int = None,
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
         workflow_db_id: str = None,
+        is_test: bool = False,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
         # @tb: we need to remove this id in workflow yaml, it has no real use.
@@ -159,7 +170,6 @@ class Parser:
         self._load_actions_config(
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
-        workflow_id = self._parse_id(workflow)
         workflow_name = workflow.get("name", "Untitled")
         workflow_description = workflow.get("description", "No description")
         workflow_permissions = workflow.get("permissions", [])
@@ -174,7 +184,7 @@ class Parser:
         )
         workflow_interval = self.parse_interval(workflow)
         on_failure_action = self._get_on_failure_action(context_manager, workflow)
-        workflow_triggers = self.get_triggers_from_workflow(workflow)
+        workflow_triggers = self.get_triggers_from_workflow_dict(workflow)
         workflow_provider_types = (
             self._get_workflow_provider_types_from_steps_and_actions(
                 workflow_steps, workflow_actions
@@ -188,6 +198,7 @@ class Parser:
 
         workflow_class = Workflow(
             workflow_id=workflow_id,
+            workflow_revision=workflow_revision,
             workflow_name=workflow_name,
             workflow_description=workflow_description,
             workflow_disabled=workflow_disabled,
@@ -204,6 +215,7 @@ class Parser:
             workflow_consts=workflow_consts,
             workflow_debug=workflow_debug,
             workflow_permissions=workflow_permissions,
+            is_test=is_test,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow_class
@@ -533,9 +545,10 @@ class Parser:
             provider = ProvidersFactory.get_provider(
                 context_manager, provider_id, step_provider_type, provider_config
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for step {_step.get('name')}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
@@ -635,9 +648,10 @@ class Parser:
                 provider_config,
                 **parsed_provider_parameters,
             )
-        except Exception:
-            self.logger.exception(
+        except Exception as ex:
+            self.logger.warning(
                 f"Error getting provider {provider_id} for action {name}",
+                exc_info=ex,
                 extra={
                     "workflow_name": workflow_id,
                     "workflow_description": workflow_description,
@@ -819,7 +833,7 @@ class Parser:
                 provider_config = {"authentication": {}}
             return config_id, provider_config
 
-    def get_providers_from_workflow(self, workflow: dict):
+    def get_providers_from_workflow_dict(self, workflow: dict):
         """extract the provider names from a worklow
 
         Args:
@@ -855,7 +869,7 @@ class Parser:
             raise
         return providers
 
-    def get_triggers_from_workflow(self, workflow: dict):
+    def get_triggers_from_workflow_dict(self, workflow: dict):
         """extract the trigger names from a worklow
 
         Args:

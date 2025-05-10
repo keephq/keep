@@ -2,6 +2,7 @@ import json
 import logging
 from sqlalchemy import func, literal, literal_column, select, text
 from sqlalchemy.exc import OperationalError
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     JsonFieldMapping,
@@ -34,6 +35,9 @@ def build_facet_selects(properties_metadata, facets):
         property_metadata = properties_metadata.get_property_metadata_for_str(
             facet.property_path
         )
+        if property_metadata is None:
+            continue
+
         select_field = ("facet_" + facet.property_path.replace(".", "_")).lower()
 
         new_fields_config.append(
@@ -115,20 +119,24 @@ def build_facets_data_query(
             elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
                 facet_value.append(item.map_to)
 
-        casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, str) for item in facet_value])}"
-        sub_query = (
+        casted = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
+        facet_sub_query = (
             select(
                 literal(facet.id).label("facet_id"),
-                text(f"{casted} AS facet_value"),
-                func.count(func.distinct(literal_column("entity_id"))).label(
-                    "matches_count"
-                ),
+                literal_column("facet_value"),
+                func.count().label("matches_count"),
             )
-            .select_from(base_query)
-            .filter(
-                text(
-                    facets_cel_to_sql_instance.convert_to_sql_str(
-                        facet_options_query.facet_queries[facet.id]
+            .select_from(
+                select(
+                    func.distinct(literal_column("entity_id")),
+                    literal_column(casted).label("facet_value"),
+                )
+                .select_from(base_query)
+                .filter(
+                    text(
+                        facets_cel_to_sql_instance.convert_to_sql_str(
+                            facet_options_query.facet_queries[facet.id]
+                        )
                     )
                 )
             )
@@ -138,9 +146,9 @@ def build_facets_data_query(
         # For SQLite we can't limit the subquery
         # so we limit the result after the result is fetched in get_facet_options
         if engine.dialect.name != "sqlite":
-            sub_query = sub_query.limit(OPTIONS_PER_FACET)
+            facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
 
-        union_queries.append(sub_query)
+        union_queries.append(facet_sub_query)
 
     query = None
 

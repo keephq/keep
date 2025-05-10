@@ -24,6 +24,8 @@ type IncidentFilter = {
 type AlertFilter = {
   type: "alert";
   filters: Filter[];
+  cel: string;
+  only_on_change: string[];
 };
 
 type IntervalFilter = {
@@ -126,6 +128,16 @@ export type PaginatedWorkflowsResults = {
   results: Workflow[];
   limit: number;
   offset: number;
+};
+
+export type WorkflowRevision = {
+  revision: number;
+  updated_by: string;
+  updated_at: string;
+};
+
+export type WorkflowRevisionList = {
+  versions: WorkflowRevision[];
 };
 
 export async function getWorkflow(api: ApiClient, id: string) {

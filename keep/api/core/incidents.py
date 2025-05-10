@@ -30,10 +30,14 @@ from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.models.incident import IncidentSorting
 from keep.api.models.query import SortOptionsDto
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
+    FieldMappingConfiguration(
+        map_from_pattern="id", map_to=["incident.id"], data_type=DataType.UUID
+    ),
     FieldMappingConfiguration(
         map_from_pattern="name",
         map_to=["incident.user_generated_name", "incident.ai_generated_name"],

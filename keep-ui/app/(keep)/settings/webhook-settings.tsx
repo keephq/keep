@@ -20,7 +20,6 @@ import useSWR from "swr";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import * as Frigade from "@frigade/react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { PageSubtitle } from "@/shared/ui";
@@ -194,9 +193,6 @@ req.end();
               >
                 Click to create an example Alert
               </Button>
-              {config?.FRIGADE_DISABLED ? null : (
-                <Frigade.Tour flowId="flow_4iLdns11" />
-              )}
             </div>
           </div>
           <TabGroup

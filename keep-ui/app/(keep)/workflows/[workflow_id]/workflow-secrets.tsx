@@ -59,8 +59,9 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
           </div>
           <Button
             onClick={() => toggleShowValue(row.original.name)}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-1 rounded"
             icon={showValues[row.original.name] ? EyeOff : Eye}
+            color="orange"
             variant="secondary"
           />
         </div>
@@ -84,52 +85,58 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
   ];
 
   return (
-    <Card className="p-4">
-      <h2 className="text-xl font-semibold">Workflow Secrets</h2>
-
+    <>
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
 
-      <div className="flex gap-4 my-4">
-        <Input
-          type="text"
-          placeholder="Secret name"
-          value={newSecret.name}
-          onChange={(e) =>
-            setNewSecret((prev) => ({ ...prev, name: e.target.value }))
-          }
-        />
-        <Input
-          placeholder="Secret value"
-          value={newSecret.value}
-          onChange={(e) =>
-            setNewSecret((prev) => ({ ...prev, value: e.target.value }))
-          }
-        />
-        <Button onClick={handleAddSecret} variant="primary" icon={PlusIcon}>
-          Add Secret
-        </Button>
-      </div>
+      <Card className="p-4">
+        <div className="flex gap-4 my-4">
+          <Input
+            type="text"
+            placeholder="Secret name"
+            value={newSecret.name}
+            onChange={(e) =>
+              setNewSecret((prev) => ({ ...prev, name: e.target.value }))
+            }
+          />
+          <Input
+            placeholder="Secret value"
+            value={newSecret.value}
+            onChange={(e) =>
+              setNewSecret((prev) => ({ ...prev, value: e.target.value }))
+            }
+          />
+          <Button
+            onClick={handleAddSecret}
+            variant="primary"
+            color="orange"
+            icon={PlusIcon}
+          >
+            Add Secret
+          </Button>
+        </div>
 
-      <GenericTable
-        data={
-          secrets
-            ? Object.entries(secrets).map(([name, value]) => ({ name, value }))
-            : []
-        }
-        columns={columns}
-        rowCount={secrets ? Object.keys(secrets).length : 0}
-        offset={0}
-        limit={10}
-        onPaginationChange={(newOffset, newLimit) => {
-          console.log("Pagination changed:", newOffset, newLimit);
-        }}
-        dataFetchedAtOneGO={true}
-      />
-    </Card>
+        <GenericTable
+          asCard={false}
+          data={
+            secrets
+              ? Object.entries(secrets).map(([name, value]) => ({
+                  name,
+                  value,
+                }))
+              : []
+          }
+          columns={columns}
+          rowCount={secrets ? Object.keys(secrets).length : 0}
+          offset={0}
+          limit={10}
+          dataFetchedAtOneGO={true}
+        />
+      </Card>
+    </>
   );
 };
 

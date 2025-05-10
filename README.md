@@ -450,12 +450,6 @@
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/mailchimp-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/mailchimp-icon.png" alt="Mailchimp"/><br/>
-            Mailchimp
-        </a>
-    </td>
-    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/mailgun-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/mailgun-icon.png" alt="Mailgun"/><br/>
             Mailgun

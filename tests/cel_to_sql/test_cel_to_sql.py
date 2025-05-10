@@ -2,6 +2,7 @@ import json
 import os
 import pytest
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
@@ -11,6 +12,9 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 )
 
 fake_field_configurations = [
+    FieldMappingConfiguration(
+        map_from_pattern="id", map_to=["entityId"], data_type=DataType.UUID
+    ),
     FieldMappingConfiguration(
         map_from_pattern="name", map_to=["user_generated_name", "ai_generated_name"]
     ),

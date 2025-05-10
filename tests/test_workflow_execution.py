@@ -10,13 +10,15 @@ from fastapi import HTTPException
 from keep.api.core.db import (
     assign_alert_to_incident,
     create_incident_from_dict,
+    get_all_provisioned_workflows,
     get_last_alerts,
     get_last_workflow_execution_by_workflow_id,
+    get_workflow_execution,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.incident import Incident, IncidentStatus
-from keep.api.models.db.workflow import Workflow
+from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -25,6 +27,7 @@ from keep.identitymanager.identity_managers.db.db_authverifier import (  # noqa
 )
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 # This workflow definition is used to test the execution of workflows based on alert firing times.
 # It defines two actions:
@@ -85,6 +88,31 @@ actions:
         "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
         Alert details: {{ alert }}"
 """
+
+MAX_WAIT_COUNT = 30
+
+
+def wait_for_workflow_execution(tenant_id, workflow_id, exclude_ids=None):
+    # Wait for the workflow execution to complete
+    workflow_execution = None
+    count = 0
+    while (
+        workflow_execution is None or workflow_execution.status == "in_progress"
+    ) and count < MAX_WAIT_COUNT:
+        try:
+            workflow_execution = get_last_workflow_execution_by_workflow_id(
+                tenant_id, workflow_id, exclude_ids=exclude_ids
+            )
+        except Exception as e:
+            print(
+                f"DEBUG: Poll attempt {count}: execution_id={workflow_execution.id if workflow_execution else None}, "
+                f"status={workflow_execution.status if workflow_execution else None}, "
+                f"error={e}"
+            )
+        finally:
+            time.sleep(1)
+            count += 1
+    return workflow_execution
 
 
 @pytest.fixture
@@ -278,21 +306,9 @@ def test_workflow_execution(
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for the workflow execution to complete
-    workflow_execution = None
-    count = 0
-    status = None
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "alert-time-check"
-        )
-        if workflow_execution is not None:
-            status = workflow_execution.status
-        time.sleep(1)
-        count += 1
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "alert-time-check"
+    )
 
     # Check if the workflow execution was successful
     assert workflow_execution is not None
@@ -464,22 +480,7 @@ def test_workflow_execution_2(
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # Wait for the workflow execution to complete
-    workflow_execution = None
-    count = 0
-    status = None
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID,
-            workflow_id,
-        )
-        if workflow_execution is not None:
-            status = workflow_execution.status
-        time.sleep(1)
-        count += 1
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow_id)
 
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
     # Check if the workflow execution was successful
@@ -589,24 +590,11 @@ def test_workflow_execution3(
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for the workflow execution to complete
-    workflow_execution = None
-    count = 0
-    status = None
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "alert-first-time"
-        )
-        if workflow_execution is not None:
-            status = workflow_execution.status
-        time.sleep(1)
-        count += 1
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "alert-first-time"
+    )
 
     # Check if the workflow execution was successful
-
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
 
@@ -718,7 +706,7 @@ def test_workflow_execution_with_disabled_workflow(
             or enabled_workflow_execution.status == "in_progress"
         )
         and disabled_workflow_execution is None
-    ) and count < 30:
+    ) and count < MAX_WAIT_COUNT:
         enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
         )
@@ -816,27 +804,11 @@ def test_workflow_incident_triggers(
 
     # Insert the current alert into the workflow manager
 
-    def wait_workflow_execution(workflow_id):
-        # Wait for the workflow execution to complete
-        workflow_execution = None
-        count = 0
-        while (
-            workflow_execution is None
-            or workflow_execution.status == "in_progress"
-            and count < 30
-        ):
-            workflow_execution = get_last_workflow_execution_by_workflow_id(
-                SINGLE_TENANT_UUID, workflow_id
-            )
-            time.sleep(1)
-            count += 1
-        return workflow_execution
-
     workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "created")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
-    workflow_execution_created = wait_workflow_execution(
-        "incident-triggers-test-created-updated"
+    workflow_execution_created = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "incident-triggers-test-created-updated"
     )
     assert workflow_execution_created is not None
     assert workflow_execution_created.status == "success"
@@ -847,8 +819,8 @@ def test_workflow_incident_triggers(
 
     workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "updated")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
-    workflow_execution_updated = wait_workflow_execution(
-        "incident-triggers-test-created-updated"
+    workflow_execution_updated = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "incident-triggers-test-created-updated"
     )
     assert workflow_execution_updated is not None
     assert workflow_execution_updated.status == "success"
@@ -876,8 +848,8 @@ def test_workflow_incident_triggers(
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # incident-triggers-test-deleted should be triggered now
-    workflow_execution_deleted = wait_workflow_execution(
-        "incident-triggers-test-deleted"
+    workflow_execution_deleted = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "incident-triggers-test-deleted"
     )
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
 
@@ -984,7 +956,6 @@ workflow_definition_routing = """workflow:
       provider:
         type: console
         with:
-          channel: prod-infra-alerts
           message: |
             "Infrastructure Production Alert
             Team: {{ alert.team }}
@@ -996,7 +967,6 @@ workflow_definition_routing = """workflow:
       provider:
         type: console
         with:
-          channel: backend-team-alerts
           message: |
             "HTTP API Error Alert
             Monitor: {{ alert.monitor_name }}
@@ -1173,20 +1143,9 @@ def test_alert_routing_policy(
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for workflow execution
-    workflow_execution = None
-    count = 0
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "alert-routing-policy"
-        )
-        if workflow_execution is not None and workflow_execution.status == "success":
-            break
-        time.sleep(1)
-        count += 1
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "alert-routing-policy"
+    )
 
     # Verify workflow execution
     assert workflow_execution is not None
@@ -1353,24 +1312,12 @@ def test_nested_conditional_flow(
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for workflow execution
-    workflow_execution = None
-    count = 0
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "nested-conditional-flow"
-        )
-        if workflow_execution is not None and workflow_execution.status == "success":
-            break
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "nested-conditional-flow"
+    )
 
-        elif workflow_execution is not None and workflow_execution.status == "error":
-            raise Exception("Workflow execution failed")
-
-        time.sleep(1)
-        count += 1
+    if workflow_execution is not None and workflow_execution.status == "error":
+        raise Exception("Workflow execution failed")
 
     # Verify workflow execution
     assert workflow_execution is not None
@@ -1447,24 +1394,12 @@ def test_alert_resolved(db_session, create_alert, workflow_manager):
     workflow_manager.insert_events(SINGLE_TENANT_UUID, alerts_dto)
 
     # Wait for workflow execution
-    workflow_execution = None
-    count = 0
-    while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
-    ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "Resolve-Alert"
-        )
-        if workflow_execution is not None and workflow_execution.status == "success":
-            break
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "Resolve-Alert"
+    )
 
-        elif workflow_execution is not None and workflow_execution.status == "error":
-            raise Exception("Workflow execution failed")
-
-        time.sleep(1)
-        count += 1
+    if workflow_execution is not None and workflow_execution.status == "error":
+        raise Exception("Workflow execution failed")
 
     # Verify workflow execution
     assert workflow_execution is not None
@@ -1626,3 +1561,95 @@ def test_workflow_permissions(
     else:
         # For 403 responses, the workflow execution should not be attempted
         mock_scheduler.handle_manual_event_workflow.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_WORKFLOWS_DIRECTORY": "./tests/provision/workflows_4",
+        },
+    ],
+    indirect=True,
+)
+def test_workflow_executions_after_reprovisioning(
+    db_session,
+    test_app,
+    workflow_manager,
+    create_alert,
+):
+    """Test that workflow executions remain attached to workflows after reprovisioning."""
+    # First provision the workflows
+    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+
+    # Get workflows after first provisioning
+    first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
+    assert len(first_provisioned) == 1  # There is 1 workflow in workflows_3 directory
+
+    # Create and execute an alert to trigger the workflow
+    first_alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-under-the-weather",
+        message="Grafana is under the weather",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp1",
+    )
+
+    # Insert the alert into workflow manager to trigger execution
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [first_alert])
+
+    # Wait for workflow execution to complete
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, first_provisioned[0].id
+    )
+
+    # Verify first execution was successful
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+    first_execution_id = workflow_execution.id
+
+    # Reprovision the workflows
+    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+
+    # Get workflows after second provisioning
+    second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
+    assert len(second_provisioned) == 1  # Should still be 1 workflow
+    assert second_provisioned[0].id == first_provisioned[0].id
+
+    # Verify the workflow execution is still attached
+    workflow_execution = get_workflow_execution(SINGLE_TENANT_UUID, first_execution_id)
+    assert workflow_execution is not None
+    assert workflow_execution.id == first_execution_id
+    assert workflow_execution.workflow_id == second_provisioned[0].id
+
+    # Execute another alert to verify the workflow still works
+    second_alert = AlertDto(
+        id="grafana-2",
+        source=["grafana"],
+        name="server-is-under-the-weather",
+        message="Grafana is under the weather again",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp2",
+    )
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [second_alert])
+
+    # Wait for second workflow execution
+    second_workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID,
+        second_provisioned[0].id,
+        exclude_ids=[first_execution_id],
+    )
+
+    # Verify second execution was also successful
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+    assert second_workflow_execution is not None
+    assert second_workflow_execution.status == "success"
+    assert second_workflow_execution.id != first_execution_id  # Different execution ID
+    assert (
+        second_workflow_execution.workflow_id == second_provisioned[0].id
+    )  # Same workflow ID

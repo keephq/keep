@@ -63,6 +63,7 @@ export interface AlertDto {
   isNoisy?: boolean;
   enriched_fields: string[];
   incident?: string;
+  incident_dto?: any[];
   alert_query?: string;
 
   // From AlertWithIncidentLinkMetadataDto
@@ -101,7 +102,6 @@ export const AlertKnownKeys = [
   "ack_status",
   "deleted",
   "assignee",
-  "providerId",
   "checkbox",
   "alertMenu",
   "group",

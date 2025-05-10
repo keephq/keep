@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -47,6 +47,10 @@ import {
 } from "@/entities/incidents/model/models";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useIncidentsTableData } from "./useIncidentsTableData";
+import EnhancedDateRangePickerV2, {
+  AllTimeFrame,
+  TimeFrameV2,
+} from "@/components/ui/DateRangePickerV2";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -76,14 +80,13 @@ export function IncidentList({
 
   const [filterCel, setFilterCel] = useState<string>("");
 
-  const [dateRange, setDateRange] = useState<TimeFrame>({
-    start: null,
-    end: null,
-    paused: false,
-  });
+  const [dateRange, setDateRange] = useState<TimeFrameV2>({
+    type: "all-time",
+    isPaused: false,
+  } as AllTimeFrame);
 
   const {
-    defaultIncidents,
+    isEmptyState,
     incidents,
     incidentsError,
     predictedIncidents,
@@ -98,8 +101,6 @@ export function IncidentList({
     filterCel: filterCel,
     timeFrame: dateRange,
   });
-
-  const isTrueEmptyState = defaultIncidents?.items.length === 0;
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
     null
@@ -219,10 +220,9 @@ export function IncidentList({
 
   const handleClearFilters = () => {
     setDateRange({
-      start: null,
-      end: null,
-      paused: false,
-    });
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame);
     setIncidentsPagination({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
       offset: 0,
@@ -244,7 +244,7 @@ export function IncidentList({
       );
     }
 
-    if (isTrueEmptyState) {
+    if (isEmptyState) {
       return <IncidentsNotFoundPlaceholder />;
     }
 
@@ -267,11 +267,9 @@ export function IncidentList({
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
-        <EnhancedDateRangePicker
+        <EnhancedDateRangePickerV2
           timeFrame={dateRange}
-          setTimeFrame={(timeFrame) => {
-            setDateRange(timeFrame);
-          }}
+          setTimeFrame={setDateRange}
           timeframeRefreshInterval={20000}
           hasPlay={true}
           pausedByDefault={false}
@@ -337,7 +335,7 @@ export function IncidentList({
                   usePropertyPathsSuggestions={true}
                   clearFiltersToken={clearFiltersToken}
                   initialFacetsData={initialFacetsData}
-                  onCelChange={(cel) => setFilterCel(cel)}
+                  onCelChange={setFilterCel}
                   revalidationToken={filterRevalidationToken}
                 />
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
