@@ -67,6 +67,7 @@ const auth0LogsProvider: ProviderMetadataForValidation = {
 };
 
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
+export type WorkflowInputType = WorkflowInput["type"];
 
 const WorkflowStrategySchema = z.enum([
   "nonparallel_with_retry",
