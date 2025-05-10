@@ -3,6 +3,7 @@ Icinga2 Provider is a class that provides a way to receive alerts from Icinga2 u
 """
 
 import dataclasses
+
 import pydantic
 import requests
 
@@ -10,6 +11,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
 
 @pydantic.dataclasses.dataclass
 class Icinga2ProviderAuthConfig:
@@ -21,6 +23,7 @@ class Icinga2ProviderAuthConfig:
     - api_user: Username for API authentication
     - api_password: Password for API authentication
     """
+
     host_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
@@ -47,6 +50,7 @@ class Icinga2ProviderAuthConfig:
         }
     )
 
+
 class Icinga2Provider(BaseProvider):
     """
     Get alerts from Icinga2 into Keep primarily via webhooks.
@@ -62,7 +66,7 @@ class Icinga2Provider(BaseProvider):
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-    
+
 To send alerts from Icinga2 to Keep, configure a new notification command:
 
 1. In Icinga2, create a new notification command
@@ -140,8 +144,7 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
                 response.raise_for_status()
 
             self.logger.info(
-                "Scopes Validation is successful",
-                extra={"response": response.json()}
+                "Scopes Validation is successful", extra={"response": response.json()}
             )
 
             return {"read_alerts": True}
@@ -149,11 +152,11 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
         except Exception as e:
             self.logger.exception("Failed to validate scopes", extra={"error": e})
             return {"read_alerts": str(e)}
-    
+
     def _get_alerts(self) -> list[AlertDto]:
         """
         Get alerts from Icinga2 via API.
-        
+
         Returns:
             list[AlertDto]: List of alerts in Keep format
         """
@@ -178,18 +181,22 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
                 AlertDto(
                     id=service.get("name"),
                     name=service.get("display_name"),
-                    status=self.STATUS_MAP.get(service.get("state"), AlertStatus.FIRING),
-                    severity=self.SEVERITY_MAP.get(service.get("state"), AlertSeverity.INFO),
+                    status=self.STATUS_MAP.get(
+                        service.get("state"), AlertStatus.FIRING
+                    ),
+                    severity=self.SEVERITY_MAP.get(
+                        service.get("state"), AlertSeverity.INFO
+                    ),
                     timestamp=service.get("last_state_change"),
-                    source=["icinga2"]
+                    source=["icinga2"],
                 )
                 for service in services
             ]
-        
+
         except Exception as e:
             self.logger.exception("Failed to get alerts from Icinga2")
             raise Exception(f"Failed to get alerts from Icinga2: {str(e)}")
-    
+
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
@@ -200,7 +207,7 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
         Args:
             event (dict): Raw alert data from Icinga2
             provider_instance (BaseProvider, optional): Provider instance
-            
+
         Returns:
             AlertDto: Formatted alert in Keep format
         """
@@ -227,26 +234,31 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
             state=state,
             state_type=check_result.get("state_type"),
             attempt=check_result.get("attempt"),
-            acknowledgement=service.get("acknowledgement") or host.get("acknowledgement"),
+            acknowledgement=service.get("acknowledgement")
+            or host.get("acknowledgement"),
             downtime_depth=service.get("downtime_depth") or host.get("downtime_depth"),
             flapping=service.get("flapping") or host.get("flapping"),
             execution_time=check_result.get("execution_time"),
             latency=check_result.get("latency"),
             raw_output=output,
+            exit_status=status,
         )
 
         return alert
 
+
 if __name__ == "__main__":
     import logging
+
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-    
+
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
     )
 
     import os
+
     icinga2_api_user = os.getenv("ICINGA2_API_USER")
     icinga2_api_password = os.getenv("ICINGA2_API_PASSWORD")
 
