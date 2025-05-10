@@ -18,7 +18,7 @@ function validateWorkflowExamples() {
   // providers_list.json should be generated with "python3 scripts/save_providers_list.py" from the root of the repo
   const providers = JSON.parse(
     fs.readFileSync(path.join(__dirname, "../../providers_list.json"), "utf8")
-  );
+  ) as any[];
   console.log(`Providers list loaded, ${providers.length} providers found`);
   const zodSchema = getYamlWorkflowDefinitionSchema(providers);
   console.log(`Zod schema loaded`);
