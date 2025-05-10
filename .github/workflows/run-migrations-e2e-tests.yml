@@ -391,6 +391,7 @@ jobs:
             mkdir -p /app/migrations/versions
             chown -R keep:keep /app/migrations
             
+            
             # Копируем конфигурацию alembic
             cp /venv/lib/python3.11/site-packages/keep/alembic.ini /app/alembic_temp.ini
             sed -i 's|script_location.*|script_location = /app/migrations|' /app/alembic_temp.ini
