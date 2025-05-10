@@ -25,8 +25,6 @@ services:
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
-    volumes:
-      - migrations_volume:/app
     ports:
       - "8080:8080"
 
@@ -108,4 +106,3 @@ services:
 
 volumes:
   grafana-storage: {}
-  migrations_volume:
