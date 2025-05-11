@@ -1,16 +1,6 @@
 import { Title } from "@tremor/react";
 import { Select } from "@/shared/ui";
-
-export interface WorkflowInput {
-  name: string;
-  type: string;
-  description?: string;
-  default?: any;
-  required?: boolean;
-  options?: string[];
-  visuallyRequired?: boolean; // For inputs without defaults that aren't explicitly required
-}
-
+import { WorkflowInput, WorkflowInputType } from "../model/yaml.schema";
 interface WorkflowInputFieldsProps {
   workflowInputs: WorkflowInput[];
   inputValues: Record<string, any>;
@@ -28,8 +18,7 @@ export function WorkflowInputFields({
 
   // Render input fields based on input type
   const renderInputField = (input: WorkflowInput) => {
-    const { name, type, description, required, visuallyRequired, options } =
-      input;
+    const { name, type, description, required, visuallyRequired } = input;
     const value = inputValues[name] !== undefined ? inputValues[name] : "";
     const isEmpty = value === undefined || value === null || value === "";
 
@@ -44,7 +33,7 @@ export function WorkflowInputFields({
     // Error state for empty fields that need values
     const hasError = isEmpty && isEffectivelyRequired;
 
-    switch (type?.toLowerCase()) {
+    switch (type) {
       case "string":
         return (
           <div key={name} className="mb-4">
@@ -144,7 +133,7 @@ export function WorkflowInputFields({
                 onChange={(option) =>
                   option && onInputChange(name, option.value)
                 }
-                options={options?.map((option) => ({
+                options={input.options.map((option) => ({
                   value: option,
                   label: option,
                 }))}
@@ -187,7 +176,19 @@ export function WorkflowInputFields({
     }
   };
 
-  return workflowInputs.map(renderInputField);
+  return (
+    <div className="mt-4">
+      <Title className="text-lg mb-2">Workflow Inputs</Title>
+      <div className="border p-3 rounded">
+        {workflowInputs.map(({ type, ...rawInput }) =>
+          renderInputField({
+            type: type ? (type.toLowerCase() as WorkflowInputType) : "string",
+            ...rawInput,
+          } as WorkflowInput)
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function areRequiredInputsFilled(
