@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Card,
-  Icon,
   Table,
   TableBody,
   TableCell,
@@ -10,34 +9,21 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Rule } from "utils/hooks/useRules";
-import {
-  CorrelationSidebar,
-  DEFAULT_CORRELATION_FORM_VALUES,
-} from "./CorrelationSidebar";
+import { CorrelationSidebar } from "./CorrelationSidebar";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { DefaultRuleGroupType } from "react-querybuilder";
-import { parseCEL } from "react-querybuilder/parseCEL";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
-import { CorrelationFormType } from "./CorrelationSidebar/types";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { GroupedByCell } from "./GroupedByCel";
-
-const TIMEFRAME_UNITS_FROM_SECONDS = {
-  seconds: (amount: number) => amount,
-  minutes: (amount: number) => amount / 60,
-  hours: (amount: number) => amount / 3600,
-  days: (amount: number) => amount / 86400,
-} as const;
+import CelInput from "@/features/cel-input/cel-input";
 
 const columnHelper = createColumnHelper<Rule>();
 
@@ -51,47 +37,6 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
 
   const selectedId = searchParams ? searchParams.get("id") : null;
   const selectedRule = rules.find((rule) => rule.id === selectedId);
-  const correlationFormFromRule: CorrelationFormType = useMemo(() => {
-    if (selectedRule) {
-      const query = parseCEL(selectedRule.definition_cel);
-      const anyCombinator = query.rules.some((rule) => "combinator" in rule);
-
-      const queryInGroup: DefaultRuleGroupType = {
-        ...query,
-        rules: anyCombinator
-          ? query.rules
-          : [
-              {
-                combinator: "and",
-                rules: query.rules,
-              },
-            ],
-      };
-
-      const timeunit = selectedRule.timeunit ?? "seconds";
-
-      return {
-        name: selectedRule.name,
-        description: selectedRule.group_description ?? "",
-        timeAmount: TIMEFRAME_UNITS_FROM_SECONDS[timeunit](
-          selectedRule.timeframe
-        ),
-        timeUnit: timeunit,
-        groupedAttributes: selectedRule.grouping_criteria,
-        requireApprove: selectedRule.require_approve,
-        resolveOn: selectedRule.resolve_on,
-        createOn: selectedRule.create_on,
-        query: queryInGroup,
-        incidents: selectedRule.incidents,
-        incidentNameTemplate: selectedRule.incident_name_template || "",
-        incidentPrefix: selectedRule.incident_prefix || "",
-        multiLevel: selectedRule.multi_level,
-        multiLevelPropertyName: selectedRule.multi_level_property_name || "",
-      };
-    }
-
-    return DEFAULT_CORRELATION_FORM_VALUES;
-  }, [selectedRule]);
 
   const [isRuleCreation, setIsRuleCreation] = useState(false);
 
@@ -141,9 +86,20 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",
-        cell: (context) => (
-          <FormattedQueryCell query={parseCEL(context.getValue())} />
-        ),
+        cell: (context) => {
+          let cel = context.getValue();
+
+          return (
+            <div
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <CelInput readOnly={true} value={cel}></CelInput>
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("grouping_criteria", {
         header: "Grouped by",
@@ -233,7 +189,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         <CorrelationSidebar
           isOpen={true}
           toggle={onCloseCorrelation}
-          defaultValue={correlationFormFromRule}
+          selectedRule={selectedRule}
         />
       )}
     </div>

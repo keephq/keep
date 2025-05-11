@@ -195,10 +195,12 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request, monkeypatch):
+def db_session(request, monkeypatch, tmp_path):
     # Create a database connection
     print("Creating db session")
     os.environ["DB_ECHO"] = "true"
+    # Set up a temporary directory for secret manager
+    os.environ["SECRET_MANAGER_DIRECTORY"] = str(tmp_path)
     if (
         request
         and hasattr(request, "param")
@@ -423,7 +425,7 @@ def elastic_container(docker_ip, docker_services):
         print("Exception occurred while waiting for MySQL to be responsive")
         raise
     finally:
-        print("Tearing down ElasticSearch")
+        print("Tearing down Elasticsearch")
 
 
 @pytest.fixture
