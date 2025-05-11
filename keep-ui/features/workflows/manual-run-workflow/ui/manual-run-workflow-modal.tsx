@@ -17,11 +17,11 @@ import {
 } from "@/entities/workflows/model/useWorkflowsV2";
 import {
   WorkflowInputFields,
-  WorkflowInput,
   areRequiredInputsFilled,
 } from "@/entities/workflows/ui/WorkflowInputFields";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import type { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
 
 interface Props {
   alert?: AlertDto | null | undefined;

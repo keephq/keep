@@ -39,9 +39,10 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
+from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
@@ -495,8 +496,8 @@ def update_workflow_with_values(
         # Get the latest revision number for this workflow
         latest_version = session.exec(
             select(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
-            .order_by(WorkflowVersion.revision.desc())
+            .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
+            .order_by(col(WorkflowVersion.revision).desc())
             .limit(1)
         ).first()
 
@@ -505,7 +506,7 @@ def update_workflow_with_values(
         # Update all existing versions to not be current
         session.exec(
             update(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
             .values(is_current=False)  # type: ignore[attr-defined]
         )
 
@@ -519,6 +520,7 @@ def update_workflow_with_values(
             # TODO: check if valid
             is_valid=True,
             is_current=True,
+            updated_at=datetime.now(),
         )
         session.add(version)
 
@@ -538,6 +540,21 @@ def update_workflow_with_values(
         return existing_workflow
 
 
+def is_equal_workflow_dicts(a: dict, b: dict):
+    return (
+        a.get("workflow_raw") == b.get("workflow_raw")
+        and a.get("tenant_id") == b.get("tenant_id")
+        and a.get("is_test") == b.get("is_test")
+        and a.get("is_deleted") == b.get("is_deleted")
+        and a.get("is_disabled") == b.get("is_disabled")
+        and a.get("name") == b.get("name")
+        and a.get("description") == b.get("description")
+        and a.get("interval") == b.get("interval")
+        and a.get("provisioned") == b.get("provisioned")
+        and a.get("provisioned_file") == b.get("provisioned_file")
+    )
+
+
 def add_or_update_workflow(
     id: str,
     name: str,
@@ -550,7 +567,7 @@ def add_or_update_workflow(
     updated_by: str,
     provisioned: bool = False,
     provisioned_file: str | None = None,
-    force_update: bool = True,
+    force_update: bool = False,
     is_test: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -562,9 +579,25 @@ def add_or_update_workflow(
             existing_workflow = get_workflow_by_id(tenant_id, id)
 
         if existing_workflow:
-            if workflow_raw == existing_workflow.workflow_raw and not force_update:
+            existing_workflow_dict = existing_workflow.model_dump()
+            workflow_dict = dict(
+                tenant_id=tenant_id,
+                name=name,
+                description=description,
+                interval=interval,
+                workflow_raw=workflow_raw,
+                is_disabled=is_disabled,
+                is_test=is_test,
+                is_deleted=False,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
+            )
+            if (
+                is_equal_workflow_dicts(existing_workflow_dict, workflow_dict)
+                and not force_update
+            ):
                 logger.info(
-                    f"Workflow {id} already exists with the same workflow_raw, skipping update"
+                    f"Workflow {id} already exists with the same workflow properties, skipping update"
                 )
                 return existing_workflow
             return update_workflow_with_values(
@@ -710,21 +743,27 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    tenant_id: str, workflow_id: str, status: str = None
+    tenant_id: str,
+    workflow_id: str,
+    status: str | None = None,
+    exclude_ids: list[str] | None = None,
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         query = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.workflow_id == workflow_id)
-            .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
-            .order_by(WorkflowExecution.started.desc())
+            select(WorkflowExecution)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
+            .order_by(col(WorkflowExecution.started).desc())
         )
 
         if status:
-            query = query.filter(WorkflowExecution.status == status)
+            query = query.where(WorkflowExecution.status == status)
 
-        workflow_execution = query.first()
+        if exclude_ids:
+            query = query.where(col(WorkflowExecution.id).notin_(exclude_ids))
+
+        workflow_execution = session.exec(query).first()
     return workflow_execution
 
 
@@ -772,14 +811,19 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     return result
 
 
-def get_all_workflows(tenant_id: str):
+def get_all_workflows(tenant_id: str, exclude_disabled: bool = False) -> List[Workflow]:
     with Session(engine) as session:
-        workflows = session.exec(
+        query = (
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
             .where(Workflow.is_test == False)
-        ).all()
+        )
+
+        if exclude_disabled:
+            query = query.where(Workflow.is_disabled == False)
+
+        workflows = session.exec(query).all()
     return workflows
 
 
@@ -3407,6 +3451,12 @@ def update_action(
     return found_action
 
 
+def get_tenants():
+    with Session(engine) as session:
+        tenants = session.exec(select(Tenant)).all()
+        return tenants
+
+
 def get_tenants_configurations(only_with_config=False) -> dict:
     with Session(engine) as session:
         try:
@@ -4214,7 +4264,6 @@ def get_alerts_data_for_incident(
             "sources": set(sources),
             "services": set(services),
             "max_severity": max(severities) if severities else IncidentSeverity.LOW,
-            "count": len(alerts_data),
         }
 
 
@@ -4288,10 +4337,6 @@ def add_alerts_to_incident(
             if not new_fingerprints:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(
-                tenant_id, new_fingerprints, session
-            )
-
             alert_to_incident_entries = [
                 LastAlertToIncident(
                     fingerprint=str(fingerprint),  # it may sometime be UUID...
@@ -4314,18 +4359,22 @@ def add_alerts_to_incident(
                     session.flush()
             session.commit()
 
-            incident.sources = list(
+            alerts_data_for_incident = get_alerts_data_for_incident(
+                tenant_id, new_fingerprints, session
+            )
+
+            new_sources = list(
                 set(incident.sources if incident.sources else [])
                 | set(alerts_data_for_incident["sources"])
             )
-            incident.affected_services = list(
+            new_affected_services = list(
                 set(incident.affected_services if incident.affected_services else [])
                 | set(alerts_data_for_incident["services"])
             )
             if not incident.forced_severity:
                 # If incident has alerts already, use the max severity between existing and new alerts,
                 # otherwise use the new alerts max severity
-                incident.severity = (
+                new_severity = (
                     max(
                         incident.severity,
                         alerts_data_for_incident["max_severity"].order,
@@ -4333,11 +4382,20 @@ def add_alerts_to_incident(
                     if incident.alerts_count
                     else alerts_data_for_incident["max_severity"].order
                 )
+            else:
+                new_severity = incident.severity
 
             if not override_count:
-                incident.alerts_count += alerts_data_for_incident["count"]
+                alerts_count = (
+                    select(count(LastAlertToIncident.fingerprint))
+                    .where(
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                        LastAlertToIncident.tenant_id == tenant_id,
+                        LastAlertToIncident.incident_id == incident.id,
+                    )
+                ).subquery()
             else:
-                incident.alerts_count = alerts_data_for_incident["count"]
+                alerts_count = alerts_data_for_incident["count"]
 
             last_received_field = get_json_extract_field(
                 session, Alert.event, "lastReceived"
@@ -4365,12 +4423,24 @@ def add_alerts_to_incident(
             if isinstance(last_seen_at, str):
                 last_seen_at = parse(last_seen_at)
 
-            incident.start_time = started_at
-            incident.last_seen_time = last_seen_at
             incident_id = incident.id
+
             for attempt in range(max_retries):
                 try:
-                    session.add(incident)
+                    session.exec(
+                        update(Incident)
+                        .where(
+                            Incident.id == incident_id,
+                            Incident.tenant_id == tenant_id,
+                        ).values(
+                            alerts_count = alerts_count,
+                            last_seen_time = last_seen_at,
+                            start_time = started_at,
+                            affected_services = new_affected_services,
+                            severity = new_severity,
+                            sources = new_sources,
+                        )
+                    )
                     session.commit()
                     break
                 except StaleDataError as ex:
@@ -4382,6 +4452,7 @@ def add_alerts_to_incident(
                         continue
                     else:
                         raise
+            session.add(incident)
             session.refresh(incident)
 
             return incident
@@ -4577,22 +4648,23 @@ def remove_alerts_to_incident_by_incident_id(
         ).one()
 
         # filtering removed entities from affected services and sources in the incident
-        incident.affected_services = [
+        new_affected_services = [
             service
             for service in incident.affected_services
             if service not in services_to_remove
         ]
-        incident.sources = [
+        new_sources = [
             source for source in incident.sources if source not in sources_to_remove
         ]
 
-        incident.alerts_count -= alerts_data_for_incident["count"]
         if not incident.forced_severity:
-            incident.severity = (
+            new_severity = (
                 max(updated_severities)
                 if updated_severities
                 else IncidentSeverity.LOW.order
             )
+        else:
+            new_severity = incident.severity
 
         if isinstance(started_at, str):
             started_at = parse(started_at)
@@ -4600,11 +4672,32 @@ def remove_alerts_to_incident_by_incident_id(
         if isinstance(last_seen_at, str):
             last_seen_at = parse(last_seen_at)
 
-        incident.start_time = started_at
-        incident.last_seen_time = last_seen_at
+        alerts_count = (
+            select(count(LastAlertToIncident.fingerprint))
+            .where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                LastAlertToIncident.tenant_id == tenant_id,
+                LastAlertToIncident.incident_id == incident.id,
+            )
+        ).subquery()
 
-        session.add(incident)
+        session.exec(
+            update(Incident)
+            .where(
+                Incident.id == incident_id,
+                Incident.tenant_id == tenant_id,
+            ).values(
+                alerts_count=alerts_count,
+                last_seen_time=last_seen_at,
+                start_time=started_at,
+                affected_services=new_affected_services,
+                severity=new_severity,
+                sources=new_sources,
+            )
+        )
         session.commit()
+        session.add(incident)
+        session.refresh(incident)
 
         return deleted
 
@@ -5695,6 +5788,41 @@ def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> No
                 stmt = stmt.where(AlertRaw.id == alert_id)
         session.exec(stmt)
         session.commit()
+
+
+def create_tenant(tenant_name: str) -> str:
+    with Session(engine) as session:
+        try:
+            # check if the tenant exist:
+            logger.info("Checking if tenant exists")
+            tenant = session.exec(
+                select(Tenant).where(Tenant.name == tenant_name)
+            ).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                tenant_id = str(uuid4())
+                logger.info(
+                    "Creating tenant",
+                    extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
+                )
+                session.add(Tenant(id=tenant_id, name=tenant_name))
+            else:
+                logger.warning("Tenant already exists")
+
+            # commit the changes
+            session.commit()
+            logger.info(
+                "Tenant created",
+                extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
+            )
+            return tenant_id
+        except IntegrityError:
+            # Tenant already exists
+            logger.exception("Failed to create tenant")
+            raise
+        except Exception:
+            logger.exception("Failed to create tenant")
+            pass
 
 
 def create_single_tenant_for_e2e(tenant_id: str) -> None:

@@ -1,4 +1,5 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 import { editor } from "monaco-editor";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
@@ -8,34 +9,31 @@ interface CelExpressionValidationMarker {
   columnEnd: number;
 }
 
-export function useCelValidation(cel: string): editor.IMarkerData[] {
+export function useCelValidation(
+  cel: string | undefined
+): editor.IMarkerData[] {
   const api = useApi();
   const uri = `/cel/validate`;
-  const [celToValidate, setCelToValidate] = useState<string>(cel);
-
-  // debounce the cel input to avoid too many requests
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setCelToValidate(cel);
-    }, 500);
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [cel, setCelToValidate]);
+  const [debouncedCel] = useDebouncedValue(cel, 500);
 
   const { data, error, isLoading } = useSWR<CelExpressionValidationMarker[]>(
-    () => (api.isReady() ? uri + celToValidate : null),
+    () => (api.isReady() && debouncedCel ? uri + debouncedCel : null),
     () => {
-      if (!celToValidate) {
+      if (!debouncedCel) {
         return [];
       }
 
       return api.post(uri, { cel });
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      keepPreviousData: false,
     }
   );
 
   const validationErrors: editor.IMarkerData[] = useMemo(() => {
-    if (!data) {
+    if (!data || !debouncedCel) {
       return [];
     }
 
@@ -44,11 +42,11 @@ export function useCelValidation(cel: string): editor.IMarkerData[] {
       startLineNumber: 1,
       endLineNumber: 1,
       startColumn: Math.max(marker.columnStart - 1, 0),
-      endColumn: Math.min(marker.columnEnd + 1, celToValidate.length),
+      endColumn: Math.min(marker.columnEnd + 1, debouncedCel.length),
       message: "The error is found at this position",
       source: "CEL",
     }));
-  }, [data, celToValidate]);
+  }, [data, debouncedCel]);
 
   return isLoading ? [] : validationErrors;
 }

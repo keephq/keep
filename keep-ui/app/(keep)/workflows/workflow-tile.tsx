@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import { KeepLoader } from "@/shared/ui";
@@ -27,7 +27,8 @@ import "./workflow-tile.css";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 import Link from "next/link";
 import { WorkflowPermissionsBadge } from "@/entities/workflows/ui/WorkflowPermissionsBadge";
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { useWorkflowZodSchema } from "@/entities/workflows/lib/useWorkflowZodSchema";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
@@ -41,6 +42,7 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
       {trigger.type === "interval" && <span>{trigger.value} seconds</span>}
       {trigger.type === "alert" && (
         <span className="text-sm text-right">
+          {trigger.cel && <Fragment>CEL = {trigger.cel}</Fragment>}
           {trigger.filters &&
             trigger.filters.map((filter) => (
               <Fragment key={filter.key}>
@@ -61,7 +63,16 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const { toggleWorkflow } = useToggleWorkflow(workflow.id);
 
   const { deleteWorkflow } = useWorkflowActions();
-  const workflowYaml = parseWorkflowYamlStringToJSON(workflow.workflow_raw);
+  const { data: workflowYamlJSON, error: workflowParseError } = useMemo(() => {
+    return parseWorkflowYamlToJSON(workflow.workflow_raw);
+  }, [workflow.workflow_raw]);
+
+  // TODO: parse permissions on backend
+  const permissions = useMemo(
+    () => workflowYamlJSON?.workflow?.permissions,
+    [workflowYamlJSON]
+  );
+
   const {
     isRunning,
     handleRunClick,
@@ -137,6 +148,34 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       .replace("hour", "hr");
   };
 
+  const zodSchema = useWorkflowZodSchema();
+  const validationResult = useMemo(
+    () => parseWorkflowYamlToJSON(workflow.workflow_raw, zodSchema),
+    [zodSchema, workflow.workflow_raw]
+  );
+
+  function renderValidationBadge() {
+    if (validationResult.success) {
+      return (
+        <Badge color="green" size="xs">
+          Valid YAML
+        </Badge>
+      );
+    }
+    return (
+      <Badge
+        color="yellow"
+        size="xs"
+        tooltip={validationResult.error.issues
+          .map((issue) => `${issue.path}: ${issue.message}`)
+          .join("\n")}
+      >
+        {validationResult.error.issues.length} issue
+        {validationResult.error.issues.length > 1 ? "s" : ""}
+      </Badge>
+    );
+  }
+
   return (
     <>
       {/* TODO: fix stuck loader */}
@@ -172,13 +211,16 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               </Badge>
             )}
           </div>
-          <WorkflowGraph workflow={workflow} />
+          <WorkflowGraph size="sm" workflow={workflow} />
           <div className="container flex flex-col space-between">
-            <div className="h-24">
-              <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
-                {workflow?.name || "Unknown"}
-              </h2>
-              <p className="text-gray-500 line-clamp-2">
+            <div className="h-28 flex flex-col pt-2">
+              <div className="flex flex-col">
+                {renderValidationBadge()}
+                <h2 className="truncate leading-6 font-bold text-base lg:text-lg">
+                  {workflow?.name || "Unknown"}
+                </h2>
+              </div>
+              <p className="text-gray-500 line-clamp-2 text-sm">
                 {workflow?.description || "no description"}
               </p>
             </div>
@@ -196,11 +238,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                   />
                 ))}
               </div>
-              {workflowYaml.permissions && (
+              {permissions && (
                 <div className="flex flex-row items-center gap-1 flex-wrap text-sm ml-1">
-                  <WorkflowPermissionsBadge
-                    permissions={workflowYaml.permissions}
-                  />
+                  <WorkflowPermissionsBadge permissions={permissions} />
                 </div>
               )}
               {!isAllExecutionProvidersConfigured &&

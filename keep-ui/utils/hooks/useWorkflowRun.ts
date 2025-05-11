@@ -6,8 +6,8 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
 import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
-import { WorkflowInput } from "@/entities/workflows/ui/WorkflowInputFields";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import type { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
 
 const noop = () => {};
 
@@ -33,7 +33,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
         const parsedWorkflow = parseWorkflowYamlStringToJSON(
           workflow.workflow_raw
         );
-        const inputs = parsedWorkflow.workflow.inputs || [];
+        const inputs = parsedWorkflow?.workflow?.inputs || [];
         setWorkflowInputs(inputs);
       } catch (error) {
         console.error("Failed to parse workflow YAML:", error);

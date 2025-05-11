@@ -2,10 +2,13 @@ import { z } from "zod";
 
 const ManualTriggerValueSchema = z.literal("true");
 
-export const V2StepManualTriggerSchema = z.object({
+const TriggerSchemaBase = z.object({
   id: z.string(),
   name: z.string(),
   componentType: z.literal("trigger"),
+});
+
+export const V2StepManualTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("manual"),
   properties: z.object({
     manual: ManualTriggerValueSchema,
@@ -14,10 +17,7 @@ export const V2StepManualTriggerSchema = z.object({
 
 const IntervalTriggerValueSchema = z.union([z.string(), z.number()]);
 
-export const V2StepIntervalTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
+export const V2StepIntervalTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("interval"),
   properties: z.object({
     interval: IntervalTriggerValueSchema,
@@ -25,16 +25,15 @@ export const V2StepIntervalTriggerSchema = z.object({
 });
 
 const AlertTriggerValueSchema = z.record(z.string(), z.string());
-export const V2StepAlertTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
+export const V2StepAlertTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("alert"),
-  properties: z.object({
-    alert: AlertTriggerValueSchema,
-    source: z.string().optional(),
-  }),
-  only_on_change: z.array(z.string()).optional(),
+  properties: z
+    .object({
+      filters: z.record(z.string(), z.string()).optional(),
+      cel: z.string().optional(),
+      only_on_change: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
@@ -42,10 +41,8 @@ export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
 const IncidentTriggerValueSchema = z.object({
   events: z.array(IncidentEventEnum),
 });
-export const V2StepIncidentTriggerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  componentType: z.literal("trigger"),
+
+export const V2StepIncidentTriggerSchema = TriggerSchemaBase.extend({
   type: z.literal("incident"),
   properties: z.object({
     incident: IncidentTriggerValueSchema,
@@ -59,10 +56,53 @@ export const V2StepTriggerSchema = z.union([
   V2StepIncidentTriggerSchema,
 ]);
 
+export const WorkflowInputTypeEnum = z.enum([
+  "string",
+  "number",
+  "boolean",
+  "choice",
+]);
+
+const WorkflowInputBaseSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  default: z.any().optional(),
+  required: z.boolean().optional(),
+  visuallyRequired: z.boolean().optional(), // For inputs without defaults that aren't explicitly required
+});
+
+const WorkflowInputStringSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("string"),
+  default: z.string().optional(),
+});
+
+const WorkflowInputNumberSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("number"),
+  default: z.number().optional(),
+});
+
+const WorkflowInputBooleanSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("boolean"),
+  default: z.boolean().optional(),
+});
+
+const WorkflowInputChoiceSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("choice"),
+  default: z.string().optional(),
+  options: z.array(z.string()),
+});
+
+export const WorkflowInputSchema = z.discriminatedUnion("type", [
+  WorkflowInputStringSchema,
+  WorkflowInputNumberSchema,
+  WorkflowInputBooleanSchema,
+  WorkflowInputChoiceSchema,
+]);
+
 export const EnrichDisposableKeyValueSchema = z.array(
   z.object({
     key: z.string(),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
     disposable: z.boolean().optional(),
   })
 );
@@ -70,7 +110,7 @@ export const EnrichDisposableKeyValueSchema = z.array(
 export const EnrichKeyValueSchema = z.array(
   z.object({
     key: z.string(),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
   })
 );
 
@@ -206,4 +246,5 @@ export const WorkflowPropertiesSchema = z.object({
   manual: ManualTriggerValueSchema.optional(),
   services: z.array(z.string()).optional(),
   owners: z.array(z.string()).optional(),
+  inputs: z.array(WorkflowInputSchema).optional(),
 });
