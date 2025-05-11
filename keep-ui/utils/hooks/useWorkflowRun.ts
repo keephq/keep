@@ -6,8 +6,8 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { isProviderInstalled } from "@/shared/lib/provider-utils";
 import { useWorkflowExecutionsRevalidation } from "@/entities/workflow-executions/model/useWorkflowExecutionsRevalidation";
-import { WorkflowInput } from "@/entities/workflows/ui/WorkflowInputFields";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import type { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
 
 const noop = () => {};
 
