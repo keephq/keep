@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TextInput, Button, Text } from "@tremor/react";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
+import { buildNestedObject } from "@/shared/lib/buildNestedObject";
 
 interface StaticField {
   key: string;
@@ -117,25 +118,6 @@ export function AlertTriggerModal({
     if (!allFieldsFilled()) {
       return;
     }
-
-    // build the final payload
-    const buildNestedObject = (
-      acc: Record<string, any>,
-      key: string,
-      value: string
-    ) => {
-      const keys = key.split(".");
-      let current = acc;
-
-      for (let i = 0; i < keys.length - 1; i++) {
-        const part = keys[i];
-        current[part] = current[part] || {};
-        current = current[part];
-      }
-
-      current[keys[keys.length - 1]] = value;
-      return acc;
-    };
 
     // Construct payload with a flexible structure
     const payload: Record<string, any> = dynamicFields.reduce((acc, field) => {

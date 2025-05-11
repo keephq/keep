@@ -1,11 +1,11 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
+import clsx from "clsx";
 import { Workflow } from "@/shared/api/workflows";
 import { WorkflowUnsavedChangesForm } from "../ui/WorkflowUnsavedChangesForm";
 import Modal from "@/components/ui/Modal";
-import { WorkflowAlertIncidentDependenciesForm } from "../../test-run/ui/workflow-alert-incident-dependencies-form";
-import clsx from "clsx";
+import { WorkflowAlertIncidentDependenciesForm } from "@/entities/workflows/ui/WorkflowAlertIncidentDependenciesForm";
 import { WorkflowInputsForm } from "../ui/WorkflowInputsForm";
 import { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
 
@@ -64,36 +64,21 @@ export function WorkflowModalProvider({
   const [unsavedChangesModalProps, setUnsavedChangesModalProps] =
     useState<any>(null);
 
-  const openInputsModal = (props: {
-    inputs: Record<string, any>;
-    onSubmit: ({ inputs }: { inputs: Record<string, any> }) => void;
-  }) => {
+  const openInputsModal = (props: InputsModalProps) => {
     setInputsModalProps(props);
   };
 
-  const openAlertDependenciesModal = (props: {
-    workflow: Workflow;
-    staticFields: any[];
-    dependencies: string[];
-    onSubmit: (payload: any) => void;
-  }) => {
+  const openAlertDependenciesModal = (props: AlertDependenciesModalProps) => {
     setAlertModalProps(props);
   };
 
-  const openIncidentDependenciesModal = (props: {
-    workflow: Workflow;
-    staticFields: any[];
-    dependencies: string[];
-    onSubmit: (payload: any) => void;
-  }) => {
+  const openIncidentDependenciesModal = (
+    props: IncidentDependenciesModalProps
+  ) => {
     setIncidentModalProps(props);
   };
 
-  const openUnsavedChangesModal = (props: {
-    onSaveYaml: () => void;
-    onSaveUIBuilder: () => void;
-    onRunWithoutSaving: () => void;
-  }) => {
+  const openUnsavedChangesModal = (props: UnsavedChangesModalProps) => {
     setUnsavedChangesModalProps(props);
   };
 
