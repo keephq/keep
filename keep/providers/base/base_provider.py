@@ -462,9 +462,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     "alert_id": alert.id,
                 },
             )
-            alert.fingerprint = cls.get_alert_fingerprint(
-                alert, custom_deduplication_rule.fingerprint_fields
-            )
+            # Only calculate new fingerprint if one isn't already provided
+            if not alert.fingerprint:
+                alert.fingerprint = cls.get_alert_fingerprint(
+                    alert, custom_deduplication_rule.fingerprint_fields
+                )
         return formatted_alert
 
     @staticmethod
@@ -477,10 +479,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
             fingerprint_fields (list, optional): The fields we calculate the fingerprint upon. Defaults to [].
 
         Returns:
-            str: hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
+            str: Original fingerprint if it exists, otherwise hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
         """
+        # Return existing fingerprint if present
+        if getattr(alert, 'fingerprint', None):
+            return alert.fingerprint
+            
         if not fingerprint_fields:
             return alert.name
+            
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
         for fingerprint_field in fingerprint_fields:
@@ -679,6 +686,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         E.g. parameters that were supplied by the user and were rendered by the provider.
 
         A concrete example is the "_from" and "to" of the Datadog Provider which are calculated during execution.
+
+        Returns:
+            dict: A dictionary of parameters that were calculated during query time.
         """
         # TODO - implement dynamically using decorators and
         return {}
@@ -800,6 +810,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         # Start with the base payload
         simulated_alert = alert_data["payload"].copy()
+
+        # Use a simple fingerprint for simulation
+        simulated_alert["fingerprint"] = f"simulated-{alert_type}"
 
         return simulated_alert
 

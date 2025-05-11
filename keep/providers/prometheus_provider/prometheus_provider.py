@@ -5,6 +5,8 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 import dataclasses
 import datetime
 import os
+import logging
+from pprint import pformat
 
 import pydantic
 import requests
@@ -15,6 +17,10 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+# Add these at the top of prometheus_provider.py
+DEBUG_PROMETHEUS = os.environ.get('DEBUG_PROMETHEUS', 'false').lower() == 'true'
+logging.basicConfig(level=logging.DEBUG if DEBUG_PROMETHEUS else logging.INFO)
+logger = logging.getLogger(__name__)
 
 @pydantic.dataclasses.dataclass
 class PrometheusProviderAuthConfig:
@@ -93,7 +99,7 @@ receivers:
             name="connectivity", description="Connectivity Test", mandatory=True
         )
     ]
-    FINGERPRINT_FIELDS = ["fingerprint"]
+    FINGERPRINT_FIELDS = []
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -150,74 +156,132 @@ receivers:
         return response.json()
 
     def _get_alerts(self) -> list[AlertDto]:
+        if DEBUG_PROMETHEUS:
+            logger.debug("=== Starting _get_alerts ===")
+            
         auth = None
         if self.authentication_config.username and self.authentication_config.password:
             auth = HTTPBasicAuth(
                 self.authentication_config.username, self.authentication_config.password
             )
+            
+        url = f"{self.authentication_config.url}/api/v1/alerts"
+
+        if DEBUG_PROMETHEUS:
+            logger.debug(f"Requesting alerts from: {url}")
+
         response = requests.get(
-            f"{self.authentication_config.url}/api/v1/alerts",
+            url,
             auth=auth,
             verify=self.authentication_config.verify,
+            headers=headers,
+            timeout=30,
         )
+
+        if DEBUG_PROMETHEUS:
+            logger.debug(f"Response status code: {response.status_code}")
+            logger.debug(f"Response headers: {pformat(dict(response.headers))}")
+            
         response.raise_for_status()
         if not response.ok:
+            logger.warning("Response not OK, returning empty list")
             return []
+            
         alerts_data = response.json().get("data", {})
+        
+        if DEBUG_PROMETHEUS:
+            logger.debug(f"Raw alerts data: {pformat(alerts_data)}")
+            
         alert_dtos = self._format_alert(alerts_data)
+        
+        if DEBUG_PROMETHEUS:
+            logger.debug(f"Formatted {len(alert_dtos)} alerts")
+            logger.debug("=== Finished _get_alerts ===")
+            
         return alert_dtos
 
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> list[AlertDto]:
-        # TODO: need to support more than 1 alert per event
+        if DEBUG_PROMETHEUS:
+            logger.debug("\n=== Starting _format_alert ===")
+            logger.debug(f"Input event: {pformat(event)}")
+        
         alert_dtos = []
         if isinstance(event, list):
+            logger.debug("Event is a list, returning as is")
             return event
-        else:
-            alerts = event.get("alerts", [event])
+            
+        alerts = event.get("alerts", [event])
+        
+        if DEBUG_PROMETHEUS:
+            logger.debug(f"Processing {len(alerts)} alerts")
+        
+        for idx, alert in enumerate(alerts, 1):
+            if DEBUG_PROMETHEUS:
+                logger.debug(f"\n--- Processing Alert {idx}/{len(alerts)} ---")
+                logger.debug(f"Raw alert data: {pformat(alert)}")
+            
+            # Extract and log fingerprint
+            fingerprint = alert.get("fingerprint")
+            if DEBUG_PROMETHEUS:
+                logger.debug(f"Extracted fingerprint: {fingerprint}")
+            
+            # Create AlertDto with detailed logging
+            try:
+                alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
+                description = alert.get("annotations", {}).pop("description", None) or alert.get("annotations", {}).get("summary", alert_id)
 
-        for alert in alerts:
-            alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
-            description = alert.get("annotations", {}).pop(
-                "description", None
-            ) or alert.get("annotations", {}).get("summary", alert_id)
-
-            labels = {k.lower(): v for k, v in alert.pop("labels", {}).items()}
-            annotations = {
-                k.lower(): v for k, v in alert.pop("annotations", {}).items()
-            }
-            service = labels.get("service", annotations.get("service", None))
-            # map severity and status to keep's format
-            status = alert.pop("state", None) or alert.pop("status", None)
-            status = PrometheusProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
-            severity = PrometheusProvider.SEVERITIES_MAP.get(
-                labels.get("severity"), AlertSeverity.INFO
-            )
-            alert_dto = AlertDto(
-                id=alert_id,
-                name=alert_id,
-                description=description,
-                status=status,
-                service=service,
-                lastReceived=datetime.datetime.now(
-                    tz=datetime.timezone.utc
-                ).isoformat(),
-                environment=labels.pop("environment", "unknown"),
-                severity=severity,
-                source=["prometheus"],
-                labels=labels,
-                annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
-                payload=alert,
-                fingerprint=alert.pop("fingerprint", None),
-                **alert,  # rest of the fields
-            )
-            for label in labels:
-                if getattr(alert_dto, label, None) is not None:
-                    continue
-                setattr(alert_dto, label, labels[label])
+                labels = {k.lower(): v for k, v in alert.pop("labels", {}).items()}
+                annotations = {k.lower(): v for k, v in alert.pop("annotations", {}).items()}
+                
+                print(f"Labels: {labels}")
+                print(f"Annotations: {annotations}")
+                
+                service = labels.get("service", annotations.get("service", None))
+                print(f"Service: {service}")
+                
+                # map severity and status to keep's format
+                status = alert.pop("state", None) or alert.pop("status", None)
+                status = PrometheusProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+                severity = PrometheusProvider.SEVERITIES_MAP.get(labels.get("severity"), AlertSeverity.INFO)
+                
+                print(f"Status: {status}")
+                print(f"Severity: {severity}")
+                
+                # Remove fingerprint from alert dict to avoid duplicate argument
+                alert.pop("fingerprint", None)
+                
+                alert_dto = AlertDto(
+                    id=alert_id,
+                    name=alert_id,
+                    description=description,
+                    status=status,
+                    service=service,
+                    lastReceived=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+                    environment=labels.pop("environment", "unknown"),
+                    severity=severity,
+                    source=["prometheus"],
+                    labels=labels,
+                    annotations=annotations,
+                    payload=alert,
+                    fingerprint=fingerprint,
+                    **alert,
+                )
+                
+                if DEBUG_PROMETHEUS:
+                    logger.debug(f"Successfully created AlertDto: {pformat(alert_dto.dict())}")
+            except Exception as e:
+                logger.error(f"Failed to create AlertDto: {str(e)}")
+                continue
+                
             alert_dtos.append(alert_dto)
+        
+        if DEBUG_PROMETHEUS:
+            logger.debug(f"\nProcessed {len(alert_dtos)} alerts")
+            logger.debug("=== Finished _format_alert ===\n")
+            
         return alert_dtos
 
     def dispose(self):
@@ -277,10 +341,12 @@ receivers:
         alert_payload["generatorURL"] = "http://example.com/graph?g0.expr={}".format(
             alert_type
         )
-        # TODO: use BaseProvider's get_alert_fingerprint
+        # Generate a fingerprint that matches Prometheus's format
+        # Prometheus uses a 64-bit FNV-1a hash of the alert's labels
         fingerprint_src = json.dumps(alert_payload["labels"], sort_keys=True)
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
         alert_payload["fingerprint"] = fingerprint
+        
         if to_wrap_with_provider_type:
             return {"keep_source_type": "prometheus", "event": alert_payload}
 

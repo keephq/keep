@@ -163,13 +163,19 @@ class KeepProvider(BaseProvider):
         for key, val in alert_data.items():
             if not hasattr(alert, key):
                 setattr(alert, key, val)
-        # if fingerprint_fields are not provided, use labels
-        if not fingerprint_fields:
-            fingerprint_fields = ["labels." + label for label in list(labels.keys())]
+                
+        # Check for original fingerprint in labels or alert data
+        original_fingerprint = labels.get("fingerprint") or alert_data.get("fingerprint")
+        if original_fingerprint:
+            alert.fingerprint = original_fingerprint
+        else:
+            # if fingerprint_fields are not provided, use labels
+            if not fingerprint_fields:
+                fingerprint_fields = ["labels." + label for label in list(labels.keys())]
 
-        # workflowId is used as the "rule id" - it's used to identify the rule that created the alert
-        fingerprint_fields.append("workflowId")
-        alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
+            # workflowId is used as the "rule id" - it's used to identify the rule that created the alert
+            fingerprint_fields.append("workflowId")
+            alert.fingerprint = self.get_alert_fingerprint(alert, fingerprint_fields)
         return alert
 
     def _handle_state_alerts(

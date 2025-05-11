@@ -930,7 +930,31 @@ def failure_artifacts(browser, console_logs, request):
 def pytest_runtest_makereport(item, call) -> Generator[None, Any, Any]:
     """Hook to store test results for use in fixtures."""
     outcome = yield
-    rep = outcome.get_result()
+    report = outcome.get_result()
 
     # Set report for each phase (setup, call, teardown)
-    setattr(item, f"rep_{rep.when}", rep)
+    setattr(item, f"rep_{report.when}", report)
+
+    # Only do this during call phase (not setup/teardown)
+    if report.when == "call":
+        # Check if test failed
+        if report.failed and hasattr(item, "funcargs"):
+            if "browser" in item.funcargs:
+                try:
+                    from keep.scripts.cleanup_test_logs import cleanup_test_logs
+                    # Clean up test artifacts after failed tests
+                    cleanup_test_logs()
+                except ImportError:
+                    print("Warning: Could not import cleanup_test_logs")
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    """Clean up test artifacts at the end of the test session."""
+    try:
+        from keep.scripts.cleanup_test_logs import cleanup_test_logs
+        count, files = cleanup_test_logs()
+        if count > 0:
+            print(f"\nCleaned up {count} test artifact files at the end of the session")
+    except ImportError:
+        print("Warning: Could not import cleanup_test_logs")

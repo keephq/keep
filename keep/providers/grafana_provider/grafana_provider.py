@@ -240,13 +240,23 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     def calculate_fingerprint(alert: dict) -> str:
         """
         Calculate fingerprint for alert.
+        Returns the original fingerprint if provided either in labels or at root level,
+        otherwise calculates a SHA256 hash based on labels or alert properties.
         """
+        # First check labels for fingerprint
         labels = alert.get("labels", {})
-        fingerprint = labels.get("fingerprint", "")
+        fingerprint = labels.get("fingerprint")
         if fingerprint:
-            logger.debug("Fingerprint provided in alert")
+            logger.debug("Using fingerprint from alert labels")
             return fingerprint
 
+        # Then check root level fingerprint
+        fingerprint = alert.get("fingerprint")
+        if fingerprint:
+            logger.debug("Using fingerprint from alert root level")
+            return fingerprint
+
+        # If no fingerprint found, calculate one
         fingerprint_string = None
         if not labels:
             logger.warning(
@@ -269,15 +279,14 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                     },
                 )
 
-        # from some reason, the fingerprint is not provided in the alert + no labels or failed to calculate
+        # If no labels or failed to calculate from labels
         if not fingerprint_string:
             # old behavior
             service = GrafanaProvider.get_service(alert)
-            fingerprint_string = alert.get(
-                "fingerprint", alert.get("alertname", "") + service
-            )
+            fingerprint_string = alert.get("alertname", "") + service
 
         fingerprint = hashlib.sha256(fingerprint_string.encode()).hexdigest()
+        logger.debug("Generated SHA256 fingerprint as no original fingerprint found")
         return fingerprint
 
     @staticmethod
@@ -302,7 +311,16 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             severity = GrafanaProvider.SEVERITIES_MAP.get(
                 labels.get("severity"), AlertSeverity.INFO
             )
-            fingerprint = GrafanaProvider.calculate_fingerprint(alert)
+            
+            # First try to get fingerprint from labels
+            fingerprint = labels.get("fingerprint")
+            if not fingerprint:
+                # Then try root level fingerprint
+                fingerprint = alert.get("fingerprint")
+                if not fingerprint:
+                    # Only calculate if no fingerprint found
+                    fingerprint = GrafanaProvider.calculate_fingerprint(alert)
+                    
             environment = labels.get(
                 "deployment_environment", labels.get("environment", "unknown")
             )

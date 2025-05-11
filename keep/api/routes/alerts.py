@@ -689,6 +689,14 @@ async def receive_event(
         raise HTTPException(status_code=400, detail="Malformed event")
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
 
+    # Format the event using the provider's format_alert method
+    t = time.time()
+    logger.debug("Formatting event using provider's format_alert method")
+    formatted_event = provider_class.format_alert(event, authenticated_entity.tenant_id, provider_type, provider_id)
+    if formatted_event:
+        event = formatted_event
+    logger.debug("Formatted event", extra={"time": time.time() - t})
+
     # If provider_name is provided, try to get provider_id from it
     if provider_name and not provider_id:
         provider = get_provider_by_name(authenticated_entity.tenant_id, provider_name)
@@ -1456,3 +1464,57 @@ def dismiss_error_alerts(
         )
 
         return {"success": True, "message": "Successfully dismissed all alerts"}
+
+
+@staticmethod
+def calculate_fingerprint(alert: dict) -> str:
+    """
+    Calculate fingerprint for alert.
+    Returns the original fingerprint if provided either in labels or at root level,
+    otherwise calculates a SHA256 hash based on labels or alert properties.
+    """
+    # First check labels for fingerprint
+    labels = alert.get("labels", {})
+    fingerprint = labels.get("fingerprint")
+    if fingerprint:
+        logger.debug("Using fingerprint from alert labels")
+        return fingerprint
+
+    # Then check root level fingerprint
+    fingerprint = alert.get("fingerprint")
+    if fingerprint:
+        logger.debug("Using fingerprint from alert root level")
+        return fingerprint
+
+    # If no fingerprint found, calculate one
+    fingerprint_string = None
+    if not labels:
+        logger.warning(
+            "No labels found in alert will use old behaviour",
+            extra={
+                "labels": labels,
+            },
+        )
+    else:
+        try:
+            logger.info(
+                "No fingerprint in alert, calculating fingerprint by labels"
+            )
+            fingerprint_string = json.dumps(labels)
+        except Exception:
+            logger.exception(
+                "Failed to calculate fingerprint",
+                extra={
+                    "labels": labels,
+                },
+            )
+
+    # If no labels or failed to calculate from labels
+    if not fingerprint_string:
+        # old behavior
+        service = GrafanaProvider.get_service(alert)
+        fingerprint_string = alert.get("alertname", "") + service
+
+    fingerprint = hashlib.sha256(fingerprint_string.encode()).hexdigest()
+    logger.debug("Generated SHA256 fingerprint as no original fingerprint found")
+    return fingerprint
