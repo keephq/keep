@@ -199,6 +199,8 @@ const mockConfig: InternalConfig = {
   KEEP_DOCS_URL: "https://docs.keephq.dev",
   KEEP_CONTACT_US_URL: "https://docs.keephq.dev/slack",
   SENTRY_DISABLED: "true",
+  KEEP_WORKFLOW_DEBUG: false,
+  KEEP_HIDE_SENSITIVE_FIELDS: true,
 };
 
 jest.mock("@/utils/hooks/useConfig", () => ({

@@ -56,6 +56,49 @@ export const V2StepTriggerSchema = z.union([
   V2StepIncidentTriggerSchema,
 ]);
 
+export const WorkflowInputTypeEnum = z.enum([
+  "string",
+  "number",
+  "boolean",
+  "choice",
+]);
+
+const WorkflowInputBaseSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  default: z.any().optional(),
+  required: z.boolean().optional(),
+  visuallyRequired: z.boolean().optional(), // For inputs without defaults that aren't explicitly required
+});
+
+const WorkflowInputStringSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("string"),
+  default: z.string().optional(),
+});
+
+const WorkflowInputNumberSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("number"),
+  default: z.number().optional(),
+});
+
+const WorkflowInputBooleanSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("boolean"),
+  default: z.boolean().optional(),
+});
+
+const WorkflowInputChoiceSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("choice"),
+  default: z.string().optional(),
+  options: z.array(z.string()),
+});
+
+export const WorkflowInputSchema = z.discriminatedUnion("type", [
+  WorkflowInputStringSchema,
+  WorkflowInputNumberSchema,
+  WorkflowInputBooleanSchema,
+  WorkflowInputChoiceSchema,
+]);
+
 export const EnrichDisposableKeyValueSchema = z.array(
   z.object({
     key: z.string(),
@@ -203,4 +246,5 @@ export const WorkflowPropertiesSchema = z.object({
   manual: ManualTriggerValueSchema.optional(),
   services: z.array(z.string()).optional(),
   owners: z.array(z.string()).optional(),
+  inputs: z.array(WorkflowInputSchema).optional(),
 });
