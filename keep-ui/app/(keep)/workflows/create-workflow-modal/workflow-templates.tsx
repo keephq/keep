@@ -112,25 +112,6 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
 
   return (
     <div className="flex flex-col gap-3 h-full w-full">
-      <div className="text-lg">
-        <p>
-          Choose a workflow template to start building the automation for your
-          alerts and incidents.
-        </p>
-        <p className="pt-2 pb-1">
-          Or skip this, and{" "}
-          <Button
-            className="ml-2"
-            color="orange"
-            size="xs"
-            variant="primary"
-            onClick={() => router.push("/workflows/builder")}
-          >
-            Start from scratch
-          </Button>
-        </p>
-      </div>
-
       <SearchInput
         placeholder="Search workflows"
         value={searchValue as string}
