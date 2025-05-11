@@ -193,7 +193,14 @@ export function WorkflowAlertIncidentDependenciesForm({
       dependencyValues,
       staticFields
     );
-    onSubmit({ type, body: payload });
+
+    if (type === "alert") {
+      onSubmit({ type, body: payload } as AlertWorkflowRunPayload);
+    } else if (type === "incident") {
+      onSubmit({ type, body: payload } as IncidentWorkflowRunPayload);
+    } else {
+      throw new Error("Invalid type");
+    }
   };
 
   const keyClassName = "w-2/6 font-mono";
