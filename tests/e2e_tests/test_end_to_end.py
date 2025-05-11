@@ -608,3 +608,36 @@ def test_yaml_editor_yaml_invalid(browser: Page):
     except Exception:
         save_failure_artifacts(browser, log_entries)
         raise
+
+
+def test_workflow_inputs(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-inputs-example.yaml")
+        page.get_by_role("button", name="Upload")
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        page.get_by_role("button", name="Run now").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_role("button", name="Run", exact=True).click()
+        page.get_by_role("button", name="Running action echo 0s").click()
+        expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
+            "This is my nodefault: shalom"
+        )
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
