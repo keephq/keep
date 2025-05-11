@@ -16,7 +16,6 @@ import WorkflowTile from "./workflow-tile";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
-import { WorkflowTemplates } from "./workflows-templates";
 import { Input, ErrorComponent } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
 import {
@@ -44,7 +43,7 @@ import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side
 import { InitialFacetsData } from "@/features/filter/api";
 import { v4 as uuidV4 } from "uuid";
 import { PaginationState } from "@/features/filter/pagination";
-import CreateWorkflowModal from "./create-workflow-modal/create-workflow-modal";
+import { CreateWorkflowModal } from "./create-workflow-modal/create-workflow-modal";
 
 const EXAMPLE_WORKFLOW_DEFINITIONS = {
   slack: `
