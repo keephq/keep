@@ -73,70 +73,39 @@ def build_facet_selects(properties_metadata, facets):
 
 def build_facet_subquery_for_column(
     base_query,
-    facets_cel_to_sql_instance: BaseCelToSqlProvider,
-    facet: Facet,
     column_name: str,
-    facet_filter: str,
 ):
-    return (
-        select(
-            func.distinct(literal_column("entity_id")),
-            literal_column(column_name).label("facet_value"),
-        )
-        .select_from(base_query)
-        .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
-    )
+    return select(
+        func.distinct(literal_column("entity_id")),
+        literal_column(column_name).label("facet_value"),
+    ).select_from(base_query)
 
 
 def build_facet_subquery_for_json_array(
     base_query,
-    facets_cel_to_sql_instance: BaseCelToSqlProvider,
-    facet: Facet,
     column_name: str,
-    facet_filter: str,
 ):
+    json_table_join = None
+
     if engine.dialect.name == "sqlite":
-        base_query_cte = base_query.cte(f"{column_name}_base_query")
         json_table_join = func.json_each(literal_column(column_name)).table_valued(
             "value"
         )
-        return (
-            select(
-                func.distinct(base_query_cte.c.entity_id),
-                json_table_join.c.value.label("facet_value"),
-            )
-            .select_from(base_query_cte)
-            .join(json_table_join, text("TRUE"))
-            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
-        )
     elif engine.dialect.name == "postgresql":
-        base_query_cte = base_query.cte(f"{column_name}_base_query")
         json_table_join = func.jsonb_array_elements_text(
             cast(literal_column(column_name), JSONB)
         ).table_valued("value")
-        return (
-            select(
-                func.distinct(base_query_cte.c.entity_id),
-                json_table_join.c.value.label("facet_value"),
-            )
-            .select_from(base_query_cte, json_table_join)
-            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
-        )
     elif engine.dialect.name == "mysql":
         # MySQL throws errors due to JSON_TABLE without LIMIT
-        base_query_cte = base_query.limit(1_000_000).cte(f"{column_name}_base_query")
+        base_query = base_query.limit(1_000_000).cte(f"{column_name}_base_query")
         json_table_join = func.json_table(
             literal_column(column_name), Column("value", String(127))
         ).table_valued("value")
-        return (
-            select(
-                func.distinct(base_query_cte.c.entity_id),
-                json_table_join.c.value.label("facet_value"),
-            )
-            .select_from(base_query_cte)
-            .join(json_table_join, text("TRUE"))
-            .filter(text(facets_cel_to_sql_instance.convert_to_sql_str(facet_filter)))
-        )
+
+    return select(
+        func.distinct(base_query.c.entity_id),
+        json_table_join.c.value.label("facet_value"),
+    ).select_from(base_query, json_table_join)
 
 
 def build_facets_data_query(
@@ -195,19 +164,21 @@ def build_facets_data_query(
         if metadata.data_type == DataType.ARRAY:
             facet_source_subquery = build_facet_subquery_for_json_array(
                 base_query,
-                facets_cel_to_sql_instance,
-                facet,
                 column_name,
-                facet_options_query.facet_queries[facet.id],
             )
         else:
             facet_source_subquery = build_facet_subquery_for_column(
                 base_query_common,
-                facets_cel_to_sql_instance,
-                facet,
                 column_name,
-                facet_options_query.facet_queries[facet.id],
             )
+
+        facet_source_subquery = facet_source_subquery.filter(
+            text(
+                facets_cel_to_sql_instance.convert_to_sql_str(
+                    facet_options_query.facet_queries[facet.id]
+                )
+            )
+        )
 
         facet_sub_query = (
             select(
