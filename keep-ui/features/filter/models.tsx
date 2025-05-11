@@ -8,7 +8,7 @@ export type FacetState = {
 
 export interface FacetConfig {
   canHitEmptyState?: boolean;
-  uncheckedByDefaultOptionValues?: string[];
+  checkedByDefaultOptionValues?: string[];
   renderOptionIcon?: (facetOption: FacetOptionDto) => JSX.Element | undefined;
   renderOptionLabel?: (
     facetOption: FacetOptionDto

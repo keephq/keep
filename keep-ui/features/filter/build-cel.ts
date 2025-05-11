@@ -7,7 +7,7 @@ export function buildCel(
   facetsConfigIdBased: FacetsConfig
 ): string {
   // In case facetOptions are not loaded yet, we need to create placeholder wich will be
-  // populated based on uncheckedByDefaultOptionValues
+  // populated based on checkedByDefaultOptionValues
   if (facetOptions == null) {
     const _facetOptions: { [key: string]: FacetOptionDto[] } = {};
     facetOptions = _facetOptions;
@@ -15,8 +15,8 @@ export function buildCel(
     facets.forEach((facet) => {
       _facetOptions[facet.id] = [];
       const facetConfig = facetsConfigIdBased?.[facet.id];
-      if (facetConfig?.uncheckedByDefaultOptionValues) {
-        facetConfig.uncheckedByDefaultOptionValues.forEach((optionValue) => {
+      if (facetConfig?.checkedByDefaultOptionValues) {
+        facetConfig.checkedByDefaultOptionValues.forEach((optionValue) => {
           _facetOptions[facet.id].push({
             display_name: optionValue,
             value: optionValue,
@@ -32,9 +32,8 @@ export function buildCel(
     .filter((facet) => facetOptions[facet.id])
     .map((facet) => {
       const allFacetOptions = Object.values(facetOptions[facet.id]);
-      const atLeastOneUnselected = allFacetOptions.some((facetOption) =>
-        facetsState[facet.id]?.has(facetOption.display_name)
-      );
+      const atLeastOneUnselected =
+        allFacetOptions.length !== facetsState[facet.id].size;
 
       if (!atLeastOneUnselected) {
         return null;

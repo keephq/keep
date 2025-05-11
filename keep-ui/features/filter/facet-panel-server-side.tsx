@@ -106,7 +106,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       const newFacetQueriesState = buildFacetsQueriesState();
 
       if (newFacetQueriesState) {
-        setFacetQueriesState(newFacetQueriesState);
+        // setFacetQueriesState(newFacetQueriesState);
       }
     },
     // disabled because this effect uses currentFacetQueriesState that's also change in that effect
@@ -140,7 +140,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
       <FacetsPanel
         panelId={entityName}
         className={className || ""}
-        facets={facetsData as any}
+        facets={facetsData?.slice(0, 1) as any}
         facetOptions={facetOptions as any}
         areFacetOptionsLoading={!isSilentReloading && facetOptionsLoading}
         clearFiltersToken={clearFiltersToken}
