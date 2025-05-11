@@ -6,7 +6,11 @@ import {
   getYamlConditionFromStep,
 } from "../parser";
 import { Provider } from "@/shared/api/providers";
-import { Definition, V2StepForeach } from "@/entities/workflows";
+import {
+  Definition,
+  V2StepForeach,
+  V2StepConditionThreshold,
+} from "@/entities/workflows";
 import {
   YamlAssertCondition,
   YamlStepOrAction,
@@ -363,11 +367,12 @@ workflow:
       expect(result.sequence[1].type).toBe("step-victoriametrics");
       expect(result.sequence[2].type).toBe("foreach");
       expect(result.sequence[3].type).toBe("condition-threshold");
-      expect(result.sequence[3].branches.true).toHaveLength(3);
-      expect(result.sequence[3].branches.false).toHaveLength(0);
-      expect(result.sequence[3].branches.true[0].type).toBe("action-slack");
-      expect(result.sequence[3].branches.true[1].type).toBe("action-slack");
-      expect(result.sequence[3].branches.true[2].type).toBe("action-ntfy");
+      const conditionStep = result.sequence[3] as V2StepConditionThreshold;
+      expect(conditionStep.branches.true).toHaveLength(3);
+      expect(conditionStep.branches.false).toHaveLength(0);
+      expect(conditionStep.branches.true[0].type).toBe("action-slack");
+      expect(conditionStep.branches.true[1].type).toBe("action-slack");
+      expect(conditionStep.branches.true[2].type).toBe("action-ntfy");
     });
 
     it("should parse a workflow with foreach", () => {
