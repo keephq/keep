@@ -28,10 +28,6 @@ jest.mock("@/features/filter/facet-panel-server-side", () => ({
   FacetsPanelServerSide: () => <div data-testid="facets-panel" />,
 }));
 
-jest.mock("@/app/(keep)/workflows/workflows-templates", () => ({
-  WorkflowTemplates: () => <div data-testid="workflow-templates" />,
-}));
-
 describe("WorkflowsPage", () => {
   afterEach(() => {
     jest.clearAllMocks();
