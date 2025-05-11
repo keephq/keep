@@ -5,6 +5,7 @@ Revises: eddcb77eb6f3
 Create Date: 2025-05-06 13:09:27.462927
 
 """
+
 from collections import defaultdict
 
 from alembic import op
@@ -25,10 +26,9 @@ depends_on = None
 def upgrade() -> None:
     session = Session(op.get_bind())
     counts = session.execute(
-        select(count(LastAlertToIncident.fingerprint), LastAlertToIncident.incident_id)
-        .group_by(
-            LastAlertToIncident.incident_id
-        )
+        select(
+            count(LastAlertToIncident.fingerprint), LastAlertToIncident.incident_id
+        ).group_by(LastAlertToIncident.incident_id)
     ).all()
     counts_per_incident = defaultdict(int)
     for count_, incident_id in counts:
@@ -39,14 +39,11 @@ def upgrade() -> None:
     for incident_id in incident_ids:
         session.execute(
             update(Incident)
-            .where(
-                Incident.id == str(incident_id)
-            )
-            .values(
-                alerts_count = counts_per_incident.get(incident_id, 0)
-            )
+            .where(Incident.id == incident_id)
+            .values(alerts_count=counts_per_incident.get(incident_id, 0))
         )
         session.commit()
+
 
 def downgrade() -> None:
     pass
