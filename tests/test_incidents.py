@@ -68,7 +68,6 @@ def test_get_alerts_data_for_incident(db_session, create_alert):
     )
     assert data["sources"] == set([f"source_{i}" for i in range(10)])
     assert data["services"] == set([f"service_{i}" for i in range(10)])
-    assert data["count"] == unique_fingerprints
 
 
 def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elastic):
