@@ -1,5 +1,5 @@
 import { act, fireEvent, getByText, render } from "@testing-library/react";
-import { WorkflowsPage } from "../workflows.client";
+import { WorkflowsPage } from "../workflows.page";
 import { useWorkflowsV2 } from "@/entities/workflows/model/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { mockWorkflow } from "@/entities/workflows/model/__mocks__/mock-workflow";
