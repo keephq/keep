@@ -8,6 +8,7 @@ import Modal from "@/components/ui/Modal";
 import { WorkflowAlertIncidentDependenciesForm } from "@/entities/workflows/ui/WorkflowAlertIncidentDependenciesForm";
 import { WorkflowInputsForm } from "../ui/WorkflowInputsForm";
 import { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
+import { AlertWorkflowRunPayload, IncidentWorkflowRunPayload } from "./types";
 
 type InputsModalProps = {
   inputs: WorkflowInput[];
@@ -18,14 +19,14 @@ type AlertDependenciesModalProps = {
   workflow: Workflow;
   staticFields: any[];
   dependencies: string[];
-  onSubmit: (inputs: Record<string, any>) => void;
+  onSubmit: (payload: AlertWorkflowRunPayload) => void;
 };
 
 type IncidentDependenciesModalProps = {
   workflow: Workflow;
   staticFields: any[];
   dependencies: string[];
-  onSubmit: (inputs: Record<string, any>) => void;
+  onSubmit: (payload: IncidentWorkflowRunPayload) => void;
 };
 
 type UnsavedChangesModalProps = {

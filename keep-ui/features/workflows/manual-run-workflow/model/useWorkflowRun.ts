@@ -16,6 +16,11 @@ import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-
 import { useWorkflowModals } from "@/features/workflows/manual-run-workflow";
 import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/extractWorkflowYamlDependencies";
 import { v4 as uuidv4 } from "uuid";
+import {
+  AlertWorkflowRunPayload,
+  IncidentWorkflowRunPayload,
+  WorkflowRunPayload,
+} from "./types";
 
 const noop = () => {};
 
@@ -176,7 +181,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
     message = getDisabledTooltip();
   }
 
-  const runWorkflow = async (payload: object) => {
+  const runWorkflow = async (payload: WorkflowRunPayload) => {
     try {
       if (!workflow) {
         return;
@@ -211,8 +216,8 @@ export const useWorkflowRun = (workflow: Workflow) => {
   }: {
     skipUnsavedChangesModal?: boolean;
     inputsValues?: Record<string, any> | null;
-    alertValues?: Record<string, any> | null;
-    incidentValues?: Record<string, any> | null;
+    alertValues?: AlertWorkflowRunPayload | null;
+    incidentValues?: IncidentWorkflowRunPayload | null;
   } = {}) => {
     if (!workflow) {
       return;
@@ -309,11 +314,22 @@ export const useWorkflowRun = (workflow: Workflow) => {
 
     // All required data collected, execute the workflow
     else {
-      runWorkflow({
-        ...(inputsValues || {}),
-        ...(alertValues || {}),
-        ...(incidentValues || {}),
-      });
+      if (alertValues) {
+        runWorkflow({
+          ...alertValues,
+          inputs: inputsValues ?? undefined,
+        });
+      } else if (incidentValues) {
+        runWorkflow({
+          ...incidentValues,
+          inputs: inputsValues ?? undefined,
+        });
+      } else {
+        runWorkflow({
+          type: undefined,
+          inputs: inputsValues ?? undefined,
+        });
+      }
     }
   };
 

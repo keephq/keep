@@ -1,7 +1,7 @@
 import { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
 import { WorkflowInputFields } from "@/entities/workflows/ui/WorkflowInputFields";
 import { Button, Text } from "@tremor/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface WorkflowInputsFormProps {
   workflowInputs: WorkflowInput[];
@@ -15,6 +15,28 @@ export function WorkflowInputsForm({
   onCancel,
 }: WorkflowInputsFormProps) {
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    // Initialize input values with defaults
+    const initialValues: Record<string, any> = {};
+    workflowInputs.forEach((input) => {
+      initialValues[input.name] =
+        input.default !== undefined ? input.default : "";
+    });
+    setInputValues(initialValues);
+  }, [workflowInputs]);
+
+  const enhancedInputs = useMemo(
+    () =>
+      workflowInputs.map((input) => {
+        // Mark inputs without defaults as visually required
+        if (input.default === undefined && !input.required) {
+          return { ...input, visuallyRequired: true };
+        }
+        return input;
+      }),
+    [workflowInputs]
+  );
 
   const handleInputChange = (name: string, value: any) => {
     setInputValues((prev) => ({
@@ -30,11 +52,9 @@ export function WorkflowInputsForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <Text className="font-bold">
-        Fill in the inputs required to run the workflow
-      </Text>
+      <Text className="font-bold">Inputs required to run the workflow</Text>
       <WorkflowInputFields
-        workflowInputs={workflowInputs}
+        workflowInputs={enhancedInputs}
         inputValues={inputValues}
         onInputChange={handleInputChange}
       />

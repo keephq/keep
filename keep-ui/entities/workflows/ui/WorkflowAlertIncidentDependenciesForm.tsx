@@ -4,6 +4,10 @@ import { TextInput } from "@/components/ui";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { JsonCard } from "@/shared/ui/JsonCard";
 import { buildNestedObject } from "@/shared/lib/buildNestedObject";
+import {
+  AlertWorkflowRunPayload,
+  IncidentWorkflowRunPayload,
+} from "@/features/workflows/manual-run-workflow/model/types";
 
 const getAlertPayload = (
   dynamicFields: Field[],
@@ -42,14 +46,27 @@ interface Field {
 
 type Payload = Record<string, any>;
 
-interface WorkflowAlertIncidentDependenciesFormProps {
-  type: "alert" | "incident";
+interface WorkflowAlertDependenciesFormProps {
+  type: "alert";
   dependencies: string[];
   staticFields: Field[];
   submitLabel?: string;
   onCancel: () => void;
-  onSubmit: (payload: Payload) => void;
+  onSubmit: (payload: AlertWorkflowRunPayload) => void;
 }
+
+type WorkflowIncidentDependenciesFormProps = {
+  type: "incident";
+  dependencies: string[];
+  staticFields: Field[];
+  submitLabel?: string;
+  onCancel: () => void;
+  onSubmit: (payload: IncidentWorkflowRunPayload) => void;
+};
+
+type WorkflowDependenciesFormProps =
+  | WorkflowAlertDependenciesFormProps
+  | WorkflowIncidentDependenciesFormProps;
 
 export function WorkflowAlertIncidentDependenciesForm({
   type,
@@ -58,7 +75,7 @@ export function WorkflowAlertIncidentDependenciesForm({
   onCancel,
   onSubmit,
   submitLabel = "Continue",
-}: WorkflowAlertIncidentDependenciesFormProps) {
+}: WorkflowDependenciesFormProps) {
   const [dynamicFields, setDynamicFields] = useState<Field[]>([]);
   const [fieldErrors, setFieldErrors] = useState<
     Record<number, { key: boolean; value: boolean }>

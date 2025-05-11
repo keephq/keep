@@ -263,10 +263,8 @@ export function ManualRunWorkflowModal({
 
       {/* Always show workflow inputs when available - whether from direct workflow or selected workflow */}
       {workflowInputs.length > 0 ? (
-        <div className="mt-4">
-          <Text className="font-bold">
-            Fill in the inputs required to run the workflow
-          </Text>
+        <div className="mt-4 flex flex-col gap-2">
+          <Text className="font-bold">Inputs required to run the workflow</Text>
           <WorkflowInputFields
             workflowInputs={workflowInputs}
             inputValues={inputValues}
