@@ -295,5 +295,14 @@
       "mysql": "entityId = '123e4567e89b12d3a456426614174000'",
       "postgresql": "entityId = '123e4567-e89b-12d3-a456-426614174000'"
     }
+  },
+  {
+    "input_cel": "propWithUnknownType <= 100",
+    "description": "When column type is unknown, column is converted to constant node type",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(columnWithUnknownType as REAL) <= 100",
+      "mysql": "columnWithUnknownType <= 100",
+      "postgresql": "(columnWithUnknownType)::FLOAT <= 100"
+    }
   }
 ]

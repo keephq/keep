@@ -321,12 +321,12 @@ class BaseCelToSqlProvider:
                 )
 
             if isinstance(comparison_node.second_operand, ConstantNode):
-                second_operand_data_type = self._get_data_type_to_convert(
-                    comparison_node
-                ) or from_type_to_data_type(type(comparison_node.second_operand.value))
+                second_operand_data_type = from_type_to_data_type(
+                    type(comparison_node.second_operand.value)
+                )
                 second_operand = self._visit_constant_node(
                     comparison_node.second_operand.value,
-                    second_operand_data_type,
+                    first_operand_data_type,
                 )
 
         if first_operand is None:
@@ -337,10 +337,7 @@ class BaseCelToSqlProvider:
                 comparison_node.second_operand, stack
             )
 
-        if force_cast or (
-            first_operand_data_type
-            and first_operand_data_type != second_operand_data_type
-        ):
+        if force_cast or (not first_operand_data_type and second_operand_data_type):
             first_operand = self.cast(
                 first_operand,
                 second_operand_data_type,
