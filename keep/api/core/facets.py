@@ -9,7 +9,6 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     PropertiesMetadata,
     SimpleFieldMapping,
 )
-from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
