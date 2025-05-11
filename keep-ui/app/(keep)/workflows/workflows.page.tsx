@@ -11,11 +11,10 @@ export function WorkflowsPage({
 }: {
   initialFacetsData?: InitialFacetsData;
 }) {
-  let { totalCount, error, isLoading } = useWorkflowsV2(
+  const { totalCount, error, isLoading } = useWorkflowsV2(
     { cel: "", limit: 0, offset: 0 },
     { keepPreviousData: true }
   );
-  totalCount = 0;
 
   if (isLoading) {
     return (
