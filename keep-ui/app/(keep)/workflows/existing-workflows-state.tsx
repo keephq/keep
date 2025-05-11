@@ -92,7 +92,7 @@ const AssigneeLabel = ({ email }: { email: string }) => {
   return user ? user.name : email;
 };
 
-export function WorkflowsPage({
+export function ExistingWorkflowsState({
   initialFacetsData,
 }: {
   initialFacetsData?: InitialFacetsData;
