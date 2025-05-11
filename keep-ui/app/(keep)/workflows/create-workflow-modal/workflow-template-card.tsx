@@ -1,4 +1,4 @@
-import { WorkflowSteps } from "../workflows-templates";
+import { WorkflowSteps } from "../workflows-steps";
 import { WorkflowTemplate } from "@/shared/api/workflows";
 import { Button, Card } from "@tremor/react";
 import { useRouter } from "next/navigation";
