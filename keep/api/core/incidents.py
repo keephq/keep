@@ -41,23 +41,45 @@ incident_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="name",
         map_to=["incident.user_generated_name", "incident.ai_generated_name"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="summary",
         map_to=["incident.user_summary", "incident.generated_summary"],
-    ),
-    FieldMappingConfiguration(map_from_pattern="assignee", map_to="incident.assignee"),
-    FieldMappingConfiguration(map_from_pattern="severity", map_to="incident.severity"),
-    FieldMappingConfiguration(map_from_pattern="status", map_to="incident.status"),
-    FieldMappingConfiguration(
-        map_from_pattern="creation_time", map_to="incident.creation_time"
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="start_time", map_to="incident.start_time"
+        map_from_pattern="assignee",
+        map_to="incident.assignee",
+        data_type=DataType.STRING,
     ),
-    FieldMappingConfiguration(map_from_pattern="end_time", map_to="incident.end_time"),
     FieldMappingConfiguration(
-        map_from_pattern="last_seen_time", map_to="incident.last_seen_time"
+        map_from_pattern="severity",
+        map_to="incident.severity",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="status", map_to="incident.status", data_type=DataType.STRING
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="creation_time",
+        map_to="incident.creation_time",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="start_time",
+        map_to="incident.start_time",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="end_time",
+        map_to="incident.end_time",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="last_seen_time",
+        map_to="incident.last_seen_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
         map_from_pattern="is_predicted",
@@ -75,20 +97,29 @@ incident_field_configurations = [
         data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alerts_count", map_to="incident.alerts_count"
+        map_from_pattern="alerts_count",
+        map_to="incident.alerts_count",
+        data_type=DataType.INTEGER,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="merged_at", map_to="incident.merged_at"
+        map_from_pattern="merged_at",
+        map_to="incident.merged_at",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="merged_by", map_to="incident.merged_by"
+        map_from_pattern="merged_by",
+        map_to="incident.merged_by",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="hasLinkedIncident",
         map_to="addional_incident_fields.incident_has_linked_incident",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alert.providerType", map_to="alert.provider_type"
+        map_from_pattern="alert.providerType",
+        map_to="alert.provider_type",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="sources", map_to="incident.sources", data_type=DataType.ARRAY
