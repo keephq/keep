@@ -159,18 +159,7 @@ export const Facet: React.FC<FacetProps> = ({
   }
 
   function selectOneFacetOption(optionValue: string): void {
-    const strValue = valueToString(optionValue);
-
-    options?.forEach((facetOption) => {
-      if (facetOption.value === strValue) {
-        facetState.add(strValue);
-        return;
-      }
-
-      facetState.delete(strValue);
-    });
-
-    setFacetState(new Set(facetState));
+    setFacetState(new Set([valueToString(optionValue)]));
   }
 
   function selectAllFacetOptions() {
@@ -195,12 +184,7 @@ export const Facet: React.FC<FacetProps> = ({
       return false;
     }
 
-    const isSelected = facetState.has(optionValue);
-    const restNotSelected = !!options
-      ?.filter((option) => option.display_name !== optionValue)
-      .every((option) => !facetState.has(option.display_name));
-
-    return isSelected && restNotSelected;
+    return facetState.size === 1 && facetState.has(valueToString(optionValue));
   }
 
   const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
@@ -222,7 +206,7 @@ export const Facet: React.FC<FacetProps> = ({
         count={facetOption.matches_count}
         showIcon={showIcon}
         isExclusivelySelected={checkIfOptionExclusievlySelected(
-          facetOption.display_name
+          facetOption.value
         )}
         isSelected={isOptionSelected(facetOption.value)}
         isSelectable={
