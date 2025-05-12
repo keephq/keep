@@ -1,5 +1,4 @@
 import "react-loading-skeleton/dist/skeleton.css";
-import { useQueryWorkflowTemplate } from "./use-query-workflow-template";
 import { useCallback, useMemo, useState } from "react";
 import { SearchInput } from "@/features/filter";
 import { Pagination, PaginationState } from "@/features/filter/pagination";
@@ -7,6 +6,7 @@ import { WorkflowTemplateCard } from "./workflow-template-card";
 import { ErrorComponent } from "@/shared/ui";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Button } from "@tremor/react";
+import { useQueryWorkflowTemplate } from "@/entities/workflows/lib/use-query-workflow-template";
 
 interface WorkflowTemplatesProps {}
 
