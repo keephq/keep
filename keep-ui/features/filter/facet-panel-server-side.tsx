@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { FacetOptionsQueries, FacetOptionsQuery, FacetsConfig } from "./models";
+import {
+  FacetDto,
+  FacetOptionsQueries,
+  FacetOptionsQuery,
+  FacetsConfig,
+} from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
@@ -94,62 +99,21 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     revalidationToken
   );
 
-  useEffect(
-    function reloadOptions() {
-      if (
-        facetsData === initialFacetsData?.facets &&
-        initialFacetsData?.facetOptions
-      ) {
-        return;
-      }
-
-      const newFacetQueriesState = buildFacetsQueriesState();
-
-      if (newFacetQueriesState) {
-        // setFacetQueriesState(newFacetQueriesState);
-      }
-    },
-    // disabled because this effect uses currentFacetQueriesState that's also change in that effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [facetsData]
-  );
-
-  function buildFacetsQueriesState() {
-    let newFacetQueriesState: { [key: string]: string } | undefined = undefined;
-
-    facetsData?.forEach((facet) => {
-      if (!newFacetQueriesState) {
-        newFacetQueriesState = {};
-      }
-      if (facetQueriesState && facet.id in facetQueriesState) {
-        newFacetQueriesState[facet.id] = facetQueriesState[facet.id];
-      } else {
-        newFacetQueriesState[facet.id] = "";
-      }
-    });
-
-    if (newFacetQueriesState) {
-      return newFacetQueriesState;
-    }
-
-    return null;
-  }
-
   return (
     <>
       <FacetsPanel
         panelId={entityName}
         className={className || ""}
-        facets={facetsData?.slice(0, 1) as any}
+        facets={facetsData as FacetDto[]}
         facetOptions={facetOptions as any}
         areFacetOptionsLoading={!isSilentReloading && facetOptionsLoading}
         clearFiltersToken={clearFiltersToken}
         facetsConfig={facetsConfig}
         onCelChange={onCelChange}
         onAddFacet={() => setIsModalOpen(true)}
-        onLoadFacetOptions={(facetId) => {
-          setFacetQueriesState({ ...facetQueriesState, [facetId]: "" });
-        }}
+        onLoadFacetOptions={(facetId) =>
+          setFacetQueriesState({ ...facetQueriesState, [facetId]: "" })
+        }
         onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
         onReloadFacetOptions={(facetQueries) =>
           setFacetQueriesState({ ...facetQueries })

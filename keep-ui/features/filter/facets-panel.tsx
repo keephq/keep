@@ -5,12 +5,13 @@ import {
   FacetOptionDto,
   FacetOptionsQueries,
   FacetsConfig,
-  FacetState,
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
 import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
+import { FacetStoreProvider, useNewFacetStore } from "./store";
+import { useStore } from "zustand";
 
 export interface FacetsPanelProps {
   panelId: string;
@@ -54,20 +55,15 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
 }) => {
-  const defaultStateHandledForFacetIds = useMemo(() => new Set<string>(), []);
-  const [facetsState, setFacetsState] = useState<FacetState>({});
-  const [facetCelState, setFacetCelState] = useState<Record<
-    string,
-    string
-  > | null>(null);
-  const [debouncedFacetCelState] = useDebouncedValue(facetCelState, 100);
-
   const [facetOptionQueries, setFacetOptionQueries] =
     useState<FacetOptionsQueries | null>(null);
   const facetOptionsRef = useRef<any>(facetOptions);
   facetOptionsRef.current = facetOptions;
   const onCelChangeRef = useRef(onCelChange);
   onCelChangeRef.current = onCelChange;
+  const store = useNewFacetStore();
+  const state = useStore(store);
+  const [debouncedFacetCelState] = useDebouncedValue(state.facetCelState, 100);
 
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
@@ -99,29 +95,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
     return result;
   }, [facetsConfig, facets]);
-  const facetsConfigIdBasedRef = useRef(facetsConfigIdBased);
-  facetsConfigIdBasedRef.current = facetsConfigIdBased;
-
-  function getFacetState(facetId: string): Set<string> {
-    if (
-      !defaultStateHandledForFacetIds.has(facetId) &&
-      facetsConfigIdBased[facetId]?.checkedByDefaultOptionValues
-    ) {
-      const facetState = new Set<string>(...(facetsState[facetId] || []));
-      const facet = facets.find((f) => f.id === facetId);
-
-      if (facet) {
-        facetsConfigIdBased[facetId]?.checkedByDefaultOptionValues.forEach(
-          (optionValue) => facetState.add(optionValue)
-        );
-        defaultStateHandledForFacetIds.add(facetId);
-      }
-
-      facetsState[facetId] = facetState;
-    }
-
-    return facetsState[facetId] || new Set<string>();
-  }
 
   useEffect(() => {
     if (facetOptionQueries) {
@@ -152,6 +125,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     });
 
     setFacetOptionQueries(facetOptionQueries);
+
     const filterCel = Object.values(debouncedFacetCelState || {})
       .filter(Boolean)
       .map((cel) => `(${cel})`)
@@ -159,33 +133,15 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     onCelChangeRef.current && onCelChangeRef.current(filterCel);
   }, [debouncedFacetCelState, setFacetOptionQueries]);
 
-  function clearFilters(): void {
-    Object.keys(facetsState).forEach((facetId) => facetsState[facetId].clear());
-    defaultStateHandledForFacetIds.clear();
-
-    const newFacetsState: FacetState = {};
-
-    facets.forEach((facet) => {
-      newFacetsState[facet.id] = getFacetState(facet.id);
-    });
-    setFacetsState(newFacetsState);
-  }
-
   useEffect(
     function clearFiltersWhenTokenChange(): void {
       if (clearFiltersToken) {
-        clearFilters();
+        state.clearFilters();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [clearFiltersToken]
   );
-
-  const updateFacetsCelState = (facetId: string, facetCel: string) =>
-    setFacetCelState({
-      ...(facetCelState || {}),
-      [facetId]: facetCel,
-    });
 
   return (
     <section
@@ -204,47 +160,46 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             Add Facet
           </button>
           <button
-            onClick={() => clearFilters()}
+            onClick={() => state.clearFilters()}
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <XMarkIcon className="h-4 w-4" />
             Reset
           </button>
         </div>
-
-        {!facets &&
-          [undefined, undefined, undefined].map((_, index) => (
-            <Facet
-              facet={
-                {
-                  id: "",
-                  name: "",
-                  is_static: true,
-                } as FacetDto
-              }
-              key={index}
-              isOpenByDefault={true}
-              optionsLoading={true}
-              optionsReloading={false}
-            />
-          ))}
-
-        {facets &&
-          facets.map((facet, index) => (
-            <Facet
-              key={facet.id + index}
-              facet={facet}
-              onCelChange={(cel) => updateFacetsCelState(facet.id, cel)}
-              options={facetOptions?.[facet.id]}
-              optionsLoading={!facetOptions?.[facet.id]}
-              optionsReloading={areFacetOptionsLoading && !!facet.id}
-              facetConfig={facetsConfigIdBased[facet.id]}
-              onLoadOptions={() =>
-                onLoadFacetOptions && onLoadFacetOptions(facet.id)
-              }
-              onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
-            />
-          ))}
+        <FacetStoreProvider store={store}>
+          {!facets &&
+            [undefined, undefined, undefined].map((_, index) => (
+              <Facet
+                facet={
+                  {
+                    id: "",
+                    name: "",
+                    is_static: true,
+                  } as FacetDto
+                }
+                key={index}
+                isOpenByDefault={true}
+                optionsLoading={true}
+                optionsReloading={false}
+              />
+            ))}
+          {facets &&
+            facets.map((facet, index) => (
+              <Facet
+                key={facet.id + index}
+                facet={facet}
+                options={facetOptions?.[facet.id]}
+                optionsLoading={!facetOptions?.[facet.id]}
+                optionsReloading={areFacetOptionsLoading && !!facet.id}
+                facetConfig={facetsConfigIdBased[facet.id]}
+                onLoadOptions={() =>
+                  onLoadFacetOptions && onLoadFacetOptions(facet.id)
+                }
+                onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
+              />
+            ))}
+        </FacetStoreProvider>
       </div>
     </section>
   );

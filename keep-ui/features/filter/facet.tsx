@@ -7,6 +7,7 @@ import Skeleton from "react-loading-skeleton";
 import { FacetValue } from "./facet-value";
 import { FacetConfig, FacetDto, FacetOptionDto, FacetState } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useExistingFacetStore } from "./store";
 
 export interface FacetProps {
   facet: FacetDto;
@@ -16,7 +17,6 @@ export interface FacetProps {
   optionsReloading: boolean;
   showIcon?: boolean;
   facetConfig?: FacetConfig;
-  onCelChange?: (cel: string) => void;
   onLoadOptions?: () => void;
   onDelete?: () => void;
 }
@@ -27,10 +27,8 @@ export const Facet: React.FC<FacetProps> = ({
   showIcon = true,
   optionsLoading,
   optionsReloading,
-  onCelChange,
   onLoadOptions,
   onDelete,
-  isOpenByDefault,
   facetConfig,
 }) => {
   function getInitialFacetState(): Set<string> {
@@ -58,9 +56,13 @@ export const Facet: React.FC<FacetProps> = ({
   );
   const facetStateRef = useRef(facetState);
   facetStateRef.current = facetState;
-  const onCelChangeRef = useRef(onCelChange);
-  onCelChangeRef.current = onCelChange;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+  const facetRef = useRef(facet);
+  facetRef.current = facet;
   const [isInitialized, setIsInitialized] = useState(false);
+  const clearFiltersToken = useExistingFacetStore((s) => s.clearFiltersToken);
+  const setFacetCelState = useExistingFacetStore((s) => s.setFacetCelState);
 
   function valueToString(value: any): string {
     if (typeof value === "string") {
@@ -70,6 +72,7 @@ export const Facet: React.FC<FacetProps> = ({
     } else if (value == null) {
       return "null";
     }
+
     return `${value}`;
   }
 
@@ -82,12 +85,16 @@ export const Facet: React.FC<FacetProps> = ({
       return;
     }
 
-    setFacetState(new Set(options.map((opt) => opt.value)));
+    setFacetState(new Set(options.map((opt) => valueToString(opt.value))));
     setIsInitialized(true);
   }, [isInitialized, setIsInitialized, options, facetConfig]);
 
   const currentCel = useMemo(() => {
     const values = Array.from(facetState);
+
+    if (values.length === optionsRef.current?.length) {
+      return "";
+    }
 
     if (!values.length) {
       return "";
@@ -96,7 +103,28 @@ export const Facet: React.FC<FacetProps> = ({
     return `${facet.property_path} in [${values.join(", ")}]`;
   }, [facet.property_path, facetState]);
 
-  useEffect(() => onCelChangeRef.current?.(currentCel), [currentCel]);
+  useEffect(
+    () => setFacetCelState(facet.id, currentCel),
+    [setFacetCelState, facet.id, currentCel]
+  );
+
+  useEffect(() => {
+    if (clearFiltersToken && facetRef.current && optionsRef.current) {
+      const facetState = new Set<string>();
+
+      if (facetConfig?.checkedByDefaultOptionValues) {
+        facetConfig.checkedByDefaultOptionValues.forEach((optionValue) => {
+          facetState.add(valueToString(optionValue));
+        });
+      } else {
+        optionsRef.current.forEach((option) => {
+          facetState.add(valueToString(option.value));
+        });
+      }
+
+      setFacetState(facetState);
+    }
+  }, [clearFiltersToken, setFacetState]);
 
   useEffect(() => {
     setIsLoaded(!!options); // Sync prop change with state
@@ -115,12 +143,13 @@ export const Facet: React.FC<FacetProps> = ({
   );
 
   const isOptionSelected = (optionValue: string) => {
-    return facetState.has(valueToString(optionValue));
+    const strValue = valueToString(optionValue);
+    return facetState.has(strValue);
   };
 
   function toggleFacetOption(value: any) {
     const strValue = valueToString(value);
-    if (isOptionSelected(strValue)) {
+    if (isOptionSelected(value)) {
       facetState.delete(strValue);
     } else {
       facetState.add(strValue);
