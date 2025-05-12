@@ -1,9 +1,14 @@
 from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel
 
 from keep.api.models.action_type import ActionType
-from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.alert import AlertAudit, CommentMention
+
+
+class CommentMentionDto(BaseModel):
+    mentioned_user_id: str
 
 
 class AlertAuditDto(BaseModel):
@@ -13,9 +18,17 @@ class AlertAuditDto(BaseModel):
     action: ActionType
     user_id: str
     description: str
+    mentions: Optional[List[CommentMentionDto]] = None
 
     @classmethod
     def from_orm(cls, alert_audit: AlertAudit) -> "AlertAuditDto":
+        mentions_data = None
+        if hasattr(alert_audit, 'mentions') and alert_audit.mentions:
+            mentions_data = [
+                CommentMentionDto(mentioned_user_id=mention.mentioned_user_id)
+                for mention in alert_audit.mentions
+            ]
+
         return cls(
             id=str(alert_audit.id),
             timestamp=alert_audit.timestamp,
@@ -23,6 +36,7 @@ class AlertAuditDto(BaseModel):
             action=alert_audit.action,
             user_id=alert_audit.user_id,
             description=alert_audit.description,
+            mentions=mentions_data,
         )
 
     @classmethod

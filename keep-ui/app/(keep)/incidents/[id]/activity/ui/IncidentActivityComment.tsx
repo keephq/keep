@@ -1,11 +1,13 @@
 import { IncidentDto } from "@/entities/incidents/model";
-import { TextInput, Button } from "@tremor/react";
+import { Button } from "@tremor/react";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
+import { QuillMentionsInput } from "./QuillMentionsInput";
+import { useUsers } from "@/entities/users/model/useUsers";
 
 export function IncidentActivityComment({
   incident,
@@ -15,21 +17,25 @@ export function IncidentActivityComment({
   mutator: KeyedMutator<AuditEvent[]>;
 }) {
   const [comment, setComment] = useState("");
+  const [taggedUsers, setTaggedUsers] = useState<string[]>([]);
   const api = useApi();
+  const { data: users = [], isLoading: usersLoading } = useUsers();
 
   const onSubmit = useCallback(async () => {
     try {
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,
+        tagged_users: taggedUsers,
       });
       toast.success("Comment added!", { position: "top-right" });
       setComment("");
+      setTaggedUsers([]);
       mutator();
     } catch (error) {
       showErrorToast(error, "Failed to add comment");
     }
-  }, [api, incident.id, incident.status, comment, mutator]);
+  }, [api, incident.id, incident.status, comment, taggedUsers, mutator]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -52,21 +58,30 @@ export function IncidentActivityComment({
   }, [comment, handleKeyDown]);
 
   return (
-    <div className="flex h-full w-full relative items-center">
-      <TextInput
-        value={comment}
-        onValueChange={setComment}
-        placeholder="Add a new comment..."
-      />
-      <Button
-        color="orange"
-        variant="secondary"
-        className="ml-2.5"
-        disabled={!comment}
-        onClick={onSubmit}
-      >
-        Comment
-      </Button>
+    <div className="flex flex-col h-full w-full relative">
+      <div className="w-full mb-3">
+        <QuillMentionsInput
+          value={comment}
+          onValueChange={setComment}
+          placeholder="Add a new comment... Use @ to mention users"
+          users={users}
+          onTagUser={(email) => {
+            if (!taggedUsers.includes(email)) {
+              setTaggedUsers([...taggedUsers, email]);
+            }
+          }}
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button
+          color="orange"
+          variant="secondary"
+          disabled={!comment}
+          onClick={onSubmit}
+        >
+          Comment
+        </Button>
+      </div>
     </div>
   );
 }
