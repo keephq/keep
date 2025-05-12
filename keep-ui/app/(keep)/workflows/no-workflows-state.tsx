@@ -16,7 +16,7 @@ export function NoWorkflowsState({}: {
   const router = useRouter();
 
   return (
-    <>
+    <div data-testid="no-workflows-state">
       <p className="text-3xl font-bold mb-3">Create your first workflow</p>
       <div className="flex flex-col gap-3 mb-3">
         <div className="text-lg">
@@ -56,6 +56,6 @@ export function NoWorkflowsState({}: {
           onClose={() => setIsUploadWorkflowsModalOpen(false)}
         />
       )}
-    </>
+    </div>
   );
 }

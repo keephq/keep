@@ -253,7 +253,10 @@ export function ExistingWorkflowsState({
 
   return (
     <>
-      <main className="flex flex-col gap-12">
+      <main
+        data-testid="workflows-exist-state"
+        className="flex flex-col gap-12"
+      >
         <div className="flex flex-col gap-6">
           <div className="flex justify-between items-end">
             <div>
