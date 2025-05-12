@@ -54,9 +54,20 @@ from tests.e2e_tests.utils import (
 
 
 def close_all_toasts(page: Page):
-    close_buttons = page.locator(".Toastify__close-button").all()
-    for close_button in close_buttons:
-        close_button.click()
+    # First check if there are any toasts
+    if page.locator(".Toastify__close-button").count() == 0:
+        return
+
+    # Try to close toasts with a shorter timeout and handle failures gracefully
+    while page.locator(".Toastify__close-button").count() > 0:
+        try:
+            # Use first() to get the first toast and wait for it to be stable
+            close_button = page.locator(".Toastify__close-button").first
+            if close_button.is_visible():
+                close_button.click(timeout=1000)
+        except Exception:
+            # If clicking fails (e.g. button disappeared), continue to next toast
+            continue
 
 
 def test_sanity(browser: Page):  # browser is actually a page object
