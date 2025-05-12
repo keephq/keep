@@ -40,17 +40,7 @@ export const WorkflowTemplateCard: React.FC<{ template: WorkflowTemplate }> = ({
           {!template && <Skeleton className="h-16 w-full mb-2" />}
         </p>
       </div>
-      <div>
-        {template && (
-          <Button
-            variant="secondary"
-            //   disabled={!!(loadingId && loadingId !== workflow.id)}
-            //   loading={loadingId === workflow.id}
-          >
-            Preview
-          </Button>
-        )}
-      </div>
+      <div>{template && <Button variant="secondary">Preview</Button>}</div>
     </Card>
   );
 };

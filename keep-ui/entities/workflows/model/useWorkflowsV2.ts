@@ -15,6 +15,12 @@ export const DEFAULT_WORKFLOWS_QUERY = {
   sortDir: "desc" as const,
 };
 
+export interface WorkflowTemplatesQuery {
+  cel: string;
+  limit: number;
+  offset: number;
+}
+
 export interface WorkflowsQuery {
   cel?: string;
   limit?: number;

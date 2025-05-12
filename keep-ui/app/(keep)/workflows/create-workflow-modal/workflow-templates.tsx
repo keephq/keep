@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import { SearchInput } from "@/features/filter";
 import { Pagination, PaginationState } from "@/features/filter/pagination";
 import { WorkflowTemplateCard } from "./workflow-template-card";
-import { useRouter } from "next/navigation";
 import { ErrorComponent } from "@/shared/ui";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Button } from "@tremor/react";
@@ -12,8 +11,6 @@ import { Button } from "@tremor/react";
 interface WorkflowTemplatesProps {}
 
 export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
-  const router = useRouter();
-
   const [searchValue, setSearchValue] = useState("");
   const [paginationState, setPaginationState] = useState<PaginationState>({
     offset: 0,
