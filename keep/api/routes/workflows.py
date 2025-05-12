@@ -682,6 +682,9 @@ def get_random_workflow_templates(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
 ) -> list[dict]:
+    """
+    This endpoint is deprecated and will be removed in the future.
+    """
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     default_directory = os.environ.get(
