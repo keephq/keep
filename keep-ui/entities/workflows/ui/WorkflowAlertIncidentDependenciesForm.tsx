@@ -207,7 +207,11 @@ export function WorkflowAlertIncidentDependenciesForm({
   const valueClassName = "flex-1 font-mono";
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={handleSubmit}
+      data-testid={`wf-${type}-dependencies-form`}
+    >
       <header>
         <Text className="font-bold">
           Build {type === "alert" ? "Alert" : "Incident"} payload required to
@@ -261,6 +265,7 @@ export function WorkflowAlertIncidentDependenciesForm({
                     disabled
                   />
                   <TextInput
+                    name={dependencyName}
                     placeholder="value"
                     value={
                       typeof dependencyValues[dependencyName] === "string"
@@ -279,6 +284,7 @@ export function WorkflowAlertIncidentDependenciesForm({
               <div key={index} className="flex items-center gap-2 mb-2">
                 <TextInput
                   placeholder="key"
+                  name={"key-" + field.key}
                   value={field.key}
                   className={keyClassName}
                   onChange={(e) =>
@@ -287,6 +293,7 @@ export function WorkflowAlertIncidentDependenciesForm({
                   error={fieldErrors[index]?.key}
                 />
                 <TextInput
+                  name={field.key}
                   placeholder="value"
                   value={
                     typeof field.value === "string"
@@ -338,6 +345,7 @@ export function WorkflowAlertIncidentDependenciesForm({
           variant="primary"
           color="orange"
           disabled={!isValid}
+          data-testid={`wf-${type}-dependencies-form-submit`}
         >
           {submitLabel}
         </Button>

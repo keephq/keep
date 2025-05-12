@@ -619,7 +619,7 @@ def test_workflow_inputs(browser: Page):
         page.goto("http://localhost:3000/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         file_input = page.locator("#workflowFile")
-        file_input.set_input_files("./tests/e2e_tests/workflow-inputs-example.yaml")
+        file_input.set_input_files("./tests/e2e_tests/workflow-inputs-alert.yaml")
         page.get_by_role("button", name="Upload")
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         page.get_by_test_id("wf-run-now-button").click()
@@ -634,9 +634,19 @@ def test_workflow_inputs(browser: Page):
             )
         ).get_by_role("textbox").fill("shalom")
         page.get_by_role("button", name="Run", exact=True).click()
+        alert_dependencies_form = page.get_by_test_id("wf-alert-dependencies-form")
+        expect(alert_dependencies_form).to_be_visible()
+        alert_dependencies_form.locator("input[name='name']").fill("GrafanaDown")
+        alert_dependencies_form.get_by_test_id(
+            "wf-alert-dependencies-form-submit"
+        ).click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
         page.get_by_role("button", name="Running action echo 0s").click()
         expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
-            "This is my nodefault: shalom"
+            "Input Nodefault: shalom"
+        )
+        expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
+            "Alert Name: GrafanaDown"
         )
     except Exception:
         save_failure_artifacts(page, log_entries)
@@ -652,7 +662,7 @@ def test_workflow_unsaved_changes(browser: Page):
         page.goto("http://localhost:3000/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         file_input = page.locator("#workflowFile")
-        file_input.set_input_files("./tests/e2e_tests/workflow-inputs-example.yaml")
+        file_input.set_input_files("./tests/e2e_tests/workflow-inputs.yaml")
         page.get_by_role("button", name="Upload")
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
         page.get_by_role("tab", name="Builder").click()
