@@ -213,6 +213,10 @@ export function WorkflowExecutionLogs({
       return [];
     }
 
+    const sortedLogs = logs.sort((a, b) => {
+      return parseISO(a.timestamp).getTime() - parseISO(b.timestamp).getTime();
+    });
+
     const groupedLogs: LogGroup[] = [];
     let currentGroup: LogGroup | null = null;
     let currentStepName: string | null = null;
@@ -239,7 +243,7 @@ export function WorkflowExecutionLogs({
       return newGroup;
     }
 
-    for (const log of logs) {
+    for (const log of sortedLogs) {
       // Check for step start in log message
       const stepStartMatch = log.message?.match(
         /Running (step|action) ([a-zA-Z0-9-_]+)/
