@@ -53,6 +53,12 @@ from tests.e2e_tests.utils import (
 #    - Copy the generated code to a new test function.
 
 
+def close_all_toasts(page: Page):
+    close_buttons = page.locator(".Toastify__close-button").all()
+    for close_button in close_buttons:
+        close_button.click()
+
+
 def test_sanity(browser: Page):  # browser is actually a page object
     log_entries = []
     setup_console_listener(browser, log_entries)
@@ -627,11 +633,6 @@ def test_workflow_inputs(browser: Page):
             has_text=re.compile(
                 r"^nodefault \*A no default examplesThis field is required$"
             )
-        ).get_by_role("textbox").click()
-        page.locator("div").filter(
-            has_text=re.compile(
-                r"^nodefault \*A no default examplesThis field is required$"
-            )
         ).get_by_role("textbox").fill("shalom")
         page.get_by_role("button", name="Run", exact=True).click()
         alert_dependencies_form = page.get_by_test_id("wf-alert-dependencies-form")
@@ -678,16 +679,12 @@ def test_workflow_unsaved_changes(browser: Page):
             has_text=re.compile(
                 r"^nodefault \*A no default examplesThis field is required$"
             )
-        ).get_by_role("textbox").click()
-        page.locator("div").filter(
-            has_text=re.compile(
-                r"^nodefault \*A no default examplesThis field is required$"
-            )
         ).get_by_role("textbox").fill("shalom")
         page.get_by_role("button", name="Run", exact=True).click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
         log_step = page.get_by_role("button", name="Running action echo-test")
         expect(log_step).to_be_visible()
+        close_all_toasts(page)
         page.get_by_role("link", name="Workflow Details").click()
         page.get_by_role("tab", name="YAML Definition").click()
         page.get_by_test_id("wf-detail-yaml-editor").get_by_label(
@@ -697,6 +694,12 @@ def test_workflow_unsaved_changes(browser: Page):
         yaml_unsaved_form = page.get_by_test_id("wf-yaml-unsaved-changes-form")
         expect(yaml_unsaved_form).to_be_visible()
         yaml_unsaved_form.get_by_test_id("wf-unsaved-changes-discard-and-run").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_test_id("wf-inputs-form-submit").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
     except Exception:
         save_failure_artifacts(page, log_entries)

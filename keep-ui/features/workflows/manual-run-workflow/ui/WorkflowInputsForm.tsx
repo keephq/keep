@@ -59,10 +59,19 @@ export function WorkflowInputsForm({
         onInputChange={handleInputChange}
       />
       <div className="flex justify-end gap-2">
-        <Button variant="secondary" onClick={onCancel}>
+        <Button
+          variant="secondary"
+          onClick={onCancel}
+          data-testid="wf-inputs-form-cancel"
+        >
           Cancel
         </Button>
-        <Button variant="primary" color="orange" type="submit">
+        <Button
+          variant="primary"
+          color="orange"
+          type="submit"
+          data-testid="wf-inputs-form-submit"
+        >
           Run
         </Button>
       </div>
