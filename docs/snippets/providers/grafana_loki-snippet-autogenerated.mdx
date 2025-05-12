@@ -1,16 +1,17 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
 - **host_url**: Grafana Loki Host URL (required: True, sensitive: False)
+- **verify**: Enable SSL verification (required: False, sensitive: False)
 - **authentication_type**: Authentication Type (required: True, sensitive: False)
 - **username**: HTTP basic authentication - Username (required: False, sensitive: False)
 - **password**: HTTP basic authentication - Password (required: False, sensitive: True)
 - **x_scope_orgid**: X-Scope-OrgID Header Authentication (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **authenticated**: Instance is valid and user is authenticated  
+- **authenticated**: Instance is valid and user is authenticated
 
 
 
@@ -26,16 +27,16 @@ steps:
       provider: grafana_loki
       config: "{{ provider.my_provider_name }}"
       with:
-        query: {value}  
-        limit: {value}  
-        time: {value}  
-        direction: {value}  
-        start: {value}  
-        end: {value}  
-        since: {value}  
-        step: {value}  
-        interval: {value}  
-        queryType: {value}  
+        query: {value}
+        limit: {value}
+        time: {value}
+        direction: {value}
+        start: {value}
+        end: {value}
+        since: {value}
+        step: {value}
+        interval: {value}
+        queryType: {value}
 ```
 
 

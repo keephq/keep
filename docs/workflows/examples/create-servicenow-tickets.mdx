@@ -22,9 +22,7 @@ workflow:
   description: create a ticket in servicenow when an alert is triggered
   triggers:
     - type: alert
-      filters:
-        - key: source
-          value: r"(grafana|prometheus)"
+      cel: source.contains("grafana") || source.contains("prometheus")
   actions:
     - name: create-service-now-ticket
       if: "not '{{ alert.ticket_id }}' and {{ alert.annotations.ticket_type }}"

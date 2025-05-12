@@ -1,4 +1,5 @@
 import { TimeFrame } from "@/components/ui/DateRangePicker";
+import { TimeFrameV2 } from "@/components/ui/DateRangePickerV2";
 import {
   DEFAULT_INCIDENTS_CEL,
   DEFAULT_INCIDENTS_PAGE_SIZE,
@@ -19,7 +20,7 @@ export interface IncidentsTableDataQuery {
   offset: number;
   sorting: { id: string; desc: boolean };
   filterCel: string;
-  timeFrame: TimeFrame;
+  timeFrame: TimeFrameV2;
 }
 
 export const useIncidentsTableData = (
@@ -27,8 +28,6 @@ export const useIncidentsTableData = (
   query: IncidentsTableDataQuery
 ) => {
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
-  const [isPaused, setIsPaused] = useState<boolean>(true);
-  const [timeframeDelta, setTimeframeDelta] = useState<number>(0);
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
   const [isPolling, setIsPolling] = useState<boolean>(false);
@@ -36,8 +35,23 @@ export const useIncidentsTableData = (
     useState<IncidentsQuery | null>(null);
   const incidentsQueryStateRef = useRef(incidentsQueryState);
   incidentsQueryStateRef.current = incidentsQueryState;
-  const timeframeDeltaRef = useRef<number>(0);
-  timeframeDeltaRef.current = timeframeDelta;
+
+  const isPaused = useMemo(() => {
+    if (!query) {
+      return false;
+    }
+
+    switch (query.timeFrame.type) {
+      case "absolute":
+        return false;
+      case "relative":
+        return query.timeFrame.isPaused;
+      case "all-time":
+        return query.timeFrame.isPaused;
+      default:
+        return true;
+    }
+  }, [query]);
 
   useEffect(() => {
     if (canRevalidate) {
@@ -50,18 +64,16 @@ export const useIncidentsTableData = (
     return () => clearTimeout(timeout);
   }, [canRevalidate]);
 
-  const getDateRangeCel = function () {
-    const filterArray = [];
-    const currentDate = new Date();
-
-    if (timeframeDeltaRef.current > 0) {
-      filterArray.push(
-        `creation_time >= '${new Date(
-          currentDate.getTime() - timeframeDeltaRef.current
-        ).toISOString()}'`
-      );
-      filterArray.push(`creation_time <= '${currentDate.toISOString()}'`);
-      return filterArray.join(" && ");
+  const getDateRangeCel = () => {
+    if (query?.timeFrame.type === "relative") {
+      return `creation_time >= '${new Date(
+        new Date().getTime() - query.timeFrame.deltaMs
+      ).toISOString()}'`;
+    } else if (query?.timeFrame.type === "absolute") {
+      return [
+        `creation_time >= '${query.timeFrame.start.toISOString()}'`,
+        `creation_time <= '${query.timeFrame.end.toISOString()}'`,
+      ].join(" && ");
     }
 
     return null;
@@ -81,17 +93,9 @@ export const useIncidentsTableData = (
     mutateIncidents();
   }
 
-  useEffect(() => updateIncidentsCelDateRange(), [timeframeDelta]);
+  useEffect(() => updateIncidentsCelDateRange(), [query.timeFrame]);
 
   const { incidentChangeToken } = usePollIncidents(() => {}, isPaused);
-
-  useEffect(() => {
-    const newDiff =
-      (query.timeFrame?.end?.getTime() || 0) -
-      (query.timeFrame?.start?.getTime() || 0);
-    setTimeframeDelta(newDiff);
-    setIsPaused(!!query.timeFrame?.paused);
-  }, [query.timeFrame, setIsPaused, setTimeframeDelta]);
 
   useEffect(() => {
     // When refresh token comes, this code allows polling for certain time and then stops.

@@ -167,6 +167,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         return {}
 
+    def get_provider_metadata(self) -> dict:
+        """
+        Get provider metadata. E.g. Provider Version.
+
+        Should be implemented by the provider.
+
+        Returns:
+            dict: The provider metadata.
+        """
+        return {}
+
     def notify(self, **kwargs):
         """
         Output alert message.

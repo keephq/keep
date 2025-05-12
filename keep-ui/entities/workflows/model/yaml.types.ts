@@ -1,3 +1,5 @@
+// TODO: deprecate this in favor of YamlWorkflowDefinition from yaml.schema.ts
+
 interface YamlProvider {
   type: string;
   config: string;

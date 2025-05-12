@@ -64,6 +64,8 @@ export function getConfig(): InternalConfig {
     KEEP_DOCS_URL: process.env.KEEP_DOCS_URL || "https://docs.keephq.dev",
     KEEP_CONTACT_US_URL:
       process.env.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/",
-    KEEP_HIDE_SENSITIVE_FIELDS: process.env.KEEP_HIDE_SENSITIVE_FIELDS === "true",
+    KEEP_HIDE_SENSITIVE_FIELDS:
+      process.env.KEEP_HIDE_SENSITIVE_FIELDS === "true",
+    KEEP_WORKFLOW_DEBUG: process.env.KEEP_WORKFLOW_DEBUG === "true",
   };
 }
