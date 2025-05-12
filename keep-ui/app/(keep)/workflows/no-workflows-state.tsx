@@ -28,7 +28,7 @@ export function NoWorkflowsState({}: {
             <span>You can also</span>
             <Button
               color="orange"
-              size="md"
+              size="xs"
               variant="secondary"
               onClick={() => {
                 setIsUploadWorkflowsModalOpen(true);
