@@ -70,6 +70,7 @@ export default function WorkflowDetailHeader({
                 handleRunClick?.();
               }}
               tooltip={message}
+              data-testid="wf-run-now-button"
             >
               {isRunning ? "Running..." : "Run now"}
             </Button>

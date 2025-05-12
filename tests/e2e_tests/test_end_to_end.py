@@ -622,7 +622,7 @@ def test_workflow_inputs(browser: Page):
         file_input.set_input_files("./tests/e2e_tests/workflow-inputs-example.yaml")
         page.get_by_role("button", name="Upload")
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
-        page.get_by_role("button", name="Run now").click()
+        page.get_by_test_id("wf-run-now-button").click()
         page.locator("div").filter(
             has_text=re.compile(
                 r"^nodefault \*A no default examplesThis field is required$"
@@ -638,6 +638,56 @@ def test_workflow_inputs(browser: Page):
         expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
             "This is my nodefault: shalom"
         )
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_workflow_unsaved_changes(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-inputs-example.yaml")
+        page.get_by_role("button", name="Upload")
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        page.get_by_role("tab", name="Builder").click()
+        page.locator("[data-testid='workflow-node']").filter(has_text="echo").click()
+        page.get_by_test_id("wf-editor-step-name-input").click()
+        page.get_by_test_id("wf-editor-step-name-input").fill("echo-test")
+        page.wait_for_timeout(300)
+        page.get_by_test_id("wf-run-now-button").click()
+        unsaved_ui_form = page.get_by_test_id("wf-ui-unsaved-changes-form")
+        expect(unsaved_ui_form).to_be_visible()
+        unsaved_ui_form.get_by_test_id("wf-unsaved-changes-save-and-run").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_role("button", name="Run", exact=True).click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
+        log_step = page.get_by_role("button", name="Running action echo-test")
+        expect(log_step).to_be_visible()
+        page.get_by_role("link", name="Workflow Details").click()
+        page.get_by_role("tab", name="YAML Definition").click()
+        page.get_by_test_id("wf-detail-yaml-editor").get_by_label(
+            "Editor content"
+        ).fill("random string")
+        page.get_by_test_id("wf-run-now-button").click()
+        yaml_unsaved_form = page.get_by_test_id("wf-yaml-unsaved-changes-form")
+        expect(yaml_unsaved_form).to_be_visible()
+        yaml_unsaved_form.get_by_test_id("wf-unsaved-changes-discard-and-run").click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise

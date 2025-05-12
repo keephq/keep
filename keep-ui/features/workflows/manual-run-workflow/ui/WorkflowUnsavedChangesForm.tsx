@@ -19,45 +19,44 @@ export function WorkflowUnsavedChangesForm({
 
   if (isYamlEditorUnsaved && isUIBuilderUnsaved) {
     return (
-      <div className="flex flex-col gap-4">
+      <form
+        className="flex flex-col gap-4"
+        data-testid="wf-yaml-ui-unsaved-changes-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onClose();
+        }}
+      >
         <p>
           You have unsaved changes in both the YAML editor and the workflow
-          editor. Which one do you want to save?
+          editor. Please save your changes before running the workflow.
         </p>
         <div className="flex justify-between gap-2">
           <Button
             variant="secondary"
             size="sm"
-            color="orange"
-            onClick={onClose}
+            color="rose"
+            onClick={onRunWithoutSaving}
           >
-            Cancel
+            Discard all changes and run
           </Button>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              color="rose"
-              onClick={onClose}
-            >
-              Discard all changes and run
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              color="orange"
-              onClick={onClose}
-            >
-              Return to editor
-            </Button>
-          </div>
+          <Button variant="primary" size="sm" color="orange" type="submit">
+            Return to editor
+          </Button>
         </div>
-      </div>
+      </form>
     );
   }
   if (isYamlEditorUnsaved) {
     return (
-      <div className="flex flex-col gap-4">
+      <form
+        className="flex flex-col gap-4"
+        data-testid="wf-yaml-unsaved-changes-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSaveYaml();
+        }}
+      >
         <p>
           You have unsaved changes in the YAML editor. Do you want to save them?
         </p>
@@ -76,6 +75,7 @@ export function WorkflowUnsavedChangesForm({
               size="sm"
               color="rose"
               onClick={onRunWithoutSaving}
+              data-testid="wf-unsaved-changes-discard-and-run"
             >
               Discard changes and run
             </Button>
@@ -83,18 +83,26 @@ export function WorkflowUnsavedChangesForm({
               variant="primary"
               size="sm"
               color="orange"
-              onClick={onSaveYaml}
+              type="submit"
+              data-testid="wf-unsaved-changes-save-and-run"
             >
               Save and run
             </Button>
           </div>
         </div>
-      </div>
+      </form>
     );
   }
   if (isUIBuilderUnsaved) {
     return (
-      <div className="flex flex-col gap-4">
+      <form
+        className="flex flex-col gap-4"
+        data-testid="wf-ui-unsaved-changes-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSaveUIBuilder();
+        }}
+      >
         <p>
           You have unsaved changes in the workflow UI builder. Do you want to
           save them?
@@ -114,6 +122,7 @@ export function WorkflowUnsavedChangesForm({
               size="sm"
               color="orange"
               onClick={onRunWithoutSaving}
+              data-testid="wf-unsaved-changes-discard-and-run"
             >
               Discard changes and run
             </Button>
@@ -121,13 +130,14 @@ export function WorkflowUnsavedChangesForm({
               variant="primary"
               size="sm"
               color="orange"
-              onClick={onSaveUIBuilder}
+              type="submit"
+              data-testid="wf-unsaved-changes-save-and-run"
             >
               Save and run
             </Button>
           </div>
         </div>
-      </div>
+      </form>
     );
   }
   // should not happen
