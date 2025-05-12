@@ -374,7 +374,7 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
     try:
         init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create Workflow").click()
+        page.get_by_role("button", name="Start from scratch").click()
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
@@ -416,7 +416,7 @@ def test_test_run_workflow(browser: Page):
     try:
         init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create Workflow").click()
+        page.get_by_role("button", name="Start from scratch").click()
         page.wait_for_url("http://localhost:3000/workflows/builder")
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
