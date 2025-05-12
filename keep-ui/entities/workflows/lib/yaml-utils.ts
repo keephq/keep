@@ -13,6 +13,7 @@ import { Definition } from "../model/types";
 import { getYamlWorkflowDefinition } from "./parser";
 import { YamlWorkflowDefinitionSchema } from "../model/yaml.schema";
 import { z } from "zod";
+
 const YAML_STRINGIFY_OPTIONS = {
   indent: 2,
   lineWidth: -1,
@@ -204,10 +205,10 @@ export function parseWorkflowYamlStringToJSON(yamlString: string) {
   return parseDocument(content).toJSON();
 }
 
-export function parseWorkflowYamlToJSON(
+export function parseWorkflowYamlToJSON<T extends z.ZodSchema>(
   yamlString: string,
-  schema: z.ZodSchema = YamlWorkflowDefinitionSchema
-) {
+  schema: T = YamlWorkflowDefinitionSchema as unknown as T
+): z.SafeParseReturnType<z.input<T>, z.output<T>> {
   const doc = parseDocument(yamlString);
   let json = doc.toJSON();
   if (!json.workflow) {
@@ -217,6 +218,7 @@ export function parseWorkflowYamlToJSON(
   }
   return schema.safeParse(json);
 }
+
 export function getCurrentPath(document: Document, absolutePosition: number) {
   let path: (string | number)[] = [];
   if (!document.contents) return [];
@@ -250,6 +252,7 @@ export function getCurrentPath(document: Document, absolutePosition: number) {
 
   return path;
 }
+
 export function getBodyFromStringOrDefinitionOrObject(
   definition: Definition | string | Record<string, unknown>
 ) {

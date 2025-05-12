@@ -64,6 +64,8 @@ export function WorkflowBuilderChat({
     selectedNode,
     deleteNodes,
     validationErrors,
+    v2Properties: properties,
+    updateV2Properties: setProperties,
   } = useWorkflowStore();
 
   const steps = useMemo(() => {
@@ -157,9 +159,6 @@ export function WorkflowBuilderChat({
   );
 
   const { setMessages } = useCopilotChat();
-
-  const { v2Properties: properties, updateV2Properties: setProperties } =
-    useWorkflowStore();
 
   useCopilotAction({
     name: "changeWorkflowName",

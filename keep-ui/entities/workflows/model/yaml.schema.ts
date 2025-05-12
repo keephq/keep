@@ -112,7 +112,7 @@ const TriggerSchema = z.union([
 const YamlProviderSchema = z
   .object({
     type: z.string(),
-    config: z.string(),
+    config: z.string().optional(),
     with: WithSchema,
   })
   .strict();
@@ -228,12 +228,12 @@ export const YamlWorkflowDefinitionSchema = z.object({
       triggers: z.array(TriggerSchema).min(1),
       inputs: z.array(WorkflowInputSchema).optional(),
       consts: z.record(z.string(), z.string()).optional(),
+      strategy: WorkflowStrategySchema.optional(),
+      "on-failure": OnFailureSchema.optional(),
       owners: z.array(z.string()).optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
       permissions: z.array(z.string()).optional(),
-      strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
-      "on-failure": OnFailureSchema.optional(),
       steps: z.array(YamlStepOrActionSchema).optional(),
       actions: z.array(YamlStepOrActionSchema).optional(),
     })
