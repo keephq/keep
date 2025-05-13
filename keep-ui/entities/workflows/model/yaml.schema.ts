@@ -223,7 +223,6 @@ export const YamlWorkflowDefinitionSchema = z.object({
       "on-failure": YamlStepOrActionSchema.partial({
         id: true,
         name: true,
-        provider: true,
       })
         .extend(OnFailureSchema.shape)
         .optional(),
@@ -296,7 +295,7 @@ export function getYamlWorkflowDefinitionSchema(
       strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
       "on-failure": actionSchema
-        .partial({ id: true, name: true, provider: true })
+        .partial({ id: true, name: true })
         .extend(OnFailureSchema.shape)
         .optional(),
       // optional will be replace on postProcess

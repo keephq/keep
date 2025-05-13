@@ -273,8 +273,16 @@ describe("parseWorkflowYamlToJSON", () => {
       yamlWithVars,
       workflowSchemaWithProviders
     );
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
+    expect(result.error).toBeDefined();
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ["workflow", "on-failure", "provider"],
+          message: "Required",
+        }),
+      ])
+    );
+    expect(result.data).toBeUndefined();
   });
 
   it("should validate workflow with global on-failure with provider", () => {
