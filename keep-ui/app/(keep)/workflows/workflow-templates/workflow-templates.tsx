@@ -1,5 +1,5 @@
 import "react-loading-skeleton/dist/skeleton.css";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SearchInput } from "@/features/filter";
 import { Pagination, PaginationState } from "@/features/filter/pagination";
 import { WorkflowTemplateCard } from "./workflow-template-card";
@@ -16,6 +16,9 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
     offset: 0,
     limit: 12,
   });
+  useEffect(() => {
+    setPaginationState({ offset: 0, limit: 12 });
+  }, [searchValue, setPaginationState]);
 
   const query = useMemo(() => {
     const cel = searchValue

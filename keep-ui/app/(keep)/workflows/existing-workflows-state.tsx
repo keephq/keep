@@ -35,7 +35,7 @@ import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side
 import { InitialFacetsData } from "@/features/filter/api";
 import { v4 as uuidV4 } from "uuid";
 import { PaginationState } from "@/features/filter/pagination";
-import { CreateWorkflowModal } from "./create-workflow-modal/create-workflow-modal";
+import { CreateWorkflowModal } from "./create-workflow-modal";
 import { UploadWorkflowsModal } from "./upload-workflows-modal";
 
 const AssigneeLabel = ({ email }: { email: string }) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { WorkflowTemplates } from "./create-workflow-modal";
+import { WorkflowTemplates } from "./workflow-templates";
 import { InitialFacetsData } from "@/features/filter/api";
 import { useRouter } from "next/navigation";
 import { Button } from "@tremor/react";
