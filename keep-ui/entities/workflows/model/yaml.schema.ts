@@ -7,7 +7,7 @@ import {
   WorkflowInputSchema,
 } from "./schema";
 import { Provider } from "@/shared/api/providers";
-import { checkProviderNeedsInstallation } from "../lib/validation";
+import { checkProviderNeedsInstallation } from "../lib/validate-definition";
 
 type ProviderMetadataForValidation = Pick<
   Provider,
@@ -66,16 +66,11 @@ const auth0LogsProvider: ProviderMetadataForValidation = {
   query_params: ["log_type", "previous_users"],
 };
 
-export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
-export type WorkflowInputType = WorkflowInput["type"];
-
-const WorkflowStrategySchema = z.enum([
+export const WorkflowStrategySchema = z.enum([
   "nonparallel_with_retry",
   "nonparallel",
   "parallel",
 ]);
-
-export type WorkflowStrategy = z.infer<typeof WorkflowStrategySchema>;
 
 const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
@@ -114,6 +109,16 @@ const YamlProviderSchema = z
     type: z.string(),
     config: z.string().optional(),
     with: WithSchema,
+    "on-failure": z
+      .object({
+        retry: z
+          .object({
+            count: z.number().optional(),
+            interval: z.number().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   })
   .strict();
 
@@ -154,6 +159,16 @@ function getYamlProviderSchema(
         enrich_alert: EnrichDisposableKeyValueSchema.optional(),
         enrich_incident: EnrichKeyValueSchema.optional(),
       }),
+      "on-failure": z
+        .object({
+          retry: z
+            .object({
+              count: z.number().optional(),
+              interval: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
     });
   }
 
@@ -166,24 +181,34 @@ function getYamlProviderSchema(
       type: z.literal(provider.type),
       with: withSchema,
       config: configSchema,
+      "on-failure": z
+        .object({
+          retry: z
+            .object({
+              count: z.number().optional(),
+              interval: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
     })
     .strict();
 }
 
-const YamlThresholdConditionSchema = z
+export const YamlThresholdConditionSchema = z
   .object({
     id: z.string().optional(),
     name: z.string(),
     alias: z.string().optional(),
     type: z.literal("threshold"),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
     compare_to: z.union([z.string(), z.number()]),
     compare_type: z.enum(["gt", "lt"]).optional(),
     level: z.string().optional(),
   })
   .strict();
 
-const YamlAssertConditionSchema = z
+export const YamlAssertConditionSchema = z
   .object({
     id: z.string().optional(),
     name: z.string(),
@@ -193,8 +218,7 @@ const YamlAssertConditionSchema = z
   })
   .strict();
 
-// TODO: generate schema runtime based on the providers
-const YamlStepOrActionSchema = z
+export const YamlStepOrActionSchema = z
   .object({
     name: z.string(),
     provider: YamlProviderSchema,
@@ -210,12 +234,15 @@ const YamlStepOrActionSchema = z
   })
   .strict();
 
-const OnFailureSchema = z.object({
-  retry: z.object({
-    count: z.number(),
-    interval: z.number(),
-  }),
+const OnFailureSchema = YamlStepOrActionSchema.extend({
+  name: z.string().optional(),
 });
+
+const getOnFailureSchema = (stepOrActionSchema: z.ZodObject<any, any>) => {
+  return stepOrActionSchema.extend({
+    name: z.string().optional(),
+  });
+};
 
 export const YamlWorkflowDefinitionSchema = z.object({
   workflow: z
@@ -249,16 +276,12 @@ export const YamlWorkflowDefinitionSchema = z.object({
     ),
 });
 
-export type YamlWorkflowDefinition = z.infer<
-  typeof YamlWorkflowDefinitionSchema
->;
-
 export function getYamlWorkflowDefinitionSchema(
   providers: Provider[],
   { partial = false }: { partial?: boolean } = {}
 ) {
-  let stepSchema: z.ZodSchema = YamlStepOrActionSchema;
-  let actionSchema: z.ZodSchema = YamlStepOrActionSchema;
+  let stepSchema: z.ZodObject<any, any> = YamlStepOrActionSchema;
+  let actionSchema: z.ZodObject<any, any> = YamlStepOrActionSchema;
   // Only update schemas if there are providers
   const providersWithMock = [
     mockProvider,
@@ -302,7 +325,7 @@ export function getYamlWorkflowDefinitionSchema(
       permissions: z.array(z.string()).optional(),
       strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
-      "on-failure": OnFailureSchema.optional(),
+      "on-failure": getOnFailureSchema(actionSchema).optional(),
       // optional will be replace on postProcess
       steps: z.array(stepSchema).optional(),
       actions: z.array(actionSchema).optional(),

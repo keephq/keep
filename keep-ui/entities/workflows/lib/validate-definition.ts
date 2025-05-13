@@ -1,7 +1,6 @@
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "../model/types";
 import { getWithParams } from "./parser";
-import { YamlStepOrAction, YamlWorkflowDefinition } from "../model/yaml.types";
 
 export type ValidationResult = [string, string];
 export type ValidationError = [string, "error" | "warning" | "info"];
@@ -310,7 +309,7 @@ export function validateStepPure(
         validationErrors.push(["Condition value cannot be empty.", "error"]);
       }
       const variableErrorsValue = validateAllMustacheVariablesInString(
-        step.properties.value,
+        step.properties.value.toString(),
         step,
         definition,
         secrets
@@ -325,7 +324,7 @@ export function validateStepPure(
         ]);
       }
       const variableErrorsCompareTo = validateAllMustacheVariablesInString(
-        step.properties.compare_to,
+        step.properties.compare_to.toString(),
         step,
         definition,
         secrets

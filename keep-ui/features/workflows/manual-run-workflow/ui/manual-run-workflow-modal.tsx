@@ -23,10 +23,8 @@ import {
 } from "@/entities/workflows/ui/WorkflowInputFields";
 import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import {
-  YamlWorkflowDefinitionSchema,
-  type WorkflowInput,
-} from "@/entities/workflows/model/yaml.schema";
+import { YamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
+import type { WorkflowInput } from "@/entities/workflows/model/yaml.types";
 
 interface Props {
   alert?: AlertDto | null | undefined;

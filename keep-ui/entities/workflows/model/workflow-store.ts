@@ -35,7 +35,7 @@ import {
   validateStepPure,
   validateGlobalPure,
   ValidationError,
-} from "../lib/validation";
+} from "../lib/validate-definition";
 import { getLayoutedWorkflowElements } from "../lib/getLayoutedWorkflowElements";
 import {
   parseWorkflow,
@@ -308,481 +308,488 @@ const defaultState: WorkflowStateValues = {
 };
 
 export const useWorkflowStore = create<WorkflowState>()(
-  devtools((set, get) => ({
-    ...defaultState,
-    setDefinition: (def) => set({ definition: def }),
-    setIsLoading: (loading) => set({ isLoading: loading }),
-    triggerSave: () =>
-      set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
-    setIsSaving: (state: boolean) => set({ isSaving: state }),
-    setCanDeploy: (deploy) => set({ canDeploy: deploy }),
-    setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
-    setLastDeployedAt: (deployedAt) =>
-      set({ lastDeployedAt: deployedAt, changes: 0 }),
-    setSelectedEdge: (id) => {
-      const edge = get().edges.find((edge) => edge.id === id);
-      if (!edge) {
-        return;
-      }
-      set({
-        selectedEdge: id,
-        selectedNode: null,
-        editorOpen: edgeCanHaveAddButton(edge?.source, edge?.target),
-      });
-    },
-    setIsLayouted: (isLayouted) => set({ isLayouted }),
-    getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
-    addNodeBetween: (
-      nodeOrEdgeId: string,
-      step: V2StepTrigger | Omit<V2Step, "id">,
-      type: "node" | "edge"
-    ) => {
-      const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
-      set({ selectedNode: newNodeId, selectedEdge: null });
-      return newNodeId ?? null;
-    },
-    addNodeBetweenSafe: (
-      nodeOrEdgeId: string,
-      step: V2StepTrigger | Omit<V2Step, "id">,
-      type: "node" | "edge"
-    ) => {
-      try {
+  devtools(
+    (set, get) => ({
+      ...defaultState,
+      setDefinition: (def) => set({ definition: def }),
+      setIsLoading: (loading) => set({ isLoading: loading }),
+      triggerSave: () =>
+        set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
+      setIsSaving: (state: boolean) => set({ isSaving: state }),
+      setCanDeploy: (deploy) => set({ canDeploy: deploy }),
+      setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
+      setLastDeployedAt: (deployedAt) =>
+        set({ lastDeployedAt: deployedAt, changes: 0 }),
+      setSelectedEdge: (id) => {
+        const edge = get().edges.find((edge) => edge.id === id);
+        if (!edge) {
+          return;
+        }
+        set({
+          selectedEdge: id,
+          selectedNode: null,
+          editorOpen: edgeCanHaveAddButton(edge?.source, edge?.target),
+        });
+      },
+      setIsLayouted: (isLayouted) => set({ isLayouted }),
+      getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
+      addNodeBetween: (
+        nodeOrEdgeId: string,
+        step: V2StepTrigger | Omit<V2Step, "id">,
+        type: "node" | "edge"
+      ) => {
         const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
         set({ selectedNode: newNodeId, selectedEdge: null });
         return newNodeId ?? null;
-      } catch (error) {
-        if (error instanceof ZodError) {
-          // TODO: extract meaningful error from ZodError
-          const validationError = fromError(error);
-          showErrorToast(validationError);
-          console.error(error);
-        } else {
-          showErrorToast(error);
-          console.error(error);
-        }
-        return null;
-      }
-    },
-    setProviders: (providers: Provider[]) => {
-      set({
-        providers,
-        yamlSchema: getYamlWorkflowDefinitionSchema(providers),
-        toolboxConfiguration: getToolboxConfiguration(providers),
-      });
-    },
-    setInstalledProviders: (installedProviders: Provider[]) =>
-      set({ installedProviders }),
-    setSecrets: (secrets: Record<string, string>) => set({ secrets }),
-    setEditorOpen: (open) => set({ editorOpen: open }),
-    updateSelectedNodeData: (key, value) => {
-      const currentSelectedNode = get().selectedNode;
-      if (currentSelectedNode) {
-        const updatedNodes = get().nodes.map((node) => {
-          if (node.id === currentSelectedNode) {
-            //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
-            if (value !== undefined && value !== null) {
-              node.data[key] = value;
-            } else {
-              delete node.data[key];
-            }
-            return { ...node };
+      },
+      addNodeBetweenSafe: (
+        nodeOrEdgeId: string,
+        step: V2StepTrigger | Omit<V2Step, "id">,
+        type: "node" | "edge"
+      ) => {
+        try {
+          const newNodeId = addNodeBetween(nodeOrEdgeId, step, type, set, get);
+          set({ selectedNode: newNodeId, selectedEdge: null });
+          return newNodeId ?? null;
+        } catch (error) {
+          if (error instanceof ZodError) {
+            // TODO: extract meaningful error from ZodError
+            const validationError = fromError(error);
+            showErrorToast(validationError);
+            console.error(error);
+          } else {
+            showErrorToast(error);
+            console.error(error);
           }
-          return node;
+          return null;
+        }
+      },
+      setProviders: (providers: Provider[]) => {
+        set({
+          providers,
+          yamlSchema: getYamlWorkflowDefinitionSchema(providers),
+          toolboxConfiguration: getToolboxConfiguration(providers),
+        });
+      },
+      setInstalledProviders: (installedProviders: Provider[]) =>
+        set({ installedProviders }),
+      setSecrets: (secrets: Record<string, string>) => set({ secrets }),
+      setEditorOpen: (open) => set({ editorOpen: open }),
+      updateSelectedNodeData: (key, value) => {
+        const currentSelectedNode = get().selectedNode;
+        if (currentSelectedNode) {
+          const updatedNodes = get().nodes.map((node) => {
+            if (node.id === currentSelectedNode) {
+              //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
+              if (value !== undefined && value !== null) {
+                node.data[key] = value;
+              } else {
+                delete node.data[key];
+              }
+              return { ...node };
+            }
+            return node;
+          });
+          set({
+            nodes: updatedNodes,
+            changes: get().changes + 1,
+            lastChangedAt: Date.now(),
+          });
+          get().updateDefinition();
+        }
+      },
+      updateFromYamlString: (yamlString: string) => {
+        try {
+          const json = parseWorkflowYamlStringToJSON(yamlString);
+          const parsed = get().yamlSchema?.parse(json);
+        } catch (error) {
+          if (error instanceof ZodError) {
+            console.error("Failed to validate against Zod schema", error);
+          } else {
+            console.error("Failed to parse YAML", error);
+          }
+          // we do not update nodes if the yaml is invalid or cannot be parsed
+          return;
+        }
+        set({
+          definition: wrapDefinitionV2({
+            // todo: do not change node ids, maybe use determenistic ids
+            ...parseWorkflow(yamlString, get().providers ?? []),
+            isValid: true,
+          }),
         });
         set({
-          nodes: updatedNodes,
+          changes: get().changes + 1,
+          lastChangedAt: Date.now(),
+        });
+        initializeWorkflow(
+          get().workflowId,
+          {
+            providers: get().providers ?? [],
+            installedProviders: get().installedProviders ?? [],
+            secrets: get().secrets ?? {},
+          },
+          set,
+          get
+        );
+      },
+      updateDefinition: () => {
+        // Immediately update definition with new properties
+        const { nodes, edges } = get();
+        const { sequence, properties: newProperties } =
+          reConstructWorklowToDefinition({
+            nodes,
+            edges,
+            properties: get().v2Properties,
+          });
+
+        const definition: Definition = {
+          sequence,
+          properties: newProperties as WorkflowProperties,
+        };
+
+        const { isValid, validationErrors, canDeploy } =
+          get().validateDefinition(definition);
+
+        set({
+          definition: wrapDefinitionV2({
+            ...definition,
+            isValid,
+          }),
+          validationErrors,
+          canDeploy,
+          isEditorSyncedWithNodes: true,
+        });
+      },
+      validateDefinition: (definition: Definition) => {
+        // Use validators to check if the workflow is valid
+        let isValid = true;
+        const validationErrors: Record<string, ValidationError> = {};
+
+        const result = validateGlobalPure(definition);
+        if (result) {
+          result.forEach(([key, error]) => {
+            validationErrors[key] = [error, "error"];
+          });
+          isValid = result.length === 0;
+        }
+
+        // Check each step's validity
+        for (const step of definition.sequence) {
+          const errors = validateStepPure(
+            step,
+            get().providers ?? [],
+            get().installedProviders ?? [],
+            get().secrets ?? {},
+            definition
+          );
+          if (step.componentType === "switch") {
+            [...step.branches.true, ...step.branches.false].forEach(
+              (branch) => {
+                const errors = validateStepPure(
+                  branch,
+                  get().providers ?? [],
+                  get().installedProviders ?? [],
+                  get().secrets ?? {},
+                  definition
+                );
+                if (errors.length > 0) {
+                  validationErrors[branch.name || branch.id] = errors[0];
+                  isValid = false;
+                }
+              }
+            );
+          }
+          if (step.componentType === "container") {
+            step.sequence.forEach((s) => {
+              const errors = validateStepPure(
+                s,
+                get().providers ?? [],
+                get().installedProviders ?? [],
+                get().secrets ?? {},
+                definition
+              );
+              if (errors.length > 0) {
+                validationErrors[s.name || s.id] = errors[0];
+                isValid = false;
+              }
+            });
+          }
+          if (errors.length > 0) {
+            validationErrors[step.name || step.id] = errors[0];
+            isValid = false;
+          }
+        }
+
+        // We allow deployment even if there are
+        // - provider errors, as the user can fix them later
+        // - variable errors, as the user can fix them later
+        const canDeploy =
+          Object.values(validationErrors).filter(
+            ([_, severity]) => severity === "error"
+          ).length === 0;
+
+        return { isValid, validationErrors, canDeploy };
+      },
+      updateV2Properties: (properties) => {
+        const updatedProperties = { ...get().v2Properties, ...properties };
+        set({
+          v2Properties: updatedProperties,
           changes: get().changes + 1,
           lastChangedAt: Date.now(),
         });
         get().updateDefinition();
-      }
-    },
-    updateFromYamlString: (yamlString: string) => {
-      try {
-        const json = parseWorkflowYamlStringToJSON(yamlString);
-        const parsed = get().yamlSchema?.parse(json);
-      } catch (error) {
-        if (error instanceof ZodError) {
-          console.error("Failed to validate against Zod schema", error);
-        } else {
-          console.error("Failed to parse YAML", error);
-        }
-        // we do not update nodes if the yaml is invalid or cannot be parsed
-        return;
-      }
-      set({
-        definition: wrapDefinitionV2({
-          // todo: do not change node ids, maybe use determenistic ids
-          ...parseWorkflow(yamlString, get().providers ?? []),
-          isValid: true,
-        }),
-      });
-      set({
-        changes: get().changes + 1,
-        lastChangedAt: Date.now(),
-      });
-      initializeWorkflow(
-        get().workflowId,
-        {
-          providers: get().providers ?? [],
-          installedProviders: get().installedProviders ?? [],
-          secrets: get().secrets ?? {},
-        },
-        set,
-        get
-      );
-    },
-    updateDefinition: () => {
-      // Immediately update definition with new properties
-      const { nodes, edges } = get();
-      const { sequence, properties: newProperties } =
-        reConstructWorklowToDefinition({
-          nodes,
-          edges,
-          properties: get().v2Properties,
-        });
-
-      const definition: Definition = {
-        sequence,
-        properties: newProperties as WorkflowProperties,
-      };
-
-      const { isValid, validationErrors, canDeploy } =
-        get().validateDefinition(definition);
-
-      set({
-        definition: wrapDefinitionV2({
-          ...definition,
-          isValid,
-        }),
-        validationErrors,
-        canDeploy,
-        isEditorSyncedWithNodes: true,
-      });
-    },
-    validateDefinition: (definition: Definition) => {
-      // Use validators to check if the workflow is valid
-      let isValid = true;
-      const validationErrors: Record<string, ValidationError> = {};
-
-      const result = validateGlobalPure(definition);
-      if (result) {
-        result.forEach(([key, error]) => {
-          validationErrors[key] = [error, "error"];
-        });
-        isValid = result.length === 0;
-      }
-
-      // Check each step's validity
-      for (const step of definition.sequence) {
-        const errors = validateStepPure(
-          step,
-          get().providers ?? [],
-          get().installedProviders ?? [],
-          get().secrets ?? {},
-          definition
-        );
-        if (step.componentType === "switch") {
-          [...step.branches.true, ...step.branches.false].forEach((branch) => {
-            const errors = validateStepPure(
-              branch,
-              get().providers ?? [],
-              get().installedProviders ?? [],
-              get().secrets ?? {},
-              definition
-            );
-            if (errors.length > 0) {
-              validationErrors[branch.name || branch.id] = errors[0];
-              isValid = false;
-            }
-          });
-        }
-        if (step.componentType === "container") {
-          step.sequence.forEach((s) => {
-            const errors = validateStepPure(
-              s,
-              get().providers ?? [],
-              get().installedProviders ?? [],
-              get().secrets ?? {},
-              definition
-            );
-            if (errors.length > 0) {
-              validationErrors[s.name || s.id] = errors[0];
-              isValid = false;
-            }
-          });
-        }
-        if (errors.length > 0) {
-          validationErrors[step.name || step.id] = errors[0];
-          isValid = false;
-        }
-      }
-
-      // We allow deployment even if there are
-      // - provider errors, as the user can fix them later
-      // - variable errors, as the user can fix them later
-      const canDeploy =
-        Object.values(validationErrors).filter(
-          ([_, severity]) => severity === "error"
-        ).length === 0;
-
-      return { isValid, validationErrors, canDeploy };
-    },
-    updateV2Properties: (properties) => {
-      const updatedProperties = { ...get().v2Properties, ...properties };
-      set({
-        v2Properties: updatedProperties,
-        changes: get().changes + 1,
-        lastChangedAt: Date.now(),
-      });
-      get().updateDefinition();
-    },
-    setSelectedNode: (id) => {
-      set({
-        selectedNode: id || null,
-        selectedEdge: null,
-        // open editor if we select a node
-        editorOpen: !!id,
-      });
-    },
-    onNodesChange: (changes) =>
-      set({ nodes: applyNodeChanges(changes, get().nodes) }),
-    onEdgesChange: (changes) =>
-      set({ edges: applyEdgeChanges(changes, get().edges) }),
-    onConnect: (connection) => {
-      const { source, target } = connection;
-      const sourceNode = get().getNodeById(source);
-      const targetNode = get().getNodeById(target);
-
-      // Define the connection restrictions
-      const canConnect = (
-        sourceNode: FlowNode | undefined,
-        targetNode: FlowNode | undefined
-      ) => {
-        if (!sourceNode || !targetNode) return false;
-
-        const sourceType = sourceNode?.data?.componentType;
-        const targetType = targetNode?.data?.componentType;
-
-        // Restriction logic based on node types
-        if (sourceType === "switch") {
-          return (
-            get().edges.filter((edge) => edge.source === source).length < 2
-          );
-        }
-        if (
-          sourceType === "container" &&
-          sourceNode?.data?.type === "foreach"
-        ) {
-          return true;
-        }
-        return (
-          get().edges.filter((edge) => edge.source === source).length === 0
-        );
-      };
-
-      // Check if the connection is allowed
-      if (canConnect(sourceNode, targetNode)) {
-        const edge = { ...connection, type: "custom-edge" };
-        set({ edges: addEdge(edge, get().edges) });
+      },
+      setSelectedNode: (id) => {
         set({
-          nodes: get().nodes.map((node) => {
-            if (node.id === target) {
-              return { ...node, prevStepId: source, isDraggable: false };
-            }
-            if (node.id === source) {
-              return { ...node, isDraggable: false };
-            }
-            return node;
-          }),
+          selectedNode: id || null,
+          selectedEdge: null,
+          // open editor if we select a node
+          editorOpen: !!id,
         });
-      } else {
-        console.warn("Connection not allowed based on node types");
-      }
-    },
+      },
+      onNodesChange: (changes) =>
+        set({ nodes: applyNodeChanges(changes, get().nodes) }),
+      onEdgesChange: (changes) =>
+        set({ edges: applyEdgeChanges(changes, get().edges) }),
+      onConnect: (connection) => {
+        const { source, target } = connection;
+        const sourceNode = get().getNodeById(source);
+        const targetNode = get().getNodeById(target);
 
-    onDragOver: (event) => {
-      event.preventDefault();
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "move";
-      }
-    },
-    onDrop: (event, screenToFlowPosition) => {
-      event.preventDefault();
-      event.stopPropagation();
+        // Define the connection restrictions
+        const canConnect = (
+          sourceNode: FlowNode | undefined,
+          targetNode: FlowNode | undefined
+        ) => {
+          if (!sourceNode || !targetNode) return false;
 
-      try {
-        const dataTransfer = event.dataTransfer;
-        if (!dataTransfer) return;
+          const sourceType = sourceNode?.data?.componentType;
+          const targetType = targetNode?.data?.componentType;
 
-        let step: any = dataTransfer.getData("application/reactflow");
-        if (!step) {
-          return;
+          // Restriction logic based on node types
+          if (sourceType === "switch") {
+            return (
+              get().edges.filter((edge) => edge.source === source).length < 2
+            );
+          }
+          if (
+            sourceType === "container" &&
+            sourceNode?.data?.type === "foreach"
+          ) {
+            return true;
+          }
+          return (
+            get().edges.filter((edge) => edge.source === source).length === 0
+          );
+        };
+
+        // Check if the connection is allowed
+        if (canConnect(sourceNode, targetNode)) {
+          const edge = { ...connection, type: "custom-edge" };
+          set({ edges: addEdge(edge, get().edges) });
+          set({
+            nodes: get().nodes.map((node) => {
+              if (node.id === target) {
+                return { ...node, prevStepId: source, isDraggable: false };
+              }
+              if (node.id === source) {
+                return { ...node, isDraggable: false };
+              }
+              return node;
+            }),
+          });
+        } else {
+          console.warn("Connection not allowed based on node types");
         }
-        step = JSON.parse(step);
-        if (!step) return;
-        // Use the screenToFlowPosition function to get flow coordinates
-        const position = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
-        const newUuid = uuidv4();
-        const newNode = {
-          id: newUuid,
-          type: "custom",
-          position, // Use the position object with x and y
-          data: {
-            label: step.name! as string,
-            ...step,
+      },
+
+      onDragOver: (event) => {
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = "move";
+        }
+      },
+      onDrop: (event, screenToFlowPosition) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+          const dataTransfer = event.dataTransfer;
+          if (!dataTransfer) return;
+
+          let step: any = dataTransfer.getData("application/reactflow");
+          if (!step) {
+            return;
+          }
+          step = JSON.parse(step);
+          if (!step) return;
+          // Use the screenToFlowPosition function to get flow coordinates
+          const position = screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          });
+          const newUuid = uuidv4();
+          const newNode = {
             id: newUuid,
-            name: step.name,
-            type: step.type,
-            componentType: step.componentType,
-          },
-          isDraggable: true,
-          dragHandle: ".custom-drag-handle",
-        } as FlowNode;
+            type: "custom",
+            position, // Use the position object with x and y
+            data: {
+              label: step.name! as string,
+              ...step,
+              id: newUuid,
+              name: step.name,
+              type: step.type,
+              componentType: step.componentType,
+            },
+            isDraggable: true,
+            dragHandle: ".custom-drag-handle",
+          } as FlowNode;
 
-        set({ nodes: [...get().nodes, newNode] });
-      } catch (err) {
-        console.error(err);
-      }
-    },
-    setNodes: (nodes) => set({ nodes }),
-    setEdges: (edges) => set({ edges }),
-    getNodeById: (id) => get().nodes.find((node) => node.id === id),
-    deleteNodes: (ids) => {
-      //for now handling only single node deletion. can later enhance to multiple deletions
-      if (typeof ids !== "string") {
-        return [];
-      }
-      if (PROTECTED_NODE_IDS.includes(ids)) {
-        throw new KeepWorkflowStoreError("Cannot delete protected node");
-      }
-      const nodes = get().nodes;
-      const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
-      if (nodeStartIndex === -1) {
-        return [];
-      }
-      let idArray = Array.isArray(ids) ? ids : [ids];
+          set({ nodes: [...get().nodes, newNode] });
+        } catch (err) {
+          console.error(err);
+        }
+      },
+      setNodes: (nodes) => set({ nodes }),
+      setEdges: (edges) => set({ edges }),
+      getNodeById: (id) => get().nodes.find((node) => node.id === id),
+      deleteNodes: (ids) => {
+        //for now handling only single node deletion. can later enhance to multiple deletions
+        if (typeof ids !== "string") {
+          return [];
+        }
+        if (PROTECTED_NODE_IDS.includes(ids)) {
+          throw new KeepWorkflowStoreError("Cannot delete protected node");
+        }
+        const nodes = get().nodes;
+        const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
+        if (nodeStartIndex === -1) {
+          return [];
+        }
+        let idArray = Array.isArray(ids) ? ids : [ids];
 
-      const startNode = nodes[nodeStartIndex];
-      const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
+        const startNode = nodes[nodeStartIndex];
+        const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
 
-      let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
-      endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
+        let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
+        endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
 
-      const endNode = nodes[endIndex];
+        const endNode = nodes[endIndex];
 
-      let edges = get().edges;
-      let finalEdges = edges;
-      idArray = nodes
-        .slice(nodeStartIndex, endIndex + 1)
-        .map((node) => node.id);
+        let edges = get().edges;
+        let finalEdges = edges;
+        idArray = nodes
+          .slice(nodeStartIndex, endIndex + 1)
+          .map((node) => node.id);
 
-      finalEdges = edges.filter(
-        (edge) =>
-          !(idArray.includes(edge.source) || idArray.includes(edge.target))
-      );
-      if (
-        ["interval", "alert", "manual", "incident"].includes(ids) &&
-        edges.some(
-          (edge) => edge.source === "trigger_start" && edge.target !== ids
-        )
-      ) {
-        edges = edges.filter((edge) => !idArray.includes(edge.source));
-      }
-      const sources = [
-        ...new Set(edges.filter((edge) => startNode.id === edge.target)),
-      ];
-      const targets = [
-        ...new Set(edges.filter((edge) => endNode.id === edge.source)),
-      ];
-      targets.forEach((edge) => {
-        const target =
-          edge.source === "trigger_start" ? "triggger_end" : edge.target;
-
-        finalEdges = [
-          ...finalEdges,
-          ...sources
-            .map((source: Edge) =>
-              createCustomEdgeMeta(
-                source.source,
-                target,
-                source.label as string
-              )
-            )
-            .flat(1),
+        finalEdges = edges.filter(
+          (edge) =>
+            !(idArray.includes(edge.source) || idArray.includes(edge.target))
+        );
+        if (
+          ["interval", "alert", "manual", "incident"].includes(ids) &&
+          edges.some(
+            (edge) => edge.source === "trigger_start" && edge.target !== ids
+          )
+        ) {
+          edges = edges.filter((edge) => !idArray.includes(edge.source));
+        }
+        const sources = [
+          ...new Set(edges.filter((edge) => startNode.id === edge.target)),
         ];
-      });
-      // }
+        const targets = [
+          ...new Set(edges.filter((edge) => endNode.id === edge.source)),
+        ];
+        targets.forEach((edge) => {
+          const target =
+            edge.source === "trigger_start" ? "triggger_end" : edge.target;
 
-      nodes[endIndex + 1].position = { x: 0, y: 0 };
+          finalEdges = [
+            ...finalEdges,
+            ...sources
+              .map((source: Edge) =>
+                createCustomEdgeMeta(
+                  source.source,
+                  target,
+                  source.label as string
+                )
+              )
+              .flat(1),
+          ];
+        });
+        // }
 
-      const newNode = createDefaultNodeV2(
-        { ...nodes[endIndex + 1].data, islayouted: false },
-        nodes[endIndex + 1].id
-      );
+        nodes[endIndex + 1].position = { x: 0, y: 0 };
 
-      const newNodes = [
-        ...nodes.slice(0, nodeStartIndex),
-        newNode,
-        ...nodes.slice(endIndex + 2),
-      ];
-      if (["manual", "alert", "interval", "incident"].includes(ids)) {
-        const v2Properties = get().v2Properties;
-        delete v2Properties[ids];
-        set({ v2Properties });
-      }
-      set({
-        edges: finalEdges,
-        nodes: newNodes,
-        selectedNode: null,
-        isLayouted: false,
-        changes: get().changes + 1,
-        lastChangedAt: Date.now(),
-        editorOpen: true,
-      });
-      get().onLayout({ direction: "DOWN" });
-      get().updateDefinition();
+        const newNode = createDefaultNodeV2(
+          { ...nodes[endIndex + 1].data, islayouted: false },
+          nodes[endIndex + 1].id
+        );
 
-      return [ids];
-    },
-    getNextEdge: (nodeId: string) => {
-      const node = get().getNodeById(nodeId);
-      if (!node) {
-        throw new KeepWorkflowStoreError("Node not found");
-      }
-      // TODO: handle multiple edges
-      const edges = get().edges.filter((e) => e.source === nodeId);
-      if (!edges.length) {
-        throw new KeepWorkflowStoreError("Edge not found");
-      }
-      if (node.data.componentType === "switch") {
-        // If the node is a switch, return the second edge, because "true" is the second edge
-        return edges[1];
-      }
-      return edges[0];
-    },
-    // used to reset the store to the initial state, on builder unmount
-    reset: () => set(defaultState),
-    onLayout: (params: {
-      direction: string;
-      useInitialNodes?: boolean;
-      initialNodes?: FlowNode[];
-      initialEdges?: Edge[];
-    }) => onLayout(params, set, get),
-    initializeWorkflow: (
-      workflowId: string | null,
-      { providers, installedProviders, secrets }: InitializationConfiguration
-    ) =>
-      initializeWorkflow(
-        workflowId,
-        { providers, installedProviders, secrets },
-        set,
-        get
-      ),
-  }))
+        const newNodes = [
+          ...nodes.slice(0, nodeStartIndex),
+          newNode,
+          ...nodes.slice(endIndex + 2),
+        ];
+        if (["manual", "alert", "interval", "incident"].includes(ids)) {
+          const v2Properties = get().v2Properties;
+          delete v2Properties[ids];
+          set({ v2Properties });
+        }
+        set({
+          edges: finalEdges,
+          nodes: newNodes,
+          selectedNode: null,
+          isLayouted: false,
+          changes: get().changes + 1,
+          lastChangedAt: Date.now(),
+          editorOpen: true,
+        });
+        get().onLayout({ direction: "DOWN" });
+        get().updateDefinition();
+
+        return [ids];
+      },
+      getNextEdge: (nodeId: string) => {
+        const node = get().getNodeById(nodeId);
+        if (!node) {
+          throw new KeepWorkflowStoreError("Node not found");
+        }
+        // TODO: handle multiple edges
+        const edges = get().edges.filter((e) => e.source === nodeId);
+        if (!edges.length) {
+          throw new KeepWorkflowStoreError("Edge not found");
+        }
+        if (node.data.componentType === "switch") {
+          // If the node is a switch, return the second edge, because "true" is the second edge
+          return edges[1];
+        }
+        return edges[0];
+      },
+      // used to reset the store to the initial state, on builder unmount
+      reset: () => set(defaultState),
+      onLayout: (params: {
+        direction: string;
+        useInitialNodes?: boolean;
+        initialNodes?: FlowNode[];
+        initialEdges?: Edge[];
+      }) => onLayout(params, set, get),
+      initializeWorkflow: (
+        workflowId: string | null,
+        { providers, installedProviders, secrets }: InitializationConfiguration
+      ) =>
+        initializeWorkflow(
+          workflowId,
+          { providers, installedProviders, secrets },
+          set,
+          get
+        ),
+    }),
+    {
+      name: "useWorkflowStore",
+    }
+  )
 );
 
 function onLayout(

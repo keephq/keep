@@ -141,6 +141,16 @@ export const V2ActionSchema = z.object({
     if: z.string().optional(),
     vars: z.record(z.string(), z.string()).optional(),
     with: WithSchema.optional(),
+    "on-failure": z
+      .object({
+        retry: z
+          .object({
+            count: z.number().optional(),
+            interval: z.number().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   }),
 });
 
@@ -155,6 +165,16 @@ export const V2StepStepSchema = z.object({
     vars: z.record(z.string(), z.string()).optional(),
     if: z.string().optional(),
     with: WithSchema.optional(),
+    "on-failure": z
+      .object({
+        retry: z
+          .object({
+            count: z.number().optional(),
+            interval: z.number().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   }),
 });
 
@@ -182,8 +202,8 @@ export const V2StepConditionThresholdSchema = z.object({
   type: z.literal("condition-threshold"),
   alias: z.string().optional(),
   properties: z.object({
-    value: z.string(),
-    compare_to: z.string(),
+    value: z.union([z.string(), z.number()]),
+    compare_to: z.union([z.string(), z.number()]),
   }),
   branches: z.object({
     true: z.array(V2ActionOrStepSchema),
@@ -247,4 +267,5 @@ export const WorkflowPropertiesSchema = z.object({
   services: z.array(z.string()).optional(),
   owners: z.array(z.string()).optional(),
   inputs: z.array(WorkflowInputSchema).optional(),
+  "on-failure": V2ActionSchema.optional(),
 });

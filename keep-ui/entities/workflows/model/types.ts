@@ -16,7 +16,7 @@ import {
   V2StepForeachSchema,
   V2StepTemplateSchema,
 } from "./schema";
-import { ValidationError } from "@/entities/workflows/lib/validation";
+import { ValidationError } from "@/entities/workflows/lib/validate-definition";
 
 export type IncidentEvent = z.infer<typeof IncidentEventEnum>;
 export type V2StepTrigger = z.infer<typeof V2StepTriggerSchema>;

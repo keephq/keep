@@ -3,10 +3,15 @@ import { Provider } from "@/shared/api/providers";
 import { YamlWorkflowDefinition } from "../../model/yaml.types";
 
 describe("validateMustacheVariableNameForYAML", () => {
-  const mockWorkflowDefinition: YamlWorkflowDefinition = {
+  const mockWorkflowDefinition: YamlWorkflowDefinition["workflow"] = {
     id: "test-workflow",
     name: "Test Workflow",
     description: "Test Description",
+    triggers: [
+      {
+        type: "manual",
+      },
+    ],
     steps: [
       {
         name: "First Step",
@@ -106,7 +111,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect empty variable name", () => {
     const result = validateMustacheVariableNameForYAML(
       "",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -119,7 +124,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect empty path parts", () => {
     const result = validateMustacheVariableNameForYAML(
       "step..results",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -135,7 +140,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should validate alert variables", () => {
     const result = validateMustacheVariableNameForYAML(
       "alert.name",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -148,7 +153,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should validate incident variables", () => {
     const result = validateMustacheVariableNameForYAML(
       "incident.title",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -161,7 +166,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should validate valid secrets", () => {
     const result = validateMustacheVariableNameForYAML(
       "secrets.API_KEY",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -174,7 +179,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect missing secret name", () => {
     const result = validateMustacheVariableNameForYAML(
       "secrets.",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -190,7 +195,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect non-existent secret", () => {
     const result = validateMustacheVariableNameForYAML(
       "secrets.MISSING_KEY",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -206,7 +211,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should validate provider access", () => {
     const result = validateMustacheVariableNameForYAML(
       "providers.test-config",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -219,7 +224,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should validate default provider access", () => {
     const result = validateMustacheVariableNameForYAML(
       "providers.default-test",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -232,7 +237,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect missing provider name", () => {
     const result = validateMustacheVariableNameForYAML(
       "providers.",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -248,7 +253,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect non-existent default provider", () => {
     const result = validateMustacheVariableNameForYAML(
       "providers.default-nonexistent",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -264,7 +269,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect non-installed provider", () => {
     const result = validateMustacheVariableNameForYAML(
       "providers.nonexistent-config",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -280,7 +285,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should validate step results access", () => {
     const result = validateMustacheVariableNameForYAML(
       "steps.First Step.results",
-      mockWorkflowDefinition.steps[1],
+      mockWorkflowDefinition!.steps![1],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -293,7 +298,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect missing step name", () => {
     const result = validateMustacheVariableNameForYAML(
       "steps.",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -309,7 +314,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect non-existent step", () => {
     const result = validateMustacheVariableNameForYAML(
       "steps.Nonexistent Step.results",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -325,7 +330,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should prevent accessing current step results", () => {
     const result = validateMustacheVariableNameForYAML(
       "steps.First Step.results",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -341,7 +346,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should prevent accessing future step results", () => {
     const result = validateMustacheVariableNameForYAML(
       "steps.Second Step.results",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -357,7 +362,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should detect missing results suffix", () => {
     const result = validateMustacheVariableNameForYAML(
       "steps.First Step.output",
-      mockWorkflowDefinition.steps[1],
+      mockWorkflowDefinition!.steps![1],
       "step",
       mockWorkflowDefinition,
       mockSecrets,
@@ -373,7 +378,7 @@ describe("validateMustacheVariableNameForYAML", () => {
   it("should skip provider validation when providers are not available", () => {
     const result = validateMustacheVariableNameForYAML(
       "providers.test-config",
-      mockWorkflowDefinition.steps[0],
+      mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
       mockSecrets,

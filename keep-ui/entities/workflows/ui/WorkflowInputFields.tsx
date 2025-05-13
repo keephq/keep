@@ -1,5 +1,5 @@
 import { Select } from "@/shared/ui";
-import { WorkflowInput, WorkflowInputType } from "../model/yaml.schema";
+import { WorkflowInput, WorkflowInputType } from "../model/yaml.types";
 interface WorkflowInputFieldsProps {
   workflowInputs: WorkflowInput[];
   inputValues: Record<string, any>;
