@@ -920,6 +920,8 @@ function ActionOrStepEditor({
           name="name"
           value={formData.name || ""}
           onChange={handleInputChange}
+          placeholder="e.g. my-step"
+          data-testid="wf-editor-step-name-input"
         />
       </div>
       <TabList className="px-4">

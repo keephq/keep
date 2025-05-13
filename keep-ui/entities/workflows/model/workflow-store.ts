@@ -317,7 +317,8 @@ export const useWorkflowStore = create<WorkflowState>()(
     setIsSaving: (state: boolean) => set({ isSaving: state }),
     setCanDeploy: (deploy) => set({ canDeploy: deploy }),
     setEditorSynced: (sync) => set({ isEditorSyncedWithNodes: sync }),
-    setLastDeployedAt: (deployedAt) => set({ lastDeployedAt: deployedAt }),
+    setLastDeployedAt: (deployedAt) =>
+      set({ lastDeployedAt: deployedAt, changes: 0 }),
     setSelectedEdge: (id) => {
       const edge = get().edges.find((edge) => edge.id === id);
       if (!edge) {
@@ -739,6 +740,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         selectedNode: null,
         isLayouted: false,
         changes: get().changes + 1,
+        lastChangedAt: Date.now(),
         editorOpen: true,
       });
       get().onLayout({ direction: "DOWN" });
@@ -893,21 +895,14 @@ function initializeWorkflow(
     isDeployed: workflowId !== null,
     // If it's a new workflow (workflowId = null), we want to open the editor because metadata fields in there
     editorOpen: !workflowId || (isUpdatingExistingState && get().editorOpen),
+    lastChangedAt: null,
+    lastDeployedAt: null,
   });
   get().onLayout({ direction: "DOWN" });
   get().updateDefinition();
 }
 
-export function useWorkflowEditorChangesSaved() {
-  const { lastChangedAt, lastDeployedAt, isEditorSyncedWithNodes, isDeployed } =
-    useWorkflowStore();
-  const isDeployedAndUntouched = lastChangedAt === null && isDeployed;
-  const isDeployedAndChangesSaved =
-    lastDeployedAt !== null &&
-    lastChangedAt !== null &&
-    lastDeployedAt >= lastChangedAt;
-  const isChangesSaved =
-    isEditorSyncedWithNodes &&
-    (isDeployedAndChangesSaved || isDeployedAndUntouched);
-  return isChangesSaved;
+export function useUIBuilderUnsavedChanges() {
+  const { changes } = useWorkflowStore();
+  return changes !== 0;
 }
