@@ -185,7 +185,11 @@ static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
 def __build_base_incident_query(
-    tenant_id: str, select_args: list, cel=None, force_fetch=False
+    tenant_id: str,
+    select_args: list,
+    cel=None,
+    force_fetch_alerts=False,
+    force_fetch_has_linked_incident=False,
 ):
     fetch_alerts = False
     fetch_has_linked_incident = False
@@ -216,7 +220,7 @@ def __build_base_incident_query(
 
     sql_query = select(*select_args).select_from(Incident)
 
-    if fetch_alerts or force_fetch:
+    if fetch_alerts or force_fetch_alerts:
         sql_query = (
             sql_query.outerjoin(
                 LastAlertToIncident,
@@ -245,7 +249,7 @@ def __build_base_incident_query(
             )
         )
 
-    if fetch_has_linked_incident or force_fetch:
+    if fetch_has_linked_incident or force_fetch_has_linked_incident:
         additional_incident_fields = (
             select(
                 Incident.id,
@@ -530,6 +534,16 @@ def get_incident_facets_data(
     else:
         facets = static_facets
 
+    force_fetch_alerts = next(
+        (True for facet in facets if "alert." in facet.property_path),
+        False,
+    )
+
+    force_fetch_linked_incidents = next(
+        (True for facet in facets if "hasLinkedIncident" in facet.property_path),
+        False,
+    )
+
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
     select_expressions = facet_selects_metadata["select_expressions"]
 
@@ -538,7 +552,8 @@ def get_incident_facets_data(
     base_query = __build_base_incident_query(
         tenant_id,
         select_expressions,
-        force_fetch=True,
+        force_fetch_alerts=force_fetch_alerts,
+        force_fetch_has_linked_incident=force_fetch_linked_incidents,
     )["query"]
 
     if allowed_incident_ids:
