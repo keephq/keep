@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Facet } from "./facet";
 import {
   FacetDto,
@@ -9,7 +9,6 @@ import {
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
-import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 import { FacetStoreProvider, useNewFacetStore } from "./store";
 import { useStore } from "zustand";
 
@@ -55,15 +54,42 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
 }) => {
-  const [facetOptionQueries, setFacetOptionQueries] =
-    useState<FacetOptionsQueries | null>(null);
   const facetOptionsRef = useRef<any>(facetOptions);
   facetOptionsRef.current = facetOptions;
   const onCelChangeRef = useRef(onCelChange);
   onCelChangeRef.current = onCelChange;
+  const onReloadFacetOptionsRef = useRef(onReloadFacetOptions);
+  onReloadFacetOptionsRef.current = onReloadFacetOptions;
   const store = useNewFacetStore();
-  const state = useStore(store);
-  const [debouncedFacetCelState] = useDebouncedValue(state.facetCelState, 100);
+  const facetOptionQueries = useStore(
+    store,
+    (s) => s.queriesState.facetOptionQueries
+  );
+  const filterCel = useStore(store, (s) => s.queriesState.filterCel);
+
+  const setAreOptionsReLoading = useStore(
+    store,
+    (s) => s.setAreOptionsReLoading
+  );
+  const setFacetOptions = useStore(store, (s) => s.setFacetOptions);
+  const setFacets = useStore(store, (s) => s.setFacets);
+  const clearFilters = useStore(store, (s) => s.clearFilters);
+
+  useEffect(
+    () => setAreOptionsReLoading(areFacetOptionsLoading),
+    [areFacetOptionsLoading, setAreOptionsReLoading]
+  );
+  useEffect(
+    () => setFacetOptions(facetOptions),
+    [facetOptions, setFacetOptions]
+  );
+  useEffect(() => setFacets(facets), [facets, setFacets]);
+  useEffect(() => {
+    filterCel && onCelChangeRef.current?.(filterCel);
+  }, [filterCel]);
+  useEffect(() => {
+    facetOptionQueries && onReloadFacetOptionsRef.current?.(facetOptionQueries);
+  }, [JSON.stringify(facetOptionQueries)]);
 
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
@@ -96,51 +122,14 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
     return result;
   }, [facetsConfig, facets]);
 
-  useEffect(() => {
-    if (facetOptionQueries) {
-      onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
-    }
-  }, [JSON.stringify(facetOptionQueries)]);
-
-  useEffect(() => {
-    if (!debouncedFacetCelState) {
-      return;
-    }
-
-    const facetOptionQueries: FacetOptionsQueries = {};
-
-    if (!facets || !Array.isArray(facets)) {
-      return;
-    }
-
-    facets.forEach((facet) => {
-      const otherFacetCels = facets
-        .filter((f) => f.id !== facet.id)
-        .map((f) => debouncedFacetCelState?.[f.id])
-        .filter(Boolean);
-
-      facetOptionQueries[facet.id] = otherFacetCels
-        .map((cel) => `(${cel})`)
-        .join(" && ");
-    });
-
-    setFacetOptionQueries(facetOptionQueries);
-
-    const filterCel = Object.values(debouncedFacetCelState || {})
-      .filter(Boolean)
-      .map((cel) => `(${cel})`)
-      .join(" && ");
-    onCelChangeRef.current && onCelChangeRef.current(filterCel);
-  }, [debouncedFacetCelState, setFacetOptionQueries]);
-
   useEffect(
     function clearFiltersWhenTokenChange(): void {
       if (clearFiltersToken) {
-        state.clearFilters();
+        clearFilters();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [clearFiltersToken]
+    [clearFiltersToken, clearFilters]
   );
 
   return (
@@ -160,7 +149,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             Add Facet
           </button>
           <button
-            onClick={() => state.clearFilters()}
+            onClick={() => clearFilters()}
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <XMarkIcon className="h-4 w-4" />
@@ -173,15 +162,13 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
               <Facet
                 facet={
                   {
-                    id: "",
+                    id: index.toString(),
                     name: "",
                     is_static: true,
                   } as FacetDto
                 }
                 key={index}
                 isOpenByDefault={true}
-                optionsLoading={true}
-                optionsReloading={false}
               />
             ))}
           {facets &&
@@ -190,8 +177,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
                 key={facet.id + index}
                 facet={facet}
                 options={facetOptions?.[facet.id]}
-                optionsLoading={!facetOptions?.[facet.id]}
-                optionsReloading={areFacetOptionsLoading && !!facet.id}
                 facetConfig={facetsConfigIdBased[facet.id]}
                 onLoadOptions={() =>
                   onLoadFacetOptions && onLoadFacetOptions(facet.id)

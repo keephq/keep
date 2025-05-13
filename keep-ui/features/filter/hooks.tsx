@@ -84,6 +84,7 @@ export const useFacetOptions = (
       isLoadingRef.current = true;
       const currentDate = new Date();
       const response = await api.post(requestUrl, facetsQuery);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       const responseTime = new Date().getTime() - currentDate.getTime();
       isLoadingRef.current = false;
       return {
