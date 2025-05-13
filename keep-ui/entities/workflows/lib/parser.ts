@@ -564,7 +564,15 @@ export function getYamlWorkflowDefinition(
     });
   }
   const onFailure = alert.properties["on-failure"]
-    ? getYamlActionFromAction(alert.properties["on-failure"])
+    ? {
+        ...getYamlActionFromAction({
+          ...alert.properties["on-failure"],
+          id: "on-failure",
+          name: "on-failure",
+        }),
+        // name is not needed for on-failure, but it's produced by getYamlActionFromAction, so we need to remove it
+        name: undefined,
+      }
     : undefined;
   return {
     id: alertId,
