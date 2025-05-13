@@ -24,6 +24,17 @@ jest.mock("@/entities/workflows/model/useWorkflowActions", () => ({
   }),
 }));
 
+jest.mock("@/features/workflows/manual-run-workflow", () => ({
+  useWorkflowRun: jest.fn(),
+  useWorkflowModals: jest.fn().mockReturnValue({
+    openInputsModal: jest.fn(),
+    openAlertDependenciesModal: jest.fn(),
+    openIncidentDependenciesModal: jest.fn(),
+    openUnsavedChangesModal: jest.fn(),
+    closeAllModals: jest.fn(),
+  }),
+}));
+
 jest.mock("@/features/filter/facet-panel-server-side", () => ({
   FacetsPanelServerSide: () => <div data-testid="facets-panel" />,
 }));

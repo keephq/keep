@@ -69,6 +69,9 @@ export function WorkflowBuilder({
 
   const searchParams = useSearchParams();
 
+  const alertNameFromUrl = searchParams?.get("alertName");
+  const alertSourceFromUrl = searchParams?.get("alertSource");
+
   useEffect(
     function syncProviders() {
       setProviders(providers);
@@ -105,11 +108,11 @@ export function WorkflowBuilder({
           });
         } else if (loadedYamlFileContents == null) {
           const alertUuid = uuidv4();
-          const alertName = searchParams?.get("alertName");
-          const alertSource = searchParams?.get("alertSource");
           let triggers = {};
-          if (alertName && alertSource) {
-            triggers = { alert: { source: alertSource, name: alertName } };
+          if (alertNameFromUrl && alertSourceFromUrl) {
+            triggers = {
+              alert: { source: alertSourceFromUrl, name: alertNameFromUrl },
+            };
           }
           const definition = getWorkflowDefinition(
             alertUuid,
@@ -153,7 +156,7 @@ export function WorkflowBuilder({
       }
       setIsLoading(false);
     },
-    [loadedYamlFileContents, workflowRaw, searchParams]
+    [loadedYamlFileContents, workflowRaw, alertNameFromUrl, alertSourceFromUrl]
   );
 
   const workflowYaml = useMemo(() => {
