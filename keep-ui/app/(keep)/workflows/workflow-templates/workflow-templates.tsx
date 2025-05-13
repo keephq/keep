@@ -64,7 +64,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
 
     if (cartsToRender.length === 0) {
       return (
-        <div className="flex items-center h-[640px]">
+        <div className="flex-1 min-h-0 flex items-center">
           <div className="flex flex-col justify-center items-center w-full">
             <div className="flex flex-col items-center justify-center max-w-md">
               <MagnifyingGlassIcon
@@ -90,7 +90,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
 
     return (
       <>
-        <div className="min-h-[640px]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-[1px]">
           <div className="flex-1  grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-4">
             {cartsToRender.map((template, index: number) => (
               <WorkflowTemplateCard key={index} template={template} />
@@ -113,7 +113,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
   }
 
   return (
-    <div className="flex flex-col gap-3 h-full w-full">
+    <div className="flex-1 min-h-0 flex flex-col gap-3">
       <SearchInput
         placeholder="Search workflows"
         value={searchValue as string}
