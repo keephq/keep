@@ -63,17 +63,17 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const store = useNewFacetStore();
   const facetOptionQueries = useStore(
     store,
-    (s) => s.queriesState.facetOptionQueries
+    (state) => state.queriesState.facetOptionQueries
   );
-  const filterCel = useStore(store, (s) => s.queriesState.filterCel);
+  const filterCel = useStore(store, (state) => state.queriesState.filterCel);
 
   const setAreOptionsReLoading = useStore(
     store,
-    (s) => s.setAreOptionsReLoading
+    (state) => state.setAreOptionsReLoading
   );
-  const setFacetOptions = useStore(store, (s) => s.setFacetOptions);
-  const setFacets = useStore(store, (s) => s.setFacets);
-  const clearFilters = useStore(store, (s) => s.clearFilters);
+  const setFacetOptions = useStore(store, (state) => state.setFacetOptions);
+  const setFacets = useStore(store, (state) => state.setFacets);
+  const clearFilters = useStore(store, (state) => state.clearFilters);
   const facetsConfigIdBased = useFacetsConfig(facets, facetsConfig);
 
   useEffect(

@@ -55,8 +55,6 @@ export function useQueriesHandler(store: StoreApi<FacetState>) {
       return null;
     }
 
-    // console.log("ihor", debouncedFacetsState);
-
     return buildFacetsCelState(
       facets,
       allFacetOptionsRef.current || {},

@@ -4,45 +4,56 @@ import { FacetDto, FacetOptionDto } from "../models";
 
 export type FacetState = {
   facets: FacetDto[] | null;
+  setFacets: (facets: FacetDto[]) => void;
+
   facetOptions: Record<string, FacetOptionDto[]> | null;
+  setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) => void;
+
   facetOptionsLoadingState: Record<string, string>;
+  setFacetOptionsLoadingState: (loadingState: Record<string, string>) => void;
+
   queriesState: {
     facetOptionQueries: Record<string, string> | null;
     filterCel: string | null;
   };
-  facetsState: Record<string, any>;
-  clearFiltersToken: string | null;
-  changedFacetId: string | null;
-  areOptionsReLoading: boolean;
-  areOptionsLoading: boolean;
   setQueriesState: (
     filterCel: string,
     facetOptionQueries: Record<string, string>
   ) => void;
-  setFacetOptionsLoadingState: (loadingState: Record<string, string>) => void;
-  setChangedFacetId: (facetId: string | null) => void;
-  setFacets: (facets: FacetDto[]) => void;
-  setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) => void;
+
+  facetsState: Record<string, any>;
   setFacetState: (facetId: string, state: any) => void;
+
+  clearFiltersToken: string | null;
   clearFilters: () => void;
+
+  changedFacetId: string | null;
+  setChangedFacetId: (facetId: string | null) => void;
+
+  areOptionsReLoading: boolean;
   setAreOptionsReLoading: (isLoading: boolean) => void;
+
+  areOptionsLoading: boolean;
   setAreOptionsLoading: (isLoading: boolean) => void;
 };
 
 export const createFacetStore = () =>
   createStore<FacetState>((set, state) => ({
     facets: null,
+    setFacets: (facets: FacetDto[]) => set({ facets }),
+
     facetOptions: null,
+    setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) =>
+      set({ facetOptions }),
+
     facetOptionsLoadingState: {},
+    setFacetOptionsLoadingState: (loadingState: Record<string, string>) =>
+      set({ facetOptionsLoadingState: loadingState }),
+
     queriesState: {
       facetOptionQueries: null,
       filterCel: null,
     },
-    facetsState: {},
-    clearFiltersToken: null,
-    changedFacetId: null,
-    areOptionsReLoading: false,
-    areOptionsLoading: false,
     setQueriesState: (filterCel, facetOptionQueries) =>
       set({
         queriesState: {
@@ -50,13 +61,8 @@ export const createFacetStore = () =>
           facetOptionQueries,
         },
       }),
-    setFacetOptionsLoadingState: (loadingState: Record<string, string>) =>
-      set({ facetOptionsLoadingState: loadingState }),
-    setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) =>
-      set({ facetOptions }),
-    setChangedFacetId: (facetId: string | null) =>
-      set({ changedFacetId: facetId }),
-    setFacets: (facets: FacetDto[]) => set({ facets }),
+
+    facetsState: {},
     setFacetState(facetId, facetState) {
       set({
         facetsState: {
@@ -65,13 +71,23 @@ export const createFacetStore = () =>
         },
       });
     },
+
+    clearFiltersToken: null,
     clearFilters: () => {
       return set({
         clearFiltersToken: uuidV4(),
       });
     },
+
+    changedFacetId: null,
+    setChangedFacetId: (facetId: string | null) =>
+      set({ changedFacetId: facetId }),
+
+    areOptionsReLoading: false,
     setAreOptionsReLoading: (isLoading: boolean) =>
       set({ areOptionsReLoading: isLoading }),
+
+    areOptionsLoading: false,
     setAreOptionsLoading: (isLoading: boolean) =>
       set({ areOptionsLoading: isLoading }),
   }));

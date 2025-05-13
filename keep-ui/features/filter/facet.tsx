@@ -51,13 +51,17 @@ export const Facet: React.FC<FacetProps> = ({
   const facetRef = useRef(facet);
   facetRef.current = facet;
   const [isInitialized, setIsInitialized] = useState(false);
-  const clearFiltersToken = useExistingFacetStore((s) => s.clearFiltersToken);
-  const setChangedFacetId = useExistingFacetStore((s) => s.setChangedFacetId);
-  const facetOptionsLoadingState = useExistingFacetStore(
-    (s) => s.facetOptionsLoadingState
+  const clearFiltersToken = useExistingFacetStore(
+    (state) => state.clearFiltersToken
   );
-  const setFacetState = useExistingFacetStore((s) => s.setFacetState);
-  const facetsState = useExistingFacetStore((s) => s.facetsState);
+  const setChangedFacetId = useExistingFacetStore(
+    (state) => state.setChangedFacetId
+  );
+  const facetOptionsLoadingState = useExistingFacetStore(
+    (state) => state.facetOptionsLoadingState
+  );
+  const setFacetState = useExistingFacetStore((state) => state.setFacetState);
+  const facetsState = useExistingFacetStore((state) => state.facetsState);
   const facetState: Record<string, boolean> = useMemo(
     () => facetsState?.[facet.id] || {},
     [facet.id, facetsState]
