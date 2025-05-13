@@ -134,11 +134,12 @@ def test_initial_loading(browser, setup_test_data):
         incidents = setup_test_data["incidents"]
         # verify intial loading of incidents page
         init_test(browser, incidents)
+        filter_predicate = lambda alert: (alert["status"] in ["firing", "acknowledged"])
 
         assert_incidents_by_column(
             browser,
             incidents,
-            lambda alert: (alert["status"] in ["firing"]),
+            filter_predicate,
             "status",
             None,
         )
@@ -150,7 +151,7 @@ def test_initial_loading(browser, setup_test_data):
         assert_incidents_by_column(
             browser,
             incidents,
-            lambda alert: (alert["status"] in ["firing", "acknowledged"]),
+            filter_predicate,
             "status",
             None,
         )
