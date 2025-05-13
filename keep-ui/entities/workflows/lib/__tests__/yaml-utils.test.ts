@@ -100,6 +100,9 @@ workflow:
           query: |
             SELECT Url, Status FROM "observability"."Urls"
             WHERE ( Url LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE)) AND Status = 0;
+        on-failure:
+          retry:
+            count: 1
 `;
 
 describe("YAML Utils", () => {

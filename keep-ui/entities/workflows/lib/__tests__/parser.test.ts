@@ -97,6 +97,12 @@ workflow:
   consts: {}
   owners: []
   services: []
+  on-failure:
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      with:
+        message: "Error in victoriametrics-step: {{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
   steps:
     - name: gcp-monitoring-step
       provider:
@@ -115,6 +121,9 @@ workflow:
         with:
           query: avg(rate(process_cpu_seconds_total))
           queryType: query
+        on-failure:
+          retry:
+            count: 1
   actions:
     - name: trigger-slack-gcp
       foreach: "{{ steps.gcp-monitoring-step.results.data.result }}"
