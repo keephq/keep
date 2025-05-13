@@ -27,7 +27,10 @@ export const DefaultIncidentFilters: object = {
 };
 
 // on initial page load, we have to display only active incidents
-export const DEFAULT_INCIDENTS_CHECKED_OPTIONS = ["firing"];
+export const DEFAULT_INCIDENTS_CHECKED_OPTIONS = [
+  Status.Firing,
+  Status.Acknowledged,
+];
 export const DEFAULT_INCIDENTS_CEL = `is_candidate == false && (status in [${DEFAULT_INCIDENTS_CHECKED_OPTIONS.map((opt) => "'" + opt + "'").join(", ")}])`;
 
 export const DEFAULT_INCIDENTS_SORTING = { id: "creation_time", desc: true };

@@ -150,7 +150,7 @@ def test_initial_loading(browser, setup_test_data):
         assert_incidents_by_column(
             browser,
             incidents,
-            lambda alert: (alert["status"] in ["firing"]),
+            lambda alert: (alert["status"] in ["firing", "acknowledged"]),
             "status",
             None,
         )
