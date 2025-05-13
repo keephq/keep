@@ -9,7 +9,7 @@ import {
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
-import { FacetStoreProvider, useNewFacetStore } from "./store";
+import { FacetStoreProvider, useFacetsConfig, useNewFacetStore } from "./store";
 import { useStore } from "zustand";
 
 export interface FacetsPanelProps {
@@ -74,6 +74,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const setFacetOptions = useStore(store, (s) => s.setFacetOptions);
   const setFacets = useStore(store, (s) => s.setFacets);
   const clearFilters = useStore(store, (s) => s.clearFilters);
+  const facetsConfigIdBased = useFacetsConfig(facets, facetsConfig);
 
   useEffect(
     () => setAreOptionsReLoading(areFacetOptionsLoading),
@@ -90,37 +91,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   useEffect(() => {
     facetOptionQueries && onReloadFacetOptionsRef.current?.(facetOptionQueries);
   }, [JSON.stringify(facetOptionQueries)]);
-
-  const facetsConfigIdBased = useMemo(() => {
-    const result: FacetsConfig = {};
-
-    if (facets && Array.isArray(facets)) {
-      facets.forEach((facet) => {
-        const facetConfig = facetsConfig?.[facet.name];
-        const sortCallback =
-          facetConfig?.sortCallback ||
-          ((facetOption: FacetOptionDto) => facetOption.matches_count);
-        const renderOptionIcon = facetConfig?.renderOptionIcon;
-        const renderOptionLabel =
-          facetConfig?.renderOptionLabel ||
-          ((facetOption: FacetOptionDto) => (
-            <span className="capitalize">{facetOption.display_name}</span>
-          ));
-        const uncheckedByDefaultOptionValues =
-          facetConfig?.checkedByDefaultOptionValues;
-        const canHitEmptyState = !!facetConfig?.canHitEmptyState;
-        result[facet.id] = {
-          sortCallback,
-          renderOptionIcon,
-          renderOptionLabel,
-          checkedByDefaultOptionValues: uncheckedByDefaultOptionValues,
-          canHitEmptyState,
-        };
-      });
-    }
-
-    return result;
-  }, [facetsConfig, facets]);
 
   useEffect(
     function clearFiltersWhenTokenChange(): void {
