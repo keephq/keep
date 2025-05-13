@@ -45,9 +45,6 @@ export const Facet: React.FC<FacetProps> = ({
   const [isOpen, setIsOpen] = useState<boolean>(true);
   const [isLoaded, setIsLoaded] = useState<boolean>(!!options?.length);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  // const [facetState, setFacetState] = useState<Set<string>>(
-  //   getInitialFacetState()
-  // );
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -55,7 +52,6 @@ export const Facet: React.FC<FacetProps> = ({
   facetRef.current = facet;
   const [isInitialized, setIsInitialized] = useState(false);
   const clearFiltersToken = useExistingFacetStore((s) => s.clearFiltersToken);
-  const setFacetCelState = useExistingFacetStore((s) => s.setFacetCelState);
   const setChangedFacetId = useExistingFacetStore((s) => s.setChangedFacetId);
   const facetOptionsLoadingState = useExistingFacetStore(
     (s) => s.facetOptionsLoadingState
@@ -125,25 +121,6 @@ export const Facet: React.FC<FacetProps> = ({
     facet.id,
   ]);
 
-  const currentCel = useMemo(() => {
-    const values = getSelectedValues();
-
-    if (values.length === optionsRef.current?.length) {
-      return "";
-    }
-
-    if (!values.length) {
-      return "";
-    }
-
-    return `${facet.property_path} in [${values.join(", ")}]`;
-  }, [facet.property_path, facetState]);
-
-  useEffect(
-    () => setFacetCelState(facet.id, currentCel),
-    [setFacetCelState, facet.id, currentCel]
-  );
-
   useEffect(() => {
     if (clearFiltersToken && facetRef.current && optionsRef.current) {
       const facetState: string[] = [];
@@ -180,7 +157,7 @@ export const Facet: React.FC<FacetProps> = ({
 
   const isOptionSelected = (optionValue: string) => {
     const strValue = valueToString(optionValue);
-    return facetState[strValue];
+    return !!facetState[strValue];
   };
 
   function toggleFacetOption(value: any) {

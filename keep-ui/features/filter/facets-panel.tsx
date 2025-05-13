@@ -85,7 +85,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   );
   useEffect(() => setFacets(facets), [facets, setFacets]);
   useEffect(() => {
-    filterCel && onCelChangeRef.current?.(filterCel);
+    filterCel !== null && onCelChangeRef.current?.(filterCel);
   }, [filterCel]);
   useEffect(() => {
     facetOptionQueries && onReloadFacetOptionsRef.current?.(facetOptionQueries);

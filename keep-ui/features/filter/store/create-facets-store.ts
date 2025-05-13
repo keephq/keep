@@ -1,5 +1,4 @@
-import { createContext, useContext, useRef } from "react";
-import { createStore, useStore } from "zustand";
+import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
 import { FacetDto, FacetOptionDto } from "../models";
 
@@ -11,7 +10,6 @@ export type FacetState = {
     facetOptionQueries: Record<string, string> | null;
     filterCel: string | null;
   };
-  facetCelState: Record<string, string> | null;
   facetsState: Record<string, any>;
   clearFiltersToken: string | null;
   changedFacetId: string | null;
@@ -25,7 +23,6 @@ export type FacetState = {
   setChangedFacetId: (facetId: string | null) => void;
   setFacets: (facets: FacetDto[]) => void;
   setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) => void;
-  setFacetCelState: (facetId: string, cel: string) => void;
   setFacetState: (facetId: string, state: any) => void;
   clearFilters: () => void;
   setAreOptionsReLoading: (isLoading: boolean) => void;
@@ -41,7 +38,6 @@ export const createFacetStore = () =>
       facetOptionQueries: null,
       filterCel: null,
     },
-    facetCelState: null,
     facetsState: {},
     clearFiltersToken: null,
     changedFacetId: null,
@@ -69,24 +65,9 @@ export const createFacetStore = () =>
         },
       });
     },
-    setFacetCelState: (facetId: string, cel: string) =>
-      set({
-        facetCelState: {
-          ...(state().facetCelState || {}),
-          [facetId]: cel,
-        },
-      }),
-
     clearFilters: () => {
       return set({
         clearFiltersToken: uuidV4(),
-        facetCelState: state().facets?.reduce(
-          (acc, facet) => ({
-            ...acc,
-            [facet.id]: state().facetCelState?.[facet.id] || "",
-          }),
-          {}
-        ),
       });
     },
     setAreOptionsReLoading: (isLoading: boolean) =>
