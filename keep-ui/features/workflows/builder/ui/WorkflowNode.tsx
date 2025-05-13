@@ -173,6 +173,7 @@ function WorkflowNode({ id, data }: FlowNode) {
             opacity: data.isLayouted ? 1 : 0,
             borderStyle: isEmptyNode ? "dashed" : "",
           }}
+          data-testid="workflow-node"
         >
           <DebugNodeInfo id={id} data={data} />
           {isEmptyNode && (
