@@ -1,7 +1,9 @@
-import { YamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
+import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
 import { parseWorkflowYamlToJSON } from "../yaml-utils";
+import { mockProviders } from "../provider-mocks";
 
-const defaultWorkflowSchema = YamlWorkflowDefinitionSchema;
+const workflowSchemaWithProviders =
+  getYamlWorkflowDefinitionSchema(mockProviders);
 
 describe("parseWorkflowYamlToJSON", () => {
   it("should validate a correct workflow YAML", () => {
@@ -21,10 +23,12 @@ describe("parseWorkflowYamlToJSON", () => {
           query: SELECT 1
           single_row: true`;
 
-    const result = parseWorkflowYamlToJSON(validYaml, defaultWorkflowSchema);
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
+    const result = parseWorkflowYamlToJSON(
+      validYaml,
+      workflowSchemaWithProviders
+    );
     expect(result.error).toBeUndefined();
+    expect(result.data).toBeDefined();
   });
 
   it("should validate a workflow with all optional fields", () => {
@@ -57,10 +61,12 @@ describe("parseWorkflowYamlToJSON", () => {
           message: test
           topic: alerts`;
 
-    const result = parseWorkflowYamlToJSON(validYaml, defaultWorkflowSchema);
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
+    const result = parseWorkflowYamlToJSON(
+      validYaml,
+      workflowSchemaWithProviders
+    );
     expect(result.error).toBeUndefined();
+    expect(result.data).toBeDefined();
   });
 
   it("should detect missing required fields with line positions", () => {
@@ -74,7 +80,10 @@ describe("parseWorkflowYamlToJSON", () => {
         with:
           query: SELECT 1`;
 
-    const result = parseWorkflowYamlToJSON(invalidYaml, defaultWorkflowSchema);
+    const result = parseWorkflowYamlToJSON(
+      invalidYaml,
+      workflowSchemaWithProviders
+    );
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
     expect(result.error?.issues).toEqual(
@@ -99,6 +108,7 @@ describe("parseWorkflowYamlToJSON", () => {
     const yamlWithConditions = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -119,11 +129,10 @@ describe("parseWorkflowYamlToJSON", () => {
 
     const result = parseWorkflowYamlToJSON(
       yamlWithConditions,
-      defaultWorkflowSchema
+      workflowSchemaWithProviders
     );
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
     expect(result.error).toBeUndefined();
+    expect(result.data).toBeDefined();
   });
 
   it("should detect invalid condition type", () => {
@@ -144,8 +153,10 @@ describe("parseWorkflowYamlToJSON", () => {
           type: invalid
           value: test`;
 
-    const result = parseWorkflowYamlToJSON(invalidYaml, defaultWorkflowSchema);
-    expect(result.success).toBe(false);
+    const result = parseWorkflowYamlToJSON(
+      invalidYaml,
+      workflowSchemaWithProviders
+    );
     expect(result.error).toBeDefined();
     expect(result.error?.issues).toEqual(
       expect.arrayContaining([
@@ -161,6 +172,7 @@ describe("parseWorkflowYamlToJSON", () => {
     const yamlWithForeach = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -174,17 +186,17 @@ describe("parseWorkflowYamlToJSON", () => {
 
     const result = parseWorkflowYamlToJSON(
       yamlWithForeach,
-      defaultWorkflowSchema
+      workflowSchemaWithProviders
     );
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
     expect(result.error).toBeUndefined();
+    expect(result.data).toBeDefined();
   });
 
   it("should validate workflow with variables", () => {
     const yamlWithVars = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -198,16 +210,19 @@ describe("parseWorkflowYamlToJSON", () => {
         var1: "{{ steps.previous-step.results }}"
         var2: "static-value"`;
 
-    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
+    const result = parseWorkflowYamlToJSON(
+      yamlWithVars,
+      workflowSchemaWithProviders
+    );
     expect(result.error).toBeUndefined();
+    expect(result.data).toBeDefined();
   });
 
   it("should validate workflow with invalid provider and return proper column and line", () => {
     const invalidYaml = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -217,14 +232,16 @@ describe("parseWorkflowYamlToJSON", () => {
         with:
           query: SELECT 1`;
 
-    const result = parseWorkflowYamlToJSON(invalidYaml, defaultWorkflowSchema);
-    expect(result.success).toBe(false);
+    const result = parseWorkflowYamlToJSON(
+      invalidYaml,
+      workflowSchemaWithProviders
+    );
     expect(result.error).toBeDefined();
     expect(result.error?.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           path: ["workflow", "steps", 0, "provider", "type"],
-          message: "Required",
+          message: expect.stringContaining("Invalid discriminator value"),
         }),
       ])
     );
@@ -234,6 +251,7 @@ describe("parseWorkflowYamlToJSON", () => {
     const yamlWithVars = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -251,16 +269,19 @@ describe("parseWorkflowYamlToJSON", () => {
       count: 2
       interval: 2`;
 
-    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
+    const result = parseWorkflowYamlToJSON(
+      yamlWithVars,
+      workflowSchemaWithProviders
+    );
     expect(result.error).toBeUndefined();
+    expect(result.data).toBeDefined();
   });
 
   it("should validate workflow with global on-failure with provider", () => {
     const yamlWithVars = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -284,16 +305,20 @@ describe("parseWorkflowYamlToJSON", () => {
       count: 2
       interval: 2`;
 
-    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    const result = parseWorkflowYamlToJSON(
+      yamlWithVars,
+      workflowSchemaWithProviders
+    );
+    expect(result.error).toBeUndefined();
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
-    expect(result.error).toBeUndefined();
   });
 
   it("should validate workflow with just provider in on-failure", () => {
     const yamlWithVars = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -314,16 +339,20 @@ describe("parseWorkflowYamlToJSON", () => {
         message: test
         topic: alerts`;
 
-    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    const result = parseWorkflowYamlToJSON(
+      yamlWithVars,
+      workflowSchemaWithProviders
+    );
+    expect(result.error).toBeUndefined();
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
-    expect(result.error).toBeUndefined();
   });
 
   it("should validate workflow with step-level on-failure", () => {
     const yamlWithVars = `workflow:
   id: test-workflow
   name: Test Workflow
+  description: Test workflow
   triggers:
     - type: manual
   steps:
@@ -341,9 +370,12 @@ describe("parseWorkflowYamlToJSON", () => {
         var1: "{{ steps.previous-step.results }}"
         var2: "static-value"`;
 
-    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    const result = parseWorkflowYamlToJSON(
+      yamlWithVars,
+      workflowSchemaWithProviders
+    );
+    expect(result.error).toBeUndefined();
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
-    expect(result.error).toBeUndefined();
   });
 });
