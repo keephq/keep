@@ -8,7 +8,7 @@ import WorkflowGraph from "../workflow-graph";
 import { WorkflowExecutionsTable } from "./workflow-executions-table";
 import { WorkflowOverviewSkeleton } from "./workflow-overview-skeleton";
 import { WorkflowProviders } from "./workflow-providers";
-import { WorkflowSteps } from "../workflows-templates";
+import { WorkflowSteps } from "../workflows-steps";
 import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
 interface Pagination {
   limit: number;

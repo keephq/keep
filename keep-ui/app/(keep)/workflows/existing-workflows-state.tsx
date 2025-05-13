@@ -1,31 +1,22 @@
 "use client";
 
-import {
-  ChangeEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@tremor/react";
 import { ArrowUpOnSquareStackIcon } from "@heroicons/react/24/outline";
-import { EmptyStateCard, KeepLoader, PageTitle } from "@/shared/ui";
+import {
+  EmptyStateCard,
+  ErrorComponent,
+  KeepLoader,
+  PageTitle,
+} from "@/shared/ui";
 import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile from "./workflow-tile";
-import { ArrowRightIcon } from "@radix-ui/react-icons";
-import { useRouter } from "next/navigation";
-import Modal from "@/components/ui/Modal";
-import { WorkflowTemplates } from "./workflows-templates";
-import { Input, ErrorComponent } from "@/shared/ui";
-import { Textarea } from "@/components/ui";
 import {
   DEFAULT_WORKFLOWS_PAGINATION,
   DEFAULT_WORKFLOWS_QUERY,
   useWorkflowsV2,
   WorkflowsQuery,
 } from "@/entities/workflows/model/useWorkflowsV2";
-import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { PageSubtitle } from "@/shared/ui/PageSubtitle";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { UserStatefulAvatar } from "@/entities/users/ui";
@@ -44,62 +35,23 @@ import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side
 import { InitialFacetsData } from "@/features/filter/api";
 import { v4 as uuidV4 } from "uuid";
 import { PaginationState } from "@/features/filter/pagination";
-
-const EXAMPLE_WORKFLOW_DEFINITIONS = {
-  slack: `
-    workflow:
-      id: slack-demo
-      description: Send a slack message when any alert is triggered or manually
-      triggers:
-        - type: alert
-        - type: manual
-      actions:
-        - name: trigger-slack
-          provider:
-            type: slack
-            config: " {{ providers.slack }} "
-            with:
-              message: "Workflow ran | reason: {{ event.trigger }}"
-    `,
-  sql: `
-    workflow:
-      id: bq-sql-query
-      description: Run SQL on Bigquery and send the results to slack
-      triggers:
-        - type: manual
-      steps:
-        - name: get-sql-data
-          provider:
-            type: bigquery
-            config: "{{ providers.bigquery-prod }}"
-            with:
-              query: "SELECT * FROM some_database LIMIT 1"
-      actions:
-        - name: trigger-slack
-          provider:
-            type: slack
-            config: " {{ providers.slack-prod }} "
-            with:
-              message: "Results from the DB: ({{ steps.get-sql-data.results }})"
-  `,
-};
-
-type ExampleWorkflowKey = keyof typeof EXAMPLE_WORKFLOW_DEFINITIONS;
+import { CreateWorkflowModal } from "./create-workflow-modal";
+import { UploadWorkflowsModal } from "./upload-workflows-modal";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
 };
 
-export function WorkflowsPage({
+export function ExistingWorkflowsState({
   initialFacetsData,
 }: {
   initialFacetsData?: InitialFacetsData;
 }) {
-  const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [workflowDefinition, setWorkflowDefinition] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUploadWorkflowsModalOpen, setIsUploadWorkflowsModalOpen] =
+    useState(false);
+  const [isCreateWorkflowModalOpen, setIsCreateWorkflowModalOpen] =
+    useState(false);
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -156,8 +108,6 @@ export function WorkflowsPage({
   } = useWorkflowsV2(workflowsQuery, { keepPreviousData: true });
 
   const isFirstLoading = isFilteredWorkflowsLoading && !filteredWorkflows;
-
-  const { uploadWorkflowFiles } = useWorkflowActions();
 
   const isTableEmpty = filteredWorkflowsCount === 0;
   const isEmptyState =
@@ -301,60 +251,12 @@ export function WorkflowsPage({
     return <ErrorComponent error={error} reset={() => {}} />;
   }
 
-  const onDrop = async (files: ChangeEvent<HTMLInputElement>) => {
-    if (!files.target.files) {
-      return;
-    }
-
-    const uploadedWorkflowsIds = await uploadWorkflowFiles(files.target.files);
-
-    if (fileInputRef.current) {
-      // Reset the file input to allow for multiple uploads
-      fileInputRef.current.value = "";
-    }
-
-    setIsModalOpen(false);
-    if (uploadedWorkflowsIds.length === 1) {
-      // If there is only one file, redirect to the workflow detail page
-      router.push(`/workflows/${uploadedWorkflowsIds[0]}`);
-    }
-  };
-
-  function handleWorkflowDefinitionString(
-    workflowDefinition: string,
-    name: string = "New workflow"
-  ) {
-    const blob = new Blob([workflowDefinition], {
-      type: "application/x-yaml",
-    });
-    const file = new File([blob], `${name}.yml`, {
-      type: "application/x-yaml",
-    });
-    const event = {
-      target: {
-        files: [file],
-      },
-    };
-    onDrop(event as any);
-  }
-
-  function handleStaticExampleSelect(exampleKey: ExampleWorkflowKey) {
-    switch (exampleKey) {
-      case "slack":
-        handleWorkflowDefinitionString(EXAMPLE_WORKFLOW_DEFINITIONS.slack);
-        break;
-      case "sql":
-        handleWorkflowDefinitionString(EXAMPLE_WORKFLOW_DEFINITIONS.sql);
-        break;
-      default:
-        throw new Error(`Invalid example workflow key: ${exampleKey}`);
-    }
-    setIsModalOpen(false);
-  }
-
   return (
     <>
-      <main className="flex flex-col gap-12">
+      <main
+        data-testid="workflows-exist-state"
+        className="flex flex-col gap-12"
+      >
         <div className="flex flex-col gap-6">
           <div className="flex justify-between items-end">
             <div>
@@ -369,7 +271,7 @@ export function WorkflowsPage({
                 size="md"
                 variant="secondary"
                 onClick={() => {
-                  setIsModalOpen(true);
+                  setIsUploadWorkflowsModalOpen(true);
                 }}
                 icon={ArrowUpOnSquareStackIcon}
                 id="uploadWorkflowButton"
@@ -380,7 +282,7 @@ export function WorkflowsPage({
                 color="orange"
                 size="md"
                 variant="primary"
-                onClick={() => router.push("/workflows/builder")}
+                onClick={() => setIsCreateWorkflowModalOpen(true)}
                 icon={PlusIcon}
               >
                 Create Workflow
@@ -439,101 +341,17 @@ export function WorkflowsPage({
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-4">
-          <WorkflowTemplates />
-        </div>
       </main>
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Upload Workflow files"
-      >
-        <div className="bg-white rounded max-w-lg max-h-fit	 mx-auto z-20">
-          <div className="space-y-2">
-            <Input
-              ref={fileInputRef}
-              id="workflowFile"
-              name="file"
-              type="file"
-              className="mt-2"
-              accept=".yml, .yaml"
-              multiple
-              onChange={(e) => {
-                onDrop(e);
-                setIsModalOpen(false); // Add this line to close the modal
-              }}
-            />
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-              Only .yml and .yaml files are supported.
-            </p>
-          </div>
-          <div className="mt-4">
-            <h3>Or paste the YAML definition:</h3>
-            <Textarea
-              id="workflowDefinition"
-              onChange={(e) => {
-                setWorkflowDefinition(e.target.value);
-              }}
-              name="workflowDefinition"
-              className="mt-2"
-            />
-            <Button
-              className="mt-2"
-              color="orange"
-              size="md"
-              variant="primary"
-              onClick={() => handleWorkflowDefinitionString(workflowDefinition)}
-            >
-              Load
-            </Button>
-          </div>
-          <div className="mt-4 text-sm">
-            <h3>Or just try some from Keep examples:</h3>
-            <Button
-              className="mt-2"
-              color="orange"
-              size="md"
-              variant="secondary"
-              icon={ArrowRightIcon}
-              onClick={() => handleStaticExampleSelect("slack")}
-            >
-              Send a Slack message for every alert or manually
-            </Button>
-
-            <Button
-              className="mt-2"
-              color="orange"
-              size="md"
-              variant="secondary"
-              icon={ArrowRightIcon}
-              onClick={() => handleStaticExampleSelect("sql")}
-            >
-              Run SQL query and send the results as a Slack message
-            </Button>
-
-            <p className="mt-2">
-              More examples at{" "}
-              <a
-                href="https://github.com/keephq/keep/tree/main/examples/workflows"
-                target="_blank"
-              >
-                Keep GitHub repo
-              </a>
-            </p>
-          </div>
-
-          <div className="mt-4">
-            <Button
-              className="mt-2"
-              color="orange"
-              variant="secondary"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {isUploadWorkflowsModalOpen && (
+        <UploadWorkflowsModal
+          onClose={() => setIsUploadWorkflowsModalOpen(false)}
+        />
+      )}
+      {isCreateWorkflowModalOpen && (
+        <CreateWorkflowModal
+          onClose={() => setIsCreateWorkflowModalOpen(false)}
+        />
+      )}
     </>
   );
 }

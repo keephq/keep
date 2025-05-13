@@ -1,5 +1,5 @@
-import { act, fireEvent, render } from "@testing-library/react";
-import { WorkflowsPage } from "../workflows.client";
+import { act, fireEvent, getByText, render } from "@testing-library/react";
+import { ExistingWorkflowsState } from "../existing-workflows-state";
 import { useWorkflowsV2 } from "@/entities/workflows/model/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { mockWorkflow } from "@/entities/workflows/model/__mocks__/mock-workflow";
@@ -39,10 +39,6 @@ jest.mock("@/features/filter/facet-panel-server-side", () => ({
   FacetsPanelServerSide: () => <div data-testid="facets-panel" />,
 }));
 
-jest.mock("@/app/(keep)/workflows/workflows-templates", () => ({
-  WorkflowTemplates: () => <div data-testid="workflow-templates" />,
-}));
-
 describe("WorkflowsPage", () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -56,7 +52,7 @@ describe("WorkflowsPage", () => {
       error: null,
     });
 
-    const { getByTestId } = render(<WorkflowsPage />);
+    const { getByTestId } = render(<ExistingWorkflowsState />);
 
     expect(getByTestId("workflow-list")).toBeInTheDocument();
   });
@@ -69,7 +65,7 @@ describe("WorkflowsPage", () => {
       error: null,
     });
 
-    const { getByTestId } = render(<WorkflowsPage />);
+    const { getByTestId } = render(<ExistingWorkflowsState />);
 
     await act(async () => {
       const workflowList = getByTestId("workflow-list");
