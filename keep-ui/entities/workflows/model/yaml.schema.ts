@@ -3,6 +3,7 @@ import {
   EnrichDisposableKeyValueSchema,
   EnrichKeyValueSchema,
   IncidentEventEnum,
+  OnFailureSchema,
   WithSchema,
   WorkflowInputSchema,
 } from "./schema";
@@ -109,16 +110,7 @@ const YamlProviderSchema = z
     type: z.string(),
     config: z.string().optional(),
     with: WithSchema,
-    "on-failure": z
-      .object({
-        retry: z
-          .object({
-            count: z.number().optional(),
-            interval: z.number().optional(),
-          })
-          .optional(),
-      })
-      .optional(),
+    "on-failure": OnFailureSchema.optional(),
   })
   .strict();
 
@@ -159,16 +151,7 @@ function getYamlProviderSchema(
         enrich_alert: EnrichDisposableKeyValueSchema.optional(),
         enrich_incident: EnrichKeyValueSchema.optional(),
       }),
-      "on-failure": z
-        .object({
-          retry: z
-            .object({
-              count: z.number().optional(),
-              interval: z.number().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
+      "on-failure": OnFailureSchema.optional(),
     });
   }
 
@@ -181,16 +164,7 @@ function getYamlProviderSchema(
       type: z.literal(provider.type),
       with: withSchema,
       config: configSchema,
-      "on-failure": z
-        .object({
-          retry: z
-            .object({
-              count: z.number().optional(),
-              interval: z.number().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
+      "on-failure": OnFailureSchema.optional(),
     })
     .strict();
 }
@@ -234,16 +208,6 @@ export const YamlStepOrActionSchema = z
   })
   .strict();
 
-const OnFailureSchema = YamlStepOrActionSchema.extend({
-  name: z.string().optional(),
-});
-
-const getOnFailureSchema = (stepOrActionSchema: z.ZodObject<any, any>) => {
-  return stepOrActionSchema.extend({
-    name: z.string().optional(),
-  });
-};
-
 export const YamlWorkflowDefinitionSchema = z.object({
   workflow: z
     .object({
@@ -256,7 +220,13 @@ export const YamlWorkflowDefinitionSchema = z.object({
       inputs: z.array(WorkflowInputSchema).optional(),
       consts: z.record(z.string(), z.string()).optional(),
       strategy: WorkflowStrategySchema.optional(),
-      "on-failure": OnFailureSchema.optional(),
+      "on-failure": YamlStepOrActionSchema.partial({
+        id: true,
+        name: true,
+        provider: true,
+      })
+        .extend(OnFailureSchema.shape)
+        .optional(),
       owners: z.array(z.string()).optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
       permissions: z.array(z.string()).optional(),
@@ -325,7 +295,10 @@ export function getYamlWorkflowDefinitionSchema(
       permissions: z.array(z.string()).optional(),
       strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
-      "on-failure": getOnFailureSchema(actionSchema).optional(),
+      "on-failure": actionSchema
+        .partial({ id: true, name: true, provider: true })
+        .extend(OnFailureSchema.shape)
+        .optional(),
       // optional will be replace on postProcess
       steps: z.array(stepSchema).optional(),
       actions: z.array(actionSchema).optional(),

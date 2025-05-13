@@ -3,7 +3,7 @@ import { parseWorkflowYamlToJSON } from "../yaml-utils";
 
 const defaultWorkflowSchema = YamlWorkflowDefinitionSchema;
 
-describe("validateWorkflowYaml", () => {
+describe("parseWorkflowYamlToJSON", () => {
   it("should validate a correct workflow YAML", () => {
     const validYaml = `workflow:
   id: test-workflow
@@ -228,5 +228,122 @@ describe("validateWorkflowYaml", () => {
         }),
       ])
     );
+  });
+
+  it("should validate workflow with global on-failure", () => {
+    const yamlWithVars = `workflow:
+  id: test-workflow
+  name: Test Workflow
+  triggers:
+    - type: manual
+  steps:
+    - name: test-step
+      provider:
+        type: clickhouse
+        config: default
+        with:
+          query: SELECT 1
+      vars:
+        var1: "{{ steps.previous-step.results }}"
+        var2: "static-value"
+  on-failure:
+    retry:
+      count: 2
+      interval: 2`;
+
+    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should validate workflow with global on-failure with provider", () => {
+    const yamlWithVars = `workflow:
+  id: test-workflow
+  name: Test Workflow
+  triggers:
+    - type: manual
+  steps:
+    - name: test-step
+      provider:
+        type: clickhouse
+        config: default
+        with:
+          query: SELECT 1
+      vars:
+        var1: "{{ steps.previous-step.results }}"
+        var2: "static-value"
+  on-failure:
+    provider:
+      type: ntfy
+      config: default
+      with:
+        message: test
+        topic: alerts
+    retry:
+      count: 2
+      interval: 2`;
+
+    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should validate workflow with just provider in on-failure", () => {
+    const yamlWithVars = `workflow:
+  id: test-workflow
+  name: Test Workflow
+  triggers:
+    - type: manual
+  steps:
+    - name: test-step
+      provider:
+        type: clickhouse
+        config: default
+        with:
+          query: SELECT 1
+      vars:
+        var1: "{{ steps.previous-step.results }}"
+        var2: "static-value"
+  on-failure:
+    provider:
+      type: ntfy
+      config: default
+      with:
+        message: test
+        topic: alerts`;
+
+    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.error).toBeUndefined();
+  });
+
+  it("should validate workflow with step-level on-failure", () => {
+    const yamlWithVars = `workflow:
+  id: test-workflow
+  name: Test Workflow
+  triggers:
+    - type: manual
+  steps:
+    - name: test-step
+      provider:
+        type: clickhouse
+        config: default
+        with:
+          query: SELECT 1
+        on-failure:
+          retry:
+            count: 2
+            interval: 2
+      vars:
+        var1: "{{ steps.previous-step.results }}"
+        var2: "static-value"`;
+
+    const result = parseWorkflowYamlToJSON(yamlWithVars, defaultWorkflowSchema);
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.error).toBeUndefined();
   });
 });
