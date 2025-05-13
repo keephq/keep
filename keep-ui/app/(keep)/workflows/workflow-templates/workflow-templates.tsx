@@ -16,9 +16,10 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
     offset: 0,
     limit: 12,
   });
-  useEffect(() => {
-    setPaginationState({ offset: 0, limit: 12 });
-  }, [searchValue, setPaginationState]);
+  useEffect(
+    () => setPaginationState({ offset: 0, limit: 12 }),
+    [searchValue, setPaginationState]
+  );
 
   const query = useMemo(() => {
     const cel = searchValue
@@ -98,6 +99,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
         </div>
         <div className={mockLoading ? "hidden" : ""}>
           <Pagination
+            key={searchValue}
             totalCount={totalCount ?? 0}
             isRefreshAllowed={false}
             isRefreshing={false}
