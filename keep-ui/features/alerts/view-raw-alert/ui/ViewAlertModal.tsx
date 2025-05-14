@@ -4,7 +4,7 @@ import { Button, Switch, Text, Callout } from "@tremor/react";
 import { toast } from "react-toastify";
 import React, { useState, useRef, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { MonacoEditor, showErrorToast } from "@/shared/ui";
+import { MonacoEditor, showErrorToast, showSuccessToast } from "@/shared/ui";
 import { type Monaco } from "@monaco-editor/react";
 import { Lock, Unlock, Save, AlertTriangle, Copy, X } from "lucide-react";
 import { type editor } from "monaco-editor";
@@ -607,8 +607,9 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (alert) {
       try {
         await navigator.clipboard.writeText(editorValue);
-        toast.success("Alert copied to clipboard!");
+        showSuccessToast("Alert copied to clipboard!");
       } catch (err) {
+        console.error("Failed to copy alert:", err);
         showErrorToast(err, "Failed to copy alert.");
       }
     }
