@@ -28,6 +28,7 @@ import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
+import { useCelState } from "@/features/cel-input/use-cel-state";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -177,33 +178,17 @@ export const AlertsRulesBuilder = ({
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(
-    searchParams?.get("cel") || defaultQuery
-  );
+  const [celRules, setCELRules] = useCelState({
+    enableQueryParams: shouldSetQueryParam,
+    defaultCel: defaultQuery,
+  });
+
   const parsedCELRulesToQuery = parseCEL(celRules);
 
   const isDynamic =
     selectedPreset && !STATIC_PRESETS_NAMES.includes(selectedPreset.name);
 
   const action = isDynamic ? "update" : "create";
-
-  const setQueryParam = (key: string, value: string) => {
-    const current = new URLSearchParams(
-      Array.from(searchParams ? searchParams.entries() : [])
-    );
-
-    if (value) {
-      current.set(key, value);
-    } else {
-      current.delete(key);
-    }
-
-    // cast to string
-    const search = current.toString();
-    // or const query = `${'?'.repeat(search.length && 1)}${search}`;
-    const query = search ? `?${search}` : "";
-    router.push(`${pathname}${query}`);
-  };
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
@@ -220,7 +205,6 @@ export const AlertsRulesBuilder = ({
     setCELRules("");
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
-    if (shouldSetQueryParam) setQueryParam("cel", "");
     onApplyFilter();
     updateOutputCEL?.(celRules);
     setIsValidCEL(true);
@@ -323,7 +307,6 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
-        if (shouldSetQueryParam) setQueryParam("cel", celRules);
         onApplyFilter();
         updateOutputCEL?.(celRules);
         if (showToast)
@@ -360,8 +343,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-    ? customFields
-    : [];
+      ? customFields
+      : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);

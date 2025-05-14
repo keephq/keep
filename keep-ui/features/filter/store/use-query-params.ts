@@ -1,13 +1,9 @@
-import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { StoreApi, useStore } from "zustand";
 import { FacetState } from "./create-facets-store";
 import { FacetDto, FacetOptionDto, FacetOptionsQueries } from "../models";
-import { useRouter } from "next/navigation";
 
 export function useQueryParams(store: StoreApi<FacetState>) {
-  const router = useRouter();
-
   const facets = useStore(store, (state) => state.facets);
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const allFacetOptionsRef = useRef<Record<string, FacetOptionDto[]> | null>(
@@ -120,7 +116,11 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       const queryString = queryParams.toString();
 
       if (queryString !== currentQuery) {
-        router.replace(`?${queryString}`);
+        var newurl =
+          window.location.origin + window.location.pathname + queryString
+            ? `?${queryString}`
+            : "";
+        window.history.pushState({ path: newurl }, "", newurl);
       }
     }, 500);
 
