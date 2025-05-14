@@ -176,12 +176,19 @@ describe("parseWorkflowYamlToJSON", () => {
   triggers:
     - type: manual
   steps:
-    - name: test-step
+    - name: previous-step
       provider:
         type: clickhouse
         config: default
         with:
           query: SELECT 1
+  actions:
+    - name: print-step  
+      provider:
+        type: console
+        config: default
+        with:
+          message: "{{ item }}"
       foreach: "{{ steps.previous-step.results.items }}"`;
 
     const result = parseWorkflowYamlToJSON(
@@ -264,10 +271,7 @@ describe("parseWorkflowYamlToJSON", () => {
       vars:
         var1: "{{ steps.previous-step.results }}"
         var2: "static-value"
-  on-failure:
-    retry:
-      count: 2
-      interval: 2`;
+  on-failure: {}`;
 
     const result = parseWorkflowYamlToJSON(
       yamlWithVars,
@@ -308,10 +312,7 @@ describe("parseWorkflowYamlToJSON", () => {
       config: default
       with:
         message: test
-        topic: alerts
-    retry:
-      count: 2
-      interval: 2`;
+        topic: alerts`;
 
     const result = parseWorkflowYamlToJSON(
       yamlWithVars,
@@ -370,10 +371,10 @@ describe("parseWorkflowYamlToJSON", () => {
         config: default
         with:
           query: SELECT 1
-        on-failure:
-          retry:
-            count: 2
-            interval: 2
+      on-failure:
+        retry:
+          count: 2
+          interval: 2
       vars:
         var1: "{{ steps.previous-step.results }}"
         var2: "static-value"`;

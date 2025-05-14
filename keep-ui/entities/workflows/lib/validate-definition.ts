@@ -309,7 +309,7 @@ export function validateStepPure(
         validationErrors.push(["Condition value cannot be empty.", "error"]);
       }
       const variableErrorsValue = validateAllMustacheVariablesInString(
-        step.properties.value.toString(),
+        step.properties.value?.toString() ?? "",
         step,
         definition,
         secrets
@@ -324,7 +324,7 @@ export function validateStepPure(
         ]);
       }
       const variableErrorsCompareTo = validateAllMustacheVariablesInString(
-        step.properties.compare_to.toString(),
+        step.properties.compare_to?.toString() ?? "",
         step,
         definition,
         secrets

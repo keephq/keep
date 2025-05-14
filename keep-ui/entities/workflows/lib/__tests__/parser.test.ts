@@ -132,9 +132,9 @@ workflow:
         with:
           query: avg(rate(process_cpu_seconds_total))
           queryType: query
-        on-failure:
-          retry:
-            count: 1
+      on-failure:
+        retry:
+          count: 1
   actions:
     - name: trigger-slack-gcp
       foreach: "{{ steps.gcp-monitoring-step.results.data.result }}"

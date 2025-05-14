@@ -110,7 +110,6 @@ const YamlProviderSchema = z
     type: z.string(),
     config: z.string().optional(),
     with: WithSchema,
-    "on-failure": OnFailureSchema.optional(),
   })
   .strict();
 
@@ -151,7 +150,6 @@ function getYamlProviderSchema(
         enrich_alert: EnrichDisposableKeyValueSchema.optional(),
         enrich_incident: EnrichKeyValueSchema.optional(),
       }),
-      "on-failure": OnFailureSchema.optional(),
     });
   }
 
@@ -164,7 +162,6 @@ function getYamlProviderSchema(
       type: z.literal(provider.type),
       with: withSchema,
       config: configSchema,
-      "on-failure": OnFailureSchema.optional(),
     })
     .strict();
 }
@@ -205,6 +202,7 @@ export const YamlStepOrActionSchema = z
       .optional(),
     foreach: z.string().optional(),
     continue: z.boolean().optional(),
+    "on-failure": OnFailureSchema.optional(),
   })
   .strict();
 
@@ -223,9 +221,7 @@ export const YamlWorkflowDefinitionSchema = z.object({
       "on-failure": YamlStepOrActionSchema.partial({
         id: true,
         name: true,
-      })
-        .extend(OnFailureSchema.shape)
-        .optional(),
+      }).optional(),
       owners: z.array(z.string()).optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
       permissions: z.array(z.string()).optional(),
@@ -294,10 +290,7 @@ export function getYamlWorkflowDefinitionSchema(
       permissions: z.array(z.string()).optional(),
       strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
-      "on-failure": actionSchema
-        .partial({ id: true, name: true })
-        .extend(OnFailureSchema.shape)
-        .optional(),
+      "on-failure": actionSchema.partial({ id: true, name: true }).optional(),
       // optional will be replace on postProcess
       steps: z.array(stepSchema).optional(),
       actions: z.array(actionSchema).optional(),

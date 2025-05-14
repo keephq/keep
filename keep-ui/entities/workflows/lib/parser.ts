@@ -67,7 +67,7 @@ function getV2StepOrV2Action(
       actionParams: provider?.notify_params!,
       if: actionOrStep.if,
       vars: actionOrStep.vars,
-      "on-failure": actionOrStep.provider?.["on-failure"],
+      "on-failure": actionOrStep?.["on-failure"],
     },
   };
 }
@@ -400,11 +400,10 @@ export function getYamlStepFromStep(
   const providerType = s.type.replace("step-", "");
   const providerName =
     (s.properties.config as string)?.trim() || `default-${providerType}`;
-  const provider = {
+  const provider: YamlStepOrAction["provider"] = {
     type: s.type.replace("step-", ""),
     config: `{{ providers.${providerName} }}`,
     with: withParams,
-    "on-failure": s.properties["on-failure"],
   };
   const ifParam =
     typeof s.properties.if === "string" && s.properties.if.trim() !== ""
@@ -416,6 +415,7 @@ export function getYamlStepFromStep(
     if: ifParam,
     condition: condition ? [getYamlConditionFromStep(condition)] : undefined,
     provider: provider,
+    "on-failure": s.properties["on-failure"],
   };
   if (s.properties.vars) {
     step.vars = s.properties.vars;
@@ -437,11 +437,10 @@ export function getYamlActionFromAction(
   const providerType = s.type.replace("action-", "");
   const providerName =
     (s.properties.config as string)?.trim() || `default-${providerType}`;
-  const provider = {
+  const provider: YamlStepOrAction["provider"] = {
     type: s.type.replace("action-", ""),
     config: `{{ providers.${providerName} }}`,
     with: withParams,
-    "on-failure": s.properties["on-failure"],
   };
   const ifParam =
     typeof s.properties.if === "string" && s.properties.if.trim() !== ""
@@ -453,6 +452,7 @@ export function getYamlActionFromAction(
     if: ifParam,
     condition: condition ? [getYamlConditionFromStep(condition)] : undefined,
     provider: provider,
+    "on-failure": s.properties["on-failure"],
   };
   if (s.properties.vars) {
     action.vars = s.properties.vars;

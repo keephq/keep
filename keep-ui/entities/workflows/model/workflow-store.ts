@@ -380,7 +380,6 @@ export const useWorkflowStore = create<WorkflowState>()(
         if (currentSelectedNode) {
           const updatedNodes = get().nodes.map((node) => {
             if (node.id === currentSelectedNode) {
-              //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
               if (value !== undefined && value !== null) {
                 node.data[key] = value;
               } else {
@@ -703,7 +702,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         ];
         targets.forEach((edge) => {
           const target =
-            edge.source === "trigger_start" ? "triggger_end" : edge.target;
+            edge.source === "trigger_start" ? "trigger_end" : edge.target;
 
           finalEdges = [
             ...finalEdges,

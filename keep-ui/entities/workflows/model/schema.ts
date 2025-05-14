@@ -131,8 +131,8 @@ export const WithSchema = z
   );
 
 const RetrySchema = z.object({
-  count: z.number().optional(),
-  interval: z.number().optional(),
+  count: z.number().min(0).optional(),
+  interval: z.number().min(0).optional(),
 });
 
 export const OnFailureSchema = z.object({
