@@ -1,13 +1,16 @@
 import { StoreApi, useStore } from "zustand";
 import { FacetState } from "./create-facets-store";
 import { toFacetState, valueToString } from "./utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function useInitialStateHandler(store: StoreApi<FacetState>) {
   const facetsConfig = useStore(store, (state) => state.facetsConfig);
   const facets = useStore(store, (state) => state.facets);
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const patchFacetsState = useStore(store, (state) => state.patchFacetsState);
+  const facetsState = useStore(store, (state) => state.facetsState);
+  const facetsStateRef = useRef(facetsState);
+  facetsStateRef.current = facetsState;
 
   const isInitialStateHandled = useStore(
     store,
@@ -36,8 +39,6 @@ export function useInitialStateHandler(store: StoreApi<FacetState>) {
             valueToString(value)
           )
         );
-      } else {
-        facetsStatePatch[facet.id] = toFacetState([]);
       }
     });
 
@@ -65,6 +66,10 @@ export function useInitialStateHandler(store: StoreApi<FacetState>) {
     const facetsStatePatch: Record<string, any> = {};
 
     facets.forEach((facet) => {
+      if (facetsStateRef.current[facet.id]) {
+        return;
+      }
+
       const facetConfig = facetsConfig?.[facet.id];
       const facetOptions = allFacetOptions?.[facet.id];
 

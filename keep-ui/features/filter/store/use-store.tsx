@@ -20,11 +20,11 @@ export function useNewFacetStore(facetsConfig: FacetsConfig | undefined) {
   useQueriesHandler(storeRef.current);
   useQueryParams(storeRef.current);
 
-  // const facetsState = useStore(storeRef.current, (state) => state.facetsState);
+  const facetsState = useStore(storeRef.current, (state) => state.facetsState);
 
-  // useEffect(() => {
-  //   console.log("Ihor", facetsState);
-  // }, [facetsState]);
+  useEffect(() => {
+    console.log("Ihor", facetsState);
+  }, [facetsState]);
 
   return storeRef.current;
 }

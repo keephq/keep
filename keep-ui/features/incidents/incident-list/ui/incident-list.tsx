@@ -92,7 +92,7 @@ export function IncidentList({
     predictedIncidents,
     isPredictedLoading,
     facetsCel,
-  } = useIncidentsTableData(initialData, {
+  } = useIncidentsTableData({
     candidate: null,
     predicted: null,
     limit: incidentsPagination.limit,

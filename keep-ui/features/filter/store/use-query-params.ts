@@ -72,6 +72,7 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       facetsStatePatch[facetId][value] = true;
     });
 
+    console.log("Ihor QUERY PARAMS", facetsStatePatch);
     patchFacetsState(facetsStatePatch);
     setAreQueryparamsSet(true);
   }, [

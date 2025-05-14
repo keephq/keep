@@ -23,10 +23,7 @@ export interface IncidentsTableDataQuery {
   timeFrame: TimeFrameV2;
 }
 
-export const useIncidentsTableData = (
-  initialData: PaginatedIncidentsDto | undefined,
-  query: IncidentsTableDataQuery
-) => {
+export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
@@ -152,7 +149,7 @@ export const useIncidentsTableData = (
     incidentsQueryState,
     {
       revalidateOnFocus: false,
-      revalidateOnMount: !initialData,
+      revalidateOnMount: true,
       onSuccess: () => {
         refreshDefaultIncidents();
       },
@@ -173,7 +170,6 @@ export const useIncidentsTableData = (
       {
         revalidateOnFocus: false,
         revalidateOnMount: false,
-        fallbackData: initialData,
       }
     );
 
@@ -182,7 +178,7 @@ export const useIncidentsTableData = (
 
   const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
     PaginatedIncidentsDto | undefined
-  >(initialData);
+  >();
   useEffect(() => {
     if (!paginatedIncidentsFromHook) {
       return;
@@ -204,7 +200,7 @@ export const useIncidentsTableData = (
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
-    isEmptyState: defaultIncidents.count === 0,
+    isEmptyState: defaultIncidents?.count === 0,
     predictedIncidents,
     isPredictedLoading,
     facetsCel: mainCelQuery,
