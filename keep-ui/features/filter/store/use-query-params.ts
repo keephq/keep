@@ -72,7 +72,6 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       facetsStatePatch[facetId][value] = true;
     });
 
-    console.log("Ihor QUERY PARAMS", facetsStatePatch);
     patchFacetsState(facetsStatePatch);
     setAreQueryparamsSet(true);
   }, [
@@ -92,9 +91,9 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       const queryParams = new URLSearchParams(window.location.search);
       const currentQuery = window.location.search.replace(/^\?/, "");
 
-      queryParams.entries().forEach(([key, value]) => {
+      Array.from(queryParams.entries()).forEach(([key, value]) => {
         if (key.startsWith("facet_")) {
-          queryParams.delete(key);
+          queryParams.delete(key, value);
         }
       });
 
