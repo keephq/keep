@@ -1734,13 +1734,13 @@ def test_workflow_with_on_failure(db_session, create_alert, workflow_manager, mo
     first_execution_id = workflow_execution.id
 
     # Verify the provider was called 4 times:
-    # 1. For the main action (which failed)
-    # 2-3. For the retry of the main action
-    # 4. For the on-failure action
+    # 1-3. For the main action (which failed)
+    # 4. For the retry of the main action, which succeeds
     assert mock_console.call_count == 4
 
     assert "Tier 1 Alert: server-is-upsidedown" in str(mock_console.call_args_list[-1])
 
+    # Now make the main action fail all retries, and the on-failure action should be called
     mock_console.side_effect = [
         Exception("Action failed"),  # First call (main action) fails
         Exception("Action failed"),  # Second call (main action) fails
@@ -1768,6 +1768,12 @@ def test_workflow_with_on_failure(db_session, create_alert, workflow_manager, mo
     )
     assert workflow_execution is not None
     assert workflow_execution.status == "error"
+
+    # Verify the provider was called 5 times:
+    # 1. For the main action (which failed)
+    # 2-4. For the retry of the main action
+    # 5. For the on-failure action
+    assert mock_console.call_count == 5
 
     # Verify the on-failure action was called with the correct message
     assert "Workflow on-failure-workflow failed with errors:" in str(
