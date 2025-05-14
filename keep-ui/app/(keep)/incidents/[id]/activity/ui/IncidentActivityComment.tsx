@@ -6,7 +6,7 @@ import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
-import { QuillMentionsInput } from "./QuillMentionsInput";
+import { CommentInput, extractTaggedUsers } from "./CommentInput";
 import { useUsers } from "@/entities/users/model/useUsers";
 
 export function IncidentActivityComment({
@@ -23,11 +23,18 @@ export function IncidentActivityComment({
 
   const onSubmit = useCallback(async () => {
     try {
+      // Extract tagged users from the comment content
+      const extractedTaggedUsers = extractTaggedUsers(comment);
+
+      // Combine with manually tracked tagged users
+      const allTaggedUsers = [...new Set([...taggedUsers, ...extractedTaggedUsers])];
+
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,
-        tagged_users: taggedUsers,
+        tagged_users: allTaggedUsers,
       });
+
       toast.success("Comment added!", { position: "top-right" });
       setComment("");
       setTaggedUsers([]);
@@ -60,10 +67,10 @@ export function IncidentActivityComment({
   return (
     <div className="flex flex-col h-full w-full relative">
       <div className="w-full mb-3">
-        <QuillMentionsInput
+        <CommentInput
           value={comment}
           onValueChange={setComment}
-          placeholder="Add a new comment... Use @ to mention users"
+          placeholder="Add a new comment... Type @ to mention users"
           users={users}
           onTagUser={(email) => {
             if (!taggedUsers.includes(email)) {

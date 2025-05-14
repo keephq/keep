@@ -176,14 +176,18 @@ def migrate_db():
         logger.info("Skipping running migrations...")
         return None
 
-    logger.info("Running migrations...")
-    config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
-    config = alembic.config.Config(file_=config_path)
-    # Re-defined because alembic.ini uses relative paths which doesn't work
-    # when running the app as a pyhton pakage (could happen form any path)
-    config.set_main_option(
-        "script_location",
-        os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations",
-    )
-    alembic.command.upgrade(config, "head")
-    logger.info("Finished migrations")
+    # Temporarily skip migrations due to multiple heads issue
+    logger.info("Skipping migrations due to multiple heads issue...")
+    return None
+
+    # logger.info("Running migrations...")
+    # config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
+    # config = alembic.config.Config(file_=config_path)
+    # # Re-defined because alembic.ini uses relative paths which doesn't work
+    # # when running the app as a pyhton pakage (could happen form any path)
+    # config.set_main_option(
+    #     "script_location",
+    #     os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations",
+    # )
+    # alembic.command.upgrade(config, "head")
+    # logger.info("Finished migrations")

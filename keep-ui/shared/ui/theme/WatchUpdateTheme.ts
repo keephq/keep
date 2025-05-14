@@ -9,9 +9,12 @@ export function WatchUpdateTheme() {
   const [isLocalStorageReady, setIsLocalStorageReady] = useState(false);
 
   const setThemeClassName = (isDark: boolean) => {
-    document.documentElement.classList[isDark ? "add" : "remove"](
-      "workaround-dark"
-    );
+    // Use a more controlled approach to avoid hydration issues
+    if (isDark) {
+      document.documentElement.classList.add("workaround-dark");
+    } else {
+      document.documentElement.classList.remove("workaround-dark");
+    }
   };
 
   const updateThemeIfSystem = useCallback(
@@ -19,7 +22,10 @@ export function WatchUpdateTheme() {
       if (theme !== null) {
         return;
       }
-      setThemeClassName(e.matches);
+      // Only update after initial render to avoid hydration issues
+      requestAnimationFrame(() => {
+        setThemeClassName(e.matches);
+      });
     },
     [theme]
   );
@@ -34,13 +40,24 @@ export function WatchUpdateTheme() {
   }, [updateThemeIfSystem]);
 
   useEffect(() => {
+    // Only run this effect on the client side after hydration
+    if (typeof window === 'undefined') return;
+
     // watch for theme preference changes and update if system selected and localstorage is ready
     setIsLocalStorageReady(true);
-    if (theme !== null || !isLocalStorageReady) {
-      return;
-    }
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    setThemeClassName(mediaQuery.matches);
+
+    // Use requestAnimationFrame to ensure we run after React hydration
+    requestAnimationFrame(() => {
+      if (theme === 'dark') {
+        setThemeClassName(true);
+      } else if (theme === 'light') {
+        setThemeClassName(false);
+      } else if (isLocalStorageReady) {
+        // If theme is null (system preference), check the system preference
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        setThemeClassName(mediaQuery.matches);
+      }
+    });
   }, [theme, isLocalStorageReady]);
 
   return null;

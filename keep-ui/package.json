@@ -6,7 +6,7 @@
   "scripts": {
     "build-monaco-workers": "node scripts/build-monaco-workers-turbopack.js",
     "build": "./next_build.sh",
-    "dev": "npm run build-monaco-workers && next dev --turbopack -p 3000",
+    "dev": "npm run build-monaco-workers && next dev --turbopack -p 3001",
     "dev:webpack": "next dev -p 3000",
     "lint": "next lint",
     "start": "next start",
@@ -63,6 +63,7 @@
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",
     "pusher-js": "^8.4.0",
+    "quill-mention": "^6.0.2",
     "react": "19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-chrono": "^2.6.1",

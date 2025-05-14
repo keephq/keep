@@ -204,7 +204,7 @@ export const useIncidentsTableData = (
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading: !isPolling && incidentsLoading,
-    isEmptyState: defaultIncidents.count === 0,
+    isEmptyState: defaultIncidents?.count === 0,
     predictedIncidents,
     isPredictedLoading,
     facetsCel: mainCelQuery,

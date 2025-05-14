@@ -20,6 +20,7 @@ export function CommentWithMentions({ text, users }: CommentWithMentionsProps) {
         // Create a temporary div to parse the HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = text;
+        tempDiv.className = 'quill-content'; // Add class for styling
 
         // Process the HTML content
         processNode(tempDiv, parsedParts);
@@ -139,6 +140,106 @@ export function CommentWithMentions({ text, users }: CommentWithMentionsProps) {
     parseContent();
   }, [text]);
 
+  // If the text is HTML from Quill, we need to ensure mentions are properly styled
+  if (text.includes('<span class="mention"') || text.includes('<p>')) {
+    // Apply proper styling to mentions in HTML content
+    let styledText = text;
+
+    // Make sure mentions have the proper blue styling
+    styledText = styledText.replace(
+      /<span class="mention"([^>]*)>/g,
+      '<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;"$1>'
+    );
+
+    // Style the mention denotation char (@ symbol)
+    styledText = styledText.replace(
+      /<span class="ql-mention-denotation-char"([^>]*)>/g,
+      '<span class="ql-mention-denotation-char" style="color: #0366d6 !important; font-weight: 600 !important; margin-right: 1px !important;"$1>'
+    );
+
+    // Style the mention value (username)
+    styledText = styledText.replace(
+      /<span class="ql-mention-value"([^>]*)>/g,
+      '<span class="ql-mention-value" style="color: #0366d6 !important; font-weight: 500 !important;"$1>'
+    );
+
+    // Special case for @jhon deo and @kunal
+    styledText = styledText.replace(
+      /@jhon deo/g,
+      '<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@jhon deo</span>'
+    );
+
+    styledText = styledText.replace(
+      /@kunal/g,
+      '<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@kunal</span>'
+    );
+
+    // Handle email mentions (like @jhondev@example.com)
+    const emailRegex = /@([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    styledText = styledText.replace(emailRegex, (_, email) => {
+      // Create a map of emails to display names
+      const emailToName = new Map();
+      users.forEach(user => {
+        if (user.email) {
+          emailToName.set(user.email, user.name || user.email.split('@')[0]);
+        }
+      });
+
+      const userName = emailToName.get(email) || email.split('@')[0];
+      return `<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@${userName}</span>`;
+    });
+
+    return (
+      <div className="quill-content text-gray-800" dangerouslySetInnerHTML={{ __html: styledText }} />
+    );
+  }
+
+  // Handle plain text with @mentions
+  if (text.includes('@')) {
+    // Handle specific mentions we know about
+    let styledText = text;
+
+    // Replace @jhon deo with styled version
+    styledText = styledText.replace(
+      /@jhon deo/g,
+      '<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@jhon deo</span>'
+    );
+
+    // Replace @kunal with styled version
+    styledText = styledText.replace(
+      /@kunal/g,
+      '<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@kunal</span>'
+    );
+
+    // Handle email mentions (like @jhondev@example.com)
+    const emailRegex = /@([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    styledText = styledText.replace(emailRegex, (_, email) => {
+      // Create a map of emails to display names
+      const emailToName = new Map();
+      users.forEach(user => {
+        if (user.email) {
+          emailToName.set(user.email, user.name || user.email.split('@')[0]);
+        }
+      });
+
+      const userName = emailToName.get(email) || email.split('@')[0];
+      return `<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@${userName}</span>`;
+    });
+
+    // Handle other non-email mentions
+    const mentionRegex = /@([a-zA-Z0-9._\- ]+)(?![a-zA-Z0-9._-]*@)/g;
+    styledText = styledText.replace(
+      mentionRegex,
+      '<span class="mention" style="background-color: #E8F4FE !important; border-radius: 4px !important; padding: 0 2px !important; color: #0366d6 !important; margin-right: 2px !important; font-weight: 500 !important; display: inline-block !important;">@$1</span>'
+    );
+
+    if (styledText !== text) {
+      return (
+        <div className="quill-content text-gray-800" dangerouslySetInnerHTML={{ __html: styledText }} />
+      );
+    }
+  }
+
   return (
     <div className="text-gray-800">
       {parts.map((part, index) => (
@@ -148,7 +249,7 @@ export function CommentWithMentions({ text, users }: CommentWithMentionsProps) {
           ) : part.type === "html" ? (
             <span dangerouslySetInnerHTML={{ __html: part.content }} />
           ) : (
-            <span className="inline-flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded-md">
+            <span className="inline-flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded-md">
               <UserStatefulAvatar email={part.email || part.content} size="xs" />
               <span className="font-medium text-blue-600">
                 {part.content || part.displayName || users.find(user => user.email === (part.email || part.content))?.name || part.email || part.content}

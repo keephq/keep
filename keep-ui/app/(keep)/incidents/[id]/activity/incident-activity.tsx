@@ -5,6 +5,7 @@ import { IncidentDto } from "@/entities/incidents/model";
 import { useUsers } from "@/entities/users/model/useUsers";
 import UserAvatar from "@/components/navbar/UserAvatar";
 import "./incident-activity.css";
+import "./ui/quill-mention.css";
 import {
   useIncidentAlerts,
   usePollIncidentComments,

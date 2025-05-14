@@ -23,9 +23,12 @@ export function ThemeControl({ className }: { className?: string }) {
   const updateTheme = (theme: string) => {
     setTheme(theme === "system" ? null : theme);
     if (theme !== "system") {
-      document.documentElement.classList[theme === "dark" ? "add" : "remove"](
-        "workaround-dark"
-      );
+      // Use a more controlled approach to avoid hydration issues
+      if (theme === "dark") {
+        document.documentElement.classList.add("workaround-dark");
+      } else {
+        document.documentElement.classList.remove("workaround-dark");
+      }
       // If system theme is selected, <WatchUpdateTheme /> will handle the rest
     }
   };

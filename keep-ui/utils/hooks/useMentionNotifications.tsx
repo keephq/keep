@@ -1,26 +1,30 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
-import { usePusher } from './usePusher';
+import { useWebsocket } from './usePusher';
 
 export function useMentionNotifications() {
   const { data: session } = useSession();
-  const pusher = usePusher();
+  const websocket = useWebsocket();
   const router = useRouter();
+  // Add isClient state to prevent hydration mismatch
+  const [isClient, setIsClient] = useState(false);
+
+  // Set isClient to true on component mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
-    if (!pusher || !session?.user?.email) return;
+    // Only run this effect on the client side
+    if (!isClient || !websocket || !session?.user?.email) return;
 
-    const tenantId = session.user.tenantId;
-    const userEmail = session.user.email;
-    const channelName = `private-${tenantId}-${userEmail}`;
+    // Subscribe to the websocket
+    websocket.subscribe();
 
-    // Subscribe to the user's personal channel for mentions
-    const channel = pusher.subscribe(channelName);
-
-    // Listen for mention events
-    channel.bind('incident-mention', (data: {
+    // Define the event handler
+    const handleMention = (data: {
       incident_id: string;
       mentioned_by: string;
       comment: string;
@@ -31,7 +35,7 @@ export function useMentionNotifications() {
           <p className="font-bold">You were mentioned in an incident</p>
           <p>By: {data.mentioned_by}</p>
           <p className="truncate max-w-xs">{data.comment}</p>
-          <button 
+          <button
             className="bg-blue-500 text-white px-2 py-1 rounded mt-2"
             onClick={() => router.push(`/incidents/${data.incident_id}`)}
           >
@@ -45,12 +49,15 @@ export function useMentionNotifications() {
           pauseOnHover: true,
         }
       );
-    });
+    };
+
+    // Bind the event handler
+    websocket.bind('incident-mention', handleMention);
 
     // Cleanup on unmount
     return () => {
-      channel.unbind('incident-mention');
-      pusher.unsubscribe(channelName);
+      websocket.unbind('incident-mention', handleMention);
+      websocket.unsubscribe();
     };
-  }, [pusher, session, router]);
+  }, [isClient, websocket, session, router]);
 }

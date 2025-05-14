@@ -1,0 +1,156 @@
+.ql-mention-list-container {
+  background-color: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(30, 30, 30, 0.08);
+  overflow: auto;
+  width: 270px;
+  z-index: 9001;
+}
+
+.ql-mention-loading {
+  font-size: 16px;
+  line-height: 44px;
+  padding: 0 20px;
+  vertical-align: middle;
+}
+
+.ql-mention-list {
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.ql-mention-list-item {
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 24px;
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+.ql-mention-list-item.disabled {
+  cursor: auto;
+}
+
+.ql-mention-list-item.selected {
+  background-color: #e8f4fe;
+  text-decoration: none;
+}
+
+.mention {
+  background-color: #e8f4fe !important;
+  border-radius: 4px !important;
+  margin-right: 2px !important;
+  padding: 2px 4px !important;
+  user-select: all !important;
+  color: #0366d6 !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  display: inline-block !important;
+}
+
+/* Style for the @ symbol in mentions */
+.mention .ql-mention-denotation-char {
+  color: #0366d6 !important;
+  font-weight: 600 !important;
+  margin-right: 1px !important;
+}
+
+/* Style for the user name in mentions */
+.mention .ql-mention-value {
+  color: #0366d6 !important;
+  font-weight: 500 !important;
+}
+
+/* Ensure mentions are styled in the rendered content */
+.quill-content .mention {
+  background-color: #e8f4fe !important;
+  border-radius: 4px !important;
+  padding: 2px 4px !important;
+  color: #0366d6 !important;
+  font-weight: 500 !important;
+  display: inline !important;
+}
+
+/* Additional styles to ensure mentions are visible */
+span[data-denotation-char] {
+  background-color: #e8f4fe !important;
+  border-radius: 4px !important;
+  padding: 0 2px !important;
+  color: #0366d6 !important;
+  margin-right: 2px !important;
+  font-weight: 500 !important;
+  display: inline-block !important;
+}
+
+/* Force blue color for all mentions */
+.ql-editor .mention,
+.quill-content .mention,
+span.mention {
+  background-color: #e8f4fe !important;
+  color: #0366d6 !important;
+}
+
+/* Override any conflicting styles */
+.ql-editor p span.mention,
+.quill-content p span.mention {
+  background-color: #e8f4fe !important;
+  color: #0366d6 !important;
+  display: inline-block !important;
+}
+
+/* Make sure the text around mentions is normal color */
+.quill-content {
+  color: #1F2937 !important; /* gray-800 in Tailwind */
+}
+
+/* Style for specific known mentions */
+.quill-content span:not(.mention) {
+  color: #1F2937 !important;
+  background-color: transparent !important;
+}
+
+/* Ensure the @ symbol is properly styled */
+.mention-at {
+  color: #0366d6 !important;
+  font-weight: 600 !important;
+}
+
+.mention > span {
+  margin: 0 1px;
+}
+
+/* Custom styling for the mention item in the dropdown */
+.mention-item-content {
+  display: flex;
+  align-items: center;
+}
+
+.mention-item-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #666;
+}
+
+.mention-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mention-item-name {
+  font-weight: 500;
+}
+
+.mention-item-email {
+  font-size: 12px;
+  color: #666;
+}
