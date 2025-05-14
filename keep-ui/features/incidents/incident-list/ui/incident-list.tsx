@@ -17,6 +17,7 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { Icon } from "@tremor/react";
 import {
+  KeepLoader,
   PageSubtitle,
   PageTitle,
   SeverityBorderIcon,
@@ -63,7 +64,6 @@ interface Pagination {
 }
 
 export function IncidentList({
-  initialData,
   initialFacetsData,
 }: {
   initialData?: PaginatedIncidentsDto;
@@ -88,6 +88,7 @@ export function IncidentList({
   const {
     isEmptyState,
     incidents,
+    incidentsLoading,
     incidentsError,
     predictedIncidents,
     isPredictedLoading,
@@ -231,11 +232,15 @@ export function IncidentList({
   };
 
   function renderIncidents() {
+    if (incidentsLoading) {
+      return <KeepLoader></KeepLoader>;
+    }
+
     if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
           filterCel={facetsCel}
-          incidents={incidents}
+          incidents={incidents as PaginatedIncidentsDto}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
           setSorting={setIncidentsSorting}

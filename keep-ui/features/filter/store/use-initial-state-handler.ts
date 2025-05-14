@@ -9,6 +9,7 @@ export function useInitialStateHandler(store: StoreApi<FacetState>) {
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const patchFacetsState = useStore(store, (state) => state.patchFacetsState);
   const facetsState = useStore(store, (state) => state.facetsState);
+
   const facetsStateRef = useRef(facetsState);
   facetsStateRef.current = facetsState;
 
@@ -21,7 +22,14 @@ export function useInitialStateHandler(store: StoreApi<FacetState>) {
     (state) => state.setIsInitialStateHandled
   );
 
-  const [areFacetOptionsHandled, setAreFacetOptionsHandled] = useState(false);
+  const areFacetOptionsHandled = useStore(
+    store,
+    (state) => state.areFacetOptionsHandled
+  );
+  const setAreFacetOptionsHandled = useStore(
+    store,
+    (state) => state.setAreFacetOptionsHandled
+  );
 
   useEffect(() => {
     if (isInitialStateHandled || !facets || !facetsConfig) {

@@ -29,6 +29,9 @@ export type FacetState = {
   patchFacetsState: (facetsStatePatch: Record<string, any>) => void;
   setFacetState: (facetId: string, state: any) => void;
 
+  areFacetOptionsHandled: boolean;
+  setAreFacetOptionsHandled: (areFacetOptionsHandled: boolean) => void;
+
   facetsStateRefreshToken: string | null;
 
   areQueryparamsSet: boolean;
@@ -37,7 +40,6 @@ export type FacetState = {
   isInitialStateHandled: boolean;
   setIsInitialStateHandled: (isInitialStateHandled: boolean) => void;
 
-  clearFiltersToken: string | null;
   clearFilters: () => void;
 
   changedFacetId: string | null;
@@ -100,6 +102,12 @@ export const createFacetStore = () =>
       });
     },
 
+    areFacetOptionsHandled: false,
+    setAreFacetOptionsHandled: (areFacetOptionsHandled) =>
+      set({
+        areFacetOptionsHandled,
+      }),
+
     facetsStateRefreshToken: null,
 
     areQueryparamsSet: false,
@@ -110,10 +118,12 @@ export const createFacetStore = () =>
     setIsInitialStateHandled: (isInitialStateHandled: boolean) =>
       set({ isInitialStateHandled }),
 
-    clearFiltersToken: null,
     clearFilters: () => {
       return set({
-        clearFiltersToken: uuidV4(),
+        isInitialStateHandled: false,
+        facetsState: {},
+        facetsStateRefreshToken: uuidV4(),
+        areFacetOptionsHandled: false,
       });
     },
 

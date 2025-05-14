@@ -89,24 +89,6 @@ export const Facet: React.FC<FacetProps> = ({
   }, [options, facetState]);
 
   useEffect(() => {
-    if (clearFiltersToken && facetRef.current && optionsRef.current) {
-      const facetState: string[] = [];
-
-      if (facetConfig?.checkedByDefaultOptionValues) {
-        facetConfig.checkedByDefaultOptionValues.forEach((optionValue) => {
-          facetState.push(valueToString(optionValue));
-        });
-      } else {
-        optionsRef.current.forEach((option) => {
-          facetState.push(valueToString(option.value));
-        });
-      }
-
-      setFacetState(facet.id, toFacetState(facetState));
-    }
-  }, [clearFiltersToken, setFacetState, facet.id]);
-
-  useEffect(() => {
     setIsLoaded(!!options); // Sync prop change with state
 
     if (isLoading && options) {

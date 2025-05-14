@@ -78,8 +78,6 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
 
   function updateIncidentsCelDateRange() {
     const dateRangeCel = getDateRangeCel();
-    setIsPolling(true);
-
     setDateRangeCel(dateRangeCel);
 
     if (dateRangeCel) {
@@ -116,11 +114,15 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     const refreshInterval = Math.max((responseTimeMs || 1000) * 2, 6000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
+        setIsPolling(true);
         updateIncidentsCelDateRange();
       }
     }, refreshInterval);
     return () => clearInterval(interval);
   }, [isPaused, shouldRefreshDate]);
+  useEffect(() => {
+    setIsPolling(false);
+  }, [JSON.stringify(query)]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = ["is_candidate == false", dateRangeCel];
@@ -197,9 +199,14 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     );
   }, [isPaused, incidentsLoading, paginatedIncidentsFromHook]);
 
+  useEffect(() => {
+    console.log("Ihor IsPolling", isPolling);
+  }, [isPolling]);
+
   return {
     incidents: paginatedIncidentsToReturn,
-    incidentsLoading: !isPolling && incidentsLoading,
+    incidentsLoading:
+      (!isPolling && incidentsLoading) || !paginatedIncidentsToReturn,
     isEmptyState: defaultIncidents?.count === 0,
     predictedIncidents,
     isPredictedLoading,

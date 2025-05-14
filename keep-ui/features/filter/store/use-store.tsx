@@ -22,10 +22,6 @@ export function useNewFacetStore(facetsConfig: FacetsConfig | undefined) {
 
   const facetsState = useStore(storeRef.current, (state) => state.facetsState);
 
-  useEffect(() => {
-    console.log("Ihor", facetsState);
-  }, [facetsState]);
-
   return storeRef.current;
 }
 
