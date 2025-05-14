@@ -14,6 +14,7 @@ import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { PostHogPageView } from "@/shared/ui/PostHogPageView";
 import { MentionNotificationsProvider } from "./MentionNotificationsProvider";
+import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 
 // If loading a variable font, you don't need to specify the font weight
 const mulish = Mulish({
