@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
-import { Button, Subtitle, Text } from "@tremor/react";
+import { Button, Text } from "@tremor/react";
 import { TextInput } from "@/components/ui";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { JsonCard } from "@/shared/ui/JsonCard";
-import { buildNestedObject } from "../lib/buildNestedObject";
+import { buildNestedObject } from "@/shared/lib/buildNestedObject";
+import {
+  AlertWorkflowRunPayload,
+  IncidentWorkflowRunPayload,
+} from "@/features/workflows/manual-run-workflow/model/types";
 
 const getAlertPayload = (
   dynamicFields: Field[],
@@ -42,14 +46,27 @@ interface Field {
 
 type Payload = Record<string, any>;
 
-interface WorkflowAlertIncidentDependenciesFormProps {
-  type: "alert" | "incident";
+interface WorkflowAlertDependenciesFormProps {
+  type: "alert";
   dependencies: string[];
   staticFields: Field[];
   submitLabel?: string;
   onCancel: () => void;
-  onSubmit: (payload: Payload) => void;
+  onSubmit: (payload: AlertWorkflowRunPayload) => void;
 }
+
+type WorkflowIncidentDependenciesFormProps = {
+  type: "incident";
+  dependencies: string[];
+  staticFields: Field[];
+  submitLabel?: string;
+  onCancel: () => void;
+  onSubmit: (payload: IncidentWorkflowRunPayload) => void;
+};
+
+type WorkflowDependenciesFormProps =
+  | WorkflowAlertDependenciesFormProps
+  | WorkflowIncidentDependenciesFormProps;
 
 export function WorkflowAlertIncidentDependenciesForm({
   type,
@@ -58,7 +75,7 @@ export function WorkflowAlertIncidentDependenciesForm({
   onCancel,
   onSubmit,
   submitLabel = "Continue",
-}: WorkflowAlertIncidentDependenciesFormProps) {
+}: WorkflowDependenciesFormProps) {
   const [dynamicFields, setDynamicFields] = useState<Field[]>([]);
   const [fieldErrors, setFieldErrors] = useState<
     Record<number, { key: boolean; value: boolean }>
@@ -176,14 +193,25 @@ export function WorkflowAlertIncidentDependenciesForm({
       dependencyValues,
       staticFields
     );
-    onSubmit(payload);
+
+    if (type === "alert") {
+      onSubmit({ type, body: payload } as AlertWorkflowRunPayload);
+    } else if (type === "incident") {
+      onSubmit({ type, body: payload } as IncidentWorkflowRunPayload);
+    } else {
+      throw new Error("Invalid type");
+    }
   };
 
   const keyClassName = "w-2/6 font-mono";
   const valueClassName = "flex-1 font-mono";
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={handleSubmit}
+      data-testid={`wf-${type}-dependencies-form`}
+    >
       <header>
         <Text className="font-bold">
           Build {type === "alert" ? "Alert" : "Incident"} payload required to
@@ -237,6 +265,7 @@ export function WorkflowAlertIncidentDependenciesForm({
                     disabled
                   />
                   <TextInput
+                    name={dependencyName}
                     placeholder="value"
                     value={
                       typeof dependencyValues[dependencyName] === "string"
@@ -255,6 +284,7 @@ export function WorkflowAlertIncidentDependenciesForm({
               <div key={index} className="flex items-center gap-2 mb-2">
                 <TextInput
                   placeholder="key"
+                  name={"key-" + field.key}
                   value={field.key}
                   className={keyClassName}
                   onChange={(e) =>
@@ -263,6 +293,7 @@ export function WorkflowAlertIncidentDependenciesForm({
                   error={fieldErrors[index]?.key}
                 />
                 <TextInput
+                  name={field.key}
                   placeholder="value"
                   value={
                     typeof field.value === "string"
@@ -314,6 +345,7 @@ export function WorkflowAlertIncidentDependenciesForm({
           variant="primary"
           color="orange"
           disabled={!isValid}
+          data-testid={`wf-${type}-dependencies-form-submit`}
         >
           {submitLabel}
         </Button>

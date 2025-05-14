@@ -53,6 +53,23 @@ from tests.e2e_tests.utils import (
 #    - Copy the generated code to a new test function.
 
 
+def close_all_toasts(page: Page):
+    # First check if there are any toasts
+    if page.locator(".Toastify__close-button").count() == 0:
+        return
+
+    # Try to close toasts with a shorter timeout and handle failures gracefully
+    while page.locator(".Toastify__close-button").count() > 0:
+        try:
+            # Use first() to get the first toast and wait for it to be stable
+            close_button = page.locator(".Toastify__close-button").first
+            if close_button.is_visible():
+                close_button.click(timeout=1000)
+        except Exception:
+            # If clicking fails (e.g. button disappeared), continue to next toast
+            continue
+
+
 def test_sanity(browser: Page):  # browser is actually a page object
     log_entries = []
     setup_console_listener(browser, log_entries)
@@ -374,7 +391,7 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
     try:
         init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create Workflow").click()
+        page.get_by_role("button", name="Start from scratch").click()
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
@@ -416,7 +433,17 @@ def test_test_run_workflow(browser: Page):
     try:
         init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create Workflow").click()
+        page.wait_for_url("**/workflows")
+        page.wait_for_timeout(500)
+
+        if page.locator('[data-testid="workflows-exist-state"]').is_visible():
+            page.get_by_role("button", name="Create workflow").click()
+            page.get_by_role("button", name="Start from scratch").click()
+        elif page.locator('[data-testid="no-workflows-state"]').is_visible():
+            page.get_by_role("button", name="Start from scratch").click()
+        else:
+            raise Exception("Unknown state is visible for workflows page")
+
         page.wait_for_url("http://localhost:3000/workflows/builder")
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
@@ -607,4 +634,94 @@ def test_yaml_editor_yaml_invalid(browser: Page):
 
     except Exception:
         save_failure_artifacts(browser, log_entries)
+        raise
+
+
+def test_workflow_inputs(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-inputs-alert.yaml")
+        page.get_by_role("button", name="Upload")
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        page.get_by_test_id("wf-run-now-button").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_role("button", name="Run", exact=True).click()
+        alert_dependencies_form = page.get_by_test_id("wf-alert-dependencies-form")
+        expect(alert_dependencies_form).to_be_visible()
+        alert_dependencies_form.locator("input[name='name']").fill("GrafanaDown")
+        alert_dependencies_form.get_by_test_id(
+            "wf-alert-dependencies-form-submit"
+        ).click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
+        page.get_by_role("button", name="Running action echo 0s").click()
+        expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
+            "Input Nodefault: shalom"
+        )
+        expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
+            "Alert Name: GrafanaDown"
+        )
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_workflow_unsaved_changes(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files("./tests/e2e_tests/workflow-inputs.yaml")
+        page.get_by_role("button", name="Upload")
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        page.get_by_role("tab", name="Builder").click()
+        page.locator("[data-testid='workflow-node']").filter(has_text="echo").click()
+        page.get_by_test_id("wf-editor-step-name-input").click()
+        page.get_by_test_id("wf-editor-step-name-input").fill("echo-test")
+        page.wait_for_timeout(300)
+        page.get_by_test_id("wf-run-now-button").click()
+        unsaved_ui_form = page.get_by_test_id("wf-ui-unsaved-changes-form")
+        expect(unsaved_ui_form).to_be_visible()
+        unsaved_ui_form.get_by_test_id("wf-unsaved-changes-save-and-run").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_role("button", name="Run", exact=True).click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
+        log_step = page.get_by_role("button", name="Running action echo-test")
+        expect(log_step).to_be_visible()
+        close_all_toasts(page)
+        page.get_by_role("link", name="Workflow Details").click()
+        page.get_by_role("tab", name="YAML Definition").click()
+        page.get_by_test_id("wf-detail-yaml-editor").get_by_label(
+            "Editor content"
+        ).fill("random string")
+        page.get_by_test_id("wf-run-now-button").click()
+        yaml_unsaved_form = page.get_by_test_id("wf-yaml-unsaved-changes-form")
+        expect(yaml_unsaved_form).to_be_visible()
+        yaml_unsaved_form.get_by_test_id("wf-unsaved-changes-discard-and-run").click()
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_test_id("wf-inputs-form-submit").click()
+        page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
+    except Exception:
+        save_failure_artifacts(page, log_entries)
         raise
