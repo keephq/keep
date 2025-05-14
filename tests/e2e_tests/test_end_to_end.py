@@ -391,7 +391,7 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
     try:
         init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create Workflow").click()
+        page.get_by_role("button", name="Start from scratch").click()
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
         page.get_by_placeholder("Set the name").fill("Example Console Workflow")
@@ -433,7 +433,17 @@ def test_test_run_workflow(browser: Page):
     try:
         init_e2e_test(browser, next_url="/signin")
         page.get_by_role("link", name="Workflows").click()
-        page.get_by_role("button", name="Create Workflow").click()
+        page.wait_for_url("**/workflows")
+        page.wait_for_timeout(500)
+
+        if page.locator('[data-testid="workflows-exist-state"]').is_visible():
+            page.get_by_role("button", name="Create workflow").click()
+            page.get_by_role("button", name="Start from scratch").click()
+        elif page.locator('[data-testid="no-workflows-state"]').is_visible():
+            page.get_by_role("button", name="Start from scratch").click()
+        else:
+            raise Exception("Unknown state is visible for workflows page")
+
         page.wait_for_url("http://localhost:3000/workflows/builder")
         page.get_by_placeholder("Set the name").click()
         page.get_by_placeholder("Set the name").press("ControlOrMeta+a")
