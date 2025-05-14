@@ -1,6 +1,6 @@
 import { getYamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
 import { parseWorkflowYamlToJSON } from "../yaml-utils";
-import { mockProviders } from "../provider-mocks";
+import { mockProviders } from "@/entities/providers/model/__mocks__/provider-mocks";
 
 const workflowSchemaWithProviders =
   getYamlWorkflowDefinitionSchema(mockProviders);

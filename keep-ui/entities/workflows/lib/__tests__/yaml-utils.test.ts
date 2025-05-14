@@ -3,7 +3,7 @@ import {
   getOrderedWorkflowYamlString,
   parseWorkflowYamlToJSON,
 } from "../yaml-utils";
-import { mockProviders } from "../provider-mocks";
+import { mockProviders } from "@/entities/providers/model/__mocks__/provider-mocks";
 
 const unorderedClickhouseExampleYaml = `
 workflow:
