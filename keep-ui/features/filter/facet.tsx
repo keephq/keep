@@ -8,13 +8,13 @@ import { FacetValue } from "./facet-value";
 import { FacetConfig, FacetDto, FacetOptionDto, FacetState } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useExistingFacetStore } from "./store";
+import { stringToValue, toFacetState, valueToString } from "./store/utils";
 
 export interface FacetProps {
   facet: FacetDto;
   isOpenByDefault?: boolean;
   options?: FacetOptionDto[];
   showIcon?: boolean;
-  facetConfig?: FacetConfig;
   onLoadOptions?: () => void;
   onDelete?: () => void;
 }
@@ -25,18 +25,7 @@ export const Facet: React.FC<FacetProps> = ({
   showIcon = true,
   onLoadOptions,
   onDelete,
-  facetConfig,
 }) => {
-  function getInitialFacetState(): string[] {
-    if (facetConfig?.checkedByDefaultOptionValues) {
-      return facetConfig.checkedByDefaultOptionValues.map((value) =>
-        valueToString(value)
-      );
-    }
-
-    return [];
-  }
-
   const pathname = usePathname();
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
@@ -50,7 +39,6 @@ export const Facet: React.FC<FacetProps> = ({
   optionsRef.current = options;
   const facetRef = useRef(facet);
   facetRef.current = facet;
-  const [isInitialized, setIsInitialized] = useState(false);
   const clearFiltersToken = useExistingFacetStore(
     (state) => state.clearFiltersToken
   );
@@ -67,63 +55,38 @@ export const Facet: React.FC<FacetProps> = ({
     [facet.id, facetsState]
   );
 
+  const facetsConfig = useExistingFacetStore((state) => state.facetsConfig);
+  const facetConfig = facetsConfig?.[facet.id];
+
   const facetStateRef = useRef(facetState);
   facetStateRef.current = facetState;
-
-  function valueToString(value: any): string {
-    if (typeof value === "string") {
-      /* Escape single-quote because single-quote is used for string literal mark*/
-      const optionValue = value.replace(/'/g, "\\'");
-      return `'${optionValue}'`;
-    } else if (value == null) {
-      return "null";
-    }
-
-    return `${value}`;
-  }
-
-  function toFacetState(values: string[]): Record<string, boolean> {
-    return values.reduce(
-      (acc, value) => {
-        acc[value] = true;
-        return acc;
-      },
-      {} as Record<string, boolean>
-    );
-  }
 
   function getSelectedValues(): string[] {
     return Object.keys(facetStateRef.current);
   }
 
-  useEffect(() => {
-    if (facet) {
-      setFacetState(facet.id, toFacetState(getInitialFacetState()));
-    }
-  }, [!!facet, setFacetState]);
-
-  useEffect(() => {
-    if (isInitialized || !options) {
-      return;
+  const extendedOptions = useMemo(() => {
+    if (!options) {
+      return null;
     }
 
-    if (facetConfig?.checkedByDefaultOptionValues) {
-      return;
-    }
-
-    setFacetState(
-      facet.id,
-      toFacetState(options.map((opt) => valueToString(opt.value)))
+    const result = [...options];
+    const existingOptions = new Set<string>(
+      options.map((option) => valueToString(option.value))
     );
-    setIsInitialized(true);
-  }, [
-    isInitialized,
-    setIsInitialized,
-    options,
-    facetConfig,
-    setFacetState,
-    facet.id,
-  ]);
+
+    Object.keys(facetState)
+      .filter((value) => !existingOptions.has(value))
+      .forEach((key) => {
+        result.push({
+          display_name: stringToValue(key),
+          matches_count: 0,
+          value: stringToValue(key),
+        });
+      });
+
+    return result;
+  }, [options, facetState]);
 
   useEffect(() => {
     if (clearFiltersToken && facetRef.current && optionsRef.current) {
@@ -266,7 +229,7 @@ export const Facet: React.FC<FacetProps> = ({
     }
 
     let optionsToRender =
-      options
+      extendedOptions
         ?.filter((facetOption) =>
           facetOption.display_name
             .toLocaleLowerCase()

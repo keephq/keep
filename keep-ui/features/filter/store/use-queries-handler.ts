@@ -9,7 +9,7 @@ function buildStringFacetCel(
   facetOptions: FacetOptionDto[],
   facetState: Record<string, boolean>
 ): string {
-  const values = Object.keys(facetState).filter((key) => facetState[key]);
+  const values = Object.keys(facetState || {}).filter((key) => facetState[key]);
 
   if (values.length === facetOptions?.length) {
     return "";
@@ -42,28 +42,39 @@ function buildFacetsCelState(
 
 export function useQueriesHandler(store: StoreApi<FacetState>) {
   const facetsState = useStore(store, (state) => state.facetsState);
+  const facetsStateRef = useRef(facetsState);
+  facetsStateRef.current = facetsState;
+  const facetsStateRefreshToken = useStore(
+    store,
+    (state) => state.facetsStateRefreshToken
+  );
+
   const facets = useStore(store, (state) => state.facets);
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const allFacetOptionsRef = useRef(allFacetOptions);
   allFacetOptionsRef.current = allFacetOptions;
   const setQueriesState = useStore(store, (state) => state.setQueriesState);
+  const areQueryParamsSet = useStore(store, (state) => state.areQueryparamsSet);
 
-  const [debouncedFacetsState] = useDebouncedValue(facetsState, 100);
+  const [debouncedFacetsStateRefreshToken] = useDebouncedValue(
+    facetsStateRefreshToken,
+    100
+  );
 
   const facetsCelState = useMemo(() => {
-    if (!debouncedFacetsState || !facets) {
+    if (!debouncedFacetsStateRefreshToken || !facets) {
       return null;
     }
 
     return buildFacetsCelState(
       facets,
       allFacetOptionsRef.current || {},
-      debouncedFacetsState
+      facetsStateRef.current || {}
     );
-  }, [debouncedFacetsState, setQueriesState]);
+  }, [debouncedFacetsStateRefreshToken, setQueriesState]);
 
   useEffect(() => {
-    if (!facetsCelState) {
+    if (!areQueryParamsSet || !facetsCelState) {
       return;
     }
 
@@ -89,5 +100,5 @@ export function useQueriesHandler(store: StoreApi<FacetState>) {
       .map((cel) => `(${cel})`)
       .join(" && ");
     setQueriesState(filterCel, facetOptionQueries);
-  }, [facetsCelState, facets]);
+  }, [facetsCelState, facets, areQueryParamsSet]);
 }

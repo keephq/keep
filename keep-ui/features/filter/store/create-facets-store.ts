@@ -1,8 +1,11 @@
 import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
-import { FacetDto, FacetOptionDto } from "../models";
+import { FacetDto, FacetOptionDto, FacetsConfig } from "../models";
 
 export type FacetState = {
+  facetsConfig: FacetsConfig | null;
+  setFacetsConfig: (facetsConfig: FacetsConfig) => void;
+
   facets: FacetDto[] | null;
   setFacets: (facets: FacetDto[]) => void;
 
@@ -22,7 +25,17 @@ export type FacetState = {
   ) => void;
 
   facetsState: Record<string, any>;
+
+  patchFacetsState: (facetsStatePatch: Record<string, any>) => void;
   setFacetState: (facetId: string, state: any) => void;
+
+  facetsStateRefreshToken: string | null;
+
+  areQueryparamsSet: boolean;
+  setAreQueryparamsSet: (areQueryparamsSet: boolean) => void;
+
+  isInitialStateHandled: boolean;
+  setIsInitialStateHandled: (isInitialStateHandled: boolean) => void;
 
   clearFiltersToken: string | null;
   clearFilters: () => void;
@@ -39,6 +52,9 @@ export type FacetState = {
 
 export const createFacetStore = () =>
   createStore<FacetState>((set, state) => ({
+    facetsConfig: null,
+    setFacetsConfig: (facetsConfig: FacetsConfig) => set({ facetsConfig }),
+
     facets: null,
     setFacets: (facets: FacetDto[]) => set({ facets }),
 
@@ -63,14 +79,36 @@ export const createFacetStore = () =>
       }),
 
     facetsState: {},
+    patchFacetsState: (facetsStatePatch) => {
+      set({
+        // So that it only triggers refresh when facetsState is patched once
+        facetsStateRefreshToken: state().facetsStateRefreshToken || uuidV4(),
+        facetsState: {
+          ...(state().facetsState || {}),
+          ...facetsStatePatch,
+        },
+      });
+    },
     setFacetState(facetId, facetState) {
       set({
+        // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
+        facetsStateRefreshToken: uuidV4(),
         facetsState: {
           ...(state().facetsState || {}),
           [facetId]: facetState,
         },
       });
     },
+
+    facetsStateRefreshToken: null,
+
+    areQueryparamsSet: false,
+    setAreQueryparamsSet: (areQueryparamsSet: boolean) =>
+      set({ areQueryparamsSet }),
+
+    isInitialStateHandled: false,
+    setIsInitialStateHandled: (isInitialStateHandled: boolean) =>
+      set({ isInitialStateHandled }),
 
     clearFiltersToken: null,
     clearFilters: () => {

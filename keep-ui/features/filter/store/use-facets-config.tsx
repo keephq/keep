@@ -1,11 +1,20 @@
-import { useMemo } from "react";
-import { FacetDto, FacetOptionDto, FacetsConfig } from "../models";
+import { useEffect, useMemo } from "react";
+import { FacetOptionDto, FacetsConfig } from "../models";
+import { StoreApi, useStore } from "zustand";
+import { FacetState } from "./create-facets-store";
 
 export function useFacetsConfig(
-  facets: FacetDto[],
-  facetsConfig: FacetsConfig | undefined
+  facetsConfig: FacetsConfig | undefined,
+  store: StoreApi<FacetState>
 ) {
-  const facetsConfigIdBased = useMemo(() => {
+  const facets = useStore(store, (state) => state.facets);
+  const setFacetsConfig = useStore(store, (state) => state.setFacetsConfig);
+
+  useEffect(() => {
+    if (!facets) {
+      return;
+    }
+
     const result: FacetsConfig = {};
 
     if (facets && Array.isArray(facets)) {
@@ -33,8 +42,8 @@ export function useFacetsConfig(
       });
     }
 
-    return result;
-  }, [facetsConfig, facets]);
+    console.log(result);
 
-  return facetsConfigIdBased;
+    setFacetsConfig(result);
+  }, [facetsConfig, facets, setFacetsConfig]);
 }

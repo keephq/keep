@@ -60,7 +60,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onCelChangeRef.current = onCelChange;
   const onReloadFacetOptionsRef = useRef(onReloadFacetOptions);
   onReloadFacetOptionsRef.current = onReloadFacetOptions;
-  const store = useNewFacetStore();
+  const store = useNewFacetStore(facetsConfig);
   const facetOptionQueries = useStore(
     store,
     (state) => state.queriesState.facetOptionQueries
@@ -74,7 +74,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const setFacetOptions = useStore(store, (state) => state.setFacetOptions);
   const setFacets = useStore(store, (state) => state.setFacets);
   const clearFilters = useStore(store, (state) => state.clearFilters);
-  const facetsConfigIdBased = useFacetsConfig(facets, facetsConfig);
 
   useEffect(
     () => setAreOptionsReLoading(areFacetOptionsLoading),
@@ -147,7 +146,6 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
                 key={facet.id + index}
                 facet={facet}
                 options={facetOptions?.[facet.id]}
-                facetConfig={facetsConfigIdBased[facet.id]}
                 onLoadOptions={() =>
                   onLoadFacetOptions && onLoadFacetOptions(facet.id)
                 }

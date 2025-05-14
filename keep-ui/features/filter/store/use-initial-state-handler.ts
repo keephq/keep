@@ -1,0 +1,88 @@
+import { StoreApi, useStore } from "zustand";
+import { FacetState } from "./create-facets-store";
+import { toFacetState, valueToString } from "./utils";
+import { useEffect, useState } from "react";
+
+export function useInitialStateHandler(store: StoreApi<FacetState>) {
+  const facetsConfig = useStore(store, (state) => state.facetsConfig);
+  const facets = useStore(store, (state) => state.facets);
+  const allFacetOptions = useStore(store, (state) => state.facetOptions);
+  const patchFacetsState = useStore(store, (state) => state.patchFacetsState);
+
+  const isInitialStateHandled = useStore(
+    store,
+    (state) => state.isInitialStateHandled
+  );
+  const setIsInitialStateHandled = useStore(
+    store,
+    (state) => state.setIsInitialStateHandled
+  );
+
+  const [areFacetOptionsHandled, setAreFacetOptionsHandled] = useState(false);
+
+  useEffect(() => {
+    if (isInitialStateHandled || !facets || !facetsConfig) {
+      return;
+    }
+
+    const facetsStatePatch: Record<string, any> = {};
+
+    facets.forEach((facet) => {
+      const facetConfig = facetsConfig?.[facet.id];
+
+      if (facetConfig?.checkedByDefaultOptionValues) {
+        facetsStatePatch[facet.id] = toFacetState(
+          facetConfig.checkedByDefaultOptionValues.map((value) =>
+            valueToString(value)
+          )
+        );
+      } else {
+        facetsStatePatch[facet.id] = toFacetState([]);
+      }
+    });
+
+    setIsInitialStateHandled(true);
+    patchFacetsState(facetsStatePatch);
+    setIsInitialStateHandled(true);
+  }, [
+    facetsConfig,
+    facets,
+    patchFacetsState,
+    isInitialStateHandled,
+    setIsInitialStateHandled,
+  ]);
+
+  useEffect(() => {
+    if (
+      areFacetOptionsHandled ||
+      !facets ||
+      !allFacetOptions ||
+      !facetsConfig
+    ) {
+      return;
+    }
+
+    const facetsStatePatch: Record<string, any> = {};
+
+    facets.forEach((facet) => {
+      const facetConfig = facetsConfig?.[facet.id];
+      const facetOptions = allFacetOptions?.[facet.id];
+
+      if (!facetConfig?.checkedByDefaultOptionValues) {
+        facetsStatePatch[facet.id] = toFacetState(
+          facetOptions.map((option) => valueToString(option.value))
+        );
+      }
+    });
+
+    setAreFacetOptionsHandled(true);
+    patchFacetsState(facetsStatePatch);
+  }, [
+    facets,
+    allFacetOptions,
+    facetsConfig,
+    areFacetOptionsHandled,
+    setAreFacetOptionsHandled,
+    patchFacetsState,
+  ]);
+}
