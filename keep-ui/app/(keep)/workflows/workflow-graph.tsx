@@ -30,7 +30,9 @@ Chart.register(
   Legend
 );
 
-const baseChartOptions = {
+type BarChartOptions = Parameters<typeof Bar>[0]["options"];
+
+const baseChartOptions: BarChartOptions = {
   scales: {
     x: {
       beginAtZero: true,
@@ -43,9 +45,9 @@ const baseChartOptions = {
       border: {
         display: false,
       },
+      type: "linear",
     },
     y: {
-      beginAtZero: true,
       ticks: {
         display: false,
       },
@@ -67,12 +69,12 @@ const baseChartOptions = {
   maintainAspectRatio: false,
 };
 
-const fullChartOptions = {
+const fullChartOptions: BarChartOptions = {
   ...baseChartOptions,
   scales: {
     ...baseChartOptions.scales,
     y: {
-      ...baseChartOptions.scales.y,
+      ...baseChartOptions.scales?.y,
       grid: {
         display: true,
       },
