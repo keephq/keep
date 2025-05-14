@@ -4,7 +4,7 @@ import Image from "next/image";
 import {
   Chart,
   CategoryScale,
-  LinearScale,
+  LogarithmicScale,
   BarElement,
   Title as ChartTitle,
   Tooltip,
@@ -18,19 +18,78 @@ import {
   getLabels,
   getDataValues,
   getColors,
-  chartOptions,
 } from "./workflow-utils";
 import clsx from "clsx";
+
 Chart.register(
   CategoryScale,
-  LinearScale,
+  LogarithmicScale,
   BarElement,
   ChartTitle,
   Tooltip,
   Legend
 );
 
-const show_real_data = true;
+const baseChartOptions = {
+  scales: {
+    x: {
+      beginAtZero: true,
+      ticks: {
+        display: false,
+      },
+      grid: {
+        display: false,
+      },
+      border: {
+        display: false,
+      },
+    },
+    y: {
+      beginAtZero: true,
+      ticks: {
+        display: false,
+      },
+      grid: {
+        display: false,
+      },
+      border: {
+        display: false,
+      },
+      type: "logarithmic",
+    },
+  },
+  plugins: {
+    legend: {
+      display: false,
+    },
+  },
+  responsive: true,
+  maintainAspectRatio: false,
+};
+
+const fullChartOptions = {
+  ...baseChartOptions,
+  scales: {
+    ...baseChartOptions.scales,
+    y: {
+      ...baseChartOptions.scales.y,
+      grid: {
+        display: true,
+      },
+      ticks: {
+        display: true,
+        format: {
+          // it's an integer, so no need to show decimals
+          style: "unit",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+          unit: "second",
+          unitDisplay: "narrow",
+        },
+      },
+    },
+  },
+};
 
 export default function WorkflowGraph({
   showLastExecutionStatus = true,
@@ -38,12 +97,14 @@ export default function WorkflowGraph({
   limit = 15,
   showAll,
   size = "md",
+  full = false,
 }: {
   showLastExecutionStatus?: boolean;
   workflow: Partial<Workflow>;
   limit?: number;
   size?: string;
   showAll?: boolean;
+  full?: boolean;
 }) {
   let height;
   switch (size) {
@@ -83,14 +144,9 @@ export default function WorkflowGraph({
     datasets: [
       {
         label: "Execution Time (seconds)",
-        data: getDataValues(lastExecutions, show_real_data),
-        backgroundColor: getColors(
-          lastExecutions,
-          status,
-          true,
-          show_real_data
-        ),
-        borderColor: getColors(lastExecutions, status, false, show_real_data),
+        data: getDataValues(lastExecutions),
+        backgroundColor: getColors(lastExecutions, status, true),
+        borderColor: getColors(lastExecutions, status, false),
         borderWidth: {
           top: 2,
           right: 0,
@@ -103,7 +159,7 @@ export default function WorkflowGraph({
     ],
   };
   function getIcon() {
-    if (show_real_data && hasNoData) {
+    if (hasNoData) {
       return null;
     }
 
@@ -136,7 +192,7 @@ export default function WorkflowGraph({
     }
     return icon;
   }
-  if (hasNoData && show_real_data) {
+  if (hasNoData) {
     return (
       <div
         className={clsx(
@@ -158,7 +214,10 @@ export default function WorkflowGraph({
     >
       {showLastExecutionStatus && <div>{getIcon()}</div>}
       <div className={clsx("overflow-hidden", height, "w-full")}>
-        <Bar data={chartData} options={chartOptions} />
+        <Bar
+          data={chartData}
+          options={full ? fullChartOptions : baseChartOptions}
+        />
       </div>
     </div>
   );

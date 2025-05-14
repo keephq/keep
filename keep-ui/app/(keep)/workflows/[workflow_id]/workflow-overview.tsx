@@ -134,6 +134,7 @@ export default function WorkflowOverview({
           <Card>
             <Title>Executions Graph</Title>
             <WorkflowGraph
+              full
               showLastExecutionStatus={false}
               workflow={workflow}
               limit={executionPagination.limit}
