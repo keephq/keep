@@ -1,4 +1,4 @@
-import { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
+import { WorkflowInput } from "@/entities/workflows/model/yaml.types";
 import { WorkflowInputFields } from "@/entities/workflows/ui/WorkflowInputFields";
 import { Button, Text } from "@tremor/react";
 import { useEffect, useMemo, useState } from "react";

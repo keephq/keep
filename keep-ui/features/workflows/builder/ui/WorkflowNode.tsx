@@ -19,7 +19,7 @@ import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
-import { ValidationError } from "@/entities/workflows/lib/validation";
+import { ValidationError } from "@/entities/workflows/lib/validate-definition";
 import { useConfig } from "@/utils/hooks/useConfig";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {

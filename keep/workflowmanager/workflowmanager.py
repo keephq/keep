@@ -555,7 +555,11 @@ class WorkflowManager:
             message = (
                 f"Workflow {workflow.workflow_id} failed with errors: {error_message}"
             )
-            workflow.on_failure.provider_parameters = {"message": message}
+            # TODO: maybe to set the message in step.vars instead of provider_parameters so user can format it
+            workflow.on_failure.provider_parameters = {
+                **workflow.on_failure.provider_parameters,
+                "message": message,
+            }
             workflow.on_failure.run()
             self.logger.info(
                 "Ran on_failure action for workflow",

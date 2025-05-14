@@ -3,11 +3,12 @@ import {
   EnrichDisposableKeyValueSchema,
   EnrichKeyValueSchema,
   IncidentEventEnum,
+  OnFailureSchema,
   WithSchema,
   WorkflowInputSchema,
 } from "./schema";
 import { Provider } from "@/shared/api/providers";
-import { checkProviderNeedsInstallation } from "../lib/validation";
+import { checkProviderNeedsInstallation } from "../lib/validate-definition";
 
 type ProviderMetadataForValidation = Pick<
   Provider,
@@ -66,16 +67,11 @@ const auth0LogsProvider: ProviderMetadataForValidation = {
   query_params: ["log_type", "previous_users"],
 };
 
-export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
-export type WorkflowInputType = WorkflowInput["type"];
-
-const WorkflowStrategySchema = z.enum([
+export const WorkflowStrategySchema = z.enum([
   "nonparallel_with_retry",
   "nonparallel",
   "parallel",
 ]);
-
-export type WorkflowStrategy = z.infer<typeof WorkflowStrategySchema>;
 
 const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
@@ -170,20 +166,20 @@ function getYamlProviderSchema(
     .strict();
 }
 
-const YamlThresholdConditionSchema = z
+export const YamlThresholdConditionSchema = z
   .object({
     id: z.string().optional(),
     name: z.string(),
     alias: z.string().optional(),
     type: z.literal("threshold"),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
     compare_to: z.union([z.string(), z.number()]),
     compare_type: z.enum(["gt", "lt"]).optional(),
     level: z.string().optional(),
   })
   .strict();
 
-const YamlAssertConditionSchema = z
+export const YamlAssertConditionSchema = z
   .object({
     id: z.string().optional(),
     name: z.string(),
@@ -193,8 +189,7 @@ const YamlAssertConditionSchema = z
   })
   .strict();
 
-// TODO: generate schema runtime based on the providers
-const YamlStepOrActionSchema = z
+export const YamlStepOrActionSchema = z
   .object({
     name: z.string(),
     provider: YamlProviderSchema,
@@ -207,15 +202,9 @@ const YamlStepOrActionSchema = z
       .optional(),
     foreach: z.string().optional(),
     continue: z.boolean().optional(),
+    "on-failure": OnFailureSchema.optional(),
   })
   .strict();
-
-const OnFailureSchema = z.object({
-  retry: z.object({
-    count: z.number(),
-    interval: z.number(),
-  }),
-});
 
 export const YamlWorkflowDefinitionSchema = z.object({
   workflow: z
@@ -229,7 +218,10 @@ export const YamlWorkflowDefinitionSchema = z.object({
       inputs: z.array(WorkflowInputSchema).optional(),
       consts: z.record(z.string(), z.string()).optional(),
       strategy: WorkflowStrategySchema.optional(),
-      "on-failure": OnFailureSchema.optional(),
+      "on-failure": YamlStepOrActionSchema.partial({
+        id: true,
+        name: true,
+      }).optional(),
       owners: z.array(z.string()).optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
       permissions: z.array(z.string()).optional(),
@@ -249,16 +241,12 @@ export const YamlWorkflowDefinitionSchema = z.object({
     ),
 });
 
-export type YamlWorkflowDefinition = z.infer<
-  typeof YamlWorkflowDefinitionSchema
->;
-
 export function getYamlWorkflowDefinitionSchema(
   providers: Provider[],
   { partial = false }: { partial?: boolean } = {}
 ) {
-  let stepSchema: z.ZodSchema = YamlStepOrActionSchema;
-  let actionSchema: z.ZodSchema = YamlStepOrActionSchema;
+  let stepSchema: z.ZodObject<any, any> = YamlStepOrActionSchema;
+  let actionSchema: z.ZodObject<any, any> = YamlStepOrActionSchema;
   // Only update schemas if there are providers
   const providersWithMock = [
     mockProvider,
@@ -302,7 +290,7 @@ export function getYamlWorkflowDefinitionSchema(
       permissions: z.array(z.string()).optional(),
       strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
-      "on-failure": OnFailureSchema.optional(),
+      "on-failure": actionSchema.partial({ id: true, name: true }).optional(),
       // optional will be replace on postProcess
       steps: z.array(stepSchema).optional(),
       actions: z.array(actionSchema).optional(),
