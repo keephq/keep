@@ -267,15 +267,14 @@ class SlackProvider(BaseProvider):
                         },
                     )
                     payload["token"] = self.authentication_config.access_token
-                response = requests.post(
-                    f"{SlackProvider.SLACK_API}/{method}",
-                    data={"payload": json.dumps(payload)},
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                )
-            else:
-                response = requests.post(
-                    f"{SlackProvider.SLACK_API}/{method}", data=payload
-                )
+
+            response = requests.post(
+                f"{SlackProvider.SLACK_API}/{method}", json=payload,
+                headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {self.authentication_config.access_token}",
+                },
+            )
 
             response_json = response.json()
             if not response.ok or not response_json.get("ok"):
