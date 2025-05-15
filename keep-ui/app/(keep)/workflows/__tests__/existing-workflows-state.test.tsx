@@ -1,5 +1,5 @@
 import { act, fireEvent, getByText, render } from "@testing-library/react";
-import { WorkflowsPage } from "../workflows.client";
+import { ExistingWorkflowsState } from "../existing-workflows-state";
 import { useWorkflowsV2 } from "@/entities/workflows/model/useWorkflowsV2";
 import { useWorkflowActions } from "@/entities/workflows/model/useWorkflowActions";
 import { mockWorkflow } from "@/entities/workflows/model/__mocks__/mock-workflow";
@@ -24,12 +24,19 @@ jest.mock("@/entities/workflows/model/useWorkflowActions", () => ({
   }),
 }));
 
-jest.mock("@/features/filter/facet-panel-server-side", () => ({
-  FacetsPanelServerSide: () => <div data-testid="facets-panel" />,
+jest.mock("@/features/workflows/manual-run-workflow", () => ({
+  useWorkflowRun: jest.fn(),
+  useWorkflowModals: jest.fn().mockReturnValue({
+    openInputsModal: jest.fn(),
+    openAlertDependenciesModal: jest.fn(),
+    openIncidentDependenciesModal: jest.fn(),
+    openUnsavedChangesModal: jest.fn(),
+    closeAllModals: jest.fn(),
+  }),
 }));
 
-jest.mock("@/app/(keep)/workflows/workflows-templates", () => ({
-  WorkflowTemplates: () => <div data-testid="workflow-templates" />,
+jest.mock("@/features/filter/facet-panel-server-side", () => ({
+  FacetsPanelServerSide: () => <div data-testid="facets-panel" />,
 }));
 
 describe("WorkflowsPage", () => {
@@ -45,7 +52,7 @@ describe("WorkflowsPage", () => {
       error: null,
     });
 
-    const { getByTestId } = render(<WorkflowsPage />);
+    const { getByTestId } = render(<ExistingWorkflowsState />);
 
     expect(getByTestId("workflow-list")).toBeInTheDocument();
   });
@@ -58,7 +65,7 @@ describe("WorkflowsPage", () => {
       error: null,
     });
 
-    const { getByTestId } = render(<WorkflowsPage />);
+    const { getByTestId } = render(<ExistingWorkflowsState />);
 
     await act(async () => {
       const workflowList = getByTestId("workflow-list");

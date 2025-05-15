@@ -1,3 +1,5 @@
+"use client";
+
 import { Button, Callout, Text, Title } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useEffect, useState } from "react";
@@ -17,26 +19,27 @@ import {
 } from "@/entities/workflows/model/useWorkflowsV2";
 import {
   WorkflowInputFields,
-  WorkflowInput,
   areRequiredInputsFilled,
 } from "@/entities/workflows/ui/WorkflowInputFields";
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { YamlWorkflowDefinitionSchema } from "@/entities/workflows/model/yaml.schema";
+import type { WorkflowInput } from "@/entities/workflows/model/yaml.types";
 
 interface Props {
   alert?: AlertDto | null | undefined;
   incident?: IncidentDto | null | undefined;
   workflow?: Workflow | null | undefined;
-  handleClose: () => void;
+  onClose: () => void;
   isOpen?: boolean;
-  onSubmit?: (inputs: Record<string, any>) => void;
+  onSubmit?: ({ inputs }: { inputs: Record<string, any> }) => void;
 }
 
 export function ManualRunWorkflowModal({
   alert,
   incident,
   workflow,
-  handleClose,
+  onClose,
   isOpen: propIsOpen,
   onSubmit,
 }: Props) {
@@ -68,14 +71,17 @@ export function ManualRunWorkflowModal({
     if (effectiveWorkflow?.workflow_raw) {
       try {
         // Parse workflow_raw as YAML to extract inputs
-        const parsedWorkflow = parseWorkflowYamlStringToJSON(
-          effectiveWorkflow.workflow_raw
+        const parsedWorkflow = parseWorkflowYamlToJSON(
+          effectiveWorkflow.workflow_raw,
+          YamlWorkflowDefinitionSchema
         );
-        const inputs =
-          parsedWorkflow.inputs || parsedWorkflow.workflow.inputs || [];
+        const inputs = parsedWorkflow.data?.workflow.inputs;
+        if (!inputs) {
+          return;
+        }
 
         // Add visual indicator of required status for inputs without defaults
-        const enhancedInputs = inputs.map((input: WorkflowInput) => {
+        const enhancedInputs = inputs.map((input) => {
           // Mark inputs without defaults as visually required
           if (input.default === undefined && !input.required) {
             return { ...input, visuallyRequired: true };
@@ -87,7 +93,7 @@ export function ManualRunWorkflowModal({
 
         // Initialize input values with defaults
         const initialValues: Record<string, any> = {};
-        inputs.forEach((input: WorkflowInput) => {
+        inputs.forEach((input) => {
           initialValues[input.name] =
             input.default !== undefined ? input.default : "";
         });
@@ -110,7 +116,7 @@ export function ManualRunWorkflowModal({
     }
     setWorkflowInputs([]);
     setInputValues({});
-    handleClose();
+    onClose();
   };
 
   const handleInputChange = (name: string, value: any) => {
@@ -124,7 +130,7 @@ export function ManualRunWorkflowModal({
     try {
       if (onSubmit) {
         // If onSubmit prop is provided, use it (for WorkflowDetailHeader usage)
-        onSubmit(inputValues);
+        onSubmit({ inputs: inputValues });
       } else if (effectiveWorkflow) {
         // Direct API call for alert/incident context
         const responseData = await api.post(
@@ -255,11 +261,14 @@ export function ManualRunWorkflowModal({
 
       {/* Always show workflow inputs when available - whether from direct workflow or selected workflow */}
       {workflowInputs.length > 0 ? (
-        <WorkflowInputFields
-          workflowInputs={workflowInputs}
-          inputValues={inputValues}
-          onInputChange={handleInputChange}
-        />
+        <div className="mt-4 flex flex-col gap-2">
+          <Text className="font-bold">Inputs required to run the workflow</Text>
+          <WorkflowInputFields
+            workflowInputs={workflowInputs}
+            inputValues={inputValues}
+            onInputChange={handleInputChange}
+          />
+        </div>
       ) : effectiveWorkflow ? (
         <div className="mt-4 text-center py-4">
           <Text>This workflow does not require any inputs</Text>

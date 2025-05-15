@@ -9,7 +9,7 @@ import { getBodyFromStringOrDefinitionOrObject } from "@/entities/workflows/lib/
 import { Button, ButtonProps, Callout, Title } from "@tremor/react";
 import { ExclamationCircleIcon, PlayIcon } from "@heroicons/react/24/outline";
 import { WorkflowExecutionResults } from "@/features/workflow-execution-results";
-import { WorkflowAlertIncidentDependenciesForm } from "./workflow-alert-incident-dependencies-form";
+import { WorkflowAlertIncidentDependenciesForm } from "@/entities/workflows/ui/WorkflowAlertIncidentDependenciesForm";
 import { useWorkflowTestRun } from "../model/useWorkflowTestRun";
 import { v4 as uuidv4 } from "uuid";
 

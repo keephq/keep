@@ -277,10 +277,11 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             right = right.value
 
         prop_access_node: PropertyAccessNode = left
-        self.stack.append(left)
-        self.member_access_stack.append(
-            PropertyAccessNode(path=prop_access_node.path + [str(right)])
+        new_property_access_node = PropertyAccessNode(
+            path=prop_access_node.path + [str(right)]
         )
+        self.stack.append(new_property_access_node)
+        self.member_access_stack.append(new_property_access_node)
 
     def member_object(self, tree: lark.Tree) -> None:
         raise NotImplementedError("Member object not implemented")
