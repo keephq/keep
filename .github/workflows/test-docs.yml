@@ -4,10 +4,12 @@ on:
     paths:
       - 'keep/providers/**'
       - 'docs/**'
+      - 'examples/**'
   pull_request:
     paths:
       - 'keep/providers/**'
       - 'docs/**'
+      - 'examples/**'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}-${{ github.job }}
