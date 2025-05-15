@@ -54,11 +54,13 @@ def test_db_migrations():
     with tempfile.TemporaryDirectory() as temp_dir:
         base_dir = Path(__file__).resolve().parent.parent
         os.environ["SECRET_MANAGER_DIRECTORY"] = os.path.join(temp_dir, "state")
+
         shutil.copytree(
             f"{base_dir}/keep/api/models/db/migrations",
             os.path.join(temp_dir, "migrations"),
-            ignore=shutil.ignore_patterns("versions")
+            ignore=shutil.ignore_patterns("__pycache__")
         )
+
         shutil.copy(f"{base_dir}/keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
         alembic_ini_path = os.path.join(temp_dir, "migrations", "alembic.ini")
         migrations_path = os.path.join(temp_dir, "migrations")
@@ -69,7 +71,7 @@ def test_db_migrations():
         current_revision = get_current_revision()
 
         assert current_revision is None
-        os.mkdir(os.path.join(temp_dir, "migrations", "versions"))
+        os.makedirs(os.path.join(temp_dir, "migrations", "versions"), exist_ok=True)
         # Test startup revision
         with open(os.path.join(temp_dir, "migrations", "versions", "revision1.py"), "w") as f:
             f.write(revision1)
