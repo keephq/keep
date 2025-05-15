@@ -6,6 +6,146 @@ The **Functions** in Keep Workflow Engine are utilities that can be used to mani
 
 ---
 
+## Mathematical Functions
+
+### `add`
+
+**Description:** Adds all provided numbers together. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.add(1, 2, 3) # Output: 6
+        message2: keep.add(10, 20, 30) # Output: 60
+```
+
+---
+
+### `sub`
+
+**Description:** Subtracts all subsequent numbers from the first number. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.sub(10, 2, 3) # Output: 5
+        message2: keep.sub(100, 20, 30) # Output: 50
+```
+
+---
+
+### `mul`
+
+**Description:** Multiplies all provided numbers together. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.mul(2, 3, 4) # Output: 24
+        message2: keep.mul(5, 6, 7) # Output: 210
+```
+
+---
+
+### `div`
+
+**Description:** Divides the first number by all subsequent numbers. All arguments are converted to integers. Returns an integer if the division result is whole, otherwise returns a floating-point number.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.div(10, 2) # Output: 5
+        message2: keep.div(10, 3) # Output: 3.3333333333333335
+        message3: keep.div(100, 2, 5) # Output: 10
+```
+
+---
+
+### `mod`
+
+**Description:** Calculates the remainder of dividing the first number by all subsequent numbers sequentially. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.mod(10, 3) # Output: 1
+        message2: keep.mod(100, 30, 7) # Output: 2
+```
+
+---
+
+### `exp`
+
+**Description:** Raises the first number to the power equal to the product of all subsequent numbers. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.exp(2, 3) # Output: 8
+        message2: keep.exp(2, 3, 2) # Output: 64
+```
+
+---
+
+### `fdiv`
+
+**Description:** Performs integer division of the first number by all subsequent numbers sequentially. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.fdiv(10, 3) # Output: 3
+        message2: keep.fdiv(100, 3, 2) # Output: 16
+```
+
+---
+
+### `eq`
+
+**Description:** Checks if two values are equal.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.eq(5, 5) # Output: true
+        message2: keep.eq("hello", "world") # Output: false
+        message3: keep.eq([1, 2, 3], [1, 2, 3]) # Output: true
+```
+
+---
+
 ## String Functions
 
 ### `uppercase`

@@ -1,16 +1,5 @@
-import { Title } from "@tremor/react";
 import { Select } from "@/shared/ui";
-
-export interface WorkflowInput {
-  name: string;
-  type: string;
-  description?: string;
-  default?: any;
-  required?: boolean;
-  options?: string[];
-  visuallyRequired?: boolean; // For inputs without defaults that aren't explicitly required
-}
-
+import { WorkflowInput, WorkflowInputType } from "../model/yaml.types";
 interface WorkflowInputFieldsProps {
   workflowInputs: WorkflowInput[];
   inputValues: Record<string, any>;
@@ -28,8 +17,7 @@ export function WorkflowInputFields({
 
   // Render input fields based on input type
   const renderInputField = (input: WorkflowInput) => {
-    const { name, type, description, required, visuallyRequired, options } =
-      input;
+    const { name, type, description, required, visuallyRequired } = input;
     const value = inputValues[name] !== undefined ? inputValues[name] : "";
     const isEmpty = value === undefined || value === null || value === "";
 
@@ -44,10 +32,10 @@ export function WorkflowInputFields({
     // Error state for empty fields that need values
     const hasError = isEmpty && isEffectivelyRequired;
 
-    switch (type?.toLowerCase()) {
+    switch (type) {
       case "string":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -73,7 +61,7 @@ export function WorkflowInputFields({
 
       case "number":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -101,7 +89,7 @@ export function WorkflowInputFields({
 
       case "boolean":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -126,7 +114,7 @@ export function WorkflowInputFields({
 
       case "choice":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -144,7 +132,7 @@ export function WorkflowInputFields({
                 onChange={(option) =>
                   option && onInputChange(name, option.value)
                 }
-                options={options?.map((option) => ({
+                options={input.options.map((option) => ({
                   value: option,
                   label: option,
                 }))}
@@ -161,7 +149,7 @@ export function WorkflowInputFields({
 
       default:
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -187,13 +175,11 @@ export function WorkflowInputFields({
     }
   };
 
-  return (
-    <div className="mt-4">
-      <Title className="text-lg mb-2">Workflow Inputs</Title>
-      <div className="border p-3 rounded">
-        {workflowInputs.map(renderInputField)}
-      </div>
-    </div>
+  return workflowInputs.map(({ type, ...rawInput }) =>
+    renderInputField({
+      type: type ? (type.toLowerCase() as WorkflowInputType) : "string",
+      ...rawInput,
+    } as WorkflowInput)
   );
 }
 

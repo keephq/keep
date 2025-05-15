@@ -25,7 +25,7 @@ export default function Modal({
   return (
     <Dialog open={isOpen} onClose={onClose}>
       <DialogPanel
-        className={`border-2 border-orange-300 rounded-lg ring-0 ${className}`}
+        className={`flex flex-col border-2 border-orange-300 rounded-lg ring-0 ${className}`}
       >
         {title && (
           <header className="flex flex-col mb-4">
@@ -54,7 +54,9 @@ export default function Modal({
             )}
           </header>
         )}
-        {children}
+        <div className="flex flex-col flex-1 min-h-0 overflow-auto">
+          {children}
+        </div>
       </DialogPanel>
     </Dialog>
   );

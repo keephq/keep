@@ -37,6 +37,7 @@ class GrafanaLokiProviderAuthConfig:
             "hint": "SSL verification is enabled by default",
             "type": "switch",
             "config_main_group": "authentication",
+            "config_sub_group": "basic_authentication",
         },
         default=True,
     )

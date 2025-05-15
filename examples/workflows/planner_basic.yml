@@ -13,7 +13,7 @@ workflow:
         with:
           title: "Keep HQ Task1"
           plan_id: "tAtCor_XPEmqTzVqTigCycgABz0K"
-  on-failure:
-    retry:
-      count: 2
-      interval: 2
+      on-failure:
+        retry:
+          count: 2
+          interval: 2
