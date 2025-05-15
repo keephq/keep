@@ -144,5 +144,4 @@ services:
 
 volumes:
   postgres-data:
-  backend-migrations:
   grafana-storage: {}
