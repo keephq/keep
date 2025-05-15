@@ -264,6 +264,41 @@ export const CorrelationForm = ({
             )}
           />
         </div>
+
+        <div>
+          <label
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
+            htmlFor="threshold"
+          >
+            Alerts threshold{" "}
+          </label>
+
+          <Controller
+            control={control}
+            name="threshold"
+            render={({ field: { value, onChange } }) => (
+              <TextInput
+              type="number"
+              placeholder="1"
+              className="mt-2"
+              {...register("threshold", {
+                required: {
+                  message: "Threshold is required",
+                  value: false,
+                },
+                validate: (value) => {
+                  if (value <= 0) {
+                    return "Threshold should be positive";
+                  }
+                  return true;
+                },
+              })}
+              error={isSubmitted && !!get(errors, "threshold.message")}
+              errorMessage={isSubmitted && get(errors, "threshold.message")}
+            />
+            )}
+          />
+        </div>
       </fieldset>
 
       <div className="flex items-center space-x-2">

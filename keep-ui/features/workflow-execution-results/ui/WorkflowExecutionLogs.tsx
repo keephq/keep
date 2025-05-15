@@ -329,7 +329,10 @@ export function WorkflowExecutionLogs({
               <LogGroupAccordion
                 key={group.id ?? "" + index}
                 defaultOpen={
-                  group.status === "pending" || group.status === "failed"
+                  group.status === "pending" ||
+                  group.status === "failed" ||
+                  // If the workflow is in progress, open the last group
+                  (status === "in_progress" && index === groupedLogs.length - 1)
                 }
                 group={group}
                 isSelected={selectedStep !== null && selectedStep === group.id}

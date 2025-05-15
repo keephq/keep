@@ -93,10 +93,27 @@ workflow:
   disabled: false
   triggers:
     - type: manual
-  inputs: []
+  inputs:
+    - name: message
+      description: The message to log to the console
+      type: string
+      default: Hey
+    - name: topic
+      description: The topic to send the message to
+      type: choice
+      options:
+        - warning
+        - error
+      default: warning
   consts: {}
   owners: []
   services: []
+  on-failure:
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      with:
+        message: "Error in victoriametrics-step: {{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
   steps:
     - name: gcp-monitoring-step
       provider:
@@ -115,6 +132,9 @@ workflow:
         with:
           query: avg(rate(process_cpu_seconds_total))
           queryType: query
+      on-failure:
+        retry:
+          count: 1
   actions:
     - name: trigger-slack-gcp
       foreach: "{{ steps.gcp-monitoring-step.results.data.result }}"
@@ -497,18 +517,18 @@ workflow:
 
       const result = getYamlWorkflowDefinition(
         workflowDefinition
-      ) as YamlWorkflowDefinition;
+      ) as YamlWorkflowDefinition["workflow"];
 
       expect(result.id).toBe("test-workflow");
       expect(result.name).toBe("Test Workflow");
       expect(result.steps).toHaveLength(2);
       expect(result.actions).toHaveLength(1);
-      expect(result.steps[0].name).toBe("clickhouse-step");
+      expect(result.steps?.[0].name).toBe("clickhouse-step");
       expect(result.actions![0].name).toBe("ntfy-action");
       expect(result.actions![0].condition).toHaveLength(1);
       expect(result.actions![0].condition![0].type).toBe("threshold");
-      expect(result.steps[1].name).toBe("Console");
-      expect(result.steps[1].foreach).toBe(
+      expect(result.steps?.[1].name).toBe("Console");
+      expect(result.steps?.[1].foreach).toBe(
         "{{ steps.clickhouse-step.results.items }}"
       );
     });
@@ -585,7 +605,7 @@ workflow:
 
       const result = getYamlWorkflowDefinition(
         workflowDefinition
-      ) as YamlWorkflowDefinition;
+      ) as YamlWorkflowDefinition["workflow"];
 
       expect(result.id).toBe("test-workflow");
       expect(result.actions).toHaveLength(1);

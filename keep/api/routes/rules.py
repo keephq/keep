@@ -34,6 +34,7 @@ class RuleCreateDto(BaseModel):
     incidentPrefix: str = None
     multiLevel: bool = False
     multiLevelPropertyName: str = None
+    threshold: int = 1
 
 
 @router.get(
@@ -92,6 +93,7 @@ async def create_rule(
     incident_prefix = rule_create_request.incidentPrefix
     multi_level = rule_create_request.multiLevel
     multi_level_property_name = rule_create_request.multiLevelPropertyName
+    threshold = rule_create_request.threshold
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -118,6 +120,9 @@ async def create_rule(
     if not create_on:
         raise HTTPException(status_code=400, detail="createOn is required")
 
+    if not threshold:
+        raise HTTPException(status_code=400, detail="threshold is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -138,6 +143,7 @@ async def create_rule(
         incident_prefix=incident_prefix,
         multi_level=multi_level,
         multi_level_property_name=multi_level_property_name,
+        threshold=threshold,
     )
     logger.info("Rule created")
     return rule
@@ -193,6 +199,7 @@ async def update_rule(
         incident_prefix = body.get("incidentPrefix", None)
         multi_level = body.get("multiLevel", False)
         multi_level_property_name = body.get("multiLevelPropertyName", None)
+        threshold = body.get("threshold", 1)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -225,6 +232,9 @@ async def update_rule(
     if not create_on:
         raise HTTPException(status_code=400, detail="createOn is required")
 
+    if not threshold:
+        raise HTTPException(status_code=400, detail="threshold is required")
+
     rule = update_rule_db(
         tenant_id=tenant_id,
         rule_id=rule_id,
@@ -245,6 +255,7 @@ async def update_rule(
         incident_prefix=incident_prefix,
         multi_level=multi_level,
         multi_level_property_name=multi_level_property_name,
+        threshold=threshold,
     )
 
     if rule:

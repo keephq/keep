@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useWorkflowStore } from "@/entities/workflows";
 import clsx from "clsx";
-import { ValidationError } from "@/entities/workflows/lib/validation";
+import { ValidationError } from "@/entities/workflows/lib/validate-definition";
 
 function ErrorList({
   validationErrors,
