@@ -50,8 +50,8 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useIncidentsTableData } from "./useIncidentsTableData";
 import EnhancedDateRangePickerV2, {
   AllTimeFrame,
-  TimeFrameV2,
 } from "@/components/ui/DateRangePickerV2";
+import { useTimeframeState } from "@/components/ui/useTimeframeState";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -80,10 +80,13 @@ export function IncidentList({
 
   const [filterCel, setFilterCel] = useState<string>("");
 
-  const [dateRange, setDateRange] = useState<TimeFrameV2>({
-    type: "all-time",
-    isPaused: false,
-  } as AllTimeFrame);
+  const [dateRange, setDateRange] = useTimeframeState({
+    enableQueryParams: true,
+    defaultTimeframe: {
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame,
+  });
 
   const {
     isEmptyState,

@@ -75,6 +75,7 @@ import EnhancedDateRangePickerV2, {
   TimeFrameV2,
 } from "@/components/ui/DateRangePickerV2";
 import { AlertsTableDataQuery } from "./useAlertsTableData";
+import { useTimeframeState } from "@/components/ui/useTimeframeState";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -150,10 +151,13 @@ export function AlertTableServerSide({
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
   const { theme } = useAlertTableTheme();
-  const [timeFrame, setTimeFrame] = useState<TimeFrameV2>({
-    type: "all-time",
-    isPaused: false,
-  } as AllTimeFrame);
+  const [timeFrame, setTimeFrame] = useTimeframeState({
+    enableQueryParams: true,
+    defaultTimeframe: {
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame,
+  });
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
