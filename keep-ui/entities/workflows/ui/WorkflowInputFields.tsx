@@ -1,6 +1,5 @@
-import { Title } from "@tremor/react";
 import { Select } from "@/shared/ui";
-import { WorkflowInput, WorkflowInputType } from "../model/yaml.schema";
+import { WorkflowInput, WorkflowInputType } from "../model/yaml.types";
 interface WorkflowInputFieldsProps {
   workflowInputs: WorkflowInput[];
   inputValues: Record<string, any>;
@@ -36,7 +35,7 @@ export function WorkflowInputFields({
     switch (type) {
       case "string":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -62,7 +61,7 @@ export function WorkflowInputFields({
 
       case "number":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -90,7 +89,7 @@ export function WorkflowInputFields({
 
       case "boolean":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -115,7 +114,7 @@ export function WorkflowInputFields({
 
       case "choice":
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -150,7 +149,7 @@ export function WorkflowInputFields({
 
       default:
         return (
-          <div key={name} className="mb-4">
+          <div key={name}>
             <label className="block text-sm font-medium mb-1">
               {name} {requiredIndicator}
             </label>
@@ -176,18 +175,11 @@ export function WorkflowInputFields({
     }
   };
 
-  return (
-    <div className="mt-4">
-      <Title className="text-lg mb-2">Workflow Inputs</Title>
-      <div className="border p-3 rounded">
-        {workflowInputs.map(({ type, ...rawInput }) =>
-          renderInputField({
-            type: type ? (type.toLowerCase() as WorkflowInputType) : "string",
-            ...rawInput,
-          } as WorkflowInput)
-        )}
-      </div>
-    </div>
+  return workflowInputs.map(({ type, ...rawInput }) =>
+    renderInputField({
+      type: type ? (type.toLowerCase() as WorkflowInputType) : "string",
+      ...rawInput,
+    } as WorkflowInput)
   );
 }
 

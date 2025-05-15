@@ -138,22 +138,24 @@ class RulesEngine:
                                 rule_groups = self._extract_subrules(
                                     rule.definition_cel
                                 )
-
-                                if not rule.require_approve:
-                                    if rule.create_on == "any" or (
-                                        rule.create_on == "all"
-                                        and len(rule_groups) == len(matched_rules)
-                                    ):
-                                        self.logger.info(
-                                            "Single event is enough, so creating incident"
-                                        )
-                                        incident.is_visible = True
-                                    elif rule.create_on == "all":
-                                        incident = (
-                                            self._process_event_for_history_based_rule(
-                                                incident, rule, session
+                                firing_count = sum([alert.event.get("firingCounter", 1) for alert in incident.alerts])
+                                alerts_count = max(incident.alerts_count, firing_count)
+                                if alerts_count >= rule.threshold:
+                                    if not rule.require_approve:
+                                        if rule.create_on == "any" or (
+                                            rule.create_on == "all"
+                                            and len(rule_groups) == len(matched_rules)
+                                        ):
+                                            self.logger.info(
+                                                "Single event is enough, so creating incident"
                                             )
-                                        )
+                                            incident.is_visible = True
+                                        elif rule.create_on == "all":
+                                            incident = (
+                                                self._process_event_for_history_based_rule(
+                                                    incident, rule, session
+                                                )
+                                            )
 
                                 send_created_event = incident.is_visible
 
@@ -266,9 +268,9 @@ class RulesEngine:
                 },
             )
             alerts = existed_incident.alerts
-            vairables = self.get_vaiables(rule.incident_name_template)
+            variables = self.get_vaiables(rule.incident_name_template)
             values = set()
-            for var in vairables:
+            for var in variables:
                 var_to_replace = ""
                 alerts_dtos = convert_db_alerts_to_dto_alerts(alerts)
                 for alert in alerts_dtos:
@@ -306,13 +308,13 @@ class RulesEngine:
         if event.status == AlertStatus.FIRING.value:
             if rule.incident_name_template:
                 incident_name = copy.copy(rule.incident_name_template)
-                vairables = self.get_vaiables(rule.incident_name_template)
-                if not vairables:
+                variables = self.get_vaiables(rule.incident_name_template)
+                if not variables:
                     self.logger.warning(
                         f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
                     )
                     incident_name = None
-                for var in vairables:
+                for var in variables:
                     value = self.get_value_from_event(event, var)
                     pattern = r"\{\{\s*" + re.escape(var) + r"\s*\}\}"
                     incident_name = re.sub(pattern, value, incident_name)
