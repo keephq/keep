@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
+from sqlalchemy import CheckConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
 # Currently a rule_definition is a list of SQL expressions
@@ -55,3 +56,4 @@ class Rule(SQLModel, table=True):
     incident_prefix: str | None = None
     multi_level: bool = False
     multi_level_property_name: str | None = None
+    threshold: int = Field(sa_column_args=(CheckConstraint("threshold>0"),), default=1)

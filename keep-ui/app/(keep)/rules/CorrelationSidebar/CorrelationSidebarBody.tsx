@@ -77,6 +77,7 @@ export const CorrelationSidebarBody = ({
       incidentPrefix,
       multiLevel,
       multiLevelPropertyName,
+      threshold,
     } = correlationFormData;
 
     const body = {
@@ -94,6 +95,7 @@ export const CorrelationSidebarBody = ({
       incidentPrefix,
       multiLevel,
       multiLevelPropertyName,
+      threshold,
     };
 
     try {

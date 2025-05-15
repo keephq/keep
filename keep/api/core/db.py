@@ -2156,6 +2156,7 @@ def create_rule(
     incident_prefix=None,
     multi_level=False,
     multi_level_property_name=None,
+    threshold=1,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -2177,6 +2178,7 @@ def create_rule(
             incident_prefix=incident_prefix,
             multi_level=multi_level,
             multi_level_property_name=multi_level_property_name,
+            threshold=threshold,
         )
         session.add(rule)
         session.commit()
@@ -2201,6 +2203,7 @@ def update_rule(
     incident_prefix,
     multi_level,
     multi_level_property_name,
+    threshold,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -2227,6 +2230,7 @@ def update_rule(
             rule.incident_prefix = incident_prefix
             rule.multi_level = multi_level
             rule.multi_level_property_name = multi_level_property_name
+            rule.threshold = threshold
             session.commit()
             session.refresh(rule)
             return rule
@@ -2338,7 +2342,7 @@ def create_incident_for_grouping_rule(
             rule_fingerprint=rule_fingerprint,
             is_predicted=True,
             is_candidate=rule.require_approve,
-            is_visible=rule.create_on == CreateIncidentOn.ANY.value,
+            is_visible=False,# rule.create_on == CreateIncidentOn.ANY.value,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,

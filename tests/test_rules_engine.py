@@ -1973,3 +1973,197 @@ def test_incident_prefix_multiple_incidents(db_session):
     assert (
         results[0].user_generated_name == "PROD-1 - test-rule"
     )  # Same prefix-number as first incident
+
+def test_rule_alerts_threshold(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ANY.value,
+        threshold=2,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
+    assert (
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    )
+    incident = db_session.query(Incident).first()
+    alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 1
+    assert len(incident.alerts) == 1
+    assert incident.alerts[0].id == alert_1.id
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    db_session.refresh(incident)
+    alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # And incident was official started
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+
+    db_session.refresh(incident)
+    assert incident.alerts_count == 1
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        session=db_session,
+    )
+    assert alert_count == 1
+    assert len(alerts) == 1
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    assert alert_1.fingerprint in fingerprints
+    assert alert_2.fingerprint in fingerprints
+
+
+def test_rule_multiple_alerts_with_threshold(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel='(severity == "critical") || (severity == "high")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ALL.value,
+        threshold=4
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
+    assert (
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    )
+    incident = db_session.query(Incident).first()
+    alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 1
+    assert len(incident.alerts) == 1
+    assert incident.alerts[0].id == alert_1.id
+
+    create_alert(
+        "Critical Alert 2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    db_session.refresh(incident)
+    alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # Still no incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # And still one candidate is there
+    assert (
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    )
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 2
+    assert len(incident.alerts) == 2
+    assert incident.alerts[0].id == alert_1.id
+    assert incident.alerts[1].id == alert_2.id
+
+    create_alert(
+        "High Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+        },
+    )
+
+    alert_3 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    # Still no incident yet because of threshold
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # And still one candidate is there
+    assert (
+        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    )
+
+    create_alert(
+        "High Alert 2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+        },
+    )
+
+    alert_4 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    # And incident was official started
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+
+    db_session.refresh(incident)
+    assert incident.alerts_count == 4
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        session=db_session,
+    )
+    assert alert_count == 4
+    assert len(alerts) == 4
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    assert alert_1.fingerprint in fingerprints
+    assert alert_2.fingerprint in fingerprints
+    assert alert_3.fingerprint in fingerprints
+    assert alert_4.fingerprint in fingerprints
