@@ -1,48 +1,42 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Title } from "@tremor/react";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { usePathname } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
 import { FacetValue } from "./facet-value";
-import { FacetConfig, FacetOptionDto } from "./models";
+import { FacetConfig, FacetDto, FacetOptionDto, FacetState } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useExistingFacetStore } from "./store";
 
 export interface FacetProps {
-  name: string;
+  facet: FacetDto;
   isOpenByDefault?: boolean;
-  isStatic: boolean;
   options?: FacetOptionDto[];
-  optionsLoading: boolean;
-  optionsReloading: boolean;
   showIcon?: boolean;
-  facetKey: string;
-  facetState: Set<string>;
   facetConfig?: FacetConfig;
-  onSelectOneOption?: (value: string) => void;
-  onSelectAllOptions?: () => void;
-  onSelect?: (value: string) => void;
   onLoadOptions?: () => void;
   onDelete?: () => void;
 }
 
 export const Facet: React.FC<FacetProps> = ({
-  name,
-  isStatic,
+  facet,
   options,
-  facetKey,
   showIcon = true,
-  optionsLoading,
-  optionsReloading,
-  facetState,
-  onSelect,
-  onSelectOneOption: selectOneOption,
-  onSelectAllOptions: selectAllOptions,
   onLoadOptions,
   onDelete,
-  isOpenByDefault,
   facetConfig,
 }) => {
+  function getInitialFacetState(): string[] {
+    if (facetConfig?.checkedByDefaultOptionValues) {
+      return facetConfig.checkedByDefaultOptionValues.map((value) =>
+        valueToString(value)
+      );
+    }
+
+    return [];
+  }
+
   const pathname = usePathname();
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
@@ -51,6 +45,103 @@ export const Facet: React.FC<FacetProps> = ({
   const [isOpen, setIsOpen] = useState<boolean>(true);
   const [isLoaded, setIsLoaded] = useState<boolean>(!!options?.length);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+  const facetRef = useRef(facet);
+  facetRef.current = facet;
+  const [isInitialized, setIsInitialized] = useState(false);
+  const clearFiltersToken = useExistingFacetStore(
+    (state) => state.clearFiltersToken
+  );
+  const setChangedFacetId = useExistingFacetStore(
+    (state) => state.setChangedFacetId
+  );
+  const facetOptionsLoadingState = useExistingFacetStore(
+    (state) => state.facetOptionsLoadingState
+  );
+  const setFacetState = useExistingFacetStore((state) => state.setFacetState);
+  const facetsState = useExistingFacetStore((state) => state.facetsState);
+  const facetState: Record<string, boolean> = useMemo(
+    () => facetsState?.[facet.id] || {},
+    [facet.id, facetsState]
+  );
+
+  const facetStateRef = useRef(facetState);
+  facetStateRef.current = facetState;
+
+  function valueToString(value: any): string {
+    if (typeof value === "string") {
+      /* Escape single-quote because single-quote is used for string literal mark*/
+      const optionValue = value.replace(/'/g, "\\'");
+      return `'${optionValue}'`;
+    } else if (value == null) {
+      return "null";
+    }
+
+    return `${value}`;
+  }
+
+  function toFacetState(values: string[]): Record<string, boolean> {
+    return values.reduce(
+      (acc, value) => {
+        acc[value] = true;
+        return acc;
+      },
+      {} as Record<string, boolean>
+    );
+  }
+
+  function getSelectedValues(): string[] {
+    return Object.keys(facetStateRef.current);
+  }
+
+  useEffect(() => {
+    if (facet) {
+      setFacetState(facet.id, toFacetState(getInitialFacetState()));
+    }
+  }, [!!facet, setFacetState]);
+
+  useEffect(() => {
+    if (isInitialized || !options) {
+      return;
+    }
+
+    if (facetConfig?.checkedByDefaultOptionValues) {
+      return;
+    }
+
+    setFacetState(
+      facet.id,
+      toFacetState(options.map((opt) => valueToString(opt.value)))
+    );
+    setIsInitialized(true);
+  }, [
+    isInitialized,
+    setIsInitialized,
+    options,
+    facetConfig,
+    setFacetState,
+    facet.id,
+  ]);
+
+  useEffect(() => {
+    if (clearFiltersToken && facetRef.current && optionsRef.current) {
+      const facetState: string[] = [];
+
+      if (facetConfig?.checkedByDefaultOptionValues) {
+        facetConfig.checkedByDefaultOptionValues.forEach((optionValue) => {
+          facetState.push(valueToString(optionValue));
+        });
+      } else {
+        optionsRef.current.forEach((option) => {
+          facetState.push(valueToString(option.value));
+        });
+      }
+
+      setFacetState(facet.id, toFacetState(facetState));
+    }
+  }, [clearFiltersToken, setFacetState, facet.id]);
 
   useEffect(() => {
     setIsLoaded(!!options); // Sync prop change with state
@@ -64,9 +155,44 @@ export const Facet: React.FC<FacetProps> = ({
 
   // Store filter value in localStorage per preset and facet
   const [filter, setFilter] = useLocalStorage<string>(
-    `facet-${presetName}-${facetKey}-filter`,
+    `facet-${presetName}-${facet.id}-filter`,
     ""
   );
+
+  const isOptionSelected = (optionValue: string) => {
+    const strValue = valueToString(optionValue);
+    return !!facetState[strValue];
+  };
+
+  function toggleFacetOption(value: any) {
+    const strValue = valueToString(value);
+    let selectedValues = getSelectedValues();
+
+    if (isOptionSelected(value)) {
+      selectedValues = selectedValues.filter(
+        (selectedValue) => selectedValue !== strValue
+      );
+    } else {
+      selectedValues.push(strValue);
+    }
+
+    setFacetState(facet.id, toFacetState(selectedValues));
+    setChangedFacetId(facet.id);
+  }
+
+  function selectOneFacetOption(optionValue: string): void {
+    setFacetState(facet.id, toFacetState([valueToString(optionValue)]));
+    setChangedFacetId(facet.id);
+  }
+
+  function selectAllFacetOptions() {
+    const selectedValues = Object.values(options ?? []).map((option) =>
+      valueToString(option.value)
+    );
+
+    setFacetState(facet.id, toFacetState(selectedValues));
+    setChangedFacetId(facet.id);
+  }
 
   const handleExpandCollapse = (isOpen: boolean) => {
     setIsOpen(!isOpen);
@@ -82,12 +208,9 @@ export const Facet: React.FC<FacetProps> = ({
       return false;
     }
 
-    const isSelected = !facetState.has(optionValue);
-    const restNotSelected = !!options
-      ?.filter((option) => option.display_name !== optionValue)
-      .every((option) => facetState.has(option.display_name));
-
-    return isSelected && restNotSelected;
+    return (
+      getSelectedValues().length === 1 && facetState[valueToString(optionValue)]
+    );
   }
 
   const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
@@ -109,9 +232,9 @@ export const Facet: React.FC<FacetProps> = ({
         count={facetOption.matches_count}
         showIcon={showIcon}
         isExclusivelySelected={checkIfOptionExclusievlySelected(
-          facetOption.display_name
+          facetOption.value
         )}
-        isSelected={!facetState.has(facetOption.display_name)}
+        isSelected={isOptionSelected(facetOption.value)}
         isSelectable={
           facetOption.matches_count > 0 || !!facetConfig?.canHitEmptyState
         }
@@ -125,17 +248,18 @@ export const Facet: React.FC<FacetProps> = ({
             ? () => facetConfig.renderOptionIcon!(facetOption)
             : undefined
         }
-        onToggleOption={() => onSelect && onSelect(facetOption.display_name)}
-        onSelectOneOption={(value: string) =>
-          selectOneOption && selectOneOption(value)
-        }
-        onSelectAllOptions={() => selectAllOptions && selectAllOptions()}
+        onToggleOption={() => toggleFacetOption(facetOption.value)}
+        onSelectOneOption={() => selectOneFacetOption(facetOption.value)}
+        onSelectAllOptions={() => selectAllFacetOptions()}
       />
     );
   }
 
   function renderBody() {
-    if (optionsLoading) {
+    if (
+      facetOptionsLoadingState[facet.id] === "loading" ||
+      !Object.keys(facetOptionsLoadingState).length
+    ) {
       return Array.from({ length: 3 }).map((_, index) =>
         renderSkeleton(`skeleton-${index}`)
       );
@@ -179,9 +303,9 @@ export const Facet: React.FC<FacetProps> = ({
         <div className="flex items-center space-x-2">
           <Icon className="size-5 -m-0.5 text-gray-600" />
           {isLoading && <Skeleton containerClassName="h-4 w-20" />}
-          {!isLoading && <Title className="text-sm">{name}</Title>}
+          {!isLoading && <Title className="text-sm">{facet.name}</Title>}
         </div>
-        {!isStatic && (
+        {!facet.is_static && (
           <button
             data-testid="delete-facet"
             onClick={(mouseEvent) => {
@@ -210,7 +334,7 @@ export const Facet: React.FC<FacetProps> = ({
             </div>
           )}
           <div
-            className={`max-h-60 overflow-y-auto${optionsReloading ? " pointer-events-none opacity-70" : ""}`}
+            className={`max-h-60 overflow-y-auto${facetOptionsLoadingState[facet.id] === "reloading" ? " pointer-events-none opacity-70" : ""}`}
           >
             {renderBody() as any}
           </div>

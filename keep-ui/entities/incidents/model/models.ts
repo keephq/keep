@@ -27,13 +27,12 @@ export const DefaultIncidentFilters: object = {
 };
 
 // on initial page load, we have to display only active incidents
-export const DEFAULT_INCIDENTS_CEL =
-  "is_candidate == false && !(status in ['resolved', 'deleted', 'merged'])";
-export const DEFAULT_INCIDENTS_UNCHECKED_OPTIONS = [
-  "resolved",
-  "deleted",
-  "merged",
+export const DEFAULT_INCIDENTS_CHECKED_OPTIONS = [
+  Status.Firing,
+  Status.Acknowledged,
 ];
+export const DEFAULT_INCIDENTS_CEL = `is_candidate == false && (status in [${DEFAULT_INCIDENTS_CHECKED_OPTIONS.map((opt) => "'" + opt + "'").join(", ")}])`;
+
 export const DEFAULT_INCIDENTS_SORTING = { id: "creation_time", desc: true };
 export const DEFAULT_INCIDENTS_PAGE_SIZE = 20;
 export const INCIDENT_PAGINATION_OPTIONS = [

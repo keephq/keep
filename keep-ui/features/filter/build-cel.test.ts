@@ -4,7 +4,7 @@ import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "./models";
 describe("buildCel", () => {
   const facetsConfigIdBased: FacetsConfig = {
     facet3: {
-      uncheckedByDefaultOptionValues: ["uncheckedOption5", "uncheckedOption6"],
+      checkedByDefaultOptionValues: ["uncheckedOption5", "uncheckedOption6"],
     },
     facet4: {
       canHitEmptyState: true,

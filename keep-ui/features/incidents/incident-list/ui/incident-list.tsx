@@ -43,7 +43,7 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import {
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
-  DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+  DEFAULT_INCIDENTS_CHECKED_OPTIONS,
 } from "@/entities/incidents/model/models";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useIncidentsTableData } from "./useIncidentsTableData";
@@ -151,7 +151,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
-        uncheckedByDefaultOptionValues: DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+        checkedByDefaultOptionValues: DEFAULT_INCIDENTS_CHECKED_OPTIONS,
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}

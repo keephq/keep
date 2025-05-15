@@ -357,8 +357,8 @@ def create_fake_incident(index: int):
     return {
         "assignee": "",
         "resolve_on": "all",
-        "user_generated_name": f"Incident name {index}",
-        "user_summary": f"Incident summary {index}",
+        "user_generated_name": f"Incident name {index} index",
+        "user_summary": f"Incident summary {index} index",
         "severity": severity,
     }
 
