@@ -206,10 +206,9 @@ export const AlertsRulesBuilder = ({
 
   const handleClearInput = useCallback(() => {
     setCELRules("");
+    setAppliedCel("");
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
-    onApplyFilter();
-    setAppliedCel(celRules);
     setIsValidCEL(true);
   }, [table]);
 
@@ -220,7 +219,6 @@ export const AlertsRulesBuilder = ({
   const handleSelectChange = (selectedOption: any) => {
     setCELRules(selectedOption.value);
     toggleSuggestions();
-    onApplyFilter();
   };
 
   const constructCELRules = (preset?: Preset) => {
@@ -278,19 +276,6 @@ export const AlertsRulesBuilder = ({
     }
   }, [selectedPreset, searchParams]);
 
-  // FIX: this is not working as expected on cold load, e.g. ?cel=id=="123"
-  // the filter is not applied until the user hits enter
-  useEffect(() => {
-    // This effect waits for celRules to update and applies the filter only on the initial render
-    if (isFirstRender.current && celRules.length > 0) {
-      onApplyFilter();
-      isFirstRender.current = false;
-    } else if (!selectedPreset) {
-      isFirstRender.current = false;
-    }
-    // This effect should only run when celRules updates and on initial render
-  }, [celRules]);
-
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
     const textArea = textAreaRef.current;
@@ -310,8 +295,6 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
-        onApplyFilter();
-
         setAppliedCel(celRules);
         if (showToast)
           toast.success("Condition applied", { position: "top-right" });
@@ -321,20 +304,8 @@ export const AlertsRulesBuilder = ({
 
   useEffect(() => {
     updateOutputCEL?.(celRules);
+    onCelChanges?.(celRules);
   }, [appliedCel, updateOutputCEL]);
-
-  const onApplyFilter = () => {
-    if (onCelChanges) {
-      onCelChanges(celRules);
-      return;
-    }
-
-    if (celRules.length === 0) {
-      return table?.resetGlobalFilter();
-    }
-
-    table?.setGlobalFilter(celRules);
-  };
 
   const onGenerateQuery = () => {
     setCELRules(formatQuery(query, "cel"));
