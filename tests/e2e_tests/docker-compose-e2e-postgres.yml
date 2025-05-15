@@ -43,7 +43,7 @@ services:
       - REDIS_HOST=${REDIS_HOST:-localhost}
       - ALLOW_DB_DOWNGRADE=true
     volumes:
-      - /tmp/keep-state:/tmp/keep-state
+      - backend-state:/tmp/keep-state
     depends_on:
       - keep-database
 
@@ -144,4 +144,5 @@ services:
 
 volumes:
   postgres-data:
+  backend-state:
   grafana-storage: {}
