@@ -43,7 +43,7 @@ services:
       - REDIS_HOST=${REDIS_HOST:-localhost}
       - ALLOW_DB_DOWNGRADE=true
     volumes:
-      - ./keep/app/migrations:/app/migrations
+      - backend-migrations:/app/migrations
     depends_on:
       - keep-database
 
@@ -144,4 +144,5 @@ services:
 
 volumes:
   postgres-data:
+  backend-migrations:
   grafana-storage: {}

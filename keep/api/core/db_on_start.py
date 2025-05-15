@@ -185,22 +185,14 @@ def copy_migrations(app_migrations_path, local_migrations_path):
     # Clear previous versions migrations
     for filename in os.listdir(local_migrations_path):
         file_path = os.path.join(local_migrations_path, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.remove(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            logger.error(f"Failed to delete {file_path}. Reason: {e}")
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.remove(file_path)
 
     # Copy new migrations
     for item in os.listdir(source_versions_path):
         src = os.path.join(source_versions_path, item)
         dst = os.path.join(local_migrations_path, item)
-        if os.path.isdir(src):
-            shutil.copytree(src, dst)
-        else:
-            shutil.copy2(src, dst)
+        shutil.copy(src, dst)
 
 def downgrade_db(config, expected_revision, local_migrations_path, app_migrations_path):
     """
