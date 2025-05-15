@@ -193,7 +193,7 @@ def copy_migrations(app_migrations_path, local_migrations_path):
         src = os.path.join(source_versions_path, item)
         dst = os.path.join(local_migrations_path, item)
         if os.path.isdir(src):
-            shutil.copytree(src, dst)
+            shutil.copytree(src, dst, dirs_exist_ok=True)
         else:
             shutil.copy(src, dst)
 
