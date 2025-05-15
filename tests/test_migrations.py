@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from keep.api.core.db_on_start import migrate_db, get_current_revision
@@ -50,13 +52,14 @@ from alembic.config import Config
 def test_db_migrations():
     # Create a temporary directory to act as the Alembic environment
     with tempfile.TemporaryDirectory() as temp_dir:
+        base_dir = Path(__file__).resolve().parent.parent
         os.environ["SECRET_MANAGER_DIRECTORY"] = os.path.join(temp_dir, "state")
         shutil.copytree(
-            "./keep/keep/api/models/db/migrations",
+            f"{base_dir}/keep/api/models/db/migrations",
             os.path.join(temp_dir, "migrations"),
             ignore=shutil.ignore_patterns("versions")
         )
-        shutil.copy("./keep/keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
+        shutil.copy(f"{base_dir}/keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
         alembic_ini_path = os.path.join(temp_dir, "migrations", "alembic.ini")
         migrations_path = os.path.join(temp_dir, "migrations")
 
