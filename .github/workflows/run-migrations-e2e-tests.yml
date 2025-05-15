@@ -136,7 +136,7 @@ jobs:
           if [[ "${{ inputs.is-fork }}" != "true" ]]; then
             docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
           fi
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up --build -d
 
       - name: Wait for old version services
         run: |
@@ -223,7 +223,7 @@ jobs:
 
       - name: Stop old version services
         run: |
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml stop
 
       # Phase 2: Run source version
       - name: Create docker-compose file for source version
@@ -238,7 +238,7 @@ jobs:
           if [[ "${{ inputs.is-fork }}" != "true" ]]; then
             docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml pull
           fi
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up --build -d
 
       - name: Wait for source version services
         run: |
@@ -377,12 +377,12 @@ jobs:
 
       - name: Stop source version services
         run: |
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml stop
 
       # Phase 3: Run source version without dummy migration again
       - name: Start source version services again
         run: |
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up -d
+          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml up --build -d
 
       - name: Wait for source version services again
         run: |
