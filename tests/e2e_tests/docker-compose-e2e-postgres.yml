@@ -43,7 +43,7 @@ services:
       - REDIS_HOST=${REDIS_HOST:-localhost}
       - ALLOW_DB_DOWNGRADE=true
     volumes:
-      - ./keep/app:/app
+      - ./keep/app/migrations:/app/migrations
     depends_on:
       - keep-database
 
