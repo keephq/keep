@@ -37,13 +37,13 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/app
+      - SECRET_MANAGER_DIRECTORY=/tmp
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
       - ALLOW_DB_DOWNGRADE=true
     volumes:
-      - backend-migrations:/app/migrations
+      - backend-migrations:/tmp
     depends_on:
       - keep-database
 
