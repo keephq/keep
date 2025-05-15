@@ -24,14 +24,19 @@ type WorkflowYAMLEditorState = WorkflowYAMLEditorStateValues & {
 };
 
 export const useWorkflowYAMLEditorStore = create<WorkflowYAMLEditorState>()(
-  devtools((set, get) => ({
-    ...defaultState,
-    setWorkflowId: (workflowId: string | null) => set({ workflowId }),
-    setHasUnsavedChanges: (hasUnsavedChanges: boolean) =>
-      set({ hasUnsavedChanges }),
-    setValidationErrors: (validationErrors: YamlValidationError[]) =>
-      set({ validationErrors }),
-    requestSave: () =>
-      set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
-  }))
+  devtools(
+    (set, get) => ({
+      ...defaultState,
+      setWorkflowId: (workflowId: string | null) => set({ workflowId }),
+      setHasUnsavedChanges: (hasUnsavedChanges: boolean) =>
+        set({ hasUnsavedChanges }),
+      setValidationErrors: (validationErrors: YamlValidationError[]) =>
+        set({ validationErrors }),
+      requestSave: () =>
+        set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
+    }),
+    {
+      name: "useWorkflowYAMLEditorStore",
+    }
+  )
 );

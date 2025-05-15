@@ -7,7 +7,7 @@ import { WorkflowUnsavedChangesForm } from "../ui/WorkflowUnsavedChangesForm";
 import Modal from "@/components/ui/Modal";
 import { WorkflowAlertIncidentDependenciesForm } from "@/entities/workflows/ui/WorkflowAlertIncidentDependenciesForm";
 import { WorkflowInputsForm } from "../ui/WorkflowInputsForm";
-import { WorkflowInput } from "@/entities/workflows/model/yaml.schema";
+import { WorkflowInput } from "@/entities/workflows/model/yaml.types";
 import { AlertWorkflowRunPayload, IncidentWorkflowRunPayload } from "./types";
 
 type InputsModalProps = {

@@ -358,39 +358,20 @@ export const AlertsRulesBuilder = ({
     }
   };
 
-  const onValueChange = (value: string) => {
-    setCELRules(value);
-    if (value.length === 0) {
-      setIsValidCEL(true);
-    }
+  const openSaveModal = (celExpression: string) => {
+    setPresetCEL?.(celExpression);
+    setIsModalOpen?.(true);
   };
 
-  const validateAndOpenSaveModal = (celExpression: string) => {
-    const celQuery = formatQuery(parseCEL(celExpression), "cel");
-
-    // Normalize both strings by:
-    // 1. Removing all whitespace
-    // 2. Creating versions with both single and double quotes
-    const normalizedCelQuery = celQuery.replace(/\s+/g, "");
-    const normalizedExpression = celExpression.replace(/\s+/g, "");
-
-    // Create variants with different quote styles
-    const celQuerySingleQuotes = normalizedCelQuery.replace(/"/g, "'");
-    const celQueryDoubleQuotes = normalizedCelQuery.replace(/'/g, '"');
-
-    const isValidCEL =
-      normalizedExpression === celQuerySingleQuotes ||
-      normalizedExpression === celQueryDoubleQuotes ||
-      celExpression === "";
-
-    if (isValidCEL && celExpression.length) {
-      setPresetCEL?.(celExpression);
-      setIsModalOpen?.(true);
-    } else {
-      alert("You can only save a valid CEL expression.");
-      setIsValidCEL(isValidCEL);
+  function getSaveFilterTooltipText(): string {
+    if (!isValidCEL) {
+      return "You can only save a valid CEL expression.";
     }
-  };
+
+    return action === "update"
+      ? "Edit preset"
+      : "Save current filter as a preset";
+  }
 
   return (
     <>
@@ -460,13 +441,9 @@ export const AlertsRulesBuilder = ({
               color="orange"
               variant="secondary"
               size="sm"
-              disabled={!celRules.length}
-              onClick={() => validateAndOpenSaveModal(celRules)}
-              tooltip={
-                action === "update"
-                  ? "Edit preset"
-                  : "Save current filter as a preset"
-              }
+              disabled={!celRules.length || !isValidCEL}
+              onClick={() => openSaveModal(celRules)}
+              tooltip={getSaveFilterTooltipText()}
             ></Button>
           )}
           {showSqlImport && (

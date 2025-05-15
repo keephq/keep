@@ -7,7 +7,7 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useFetchProviders } from "../../providers/page.client";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
-import { checkProviderNeedsInstallation } from "@/entities/workflows/lib/validation";
+import { checkProviderNeedsInstallation } from "@/entities/workflows/lib/validate-definition";
 import { Drawer } from "@/shared/ui/Drawer";
 
 export const ProvidersCarousel = ({
