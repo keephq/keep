@@ -328,7 +328,10 @@ jobs:
           # Save to output variable to reuse in later steps
           echo "revision=$REVISION" >> $GITHUB_OUTPUT
           
-          poetry run pytest -v tests/e2e_tests/test_end_to_end_db_auth.py -n 4 --dist=loadfile
+          # Running full test to test working after migrations
+          echo "Running tests..."
+          poetry run coverage run --branch -m pytest -v tests/e2e_tests/ -n 4 --dist=loadfile
+          echo "Tests completed!"
         env:
           WORKFLOW_REVISION: ${{ steps.get_revision.outputs.revision }}
 
