@@ -66,20 +66,6 @@ const auth0LogsProvider: ProviderMetadataForValidation = {
   query_params: ["log_type", "previous_users"],
 };
 
-const fluxcdProvider: ProviderMetadataForValidation = {
-  type: "fluxcd",
-  config: {
-    kubeconfig: {
-      required: false,
-      description: "Kubernetes config file content",
-      sensitive: true,
-      default: null,
-    },
-  },
-  can_query: true,
-  can_notify: false,
-  query_params: ["kubeconfig", "namespace"],
-};
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
 export type WorkflowInputType = WorkflowInput["type"];
 
