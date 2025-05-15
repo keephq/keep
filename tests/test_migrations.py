@@ -58,7 +58,7 @@ def test_db_migrations():
         shutil.copytree(
             f"{base_dir}/keep/api/models/db/migrations",
             os.path.join(temp_dir, "migrations"),
-            ignore=shutil.ignore_patterns("__pycache__")
+            ignore=shutil.ignore_patterns("versions")
         )
 
         shutil.copy(f"{base_dir}/keep/alembic.ini", os.path.join(temp_dir, "migrations", "alembic.ini"))
