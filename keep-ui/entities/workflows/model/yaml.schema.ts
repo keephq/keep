@@ -279,7 +279,6 @@ export function getYamlWorkflowDefinitionSchema(
     // TODO: move github and auth0 providers to the providers list from backend, once we have them at /providers endpoint
     githubStarsProvider,
     auth0LogsProvider,
-    fluxcdProvider,
     ...providers,
   ];
   const uniqueProviders = providersWithMock.reduce((acc, provider) => {
