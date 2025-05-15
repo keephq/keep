@@ -178,8 +178,11 @@ export const AlertsRulesBuilder = ({
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useCelState({
-    enableQueryParams: shouldSetQueryParam,
+  const [celRules, setCELRules] = useState(
+    searchParams?.get("cel") || defaultQuery
+  );
+  const [appliedCel, setAppliedCel] = useCelState({
+    enableQueryParams: true,
     defaultCel: defaultQuery,
   });
 
@@ -206,7 +209,7 @@ export const AlertsRulesBuilder = ({
     onCelChanges && onCelChanges(celRules);
     table?.resetGlobalFilter();
     onApplyFilter();
-    updateOutputCEL?.(celRules);
+    setAppliedCel(celRules);
     setIsValidCEL(true);
   }, [table]);
 
@@ -308,12 +311,17 @@ export const AlertsRulesBuilder = ({
       setShowSuggestions(false);
       if (isValidCEL) {
         onApplyFilter();
-        updateOutputCEL?.(celRules);
+
+        setAppliedCel(celRules);
         if (showToast)
           toast.success("Condition applied", { position: "top-right" });
       }
     }
   };
+
+  useEffect(() => {
+    updateOutputCEL?.(celRules);
+  }, [appliedCel, updateOutputCEL]);
 
   const onApplyFilter = () => {
     if (onCelChanges) {
@@ -427,7 +435,7 @@ export const AlertsRulesBuilder = ({
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   fieldsForSuggestions={alertFields}
-                  onValueChange={onValueChange}
+                  onValueChange={setCELRules}
                   onIsValidChange={setIsValidCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}

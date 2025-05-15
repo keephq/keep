@@ -1,61 +1,47 @@
-import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-
 const celQueryParamName = "cel";
 const defaultOptions = { enableQueryParams: false, defaultCel: "" };
 
-function updateQueryString(queryString: string) {
-  var newurl =
-    window.location.origin + window.location.pathname + queryString
-      ? `?${queryString}`
-      : "";
-  console.log("Ihor", newurl);
+export function useCelState({
+  enableQueryParams,
+  defaultCel,
+}: typeof defaultOptions) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [celState, setCelState] = useState(() => {
+    return searchParams.get(celQueryParamName) || defaultCel || "";
+  });
 
-  window.history.pushState({ path: newurl }, "", newurl);
-}
-
-export function useCelState(options: {
-  enableQueryParams: boolean;
-  defaultCel: string;
-}) {
-  options = options ?? defaultOptions;
-
-  const [celState, setCelState] = useState<string>(
-    new URLSearchParams(window.location.search).get(celQueryParamName) ||
-      options.defaultCel ||
-      ""
-  );
-  const [debouncedCel] = useDebouncedValue(celState, 500);
-
+  // Clean up cel param when pathname changes
   useEffect(() => {
     return () => {
-      const currentQueryParams = new URLSearchParams(window.location.search);
-      currentQueryParams
-        .entries()
-        .filter(([key, value]) => key === celQueryParamName)
-        .forEach(([key, value]) => currentQueryParams.delete(key, value));
-      updateQueryString(currentQueryParams.toString());
+      const newParams = new URLSearchParams(window.location.search);
+      newParams.delete(celQueryParamName);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}?${newParams}`
+      );
     };
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
-    if (!options.enableQueryParams) {
-      return;
+    if (!enableQueryParams) return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete(celQueryParamName);
+
+    if (celState && celState !== defaultCel) {
+      params.set(celQueryParamName, celState);
     }
 
-    const currentQueryParams = new URLSearchParams(window.location.search);
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}?${params}`
+    );
+  }, [celState, enableQueryParams, defaultCel]);
 
-    currentQueryParams
-      .entries()
-      .filter(([key, value]) => key === celQueryParamName)
-      .forEach(([key, value]) => currentQueryParams.delete(key, value));
-
-    if (debouncedCel !== null && debouncedCel !== options.defaultCel) {
-      currentQueryParams.append(celQueryParamName, debouncedCel);
-    }
-
-    updateQueryString(currentQueryParams.toString());
-  }, [options.enableQueryParams, options.defaultCel, debouncedCel]);
-
-  return [celState, setCelState] as [typeof celState, typeof setCelState];
+  return [celState, setCelState] as const;
 }
