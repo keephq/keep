@@ -41,48 +41,93 @@ incident_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="name",
         map_to=["incident.user_generated_name", "incident.ai_generated_name"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="summary",
         map_to=["incident.user_summary", "incident.generated_summary"],
-    ),
-    FieldMappingConfiguration(map_from_pattern="assignee", map_to="incident.assignee"),
-    FieldMappingConfiguration(map_from_pattern="severity", map_to="incident.severity"),
-    FieldMappingConfiguration(map_from_pattern="status", map_to="incident.status"),
-    FieldMappingConfiguration(
-        map_from_pattern="creation_time", map_to="incident.creation_time"
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="start_time", map_to="incident.start_time"
-    ),
-    FieldMappingConfiguration(map_from_pattern="end_time", map_to="incident.end_time"),
-    FieldMappingConfiguration(
-        map_from_pattern="last_seen_time", map_to="incident.last_seen_time"
+        map_from_pattern="assignee",
+        map_to="incident.assignee",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_predicted", map_to="incident.is_predicted"
+        map_from_pattern="severity",
+        map_to="incident.severity",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_candidate", map_to="incident.is_candidate"
+        map_from_pattern="status", map_to="incident.status", data_type=DataType.STRING
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_visible", map_to="incident.is_visible"
+        map_from_pattern="creation_time",
+        map_to="incident.creation_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alerts_count", map_to="incident.alerts_count"
+        map_from_pattern="start_time",
+        map_to="incident.start_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="merged_at", map_to="incident.merged_at"
+        map_from_pattern="end_time",
+        map_to="incident.end_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="merged_by", map_to="incident.merged_by"
+        map_from_pattern="last_seen_time",
+        map_to="incident.last_seen_time",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_predicted",
+        map_to="incident.is_predicted",
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_candidate",
+        map_to="incident.is_candidate",
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_visible",
+        map_to="incident.is_visible",
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="alerts_count",
+        map_to="incident.alerts_count",
+        data_type=DataType.INTEGER,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="merged_at",
+        map_to="incident.merged_at",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="merged_by",
+        map_to="incident.merged_by",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="hasLinkedIncident",
         map_to="addional_incident_fields.incident_has_linked_incident",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alert.providerType", map_to="alert.provider_type"
+        map_from_pattern="alert.providerType",
+        map_to="alert.provider_type",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="sources", map_to="incident.sources", data_type=DataType.ARRAY
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="affectedServices",
+        map_to="incident.affected_services",
+        data_type=DataType.ARRAY,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
@@ -116,14 +161,14 @@ static_facets = [
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.providerType",
+        property_path="sources",
         name="Source",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="alert.service",
+        property_path="affectedServices",
         name="Service",
         is_static=True,
         type=FacetType.str,
@@ -140,7 +185,11 @@ static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
 def __build_base_incident_query(
-    tenant_id: str, select_args: list, cel=None, force_fetch=False
+    tenant_id: str,
+    select_args: list,
+    cel=None,
+    force_fetch_alerts=False,
+    force_fetch_has_linked_incident=False,
 ):
     fetch_alerts = False
     fetch_has_linked_incident = False
@@ -171,7 +220,7 @@ def __build_base_incident_query(
 
     sql_query = select(*select_args).select_from(Incident)
 
-    if fetch_alerts or force_fetch:
+    if fetch_alerts or force_fetch_alerts:
         sql_query = (
             sql_query.outerjoin(
                 LastAlertToIncident,
@@ -200,7 +249,7 @@ def __build_base_incident_query(
             )
         )
 
-    if fetch_has_linked_incident or force_fetch:
+    if fetch_has_linked_incident or force_fetch_has_linked_incident:
         additional_incident_fields = (
             select(
                 Incident.id,
@@ -485,6 +534,16 @@ def get_incident_facets_data(
     else:
         facets = static_facets
 
+    force_fetch_alerts = next(
+        (True for facet in facets if "alert." in facet.property_path),
+        False,
+    )
+
+    force_fetch_linked_incidents = next(
+        (True for facet in facets if "hasLinkedIncident" in facet.property_path),
+        False,
+    )
+
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
     select_expressions = facet_selects_metadata["select_expressions"]
 
@@ -493,7 +552,8 @@ def get_incident_facets_data(
     base_query = __build_base_incident_query(
         tenant_id,
         select_expressions,
-        force_fetch=True,
+        force_fetch_alerts=force_fetch_alerts,
+        force_fetch_has_linked_incident=force_fetch_linked_incidents,
     )["query"]
 
     if allowed_incident_ids:

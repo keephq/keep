@@ -1,3 +1,5 @@
+"use client";
+
 import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { PaginatedWorkflowsResults } from "@/shared/api/workflows";
@@ -14,6 +16,12 @@ export const DEFAULT_WORKFLOWS_QUERY = {
   sortBy: "created_at",
   sortDir: "desc" as const,
 };
+
+export interface WorkflowTemplatesQuery {
+  cel: string;
+  limit: number;
+  offset: number;
+}
 
 export interface WorkflowsQuery {
   cel?: string;

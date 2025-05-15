@@ -682,6 +682,9 @@ def get_random_workflow_templates(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
 ) -> list[dict]:
+    """
+    This endpoint is deprecated and will be removed in the future.
+    """
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     default_directory = os.environ.get(
@@ -705,6 +708,43 @@ def get_random_workflow_templates(
         tenant_id=tenant_id, workflows_dir=default_directory, limit=8
     )
     return workflows
+
+
+@router.post("/templates/query", description="Query workflow templates")
+def query_workflow_templates(
+    query: QueryDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+    workflowstore = WorkflowStore()
+    default_directory = os.environ.get(
+        "KEEP_WORKFLOWS_PATH",
+        os.path.join(os.path.dirname(__file__), "../../../examples/workflows"),
+    )
+    if not os.path.exists(default_directory):
+        # on the container we use the following path
+        fallback_directory = "/examples/workflows"
+        logger.warning(
+            f"{default_directory} does not exist, using fallback: {fallback_directory}"
+        )
+        if os.path.exists(fallback_directory):
+            default_directory = fallback_directory
+        else:
+            logger.error(f"Neither {default_directory} nor {fallback_directory} exist")
+            raise FileNotFoundError(
+                f"Neither {default_directory} nor {fallback_directory} exist"
+            )
+    workflows, total_count = workflowstore.query_workflow_templates(
+        tenant_id=tenant_id, workflows_dir=default_directory, query=query
+    )
+    return {
+        "limit": query.limit,
+        "offset": query.offset,
+        "count": total_count,
+        "results": workflows,
+    }
 
 
 @router.put(
