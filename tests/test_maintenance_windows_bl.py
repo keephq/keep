@@ -14,6 +14,20 @@ def mock_session():
 
 
 @pytest.fixture
+def active_maintenance_window_rule_custom_ignore():
+    return MaintenanceWindowRule(
+        id=1,
+        name="Active maintenance_window",
+        tenant_id="test-tenant",
+        cel_query='source == "test-source"',
+        start_time=datetime.utcnow() - timedelta(hours=1),
+        end_time=datetime.utcnow() + timedelta(days=1),
+        enabled=True,
+        ignore_statuses=[AlertStatus.FIRING.value,],
+    )
+
+
+@pytest.fixture
 def active_maintenance_window_rule():
     return MaintenanceWindowRule(
         id=1,
@@ -23,6 +37,7 @@ def active_maintenance_window_rule():
         start_time=datetime.utcnow() - timedelta(hours=1),
         end_time=datetime.utcnow() + timedelta(days=1),
         enabled=True,
+        ignore_statuses=[AlertStatus.RESOLVED.value, AlertStatus.ACKNOWLEDGED.value],
     )
 
 
@@ -198,3 +213,26 @@ def test_alert_with_missing_cel_field(mock_session, active_maintenance_window_ru
 
     # Should return False because the field doesn't exist
     assert result is False
+
+
+def test_alert_not_ignored_due_to_custom_status(
+    mock_session, active_maintenance_window_rule_custom_ignore, alert_dto
+):
+    # Set the alert status to RESOLVED
+
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_maintenance_window_rule_custom_ignore
+    ]
+
+    maintenance_window_bl = MaintenanceWindowsBl(
+        tenant_id="test-tenant", session=mock_session
+    )
+
+    # Should return False because the alert status is FIRING
+    alert_dto.status = AlertStatus.FIRING.value
+    result = maintenance_window_bl.check_if_alert_in_maintenance_windows(alert_dto)
+    assert result is False
+
+    alert_dto.status = AlertStatus.RESOLVED.value
+    result = maintenance_window_bl.check_if_alert_in_maintenance_windows(alert_dto)
+    assert result is True

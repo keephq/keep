@@ -9,6 +9,8 @@ import {
   NumberInput,
   Select,
   SelectItem,
+  MultiSelect,
+  MultiSelectItem,
 } from "@tremor/react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -20,11 +22,18 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { Status } from "@/entities/alerts/model";
+import { capitalize } from "@/utils/helpers";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
   editCallback: (rule: MaintenanceRule | null) => void;
 }
+
+const DEFAULT_IGNORE_STATUSES = [
+    "resolved",
+    "acknowledged",
+]
 
 export default function CreateOrUpdateMaintenanceRule({
   maintenanceToEdit,
@@ -40,6 +49,7 @@ export default function CreateOrUpdateMaintenanceRule({
   const [intervalType, setIntervalType] = useState<string>("minutes");
   const [enabled, setEnabled] = useState<boolean>(true);
   const [suppress, setSuppress] = useState<boolean>(false);
+  const [ignoreStatuses, setIgnoreStatuses] = useState<string[]>(DEFAULT_IGNORE_STATUSES);
   const editMode = maintenanceToEdit !== null;
   const router = useRouter();
   useEffect(() => {
@@ -50,6 +60,7 @@ export default function CreateOrUpdateMaintenanceRule({
       setStartTime(new Date(maintenanceToEdit.start_time));
       setSuppress(maintenanceToEdit.suppress);
       setEnabled(maintenanceToEdit.enabled);
+      setIgnoreStatuses(maintenanceToEdit.ignore_statuses);
       if (maintenanceToEdit.duration_seconds) {
         setEndInterval(maintenanceToEdit.duration_seconds / 60);
       }
@@ -64,6 +75,7 @@ export default function CreateOrUpdateMaintenanceRule({
     setEndInterval(5);
     setSuppress(false);
     setEnabled(true);
+    setIgnoreStatuses([]);
     router.replace("/maintenance");
   };
 
@@ -99,6 +111,7 @@ export default function CreateOrUpdateMaintenanceRule({
         duration_seconds: calculateDurationInSeconds(),
         suppress: suppress,
         enabled: enabled,
+        ignore_statuses: ignoreStatuses,
       });
       clearForm();
       mutate();
@@ -123,6 +136,7 @@ export default function CreateOrUpdateMaintenanceRule({
         duration_seconds: calculateDurationInSeconds(),
         suppress: suppress,
         enabled: enabled,
+        ignore_statuses: ignoreStatuses,
       });
       exitEditMode();
       mutate();
@@ -177,6 +191,14 @@ export default function CreateOrUpdateMaintenanceRule({
           showSave={false}
           showSqlImport={false}
         />
+      </div>
+
+      <div className="mt-2.5">
+        <MultiSelect value={ignoreStatuses} onValueChange={setIgnoreStatuses}>
+          {Object.values(Status).map((value) => {
+            return <MultiSelectItem key={value} value={value}>{capitalize(value)}</MultiSelectItem>
+          })}
+        </MultiSelect>
       </div>
       <div className="mt-2.5">
         <Text>
