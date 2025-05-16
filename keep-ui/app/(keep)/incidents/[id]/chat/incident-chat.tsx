@@ -1,4 +1,4 @@
-import { CopilotChat, ResponseButtonProps } from "@copilotkit/react-ui";
+import { CopilotChat, MessagesProps } from "@copilotkit/react-ui";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import {
@@ -52,7 +52,7 @@ export function IncidentChat({
     [key: string]: boolean;
   }>({});
 
-  function CustomResponseButton({ onClick, inProgress }: ResponseButtonProps) {
+  function CustomResponseButton({ inProgress }: MessagesProps) {
     return (
       <div className="flex mt-3 gap-2">
         {!inProgress ? (
@@ -135,8 +135,9 @@ export function IncidentChat({
   const providersWithGetTrace = useMemo(
     () =>
       providers?.installed_providers
-        .filter((provider) =>
-          provider.methods?.some((method) => method.func_name === "get_trace")
+        .filter(
+          (provider) =>
+            provider.methods?.some((method) => method.func_name === "get_trace")
         )
         .map((provider) => provider.id),
     [providers]
