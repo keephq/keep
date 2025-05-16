@@ -56,6 +56,49 @@ export const V2StepTriggerSchema = z.union([
   V2StepIncidentTriggerSchema,
 ]);
 
+export const WorkflowInputTypeEnum = z.enum([
+  "string",
+  "number",
+  "boolean",
+  "choice",
+]);
+
+const WorkflowInputBaseSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  default: z.any().optional(),
+  required: z.boolean().optional(),
+  visuallyRequired: z.boolean().optional(), // For inputs without defaults that aren't explicitly required
+});
+
+const WorkflowInputStringSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("string"),
+  default: z.string().optional(),
+});
+
+const WorkflowInputNumberSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("number"),
+  default: z.number().optional(),
+});
+
+const WorkflowInputBooleanSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("boolean"),
+  default: z.boolean().optional(),
+});
+
+const WorkflowInputChoiceSchema = WorkflowInputBaseSchema.extend({
+  type: z.literal("choice"),
+  default: z.string().optional(),
+  options: z.array(z.string()),
+});
+
+export const WorkflowInputSchema = z.discriminatedUnion("type", [
+  WorkflowInputStringSchema,
+  WorkflowInputNumberSchema,
+  WorkflowInputBooleanSchema,
+  WorkflowInputChoiceSchema,
+]);
+
 export const EnrichDisposableKeyValueSchema = z.array(
   z.object({
     key: z.string(),
@@ -87,6 +130,15 @@ export const WithSchema = z
     ])
   );
 
+const RetrySchema = z.object({
+  count: z.number().min(0).optional(),
+  interval: z.number().min(0).optional(),
+});
+
+export const OnFailureSchema = z.object({
+  retry: RetrySchema.optional(),
+});
+
 export const V2ActionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -98,6 +150,7 @@ export const V2ActionSchema = z.object({
     if: z.string().optional(),
     vars: z.record(z.string(), z.string()).optional(),
     with: WithSchema.optional(),
+    "on-failure": OnFailureSchema.optional(),
   }),
 });
 
@@ -112,6 +165,7 @@ export const V2StepStepSchema = z.object({
     vars: z.record(z.string(), z.string()).optional(),
     if: z.string().optional(),
     with: WithSchema.optional(),
+    "on-failure": OnFailureSchema.optional(),
   }),
 });
 
@@ -139,8 +193,8 @@ export const V2StepConditionThresholdSchema = z.object({
   type: z.literal("condition-threshold"),
   alias: z.string().optional(),
   properties: z.object({
-    value: z.string(),
-    compare_to: z.string(),
+    value: z.union([z.string(), z.number()]),
+    compare_to: z.union([z.string(), z.number()]),
   }),
   branches: z.object({
     true: z.array(V2ActionOrStepSchema),
@@ -203,4 +257,11 @@ export const WorkflowPropertiesSchema = z.object({
   manual: ManualTriggerValueSchema.optional(),
   services: z.array(z.string()).optional(),
   owners: z.array(z.string()).optional(),
+  inputs: z.array(WorkflowInputSchema).optional(),
+  "on-failure": V2ActionSchema.partial({
+    id: true,
+    name: true,
+  })
+    .extend(OnFailureSchema.shape)
+    .optional(),
 });

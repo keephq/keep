@@ -89,6 +89,30 @@ actions:
         Alert details: {{ alert }}"
 """
 
+
+workflow_definition_with_on_failure = """workflow:
+id: on-failure
+description: Test on-failure
+triggers:
+- type: alert
+  cel: name == "server-is-upsidedown"
+actions:
+- name: send-slack-message
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+    on-failure:
+      retry:
+        count: 3
+        interval: 2
+on-failure:
+    provider:
+      type: console
+"""
+
+
 MAX_WAIT_COUNT = 30
 
 
@@ -1819,3 +1843,142 @@ def test_workflow_executions_after_reprovisioning(
     assert (
         second_workflow_execution.workflow_id == second_provisioned[0].id
     )  # Same workflow ID
+
+
+def test_workflow_with_on_failure_succeeds_after_failing(
+    db_session, create_alert, workflow_manager, mocker
+):
+    """Test that a workflow with an on-failure action is executed correctly."""
+    # Mock the ConsoleProvider's notify method
+    mock_console = mocker.patch(
+        "keep.providers.console_provider.console_provider.ConsoleProvider._notify"
+    )
+
+    # Make the main action fail but let the on-failure action succeed
+    mock_console.side_effect = [
+        Exception("Action failed"),  # First call (main action) fails
+        Exception("Action failed"),  # Second call (main action) fails
+        Exception("Action failed"),  # Third call (main action) fails
+        "<successful console call>",  # Fourth call (main action) succeeds
+    ]
+
+    # Create the workflow
+    workflow = Workflow(
+        id="on-failure-workflow",
+        name="on-failure-workflow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow with an on-failure action",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_on_failure,
+        last_updated=datetime.now(tz=pytz.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.refresh(workflow)
+
+    # Create an alert to trigger the workflow
+    alert = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+    )
+
+    # Insert the alert into workflow manager to trigger execution
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
+
+    # Wait for workflow execution to complete
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+
+    # Verify that the workflow execution failed but the on-failure action was executed
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # Verify the provider was called 4 times:
+    # 1-3. For the main action (which failed)
+    # 4. For the retry of the main action, which succeeds
+    assert mock_console.call_count == 4
+
+    assert "Tier 1 Alert: server-is-upsidedown" in str(mock_console.call_args_list[-1])
+
+
+def test_workflow_with_on_failure_action(
+    db_session, create_alert, workflow_manager, mocker
+):
+    """Test that a workflow with an on-failure action is executed correctly."""
+    # Mock the ConsoleProvider's notify method
+    mock_console = mocker.patch(
+        "keep.providers.console_provider.console_provider.ConsoleProvider._notify"
+    )
+
+    # Now make the main action fail all retries, and the on-failure action should be called
+    mock_console.side_effect = [
+        Exception("Action failed"),  # First call (main action) fails
+        Exception("Action failed"),  # Second call (main action) fails
+        Exception("Action failed"),  # Third call (main action) fails
+        Exception("Action failed"),  # Fourth call (main action) fails
+        "<successful console call>",  # Fifth call (on-failure action) succeeds
+    ]
+
+    # Create the workflow
+    workflow = Workflow(
+        id="on-failure-workflow",
+        name="on-failure-workflow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow with an on-failure action",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_on_failure,
+        last_updated=datetime.now(tz=pytz.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.refresh(workflow)
+
+    # Create an alert to trigger the workflow
+    alert = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+    )
+
+    # Create a new alert to trigger the workflow
+    alert = AlertDto(
+        id="alert-2",
+        fingerprint="upsdown-2",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down again",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+    )
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
+
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+    assert workflow_execution is not None
+    assert workflow_execution.status == "error"
+
+    # Verify the provider was called 5 times:
+    # 1. For the main action (which failed)
+    # 2-4. For the retry of the main action
+    # 5. For the on-failure action
+    assert mock_console.call_count == 5
+
+    # Verify the on-failure action was called with the correct message
+    assert "Workflow on-failure-workflow failed with errors:" in str(
+        mock_console.call_args_list[-1]
+    )
