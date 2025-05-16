@@ -76,6 +76,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import TopologiesService  # noqa
+from keep.api.models.comment import IncidentCommentDto
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -888,7 +889,7 @@ def change_incident_severity(
 @router.post("/{incident_id}/comment", description="Add incident audit activity")
 def add_comment(
     incident_id: UUID,
-    change: IncidentStatusChangeDto,
+    change: IncidentCommentDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -899,6 +900,7 @@ def add_comment(
         "commenter": authenticated_entity.email,
         "comment": change.comment,
         "incident_id": str(incident_id),
+        "mentioned_users": change.mentioned_users,
     }
     logger.info("Adding comment to incident", extra=extra)
     comment = add_audit(
@@ -910,11 +912,24 @@ def add_comment(
     )
 
     if pusher_client:
+        # Notify about the comment
         pusher_client.trigger(
             f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
         )
+        
+        # Send notifications to mentioned users
+        for mentioned_user in change.mentioned_users:
+            pusher_client.trigger(
+                f"private-{authenticated_entity.tenant_id}-{mentioned_user}",
+                "user-mention",
+                {
+                    "incident_id": str(incident_id),
+                    "comment": change.comment,
+                    "mentioned_by": authenticated_entity.email,
+                }
+            )
 
-    logger.info("Added comment to incident", extra=extra)
+    logger.info("Added comment to incident with mentions", extra=extra)
     return comment
 
 
