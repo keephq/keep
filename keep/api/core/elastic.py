@@ -50,6 +50,7 @@ class ElasticClient:
         if not self.enabled:
             return
 
+        self.refresh_strategy = os.environ.get("ELASTIC_REFRESH_STRATEGY", "true")
         self.api_key = api_key or os.environ.get("ELASTIC_API_KEY")
         self.hosts = hosts or os.environ.get("ELASTIC_HOSTS").split(",")
         self.verify_certs = (
@@ -213,7 +214,7 @@ class ElasticClient:
                 index=self.alerts_index,
                 body=alert_dict,
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
-                refresh="true",
+                refresh=self.refresh_strategy,
             )
         # TODO: retry/pubsub
         except ApiError as e:
@@ -244,7 +245,7 @@ class ElasticClient:
             actions.append(action)
 
         try:
-            success, failed = bulk(self._client, actions, refresh="true")
+            success, failed = bulk(self._client, actions, refresh=self.refresh_strategy)
             self.logger.info(
                 f"Successfully indexed {success} alerts. Failed to index {failed} alerts."
             )
