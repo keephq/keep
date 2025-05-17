@@ -137,11 +137,9 @@ export function AlertTableServerSide({
     null
   );
   const [grouping, setGrouping] = useState<GroupingState>([]);
-  const [filterCel, setFilterCel] = useState<string>("");
+  const [filterCel, setFilterCel] = useState<string | null>(null);
   const [searchCel, setSearchCel] = useState<string>("");
-  const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string | null>(
-    ""
-  );
+
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
@@ -195,6 +193,10 @@ export function AlertTableServerSide({
 
   useEffect(
     function whenQueryChange() {
+      if (filterCel === null || searchCel === null || timeFrame === null) {
+        return;
+      }
+
       if (onQueryChange) {
         const limit = paginationState.pageSize;
         const offset = limit * paginationState.pageIndex;
@@ -567,15 +569,17 @@ export function AlertTableServerSide({
         <div className="flex justify-between">
           <PageTitle className="capitalize inline">{presetName}</PageTitle>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
-            <EnhancedDateRangePickerV2
-              timeFrame={timeFrame}
-              setTimeFrame={setTimeFrame}
-              hasPlay={true}
-              hasRewind={false}
-              hasForward={false}
-              hasZoomOut={false}
-              enableYearNavigation
-            />
+            {timeFrame && (
+              <EnhancedDateRangePickerV2
+                timeFrame={timeFrame}
+                setTimeFrame={setTimeFrame}
+                hasPlay={true}
+                hasRewind={false}
+                hasForward={false}
+                hasZoomOut={false}
+                enableYearNavigation
+              />
+            )}
 
             <SettingsSelection table={table} presetName={presetName} />
           </div>

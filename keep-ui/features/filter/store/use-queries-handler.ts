@@ -99,6 +99,7 @@ export function useQueriesHandler(store: StoreApi<FacetState>) {
       .filter(Boolean)
       .map((cel) => `(${cel})`)
       .join(" && ");
+
     setQueriesState(filterCel, facetOptionQueries);
   }, [facetsCelState, facets, areQueryParamsSet]);
 }

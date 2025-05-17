@@ -199,10 +199,6 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     );
   }, [isPaused, incidentsLoading, paginatedIncidentsFromHook]);
 
-  useEffect(() => {
-    console.log("Ihor IsPolling", isPolling);
-  }, [isPolling]);
-
   return {
     incidents: paginatedIncidentsToReturn,
     incidentsLoading:
