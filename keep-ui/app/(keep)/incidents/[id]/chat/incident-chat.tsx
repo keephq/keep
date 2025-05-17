@@ -52,36 +52,6 @@ export function IncidentChat({
     [key: string]: boolean;
   }>({});
 
-  function CustomResponseButton({ inProgress }: MessagesProps) {
-    return (
-      <div className="flex mt-3 gap-2">
-        {!inProgress ? (
-          <Button
-            color="orange"
-            onClick={runChatCompletion}
-            loading={inProgress}
-          >
-            Regenerate response
-          </Button>
-        ) : (
-          <Button color="orange" onClick={stopGeneration} icon={StopIcon}>
-            Stop generating
-          </Button>
-        )}
-        <Button
-          color="orange"
-          variant="secondary"
-          tooltip="Clear chat"
-          onClick={() => {
-            localStorage.removeItem(`copilotkit-messages-${incident.id}`);
-            setMessages([]);
-          }}
-          icon={TrashIcon}
-        />
-      </div>
-    );
-  }
-
   //https://docs.copilotkit.ai/guides/messages-localstorage
   // save to local storage when messages change
   useEffect(() => {
@@ -587,7 +557,8 @@ export function IncidentChat({
                 "Hi! Lets work together to resolve this incident! Ask me anything",
               placeholder: "For example: Find the root cause of this incident",
             }}
-            ResponseButton={CustomResponseButton}
+            // ResponseButton={CustomResponseButton} // Deprecated in favor of Thumbs Up/Down, Copy and Regenerate.
+            // https://docs.copilotkit.ai/troubleshooting/migrate-to-1.8.2#responsebutton-prop-removed
             onSubmitMessage={handleSubmitMessage}
           />
         </div>
