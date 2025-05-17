@@ -1,0 +1,67 @@
+workflow:
+  id: zabbix-notification-lifecycle
+  name: Slack Notification Lifecycle Manager
+  description: Manages messages and updates as attachments in Slack with automatic updates on resolved alerts
+  disabled: false
+  triggers:
+    - type: manual
+    - type: alert
+      cel: severity > 'info' && source.contains('zabbix')
+  inputs: []
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: slack-alert-resolved
+      if: "'{{ alert.slack_timestamp }}' and '{{ alert.status }}' == 'resolved'"
+      provider:
+        type: slack
+        config: "{{ providers.keephq }}"
+        with:
+          slack_timestamp: "{{alert.slack_timestamp}}"
+          channel: C06PF9TCWUF
+          attachments:
+            - color: good
+              title: "Resolved: {{alert.name}}"
+              title_link: "{{alert.url}}"
+              fields:
+                - title: Host
+                  value: "{{alert.hostname}}"
+                  short: true
+                - title: Severity
+                  value: "{{alert.severity}}"
+                  short: true
+                - title: Description
+                  value: "{{alert.description}}"
+                  short: true
+                - title: Time
+                  value: "{{alert.time}}"
+                  short: true
+    - name: slack-alert
+      if: not '{{ alert.slack_timestamp }}' or '{{alert.status}}' == 'firing'
+      provider:
+        type: slack
+        config: "{{ providers.keephq }}"
+        with:
+          enrich_alert:
+            - key: slack_timestamp
+              value: results.slack_timestamp
+          channel: C06PF9TCWUF
+          attachments:
+            - color: danger
+              title: "{{alert.name}}"
+              title_link: "{{alert.url}}"
+              fields:
+                - title: Host
+                  value: "{{alert.hostname}}"
+                  short: true
+                - title: Severity
+                  value: "{{alert.severity}}"
+                  short: true
+                - title: Description
+                  value: "{{alert.description}}"
+                  short: true
+                - title: Time
+                  value: "{{alert.time}}"
+                  short: true
