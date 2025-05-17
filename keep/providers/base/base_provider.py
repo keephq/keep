@@ -73,7 +73,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         "Others"
     ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+        Literal["alert", "ticketing", "messaging", "data", "queue", "topology", "incident"]
     ] = []
     WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
 
