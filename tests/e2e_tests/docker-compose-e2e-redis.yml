@@ -11,6 +11,7 @@ services:
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - SENTRY_DISABLED=true
+      - ALLOW_DB_DOWNGRADE=true
     depends_on:
       - keep-backend
 
@@ -23,10 +24,12 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=sqlite:///./newdb.db?check_same_thread=False
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/appֿ
+      - SECRET_MANAGER_DIRECTORY=/app
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
+    volumes:
+      - backend-state:/tmp
     depends_on:
       - keep-redis
 
@@ -43,3 +46,4 @@ services:
 
 volumes:
   postgres-data:
+  backend-state:
