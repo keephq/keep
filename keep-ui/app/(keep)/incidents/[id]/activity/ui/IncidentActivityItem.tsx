@@ -1,10 +1,14 @@
 import { AlertSeverity } from "@/entities/alerts/ui";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertDto, CommentMentionDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
+import { useUsers } from "@/entities/users/model/useUsers";
+import { User } from "@/app/(keep)/settings/models";
 
 // TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
 
 export function IncidentActivityItem({ activity }: { activity: any }) {
+  const { data: users = [] } = useUsers();
+  
   const title =
     typeof activity.initiator === "string"
       ? activity.initiator
@@ -17,6 +21,33 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
         : activity.initiator?.status === "firing"
           ? " triggered"
           : " resolved" + ". ";
+  
+  // Process comment text to style mentions if it's a comment with mentions
+  const processCommentText = (text: string) => {
+    console.log(activity);
+    if (!text || activity.type !== 'comment') return text;
+    
+    // Create a map of email to name for user lookup
+    const emailToName = new Map();
+    users.forEach((user: User) => {
+      if (user.email) {
+        emailToName.set(user.email, user.name || user.email);
+      }
+    });
+    
+    // If the text contains HTML (from ReactQuill), it's already formatted
+    if (text.includes('<span class="mention">') || text.includes('<p>')) {
+      // Sanitize HTML to prevent XSS attacks if needed
+      // For a production app, consider using a library like DOMPurify
+      
+      return (
+        <div className="quill-content" dangerouslySetInnerHTML={{ __html: text }} />
+      );
+    }
+        
+    return text;
+  };
+          
   return (
     <div className="relative h-full w-full flex flex-col">
       <div className="flex items-center gap-2">
@@ -32,7 +63,9 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
         </span>
       </div>
       {activity.text && (
-        <div className="font-light text-gray-800">{activity.text}</div>
+        <div className="font-light text-gray-800">
+          {processCommentText(activity.text)}
+        </div>
       )}
     </div>
   );

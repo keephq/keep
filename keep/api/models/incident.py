@@ -5,7 +5,14 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Extra, Field, PrivateAttr, root_validator
+from pydantic import (
+    BaseModel,
+    Extra,
+    Field,
+    PrivateAttr,
+    validator,
+    root_validator,
+)
 from sqlmodel import col, desc
 
 from keep.api.models.db.incident import Incident, IncidentSeverity, IncidentStatus
@@ -15,6 +22,16 @@ from keep.api.models.db.rule import ResolveOn, Rule
 class IncidentStatusChangeDto(BaseModel):
     status: IncidentStatus
     comment: str | None
+    tagged_users: list[str] = []
+    
+    @validator('tagged_users')
+    @classmethod
+    def validate_no_duplicate_users(cls, value):
+        """Ensure there are no duplicate users in the tagged_users list."""
+        if len(value) != len(set(value)):
+            unique_users = list(dict.fromkeys(value))  # Preserves order while removing duplicates
+            return unique_users
+        return value
 
 
 class IncidentSeverityChangeDto(BaseModel):
