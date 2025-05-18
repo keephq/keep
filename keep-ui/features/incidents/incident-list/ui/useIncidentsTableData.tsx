@@ -19,8 +19,8 @@ export interface IncidentsTableDataQuery {
   limit: number;
   offset: number;
   sorting: { id: string; desc: boolean };
-  filterCel: string;
-  timeFrame: TimeFrameV2;
+  filterCel: string | null;
+  timeFrame: TimeFrameV2 | null;
 }
 
 export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
@@ -34,7 +34,7 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
   incidentsQueryStateRef.current = incidentsQueryState;
 
   const isPaused = useMemo(() => {
-    if (!query) {
+    if (!query.timeFrame) {
       return false;
     }
 
@@ -62,6 +62,10 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
   }, [canRevalidate]);
 
   const getDateRangeCel = () => {
+    if (query.timeFrame === null) {
+      return null;
+    }
+
     if (query?.timeFrame.type === "relative") {
       return `creation_time >= '${new Date(
         new Date().getTime() - query.timeFrame.deltaMs
@@ -131,6 +135,10 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
   }, [dateRangeCel]);
 
   useEffect(() => {
+    if (query.filterCel === null) {
+      return;
+    }
+
     setIncidentsQueryState({
       candidate: null,
       predicted: null,

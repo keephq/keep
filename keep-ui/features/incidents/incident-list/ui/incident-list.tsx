@@ -78,7 +78,7 @@ export function IncidentList({
     DEFAULT_INCIDENTS_SORTING,
   ]);
 
-  const [filterCel, setFilterCel] = useState<string>("");
+  const [filterCel, setFilterCel] = useState<string | null>(null);
 
   const [dateRange, setDateRange] = useTimeframeState({
     enableQueryParams: true,
@@ -275,17 +275,19 @@ export function IncidentList({
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
-        <EnhancedDateRangePickerV2
-          timeFrame={dateRange}
-          setTimeFrame={setDateRange}
-          timeframeRefreshInterval={20000}
-          hasPlay={true}
-          pausedByDefault={false}
-          hasRewind={false}
-          hasForward={false}
-          hasZoomOut={false}
-          enableYearNavigation
-        />
+        {dateRange && (
+          <EnhancedDateRangePickerV2
+            timeFrame={dateRange}
+            setTimeFrame={setDateRange}
+            timeframeRefreshInterval={20000}
+            hasPlay={true}
+            pausedByDefault={false}
+            hasRewind={false}
+            hasForward={false}
+            hasZoomOut={false}
+            enableYearNavigation
+          />
+        )}
       </div>
     );
   };
