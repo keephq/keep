@@ -38,6 +38,35 @@ export interface AbsoluteTimeFrame {
 }
 
 export type TimeFrameV2 = AllTimeFrame | RelativeTimeFrame | AbsoluteTimeFrame;
+
+export function areTimeframesEqual(
+  first: TimeFrameV2,
+  second: TimeFrameV2
+): boolean {
+  if (first.type !== second.type) {
+    return false;
+  }
+
+  switch (first.type) {
+    case "all-time":
+      return first.isPaused === (second as AllTimeFrame).isPaused;
+    case "relative": {
+      const secondRelative = second as RelativeTimeFrame;
+      return (
+        first.deltaMs === secondRelative.deltaMs &&
+        first.isPaused === secondRelative.isPaused
+      );
+    }
+    case "absolute": {
+      const secondAbsolute = second as AbsoluteTimeFrame;
+      return (
+        first.start.getTime() === secondAbsolute.start.getTime() &&
+        first.end.getTime() === secondAbsolute.end.getTime()
+      );
+    }
+  }
+}
+
 interface TimePreset {
   badge: string;
   label: string;

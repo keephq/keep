@@ -30,6 +30,11 @@ export function useCelState({
     if (!enableQueryParams) return;
 
     const params = new URLSearchParams(window.location.search);
+
+    if (params.get(celQueryParamName) === celState) {
+      return;
+    }
+
     params.delete(celQueryParamName);
 
     if (celState && celState !== defaultCel) {

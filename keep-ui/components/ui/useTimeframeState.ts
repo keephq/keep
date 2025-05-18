@@ -1,12 +1,9 @@
-import {
-  ReadonlyURLSearchParams,
-  usePathname,
-  useSearchParams,
-} from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   AbsoluteTimeFrame,
   AllTimeFrame,
+  areTimeframesEqual,
   RelativeTimeFrame,
   TimeFrameV2,
 } from "./DateRangePickerV2";
@@ -19,10 +16,8 @@ const defaultOptions = {
   } as AllTimeFrame,
 };
 
-function getTimeframeInitialState(
-  searchParams: ReadonlyURLSearchParams,
-  defaultTimeframe: TimeFrameV2
-): TimeFrameV2 {
+function getTimeframeInitialState(defaultTimeframe: TimeFrameV2): TimeFrameV2 {
+  const searchParams = new URLSearchParams(window.location.search);
   const type = searchParams.get("timeFrameType");
 
   if (type === "absolute") {
@@ -77,15 +72,9 @@ export function useTimeframeState({
   }
 
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
   const [timeframeState, setTimeframeState] = useState<TimeFrameV2 | null>(
     () => {
-      return getTimeframeInitialState(
-        searchParams,
-        defaultOptions.defaultTimeframe
-      );
+      return getTimeframeInitialState(defaultOptions.defaultTimeframe);
     }
   );
 
@@ -105,8 +94,13 @@ export function useTimeframeState({
   useEffect(() => {
     if (!enableQueryParams) return;
 
-    const params = new URLSearchParams(window.location.search);
+    const timeframe = getTimeframeInitialState(defaultOptions.defaultTimeframe);
 
+    if (timeframeState && areTimeframesEqual(timeframe, timeframeState)) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
     deleteTimeframeParams(params);
 
     if (timeframeState) {

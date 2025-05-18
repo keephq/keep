@@ -1,7 +1,57 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { StoreApi, useStore } from "zustand";
 import { FacetState } from "./create-facets-store";
-import { FacetDto, FacetOptionDto, FacetOptionsQueries } from "../models";
+import { FacetDto, FacetOptionDto } from "../models";
+
+const facetQueryParamPrefix = "facet_";
+
+function areFacetQueryParamsEqual(
+  first: URLSearchParams,
+  second: URLSearchParams
+): boolean {
+  const firstFacetValues = Array.from(first.entries()).filter(([key, value]) =>
+    key.startsWith(facetQueryParamPrefix)
+  );
+  const secondFacetValues = Array.from(second.entries()).filter(
+    ([key, value]) => key.startsWith(facetQueryParamPrefix)
+  );
+
+  if (firstFacetValues.length !== secondFacetValues.length) {
+    return false;
+  }
+  const firstValuesMap = new Map(firstFacetValues);
+
+  return !secondFacetValues.some(
+    ([key, value]) => firstValuesMap.get(key) !== value
+  );
+}
+
+function buildFacetQueryParams(
+  formattedFacets: {
+    id: string;
+    queryParamName: string;
+  }[],
+  facetOptions: Record<string, FacetOptionDto[]>,
+  facetsState: Record<string, any>
+): URLSearchParams {
+  const facetQueryParams = new URLSearchParams();
+
+  formattedFacets.forEach((facet) => {
+    const facetStateEntries = Object.entries(facetsState[facet.id] || {});
+    const facetOptionsCount = facetOptions?.[facet.id]?.length || 0;
+
+    if (facetStateEntries.length === facetOptionsCount) {
+      return;
+    }
+
+    facetQueryParams.append(
+      facet.queryParamName,
+      facetStateEntries.map(([key, value]) => key).join(",")
+    );
+  });
+
+  return facetQueryParams;
+}
 
 export function useQueryParams(store: StoreApi<FacetState>) {
   const facets = useStore(store, (state) => state.facets);
@@ -38,7 +88,8 @@ export function useQueryParams(store: StoreApi<FacetState>) {
     return facets
       .map((facet: FacetDto) => ({
         id: facet.id,
-        queryParamName: "facet_" + facet.property_path.replace(/\./g, "_"),
+        queryParamName:
+          facetQueryParamPrefix + facet.property_path.replace(/\./g, "_"),
       }))
       .sort((a, b) => a.queryParamName.localeCompare(b.queryParamName));
   }, [facets]);
@@ -54,19 +105,30 @@ export function useQueryParams(store: StoreApi<FacetState>) {
     );
     const facetsStatePatch: Record<string, any> = {};
     const queryParams = new URLSearchParams(window.location.search);
-    const facetEntries = Array.from(queryParams.entries()).filter(
-      ([key, value]) => key.startsWith("facet_")
+    const facetEntries = Array.from(queryParams.entries()).filter(([key]) =>
+      key.startsWith(facetQueryParamPrefix)
     );
 
-    facetEntries.forEach(([key, value]) => {
-      const facetId = formattedFacetsDict[key];
+    facetEntries
+      .map(([key, value]) => ({
+        facetName: key,
+        values: value.match(/'(?:[^']|'')*'|[^,]+/g), // matches single-quoted values and unquoted values such as null or numbers
+      }))
+      .forEach(({ facetName, values }) => {
+        const facetId = formattedFacetsDict[facetName];
 
-      if (!facetsStatePatch[facetId]) {
-        facetsStatePatch[facetId] = {};
-      }
+        if (!facetsStatePatch[facetId]) {
+          facetsStatePatch[facetId] = {};
+        }
 
-      facetsStatePatch[facetId][value] = true;
-    });
+        values?.forEach((value) => {
+          if (!value) {
+            return;
+          }
+
+          facetsStatePatch[facetId][value] = true;
+        });
+      });
 
     patchFacetsState(facetsStatePatch);
     setAreQueryparamsSet(true);
@@ -84,44 +146,34 @@ export function useQueryParams(store: StoreApi<FacetState>) {
     }
 
     const timeoutId = setTimeout(() => {
-      const queryParams = new URLSearchParams(window.location.search);
-      const currentQuery = window.location.search.replace(/^\?/, "");
+      const oldQueryParams = new URLSearchParams(window.location.search);
 
-      Array.from(queryParams.entries()).forEach(([key, value]) => {
-        if (key.startsWith("facet_")) {
-          queryParams.delete(key, value);
-        }
-      });
+      const facetQueryParams = buildFacetQueryParams(
+        formattedFacets,
+        allFacetOptionsRef.current || {},
+        facetsStateRef.current
+      );
 
-      formattedFacets.forEach((facet) => {
-        const facetStateEntries = Object.entries(
-          facetsStateRef.current[facet.id] || {}
-        );
-        const facetOptionsCount =
-          allFacetOptionsRef.current?.[facet.id]?.length || 0;
-
-        if (facetStateEntries.length === facetOptionsCount) {
-          return;
-        }
-
-        facetStateEntries
-          .filter(([key, value]) => value)
-          .map(([key, value]) => key)
-          .sort((a, b) => a.localeCompare(b))
-          .forEach((key) => {
-            queryParams.append(facet.queryParamName, key);
-          });
-      });
-
-      const queryString = queryParams.toString();
-
-      if (queryString !== currentQuery) {
-        var newurl =
-          window.location.origin + window.location.pathname + queryString
-            ? `?${queryString}`
-            : "";
-        window.history.pushState({ path: newurl }, "", newurl);
+      if (areFacetQueryParamsEqual(facetQueryParams, oldQueryParams)) {
+        return;
       }
+
+      Array.from(oldQueryParams.entries())
+        .filter(([key, value]) => key.startsWith(facetQueryParamPrefix))
+        .forEach(([key, value]) => oldQueryParams.delete(key, value));
+
+      Array.from(facetQueryParams.entries()).forEach(([key, value]) =>
+        oldQueryParams.append(key, value)
+      );
+
+      const queryString = oldQueryParams.toString();
+
+      var newurl =
+        window.location.origin + window.location.pathname + queryString
+          ? `?${queryString}`
+          : "";
+
+      window.history.replaceState(null, "", newurl);
     }, 500);
 
     return () => clearTimeout(timeoutId);
