@@ -138,7 +138,7 @@ export function AlertTableServerSide({
   );
   const [grouping, setGrouping] = useState<GroupingState>([]);
   const [filterCel, setFilterCel] = useState<string | null>(null);
-  const [searchCel, setSearchCel] = useState<string>("");
+  const [searchCel, setSearchCel] = useState<string | null>(null);
 
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();

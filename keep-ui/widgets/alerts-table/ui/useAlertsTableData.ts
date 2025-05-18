@@ -18,7 +18,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
-  const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
+  const [dateRangeCel, setDateRangeCel] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
@@ -28,6 +28,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     string | undefined
   >(undefined);
   incidentsQueryStateRef.current = alertsQueryState;
+  const isDateRangeInit = useRef(false);
 
   const isPaused = useMemo(() => {
     if (!query) {
@@ -82,11 +83,20 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     }
 
     // if date does not change, just reload the data
-    setFacetsPanelRefreshToken(uuidv4());
+    if (isDateRangeInit.current) {
+      setFacetsPanelRefreshToken(uuidv4());
+    }
+    isDateRangeInit.current = true;
     mutateAlerts();
   }
 
-  useEffect(() => updateAlertsCelDateRange(), [query?.timeFrame]);
+  useEffect(() => {
+    if (!query?.timeFrame) {
+      return;
+    }
+
+    updateAlertsCelDateRange();
+  }, [query?.timeFrame]);
 
   const { data: alertsChangeToken } = useAlertPolling(!isPaused);
 
@@ -124,8 +134,11 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   }, [JSON.stringify(query)]);
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = [query?.searchCel, dateRangeCel];
+    if (!query) {
+      return null;
+    }
 
+    const filterArray = [query?.searchCel, dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
   }, [query?.searchCel, dateRangeCel]);
 

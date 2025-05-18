@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   FacetDto,
   FacetOptionsQueries,
@@ -21,7 +21,7 @@ export interface FacetsPanelProps {
   /**
    * CEL to be used for fetching facet options.
    */
-  facetOptionsCel?: string;
+  facetOptionsCel?: string | null;
   /**
    * Revalidation token to force recalculation of the facets.
    * Will call API to recalculate facet options every revalidationToken value change
@@ -50,8 +50,16 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   facetsConfig,
   isSilentReloading,
 }) => {
-  function buildFacetOptionsQuery() {
-    if (!facetQueriesState) {
+  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
+    `addFacetModalOpen-${entityName}`,
+    false
+  );
+  const facetActions = useFacetActions(entityName, initialFacetsData);
+  const [facetQueriesState, setFacetQueriesState] =
+    useState<FacetOptionsQueries | null>(null);
+
+  const facetOptionsQuery = useMemo(() => {
+    if (facetQueriesState === null || facetOptionsCel === null) {
       return null;
     }
 
@@ -72,15 +80,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     }
 
     return result;
-  }
-
-  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
-    `addFacetModalOpen-${entityName}`,
-    false
-  );
-  const facetActions = useFacetActions(entityName, initialFacetsData);
-  const [facetQueriesState, setFacetQueriesState] =
-    useState<FacetOptionsQueries | null>(null);
+  }, [facetQueriesState, facetOptionsCel]);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -88,14 +88,10 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     fallbackData: initialFacetsData?.facets,
   });
 
-  const {
-    facetOptions,
-    mutate: mutateFacetOptions,
-    isLoading: facetOptionsLoading,
-  } = useFacetOptions(
+  const { facetOptions, isLoading: facetOptionsLoading } = useFacetOptions(
     entityName,
     initialFacetsData?.facetOptions as any,
-    buildFacetOptionsQuery(),
+    facetOptionsQuery,
     revalidationToken
   );
 

@@ -9,9 +9,9 @@ export function useCelState({
 }: typeof defaultOptions) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [celState, setCelState] = useState(() => {
-    return searchParams.get(celQueryParamName) || defaultCel || "";
-  });
+  const [celState, setCelState] = useState(
+    () => searchParams.get(celQueryParamName) || defaultCel || ""
+  );
 
   // Clean up cel param when pathname changes
   useEffect(() => {
