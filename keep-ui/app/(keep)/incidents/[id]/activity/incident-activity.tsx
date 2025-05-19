@@ -59,7 +59,7 @@ function Item({
           {icon}
         </div>
       </div>
-      <div className="py-6 flex-1">{children}</div>
+      <div className="py-6 flex-1 min-w-0">{children}</div>
     </div>
   );
 }
