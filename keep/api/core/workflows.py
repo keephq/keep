@@ -326,7 +326,7 @@ def get_workflows_with_last_executions_v2(
                     "workflow_last_run_started": started,
                     "workflow_last_run_time": execution_time,
                     "workflow_last_run_status": status,
-                    "workflow_last_executions": execution_dict[workflow.id],
+                    "workflow_last_executions": execution_dict.get(workflow.id, []),
                 }
             )
 
