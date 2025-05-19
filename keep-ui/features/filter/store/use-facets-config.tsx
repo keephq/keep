@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { FacetOptionDto, FacetsConfig } from "../models";
 import { StoreApi, useStore } from "zustand";
 import { FacetState } from "./create-facets-store";

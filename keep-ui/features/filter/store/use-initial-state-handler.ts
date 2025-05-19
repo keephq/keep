@@ -1,7 +1,7 @@
 import { StoreApi, useStore } from "zustand";
 import { FacetState } from "./create-facets-store";
 import { toFacetState, valueToString } from "./utils";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export function useInitialStateHandler(store: StoreApi<FacetState>) {
   const facetsConfig = useStore(store, (state) => state.facetsConfig);
@@ -52,7 +52,6 @@ export function useInitialStateHandler(store: StoreApi<FacetState>) {
 
     setIsInitialStateHandled(true);
     patchFacetsState(facetsStatePatch);
-    setIsInitialStateHandled(true);
   }, [
     facetsConfig,
     facets,

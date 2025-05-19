@@ -169,9 +169,8 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       const queryString = oldQueryParams.toString();
 
       var newurl =
-        window.location.origin + window.location.pathname + queryString
-          ? `?${queryString}`
-          : "";
+        window.location.origin + window.location.pathname +
+          (queryString ? `?${queryString}` : "");
 
       window.history.replaceState(null, "", newurl);
     }, 500);
