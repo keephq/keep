@@ -18,6 +18,22 @@ services:
       - keycloak-and-mysql-volume:/var/lib/mysql
     networks:
       - keycloak-and-mysql-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   keycloak:
     image: keep-keycloak
@@ -49,13 +65,15 @@ services:
       - ./event_listeners/last-login-event-listener-0.0.1-SNAPSHOT.jar:/opt/keycloak/providers/keycloak-event-listener.jar
       # - ./javascript_providers/keep-js-policies.jar:/opt/keycloak/providers/keep-js-policies.jar
       - ./keycloak_entrypoint.sh:/opt/keycloak/keycloak_entrypoint.sh
+      - ./jsons:/opt/keycloak/jsons
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - keycloak-and-mysql-network
 
   openldap:
-    image: osixia/openldap:1.5.0
+    image: osixia/openldap
     ports:
       - "389:389"
       - "636:636"
@@ -67,6 +85,8 @@ services:
     volumes:
       - openldap-data:/var/lib/ldap
       - openldap-config:/etc/ldap/slapd.d
+      # - ./ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+
     networks:
       - keycloak-and-mysql-network
 

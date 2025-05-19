@@ -5,6 +5,7 @@ import random
 import uuid
 from typing import Tuple
 
+import celpy
 import requests
 import validators
 from fastapi import HTTPException
@@ -21,6 +22,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.workflows import get_workflows_with_last_executions_v2
 from keep.api.models.db.workflow import Workflow as WorkflowModel
+from keep.api.models.query import QueryDto
 from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
@@ -32,6 +34,7 @@ class WorkflowStore:
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
+        self.celpy_env = celpy.Environment()
 
     def get_workflow_execution(
         self,
@@ -325,7 +328,11 @@ class WorkflowStore:
         provisioned_workflow_yaml = os.environ.get("KEEP_WORKFLOW")
 
         # Get all existing provisioned workflows
+        logger.info("Getting all already provisioned workflows")
         provisioned_workflows = get_all_provisioned_workflows(tenant_id)
+        logger.info(
+            f"Found {len(provisioned_workflows)} provisioned workflows"
+        )
 
         if not (provisioned_workflows_dir or provisioned_workflow_yaml):
             logger.info("No workflows for provisioning found")
@@ -355,6 +362,7 @@ class WorkflowStore:
 
         ### Provisioning from env var
         if provisioned_workflow_yaml is not None:
+            logger.info("Provisioning workflow from env var")
             pre_parsed_workflow = None
             try:
                 workflow_yaml = cyaml.safe_load(provisioned_workflow_yaml)
@@ -390,6 +398,10 @@ class WorkflowStore:
                 if not pre_parsed_workflow:
                     logger.info("No workflows to provision")
                     return []
+                
+                logger.info(
+                    f"Provisioning workflow {pre_parsed_workflow.id} from env var"
+                )
 
                 add_or_update_workflow(
                     id=pre_parsed_workflow.id,
@@ -414,6 +426,10 @@ class WorkflowStore:
 
         ### Provisioning from the directory
         if provisioned_workflows_dir is not None:
+            
+            logger.info(
+                f"Provisioning workflows from directory {provisioned_workflows_dir}"
+            )
 
             # Check for workflows that are no longer in the directory or outside the workflows_dir and delete them
             for workflow in provisioned_workflows:
@@ -466,6 +482,10 @@ class WorkflowStore:
                             f"Error provisioning workflow from {file}",
                             extra={"exception": e},
                         )
+                else:
+                    logger.info(
+                        f"Skipping file {file} as it is not a YAML file"
+                    )
 
         return provisioned_workflows
 
@@ -534,6 +554,69 @@ class WorkflowStore:
                     f"Error parsing or fetching workflow from {file}: {e}"
                 )
         return workflows
+
+    def query_workflow_templates(
+        self, tenant_id: str, workflows_dir: str, query: QueryDto
+    ) -> Tuple[list[dict], int]:
+        """
+        Get random workflows from a directory.
+        Args:
+            tenant_id (str): The tenant to which the workflows belong.
+            workflows_dir (str): A directory containing workflows yamls.
+            limit (int): The number of workflows to return.
+
+        Returns:
+            List[dict]: A list of workflows
+        """
+        if not os.path.isdir(workflows_dir):
+            raise FileNotFoundError(f"Directory {workflows_dir} does not exist")
+
+        workflow_yaml_files = [
+            f for f in os.listdir(workflows_dir) if f.endswith((".yaml", ".yml"))
+        ]
+        if not workflow_yaml_files:
+            raise FileNotFoundError(f"No workflows found in directory {workflows_dir}")
+
+        workflows = []
+
+        for file in workflow_yaml_files:
+            try:
+                file_path = os.path.join(workflows_dir, file)
+                workflow_yaml = self._parse_workflow_to_dict(file_path)
+                if "workflow" in workflow_yaml:
+                    workflow_yaml["name"] = workflow_yaml["workflow"]["id"]
+                    workflow_yaml["workflow_raw"] = cyaml.dump(workflow_yaml)
+                    workflow_yaml["workflow_raw_id"] = workflow_yaml["workflow"]["id"]
+
+                    if not query.cel:
+                        workflows.append(workflow_yaml)
+                        continue
+
+                    ast = self.celpy_env.compile(query.cel)
+                    prgm = self.celpy_env.program(ast)
+
+                    activation = celpy.json_to_cel(
+                        {
+                            "name": workflow_yaml.get("workflow", {})
+                            .get("name", None)
+                            .lower(),
+                            "description": workflow_yaml.get("workflow", {})
+                            .get("description", "")
+                            .lower(),
+                        }
+                    )
+                    relevant = prgm.evaluate(activation)
+
+                    if relevant:
+                        workflows.append(workflow_yaml)
+
+                self.logger.info(f"Workflow from {file} fetched successfully")
+            except Exception as e:
+                self.logger.error(
+                    f"Error parsing or fetching workflow from {file}: {e}"
+                )
+
+        return workflows[query.offset : query.offset + query.limit], len(workflows)
 
     def group_last_workflow_executions(self, workflows: list[dict]) -> list[dict]:
         """
