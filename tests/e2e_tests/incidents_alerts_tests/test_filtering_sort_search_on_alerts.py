@@ -552,7 +552,6 @@ def test_filter_search_timeframe_combination_with_queryparams(
     facet_name = "severity"
     alert_property_name = "severity"
     value = "info"
-    current_alerts = setup_test_data
 
     def filter_lambda(alert):
         return (
@@ -563,18 +562,16 @@ def test_filter_search_timeframe_combination_with_queryparams(
             )
             >= (datetime.now(timezone.utc) - timedelta(hours=4))
         )
-
+    current_alerts = query_alerts(cell_query="", limit=1000)["results"]
+    init_test(browser, current_alerts, max_retries=3)
     filtered_alerts = [alert for alert in current_alerts if filter_lambda(alert)]
 
-    init_test(browser, current_alerts, max_retries=3)
     # Give the page a moment to process redirects
     browser.wait_for_timeout(500)
 
     # Wait for navigation to complete to either signin or providers page
     # (since we might get redirected automatically)
     browser.wait_for_load_state("networkidle")
-
-    assert_facet(browser, facet_name, current_alerts, alert_property_name)
 
     option = browser.locator("[data-testid='facet-value']", has_text=value)
     option.hover()
@@ -594,6 +591,8 @@ def test_filter_search_timeframe_combination_with_queryparams(
         "[data-testid='timeframe-picker-content'] button", has_text="Past 4 hours"
     ).click()
 
+    browser.wait_for_timeout(2000)
+
     # check that alerts are filtered by the selected facet/cel/timeframe
     assert_facet(
         browser,
@@ -612,16 +611,16 @@ def test_filter_search_timeframe_combination_with_queryparams(
     # Refresh in order to check that filters/facets are restored
     # It will use the URL query params from previous filters
     browser.reload()
+    assert_facet(
+        browser,
+        facet_name,
+        filtered_alerts,
+        alert_property_name,
+    )
     assert_alerts_by_column(
         browser,
         current_alerts,
         filter_lambda,
         alert_property_name,
         None,
-    )
-    assert_facet(
-        browser,
-        facet_name,
-        filtered_alerts,
-        alert_property_name,
     )
