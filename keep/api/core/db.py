@@ -49,6 +49,7 @@ from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
 from keep.api.core.db_utils import (
     create_db_engine,
+    custom_serialize,
     get_json_extract_field,
     get_or_create,
 )
@@ -175,7 +176,7 @@ def retry_on_db_error(f):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except OperationalError as e:
+        except (OperationalError, IntegrityError, StaleDataError) as e:
 
             if hasattr(e, "session") and not e.session.is_active:
                 e.session.rollback()
@@ -2103,7 +2104,19 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
 
-        workflow_execution.results = workflow_results
+        try:
+            # backward comptability - try to serialize the workflow results
+            json.dumps(workflow_results)
+            # if that's ok, use the original way
+            workflow_execution.results = workflow_results
+        except Exception:
+            # if that's not ok, use the Keep way (e.g. alerdto is not json serializable)
+            logger.warning(
+                "Failed to serialize workflow results, using fastapi encoder",
+            )
+            # use some other way to serialize the workflow results
+            workflow_execution.results = custom_serialize(workflow_results)
+        # commit the changes
         session.commit()
 
 
@@ -2342,7 +2355,7 @@ def create_incident_for_grouping_rule(
             rule_fingerprint=rule_fingerprint,
             is_predicted=True,
             is_candidate=rule.require_approve,
-            is_visible=False,# rule.create_on == CreateIncidentOn.ANY.value,
+            is_visible=False,  # rule.create_on == CreateIncidentOn.ANY.value,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,
@@ -4391,8 +4404,7 @@ def add_alerts_to_incident(
 
             if not override_count:
                 alerts_count = (
-                    select(count(LastAlertToIncident.fingerprint))
-                    .where(
+                    select(count(LastAlertToIncident.fingerprint)).where(
                         LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                         LastAlertToIncident.tenant_id == tenant_id,
                         LastAlertToIncident.incident_id == incident.id,
@@ -4436,13 +4448,14 @@ def add_alerts_to_incident(
                         .where(
                             Incident.id == incident_id,
                             Incident.tenant_id == tenant_id,
-                        ).values(
-                            alerts_count = alerts_count,
-                            last_seen_time = last_seen_at,
-                            start_time = started_at,
-                            affected_services = new_affected_services,
-                            severity = new_severity,
-                            sources = new_sources,
+                        )
+                        .values(
+                            alerts_count=alerts_count,
+                            last_seen_time=last_seen_at,
+                            start_time=started_at,
+                            affected_services=new_affected_services,
+                            severity=new_severity,
+                            sources=new_sources,
                         )
                     )
                     session.commit()
@@ -4677,8 +4690,7 @@ def remove_alerts_to_incident_by_incident_id(
             last_seen_at = parse(last_seen_at)
 
         alerts_count = (
-            select(count(LastAlertToIncident.fingerprint))
-            .where(
+            select(count(LastAlertToIncident.fingerprint)).where(
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                 LastAlertToIncident.tenant_id == tenant_id,
                 LastAlertToIncident.incident_id == incident.id,
@@ -4690,7 +4702,8 @@ def remove_alerts_to_incident_by_incident_id(
             .where(
                 Incident.id == incident_id,
                 Incident.tenant_id == tenant_id,
-            ).values(
+            )
+            .values(
                 alerts_count=alerts_count,
                 last_seen_time=last_seen_at,
                 start_time=started_at,
