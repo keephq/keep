@@ -160,9 +160,10 @@ class KeepProvider(BaseProvider):
             workflowId=self.context_manager.workflow_id,
         )
         # to avoid multiple key word argument, add and key,val on alert data only if it doesn't exists:
-        for key, val in alert_data.items():
-            if not hasattr(alert, key):
-                setattr(alert, key, val)
+        if isinstance(alert_data, dict):
+            for key, val in alert_data.items():
+                if not hasattr(alert, key):
+                    setattr(alert, key, val)
         # if fingerprint_fields are not provided, use labels
         if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
@@ -550,9 +551,16 @@ class KeepProvider(BaseProvider):
         for alert_result in trigger_alerts:
             alert_data = copy.copy(alert or {})
             # render alert data
-            rendered_alert_data = self.io_handler.render_context(
-                alert_data, additional_context=alert_result
-            )
+            if isinstance(alert_result, dict):
+                rendered_alert_data = self.io_handler.render_context(
+                    alert_data, additional_context=alert_result
+                )
+            else:
+                self.logger.warning(
+                    "Alert data is not a dict, skipping rendering",
+                    extra={"alert_data": alert_data},
+                )
+                rendered_alert_data = alert_data
             self.logger.debug(
                 "Rendered alert data",
                 extra={"original": alert_data, "rendered": rendered_alert_data},
