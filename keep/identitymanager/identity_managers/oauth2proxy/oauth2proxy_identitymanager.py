@@ -34,5 +34,6 @@ class Oauth2proxyIdentityManager(BaseIdentityManager):
         return None
 
     # Not implemented
-    def delete_user(self, **kwargs) -> User:
+    def delete_user(self, user_email=None, **kwargs) -> User:
+        # Implementation or just return None
         return None
