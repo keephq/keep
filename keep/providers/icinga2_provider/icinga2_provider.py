@@ -77,7 +77,7 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
     """
 
     PROVIDER_DISPLAY_NAME = "Icinga2"
-    PROVIDER_TAGS = ["alert", "monitoring"]
+    PROVIDER_TAGS = ["alert"]
     PROVIDER_CATEGORY = ["Monitoring"]
     WEBHOOK_INSTALLATION_REQUIRED = True
     PROVIDER_ICON = "icinga2-icon.png"
