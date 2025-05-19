@@ -174,7 +174,7 @@ class WorkflowStore:
         sort_by: str = None,
         sort_dir: str = None,
         session=None,
-    ) -> Tuple[list[dict], int]:
+    ):
         # list all tenant's workflows
         return get_workflows_with_last_executions_v2(
             tenant_id=tenant_id,

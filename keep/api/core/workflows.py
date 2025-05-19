@@ -5,10 +5,10 @@ This module contains the CRUD database functions for Keep.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Tuple
+from typing import TypedDict, Tuple
 
 from sqlalchemy import and_, case, desc, func, literal_column, select, text
-from sqlmodel import Session, col
+from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
@@ -248,6 +248,14 @@ def build_workflows_query(
     return query
 
 
+class WorkflowWithLastExecutions(TypedDict):
+    workflow: Workflow
+    workflow_last_run_started: datetime
+    workflow_last_run_time: datetime
+    workflow_last_run_status: str
+    workflow_last_executions: list[WorkflowExecution]
+
+
 def get_workflows_with_last_executions_v2(
     tenant_id: str,
     cel: str,
@@ -257,7 +265,7 @@ def get_workflows_with_last_executions_v2(
     sort_dir: str,
     fetch_last_executions: int = 15,
     session: Session = None,
-):
+) -> Tuple[list[WorkflowWithLastExecutions], int]:
     with existed_or_new_session(session) as session:
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id, cel=cel
