@@ -468,7 +468,7 @@ class KeepProvider(BaseProvider):
             alert_results = (
                 context.get("steps", {}).get(alert_step, {}).get("results", {})
             )
-            self.logger.debug(
+            self.logger.info(
                 "Got alert results from alert_step",
                 extra={"alert_results": alert_results},
             )
@@ -476,10 +476,17 @@ class KeepProvider(BaseProvider):
         else:
             # TODO: this is a temporary solution until we have a better way to get the alert results
             alert_results = context.get("steps", {}).get("this", {}).get("results", {})
-            self.logger.debug(
+            self.logger.info(
                 "Got alert results from 'this' step",
                 extra={"alert_results": alert_results},
             )
+            # alert_results must be a list
+            if not isinstance(alert_results, list):
+                self.logger.warning(
+                    "Alert results must be a list, but got a non-list type",
+                    extra={"alert_results": alert_results},
+                )
+                alert_results = None
 
         # create_alert_in_keep.yml for example
         if not alert_results:
@@ -551,8 +558,7 @@ class KeepProvider(BaseProvider):
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            # TODO: find another solution since js2py is not secure
-            # rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
+            rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_result, fingerprint_fields or [], **rendered_alert_data
             )
@@ -765,25 +771,116 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
-    """
-    TODO: find alternative to js2py
     def _handle_ternary_expressions(self, rendered_providers_parameters):
-        # SG: a hack to allow ternary expressions
-        #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
-        #
-        #     this is a hack and should be improved
-        for key, value in rendered_providers_parameters.items():
-            try:
-                split_value = value.split(" ")
-                if split_value[1] == ">" and split_value[3] == "?":
-                    # import js2py
+        """
+        Handle ternary expressions in rendered parameters without using js2py.
 
-                    rendered_providers_parameters[key] = js2py.eval_js(value)
-            # we don't care, it's not a ternary expression
-            except Exception:
-                pass
+        Parses and evaluates expressions like:
+        "x > 0.9 ? 'critical' : x > 0.7 ? 'warning' : 'info'"
+
+        Args:
+            rendered_providers_parameters (dict): Dictionary of rendered parameters
+
+        Returns:
+            dict: Updated parameters with evaluated ternary expressions
+        """
+        from asteval import Interpreter
+
+        def evaluate_ternary(expression, aeval):
+            """Recursively evaluate a ternary expression using Python."""
+            # Find the position of the first question mark that's not inside quotes
+            in_quotes = False
+            quote_type = None
+            question_pos = -1
+
+            for i, char in enumerate(expression):
+                if char in ['"', "'"]:
+                    if not in_quotes:
+                        in_quotes = True
+                        quote_type = char
+                    elif char == quote_type:
+                        in_quotes = False
+
+                if char == "?" and not in_quotes:
+                    question_pos = i
+                    break
+
+            if question_pos == -1:
+                # No ternary operator found, evaluate as regular expression
+                return aeval(expression)
+
+            # Find the matching colon
+            colon_pos = -1
+            nested_level = 0
+
+            for i in range(question_pos + 1, len(expression)):
+                char = expression[i]
+
+                if char in ['"', "'"]:
+                    if not in_quotes:
+                        in_quotes = True
+                        quote_type = char
+                    elif char == quote_type:
+                        in_quotes = False
+
+                if not in_quotes:
+                    if char == "?":
+                        nested_level += 1
+                    elif char == ":":
+                        if nested_level == 0:
+                            colon_pos = i
+                            break
+                        else:
+                            nested_level -= 1
+
+            if colon_pos == -1:
+                # Malformed ternary expression
+                self.logger.warning(
+                    f"Malformed ternary expression: {expression}",
+                    extra={"expression": expression},
+                )
+                return expression
+
+            # Split into condition, true_expr, and false_expr
+            condition = expression[:question_pos].strip()
+            true_expr = expression[question_pos + 1 : colon_pos].strip()
+            false_expr = expression[colon_pos + 1 :].strip()
+
+            # Evaluate the condition
+            condition_result = aeval(condition)
+
+            # Evaluate the appropriate branch (true or false)
+            if condition_result:
+                return evaluate_ternary(true_expr, aeval)
+            else:
+                return evaluate_ternary(false_expr, aeval)
+
+        # Process each parameter value
+        for key, value in rendered_providers_parameters.items():
+            if not isinstance(value, str):
+                continue
+
+            # Check if the value might contain a ternary expression
+            if "?" in value and ":" in value:
+                try:
+                    aeval = Interpreter()
+                    result = evaluate_ternary(value, aeval)
+
+                    # If there were errors during evaluation, log them but keep the original value
+                    if aeval.error_msg:
+                        self.logger.warning(
+                            f"Error evaluating ternary expression: {value}. Error: {aeval.error_msg}",
+                            extra={"value": value, "error": aeval.error_msg},
+                        )
+                    else:
+                        rendered_providers_parameters[key] = result
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to evaluate potential ternary expression: {value}. Error: {str(e)}",
+                        extra={"value": value, "error": str(e)},
+                    )
+
         return rendered_providers_parameters
-    """
 
 
 if __name__ == "__main__":
