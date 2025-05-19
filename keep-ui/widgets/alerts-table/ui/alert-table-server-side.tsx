@@ -104,7 +104,7 @@ interface Props {
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
-  facetsCel: string;
+  facetsCel: string | null;
   facetsPanelRefreshToken: string | undefined;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
