@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useRef } from "react";
 import { useStore } from "zustand";
 import { createFacetStore, FacetState } from "./create-facets-store";
 import { useFacetsLoadingStateHandler } from "./use-facets-loading-state-handler";
@@ -20,7 +20,6 @@ export function useNewFacetStore(facetsConfig: FacetsConfig | undefined) {
   useQueriesHandler(storeRef.current);
   useQueryParams(storeRef.current);
 
-  const facetsState = useStore(storeRef.current, (state) => state.facetsState);
 
   return storeRef.current;
 }

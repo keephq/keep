@@ -109,7 +109,7 @@ export const Facet: React.FC<FacetProps> = ({
     return !!facetState[strValue];
   };
 
-  function toggleFacetOption(value: any) {
+  function toggleFacetOption(value: FacetOptionDto['value']) {
     const strValue = valueToString(value);
     let selectedValues = getSelectedValues();
 

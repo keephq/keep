@@ -17,12 +17,14 @@ export function useCelState({
   useEffect(() => {
     return () => {
       const newParams = new URLSearchParams(window.location.search);
-      newParams.delete(celQueryParamName);
-      window.history.replaceState(
-        null,
-        "",
-        `${window.location.pathname}?${newParams}`
-      );
+      if (newParams.has(celQueryParamName)) {
+        newParams.delete(celQueryParamName);
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${newParams.toString() ? '?' + newParams.toString() : ''}`
+        );
+      }
     };
   }, [pathname]);
 
