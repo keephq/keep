@@ -85,9 +85,7 @@ def test_workflow(
     )
 
 
-workflow_postgres = (
-    workflow_test
-) = """workflow:
+workflow_postgres = """workflow:
   name: Alert Simple
   description: Alert Simple
   disabled: false
@@ -167,7 +165,6 @@ def test_workflow_postgres_results(db_session):
             is_test=workflow_db.is_test,
         )[0]
     manager = WorkflowManager.get_instance()
-
     workflow_execution_id = create_workflow_execution(
         workflow_id=workflow_db.id,
         workflow_revision=workflow_db.revision,
