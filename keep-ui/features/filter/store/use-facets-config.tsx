@@ -8,7 +8,7 @@ export function useFacetsConfig(
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
 
-    if (facets && Array.isArray(facets)) {
+    if (facets) {
       facets.forEach((facet) => {
         const facetConfig = facetsConfig?.[facet.name];
         const sortCallback =

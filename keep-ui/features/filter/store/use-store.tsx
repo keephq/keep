@@ -9,10 +9,9 @@ export function useNewFacetStore() {
 
   if (!storeRef.current) {
     storeRef.current = createFacetStore(); // New store per provider
+    useFacetsLoadingStateHandler(storeRef.current);
+    useQueriesHandler(storeRef.current);
   }
-
-  useFacetsLoadingStateHandler(storeRef.current);
-  useQueriesHandler(storeRef.current);
 
   return storeRef.current;
 }

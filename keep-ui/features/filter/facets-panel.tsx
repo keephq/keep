@@ -54,7 +54,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
 }) => {
-  const facetOptionsRef = useRef<any>(facetOptions);
+  const facetOptionsRef =
+    useRef<Record<string, FacetOptionDto[]>>(facetOptions);
   facetOptionsRef.current = facetOptions;
   const onCelChangeRef = useRef(onCelChange);
   onCelChangeRef.current = onCelChange;
