@@ -45,10 +45,14 @@ function buildFacetQueryParams(
       return;
     }
 
-    facetQueryParams.append(
-      facet.queryParamName,
-      facetStateEntries.map(([key, value]) => key).join(",")
-    );
+    const facetKeys = facetStateEntries.map(([key, value]) => {
+      key
+        .replace(/\\/g, "\\\\") // escape backslash first
+        .replace(/'/g, "\\'") // escape single quote
+        .replace(/,/g, "\\,"); // escape comma
+    });
+
+    facetQueryParams.append(facet.queryParamName, facetKeys.join(","));
   });
 
   return facetQueryParams;
