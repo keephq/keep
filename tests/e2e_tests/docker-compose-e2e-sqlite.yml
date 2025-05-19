@@ -27,7 +27,7 @@ services:
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
     volumes:
-      - backend-migrations:/tmp/keep/migrations
+      - backend-migrations:/tmp
     ports:
       - "8080:8080"
 

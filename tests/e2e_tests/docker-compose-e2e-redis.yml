@@ -30,7 +30,7 @@ services:
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
     volumes:
-      - backend-migrations:/tmp/keep/migrations
+      - backend-migrations:/tmp
     depends_on:
       - keep-redis
 
