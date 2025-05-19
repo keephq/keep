@@ -1,4 +1,8 @@
-import { usePathname } from "next/navigation";
+import {
+  ReadonlyURLSearchParams,
+  usePathname,
+  useSearchParams,
+} from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   AbsoluteTimeFrame,
@@ -16,8 +20,10 @@ const defaultOptions = {
   } as AllTimeFrame,
 };
 
-function getTimeframeInitialState(defaultTimeframe: TimeFrameV2): TimeFrameV2 {
-  const searchParams = new URLSearchParams(window.location.search);
+function getTimeframeInitialState(
+  searchParams: ReadonlyURLSearchParams,
+  defaultTimeframe: TimeFrameV2
+): TimeFrameV2 {
   const type = searchParams.get("timeFrameType");
 
   if (!type) {
@@ -79,6 +85,7 @@ export function useTimeframeState({
   enableQueryParams,
   defaultTimeframe,
 }: typeof defaultOptions) {
+  const searchParams = useSearchParams();
   const defaultTimeframeRef = useRef<TimeFrameV2>();
   defaultTimeframeRef.current =
     defaultTimeframe || defaultOptions.defaultTimeframe;
@@ -86,7 +93,7 @@ export function useTimeframeState({
   const pathname = usePathname();
   const [timeframeState, setTimeframeState] = useState<TimeFrameV2 | null>(
     () => {
-      return getTimeframeInitialState(defaultTimeframe);
+      return getTimeframeInitialState(searchParams, defaultTimeframe);
     }
   );
 
