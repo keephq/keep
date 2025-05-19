@@ -15,11 +15,6 @@ from keep.api.utils.cel_utils import preprocess_cel_expression
 
 class MaintenanceWindowsBl:
 
-    ALERT_STATUSES_TO_IGNORE = [
-        AlertStatus.RESOLVED.value,
-        AlertStatus.ACKNOWLEDGED.value,
-    ]
-
     def __init__(self, tenant_id: str, session: Session | None) -> None:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
@@ -42,17 +37,17 @@ class MaintenanceWindowsBl:
             )
             return False
 
-        if alert.status in self.ALERT_STATUSES_TO_IGNORE:
-            self.logger.debug(
-                "Alert status is set to be ignored, ignoring maintenance windows",
-                extra={"tenant_id": self.tenant_id},
-            )
-            return False
-
         self.logger.info("Checking maintenance window for alert", extra=extra)
         env = celpy.Environment()
 
         for maintenance_rule in self.maintenance_rules:
+            if alert.status in maintenance_rule.ignore_statuses:
+                self.logger.debug(
+                    "Alert status is set to be ignored, ignoring maintenance windows",
+                    extra={"tenant_id": self.tenant_id},
+                )
+                continue
+
             if maintenance_rule.end_time <= datetime.datetime.now():
                 # this is wtf error, should not happen because of query in init
                 self.logger.error(

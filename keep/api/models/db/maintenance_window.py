@@ -3,11 +3,17 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, JSON
 
 # third-parties
 from sqlmodel import Column, Field, Index, SQLModel, func
 
+from keep.api.models.alert import AlertStatus
+
+DEFAULT_ALERT_STATUSES_TO_IGNORE = [
+    AlertStatus.RESOLVED.value,
+    AlertStatus.ACKNOWLEDGED.value,
+]
 
 class MaintenanceWindowRule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -29,6 +35,7 @@ class MaintenanceWindowRule(SQLModel, table=True):
     )
     suppress: bool = False
     enabled: bool = True
+    ignore_statuses: list = Field(sa_column=Column(JSON), default_factory=list)
 
     __table_args__ = (
         Index("ix_maintenance_rule_tenant_id", "tenant_id"),
@@ -44,6 +51,7 @@ class MaintenanceRuleCreate(BaseModel):
     duration_seconds: Optional[int] = None
     suppress: bool = False
     enabled: bool = True
+    ignore_statuses: list[str] = DEFAULT_ALERT_STATUSES_TO_IGNORE
 
 
 class MaintenanceRuleRead(BaseModel):
@@ -58,3 +66,4 @@ class MaintenanceRuleRead(BaseModel):
     updated_at: Optional[datetime]
     suppress: bool = False
     enabled: bool = True
+    ignore_statuses: list[str] = DEFAULT_ALERT_STATUSES_TO_IGNORE
