@@ -19,7 +19,6 @@ from uuid import UUID, uuid4
 from dateutil.parser import parse
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
-from fastapi.encoders import jsonable_encoder
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
 from retry import retry
@@ -50,6 +49,7 @@ from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
 from keep.api.core.db_utils import (
     create_db_engine,
+    custom_serialize,
     get_json_extract_field,
     get_or_create,
 )
@@ -2104,7 +2104,19 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
 
-        workflow_execution.results = json.dumps(jsonable_encoder(workflow_results))
+        try:
+            # backward comptability - try to serialize the workflow results
+            json.dumps(workflow_results)
+            # if that's ok, use the original way
+            workflow_execution.results = workflow_results
+        except Exception:
+            # if that's not ok, use the fastapi way (e.g. alerdto is not json serializable)
+            logger.warning(
+                "Failed to serialize workflow results, using fastapi encoder",
+            )
+            # use some other way to serialize the workflow results
+            workflow_execution.results = custom_serialize(workflow_results)
+        # commit the changes
         session.commit()
 
 
