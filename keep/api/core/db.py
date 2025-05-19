@@ -175,7 +175,7 @@ def retry_on_db_error(f):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except OperationalError as e:
+        except (OperationalError, IntegrityError, StaleDataError) as e:
 
             if hasattr(e, "session") and not e.session.is_active:
                 e.session.rollback()

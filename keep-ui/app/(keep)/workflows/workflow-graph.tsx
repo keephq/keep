@@ -45,7 +45,6 @@ const baseChartOptions: BarChartOptions = {
       border: {
         display: false,
       },
-      type: "linear",
     },
     y: {
       ticks: {
