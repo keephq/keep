@@ -1,8 +1,8 @@
 import json
 import os
-from uuid import UUID
 import pytest
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
@@ -13,10 +13,12 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 
 fake_field_configurations = [
     FieldMappingConfiguration(
-        map_from_pattern="id", map_to=["entityId"], data_type=UUID
+        map_from_pattern="id", map_to=["entityId"], data_type=DataType.UUID
     ),
     FieldMappingConfiguration(
-        map_from_pattern="name", map_to=["user_generated_name", "ai_generated_name"]
+        map_from_pattern="name",
+        map_to=["user_generated_name", "ai_generated_name"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="summary", map_to=["user_summary", "generated_summary"]
@@ -26,9 +28,26 @@ fake_field_configurations = [
         map_from_pattern="severity",
         map_to="severity",
         enum_values=["info", "low", "medium", "high", "critical"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alert.provider_type", map_to="incident_alert_provider_type"
+        map_from_pattern="alert.provider_type",
+        map_to="incident_alert_provider_type",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="jsonArray",
+        map_to="entity.jsonArray",
+        data_type=DataType.ARRAY,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_at",
+        map_to="created_at",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="propWithUnknownType",
+        map_to="columnWithUnknownType",
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.tags.*",

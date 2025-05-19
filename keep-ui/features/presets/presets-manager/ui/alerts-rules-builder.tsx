@@ -14,10 +14,10 @@ import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import { FiExternalLink, FiSave } from "react-icons/fi";
 import { AlertDto } from "@/entities/alerts/model";
-import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import { components, GroupBase, MenuListProps } from "react-select";
-import { MonacoEditor, Select } from "@/shared/ui";
+import { Select } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { IoSearchOutline } from "react-icons/io5";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -223,7 +223,6 @@ export const AlertsRulesBuilder = ({
     if (shouldSetQueryParam) setQueryParam("cel", "");
     onApplyFilter();
     updateOutputCEL?.(celRules);
-    setIsValidCEL(true);
   }, [table]);
 
   const toggleSuggestions = () => {
@@ -396,39 +395,20 @@ export const AlertsRulesBuilder = ({
     }
   };
 
-  const onValueChange = (value: string) => {
-    setCELRules(value);
-    if (value.length === 0) {
-      setIsValidCEL(true);
-    }
+  const openSaveModal = (celExpression: string) => {
+    setPresetCEL?.(celExpression);
+    setIsModalOpen?.(true);
   };
 
-  const validateAndOpenSaveModal = (celExpression: string) => {
-    const celQuery = formatQuery(parseCEL(celExpression), "cel");
-
-    // Normalize both strings by:
-    // 1. Removing all whitespace
-    // 2. Creating versions with both single and double quotes
-    const normalizedCelQuery = celQuery.replace(/\s+/g, "");
-    const normalizedExpression = celExpression.replace(/\s+/g, "");
-
-    // Create variants with different quote styles
-    const celQuerySingleQuotes = normalizedCelQuery.replace(/"/g, "'");
-    const celQueryDoubleQuotes = normalizedCelQuery.replace(/'/g, '"');
-
-    const isValidCEL =
-      normalizedExpression === celQuerySingleQuotes ||
-      normalizedExpression === celQueryDoubleQuotes ||
-      celExpression === "";
-
-    if (isValidCEL && celExpression.length) {
-      setPresetCEL?.(celExpression);
-      setIsModalOpen?.(true);
-    } else {
-      alert("You can only save a valid CEL expression.");
-      setIsValidCEL(isValidCEL);
+  function getSaveFilterTooltipText(): string {
+    if (!isValidCEL) {
+      return "You can only save a valid CEL expression.";
     }
-  };
+
+    return action === "update"
+      ? "Edit preset"
+      : "Save current filter as a preset";
+  }
 
   return (
     <>
@@ -444,7 +424,7 @@ export const AlertsRulesBuilder = ({
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   fieldsForSuggestions={alertFields}
-                  onValueChange={onValueChange}
+                  onValueChange={setCELRules}
                   onIsValidChange={setIsValidCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
@@ -498,13 +478,9 @@ export const AlertsRulesBuilder = ({
               color="orange"
               variant="secondary"
               size="sm"
-              disabled={!celRules.length}
-              onClick={() => validateAndOpenSaveModal(celRules)}
-              tooltip={
-                action === "update"
-                  ? "Edit preset"
-                  : "Save current filter as a preset"
-              }
+              disabled={!celRules.length || !isValidCEL}
+              onClick={() => openSaveModal(celRules)}
+              tooltip={getSaveFilterTooltipText()}
             ></Button>
           )}
           {showSqlImport && (

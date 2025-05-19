@@ -6,6 +6,146 @@ The **Functions** in Keep Workflow Engine are utilities that can be used to mani
 
 ---
 
+## Mathematical Functions
+
+### `add`
+
+**Description:** Adds all provided numbers together. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.add(1, 2, 3) # Output: 6
+        message2: keep.add(10, 20, 30) # Output: 60
+```
+
+---
+
+### `sub`
+
+**Description:** Subtracts all subsequent numbers from the first number. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.sub(10, 2, 3) # Output: 5
+        message2: keep.sub(100, 20, 30) # Output: 50
+```
+
+---
+
+### `mul`
+
+**Description:** Multiplies all provided numbers together. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.mul(2, 3, 4) # Output: 24
+        message2: keep.mul(5, 6, 7) # Output: 210
+```
+
+---
+
+### `div`
+
+**Description:** Divides the first number by all subsequent numbers. All arguments are converted to integers. Returns an integer if the division result is whole, otherwise returns a floating-point number.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.div(10, 2) # Output: 5
+        message2: keep.div(10, 3) # Output: 3.3333333333333335
+        message3: keep.div(100, 2, 5) # Output: 10
+```
+
+---
+
+### `mod`
+
+**Description:** Calculates the remainder of dividing the first number by all subsequent numbers sequentially. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.mod(10, 3) # Output: 1
+        message2: keep.mod(100, 30, 7) # Output: 2
+```
+
+---
+
+### `exp`
+
+**Description:** Raises the first number to the power equal to the product of all subsequent numbers. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.exp(2, 3) # Output: 8
+        message2: keep.exp(2, 3, 2) # Output: 64
+```
+
+---
+
+### `fdiv`
+
+**Description:** Performs integer division of the first number by all subsequent numbers sequentially. All arguments are converted to integers.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.fdiv(10, 3) # Output: 3
+        message2: keep.fdiv(100, 3, 2) # Output: 16
+```
+
+---
+
+### `eq`
+
+**Description:** Checks if two values are equal.
+
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.eq(5, 5) # Output: true
+        message2: keep.eq("hello", "world") # Output: false
+        message3: keep.eq([1, 2, 3], [1, 2, 3]) # Output: true
+```
+
+---
+
 ## String Functions
 
 ### `uppercase`
@@ -129,7 +269,6 @@ steps:
       type: mock
       with:
         message: keep.remove_newlines("hello\nworld\t!") # Output: "helloworld!"
-
 ```
 
 ---
@@ -146,31 +285,25 @@ steps:
       type: mock
       with:
         message: keep.encode("hello world") # Output: "hello%20world"
-
-
 ```
 
-### `raw_render_without_execution`
+---
 
-**Description:** Renders the string without execution of keep instructions inside this string.
+### `slice`
+
+**Description:** Extracts a portion of a string based on start and end indices.
 **Example:**
 
 ```yaml
-consts:
-  yaml: |
-    keep.is_business_hours(2024-03-25T14:00:00Z)
 steps:
   - name: example-step
     provider:
       type: mock
       with:
-        message: "raw_render_without_execution(My yaml is: {{ yaml }}!)"
+        message: keep.slice("hello world", 0, 5) # Output: "hello"
 ```
 
-Will output:
-```
-My yaml is: keep.is_business_hours(2024-03-25T14:00:00Z)!
-```
+---
 
 ## List and Dictionary Functions
 
@@ -186,9 +319,6 @@ steps:
       type: mock
       with:
         message: keep.first([1, 2, 3]) # Output: 1
-
-
-
 ```
 
 ---
@@ -211,7 +341,7 @@ steps:
 
 ### `index`
 
-**Description:**  Retrieves an element at a specific index from a list.
+**Description:** Retrieves an element at a specific index from a list.
 **Example:**
 
 ```yaml
@@ -221,15 +351,13 @@ steps:
       type: mock
       with:
         message: keep.index(["a", "b", "c"], 1) # Output: "b"
-
 ```
 
 ---
 
-
 ### `join`
 
-**Description:**  Joins a list of elements into a string using a delimiter.
+**Description:** Joins a list of elements into a string using a delimiter.
 **Example:**
 
 ```yaml
@@ -239,8 +367,6 @@ steps:
       type: mock
       with:
         message: keep.join(["a", "b", "c"], ",") # Output: "a,b,c"
-
-
 ```
 
 ---
@@ -257,8 +383,6 @@ steps:
       type: mock
       with:
         message: keep.len([1, 2, 3]) # Output: 3
-
-
 ```
 
 ---
@@ -275,6 +399,70 @@ steps:
       type: mock
       with:
         message: keep.dict_to_key_value_list({"a": 1, "b": 2}) # Output: ["a:1", "b:2"]
+```
+
+---
+
+### `dict_pop`
+
+**Description:** Removes specified keys from a dictionary.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.dict_pop({"a": 1, "b": 2, "c": 3}, "a", "b") # Output: {"c": 3}
+```
+
+---
+
+### `dict_pop_prefix`
+
+**Description:** Removes all keys that start with a specified prefix from a dictionary.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.dict_pop_prefix({"a_1": 1, "a_2": 2, "b_1": 3}, "a_") # Output: {"b_1": 3}
+```
+
+---
+
+### `dict_filter_by_prefix`
+
+**Description:** Returns only the dictionary entries whose keys start with a specified prefix.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.dict_filter_by_prefix({"a_1": 1, "a_2": 2, "b_1": 3}, "a_") # Output: {"a_1": 1, "a_2": 2}
+```
+
+---
+
+### `dictget`
+
+**Description:** Gets a value from a dictionary with a default fallback.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.dictget({"a": 1, "b": 2}, "c", "default") # Output: "default"
 ```
 
 ---
@@ -297,6 +485,22 @@ steps:
 
 ---
 
+### `utcnowtimestamp`
+
+**Description:** Returns the current UTC datetime as a Unix timestamp (seconds since epoch).
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.utcnowtimestamp() # Output: 1704067200
+```
+
+---
+
 ### `utcnowiso`
 
 **Description:** Returns the current UTC datetime in ISO format.
@@ -309,7 +513,6 @@ steps:
       type: mock
       with:
         message: keep.utcnowiso()
-
 ```
 
 ---
@@ -326,11 +529,9 @@ steps:
       type: mock
       with:
         message: keep.to_utc("2024-01-01T00:00:00")
-
 ```
 
 ---
-
 
 ### `to_timestamp`
 
@@ -348,7 +549,6 @@ steps:
 
 ---
 
-
 ### `datetime_compare`
 
 **Description:** Compares two datetime objects and returns the difference in hours.
@@ -361,7 +561,6 @@ steps:
       type: mock
       with:
         message: keep.datetime_compare("2024-01-01T10:00:00", "2024-01-01T00:00:00") # Output: 10.0
-
 ```
 
 ---
@@ -377,8 +576,13 @@ steps:
     provider:
       type: mock
       with:
-        message: keep.is_business_hours(timezone="America/New_York")
-
+        message: keep.is_business_hours(
+          time_to_check="2024-01-01T14:00:00Z",
+          start_hour=8,
+          end_hour=20,
+          business_days=[0,1,2,3,4],
+          timezone="America/New_York"
+        )
 ```
 
 ---
@@ -387,7 +591,7 @@ steps:
 
 ### `json_dumps`
 
-**Description:**  Converts a dictionary or string into a formatted JSON string.
+**Description:** Converts a dictionary or string into a formatted JSON string.
 **Example:**
 
 ```yaml
@@ -413,7 +617,6 @@ steps:
       type: mock
       with:
         message: keep.json_loads('{"key": "value"}')
-
 ```
 
 ---
@@ -431,8 +634,7 @@ steps:
     provider:
       type: mock
       with:
-        message: keep.get_firing_time(alert, "m") # Output: "15.0"
-
+        message: keep.get_firing_time(alert, "m", tenant_id="tenant-id") # Output: "15.0"
 ```
 
 ---
@@ -449,7 +651,6 @@ steps:
       type: mock
       with:
         message: keep.add_time_to_date("2024-01-01", "%Y-%m-%d", "1w 2d") # Output: "2024-01-10"
-
 ```
 
 ---
@@ -473,7 +674,6 @@ steps:
 
         # Add 1 week to a datetime
         add_week: keep.timestamp_delta("2024-01-01T00:00:00Z", 1, "weeks") # Output: 2024-01-08T00:00:00Z
-
 ```
 
 ---
@@ -494,7 +694,38 @@ steps:
 
         # Check if this is the first time the alert is firing in the last 24 hours
         first_time_24h: keep.is_first_time(alert.fingerprint, "24h", tenant_id="tenant-id")
+```
 
+---
+
+### `all`
+
+**Description:** Checks if all elements in an iterable are identical.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.all([1, 1, 1]) # Output: true
+```
+
+---
+
+### `diff`
+
+**Description:** Checks if any elements in an iterable are different (opposite of `all`).
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.diff([1, 2, 1]) # Output: true
 ```
 
 ---

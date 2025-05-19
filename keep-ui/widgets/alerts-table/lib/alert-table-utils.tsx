@@ -16,6 +16,7 @@ import AlertExtraPayload from "../ui/alert-extra-payload";
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { getNestedValue } from "@/shared/lib/object-utils";
 import {
   isListColumn,
   formatList,
@@ -44,7 +45,6 @@ import {
   TimeFormatOption,
   isDateTimeColumn,
 } from "@/widgets/alerts-table/lib/alert-table-time-format";
-import { useIncidents } from "@/utils/hooks/useIncidents";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 import {
   ColumnRenameMapping,
@@ -221,7 +221,6 @@ export const useAlertTableCols = (
     `column-time-formats-${presetName}`,
     {}
   );
-  const { data: incidents } = useIncidents({});
   const { data: providersData } = useProviders();
   const { isRowExpanded } = useExpandedRows(presetName);
   const [columnListFormats, setColumnListFormats] = useLocalStorage<
@@ -237,37 +236,15 @@ export const useAlertTableCols = (
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
-      (row) => {
-        // Extract value using the dot notation path
-        const keys = colName.split(".");
-        let value: any = row;
-        for (const key of keys) {
-          if (value && typeof value === "object" && key in value) {
-            value = value[key as keyof typeof value];
-          } else {
-            value = undefined;
-            break;
-          }
-        }
-        return value;
-      },
+      (row) => getNestedValue(row, colName),
       {
         id: colName,
         header: getColumnDisplayName(colName, colName, columnRenameMapping),
         minSize: 100,
         enableGrouping: true,
         getGroupingValue: (row) => {
-          const keys = colName.split(".");
-          let value: any = row;
-          for (const key of keys) {
-            if (value && typeof value === "object" && key in value) {
-              value = value[key as keyof typeof value];
-            } else {
-              value = undefined;
-              break;
-            }
-          }
-
+          const value = getNestedValue(row, colName);
+          
           if (typeof value === "object" && value !== null) {
             return "object"; // Group all objects together
           }
@@ -320,21 +297,16 @@ export const useAlertTableCols = (
             return provider?.details?.name || value;
           }
           if (context.column.id === "incident") {
-            const incidentString = String(value || "");
-            const incidentSplit = incidentString.split(",");
+            const incidents = row.original.incident_dto || [];
             return (
               <div className="flex flex-wrap gap-1 w-full overflow-hidden">
-                {incidentSplit.map((incidentId, index) => {
-                  const incident = incidents?.items.find(
-                    (incident) => incident.id === incidentId
-                  );
-                  if (!incident) return null;
+                {incidents.map((incident) => {
                   const title =
                     incident.user_generated_name || incident.ai_generated_name;
                   return (
                     <Link
-                      key={incidentId}
-                      href={`/incidents/${incidentId}`}
+                      key={incident.id}
+                      href={`/incidents/${incident.id}`}
                       title={title}
                     >
                       {title}

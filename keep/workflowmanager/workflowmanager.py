@@ -5,6 +5,8 @@ import threading
 import typing
 import uuid
 
+import celpy
+
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
@@ -40,6 +42,7 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
+        self.cel_environment = celpy.Environment()
         # this is to enqueue the workflows in the REDIS queue
         # SHAHAR: todo - finish the REDIS implementation
         # self.loop = None
@@ -162,128 +165,215 @@ class WorkflowManager:
                 )
             self.logger.info("Workflow added to run")
 
+    # @tb: should I move it to cel_utils.py?
+    # logging is easier here and I don't see other places who might use this >.<
+    def _convert_filters_to_cel(self, filters: list[dict[str, str]]):
+        # Convert filters ({"key": "key", "value": "value"}) and friends to CEL
+        self.logger.info(
+            "Converting filters to CEL",
+            extra={"original_filters": filters},
+        )
+        try:
+            cel_filters = []
+            for filter in filters:
+                key = filter.get("key")
+                value = filter.get("value")
+                exclude = filter.get("exclude", False)
+
+                # malformed filter?
+                if not key or not value:
+                    self.logger.warning(
+                        "Filter is missing key or value",
+                        extra={"filter": filter},
+                    )
+                    continue
+
+                if value.startswith('r"'):
+                    # Try to parse regex in to CEL
+                    cel_regex = []
+                    value = value[2:-1]
+
+                    # for example: value: r"error\\.[a-z]+\\..*" is to hard to convert to CEL
+                    # so we'll just hit the last else and raise an exception, that it's deprecated
+                    if "]^" in value or "]+" in value:
+                        raise Exception(
+                            f"Unsupported regex: {value}, move to new CEL filters"
+                        )
+                    elif "|" in value:
+                        value_split = value.split("|")
+                        for value_ in value_split:
+                            value_ = value_.lstrip("(").rstrip(")").strip()
+                            if key == "source":
+                                if exclude:
+                                    cel_regex.append(f'!{key}.contains("{value_}")')
+                                else:
+                                    cel_regex.append(f'{key}.contains("{value_}")')
+                            else:
+                                if exclude:
+                                    cel_regex.append(f'{key} != "{value_}"')
+                                else:
+                                    cel_regex.append(f'{key} == "{value_}"')
+                    elif value == ".*":
+                        cel_regex.append(f"has({key})")
+                    elif value == "^$":
+                        # empty string
+                        if exclude:
+                            cel_regex.append(f'{key} != ""')
+                        else:
+                            cel_regex.append(f'{key} == ""')
+                    elif value.startswith(".*") and value.endswith(".*"):
+                        # for example: r".*prometheus.*"
+                        if exclude:
+                            cel_regex.append(f'!{key}.contains("{value[2:-2]}")')
+                        else:
+                            cel_regex.append(f'{key}.contains("{value[2:-2]}")')
+                    elif value.endswith(".*"):
+                        # for example: r"2025-01-30T09:.*"
+                        if exclude:
+                            cel_regex.append(f'!{key}.contains("{value[:-2]}")')
+                        else:
+                            cel_regex.append(f'{key}.contains("{value[:-2]}")')
+                    else:
+                        raise Exception(
+                            f"Unsupported regex: {value}, move to new CEL filters"
+                        )
+                    # if we're talking about excluded, we need to do AND between the regexes
+                    # for example:
+                    #   filters: [{"key": "source", "value": 'r"prometheus|grafana"', "exclude": true}]
+                    #   cel: !source.contains("prometheus") && !source.contains("grafana")
+                    # otherwise, we do OR between the regexes
+                    # for example:
+                    #   filters: [{"key": "source", "value": 'r"prometheus|grafana"'}]
+                    #   cel: source.contains("prometheus") || source.contains("grafana")
+                    if exclude:
+                        cel_filters.append(f"({' && '.join(cel_regex)})")
+                    else:
+                        cel_filters.append(f"({' || '.join(cel_regex)})")
+                else:
+                    if key == "source":
+                        # handle source, which is a list of sources
+                        if exclude:
+                            cel_filters.append(f'!{key}.contains("{value}")')
+                        else:
+                            cel_filters.append(f'{key}.contains("{value}")')
+                    else:
+                        if exclude:
+                            cel_filters.append(f'{key} != "{value}"')
+                        else:
+                            cel_filters.append(f'{key} == "{value}"')
+
+            self.logger.info(
+                "Converted filters to CEL",
+                extra={"cel_filters": cel_filters, "original_filters": filters},
+            )
+
+            return " && ".join(cel_filters)
+        except Exception as e:
+            self.logger.exception(
+                "Error converting filters to CEL", extra={"exception": e}
+            )
+            raise
+
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
-            self.logger.info("Getting all workflows")
-            all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
+            self.logger.info("Getting all workflows", extra={"tenant_id": tenant_id})
+            all_workflow_models = self.workflow_store.get_all_workflows(
+                tenant_id, exclude_disabled=True
+            )
             self.logger.info(
                 "Got all workflows",
                 extra={
                     "num_of_workflows": len(all_workflow_models),
+                    "tenant_id": tenant_id,
                 },
             )
             for workflow_model in all_workflow_models:
-
-                if workflow_model.is_disabled:
-                    self.logger.debug(
-                        f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
-                        f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
-                    )
-                    continue
                 workflow = self._get_workflow_from_store(tenant_id, workflow_model)
-                # FIX: this will fail silently if error in the workflow provider configuration
+
                 if workflow is None:
+                    # Exception is thrown in _get_workflow_from_store, we don't need to log it here, just continue.
                     continue
 
                 for trigger in workflow.workflow_triggers:
-                    # TODO: handle it better
+                    # If the trigger is not an alert, it's not relevant for this event.
                     if not trigger.get("type") == "alert":
-                        self.logger.debug("trigger type is not alert, skipping")
-                        continue
-                    should_run = True
-                    # apply filters
-                    for filter in trigger.get("filters", []):
-                        # TODO: more sophisticated filtering/attributes/nested, etc
-                        self.logger.debug(f"Running filter {filter}")
-                        filter_key = filter.get("key")
-                        filter_val = filter.get("value")
-                        filter_exclude = filter.get("exclude", False)
-                        event_val = self._get_event_value(event, filter_key)
                         self.logger.debug(
-                            "Filtering",
+                            "Trigger type is not alert, skipping",
                             extra={
-                                "filter_key": filter_key,
-                                "filter_val": filter_val,
-                                "event": event,
+                                "trigger": trigger,
+                                "workflow_id": workflow_model.id,
+                                "tenant_id": tenant_id,
                             },
                         )
-                        if event_val is None:
-                            self.logger.debug(
-                                "Failed to run filter, skipping the event. This may happen if the event does not have the filter_key as attribute.",
+                        continue
+
+                    if "filters" not in trigger and "cel" not in trigger:
+                        self.logger.warning(
+                            "Trigger is missing filters or cel",
+                            extra={
+                                "trigger": trigger,
+                                "workflow_id": workflow_model.id,
+                                "tenant_id": tenant_id,
+                            },
+                        )
+                        should_run = True
+                    else:
+
+                        # By default, the workflow should not run. Only if the CEL evaluates to true, the workflow will run.
+                        should_run = False
+
+                        # backward compatibility for filter. should be removed in the future
+                        # if triggers and cel are set, we override the cel with filters.
+                        if "filters" in trigger:
+                            try:
+                                # this is old format, so let's convert it to CEL
+                                trigger["cel"] = self._convert_filters_to_cel(
+                                    trigger["filters"]
+                                )
+                            except Exception:
+                                self.logger.exception(
+                                    "Failed to convert filters to CEL, workflow will not run",
+                                    extra={
+                                        "trigger": trigger,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                    },
+                                )
+                                continue
+
+                        compiled_ast = self.cel_environment.compile(trigger["cel"])
+                        program = self.cel_environment.program(compiled_ast)
+                        activation = celpy.json_to_cel(event.dict())
+                        try:
+                            should_run = program.evaluate(activation)
+                        except celpy.evaluation.CELEvalError as e:
+                            self.logger.exception(
+                                "Error evaluating CEL for event in insert_events",
                                 extra={
-                                    "tenant_id": tenant_id,
-                                    "filter_key": filter_key,
-                                    "filter_val": filter_val,
+                                    "exception": e,
+                                    "event": event,
+                                    "trigger": trigger,
                                     "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                    "cel": trigger["cel"],
+                                    "deprecated_filters": trigger.get("filters"),
                                 },
                             )
-                            should_run = False
                             continue
-                        # if its list, check if the filter is in the list
-                        if isinstance(event_val, list):
-                            for val in event_val:
-                                # if one filter applies, it should run
-                                if self._apply_filter(filter_val, val):
-                                    self.logger.debug(
-                                        "Filter matched, running",
-                                        extra={
-                                            "filter_key": filter_key,
-                                            "filter_val": filter_val,
-                                            "event": event,
-                                        },
-                                    )
-                                    # depends on the exclude flag
-                                    if filter_exclude:
-                                        should_run = False
-                                    else:
-                                        should_run = True
-                                    break
-                                self.logger.debug(
-                                    "Filter didn't match, skipping",
-                                    extra={
-                                        "filter_key": filter_key,
-                                        "filter_val": filter_val,
-                                        "event": event,
-                                    },
-                                )
-                                if not filter_exclude:
-                                    should_run = False
-                        # elif the filter is string/int/float, compare them:
-                        elif type(event_val) in [int, str, float, bool]:
-                            filter_applied = self._apply_filter(filter_val, event_val)
-                            if not filter_applied and not filter_exclude:
-                                self.logger.debug(
-                                    "Filter didn't match, skipping",
-                                    extra={
-                                        "filter_key": filter_key,
-                                        "filter_val": filter_val,
-                                        "event": event,
-                                    },
-                                )
-                                should_run = False
-                                break
-                            # if the filter applies but its exclusion filter, don't run
-                            elif filter_applied and filter_exclude:
-                                self.logger.debug(
-                                    "Filter matched but it's exclusion filter, skipping",
-                                    extra={
-                                        "filter_key": filter_key,
-                                        "filter_val": filter_val,
-                                        "event": event,
-                                    },
-                                )
-                                should_run = False
-                        # other types currently does not supported
-                        else:
-                            self.logger.warning(
-                                "Could not run the filter on unsupported type, skipping the event. Probably misconfigured workflow."
-                            )
-                            should_run = False
-                            break
 
-                    if not should_run:
-                        self.logger.debug("Skipping the workflow")
+                    if bool(should_run) is False:
+                        self.logger.debug(
+                            "Workflow should not run, skipping",
+                            extra={
+                                "triggers": workflow.workflow_triggers,
+                                "workflow_id": workflow_model.id,
+                                "tenant_id": tenant_id,
+                                "cel": trigger["cel"],
+                                "deprecated_filters": trigger.get("filters"),
+                            },
+                        )
                         continue
+
                     # enrich the alert with more data
                     self.logger.info("Found a workflow to run")
                     event.trigger = "alert"
@@ -465,7 +555,11 @@ class WorkflowManager:
             message = (
                 f"Workflow {workflow.workflow_id} failed with errors: {error_message}"
             )
-            workflow.on_failure.provider_parameters = {"message": message}
+            # TODO: maybe to set the message in step.vars instead of provider_parameters so user can format it
+            workflow.on_failure.provider_parameters = {
+                **workflow.on_failure.provider_parameters,
+                "message": message,
+            }
             workflow.on_failure.run()
             self.logger.info(
                 "Ran on_failure action for workflow",

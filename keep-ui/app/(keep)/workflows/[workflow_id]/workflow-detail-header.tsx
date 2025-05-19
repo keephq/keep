@@ -2,11 +2,9 @@
 
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { Workflow } from "@/shared/api/workflows";
-import { useWorkflowRun } from "@/utils/hooks/useWorkflowRun";
+import { useWorkflowRun } from "@/features/workflows/manual-run-workflow/model/useWorkflowRun";
 import { Button, Text } from "@tremor/react";
 import Skeleton from "react-loading-skeleton";
-import AlertTriggerModal from "../workflow-run-with-alert-modal";
-import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 
 export default function WorkflowDetailHeader({
   workflowId: workflow_id,
@@ -19,14 +17,8 @@ export default function WorkflowDetailHeader({
     fallbackData: initialData,
   });
 
-  const {
-    isRunning,
-    handleRunClick,
-    getTriggerModalProps,
-    getManualInputModalProps,
-    isRunButtonDisabled,
-    message,
-  } = useWorkflowRun(workflow as Workflow);
+  const { isRunning, handleRunClick, isRunButtonDisabled, message } =
+    useWorkflowRun(workflow as Workflow);
 
   if (error) {
     return <div>Error loading workflow</div>;
@@ -78,27 +70,13 @@ export default function WorkflowDetailHeader({
                 handleRunClick?.();
               }}
               tooltip={message}
+              data-testid="wf-run-now-button"
             >
               {isRunning ? "Running..." : "Run now"}
             </Button>
           )}
         </div>
       </div>
-
-      {/* Alert Trigger Modal */}
-      {!!workflow && !!getTriggerModalProps && (
-        <AlertTriggerModal {...getTriggerModalProps()} />
-      )}
-
-      {/* Manual Input Modal */}
-      {!!workflow && !!getManualInputModalProps && (
-        <ManualRunWorkflowModal
-          workflow={workflow}
-          handleClose={() => getManualInputModalProps().onClose()}
-          isOpen={getManualInputModalProps().isOpen}
-          onSubmit={getManualInputModalProps().onSubmit}
-        />
-      )}
     </div>
   );
 }
