@@ -1034,7 +1034,7 @@ def delete_extraction(info: Info, extraction_id: int):
 def provider(info: Info):
     """Manage providers."""
     pass
-print("")
+
 
 @provider.command(name="build_cache", help="Output providers cache for future use")
 def build_cache():
