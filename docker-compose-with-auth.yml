@@ -25,6 +25,7 @@ services:
       - KEEP_DEFAULT_PASSWORD=keep
     volumes:
       - ./state:/state
+      - ./tmp/keep/migrations:/tmp/keep/migrations
 
   keep-websocket-server:
     extends:

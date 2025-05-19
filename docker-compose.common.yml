@@ -20,6 +20,7 @@ services:
       - PORT=8080
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
+      - MIGRATIONS_PATH=/tmp/keep/migrations
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False
       - OPENAI_API_KEY=$OPENAI_API_KEY
       - ALLOW_DB_DOWNGRADE=false

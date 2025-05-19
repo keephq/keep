@@ -23,6 +23,7 @@ services:
       - KEEP_METRICS=true
     volumes:
       - ./state:/state
+      - ./tmp/keep/migrations:/tmp/keep/migrations
 
   keep-websocket-server:
     extends:
