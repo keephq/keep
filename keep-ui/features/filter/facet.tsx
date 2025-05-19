@@ -100,7 +100,7 @@ export const Facet: React.FC<FacetProps> = ({
     if (facet) {
       setFacetState(facet.id, toFacetState(getInitialFacetState()));
     }
-  }, [!!facet, setFacetState]);
+  }, [facet.id, setFacetState]);
 
   useEffect(() => {
     if (isInitialized || !options) {

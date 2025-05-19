@@ -60,7 +60,7 @@ export function useQueriesHandler(store: StoreApi<FacetState>) {
       allFacetOptionsRef.current || {},
       debouncedFacetsState
     );
-  }, [debouncedFacetsState, setQueriesState]);
+  }, [debouncedFacetsState]);
 
   useEffect(() => {
     if (!facetsCelState) {

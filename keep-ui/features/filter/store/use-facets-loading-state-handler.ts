@@ -44,5 +44,5 @@ export function useFacetsLoadingStateHandler(store: StoreApi<FacetState>) {
     if (!areOptionsReLoading && !changedFacetId) {
       setChangedFacetId(null);
     }
-  }, [areOptionsReLoading, changedFacetId]);
+  }, [areOptionsReLoading, changedFacetId, setChangedFacetId]);
 }

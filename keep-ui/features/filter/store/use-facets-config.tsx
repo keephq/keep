@@ -20,7 +20,7 @@ export function useFacetsConfig(
           ((facetOption: FacetOptionDto) => (
             <span className="capitalize">{facetOption.display_name}</span>
           ));
-        const uncheckedByDefaultOptionValues =
+        const checkedByDefaultOptionValues =
           facetConfig?.checkedByDefaultOptionValues;
         const canHitEmptyState = !!facetConfig?.canHitEmptyState;
         result[facet.id] = {
