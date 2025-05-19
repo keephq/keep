@@ -1,28 +1,9 @@
-.quill-editor-container .quill {
-  display: block;
-  height: 100%;
-}
-
-.quill-editor-container .ql-container {
-  height: 100%;
-  font-size: 16px;
-  border: none;
-  border-top: 1px solid #ccc;
-}
-
-.quill-editor-container .ql-toolbar {
-  border: none;
-  border-bottom: 1px solid #eee;
-}
-
-.quill-editor-container .ql-editor {
-  min-height: 100%;
-  max-height: 100%;
-  overflow-y: auto;
+.incident-comment-input .ql-container {
+  @apply text-tremor-default;
 }
 
 .mention {
-  background-color: #E8F4FE;
+  background-color: #e8f4fe;
   border-radius: 4px;
   padding: 0 2px;
   color: #0366d6;

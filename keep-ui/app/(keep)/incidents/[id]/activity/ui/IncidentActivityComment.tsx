@@ -7,7 +7,8 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AuditEvent } from "@/entities/alerts/model";
 import { useUsers } from "@/entities/users/model/useUsers";
-import { IncidentCommentInput, extractTaggedUsers } from "./IncidentCommentInput";
+import { extractTaggedUsers } from "../lib/extractTaggedUsers";
+import { IncidentCommentInput } from "./IncidentCommentInput.dynamic";
 
 /**
  * Component for adding comments to an incident with user mention capability
@@ -20,16 +21,15 @@ export function IncidentActivityComment({
   mutator: KeyedMutator<AuditEvent[]>;
 }) {
   const [comment, setComment] = useState("");
-  const [taggedUsers, setTaggedUsers] = useState<string[]>([]);
-  
+
   const api = useApi();
-  
+
   const { data: users = [] } = useUsers();
   const onSubmit = useCallback(async () => {
     try {
       const extractedTaggedUsers = extractTaggedUsers(comment);
-      console.log('Extracted tagged users:', extractedTaggedUsers);
-      
+      console.log("Extracted tagged users:", extractedTaggedUsers);
+
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,
@@ -37,7 +37,6 @@ export function IncidentActivityComment({
       });
       toast.success("Comment added!", { position: "top-right" });
       setComment("");
-      setTaggedUsers([]);
       mutator();
     } catch (error) {
       showErrorToast(error, "Failed to add comment");
@@ -45,28 +44,24 @@ export function IncidentActivityComment({
   }, [api, incident.id, incident.status, comment, mutator]);
 
   return (
-    <div className="relative border border-gray-300 rounded-md mb-4">
-      <div className="flex flex-col p-2.5 gap-2.5">
-        <div className="w-full">
-          <IncidentCommentInput
-            value={comment}
-            onValueChange={setComment}
-            users={users}
-            placeholder="Add a comment..."
-            className="comment-editor"
-          />
-        </div>
+    <div className="border border-tremor-border rounded-tremor-default shadow-tremor-input flex flex-col">
+      <IncidentCommentInput
+        value={comment}
+        onValueChange={setComment}
+        users={users}
+        placeholder="Add a comment..."
+        className="min-h-11"
+      />
 
-        <div className="flex justify-end mt-2">
-          <Button
-            color="orange"
-            variant="secondary"
-            disabled={!comment}
-            onClick={onSubmit}
-          >
-            Comment
-          </Button>
-        </div>
+      <div className="flex justify-end p-2">
+        <Button
+          color="orange"
+          variant="primary"
+          disabled={!comment}
+          onClick={onSubmit}
+        >
+          Comment
+        </Button>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { User } from "@/app/(keep)/settings/models";
 
 export function IncidentActivityItem({ activity }: { activity: any }) {
   const { data: users = [] } = useUsers();
-  
+
   const title =
     typeof activity.initiator === "string"
       ? activity.initiator
@@ -21,12 +21,12 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
         : activity.initiator?.status === "firing"
           ? " triggered"
           : " resolved" + ". ";
-  
+
   // Process comment text to style mentions if it's a comment with mentions
   const processCommentText = (text: string) => {
     console.log(activity);
-    if (!text || activity.type !== 'comment') return text;
-    
+    if (!text || activity.type !== "comment") return text;
+
     // Create a map of email to name for user lookup
     const emailToName = new Map();
     users.forEach((user: User) => {
@@ -34,20 +34,24 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
         emailToName.set(user.email, user.name || user.email);
       }
     });
-    
+
+    // FIX: sanitize the text, as user can send the comment bypassing the comment input
     // If the text contains HTML (from ReactQuill), it's already formatted
-    if (text.includes('<span class="mention">') || text.includes('<p>')) {
+    if (text.includes('<span class="mention">') || text.includes("<p>")) {
       // Sanitize HTML to prevent XSS attacks if needed
       // For a production app, consider using a library like DOMPurify
-      
+
       return (
-        <div className="quill-content" dangerouslySetInnerHTML={{ __html: text }} />
+        <div
+          className="quill-content"
+          dangerouslySetInnerHTML={{ __html: text }}
+        />
       );
     }
-        
+
     return text;
   };
-          
+
   return (
     <div className="relative h-full w-full flex flex-col">
       <div className="flex items-center gap-2">
