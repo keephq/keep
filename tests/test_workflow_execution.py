@@ -18,7 +18,7 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from keep.api.models.db.incident import Incident, IncidentStatus
-from keep.api.models.db.workflow import Workflow, WorkflowExecution
+from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -119,6 +119,9 @@ workflow:
   description: Simple workflow demonstrating logging every alert
   triggers:
     - type: alert
+      filters:
+        - key: name
+          value: "server-is-upsidedown"
   actions:
     - name: log-every-alert-success
       if: "{{alert.should_fail}} == 'false'"
@@ -1899,14 +1902,14 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
     first_execution_wf_store = next(
         w
         for w in workflow["workflow_last_executions"]
-        if w["started"] == first_execution.started
+        if w["execution_id"] == first_execution.id
     )
     assert first_execution_wf_store is not None
-    assert first_execution_wf_store.status == "success"
+    assert first_execution_wf_store["status"] == "success"
     second_execution_wf_store = next(
         w
         for w in workflow["workflow_last_executions"]
-        if w["started"] == second_execution.started
+        if w["execution_id"] == second_execution.id
     )
     assert second_execution_wf_store is not None
-    assert second_execution_wf_store.status == "error"
+    assert second_execution_wf_store["status"] == "error"

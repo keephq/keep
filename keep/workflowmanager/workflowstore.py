@@ -330,9 +330,7 @@ class WorkflowStore:
         # Get all existing provisioned workflows
         logger.info("Getting all already provisioned workflows")
         provisioned_workflows = get_all_provisioned_workflows(tenant_id)
-        logger.info(
-            f"Found {len(provisioned_workflows)} provisioned workflows"
-        )
+        logger.info(f"Found {len(provisioned_workflows)} provisioned workflows")
 
         if not (provisioned_workflows_dir or provisioned_workflow_yaml):
             logger.info("No workflows for provisioning found")
@@ -398,7 +396,7 @@ class WorkflowStore:
                 if not pre_parsed_workflow:
                     logger.info("No workflows to provision")
                     return []
-                
+
                 logger.info(
                     f"Provisioning workflow {pre_parsed_workflow.id} from env var"
                 )
@@ -426,7 +424,7 @@ class WorkflowStore:
 
         ### Provisioning from the directory
         if provisioned_workflows_dir is not None:
-            
+
             logger.info(
                 f"Provisioning workflows from directory {provisioned_workflows_dir}"
             )
@@ -483,9 +481,7 @@ class WorkflowStore:
                             extra={"exception": e},
                         )
                 else:
-                    logger.info(
-                        f"Skipping file {file} as it is not a YAML file"
-                    )
+                    logger.info(f"Skipping file {file} as it is not a YAML file")
 
         return provisioned_workflows
 
@@ -626,7 +622,7 @@ class WorkflowStore:
         self.logger.info(f"workflow_executions: {workflows}")
         workflow_dict = {}
         for item in workflows:
-            workflow, started, execution_time, status = item
+            workflow, started, execution_time, status, execution_id = item
             workflow_id = workflow.id
 
             # Initialize the workflow if not already in the dictionary
@@ -646,9 +642,13 @@ class WorkflowStore:
                 workflow_dict[workflow_id]["workflow_last_run_time"] = started
 
             # Add the execution to the list of executions
-            if started is not None:
+            if started is not None and execution_id not in [
+                e["execution_id"]
+                for e in workflow_dict[workflow_id]["workflow_last_executions"]
+            ]:
                 workflow_dict[workflow_id]["workflow_last_executions"].append(
                     {
+                        "execution_id": execution_id,
                         "status": status,
                         "execution_time": execution_time,
                         "started": started,
