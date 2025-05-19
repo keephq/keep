@@ -7,7 +7,7 @@ import Skeleton from "react-loading-skeleton";
 import { FacetValue } from "./facet-value";
 import { FacetConfig, FacetDto, FacetOptionDto, FacetState } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import { useExistingFacetStore } from "./store";
+import { useExistingFacetsPanelStore } from "./store";
 import { stringToValue, toFacetState, valueToString } from "./store/utils";
 
 export interface FacetProps {
@@ -40,20 +40,24 @@ export const Facet: React.FC<FacetProps> = ({
   const facetRef = useRef(facet);
   facetRef.current = facet;
 
-  const setChangedFacetId = useExistingFacetStore(
+  const setChangedFacetId = useExistingFacetsPanelStore(
     (state) => state.setChangedFacetId
   );
-  const facetOptionsLoadingState = useExistingFacetStore(
+  const facetOptionsLoadingState = useExistingFacetsPanelStore(
     (state) => state.facetOptionsLoadingState
   );
-  const setFacetState = useExistingFacetStore((state) => state.setFacetState);
-  const facetsState = useExistingFacetStore((state) => state.facetsState);
+  const setFacetState = useExistingFacetsPanelStore(
+    (state) => state.setFacetState
+  );
+  const facetsState = useExistingFacetsPanelStore((state) => state.facetsState);
   const facetState: Record<string, boolean> = useMemo(
-    () => facetsState?.[facet.id] || {},
+    () => facetsState?.[facet.id],
     [facet.id, facetsState]
   );
 
-  const facetsConfig = useExistingFacetStore((state) => state.facetsConfig);
+  const facetsConfig = useExistingFacetsPanelStore(
+    (state) => state.facetsConfig
+  );
   const facetConfig = facetsConfig?.[facet.id];
 
   const facetStateRef = useRef(facetState);
@@ -66,6 +70,10 @@ export const Facet: React.FC<FacetProps> = ({
   const extendedOptions = useMemo(() => {
     if (!options) {
       return null;
+    }
+
+    if (!facetState) {
+      return options;
     }
 
     const result = [...options];
@@ -103,11 +111,15 @@ export const Facet: React.FC<FacetProps> = ({
   );
 
   const isOptionSelected = (optionValue: string) => {
+    if (!facetState) {
+      return true;
+    }
+
     const strValue = valueToString(optionValue);
     return !!facetState[strValue];
   };
 
-  function toggleFacetOption(value: FacetOptionDto['value']) {
+  function toggleFacetOption(value: FacetOptionDto["value"]) {
     const strValue = valueToString(value);
     let selectedValues = getSelectedValues();
 

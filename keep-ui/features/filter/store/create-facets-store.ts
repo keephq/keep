@@ -2,7 +2,9 @@ import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
 import { FacetDto, FacetOptionDto, FacetsConfig } from "../models";
 
-export type FacetState = {
+export type FacetsState = Record<string, any | null>;
+
+export type FacetsPanelState = {
   facetsConfig: FacetsConfig | null;
   setFacetsConfig: (facetsConfig: FacetsConfig) => void;
 
@@ -24,13 +26,12 @@ export type FacetState = {
     facetOptionQueries: Record<string, string>
   ) => void;
 
-  facetsState: Record<string, any>;
+  facetsState: Record<string, any | null>;
 
-  patchFacetsState: (facetsStatePatch: Record<string, any>) => void;
+  patchFacetsState: (facetsStatePatch: Record<string, any | null>) => void;
   setFacetState: (facetId: string, state: any) => void;
 
-  areFacetOptionsHandled: boolean;
-  setAreFacetOptionsHandled: (areFacetOptionsHandled: boolean) => void;
+  dirtyFacestIds: string[];
 
   facetsStateRefreshToken: string | null;
 
@@ -54,8 +55,8 @@ export type FacetState = {
   setAreOptionsLoading: (isLoading: boolean) => void;
 };
 
-export const createFacetStore = () =>
-  createStore<FacetState>((set, state) => ({
+export const createFacetsPanelStore = () =>
+  createStore<FacetsPanelState>((set, state) => ({
     facetsConfig: null,
     setFacetsConfig: (facetsConfig: FacetsConfig) => set({ facetsConfig }),
 
@@ -82,6 +83,8 @@ export const createFacetStore = () =>
         },
       }),
 
+    dirtyFacestIds: [],
+
     facetsState: {},
     patchFacetsState: (facetsStatePatch) => {
       set({
@@ -97,18 +100,15 @@ export const createFacetStore = () =>
       set({
         // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
         facetsStateRefreshToken: uuidV4(),
+        dirtyFacestIds: Array.from(
+          new Set(state().dirtyFacestIds).add(facetId)
+        ),
         facetsState: {
           ...(state().facetsState || {}),
           [facetId]: facetState,
         },
       });
     },
-
-    areFacetOptionsHandled: false,
-    setAreFacetOptionsHandled: (areFacetOptionsHandled) =>
-      set({
-        areFacetOptionsHandled,
-      }),
 
     facetsStateRefreshToken: null,
 
@@ -126,7 +126,7 @@ export const createFacetStore = () =>
         isInitialStateHandled: false,
         facetsState: {},
         facetsStateRefreshToken: uuidV4(),
-        areFacetOptionsHandled: false,
+        dirtyFacestIds: [],
       });
     },
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { StoreApi, useStore } from "zustand";
-import { FacetState } from "../create-facets-store";
+import { FacetsPanelState } from "../create-facets-store";
 import { FacetDto, FacetOptionDto } from "../../models";
 import { splitFacetValues } from "./split-facet-values";
 import { escapeFacetValue } from "./escape-facet-value";
@@ -39,6 +39,10 @@ function buildFacetQueryParams(
   const facetQueryParams = new URLSearchParams();
 
   formattedFacets.forEach((facet) => {
+    if (!facetsState[facet.id]) {
+      return;
+    }
+
     const facetStateEntries = Object.entries(facetsState[facet.id] || {});
     const facetOptionsCount = facetOptions?.[facet.id]?.length || 0;
 
@@ -55,7 +59,7 @@ function buildFacetQueryParams(
   return facetQueryParams;
 }
 
-export function useQueryParams(store: StoreApi<FacetState>) {
+export function useQueryParams(store: StoreApi<FacetsPanelState>) {
   const facets = useStore(store, (state) => state.facets);
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const allFacetOptionsRef = useRef<Record<string, FacetOptionDto[]> | null>(

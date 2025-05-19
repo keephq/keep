@@ -1,7 +1,7 @@
 import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 import { useEffect, useMemo, useRef } from "react";
 import { StoreApi, useStore } from "zustand";
-import { FacetState } from "./create-facets-store";
+import { FacetsPanelState } from "./create-facets-store";
 import { FacetDto, FacetOptionDto, FacetOptionsQueries } from "../models";
 
 function buildStringFacetCel(
@@ -9,7 +9,11 @@ function buildStringFacetCel(
   facetOptions: FacetOptionDto[],
   facetState: Record<string, boolean>
 ): string {
-  const values = Object.keys(facetState ?? {}).filter((key) => facetState[key]);
+  if (facetState === null) {
+    return "";
+  }
+
+  const values = Object.keys(facetState || {}).filter((key) => facetState[key]);
 
   if (values.length === facetOptions?.length) {
     return "";
@@ -40,7 +44,7 @@ function buildFacetsCelState(
   return facetCelState;
 }
 
-export function useQueriesHandler(store: StoreApi<FacetState>) {
+export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
   const facetsState = useStore(store, (state) => state.facetsState);
   const facetsStateRef = useRef(facetsState);
   facetsStateRef.current = facetsState;

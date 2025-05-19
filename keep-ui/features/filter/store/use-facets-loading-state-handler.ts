@@ -1,8 +1,10 @@
 import { useEffect } from "react";
-import { FacetState } from "./create-facets-store";
+import { FacetsPanelState } from "./create-facets-store";
 import { StoreApi, useStore } from "zustand";
 
-export function useFacetsLoadingStateHandler(store: StoreApi<FacetState>) {
+export function useFacetsLoadingStateHandler(
+  store: StoreApi<FacetsPanelState>
+) {
   const changedFacetId = useStore(store, (state) => state.changedFacetId);
   const allFacets = useStore(store, (state) => state.facets);
   const facetOptions = useStore(store, (state) => state.facetOptions);

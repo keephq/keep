@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { FacetOptionDto, FacetsConfig } from "../models";
 import { StoreApi, useStore } from "zustand";
-import { FacetState } from "./create-facets-store";
+import { FacetsPanelState } from "./create-facets-store";
 
 export function useFacetsConfig(
   facetsConfig: FacetsConfig | undefined,
-  store: StoreApi<FacetState>
+  store: StoreApi<FacetsPanelState>
 ) {
   const facets = useStore(store, (state) => state.facets);
   const setFacetsConfig = useStore(store, (state) => state.setFacetsConfig);

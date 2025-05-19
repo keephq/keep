@@ -1,18 +1,22 @@
-import { createContext, useContext, useRef } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import { useStore } from "zustand";
-import { createFacetStore, FacetState } from "./create-facets-store";
+import {
+  createFacetsPanelStore,
+  FacetsPanelState,
+} from "./create-facets-store";
 import { useFacetsLoadingStateHandler } from "./use-facets-loading-state-handler";
 import { useQueriesHandler } from "./use-queries-handler";
 import { useQueryParams } from "./use-query-params/use-query-params";
 import { useFacetsConfig } from "./use-facets-config";
 import { FacetsConfig } from "../models";
 import { useInitialStateHandler } from "./use-initial-state-handler";
+// import { useFacetsStateHandler } from "./use-facets-state-handler";
 
 export function useNewFacetStore(facetsConfig: FacetsConfig | undefined) {
-  const storeRef = useRef<ReturnType<typeof createFacetStore>>();
+  const storeRef = useRef<ReturnType<typeof createFacetsPanelStore>>();
 
   if (!storeRef.current) {
-    storeRef.current = createFacetStore(); // New store per provider
+    storeRef.current = createFacetsPanelStore(); // New store per provider
   }
   useFacetsConfig(facetsConfig, storeRef.current);
   useInitialStateHandler(storeRef.current);
@@ -20,19 +24,18 @@ export function useNewFacetStore(facetsConfig: FacetsConfig | undefined) {
   useQueriesHandler(storeRef.current);
   useQueryParams(storeRef.current);
 
-
   return storeRef.current;
 }
 
 const FacetStoreContext = createContext<ReturnType<
-  typeof createFacetStore
+  typeof createFacetsPanelStore
 > | null>(null);
 
 export const FacetStoreProvider = ({
   store,
   children,
 }: {
-  store: ReturnType<typeof createFacetStore>;
+  store: ReturnType<typeof createFacetsPanelStore>;
   children: React.ReactNode;
 }) => {
   return (
@@ -43,8 +46,8 @@ export const FacetStoreProvider = ({
 };
 
 // Hook to access the scoped store
-export function useExistingFacetStore<T>(
-  selector: (state: FacetState) => T
+export function useExistingFacetsPanelStore<T>(
+  selector: (state: FacetsPanelState) => T
 ): T {
   const store = useContext(FacetStoreContext);
   if (!store)
