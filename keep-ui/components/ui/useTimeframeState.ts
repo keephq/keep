@@ -20,23 +20,35 @@ function getTimeframeInitialState(defaultTimeframe: TimeFrameV2): TimeFrameV2 {
   const searchParams = new URLSearchParams(window.location.search);
   const type = searchParams.get("timeFrameType");
 
-  if (type === "absolute") {
-    const startDate = Number.parseInt(searchParams.get("startDate") as string);
-    const endDate = Number.parseInt(searchParams.get("endDate") as string);
+  if (!type) {
+    return defaultTimeframe;
+  }
 
-    if (startDate && endDate) {
+  switch (type) {
+    case "absolute": {
+      const startDate = Number.parseInt(
+        searchParams.get("startDate") as string
+      );
+      const endDate = Number.parseInt(searchParams.get("endDate") as string);
+
+      if (!startDate || !endDate) {
+        break;
+      }
+
       return {
         type: "absolute",
         start: new Date(startDate),
         end: new Date(endDate),
       } as AbsoluteTimeFrame;
     }
-  }
 
-  if (type === "relative") {
-    const deltaMs = Number.parseInt(searchParams.get("deltaMs") as string);
+    case "relative": {
+      const deltaMs = Number.parseInt(searchParams.get("deltaMs") as string);
 
-    if (deltaMs) {
+      if (!deltaMs) {
+        break;
+      }
+
       const isPaused = searchParams.get("isPaused") === "true";
 
       return {
@@ -45,13 +57,13 @@ function getTimeframeInitialState(defaultTimeframe: TimeFrameV2): TimeFrameV2 {
         isPaused,
       } as RelativeTimeFrame;
     }
-  }
 
-  if (type === "all-time") {
-    return {
-      type: "all-time",
-      isPaused: searchParams.get("isPaused") === "true",
-    } as AllTimeFrame;
+    case "all-time": {
+      return {
+        type: "all-time",
+        isPaused: searchParams.get("isPaused") === "true",
+      } as AllTimeFrame;
+    }
   }
 
   return defaultTimeframe;
@@ -92,32 +104,32 @@ export function useTimeframeState({
   }, [pathname]);
 
   useEffect(() => {
-    if (!enableQueryParams) return;
-
-    const timeframe = getTimeframeInitialState(defaultOptions.defaultTimeframe);
-
-    if (timeframeState && areTimeframesEqual(timeframe, timeframeState)) {
-      return;
-    }
+    if (!enableQueryParams || !timeframeState) return;
 
     const params = new URLSearchParams(window.location.search);
     deleteTimeframeParams(params);
 
-    if (timeframeState) {
-      if (timeframeState.type === "absolute") {
-        params.set("timeFrameType", "absolute");
-        params.set("startDate", String(timeframeState.start.getTime()));
-        params.set("endDate", String(timeframeState.end.getTime()));
-      }
+    if (
+      timeframeState &&
+      !areTimeframesEqual(timeframeState, defaultOptions.defaultTimeframe)
+    ) {
+      switch (timeframeState.type) {
+        case "absolute":
+          params.set("timeFrameType", "absolute");
+          params.set("startDate", String(timeframeState.start.getTime()));
+          params.set("endDate", String(timeframeState.end.getTime()));
+          break;
 
-      if (timeframeState.type === "relative") {
-        params.set("timeFrameType", "relative");
-        params.set("deltaMs", String(timeframeState.deltaMs));
-        params.set("isPaused", String(timeframeState.isPaused));
-      }
-      if (timeframeState.type === "all-time") {
-        params.set("timeFrameType", "all-time");
-        params.set("isPaused", String(timeframeState.isPaused));
+        case "relative":
+          params.set("timeFrameType", "relative");
+          params.set("deltaMs", String(timeframeState.deltaMs));
+          params.set("isPaused", String(timeframeState.isPaused));
+          break;
+
+        case "all-time":
+          params.set("timeFrameType", "all-time");
+          params.set("isPaused", String(timeframeState.isPaused));
+          break;
       }
     }
     const queryString = params.toString();
@@ -125,7 +137,7 @@ export function useTimeframeState({
     window.history.replaceState(
       null,
       "",
-      window.location.pathname + queryString ? `?${queryString}` : ""
+      window.location.pathname + (queryString ? `?${queryString}` : "")
     );
   }, [timeframeState, enableQueryParams]);
 

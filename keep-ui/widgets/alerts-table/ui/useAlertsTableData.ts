@@ -59,6 +59,10 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   }, [canRevalidate]);
 
   const getDateRangeCel = () => {
+    if (query?.timeFrame === null) {
+      return null;
+    }
+
     if (query?.timeFrame.type === "relative") {
       return `lastReceived >= '${new Date(
         new Date().getTime() - query.timeFrame.deltaMs
@@ -70,7 +74,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
       ].join(" && ");
     }
 
-    return null;
+    return "";
   };
 
   function updateAlertsCelDateRange() {
@@ -134,7 +138,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   }, [JSON.stringify(query)]);
 
   const mainCelQuery = useMemo(() => {
-    if (!query) {
+    if (!query || dateRangeCel === null) {
       return null;
     }
 
@@ -143,7 +147,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   }, [query?.searchCel, dateRangeCel]);
 
   useEffect(() => {
-    if (!query) {
+    if (!query || mainCelQuery === null) {
       setAlertsQueryState(undefined);
       return;
     }
@@ -154,8 +158,6 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
       sortOptions: query.sortOptions,
       cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
     };
-
-    (alertsQuery as any).source = "useAlertsTableData"; // TODO: TO REMOVE
 
     setAlertsQueryState(alertsQuery);
   }, [

@@ -156,6 +156,7 @@ export function AlertTableServerSide({
       isPaused: false,
     } as AllTimeFrame,
   });
+
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(

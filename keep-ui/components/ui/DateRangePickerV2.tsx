@@ -434,6 +434,7 @@ export default function EnhancedDateRangePickerV2({
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <Button
+            data-testid="date-range-picker-trigger"
             size="xs"
             variant="secondary"
             className={clsx(
@@ -467,6 +468,7 @@ export default function EnhancedDateRangePickerV2({
 
         <Popover.Portal>
           <Popover.Content
+            data-testid="date-range-picker-content"
             className="z-50 w-[var(--radix-popover-trigger-width)] -mt-px rounded-md rounded-t-none border bg-white shadow-md outline-none"
             align="start"
           >
