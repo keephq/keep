@@ -207,7 +207,7 @@ export const AlertsRulesBuilder = ({
   const handleClearInput = useCallback(() => {
     setCELRules("");
     setAppliedCel("");
-    onCelChanges && onCelChanges(celRules);
+    onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
     setIsValidCEL(true);
   }, [table]);
@@ -303,8 +303,8 @@ export const AlertsRulesBuilder = ({
   };
 
   useEffect(() => {
-    updateOutputCEL?.(celRules);
-    onCelChanges?.(celRules);
+    updateOutputCEL?.(appliedCel);
+    onCelChanges?.(appliedCel);
   }, [appliedCel, updateOutputCEL]);
 
   const onGenerateQuery = () => {

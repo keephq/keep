@@ -143,7 +143,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
           {facets &&
             facets.map((facet, index) => (
               <Facet
-                key={facet.id + index}
+                key={facet.id}
                 facet={facet}
                 options={facetOptions?.[facet.id]}
                 onLoadOptions={() =>

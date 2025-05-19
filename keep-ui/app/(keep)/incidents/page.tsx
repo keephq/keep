@@ -10,7 +10,7 @@ export default async function Page() {
     const api = await createServerApiClient();
 
     const tasks = [getInitialFacets(api, "incidents")];
-    const [_incidents, _facetsData] = await Promise.all(tasks);
+    const [_facetsData] = await Promise.all(tasks);
     initialFacets = _facetsData as FacetDto[];
   } catch (error) {
     console.log(error);

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   FacetDto,
+  FacetOptionDto,
   FacetOptionsQueries,
   FacetOptionsQuery,
   FacetsConfig,
@@ -90,7 +91,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
 
   const { facetOptions, isLoading: facetOptionsLoading } = useFacetOptions(
     entityName,
-    initialFacetsData?.facetOptions as any,
+    initialFacetsData?.facetOptions as Record<string, FacetOptionDto[]>,
     facetOptionsQuery,
     revalidationToken
   );
@@ -101,7 +102,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         panelId={entityName}
         className={className || ""}
         facets={facetsData as FacetDto[]}
-        facetOptions={facetOptions as any}
+        facetOptions={facetOptions as Record<string, FacetOptionDto[]>}
         areFacetOptionsLoading={!isSilentReloading && facetOptionsLoading}
         clearFiltersToken={clearFiltersToken}
         facetsConfig={facetsConfig}

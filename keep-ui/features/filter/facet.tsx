@@ -281,7 +281,7 @@ export const Facet: React.FC<FacetProps> = ({
           <div
             className={`max-h-60 overflow-y-auto${facetOptionsLoadingState[facet.id] === "reloading" ? " pointer-events-none opacity-70" : ""}`}
           >
-            {renderBody() as any}
+            {renderBody()}
           </div>
         </div>
       )}

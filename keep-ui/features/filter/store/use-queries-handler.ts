@@ -9,7 +9,7 @@ function buildStringFacetCel(
   facetOptions: FacetOptionDto[],
   facetState: Record<string, boolean>
 ): string {
-  const values = Object.keys(facetState || {}).filter((key) => facetState[key]);
+  const values = Object.keys(facetState ?? {}).filter((key) => facetState[key]);
 
   if (values.length === facetOptions?.length) {
     return "";
@@ -50,11 +50,16 @@ export function useQueriesHandler(store: StoreApi<FacetState>) {
   );
 
   const facets = useStore(store, (state) => state.facets);
+  const facetsRef = useRef(facets);
+  facetsRef.current = facets;
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const allFacetOptionsRef = useRef(allFacetOptions);
   allFacetOptionsRef.current = allFacetOptions;
   const setQueriesState = useStore(store, (state) => state.setQueriesState);
-  const areQueryParamsSet = useStore(store, (state) => state.areQueryparamsSet);
+  const areQueryParamsSet = useStore(
+    store,
+    (state) => state.isFacetsStateInitializedFromQueryParams
+  );
 
   const [debouncedFacetsStateRefreshToken] = useDebouncedValue(
     facetsStateRefreshToken,
@@ -62,14 +67,14 @@ export function useQueriesHandler(store: StoreApi<FacetState>) {
   );
 
   const facetsCelState = useMemo(() => {
-    if (!debouncedFacetsStateRefreshToken || !facets) {
+    if (!debouncedFacetsStateRefreshToken || !facetsRef.current) {
       return null;
     }
 
     return buildFacetsCelState(
-      facets,
-      allFacetOptionsRef.current || {},
-      facetsStateRef.current || {}
+      facetsRef.current,
+      allFacetOptionsRef.current ?? {},
+      facetsStateRef.current ?? {}
     );
   }, [debouncedFacetsStateRefreshToken, setQueriesState]);
 

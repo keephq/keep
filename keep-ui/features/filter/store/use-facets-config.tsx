@@ -17,32 +17,28 @@ export function useFacetsConfig(
 
     const result: FacetsConfig = {};
 
-    if (facets && Array.isArray(facets)) {
-      facets.forEach((facet) => {
-        const facetConfig = facetsConfig?.[facet.name];
-        const sortCallback =
-          facetConfig?.sortCallback ||
-          ((facetOption: FacetOptionDto) => facetOption.matches_count);
-        const renderOptionIcon = facetConfig?.renderOptionIcon;
-        const renderOptionLabel =
-          facetConfig?.renderOptionLabel ||
-          ((facetOption: FacetOptionDto) => (
-            <span className="capitalize">{facetOption.display_name}</span>
-          ));
-        const uncheckedByDefaultOptionValues =
-          facetConfig?.checkedByDefaultOptionValues;
-        const canHitEmptyState = !!facetConfig?.canHitEmptyState;
-        result[facet.id] = {
-          sortCallback,
-          renderOptionIcon,
-          renderOptionLabel,
-          checkedByDefaultOptionValues: uncheckedByDefaultOptionValues,
-          canHitEmptyState,
-        };
-      });
-    }
-
-    console.log(result);
+    facets.forEach((facet) => {
+      const facetConfig = facetsConfig?.[facet.name];
+      const sortCallback =
+        facetConfig?.sortCallback ||
+        ((facetOption: FacetOptionDto) => facetOption.matches_count);
+      const renderOptionIcon = facetConfig?.renderOptionIcon;
+      const renderOptionLabel =
+        facetConfig?.renderOptionLabel ||
+        ((facetOption: FacetOptionDto) => (
+          <span className="capitalize">{facetOption.display_name}</span>
+        ));
+      const checkedByDefaultOptionValues =
+        facetConfig?.checkedByDefaultOptionValues;
+      const canHitEmptyState = !!facetConfig?.canHitEmptyState;
+      result[facet.id] = {
+        sortCallback,
+        renderOptionIcon,
+        renderOptionLabel,
+        checkedByDefaultOptionValues,
+        canHitEmptyState,
+      };
+    });
 
     setFacetsConfig(result);
   }, [facetsConfig, facets, setFacetsConfig]);

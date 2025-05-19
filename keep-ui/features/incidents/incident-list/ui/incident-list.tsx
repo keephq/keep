@@ -243,7 +243,7 @@ export function IncidentList({
       return (
         <IncidentsTable
           filterCel={facetsCel}
-          incidents={incidents as PaginatedIncidentsDto}
+          incidents={incidents}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
           setSorting={setIncidentsSorting}

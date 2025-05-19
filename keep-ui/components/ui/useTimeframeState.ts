@@ -1,5 +1,5 @@
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AbsoluteTimeFrame,
   AllTimeFrame,
@@ -79,14 +79,14 @@ export function useTimeframeState({
   enableQueryParams,
   defaultTimeframe,
 }: typeof defaultOptions) {
-  if (!defaultTimeframe) {
-    defaultTimeframe = defaultOptions.defaultTimeframe;
-  }
+  const defaultTimeframeRef = useRef<TimeFrameV2>();
+  defaultTimeframeRef.current =
+    defaultTimeframe || defaultOptions.defaultTimeframe;
 
   const pathname = usePathname();
   const [timeframeState, setTimeframeState] = useState<TimeFrameV2 | null>(
     () => {
-      return getTimeframeInitialState(defaultOptions.defaultTimeframe);
+      return getTimeframeInitialState(defaultTimeframe);
     }
   );
 
@@ -98,7 +98,7 @@ export function useTimeframeState({
       window.history.replaceState(
         null,
         "",
-        window.location.pathname + queryString ? `?${queryString}` : ""
+        window.location.pathname + (queryString ? `?${queryString}` : "")
       );
     };
   }, [pathname]);
@@ -111,7 +111,10 @@ export function useTimeframeState({
 
     if (
       timeframeState &&
-      !areTimeframesEqual(timeframeState, defaultOptions.defaultTimeframe)
+      !areTimeframesEqual(
+        timeframeState,
+        defaultTimeframeRef.current as TimeFrameV2
+      )
     ) {
       switch (timeframeState.type) {
         case "absolute":

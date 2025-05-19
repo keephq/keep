@@ -34,8 +34,10 @@ export type FacetState = {
 
   facetsStateRefreshToken: string | null;
 
-  areQueryparamsSet: boolean;
-  setAreQueryparamsSet: (areQueryparamsSet: boolean) => void;
+  isFacetsStateInitializedFromQueryParams: boolean;
+  setIsFacetsStateInitializedFromQueryParams: (
+    isFacetsStateInitializedFromQueryParams: boolean
+  ) => void;
 
   isInitialStateHandled: boolean;
   setIsInitialStateHandled: (isInitialStateHandled: boolean) => void;
@@ -110,9 +112,10 @@ export const createFacetStore = () =>
 
     facetsStateRefreshToken: null,
 
-    areQueryparamsSet: false,
-    setAreQueryparamsSet: (areQueryparamsSet: boolean) =>
-      set({ areQueryparamsSet }),
+    isFacetsStateInitializedFromQueryParams: false,
+    setIsFacetsStateInitializedFromQueryParams: (
+      isFacetsStateInitializedFromQueryParams: boolean
+    ) => set({ isFacetsStateInitializedFromQueryParams }),
 
     isInitialStateHandled: false,
     setIsInitialStateHandled: (isInitialStateHandled: boolean) =>

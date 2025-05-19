@@ -94,13 +94,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     mutateAlerts();
   }
 
-  useEffect(() => {
-    if (!query?.timeFrame) {
-      return;
-    }
-
-    updateAlertsCelDateRange();
-  }, [query?.timeFrame]);
+  useEffect(() => updateAlertsCelDateRange(), [query?.timeFrame]);
 
   const { data: alertsChangeToken } = useAlertPolling(!isPaused);
 

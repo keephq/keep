@@ -68,12 +68,15 @@ export function useQueryParams(store: StoreApi<FacetState>) {
     (state) => state.facetsStateRefreshToken
   );
 
-  const areQueryParamsSet = useStore(store, (state) => state.areQueryparamsSet);
+  const areQueryParamsSet = useStore(
+    store,
+    (state) => state.isFacetsStateInitializedFromQueryParams
+  );
 
   const patchFacetsState = useStore(store, (state) => state.patchFacetsState);
-  const setAreQueryparamsSet = useStore(
+  const setIsFacetsStateInitializedFromQueryParams = useStore(
     store,
-    (state) => state.setAreQueryparamsSet
+    (state) => state.setIsFacetsStateInitializedFromQueryParams
   );
   const isInitialStateHandled = useStore(
     store,
@@ -131,12 +134,12 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       });
 
     patchFacetsState(facetsStatePatch);
-    setAreQueryparamsSet(true);
+    setIsFacetsStateInitializedFromQueryParams(true);
   }, [
     formattedFacets,
     areQueryParamsSet,
     patchFacetsState,
-    setAreQueryparamsSet,
+    setIsFacetsStateInitializedFromQueryParams,
     isInitialStateHandled,
   ]);
 
