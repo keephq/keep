@@ -22,7 +22,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
-      - MIGRATIONS_PATH=/tmp/keep/migrations
+      - MIGRATIONS_PATH=/tmp/migrations
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}

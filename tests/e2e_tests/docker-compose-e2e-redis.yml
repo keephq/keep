@@ -25,7 +25,7 @@ services:
       - DATABASE_CONNECTION_STRING=sqlite:///./newdb.db?check_same_thread=False
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
-      - MIGRATIONS_PATH=/tmp/keep/migrations
+      - MIGRATIONS_PATH=/tmp/migrations
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
