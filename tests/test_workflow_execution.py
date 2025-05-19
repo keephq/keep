@@ -1897,16 +1897,14 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
     assert workflow is not None
     assert len(workflow["workflow_last_executions"]) == 2
     first_execution_wf_store = next(
-        w
-        for w in workflow["workflow_last_executions"]
-        if w["execution_id"] == first_execution.id
+        w for w in workflow["workflow_last_executions"] if w["id"] == first_execution.id
     )
     assert first_execution_wf_store is not None
     assert first_execution_wf_store["status"] == "success"
     second_execution_wf_store = next(
         w
         for w in workflow["workflow_last_executions"]
-        if w["execution_id"] == second_execution.id
+        if w["id"] == second_execution.id
     )
     assert second_execution_wf_store is not None
     assert second_execution_wf_store["status"] == "error"
