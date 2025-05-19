@@ -177,17 +177,23 @@ def get_current_revision():
 
 def copy_migrations(app_migrations_path, local_migrations_path):
     """Copy migrations to a local backup folder for safe downgrade purposes."""
+
     source_versions_path = os.path.join(app_migrations_path, "versions")
 
     # Ensure destination exists
-    os.makedirs(local_migrations_path, exist_ok=True)
+    try:
+        os.makedirs(local_migrations_path, exist_ok=True)
+    except Exception as e:
+        logger.error(f"Failed to create local migrations folder with error: {e}")
 
-    # Clear previous versions migrations
+
+    # Clear previous versioned migrations to ensure only migrations relevant to the current version are present
     for filename in os.listdir(local_migrations_path):
         file_path = os.path.join(local_migrations_path, filename)
         if os.path.isfile(file_path) or os.path.islink(file_path):
             os.remove(file_path)
 
+    # Alembic needs the full migration history to safely perform a downgrade to earlier versions
     # Copy new migrations
     for item in os.listdir(source_versions_path):
         src = os.path.join(source_versions_path, item)
@@ -199,23 +205,41 @@ def copy_migrations(app_migrations_path, local_migrations_path):
 
 def downgrade_db(config, expected_revision, local_migrations_path, app_migrations_path):
     """
-    Downgrade the DB to the previous revision.
+    Downgrade the DB to the previous revision, using local backup migrations temporarily.
+    Restores original migrations after downgrade.
     """
     source_versions_path = os.path.join(app_migrations_path, "versions")
     source_versions_path_copy = os.path.join(app_migrations_path, "versions_copy")
 
-    # Rename the source versions folder before restoring migrations from the backup folder
-    shutil.move(source_versions_path, source_versions_path_copy)
+    try:
+        logger.info("Backing up original migrations...")
+        if os.path.exists(source_versions_path_copy):
+            shutil.rmtree(source_versions_path_copy)
+        shutil.move(source_versions_path, source_versions_path_copy)
+        logger.info("Original migrations backed up.")
 
-    # Restore migrations from the backup folder
-    shutil.copytree(local_migrations_path, source_versions_path)
+        logger.info("Restoring migrations from local backup...")
+        shutil.copytree(local_migrations_path, source_versions_path)
+        logger.info("Migrations restored from local.")
 
-    # Downgrade database from backup migrations
-    alembic.command.downgrade(config, expected_revision)
+        logger.info("Downgrading the database...")
+        alembic.command.downgrade(config, expected_revision)
+        logger.info("Database successfully downgraded.")
 
-    # Restoring source migrations
-    shutil.rmtree(source_versions_path)
-    shutil.move(source_versions_path_copy, source_versions_path)
+    except Exception as e:
+        logger.error(f"Error occurred during downgrade process: {e}")
+    finally:
+        logger.info("Restoring original migrations...")
+        try:
+            if os.path.exists(source_versions_path):
+                shutil.rmtree(source_versions_path)
+            if os.path.exists(source_versions_path_copy):
+                shutil.move(source_versions_path_copy, source_versions_path)
+                logger.info("Original migrations restored!")
+            else:
+                logger.warning("Backup not found!!! Original migrations not restored!!!")
+        except Exception as restore_error:
+            logger.error(f"Failed to restore original migrations: {restore_error}")
 
 def migrate_db(config_path: str = None, app_migrations_path: str = None):
     """
@@ -231,7 +255,7 @@ def migrate_db(config_path: str = None, app_migrations_path: str = None):
     # when running the app as a pyhton pakage (could happen form any path)
 
     # This path will be used to save migrations locally for safe downgrade purposes
-    local_migrations_path = os.environ.get("SECRET_MANAGER_DIRECTORY", "/state") + "/migrations"
+    local_migrations_path = os.environ.get("MIGRATIONS_PATH", "/tmp/keep/migrations")
     app_migrations_path = app_migrations_path or os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations"
     config.set_main_option(
         "script_location",
@@ -252,7 +276,7 @@ def migrate_db(config_path: str = None, app_migrations_path: str = None):
     try:
         alembic.command.upgrade(config, "head")
     except Exception as e:
-        logger.error(f"{e} it's seems like KeepHQ was rolled back to a previous version")
+        logger.error(f"{e} it's seems like Keep was rolled back to a previous version")
 
         if not os.getenv("ALLOW_DB_DOWNGRADE", "false") == "true":
             logger.error(f"ALLOW_DB_DOWNGRADE is not set to true, but the database schema ({current_revision}) doesn't match application version ({expected_revision})")

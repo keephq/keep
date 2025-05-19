@@ -37,13 +37,14 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=/tmp
+      - SECRET_MANAGER_DIRECTORY=/app
+      - MIGRATION_PATH=/tmp/keep/migrations
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
       - ALLOW_DB_DOWNGRADE=true
     volumes:
-      - backend-state:/tmp
+      - backend-migrations:/tmp/keep/migrations
     depends_on:
       - keep-database
 
@@ -144,5 +145,5 @@ services:
 
 volumes:
   postgres-data:
-  backend-state:
+  backend-migrations:
   grafana-storage: {}

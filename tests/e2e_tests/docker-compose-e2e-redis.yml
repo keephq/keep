@@ -25,11 +25,12 @@ services:
       - DATABASE_CONNECTION_STRING=sqlite:///./newdb.db?check_same_thread=False
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - MIGRATIONS_PATH=/tmp/keep/migrations
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
     volumes:
-      - backend-state:/tmp
+      - backend-migrations:/tmp/keep/migrations
     depends_on:
       - keep-redis
 
@@ -46,4 +47,4 @@ services:
 
 volumes:
   postgres-data:
-  backend-state:
+  backend-migrations:

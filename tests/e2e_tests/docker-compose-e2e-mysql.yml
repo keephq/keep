@@ -42,11 +42,12 @@ services:
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - MIGRATIONS_PATH=/tmp/keep/migration
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
     volumes:
-      - backend-state:/tmp
+      - backend-migrations:/tmp/keep/migrations
     depends_on:
       keep-database:
         condition: service_healthy
@@ -149,5 +150,5 @@ services:
 
 volumes:
   mysql-data:
-  backend-state:
+  backend-migrations:
   grafana-storage: {}
