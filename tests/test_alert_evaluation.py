@@ -2,7 +2,7 @@
 
 # Shahar: since js2py is not secured, I've commented out this tests
 # TODO: fix js2py and uncomment the tests
-"""
+
 from datetime import timedelta
 
 import pytest
@@ -931,4 +931,3 @@ def test_state_alerts_flapping(db_session):
                 assert alert.status == AlertStatus.PENDING
             else:
                 assert alert.status == AlertStatus.FIRING
-"""
