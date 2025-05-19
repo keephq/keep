@@ -1,6 +1,7 @@
 import {
   Button,
   Callout,
+  NumberInput,
   Select,
   SelectItem,
   Subtitle,
@@ -35,7 +36,7 @@ import { TestRunStepForm } from "./StepTest";
 import {
   checkProviderNeedsInstallation,
   ValidationError,
-} from "@/entities/workflows/lib/validation";
+} from "@/entities/workflows/lib/validate-definition";
 import { EditorField } from "./EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
@@ -532,19 +533,37 @@ function KeepThresholdConditionEditor({
     <>
       {errorMessage && <Text className="text-red-500">{errorMessage}</Text>}
       <Text>Value</Text>
-      <TextInput
-        placeholder="Value"
-        onChange={(e: any) => updateProperty("value", e.target.value)}
-        className="mb-2.5"
-        value={currentValueValue}
-      />
+      {typeof currentValueValue === "number" ? (
+        <NumberInput
+          placeholder="Value"
+          onChange={(e: any) => updateProperty("value", e.target.value)}
+          className="mb-2.5"
+          value={currentValueValue}
+        />
+      ) : (
+        <TextInput
+          placeholder="Value"
+          onChange={(e: any) => updateProperty("value", e.target.value)}
+          className="mb-2.5"
+          value={currentValueValue}
+        />
+      )}
       <Text>Compare to</Text>
-      <TextInput
-        placeholder="Compare with"
-        onChange={(e: any) => updateProperty("compare_to", e.target.value)}
-        className="mb-2.5"
-        value={currentCompareToValue}
-      />
+      {typeof currentCompareToValue === "number" ? (
+        <NumberInput
+          placeholder="Compare with"
+          onChange={(e: any) => updateProperty("compare_to", e.target.value)}
+          className="mb-2.5"
+          value={currentCompareToValue}
+        />
+      ) : (
+        <TextInput
+          placeholder="Compare with"
+          onChange={(e: any) => updateProperty("compare_to", e.target.value)}
+          className="mb-2.5"
+          value={currentCompareToValue}
+        />
+      )}
     </>
   );
 }
@@ -920,6 +939,8 @@ function ActionOrStepEditor({
           name="name"
           value={formData.name || ""}
           onChange={handleInputChange}
+          placeholder="e.g. my-step"
+          data-testid="wf-editor-step-name-input"
         />
       </div>
       <TabList className="px-4">

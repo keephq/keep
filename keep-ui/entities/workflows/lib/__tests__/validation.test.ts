@@ -3,7 +3,7 @@ import {
   validateAllMustacheVariablesInString,
   validateStepPure,
   validateGlobalPure,
-} from "../validation";
+} from "../validate-definition";
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "../../model/types";
 
