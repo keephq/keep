@@ -1,3 +1,25 @@
+/**
+ * Workflow Definition Parser Module
+ *
+ * This module handles bidirectional conversion between:
+ * 1. YAML workflow definitions (human-readable format used for storage)
+ * 2. Internal workflow definition objects (used for UI rendering and manipulation)
+ *
+ * Key responsibilities:
+ * - Parse YAML workflow definitions into structured Definition objects
+ * - Convert workflow Definition objects back to YAML format
+ * - Handle complex workflow components like:
+ *   - Steps and Actions with provider configurations
+ *   - Conditional logic (assert/threshold conditions)
+ *   - Foreach loops
+ *   - Triggers and failure handlers
+ * - Extract and validate workflow inputs
+ * - Generate unique IDs for workflow components
+ *
+ * The module maintains type safety throughout the conversion process while
+ * preserving all workflow properties, conditions, and relationships.
+ */
+
 import {
   Definition,
   DefinitionV2,
@@ -14,10 +36,10 @@ import {
   YamlAssertCondition,
   YamlStepOrAction,
   YamlThresholdCondition,
+  WorkflowInput,
   YamlWorkflowDefinition,
 } from "@/entities/workflows/model/yaml.types";
 import { parseWorkflowYamlStringToJSON } from "./yaml-utils";
-import { WorkflowInput } from "../model/yaml.schema";
 
 type StepOrActionWithType = YamlStepOrAction & { type: "step" | "action" };
 
@@ -45,6 +67,7 @@ function getV2StepOrV2Action(
       actionParams: provider?.notify_params!,
       if: actionOrStep.if,
       vars: actionOrStep.vars,
+      "on-failure": actionOrStep?.["on-failure"],
     },
   };
 }
@@ -119,7 +142,9 @@ export function getWorkflowDefinition(
   consts: Record<string, string>,
   steps: V2Step[],
   conditions: V2Step[],
-  triggers: { [key: string]: { [key: string]: string } } = {}
+  triggers: { [key: string]: { [key: string]: string } } = {},
+  inputs: WorkflowInput[] = [],
+  onFailure?: V2ActionStep
 ): Definition {
   /**
    * Generate the workflow definition
@@ -134,6 +159,8 @@ export function getWorkflowDefinition(
       disabled: disabled,
       isLocked: true,
       consts: consts,
+      inputs: inputs,
+      "on-failure": onFailure,
       ...triggers,
     },
   };
@@ -147,6 +174,7 @@ export function getWorkflowDefinition(
 // 1. Parse the yaml file to get YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition
 // 2. Convert YamlStepOrAction, YamlAssertCondition, YamlThresholdCondition to V2StepStep, V2ActionStep, V2StepConditionAssert, V2StepConditionThreshold
 
+// TODO: use zod to validate the input, use yaml as a source of truth
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]
@@ -242,6 +270,13 @@ export function parseWorkflow(
       return prev;
     }, {}) || {};
 
+  const onFailure = workflow["on-failure"]
+    ? (getV2StepOrV2Action(
+        { ...workflow["on-failure"], type: "action" },
+        providers
+      ) as V2ActionStep)
+    : undefined;
+
   return getWorkflowDefinition(
     workflow.id,
     workflow.name,
@@ -250,7 +285,9 @@ export function parseWorkflow(
     workflow.consts,
     steps,
     conditions,
-    triggers
+    triggers,
+    workflow?.inputs ?? [],
+    onFailure
   );
 }
 
@@ -363,7 +400,7 @@ export function getYamlStepFromStep(
   const providerType = s.type.replace("step-", "");
   const providerName =
     (s.properties.config as string)?.trim() || `default-${providerType}`;
-  const provider = {
+  const provider: YamlStepOrAction["provider"] = {
     type: s.type.replace("step-", ""),
     config: `{{ providers.${providerName} }}`,
     with: withParams,
@@ -378,6 +415,7 @@ export function getYamlStepFromStep(
     if: ifParam,
     condition: condition ? [getYamlConditionFromStep(condition)] : undefined,
     provider: provider,
+    "on-failure": s.properties["on-failure"],
   };
   if (s.properties.vars) {
     step.vars = s.properties.vars;
@@ -399,7 +437,7 @@ export function getYamlActionFromAction(
   const providerType = s.type.replace("action-", "");
   const providerName =
     (s.properties.config as string)?.trim() || `default-${providerType}`;
-  const provider = {
+  const provider: YamlStepOrAction["provider"] = {
     type: s.type.replace("action-", ""),
     config: `{{ providers.${providerName} }}`,
     with: withParams,
@@ -414,6 +452,7 @@ export function getYamlActionFromAction(
     if: ifParam,
     condition: condition ? [getYamlConditionFromStep(condition)] : undefined,
     provider: provider,
+    "on-failure": s.properties["on-failure"],
   };
   if (s.properties.vars) {
     action.vars = s.properties.vars;
@@ -426,7 +465,7 @@ export function getYamlActionFromAction(
  */
 export function getYamlWorkflowDefinition(
   definition: Definition
-): YamlWorkflowDefinition {
+): YamlWorkflowDefinition["workflow"] {
   const alert = definition;
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
@@ -524,17 +563,30 @@ export function getYamlWorkflowDefinition(
       events: alert.properties.incident.events,
     });
   }
+  const onFailure = alert.properties["on-failure"]
+    ? {
+        ...getYamlActionFromAction({
+          ...alert.properties["on-failure"],
+          id: "on-failure",
+          name: "on-failure",
+        }),
+        // name is not needed for on-failure, but it's produced by getYamlActionFromAction, so we need to remove it
+        name: undefined,
+      }
+    : undefined;
   return {
     id: alertId,
     name: name,
-    triggers: triggers,
     description: description,
     disabled: Boolean(disabled),
+    triggers: triggers,
+    inputs: alert.properties.inputs,
     owners: owners,
     services: services,
     consts: consts,
     steps: steps,
     actions: actions,
+    "on-failure": onFailure,
   };
 }
 

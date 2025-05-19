@@ -19,7 +19,7 @@ import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
-import { ValidationError } from "@/entities/workflows/lib/validation";
+import { ValidationError } from "@/entities/workflows/lib/validate-definition";
 import { useConfig } from "@/utils/hooks/useConfig";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
@@ -173,6 +173,7 @@ function WorkflowNode({ id, data }: FlowNode) {
             opacity: data.isLayouted ? 1 : 0,
             borderStyle: isEmptyNode ? "dashed" : "",
           }}
+          data-testid="workflow-node"
         >
           <DebugNodeInfo id={id} data={data} />
           {isEmptyNode && (

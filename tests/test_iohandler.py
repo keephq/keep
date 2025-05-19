@@ -40,6 +40,24 @@ def test_with_function(context_manager):
     s = iohandler.render("hello keep.len({{ steps.some_list }})")
     assert s == "hello 3"
 
+@pytest.mark.parametrize(
+    "test_input, expected_output",
+    [
+        ("res keep.add(1, 2)", "res 3"),
+        ("res keep.sub(3, 1)", "res 2"),
+        ("res keep.mul(2, 2)", "res 4"),
+        ("res keep.div(6, 2)", "res 3"),
+        ("res keep.mod(8, 3)", "res 2"),
+        ("res keep.fdiv(8, 3)", "res 2"),
+        ("res keep.exp(2, 3)", "res 8"),
+        ("res keep.eq(2, 2)", "res True"),
+        ("res keep.eq(1, 2)", "res False"),
+    ]
+)
+def test_with_arithmetic_functions(context_manager, test_input, expected_output):
+    iohandler = IOHandler(context_manager)
+    s = iohandler.render(test_input)
+    assert s == expected_output
 
 def test_with_function_is_business_hours_args(context_manager):
     iohandler = IOHandler(context_manager)

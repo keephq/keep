@@ -3,10 +3,12 @@ import {
   EnrichDisposableKeyValueSchema,
   EnrichKeyValueSchema,
   IncidentEventEnum,
+  OnFailureSchema,
   WithSchema,
+  WorkflowInputSchema,
 } from "./schema";
 import { Provider } from "@/shared/api/providers";
-import { checkProviderNeedsInstallation } from "../lib/validation";
+import { checkProviderNeedsInstallation } from "../lib/validate-definition";
 
 type ProviderMetadataForValidation = Pick<
   Provider,
@@ -65,25 +67,11 @@ const auth0LogsProvider: ProviderMetadataForValidation = {
   query_params: ["log_type", "previous_users"],
 };
 
-export const WorkflowInputSchema = z.object({
-  name: z.string(),
-  type: z.string(),
-  description: z.string().optional(),
-  default: z.any().optional(),
-  required: z.boolean().optional(),
-  options: z.array(z.string()).optional(),
-  visuallyRequired: z.boolean().optional(),
-});
-
-export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
-
-const WorkflowStrategySchema = z.enum([
+export const WorkflowStrategySchema = z.enum([
   "nonparallel_with_retry",
   "nonparallel",
   "parallel",
 ]);
-
-export type WorkflowStrategy = z.infer<typeof WorkflowStrategySchema>;
 
 const ManualTriggerSchema = z.object({
   type: z.literal("manual"),
@@ -120,7 +108,7 @@ const TriggerSchema = z.union([
 const YamlProviderSchema = z
   .object({
     type: z.string(),
-    config: z.string(),
+    config: z.string().optional(),
     with: WithSchema,
   })
   .strict();
@@ -178,20 +166,20 @@ function getYamlProviderSchema(
     .strict();
 }
 
-const YamlThresholdConditionSchema = z
+export const YamlThresholdConditionSchema = z
   .object({
     id: z.string().optional(),
     name: z.string(),
     alias: z.string().optional(),
     type: z.literal("threshold"),
-    value: z.string(),
+    value: z.union([z.string(), z.number()]),
     compare_to: z.union([z.string(), z.number()]),
     compare_type: z.enum(["gt", "lt"]).optional(),
     level: z.string().optional(),
   })
   .strict();
 
-const YamlAssertConditionSchema = z
+export const YamlAssertConditionSchema = z
   .object({
     id: z.string().optional(),
     name: z.string(),
@@ -201,8 +189,7 @@ const YamlAssertConditionSchema = z
   })
   .strict();
 
-// TODO: generate schema runtime based on the providers
-const YamlStepOrActionSchema = z
+export const YamlStepOrActionSchema = z
   .object({
     name: z.string(),
     provider: YamlProviderSchema,
@@ -215,33 +202,32 @@ const YamlStepOrActionSchema = z
       .optional(),
     foreach: z.string().optional(),
     continue: z.boolean().optional(),
+    "on-failure": OnFailureSchema.optional(),
   })
   .strict();
-
-const OnFailureSchema = z.object({
-  retry: z.object({
-    count: z.number(),
-    interval: z.number(),
-  }),
-});
 
 export const YamlWorkflowDefinitionSchema = z.object({
   workflow: z
     .object({
       id: z.string(),
-      disabled: z.boolean().optional(),
+      name: z.string().optional(),
       description: z.string().optional(),
+      disabled: z.boolean().optional(),
+      debug: z.boolean().optional(),
+      triggers: z.array(TriggerSchema).min(1),
+      inputs: z.array(WorkflowInputSchema).optional(),
+      consts: z.record(z.string(), z.string()).optional(),
+      strategy: WorkflowStrategySchema.optional(),
+      "on-failure": YamlStepOrActionSchema.partial({
+        id: true,
+        name: true,
+      }).optional(),
       owners: z.array(z.string()).optional(),
+      // [doe.john@example.com, doe.jane@example.com, NOC]
+      permissions: z.array(z.string()).optional(),
       services: z.array(z.string()).optional(),
       steps: z.array(YamlStepOrActionSchema).optional(),
       actions: z.array(YamlStepOrActionSchema).optional(),
-      triggers: z.array(TriggerSchema).min(1),
-      name: z.string().optional(),
-      consts: z.record(z.string(), z.string()).optional(),
-      strategy: WorkflowStrategySchema.optional(),
-      "on-failure": OnFailureSchema.optional(),
-      // [doe.john@example.com, doe.jane@example.com, NOC]
-      permissions: z.array(z.string()).optional(),
     })
     .refine(
       (data) => {
@@ -259,8 +245,8 @@ export function getYamlWorkflowDefinitionSchema(
   providers: Provider[],
   { partial = false }: { partial?: boolean } = {}
 ) {
-  let stepSchema: z.ZodSchema = YamlStepOrActionSchema;
-  let actionSchema: z.ZodSchema = YamlStepOrActionSchema;
+  let stepSchema: z.ZodObject<any, any> = YamlStepOrActionSchema;
+  let actionSchema: z.ZodObject<any, any> = YamlStepOrActionSchema;
   // Only update schemas if there are providers
   const providersWithMock = [
     mockProvider,
@@ -292,21 +278,22 @@ export function getYamlWorkflowDefinitionSchema(
   const baseSchema = z.object({
     workflow: z.object({
       id: z.string(),
-      disabled: z.boolean().optional(),
       name: z.string().min(1),
       description: z.string().min(1),
+      disabled: z.boolean().optional(),
+      debug: z.boolean().optional(),
+      triggers: z.array(TriggerSchema).min(1),
+      inputs: z.array(WorkflowInputSchema).optional(),
+      consts: z.record(z.string(), z.string()).optional(),
       owners: z.array(z.string()).optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
       permissions: z.array(z.string()).optional(),
+      strategy: WorkflowStrategySchema.optional(),
       services: z.array(z.string()).optional(),
+      "on-failure": actionSchema.partial({ id: true, name: true }).optional(),
       // optional will be replace on postProcess
       steps: z.array(stepSchema).optional(),
       actions: z.array(actionSchema).optional(),
-      triggers: z.array(TriggerSchema).min(1),
-      consts: z.record(z.string(), z.string()).optional(),
-      inputs: z.array(WorkflowInputSchema).optional(),
-      strategy: WorkflowStrategySchema.optional(),
-      "on-failure": OnFailureSchema.optional(),
     }),
   });
 

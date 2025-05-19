@@ -33,7 +33,9 @@ class Step:
         self.provider_parameters: dict[str, str | StepProviderParameter] = (
             provider_parameters
         )
-        self.on_failure = self.config.get("provider", {}).get("on-failure", {})
+        # backward compatibility
+        legacy_on_failure = self.config.get("provider", {}).get("on-failure", {})
+        self.on_failure = self.config.get("on-failure", {}) or legacy_on_failure
         self.context_manager: ContextManager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
