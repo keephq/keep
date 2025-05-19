@@ -3,6 +3,7 @@ import { StoreApi, useStore } from "zustand";
 import { FacetState } from "../create-facets-store";
 import { FacetDto, FacetOptionDto } from "../../models";
 import { splitFacetValues } from "./split-facet-values";
+import { escapeFacetValue } from "./escape-facet-value";
 
 const facetQueryParamPrefix = "facet_";
 
@@ -45,14 +46,10 @@ function buildFacetQueryParams(
       return;
     }
 
-    const facetKeys = facetStateEntries.map(([key, value]) => {
-      key
-        .replace(/\\/g, "\\\\") // escape backslash first
-        .replace(/'/g, "\\'") // escape single quote
-        .replace(/,/g, "\\,"); // escape comma
-    });
-
-    facetQueryParams.append(facet.queryParamName, facetKeys.join(","));
+    facetQueryParams.append(
+      facet.queryParamName,
+      facetStateEntries.map(([key, value]) => escapeFacetValue(key)).join(",")
+    );
   });
 
   return facetQueryParams;
