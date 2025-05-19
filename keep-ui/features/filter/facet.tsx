@@ -39,9 +39,7 @@ export const Facet: React.FC<FacetProps> = ({
   optionsRef.current = options;
   const facetRef = useRef(facet);
   facetRef.current = facet;
-  const clearFiltersToken = useExistingFacetStore(
-    (state) => state.clearFiltersToken
-  );
+
   const setChangedFacetId = useExistingFacetStore(
     (state) => state.setChangedFacetId
   );
