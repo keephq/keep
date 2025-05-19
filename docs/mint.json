@@ -189,6 +189,7 @@
             "providers/documentation/graylog-provider",
             "providers/documentation/grok-provider",
             "providers/documentation/http-provider",
+            "providers/documentation/icinga2-provider",
             "providers/documentation/ilert-provider",
             "providers/documentation/incidentio-provider",
             "providers/documentation/incidentmanager-provider",
