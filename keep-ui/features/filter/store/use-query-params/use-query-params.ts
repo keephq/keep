@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { StoreApi, useStore } from "zustand";
-import { FacetState } from "./create-facets-store";
-import { FacetDto, FacetOptionDto } from "../models";
+import { FacetState } from "../create-facets-store";
+import { FacetDto, FacetOptionDto } from "../../models";
+import { splitFacetValues } from "./split-facet-values";
 
 const facetQueryParamPrefix = "facet_";
 
@@ -115,7 +116,7 @@ export function useQueryParams(store: StoreApi<FacetState>) {
     facetEntries
       .map(([key, value]) => ({
         facetName: key,
-        values: value.match(/'(?:[^']|'')*'|[^,]+/g), // matches single-quoted values and unquoted values such as null or numbers
+        values: splitFacetValues(value), // matches single-quoted values and unquoted values such as null or numbers
       }))
       .forEach(({ facetName, values }) => {
         const facetId = formattedFacetsDict[facetName];
@@ -172,8 +173,9 @@ export function useQueryParams(store: StoreApi<FacetState>) {
       const queryString = oldQueryParams.toString();
 
       var newurl =
-        window.location.origin + window.location.pathname +
-          (queryString ? `?${queryString}` : "");
+        window.location.origin +
+        window.location.pathname +
+        (queryString ? `?${queryString}` : "");
 
       window.history.replaceState(null, "", newurl);
     }, 500);

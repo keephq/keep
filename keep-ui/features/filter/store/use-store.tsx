@@ -3,7 +3,7 @@ import { useStore } from "zustand";
 import { createFacetStore, FacetState } from "./create-facets-store";
 import { useFacetsLoadingStateHandler } from "./use-facets-loading-state-handler";
 import { useQueriesHandler } from "./use-queries-handler";
-import { useQueryParams } from "./use-query-params";
+import { useQueryParams } from "./use-query-params/use-query-params";
 import { useFacetsConfig } from "./use-facets-config";
 import { FacetsConfig } from "../models";
 import { useInitialStateHandler } from "./use-initial-state-handler";
