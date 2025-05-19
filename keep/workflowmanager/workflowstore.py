@@ -614,60 +614,6 @@ class WorkflowStore:
 
         return workflows[query.offset : query.offset + query.limit], len(workflows)
 
-    def group_last_workflow_executions(self, workflows: list[dict]) -> list[dict]:
-        """
-        Group last workflow executions by workflow id
-        """
-
-        self.logger.info(f"workflow_executions: {workflows}")
-        workflow_dict = {}
-        for item in workflows:
-            workflow, started, execution_time, status, execution_id = item
-            workflow_id = workflow.id
-
-            # Initialize the workflow if not already in the dictionary
-            if workflow_id not in workflow_dict:
-                workflow_dict[workflow_id] = {
-                    "workflow": workflow,
-                    "workflow_last_run_started": None,
-                    "workflow_last_run_time": None,
-                    "workflow_last_run_status": None,
-                    "workflow_last_executions": [],
-                }
-
-            # Update the latest execution details if available
-            if workflow_dict[workflow_id]["workflow_last_run_started"] is None:
-                workflow_dict[workflow_id]["workflow_last_run_status"] = status
-                workflow_dict[workflow_id]["workflow_last_run_started"] = started
-                workflow_dict[workflow_id]["workflow_last_run_time"] = started
-
-            # Add the execution to the list of executions
-            if started is not None and execution_id not in [
-                e["execution_id"]
-                for e in workflow_dict[workflow_id]["workflow_last_executions"]
-            ]:
-                workflow_dict[workflow_id]["workflow_last_executions"].append(
-                    {
-                        "execution_id": execution_id,
-                        "status": status,
-                        "execution_time": execution_time,
-                        "started": started,
-                    }
-                )
-        # Convert the dictionary to a list of results
-        results = [
-            {
-                "workflow": workflow_info["workflow"],
-                "workflow_last_run_status": workflow_info["workflow_last_run_status"],
-                "workflow_last_run_time": workflow_info["workflow_last_run_time"],
-                "workflow_last_run_started": workflow_info["workflow_last_run_started"],
-                "workflow_last_executions": workflow_info["workflow_last_executions"],
-            }
-            for workflow_id, workflow_info in workflow_dict.items()
-        ]
-
-        return results
-
     def get_workflow_meta_data(
         self,
         tenant_id: str,

@@ -1888,11 +1888,8 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
 
     workflowstore = WorkflowStore()
     # Get all workflows with last execution
-    workflows_with_last_execution, count = (
-        workflowstore.get_all_workflows_with_last_execution(SINGLE_TENANT_UUID)
-    )
-    workflows = workflowstore.group_last_workflow_executions(
-        workflows=workflows_with_last_execution
+    workflows, _count = workflowstore.get_all_workflows_with_last_execution(
+        SINGLE_TENANT_UUID
     )
 
     # Verify that the workflow was executed twice
