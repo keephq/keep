@@ -78,6 +78,10 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   };
 
   function updateAlertsCelDateRange() {
+    if (!query?.timeFrame) {
+      return;
+    }
+
     const dateRangeCel = getDateRangeCel();
 
     setDateRangeCel(dateRangeCel);
