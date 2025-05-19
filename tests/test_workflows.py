@@ -70,8 +70,12 @@ def test_workflow(
         event_id="1234",
         event_type="manual",
     )
-    results = manager._run_workflow(
+    manager._run_workflow(
         workflow=workflow, workflow_execution_id=workflow_execution_id
     )
     results_db = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
-    assert results_db.results == results
+    assert results_db.results.get("console-step") == ["hello world"]
+    assert (
+        results_db.results.get("keep-action")[0][0].get("name")
+        == "Packloss for host in production !"
+    )

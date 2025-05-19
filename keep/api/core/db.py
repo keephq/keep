@@ -2110,7 +2110,7 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             # if that's ok, use the original way
             workflow_execution.results = workflow_results
         except Exception:
-            # if that's not ok, use the fastapi way (e.g. alerdto is not json serializable)
+            # if that's not ok, use the Keep way (e.g. alerdto is not json serializable)
             logger.warning(
                 "Failed to serialize workflow results, using fastapi encoder",
             )
