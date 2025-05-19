@@ -120,8 +120,15 @@ class Info:
         if not self.random_user_id:
             self.random_user_id = str(uuid.uuid4())
             self.config["random_user_id"] = self.random_user_id
-            with open(file=keep_config, mode="w") as f:
-                cyaml.dump(self.config, f)
+            try:
+                with open(file=keep_config, mode="w") as f:
+                    cyaml.dump(self.config, f)
+            # e.g. in case of openshift you don't have write access to the file
+            except Exception as e:
+                logger.debug(
+                    f"Error writing random user id to config file: {e}. Please set it manually."
+                )
+                pass
 
         arguments = sys.argv
 
