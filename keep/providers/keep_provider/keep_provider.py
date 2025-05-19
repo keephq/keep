@@ -468,7 +468,7 @@ class KeepProvider(BaseProvider):
             alert_results = (
                 context.get("steps", {}).get(alert_step, {}).get("results", {})
             )
-            self.logger.debug(
+            self.logger.info(
                 "Got alert results from alert_step",
                 extra={"alert_results": alert_results},
             )
@@ -476,10 +476,17 @@ class KeepProvider(BaseProvider):
         else:
             # TODO: this is a temporary solution until we have a better way to get the alert results
             alert_results = context.get("steps", {}).get("this", {}).get("results", {})
-            self.logger.debug(
+            self.logger.info(
                 "Got alert results from 'this' step",
                 extra={"alert_results": alert_results},
             )
+            # alert_results must be a list
+            if not isinstance(alert_results, list):
+                self.logger.warning(
+                    "Alert results must be a list, but got a non-list type",
+                    extra={"alert_results": alert_results},
+                )
+                alert_results = None
 
         # create_alert_in_keep.yml for example
         if not alert_results:
