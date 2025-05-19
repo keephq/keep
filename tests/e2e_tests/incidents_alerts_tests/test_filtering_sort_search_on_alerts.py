@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import requests
@@ -320,9 +320,8 @@ def test_search_by_cel(
     browser.wait_for_timeout(3000)
     print(current_alerts)
     init_test(browser, current_alerts)
-    cel_input_id = "alerts-cel-input"
     browser.wait_for_timeout(1000)
-    cel_input_locator = browser.locator(f".{cel_input_id}")
+    cel_input_locator = browser.locator(".alerts-cel-input")
     cel_input_locator.click()
 
     for command in commands:
@@ -541,4 +540,88 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
         lambda alert: alert[alert_property_name] == value,
         alert_property_name,
         None,
+    )
+
+
+def test_filter_search_timeframe_combination_with_queryparams(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    facet_name = "severity"
+    alert_property_name = "severity"
+    value = "info"
+    current_alerts = setup_test_data
+
+    def filter_lambda(alert):
+        return (
+            alert[alert_property_name] == value
+            and "high" in alert["name"].lower()
+            and datetime.fromisoformat(alert["lastReceived"]).replace(
+                tzinfo=timezone.utc
+            )
+            >= (datetime.now(timezone.utc) - timedelta(hours=4))
+        )
+
+    filtered_alerts = [alert for alert in current_alerts if filter_lambda(alert)]
+
+    init_test(browser, current_alerts, max_retries=3)
+    # Give the page a moment to process redirects
+    browser.wait_for_timeout(500)
+
+    # Wait for navigation to complete to either signin or providers page
+    # (since we might get redirected automatically)
+    browser.wait_for_load_state("networkidle")
+
+    assert_facet(browser, facet_name, current_alerts, alert_property_name)
+
+    option = browser.locator("[data-testid='facet-value']", has_text=value)
+    option.hover()
+
+    option.locator("button", has_text="Only").click()
+    browser.wait_for_timeout(500)
+
+    cel_input_locator = browser.locator(".alerts-cel-input")
+    cel_input_locator.click()
+    browser.keyboard.type("name.contains('high')")
+    browser.keyboard.press("Enter")
+    browser.wait_for_timeout(500)
+
+    # select timeframe
+    browser.locator("button[data-testid='timeframe-picker-trigger']").click()
+    browser.locator(
+        "[data-testid='timeframe-picker-content'] button", has_text="Past 4 hours"
+    ).click()
+
+    # check that alerts are filtered by the selected facet/cel/timeframe
+    assert_facet(
+        browser,
+        facet_name,
+        filtered_alerts,
+        alert_property_name,
+    )
+    assert_alerts_by_column(
+        browser,
+        current_alerts,
+        filter_lambda,
+        alert_property_name,
+        None,
+    )
+
+    # Refresh in order to check that filters/facets are restored
+    # It will use the URL query params from previous filters
+    browser.reload()
+    assert_alerts_by_column(
+        browser,
+        current_alerts,
+        filter_lambda,
+        alert_property_name,
+        None,
+    )
+    assert_facet(
+        browser,
+        facet_name,
+        filtered_alerts,
+        alert_property_name,
     )
