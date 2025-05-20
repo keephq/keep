@@ -4,6 +4,11 @@ import { FacetsPanelState } from "../create-facets-store";
 import { FacetDto, FacetOptionDto } from "../../models";
 import { splitFacetValues } from "./split-facet-values";
 import { escapeFacetValue } from "./escape-facet-value";
+import {
+  ReadonlyURLSearchParams,
+  useSearchParams,
+  usePathname,
+} from "next/navigation";
 
 const facetQueryParamPrefix = "facet_";
 
@@ -59,7 +64,18 @@ function buildFacetQueryParams(
   return facetQueryParams;
 }
 
+function replaceQueryParams(searchParams: URLSearchParams): void {
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${searchParams.toString() ? "?" + searchParams.toString() : ""}`
+  );
+}
+
 export function useQueryParams(store: StoreApi<FacetsPanelState>) {
+  const searchParamsRef = useRef<ReadonlyURLSearchParams>();
+  searchParamsRef.current = useSearchParams();
+  const pathname = usePathname();
   const facets = useStore(store, (state) => state.facets);
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const allFacetOptionsRef = useRef<Record<string, FacetOptionDto[]> | null>(
@@ -74,7 +90,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
     (state) => state.facetsStateRefreshToken
   );
 
-  const areQueryParamsSet = useStore(
+  const isFacetsStateInitializedFromQueryParams = useStore(
     store,
     (state) => state.isFacetsStateInitializedFromQueryParams
   );
@@ -88,6 +104,22 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
     store,
     (state) => state.isInitialStateHandled
   );
+
+  useEffect(() => {
+    return () => {
+      const newParams = new URLSearchParams(window.location.search);
+      const facetQueryParams = Array.from(newParams.entries()).filter(([key]) =>
+        key.startsWith(facetQueryParamPrefix)
+      );
+
+      if (facetQueryParams.length) {
+        facetQueryParams.forEach(([key, value]) =>
+          newParams.delete(key, value)
+        );
+        replaceQueryParams(newParams);
+      }
+    };
+  }, [pathname]);
 
   const formattedFacets = useMemo(() => {
     if (!facets) {
@@ -104,7 +136,11 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
   }, [facets]);
 
   useEffect(() => {
-    if (!isInitialStateHandled || areQueryParamsSet || !formattedFacets) {
+    if (
+      !isInitialStateHandled ||
+      isFacetsStateInitializedFromQueryParams ||
+      !formattedFacets
+    ) {
       return;
     }
 
@@ -113,7 +149,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
       {}
     );
     const facetsStatePatch: Record<string, any> = {};
-    const queryParams = new URLSearchParams(window.location.search);
+    const queryParams = new URLSearchParams(searchParamsRef.current);
     const facetEntries = Array.from(queryParams.entries()).filter(([key]) =>
       key.startsWith(facetQueryParamPrefix)
     );
@@ -143,7 +179,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
     setIsFacetsStateInitializedFromQueryParams(true);
   }, [
     formattedFacets,
-    areQueryParamsSet,
+    isFacetsStateInitializedFromQueryParams,
     patchFacetsState,
     setIsFacetsStateInitializedFromQueryParams,
     isInitialStateHandled,
@@ -155,7 +191,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
     }
 
     const timeoutId = setTimeout(() => {
-      const oldQueryParams = new URLSearchParams(window.location.search);
+      const oldQueryParams = new URLSearchParams(searchParamsRef.current);
 
       const facetQueryParams = buildFacetQueryParams(
         formattedFacets,
@@ -175,14 +211,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
         oldQueryParams.append(key, value)
       );
 
-      const queryString = oldQueryParams.toString();
-
-      var newurl =
-        window.location.origin +
-        window.location.pathname +
-        (queryString ? `?${queryString}` : "");
-
-      window.history.replaceState(null, "", newurl);
+      replaceQueryParams(oldQueryParams);
     }, 500);
 
     return () => clearTimeout(timeoutId);
