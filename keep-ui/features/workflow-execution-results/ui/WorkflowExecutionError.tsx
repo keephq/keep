@@ -1,5 +1,7 @@
 import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui";
+import { showSuccessToast } from "@/shared/ui";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Button, Callout } from "@tremor/react";
 
@@ -26,8 +28,16 @@ export function WorkflowExecutionError({
   -H "Content-Type: application/json"`;
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(getCurlCommand());
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(getCurlCommand());
+      showSuccessToast("CURL command copied to clipboard");
+    } catch (err) {
+      showErrorToast(
+        err,
+        "Failed to copy CURL command. Please check your browser permissions."
+      );
+    }
   };
 
   return (

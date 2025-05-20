@@ -18,7 +18,12 @@ import {
   ArrowUpRightIcon,
   ClipboardDocumentIcon,
 } from "@heroicons/react/24/outline";
-import { DropdownMenu, getIconForStatusString } from "@/shared/ui";
+import {
+  DropdownMenu,
+  getIconForStatusString,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { Link } from "@/components/ui";
 import {
   extractTriggerDetailsV2,
@@ -66,8 +71,12 @@ function WorkflowExecutionRowMenu({
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(row.original.id);
+            showSuccessToast("Execution ID copied to clipboard");
           } catch (err) {
-            console.error("Failed to copy execution id:", err);
+            showErrorToast(
+              err,
+              "Failed to copy execution id. Please check your browser permissions."
+            );
           }
         }}
       />

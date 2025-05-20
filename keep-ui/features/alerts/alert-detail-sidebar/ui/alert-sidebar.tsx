@@ -7,7 +7,14 @@ import { AlertTimeline } from "./alert-timeline";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { TopologyMap } from "@/app/(keep)/topology/ui/map";
 import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchContext";
-import { FieldHeader, SeverityLabel, UISeverity, Tooltip } from "@/shared/ui";
+import {
+  FieldHeader,
+  SeverityLabel,
+  UISeverity,
+  Tooltip,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
 import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { Link } from "@/components/ui";
@@ -17,7 +24,6 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
-import { toast } from "react-toastify";
 import { IncidentDto } from "@/entities/incidents/model";
 
 type AlertSidebarProps = {
@@ -56,6 +62,22 @@ export const AlertSidebar = ({
   const handleRefresh = async () => {
     console.log("Refresh button clicked");
     await mutate();
+  };
+
+  const handleCopyFingerprint = async (alertFingerprint: string) => {
+    if (!alertFingerprint) {
+      showErrorToast(new Error("Alert has no fingerprint"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(alertFingerprint);
+      showSuccessToast("Fingerprint copied to clipboard");
+    } catch (err) {
+      showErrorToast(
+        err,
+        "Failed to copy fingerprint. Please check your browser permissions."
+      );
+    }
   };
 
   return (
@@ -177,45 +199,35 @@ export const AlertSidebar = ({
                         size="xs"
                         color="orange"
                         variant="light"
-                        onClick={() => {
-                          navigator.clipboard
-                            .writeText(alert.fingerprint)
-                            .then(() => {
-                              toast.success(
-                                "Fingerprint copied to clipboard!",
-                                {
-                                  position: "top-left",
-                                }
-                              );
-                            })
-                            .catch((err) => {
-                              console.error("Failed to copy fingerprint:", err);
-                              toast.error("Failed to copy fingerprint", {
-                                position: "top-left",
-                              });
-                            });
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCopyFingerprint(alert.fingerprint);
                         }}
                         tooltip="Copy fingerprint"
                       />
                     </div>
                   </p>
                 </div>
-                {alert.incident_dto && <div>
-                  <FieldHeader>Incidents</FieldHeader>
-                  {alert.incident_dto.map((incident: IncidentDto) => {
-                    const title =
-                      incident.user_generated_name || incident.ai_generated_name;
-                    return (
-                      <Link
-                        key={incident.id}
-                        href={`/incidents/${incident.id}`}
-                        title={title}
-                      >
-                        {title}
-                      </Link>
-                    );
-                  })}
-                </div>}
+                {alert.incident_dto && (
+                  <div>
+                    <FieldHeader>Incidents</FieldHeader>
+                    {alert.incident_dto.map((incident: IncidentDto) => {
+                      const title =
+                        incident.user_generated_name ||
+                        incident.ai_generated_name;
+                      return (
+                        <Link
+                          key={incident.id}
+                          href={`/incidents/${incident.id}`}
+                          title={title}
+                        >
+                          {title}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
                 <AlertTimeline
                   key={auditData ? auditData.length : 1}
                   alert={alert}

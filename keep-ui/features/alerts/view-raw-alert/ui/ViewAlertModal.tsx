@@ -607,10 +607,12 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (alert) {
       try {
         await navigator.clipboard.writeText(editorValue);
-        showSuccessToast("Alert copied to clipboard!");
+        showSuccessToast("Alert copied to clipboard");
       } catch (err) {
-        console.error("Failed to copy alert:", err);
-        showErrorToast(err, "Failed to copy alert.");
+        showErrorToast(
+          err,
+          "Failed to copy alert. Please check your browser permissions."
+        );
       }
     }
   };

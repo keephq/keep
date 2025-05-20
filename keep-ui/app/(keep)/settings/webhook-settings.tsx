@@ -17,12 +17,11 @@ import {
 import Loading from "@/app/(keep)/loading";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { PageSubtitle } from "@/shared/ui";
+import { PageSubtitle, showErrorToast, showSuccessToast } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
 import { MonacoEditor } from "@/shared/ui";
 
@@ -156,19 +155,23 @@ req.end();
     if (resp.ok) {
       router.push("/alerts/feed");
     } else {
-      alert("Something went wrong! Please try again.");
+      showErrorToast(resp, "Something went wrong! Please try again.");
     }
   };
 
-  const onCopyCode = () => {
+  const onCopyCode = async () => {
     const currentCode = languages.at(codeTabIndex);
+    if (currentCode === undefined) {
+      return;
+    }
 
-    if (currentCode !== undefined) {
-      return window.navigator.clipboard.writeText(currentCode.code).then(() =>
-        toast("Code copied to clipboard!", {
-          position: "top-left",
-          type: "success",
-        })
+    try {
+      await navigator.clipboard.writeText(currentCode.code);
+      showSuccessToast("Code copied to clipboard!");
+    } catch (err) {
+      showErrorToast(
+        err,
+        "Failed to copy code. Please check your browser permissions."
       );
     }
   };

@@ -12,7 +12,12 @@ import type { editor } from "monaco-editor";
 import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
 import { WorkflowYAMLEditorProps } from "../model/types";
 // NOTE: IT IS IMPORTANT TO IMPORT MonacoYAMLEditor FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
-import { MonacoYAMLEditor, KeepLoader } from "@/shared/ui";
+import {
+  MonacoYAMLEditor,
+  KeepLoader,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
 import { useYamlValidation } from "../lib/useYamlValidation";
@@ -158,8 +163,12 @@ export const WorkflowYAMLEditor = ({
     }
     try {
       await navigator.clipboard.writeText(value);
+      showSuccessToast("Workflow YAML copied to clipboard");
     } catch (err) {
-      console.error("Failed to copy text:", err);
+      showErrorToast(
+        err,
+        "Failed to copy Workflow YAML. Please check your browser permissions."
+      );
     }
   }, []);
 
