@@ -5,7 +5,7 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { usePathname } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
 import { FacetValue } from "./facet-value";
-import { FacetConfig, FacetDto, FacetOptionDto, FacetState } from "./models";
+import { FacetDto, FacetOptionDto } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useExistingFacetsPanelStore } from "./store";
 import { stringToValue, toFacetState, valueToString } from "./store/utils";
