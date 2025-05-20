@@ -53,6 +53,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [Graylog](/providers/documentation/graylog-provider)
 - [Grok](/providers/documentation/grok-provider)
 - [HTTP](/providers/documentation/http-provider)
+- [Icinga2](/providers/documentation/icinga2-provider)
 - [ilert](/providers/documentation/ilert-provider)
 - [Incident.io](/providers/documentation/incidentio-provider)
 - [Incident Manager](/providers/documentation/incidentmanager-provider)
