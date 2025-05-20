@@ -12,13 +12,21 @@ import type { editor } from "monaco-editor";
 import { useWorkflowJsonSchema } from "@/entities/workflows/lib/useWorkflowJsonSchema";
 import { WorkflowYAMLEditorProps } from "../model/types";
 // NOTE: IT IS IMPORTANT TO IMPORT MonacoYAMLEditor FROM THE SHARED UI DIRECTORY, because import will be replaced for turbopack
-import { MonacoYAMLEditor, KeepLoader } from "@/shared/ui";
+import {
+  MonacoYAMLEditor,
+  KeepLoader,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { WorkflowYAMLValidationErrors } from "./WorkflowYAMLValidationErrors";
 import { useYamlValidation } from "../lib/useYamlValidation";
 import { WorkflowYAMLEditorToolbar } from "./WorkflowYAMLEditorToolbar";
 import { navigateToErrorPosition } from "../lib/utils";
 import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
+import { Link } from "@/components/ui/Link";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
@@ -39,6 +47,7 @@ export const WorkflowYAMLEditor = ({
   >(null);
   const { getSecrets } = useWorkflowSecrets(workflowId);
   const { data: secrets } = getSecrets;
+  const { data: config } = useConfig();
 
   const {
     validationErrors,
@@ -158,8 +167,20 @@ export const WorkflowYAMLEditor = ({
     }
     try {
       await navigator.clipboard.writeText(value);
+      showSuccessToast("Workflow YAML copied to clipboard");
     } catch (err) {
-      console.error("Failed to copy text:", err);
+      showErrorToast(
+        err,
+        <p>
+          Failed to copy Workflow YAML. Please check your browser permissions.{" "}
+          <Link
+            target="_blank"
+            href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+          >
+            Learn more
+          </Link>
+        </p>
+      );
     }
   }, []);
 

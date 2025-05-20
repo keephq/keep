@@ -174,7 +174,7 @@ class WorkflowStore:
         sort_by: str = None,
         sort_dir: str = None,
         session=None,
-    ) -> Tuple[list[dict], int]:
+    ):
         # list all tenant's workflows
         return get_workflows_with_last_executions_v2(
             tenant_id=tenant_id,
@@ -330,9 +330,7 @@ class WorkflowStore:
         # Get all existing provisioned workflows
         logger.info("Getting all already provisioned workflows")
         provisioned_workflows = get_all_provisioned_workflows(tenant_id)
-        logger.info(
-            f"Found {len(provisioned_workflows)} provisioned workflows"
-        )
+        logger.info(f"Found {len(provisioned_workflows)} provisioned workflows")
 
         if not (provisioned_workflows_dir or provisioned_workflow_yaml):
             logger.info("No workflows for provisioning found")
@@ -398,7 +396,7 @@ class WorkflowStore:
                 if not pre_parsed_workflow:
                     logger.info("No workflows to provision")
                     return []
-                
+
                 logger.info(
                     f"Provisioning workflow {pre_parsed_workflow.id} from env var"
                 )
@@ -426,7 +424,7 @@ class WorkflowStore:
 
         ### Provisioning from the directory
         if provisioned_workflows_dir is not None:
-            
+
             logger.info(
                 f"Provisioning workflows from directory {provisioned_workflows_dir}"
             )
@@ -483,9 +481,7 @@ class WorkflowStore:
                             extra={"exception": e},
                         )
                 else:
-                    logger.info(
-                        f"Skipping file {file} as it is not a YAML file"
-                    )
+                    logger.info(f"Skipping file {file} as it is not a YAML file")
 
         return provisioned_workflows
 
@@ -617,56 +613,6 @@ class WorkflowStore:
                 )
 
         return workflows[query.offset : query.offset + query.limit], len(workflows)
-
-    def group_last_workflow_executions(self, workflows: list[dict]) -> list[dict]:
-        """
-        Group last workflow executions by workflow id
-        """
-
-        self.logger.info(f"workflow_executions: {workflows}")
-        workflow_dict = {}
-        for item in workflows:
-            workflow, started, execution_time, status = item
-            workflow_id = workflow.id
-
-            # Initialize the workflow if not already in the dictionary
-            if workflow_id not in workflow_dict:
-                workflow_dict[workflow_id] = {
-                    "workflow": workflow,
-                    "workflow_last_run_started": None,
-                    "workflow_last_run_time": None,
-                    "workflow_last_run_status": None,
-                    "workflow_last_executions": [],
-                }
-
-            # Update the latest execution details if available
-            if workflow_dict[workflow_id]["workflow_last_run_started"] is None:
-                workflow_dict[workflow_id]["workflow_last_run_status"] = status
-                workflow_dict[workflow_id]["workflow_last_run_started"] = started
-                workflow_dict[workflow_id]["workflow_last_run_time"] = started
-
-            # Add the execution to the list of executions
-            if started is not None:
-                workflow_dict[workflow_id]["workflow_last_executions"].append(
-                    {
-                        "status": status,
-                        "execution_time": execution_time,
-                        "started": started,
-                    }
-                )
-        # Convert the dictionary to a list of results
-        results = [
-            {
-                "workflow": workflow_info["workflow"],
-                "workflow_last_run_status": workflow_info["workflow_last_run_status"],
-                "workflow_last_run_time": workflow_info["workflow_last_run_time"],
-                "workflow_last_run_started": workflow_info["workflow_last_run_started"],
-                "workflow_last_executions": workflow_info["workflow_last_executions"],
-            }
-            for workflow_id, workflow_info in workflow_dict.items()
-        ]
-
-        return results
 
     def get_workflow_meta_data(
         self,
