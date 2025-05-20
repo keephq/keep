@@ -21,6 +21,54 @@ logger = logging.getLogger(__name__)
 
 _len = len
 
+def add(*args) -> [int, float]:
+    args = list(map(int, args))
+    return sum(args)
+
+def sub(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result -= arg
+    return result
+
+def mul(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result *= arg
+    return result
+
+def div(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result /= arg
+    return int(result) if result.is_integer() else result
+
+def mod(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result %= arg
+    return result
+
+def exp(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result **= arg
+    return result
+
+def fdiv(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result //= arg
+    return result
+
+def eq(a, b) -> bool:
+    return a == b
 
 def all(iterable) -> bool:
     # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical

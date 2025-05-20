@@ -16,6 +16,7 @@ import AlertExtraPayload from "../ui/alert-extra-payload";
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { getNestedValue } from "@/shared/lib/object-utils";
 import {
   isListColumn,
   formatList,
@@ -235,37 +236,15 @@ export const useAlertTableCols = (
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
-      (row) => {
-        // Extract value using the dot notation path
-        const keys = colName.split(".");
-        let value: any = row;
-        for (const key of keys) {
-          if (value && typeof value === "object" && key in value) {
-            value = value[key as keyof typeof value];
-          } else {
-            value = undefined;
-            break;
-          }
-        }
-        return value;
-      },
+      (row) => getNestedValue(row, colName),
       {
         id: colName,
         header: getColumnDisplayName(colName, colName, columnRenameMapping),
         minSize: 100,
         enableGrouping: true,
         getGroupingValue: (row) => {
-          const keys = colName.split(".");
-          let value: any = row;
-          for (const key of keys) {
-            if (value && typeof value === "object" && key in value) {
-              value = value[key as keyof typeof value];
-            } else {
-              value = undefined;
-              break;
-            }
-          }
-
+          const value = getNestedValue(row, colName);
+          
           if (typeof value === "object" && value !== null) {
             return "object"; // Group all objects together
           }
