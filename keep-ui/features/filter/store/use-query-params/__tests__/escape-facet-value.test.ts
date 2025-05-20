@@ -1,4 +1,4 @@
-import { escapeFacetValue } from "./escape-facet-value";
+import { escapeFacetValue } from "../escape-facet-value";
 
 describe("escapeFacetValue", () => {
   it("should escape backslashes, single quotes, and commas inside single-quoted strings", () => {
