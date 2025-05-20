@@ -426,6 +426,7 @@ def assign_alert(
         action_type=ActionType.ACKNOWLEDGE,
         action_description=f"Alert assigned to {user_email}, status: {status}",
         action_callee=user_email,
+        dispose_on_new_alert=True,
     )
 
     try:
