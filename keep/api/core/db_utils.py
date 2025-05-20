@@ -7,17 +7,20 @@ Mainly, it creates the database engine based on the environment variables.
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, Type, TypeVar, Tuple
+from enum import Enum
+from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 
 import pymysql
 from dotenv import find_dotenv, load_dotenv
+from fastapi.encoders import jsonable_encoder
 from google.cloud.sql.connector import Connector
+from pydantic import BaseModel
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
-from sqlmodel import Session, create_engine, SQLModel, select
-from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -266,3 +269,28 @@ def get_or_create(
             return instance, False
         # If we still can't find it, something else is wrong, re-raise
         raise
+
+
+def custom_serialize(obj: Any) -> Any:
+    """
+    Custom serializer that handles Pydantic models (like AlertDto) and other complex types.
+    """
+    if isinstance(obj, dict):
+        return {k: custom_serialize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [custom_serialize(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(custom_serialize(item) for item in obj)
+    elif isinstance(obj, BaseModel):
+        # For Pydantic models like AlertDto
+        return obj.dict()
+    elif isinstance(obj, Enum):
+        # For enum values
+        return obj.value
+    else:
+        # For other objects, try jsonable_encoder, which handles many edge cases
+        try:
+            return jsonable_encoder(obj)
+        except Exception:
+            # If even jsonable_encoder fails, convert to string as a last resort
+            return str(obj)
