@@ -67,32 +67,45 @@ export const Facet: React.FC<FacetProps> = ({
     return Object.keys(facetStateRef.current);
   }
 
+  /** This variable stores placeholders for facet options that are selected, but don't exist.
+   * For example, if user selects "foo" and "bar" options, but only "foo" exists in the options list,
+   * then "bar" will be added to the options list as a placeholder with 0 matches_count and will be displayed as selected for user.
+   * But upon unselection, the option will disappear from the list.
+   * Such behavior might happen in case when query params contained options that are not present in the current options list.
+   */
+  const placeholderOptions: Record<string, FacetOptionDto> = useMemo(() => {
+    if (!options) {
+      return {};
+    }
+
+    if (!facetState) {
+      return {};
+    }
+
+    const existingOptions = new Set<string>(
+      options.map((option) => valueToString(option.value))
+    );
+
+    return Object.keys(facetState)
+      .filter((value) => !existingOptions.has(value))
+      .map((key) => ({
+        display_name: stringToValue(key),
+        matches_count: 0,
+        value: stringToValue(key),
+      }))
+      .reduce(
+        (acc, current) => ({ ...acc, [current.value]: current }),
+        {} as Record<string, FacetOptionDto>
+      );
+  }, [options, facetState]);
+
   const extendedOptions = useMemo(() => {
     if (!options) {
       return null;
     }
 
-    if (!facetState) {
-      return options;
-    }
-
-    const result = [...options];
-    const existingOptions = new Set<string>(
-      options.map((option) => valueToString(option.value))
-    );
-
-    Object.keys(facetState)
-      .filter((value) => !existingOptions.has(value))
-      .forEach((key) => {
-        result.push({
-          display_name: stringToValue(key),
-          matches_count: 0,
-          value: stringToValue(key),
-        });
-      });
-
-    return result;
-  }, [options, facetState]);
+    return [...options, ...Object.values(placeholderOptions)];
+  }, [options, placeholderOptions]);
 
   useEffect(() => {
     setIsLoaded(!!options); // Sync prop change with state
@@ -189,7 +202,10 @@ export const Facet: React.FC<FacetProps> = ({
         isExclusivelySelected={checkIfOptionExclusievlySelected(
           facetOption.value
         )}
-        isSelected={isOptionSelected(facetOption.value)}
+        isSelected={
+          !!placeholderOptions[facetOption.value] ||
+          isOptionSelected(facetOption.value)
+        }
         isSelectable={
           facetOption.matches_count > 0 || !!facetConfig?.canHitEmptyState
         }
