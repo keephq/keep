@@ -232,8 +232,6 @@ def query_workflows(
             detail=f"Error parsing CEL expression: {query.cel}",
         ) from e
 
-    workflows = workflowstore.group_last_workflow_executions(workflows=workflows)
-
     # iterate workflows
     for _workflow in workflows:
         workflow = _workflow["workflow"]
