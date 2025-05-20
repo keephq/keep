@@ -107,7 +107,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
 
   useEffect(() => {
     return () => {
-      const newParams = new URLSearchParams(window.location.search);
+      const newParams = new URLSearchParams(searchParamsRef.current);
       const facetQueryParams = Array.from(newParams.entries()).filter(([key]) =>
         key.startsWith(facetQueryParamPrefix)
       );

@@ -212,4 +212,33 @@ describe("useQueryParams", () => {
       "'critical','high'",
     ]);
   });
+
+  describe("when unmounting", () => {
+    it("should clean up only facet-related query params when path changes", () => {
+      (useSearchParams as jest.Mock).mockReturnValue(
+        new URLSearchParams({
+          facet_severity: "'critical','high'",
+          facet_incident_name: "'HTTP 500 error, needs clarification'",
+          unrelated_param: "some_value",
+        })
+      );
+
+      const { unmount } = renderHook(() => useQueryParams(store));
+
+      // Simulate path change
+      (
+        jest.requireMock("next/navigation").usePathname as jest.Mock
+      ).mockReturnValue("/alerts/details");
+      act(() => {
+        unmount();
+      });
+
+      const searchEntries = Array.from(
+        new URLSearchParams(window.location.search).entries()
+      );
+
+      expect(searchEntries).toHaveLength(1);
+      expect(searchEntries).toContainEqual(["unrelated_param", "some_value"]);
+    });
+  });
 });
