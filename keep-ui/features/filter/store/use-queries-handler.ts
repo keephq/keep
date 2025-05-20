@@ -60,7 +60,7 @@ export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
   const allFacetOptionsRef = useRef(allFacetOptions);
   allFacetOptionsRef.current = allFacetOptions;
   const setQueriesState = useStore(store, (state) => state.setQueriesState);
-  const areQueryParamsSet = useStore(
+  const isFacetsStateInitializedFromQueryParams = useStore(
     store,
     (state) => state.isFacetsStateInitializedFromQueryParams
   );
@@ -83,7 +83,7 @@ export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
   }, [debouncedFacetsStateRefreshToken, setQueriesState]);
 
   useEffect(() => {
-    if (!areQueryParamsSet || !facetsCelState) {
+    if (!isFacetsStateInitializedFromQueryParams || !facetsCelState) {
       return;
     }
 
@@ -110,5 +110,5 @@ export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
       .join(" && ");
 
     setQueriesState(filterCel, facetOptionQueries);
-  }, [facetsCelState, facets, areQueryParamsSet]);
+  }, [facetsCelState, facets, isFacetsStateInitializedFromQueryParams]);
 }
