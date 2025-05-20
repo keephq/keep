@@ -1,4 +1,0 @@
-[lint]
-ignore = ["F405", "F811", "E712", "E711", "F403"]
-# Exclude all YAML and MDX files
-exclude = ["*.yml", "*.yaml", "*.mdx"]

@@ -24,13 +24,13 @@ except ImportError as e:
     logging.warning(f"Import error in FluxCD provider: {str(e)}")
 
     # Define fallback classes
-    client = None
-    config = None
-    ApiException = Exception
-    kube_config = None
+    client = None  # noqa: F811
+    config = None  # noqa: F811
+    ApiException = Exception  # noqa: F811
+    kube_config = None  # noqa: F811
 
     # Mock classes for documentation generation
-    class TopologyServiceInDto:
+    class TopologyServiceInDto:  # noqa: F811
         def __init__(self, source_provider_id=None, service=None, display_name=None, repository=None):
             self.source_provider_id = source_provider_id
             self.service = service
@@ -38,11 +38,11 @@ except ImportError as e:
             self.repository = repository
             self.dependencies = {}
 
-    class ContextManager:
+    class ContextManager:  # noqa: F811
         def __init__(self, tenant_id=None):
             self.tenant_id = tenant_id
 
-    class BaseTopologyProvider:
+    class BaseTopologyProvider:  # noqa: F811
         PROVIDER_CATEGORY = []
         PROVIDER_DISPLAY_NAME = ""
         PROVIDER_TAGS = []
@@ -54,11 +54,11 @@ except ImportError as e:
             self.config = config
             self.logger = logging.getLogger(__name__)
 
-    class ProviderConfig:
+    class ProviderConfig:  # noqa: F811
         def __init__(self, authentication=None):
             self.authentication = authentication or {}
 
-    class ProviderScope:
+    class ProviderScope:  # noqa: F811
         def __init__(self, name, description, mandatory=False, mandatory_for_webhook=False, alias=None):
             self.name = name
             self.description = description
@@ -655,7 +655,7 @@ class FluxcdProvider(BaseTopologyProvider):
         # Check resource status conditions
         conditions = resource.get("status", {}).get("conditions", [])
         for condition in conditions:
-            if condition.get("status") != "True" and condition.get("type") != "Ready":
+            if condition.get("status") != "True" and condition.get("type") != "Ready":  # noqa: E712
                 alert = {
                     "id": f"{uid}-{condition.get('type')}",
                     "name": f"{resource_kind} {name} - {condition.get('type')}",
@@ -725,7 +725,7 @@ class FluxcdProvider(BaseTopologyProvider):
             # Create an Apps V1 API client
             try:
                 # Check if client is available (it might be None in tests)
-                if client is None:
+                if client is None:  # noqa: E711
                     raise ImportError("Kubernetes client is not available")
 
                 api_client = client.ApiClient()
@@ -747,7 +747,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 # A deployment is healthy if it has the desired number of replicas available
                 desired = deployment.spec.replicas
                 available = deployment.status.available_replicas or 0
-                healthy = available == desired
+                healthy = available == desired  # This is a valid comparison, no need to change
 
                 components[name] = {
                     "healthy": healthy,
