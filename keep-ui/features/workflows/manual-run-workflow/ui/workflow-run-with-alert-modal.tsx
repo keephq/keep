@@ -4,7 +4,7 @@ import { useState } from "react";
 import { TextInput, Button, Text } from "@tremor/react";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
-import { buildNestedObject } from "@/shared/lib/buildNestedObject";
+import { buildNestedObject } from "@/shared/lib/object-utils";
 
 interface StaticField {
   key: string;
