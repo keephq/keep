@@ -25,6 +25,7 @@ import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 import { IncidentDto } from "@/entities/incidents/model";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -75,7 +76,15 @@ export const AlertSidebar = ({
     } catch (err) {
       showErrorToast(
         err,
-        "Failed to copy fingerprint. Please check your browser permissions."
+        <p>
+          Failed to copy fingerprint. Please check your browser permissions.{" "}
+          <Link
+            target="_blank"
+            href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+          >
+            Learn more
+          </Link>
+        </p>
       );
     }
   };

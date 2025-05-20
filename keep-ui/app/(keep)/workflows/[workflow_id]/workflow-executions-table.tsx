@@ -30,6 +30,8 @@ import {
   getTriggerIcon,
 } from "@/entities/workflows/lib/ui-utils";
 import { TableFilters } from "./table-filters";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Pagination {
   limit: number;
@@ -49,6 +51,7 @@ function WorkflowExecutionRowMenu({
 }: {
   row: Row<WorkflowExecutionDetail>;
 }) {
+  const { data: config } = useConfig();
   const router = useRouter();
   return (
     <DropdownMenu.Menu
@@ -75,7 +78,16 @@ function WorkflowExecutionRowMenu({
           } catch (err) {
             showErrorToast(
               err,
-              "Failed to copy execution id. Please check your browser permissions."
+              <p>
+                Failed to copy execution id. Please check your browser
+                permissions.{" "}
+                <Link
+                  target="_blank"
+                  href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+                >
+                  Learn more
+                </Link>
+              </p>
             );
           }
         }}

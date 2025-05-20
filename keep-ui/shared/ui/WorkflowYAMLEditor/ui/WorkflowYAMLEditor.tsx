@@ -24,6 +24,9 @@ import { useYamlValidation } from "../lib/useYamlValidation";
 import { WorkflowYAMLEditorToolbar } from "./WorkflowYAMLEditorToolbar";
 import { navigateToErrorPosition } from "../lib/utils";
 import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
+import { Link } from "@/components/ui/Link";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
@@ -44,6 +47,7 @@ export const WorkflowYAMLEditor = ({
   >(null);
   const { getSecrets } = useWorkflowSecrets(workflowId);
   const { data: secrets } = getSecrets;
+  const { data: config } = useConfig();
 
   const {
     validationErrors,
@@ -167,7 +171,15 @@ export const WorkflowYAMLEditor = ({
     } catch (err) {
       showErrorToast(
         err,
-        "Failed to copy Workflow YAML. Please check your browser permissions."
+        <p>
+          Failed to copy Workflow YAML. Please check your browser permissions.{" "}
+          <Link
+            target="_blank"
+            href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+          >
+            Learn more
+          </Link>
+        </p>
       );
     }
   }, []);

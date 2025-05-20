@@ -1,0 +1,14 @@
+---
+title: "FAQ"
+sidebarTitle: FAQ
+---
+
+## FAQ
+
+### 1. "Failed to copy alert/fingerprint. Please check your browser permissions"
+
+Modern browsers block clipboard access from insecure ("http") origins for security reasons. To resolve this:
+
+- For production: Configure HTTPS for your Keep deployment
+- For local development: Use "localhost" which browsers treat as a secure origin
+- If using a custom domain locally: Enable HTTPS or switch to "localhost"

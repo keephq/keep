@@ -24,6 +24,8 @@ import { useConfig } from "@/utils/hooks/useConfig";
 import { PageSubtitle, showErrorToast, showSuccessToast } from "@/shared/ui";
 import { PageTitle } from "@/shared/ui";
 import { MonacoEditor } from "@/shared/ui";
+import { Link } from "@/components/ui/Link";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 
 interface Webhook {
   webhookApi: string;
@@ -171,7 +173,15 @@ req.end();
     } catch (err) {
       showErrorToast(
         err,
-        "Failed to copy code. Please check your browser permissions."
+        <p>
+          Failed to copy code. Please check your browser permissions.{" "}
+          <Link
+            target="_blank"
+            href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+          >
+            Learn more
+          </Link>
+        </p>
       );
     }
   };
