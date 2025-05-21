@@ -1,5 +1,12 @@
 import React from "react";
-import { DialogPanel, Dialog, Text, Badge, Button } from "@tremor/react";
+import {
+  DialogPanel,
+  Dialog,
+  Text,
+  Badge,
+  Button,
+  DialogProps,
+} from "@tremor/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { PageTitle } from "@/shared/ui/PageTitle";
 
@@ -12,6 +19,7 @@ export default function Modal({
   className = "",
   beta = false,
   description,
+  ...props
 }: {
   children: React.ReactNode;
   isOpen: boolean;
@@ -21,9 +29,9 @@ export default function Modal({
   className?: string;
   beta?: boolean;
   description?: string;
-}) {
+} & Omit<DialogProps, "open" | "onClose" | "static" | "children">) {
   return (
-    <Dialog open={isOpen} onClose={onClose}>
+    <Dialog open={isOpen} onClose={onClose} {...props}>
       <DialogPanel
         className={`flex flex-col border-2 border-orange-300 rounded-lg ring-0 ${className}`}
       >
@@ -54,9 +62,7 @@ export default function Modal({
             )}
           </header>
         )}
-        <div className="flex flex-col flex-1 min-h-0 overflow-auto">
-          {children}
-        </div>
+        <div className="flex flex-col flex-1 min-h-0">{children}</div>
       </DialogPanel>
     </Dialog>
   );
