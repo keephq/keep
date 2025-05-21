@@ -540,7 +540,10 @@ export function AlertTableServerSide({
       }
     }
     return (
-      <Table className="[&>table]:table-fixed [&>table]:w-full">
+      <Table
+        className="[&>table]:table-fixed [&>table]:w-full"
+        data-testid="alerts-table"
+      >
         <AlertsTableHeaders
           columns={columns}
           table={table}
