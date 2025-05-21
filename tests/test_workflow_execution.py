@@ -18,7 +18,7 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from keep.api.models.db.incident import Incident, IncidentStatus
-from keep.api.models.db.workflow import Workflow, WorkflowExecution
+from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -110,6 +110,32 @@ actions:
 on-failure:
     provider:
       type: console
+"""
+
+LOG_EVERY_ALERT_WORKFLOW = """
+workflow:
+  id: log-every-alert
+  name: Log every alert
+  description: Simple workflow demonstrating logging every alert
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: "server-is-upsidedown"
+  actions:
+    - name: log-every-alert-success
+      if: "{{alert.should_fail}} == 'false'"
+      provider:
+        type: console
+        with:
+          message: "{{alert.name}} - {{alert.message}}"
+    - name: log-every-alert-failure
+      if: "{{alert.should_fail}} == 'true'"
+      provider:
+        type: console
+        with:
+          invalid-argument-to-fail-workflow: true
+          message: "{{alert.name}} - {{alert.message}}"
 """
 
 
@@ -1680,7 +1706,7 @@ def test_workflow_executions_after_reprovisioning(
 
 
 def test_workflow_with_on_failure_succeeds_after_failing(
-    db_session, create_alert, workflow_manager, mocker
+    db_session, workflow_manager, mocker
 ):
     """Test that a workflow with an on-failure action is executed correctly."""
     # Mock the ConsoleProvider's notify method
@@ -1742,9 +1768,7 @@ def test_workflow_with_on_failure_succeeds_after_failing(
     assert "Tier 1 Alert: server-is-upsidedown" in str(mock_console.call_args_list[-1])
 
 
-def test_workflow_with_on_failure_action(
-    db_session, create_alert, workflow_manager, mocker
-):
+def test_workflow_with_on_failure_action(db_session, workflow_manager, mocker):
     """Test that a workflow with an on-failure action is executed correctly."""
     # Mock the ConsoleProvider's notify method
     mock_console = mocker.patch(
@@ -1788,18 +1812,6 @@ def test_workflow_with_on_failure_action(
         lastReceived=datetime.now(tz=pytz.utc).isoformat(),
     )
 
-    # Create a new alert to trigger the workflow
-    alert = AlertDto(
-        id="alert-2",
-        fingerprint="upsdown-2",
-        source=["grafana"],
-        name="server-is-upsidedown",
-        message="Server is upside down again",
-        status=AlertStatus.FIRING,
-        severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
-    )
-
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
 
     workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
@@ -1816,3 +1828,83 @@ def test_workflow_with_on_failure_action(
     assert "Workflow on-failure-workflow failed with errors:" in str(
         mock_console.call_args_list[-1]
     )
+
+
+def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
+    workflow = Workflow(
+        id="log-every-alert",
+        name="log-every-alert",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="workflow which logs every alert, and fails if alert.should_fail is true",
+        created_by="borat@keephq.dev",
+        interval=0,
+        workflow_raw=LOG_EVERY_ALERT_WORKFLOW,
+        last_updated=datetime.now(),
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Create an alert to trigger the workflow
+    alert1 = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+        should_fail="false",
+    )
+
+    # Create a new alert to trigger the workflow
+    alert2 = AlertDto(
+        id="alert-2",
+        fingerprint="upsdown-2",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down again",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+        should_fail="true",
+    )
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert1])
+
+    # Wait for the workflow to execute
+    first_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+    assert first_execution is not None
+    assert first_execution.status == "success"
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert2])
+
+    # Wait for the workflow to execute again
+    second_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, workflow.id, exclude_ids=[first_execution.id]
+    )
+    assert second_execution is not None
+    assert second_execution.status == "error"
+
+    workflowstore = WorkflowStore()
+    # Get all workflows with last execution
+    workflows, _count = workflowstore.get_all_workflows_with_last_execution(
+        SINGLE_TENANT_UUID
+    )
+
+    # Verify that the workflow was executed twice
+    workflow = next(w for w in workflows if w["workflow"].id == workflow.id)
+    assert workflow is not None
+    assert len(workflow["workflow_last_executions"]) == 2
+    first_execution_wf_store = next(
+        w for w in workflow["workflow_last_executions"] if w["id"] == first_execution.id
+    )
+    assert first_execution_wf_store is not None
+    assert first_execution_wf_store["status"] == "success"
+    second_execution_wf_store = next(
+        w
+        for w in workflow["workflow_last_executions"]
+        if w["id"] == second_execution.id
+    )
+    assert second_execution_wf_store is not None
+    assert second_execution_wf_store["status"] == "error"

@@ -44,6 +44,7 @@ export type Trigger =
   | ManualFilter;
 
 export type LastWorkflowExecution = {
+  id: string;
   execution_time: number;
   status: string;
   started: string;

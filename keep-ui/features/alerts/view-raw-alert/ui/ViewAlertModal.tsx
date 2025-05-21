@@ -4,12 +4,14 @@ import { Button, Switch, Text, Callout } from "@tremor/react";
 import { toast } from "react-toastify";
 import React, { useState, useRef, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { MonacoEditor, showErrorToast } from "@/shared/ui";
+import { MonacoEditor, showErrorToast, showSuccessToast } from "@/shared/ui";
 import { type Monaco } from "@monaco-editor/react";
 import { Lock, Unlock, Save, AlertTriangle, Copy, X } from "lucide-react";
 import { type editor } from "monaco-editor";
 import "./ViewAlertModal.css";
-
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { Link } from "@/components/ui/Link";
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
   handleClose: () => void;
@@ -67,7 +69,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
-
+  const { data: config } = useConfig();
   // Initialize editor value when alert changes
   useEffect(() => {
     if (alert) {
@@ -607,9 +609,20 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (alert) {
       try {
         await navigator.clipboard.writeText(editorValue);
-        toast.success("Alert copied to clipboard!");
+        showSuccessToast("Alert copied to clipboard");
       } catch (err) {
-        showErrorToast(err, "Failed to copy alert.");
+        showErrorToast(
+          err,
+          <p>
+            Failed to copy alert. Please check your browser permissions.{" "}
+            <Link
+              target="_blank"
+              href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+            >
+              Learn more
+            </Link>
+          </p>
+        );
       }
     }
   };

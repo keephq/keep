@@ -762,10 +762,14 @@ class PagerdutyProvider(
             event.get("severity", "info")
         )
         source = ["pagerduty"]
-        origin = event.get("body", {}).get("cef_details", {}).get("source_origin")
         fingerprint = event.get("alert_key", event.get("id"))
-        if origin:
-            source.append(origin)
+        try:
+            origin = event.get("body", {}).get("cef_details", {}).get("source_origin")
+            if origin:
+                source.append(origin)
+        except Exception:
+            # Could not extract origin or fingerprint, so we'll use the event id
+            pass
         return AlertDto(
             id=event.get("id"),
             name=event.get("summary"),

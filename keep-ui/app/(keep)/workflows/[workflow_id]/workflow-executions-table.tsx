@@ -18,13 +18,20 @@ import {
   ArrowUpRightIcon,
   ClipboardDocumentIcon,
 } from "@heroicons/react/24/outline";
-import { DropdownMenu, getIconForStatusString } from "@/shared/ui";
+import {
+  DropdownMenu,
+  getIconForStatusString,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { Link } from "@/components/ui";
 import {
   extractTriggerDetailsV2,
   getTriggerIcon,
 } from "@/entities/workflows/lib/ui-utils";
 import { TableFilters } from "./table-filters";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Pagination {
   limit: number;
@@ -44,6 +51,7 @@ function WorkflowExecutionRowMenu({
 }: {
   row: Row<WorkflowExecutionDetail>;
 }) {
+  const { data: config } = useConfig();
   const router = useRouter();
   return (
     <DropdownMenu.Menu
@@ -66,8 +74,21 @@ function WorkflowExecutionRowMenu({
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(row.original.id);
+            showSuccessToast("Execution ID copied to clipboard");
           } catch (err) {
-            console.error("Failed to copy execution id:", err);
+            showErrorToast(
+              err,
+              <p>
+                Failed to copy execution id. Please check your browser
+                permissions.{" "}
+                <Link
+                  target="_blank"
+                  href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+                >
+                  Learn more
+                </Link>
+              </p>
+            );
           }
         }}
       />
