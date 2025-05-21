@@ -1,6 +1,6 @@
 import datetime
 from types import NoneType
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from enum import Enum
 
