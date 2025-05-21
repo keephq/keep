@@ -1,25 +1,22 @@
 import { AlertSeverity } from "@/entities/alerts/ui";
-import { AlertDto, CommentMentionDto } from "@/entities/alerts/model";
+import { AlertDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
-import { useUsers } from "@/entities/users/model/useUsers";
-import { User } from "@/app/(keep)/settings/models";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { IncidentActivity } from "../incident-activity";
 
 // TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
 
-export function IncidentActivityItem({ activity }: { activity: any }) {
-  const { data: users = [] } = useUsers();
-
+export function IncidentActivityItem({ activity }: { activity: IncidentActivity }) {
   const title =
     typeof activity.initiator === "string"
       ? activity.initiator
-      : activity.initiator?.name;
+      : (activity.initiator as AlertDto)?.name;
   const subTitle =
     activity.type === "comment"
       ? " Added a comment. "
       : activity.type === "statuschange"
         ? " Incident status changed. "
-        : activity.initiator?.status === "firing"
+        : (activity.initiator as AlertDto)?.status === "firing"
           ? " triggered"
           : " resolved" + ". ";
 
