@@ -675,9 +675,11 @@ class KeepProvider(BaseProvider):
             read_only: if True, don't modify existing alerts
             fingerprint: alert fingerprint
         """
-        # for backward compatibility
-        if_condition = if_ or kwargs.get("if", None)
-        for_duration = for_ or kwargs.get("for", None)
+        # TODO: refactor this to be two separate ProviderMethods, when wf engine will support calling provider methods
+        is_workflow_action = (
+            workflow_full_sync or delete_all_other_workflows or workflow_to_update_yaml
+        )
+
         if workflow_full_sync or delete_all_other_workflows:
             # We need DB id, not user id for the workflow, so getting it from the wf execution.
             workflow_store = WorkflowStore()
@@ -730,8 +732,11 @@ class KeepProvider(BaseProvider):
                     },
                 )
                 raise ProviderException(f"Failed to create workflow: {e}")
-        else:
+        elif not is_workflow_action:
             self.logger.info("Notifying Alerts")
+            # for backward compatibility
+            if_condition = if_ or kwargs.get("if", None)
+            for_duration = for_ or kwargs.get("for", None)
             alerts = self._notify_alert(
                 alert=alert,
                 if_condition=if_condition,
