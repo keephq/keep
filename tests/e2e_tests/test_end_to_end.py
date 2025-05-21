@@ -27,7 +27,11 @@ import time
 from datetime import datetime
 
 from playwright.sync_api import Page, expect
+import pytest
 
+from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
+    setup_incidents_alerts,
+)
 from tests.e2e_tests.utils import (
     assert_connected_provider_count,
     assert_scope_text_count,
@@ -722,6 +726,64 @@ def test_workflow_unsaved_changes(browser: Page):
         ).get_by_role("textbox").fill("shalom")
         page.get_by_test_id("wf-inputs-form-submit").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*/runs/.*"))
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
+@pytest.fixture(scope="module")
+def setup_alerts_and_incidents():
+    print("Setting up alerts and incidents...")
+    test_data = setup_incidents_alerts()
+    yield test_data
+
+
+def test_run_workflow_from_alert_and_incident(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files(
+            [
+                "./tests/e2e_tests/workflow-alert-log.yaml",
+                "./tests/e2e_tests/workflow-incident-log.yaml",
+            ]
+        )
+        page.get_by_role("button", name="Upload")
+        expect(page.get_by_text("2 workflows uploaded successfully")).to_be_visible()
+        # Run workflow from incident
+        page.goto("http://localhost:3000/incidents")
+        # wait for the incidents table to load
+        page.wait_for_timeout(500)
+        page.get_by_test_id("incidents-table").get_by_test_id(
+            "dropdown-menu-button"
+        ).first.click()
+        page.get_by_test_id("dropdown-menu-list").get_by_role(
+            "button", name="Run workflow"
+        ).click()
+        modal = page.get_by_test_id("manual-run-workflow-modal")
+        modal.get_by_test_id("manual-run-workflow-select-control").click()
+        modal.get_by_role("option", name=re.compile(r"Log every incident")).click()
+        modal.get_by_role("button", name="Run").click()
+        expect(page.get_by_text("Workflow started successfully")).to_be_visible()
+        # Run workflow from alert
+        page.goto("http://localhost:3000/alerts/feed")
+        page.wait_for_timeout(500)
+        page.get_by_test_id("alerts-table").locator(
+            "[data-column-id='alertMenu']"
+        ).first.get_by_test_id("dropdown-menu-button").click()
+        page.get_by_test_id("dropdown-menu-list").get_by_role(
+            "button", name="Run workflow"
+        ).click()
+        modal = page.get_by_test_id("manual-run-workflow-modal")
+        modal.get_by_test_id("manual-run-workflow-select-control").click()
+        modal.get_by_role("option", name=re.compile(r"Log every alert")).click()
+        modal.get_by_role("button", name="Run").click()
+        expect(page.get_by_text("Workflow started successfully")).to_be_visible()
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise

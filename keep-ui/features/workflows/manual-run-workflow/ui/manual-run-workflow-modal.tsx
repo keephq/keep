@@ -9,7 +9,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { Select } from "@/shared/ui";
 import { Trigger, Workflow } from "@/shared/api/workflows";
-import { components, OptionProps } from "react-select";
+import { components, ControlProps, OptionProps } from "react-select";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { WorkflowTriggerBadge } from "@/entities/workflows/ui/WorkflowTriggerBadge";
 import Link from "next/link";
@@ -197,6 +197,20 @@ export function ManualRunWorkflowModal({
     );
   };
 
+  const CustomControl = (props: ControlProps<Workflow>) => {
+    return (
+      <components.Control
+        {...props}
+        innerProps={
+          {
+            "data-testid": "manual-run-workflow-select-control",
+            ...props.innerProps,
+          } as unknown as React.HTMLAttributes<HTMLDivElement>
+        }
+      />
+    );
+  };
+
   return (
     <Modal
       onClose={clearAndClose}
@@ -207,6 +221,7 @@ export function ManualRunWorkflowModal({
         (effectiveWorkflow?.name ? `Run: ${effectiveWorkflow.name}` : undefined)
       }
       title={workflow ? "Run Workflow with Inputs" : "Run Workflow"}
+      data-testid="manual-run-workflow-modal"
     >
       {/* Only show workflow selector when no workflow is directly provided */}
       {!workflow && (
@@ -250,6 +265,7 @@ export function ManualRunWorkflowModal({
                 }}
                 components={{
                   Option: CustomOption,
+                  Control: CustomControl,
                 }}
                 options={filteredWorkflows}
               />
