@@ -153,8 +153,8 @@ describe("useQueryParams", () => {
         facetsState: {
           severityFacet: { "'critical'": true, "'high'": true },
           incidentNameFacet: {
-            "'HTTP 500 error, needs clarification'": true,
-            "'Error processing event 'datadog''": true,
+            "'HTTP 500 error\\, needs clarification'": true,
+            "'Error processing event \\'datadog\\''": true,
           },
         },
       });
