@@ -45,7 +45,12 @@ class WorkflowStore:
         return get_workflow_execution(tenant_id, workflow_execution_id, is_test_run)
 
     def create_workflow(
-        self, tenant_id: str, created_by, workflow: dict, force_update: bool = True
+        self,
+        tenant_id: str,
+        created_by,
+        workflow: dict,
+        force_update: bool = True,
+        lookup_by_name: bool = False,
     ):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
@@ -67,6 +72,7 @@ class WorkflowStore:
             is_disabled=Parser.parse_disabled(workflow),
             workflow_raw=cyaml.dump(workflow, width=99999),
             force_update=force_update,
+            lookup_by_name=lookup_by_name,
         )
         self.logger.info(
             f"Workflow {workflow_db.id}, {workflow_db.revision} created successfully"
