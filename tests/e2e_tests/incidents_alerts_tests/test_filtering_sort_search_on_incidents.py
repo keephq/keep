@@ -1,7 +1,9 @@
+from datetime import datetime, timedelta, timezone
 import re
 import pytest
 from playwright.sync_api import expect, Page
 from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
+    query_incidents,
     setup_incidents_alerts,
 )
 from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
@@ -373,6 +375,84 @@ def test_sort_asc_dsc(
                             f"Expected: {incident['user_generated_name']} but got: {column_locator.text_content()}"
                         )
                         continue
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+
+def test_filter_timeframe_combination_with_queryparams(browser, setup_test_data):
+    try:
+        facet_name = "status"
+        incident_property_name = "status"
+        column_index = None
+        value = "firing"
+
+        def filter_lambda(incident):
+            return incident[incident_property_name] == value and datetime.fromisoformat(
+                incident["creation_time"]
+            ).replace(tzinfo=timezone.utc) >= (
+                datetime.now(timezone.utc) - timedelta(hours=4)
+            )
+
+        current_incidents = query_incidents(cell_query="", limit=1000)["results"]
+
+        filtered_incidents = [
+            alert for alert in current_incidents if filter_lambda(alert)
+        ]
+        # Give the page a moment to process redirects
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        init_test(browser, current_incidents)
+        display_all_available_incidents(browser)
+
+        option = browser.locator("[data-testid='facet-value']", has_text=value)
+        option.hover()
+
+        option.locator("button", has_text="Only").click()
+        browser.wait_for_timeout(500)
+
+        # select timeframe
+        browser.locator("button[data-testid='timeframe-picker-trigger']").click()
+        browser.locator(
+            "[data-testid='timeframe-picker-content'] button", has_text="Past 4 hours"
+        ).click()
+
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_incidents,
+            incident_property_name,
+        )
+        assert_incidents_by_column(
+            browser,
+            filtered_incidents,
+            lambda alert: True,
+            incident_property_name,
+            column_index,
+        )
+
+        # Refresh in order to check that filters/facets are restored
+        # It will use the URL query params from previous filters
+        browser.reload()
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_incidents,
+            incident_property_name,
+        )
+        assert_incidents_by_column(
+            browser,
+            filtered_incidents,
+            lambda alert: True,
+            incident_property_name,
+            column_index,
+        )
+        expect(
+            browser.locator("[data-testid='timeframe-picker-trigger'] button")
+        ).to_contain_text("Past 4 hours")
+
+        print()
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
