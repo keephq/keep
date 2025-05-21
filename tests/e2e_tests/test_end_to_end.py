@@ -759,8 +759,8 @@ def test_run_workflow_from_alert_and_incident(
         expect(page.get_by_text("2 workflows uploaded successfully")).to_be_visible()
         # Run workflow from incident
         page.goto("http://localhost:3000/incidents")
-        # wait for the incidents table to load
-        page.wait_for_timeout(500)
+        # wait for the incidents facets to load, so it doesn't interfere with the dropdown
+        page.wait_for_selector("[data-testid='facet-value']")
         page.get_by_test_id("incidents-table").get_by_test_id(
             "dropdown-menu-button"
         ).first.click()
@@ -774,7 +774,8 @@ def test_run_workflow_from_alert_and_incident(
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
         # Run workflow from alert
         page.goto("http://localhost:3000/alerts/feed")
-        page.wait_for_timeout(500)
+        # wait for the alerts facets to load, so it doesn't interfere with the dropdown
+        page.wait_for_selector("[data-testid='facet-value']")
         page.get_by_test_id("alerts-table").locator(
             "[data-column-id='alertMenu']"
         ).first.get_by_test_id("dropdown-menu-button").click()
