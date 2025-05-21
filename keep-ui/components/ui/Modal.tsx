@@ -54,9 +54,7 @@ export default function Modal({
             )}
           </header>
         )}
-        <div className="flex flex-col flex-1 min-h-0 overflow-auto">
-          {children}
-        </div>
+        <div className="flex flex-col flex-1 min-h-0">{children}</div>
       </DialogPanel>
     </Dialog>
   );
