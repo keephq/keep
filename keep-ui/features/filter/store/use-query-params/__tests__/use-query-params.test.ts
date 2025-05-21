@@ -161,6 +161,7 @@ describe("useQueryParams", () => {
     });
 
     act(() => {
+      // 600 is used to perform check after 500 debounce time
       jest.advanceTimersByTime(600);
     });
 
@@ -199,6 +200,7 @@ describe("useQueryParams", () => {
     });
 
     act(() => {
+      // 600 is used to perform check after 500 debounce time
       jest.advanceTimersByTime(600);
     });
 

@@ -3,7 +3,6 @@ import { StoreApi, useStore } from "zustand";
 import { FacetsPanelState } from "../create-facets-store";
 import { FacetDto, FacetOptionDto } from "../../models";
 import { splitFacetValues } from "./split-facet-values";
-import { escapeFacetValue } from "./escape-facet-value";
 import {
   ReadonlyURLSearchParams,
   useSearchParams,
@@ -57,7 +56,7 @@ function buildFacetQueryParams(
 
     facetQueryParams.append(
       facet.queryParamName,
-      facetStateEntries.map(([key, value]) => escapeFacetValue(key)).join(",")
+      facetStateEntries.map(([key, value]) => key).join(",")
     );
   });
 
@@ -157,7 +156,7 @@ export function useQueryParams(store: StoreApi<FacetsPanelState>) {
     facetEntries
       .map(([key, value]) => ({
         facetName: key,
-        values: splitFacetValues(value), // matches single-quoted values and unquoted values such as null or numbers
+        values: splitFacetValues(value),
       }))
       .forEach(({ facetName, values }) => {
         const facetId = formattedFacetsDict[facetName];

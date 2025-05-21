@@ -31,7 +31,7 @@ export type FacetsPanelState = {
   patchFacetsState: (facetsStatePatch: Record<string, any | null>) => void;
   setFacetState: (facetId: string, state: any) => void;
 
-  dirtyFacestIds: string[];
+  dirtyFacetIds: string[];
 
   facetsStateRefreshToken: string | null;
 
@@ -83,7 +83,7 @@ export const createFacetsPanelStore = () =>
         },
       }),
 
-    dirtyFacestIds: [],
+    dirtyFacetIds: [],
 
     facetsState: {},
     patchFacetsState: (facetsStatePatch) => {
@@ -100,9 +100,7 @@ export const createFacetsPanelStore = () =>
       set({
         // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
         facetsStateRefreshToken: uuidV4(),
-        dirtyFacestIds: Array.from(
-          new Set(state().dirtyFacestIds).add(facetId)
-        ),
+        dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
         facetsState: {
           ...(state().facetsState || {}),
           [facetId]: facetState,
@@ -126,7 +124,7 @@ export const createFacetsPanelStore = () =>
         isInitialStateHandled: false,
         facetsState: {},
         facetsStateRefreshToken: uuidV4(),
-        dirtyFacestIds: [],
+        dirtyFacetIds: [],
       });
     },
 

@@ -2,12 +2,28 @@ import { stringToValue, toFacetState, valueToString } from "../utils";
 
 describe("utils", () => {
   describe("valueToString", () => {
-    it("should return a string wrapped in single quotes", () => {
-      expect(valueToString("test")).toBe("'test'");
-    });
+    describe("for strings", () => {
+      it("should return a string wrapped in single quotes", () => {
+        expect(valueToString("test")).toBe("'test'");
+      });
 
-    it("should escape single quotes in the string", () => {
-      expect(valueToString("it's a test")).toBe("'it\\'s a test'");
+      it("should escape single quotes in the string", () => {
+        expect(valueToString("it's a test and it's a test")).toBe(
+          "'it\\'s a test and it\\'s a test'"
+        );
+      });
+
+      it("should escape comma in the string", () => {
+        expect(valueToString("first, second, third")).toBe(
+          "'first\\, second\\, third'"
+        );
+      });
+
+      it("should escape back slash in the string", () => {
+        expect(valueToString("first\\second\\third")).toBe(
+          "'first\\\\second\\\\third'"
+        );
+      });
     });
 
     it("should return 'null' for null value", () => {
@@ -26,39 +42,39 @@ describe("utils", () => {
       expect(valueToString(true)).toBe("true");
       expect(valueToString(false)).toBe("false");
     });
-
-    it("should return the string representation of an object", () => {
-      expect(valueToString({ key: "value" })).toBe("[object Object]");
-    });
-
-    it("should return the string representation of an array", () => {
-      expect(valueToString([1, 2, 3])).toBe("1,2,3");
-    });
   });
 
   describe("stringToValue", () => {
+    describe("for strings", () => {
+      it("should return the original string if wrapped in single quotes", () => {
+        expect(stringToValue("'test'")).toBe("test");
+      });
+
+      it("should unescape single quotes in the string", () => {
+        expect(stringToValue("'it\\'s a test and it\\'s a test'")).toBe(
+          "it's a test and it's a test"
+        );
+      });
+
+      it("should unescape comma in the string", () => {
+        expect(stringToValue("'first\\,second\\,third'")).toBe(
+          "first,second,third"
+        );
+      });
+
+      it("should unescape back slash in the string", () => {
+        expect(stringToValue("'first\\\\second\\\\third'")).toBe(
+          "first\\second\\third"
+        );
+      });
+    });
+
     it("should return null for the string 'null'", () => {
       expect(stringToValue("null")).toBeNull();
     });
 
-    it("should return the original string if wrapped in single quotes", () => {
-      expect(stringToValue("'test'")).toBe("test");
-    });
-
-    it("should unescape single quotes in the string", () => {
-      expect(stringToValue("'it\\'s a test'")).toBe("it's a test");
-    });
-
-    it("should parse a valid JSON string", () => {
-      expect(stringToValue('{"key":"value"}')).toEqual({ key: "value" });
-    });
-
-    it("should parse a valid JSON array string", () => {
-      expect(stringToValue("[1,2,3]")).toEqual([1, 2, 3]);
-    });
-
     it("should parse a number string", () => {
-      expect(stringToValue("123")).toBe(123);
+      expect(stringToValue("123.34")).toBe(123.34);
     });
 
     it("should parse a boolean string", () => {

@@ -52,7 +52,7 @@ describe("useInitialStateHandler", () => {
     );
   });
 
-  it("should set default option values for status facet", () => {
+  it("should not set default option values for severity facet", () => {
     expect(store.getState().facetsState).not.toEqual(
       expect.objectContaining({
         severityFacet: expect.anything(),

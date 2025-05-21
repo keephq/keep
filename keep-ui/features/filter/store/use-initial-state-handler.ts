@@ -1,16 +1,12 @@
 import { StoreApi, useStore } from "zustand";
 import { FacetsPanelState } from "./create-facets-store";
 import { toFacetState, valueToString } from "./utils";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export function useInitialStateHandler(store: StoreApi<FacetsPanelState>) {
   const facetsConfig = useStore(store, (state) => state.facetsConfig);
   const facets = useStore(store, (state) => state.facets);
   const patchFacetsState = useStore(store, (state) => state.patchFacetsState);
-  const facetsState = useStore(store, (state) => state.facetsState);
-
-  const facetsStateRef = useRef(facetsState);
-  facetsStateRef.current = facetsState;
 
   const isInitialStateHandled = useStore(
     store,
