@@ -71,7 +71,7 @@ export function IncidentCommentInput({
     () => ({
       toolbar: false,
       mention: {
-        allowedChars: /^[A-Za-z0-9\s]*$/,
+        allowedChars: /^[\p{L}\p{N}\s]*$/u,
         mentionDenotationChars: ["@"],
         fixMentionsToQuill: false, // Important - allows the dropdown to position correctly
         defaultMenuOrientation: "bottom",
@@ -94,7 +94,7 @@ export function IncidentCommentInput({
         },
         onSelect: (
           item: { id: string; value: string },
-          insertItem: (item: any) => void
+          insertItem: (item: { id: string; value: string }) => void
         ) => {
           insertItem(item);
         },

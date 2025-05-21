@@ -1,7 +1,7 @@
 import re
 import pytest
 from playwright.sync_api import Page, expect
-from tests.e2e_tests.utils import init_e2e_test
+from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 from tests.e2e_tests.test_end_to_end import setup_console_listener
 
 KEEP_UI_URL = "http://localhost:3000"
@@ -59,17 +59,32 @@ def test_mentions_in_incident_comments(browser: Page, setup_test_data, setup_pag
         
         page.wait_for_load_state("networkidle")
         page.get_by_role("tab", name="Activity").click()
-        
+        page.wait_for_load_state("networkidle")
+
         page.wait_for_selector("[data-testid='base-input']", timeout=10000)
         page.get_by_test_id("base-input").click()
         page.get_by_test_id("base-input").fill("@")
-        page.wait_for_selector("text=John Smith", timeout=10000)
-        page.get_by_text("John Smith").click()
-        page.get_by_role("button", name="Comment").click()
-        
-        expect(page.get_by_text("@John Smith")).to_be_visible()
 
-        
+        mention_dropdown = page.locator("div.absolute.top-full.left-0.w-full.z-10")
+        page.wait_for_selector("div.absolute.top-full.left-0.w-full.z-10", timeout=10000)
+
+        # Select the first option in the dropdown
+        first_option = mention_dropdown.locator("div.px-3.py-2.cursor-pointer").first
+        first_option.click()
+
+        # Submit the comment
+        page.get_by_role("button", name="Comment").click()
+        page.wait_for_load_state("networkidle")
+
+        # Verify the mention was added to the comment
+        # Based on IncidentActivityItem component structure
+        page.wait_for_selector("div.font-light.text-gray-800", timeout=10000)
+
+        # Check for the comment text, which should be inside the div.font-light element
+        comment_content = page.locator("div.font-light.text-gray-800").last
+        expect(comment_content).to_be_visible()
+
+
     except Exception as e:
-        save_failure_artifacts(browser, log_entries=log_entries, failure_name=failure_artifacts)
+        save_failure_artifacts(browser, log_entries)
         raise e

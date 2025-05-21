@@ -28,8 +28,6 @@ export function IncidentActivityComment({
   const onSubmit = useCallback(async () => {
     try {
       const extractedTaggedUsers = extractTaggedUsers(comment);
-      console.log("Extracted tagged users:", extractedTaggedUsers);
-
       await api.post(`/incidents/${incident.id}/comment`, {
         status: incident.status,
         comment,

@@ -40,7 +40,10 @@ def upgrade() -> None:
                 ondelete="CASCADE",
             ),
             sa.ForeignKeyConstraint(
-                ["tenant_id"], ["tenant.id"], name="fk_commentmention_tenant"
+                ["tenant_id"],
+                ["tenant.id"],
+                name="fk_commentmention_tenant",
+                ondelete="CASCADE",
             ),
             sa.PrimaryKeyConstraint("id", name="pk_commentmention"),
             sa.UniqueConstraint(

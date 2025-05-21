@@ -7,12 +7,6 @@
  */
 export function extractTaggedUsers(content: string): string[] {
   const mentionRegex = /data-id="([^"]+)"/g;
-  const matches = content.match(mentionRegex) || [];
-
-  return matches
-    .map((match) => {
-      const idMatch = match.match(/data-id="([^"]+)"/);
-      return idMatch ? idMatch[1] : null;
-    })
-    .filter(Boolean) as string[];
+  const ids = Array.from(content.matchAll(mentionRegex)).map(match => match[1]) || [];
+  return ids;
 }
