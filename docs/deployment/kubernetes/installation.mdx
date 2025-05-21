@@ -191,7 +191,7 @@ kubectl create secret tls keep-tls --cert=./tls.crt --key=./tls.key -n keep
 ### Update Helm Values for TLS
 ```bash
 helm upgrade -n keep keep keephq/keep \
-  --set "global.ingress.hosts[0]=keep.example.com" \
+  --set "global.ingress.hosts[0].host=keep.example.com" \
   --set "global.ingress.tls[0].hosts[0]=keep.example.com" \
   --set "global.ingress.tls[0].secretName=keep-tls"
 ```
