@@ -3,9 +3,9 @@
     "input_cel": "alert.severity == null",
     "description": "Equality with null",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"'))) IS NULL",
-      "postgresql": "COALESCE((alert_enrichments) ->> 'severity', (alert_event) ->> 'severity') IS NULL",
-      "sqlite": "COALESCE(json_extract(alert_enrichments, '$.\"severity\"'), json_extract(alert_event, '$.\"severity\"')) IS NULL"
+      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')) IS NULL)",
+      "postgresql": "((alert_event) ->> 'severity' IS NULL)",
+      "sqlite": "(json_extract(alert_event, '$.\"severity\"') IS NULL)"
     }
   },
   {
@@ -21,9 +21,9 @@
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"'))) = 'HIGH'",
-      "postgresql": "(COALESCE((alert_enrichments) ->> 'severity', (alert_event) ->> 'severity'))::TEXT = 'HIGH'",
-      "sqlite": "CAST(COALESCE(json_extract(alert_enrichments, '$.\"severity\"'), json_extract(alert_event, '$.\"severity\"')) as TEXT) = 'HIGH'"
+      "mysql": "((JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')) = 'HIGH' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')) = 'HIGH'))",
+      "postgresql": "((((alert_enrichments) ->> 'severity')::TEXT = 'HIGH' OR ((alert_event) ->> 'severity')::TEXT = 'HIGH'))",
+      "sqlite": "((CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT) = 'HIGH' OR CAST(json_extract(alert_event, '$.\"severity\"') as TEXT) = 'HIGH'))"
     }
   },
   {
