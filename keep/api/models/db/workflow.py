@@ -195,8 +195,17 @@ class WorkflowToIncidentExecution(SQLModel, table=True):
 
 
 class WorkflowExecutionLog(SQLModel, table=True):
+    __table_args__ = (
+        Index(
+            "idx_workflowexecutionlog_workflow_execution_step_id",
+            "workflow_execution_id",
+            "step_id",
+        ),
+    )
+
     id: int = Field(default=None, primary_key=True)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
+    step_id: Optional[str] = None  # New nullable string field
     timestamp: datetime
     message: str = Field(sa_column=Column(TEXT))
     workflowexecution: Optional[WorkflowExecution] = Relationship(back_populates="logs")

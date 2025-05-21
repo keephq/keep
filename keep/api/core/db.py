@@ -1138,6 +1138,7 @@ def push_logs_to_db(log_entries):
                 except Exception:
                     timestamp = log_entry["created"]
 
+                step_id = log_entry.get("context", {}).get("step_id")
                 log_entry = WorkflowExecutionLog(
                     workflow_execution_id=log_entry["workflow_execution_id"],
                     timestamp=timestamp,
@@ -1145,6 +1146,7 @@ def push_logs_to_db(log_entries):
                     context=json.loads(
                         json.dumps(log_entry.get("context", {}), default=str)
                     ),  # workaround to serialize any object
+                    step_id=step_id,
                 )
                 db_log_entries.append(log_entry)
             except Exception:
