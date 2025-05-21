@@ -20,7 +20,6 @@ class Node(BaseModel):
 
     node_type: str = Field(default=None)
 
-
     @property
     def __str(self):
         """
@@ -99,7 +98,6 @@ class LogicalNode(Node):
 
     def __str__(self):
         return f"{self.left} {self.operator.value} {self.right }"
-
 
 class ComparisonNodeOperator(Enum):
     LT = "<"
@@ -246,7 +244,6 @@ class PropertyAccessNode(Node):
         __str__() -> str:
             Returns a string representation of the PropertyAccessNode.
     """
-
     node_type: str = Field(default="PropertyAccessNode", const=True)
     path: list[str] = Field(default=None)
     data_type: DataType = Field(default=None)

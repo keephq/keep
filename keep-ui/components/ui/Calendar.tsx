@@ -1,6 +1,6 @@
 import * as React from "react";
 import { DayPicker, DateRange } from "react-day-picker";
-import "./Calendar.css";
+import "./Calendar.scss";
 
 export function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -59,6 +59,7 @@ function Calendar({
   const [internalSelected, setInternalSelected] = React.useState<
     Date | DateRange | undefined
   >(selected);
+  const today = new Date();
 
   React.useEffect(() => {
     setInternalSelected(selected);
@@ -93,20 +94,50 @@ function Calendar({
   };
 
   const handleDaySelect = (value: Date | DateRange | undefined) => {
-    setInternalSelected(value);
-    if (
-      mode === "single" &&
-      !(value instanceof Date) &&
-      "from" in (value || {})
-    ) {
-      (onSelect as (date: Date | undefined) => void)?.(
-        (value as DateRange)?.from
-      );
-    } else if (mode === "range" && (value instanceof Date || !value)) {
-      (onSelect as (date: DateRange | undefined) => void)?.(undefined);
-    } else {
-      (onSelect as any)?.(value);
+    let toInternalSelected = value;
+    const _value = value as DateRange;
+
+    if (mode === "single") {
+      if (!(value instanceof Date) && "from" in (value || {})) {
+        (onSelect as (date: Date | undefined) => void)?.(
+          (value as DateRange)?.from
+        );
+      }
+
+      toInternalSelected = value;
     }
+
+    if (mode === "range") {
+      if (value instanceof Date || !value) {
+        (onSelect as (date: DateRange | undefined) => void)?.(undefined);
+        setInternalSelected(undefined);
+      } else if (
+        (internalSelected as any)?.from.getTime() !==
+        (internalSelected as any)?.to.getTime()
+      ) {
+        const _internalSelected = internalSelected as DateRange;
+        // when the range is already selected and user clicks another date,
+        // it should be treated as a new range selection
+        const internalSelectedSet = new Set([
+          _internalSelected.from?.getTime() as number,
+          _internalSelected.to?.getTime() as number,
+        ]);
+        const dateToApply = [_value.from as Date, _value.to as Date].find(
+          (date) => !internalSelectedSet.has(date.getTime())
+        );
+
+        toInternalSelected = {
+          from: dateToApply,
+          to: dateToApply,
+        };
+      } else if (_value.from?.getTime() !== _value.to?.getTime()) {
+        // emit value to outside only when from and to do not match (i.e. range selected)
+        (onSelect as any)?.(value);
+        toInternalSelected = value;
+      }
+    }
+
+    setInternalSelected(toInternalSelected);
   };
 
   const dayPickerProps = {
@@ -176,6 +207,14 @@ function Calendar({
         internalSelected && "from" in internalSelected && internalSelected.to
           ? [internalSelected.to]
           : [],
+      past: { before: today },
+      future: { after: today },
+      today: today,
+    },
+    modifiersClassNames: {
+      today: "rdp-today",
+      past: "rdp-past",
+      future: "rdp-future",
     },
     modifiersStyles: {
       ...props.modifiersStyles,

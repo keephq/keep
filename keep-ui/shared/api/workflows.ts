@@ -24,6 +24,8 @@ type IncidentFilter = {
 type AlertFilter = {
   type: "alert";
   filters: Filter[];
+  cel: string;
+  only_on_change: string[];
 };
 
 type IntervalFilter = {
@@ -42,6 +44,7 @@ export type Trigger =
   | ManualFilter;
 
 export type LastWorkflowExecution = {
+  id: string;
   execution_time: number;
   status: string;
   started: string;

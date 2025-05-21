@@ -16,7 +16,7 @@ from keep.api.core.db import (
     get_workflow_execution,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from keep.api.models.db.incident import Incident, IncidentStatus
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
@@ -89,10 +89,60 @@ actions:
         Alert details: {{ alert }}"
 """
 
+
+workflow_definition_with_on_failure = """workflow:
+id: on-failure
+description: Test on-failure
+triggers:
+- type: alert
+  cel: name == "server-is-upsidedown"
+actions:
+- name: send-slack-message
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+    on-failure:
+      retry:
+        count: 3
+        interval: 2
+on-failure:
+    provider:
+      type: console
+"""
+
+LOG_EVERY_ALERT_WORKFLOW = """
+workflow:
+  id: log-every-alert
+  name: Log every alert
+  description: Simple workflow demonstrating logging every alert
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: "server-is-upsidedown"
+  actions:
+    - name: log-every-alert-success
+      if: "{{alert.should_fail}} == 'false'"
+      provider:
+        type: console
+        with:
+          message: "{{alert.name}} - {{alert.message}}"
+    - name: log-every-alert-failure
+      if: "{{alert.should_fail}} == 'true'"
+      provider:
+        type: console
+        with:
+          invalid-argument-to-fail-workflow: true
+          message: "{{alert.name}} - {{alert.message}}"
+"""
+
+
 MAX_WAIT_COUNT = 30
 
 
-def wait_for_workflow_execution(tenant_id, workflow_id):
+def wait_for_workflow_execution(tenant_id, workflow_id, exclude_ids=None):
     # Wait for the workflow execution to complete
     workflow_execution = None
     count = 0
@@ -101,7 +151,7 @@ def wait_for_workflow_execution(tenant_id, workflow_id):
     ) and count < MAX_WAIT_COUNT:
         try:
             workflow_execution = get_last_workflow_execution_by_workflow_id(
-                tenant_id, workflow_id
+                tenant_id, workflow_id, exclude_ids=exclude_ids
             )
         except Exception as e:
             print(
@@ -956,7 +1006,6 @@ workflow_definition_routing = """workflow:
       provider:
         type: console
         with:
-          channel: prod-infra-alerts
           message: |
             "Infrastructure Production Alert
             Team: {{ alert.team }}
@@ -968,7 +1017,6 @@ workflow_definition_routing = """workflow:
       provider:
         type: console
         with:
-          channel: backend-team-alerts
           message: |
             "HTTP API Error Alert
             Monitor: {{ alert.monitor_name }}
@@ -1590,19 +1638,18 @@ def test_workflow_executions_after_reprovisioning(
     assert len(first_provisioned) == 1  # There is 1 workflow in workflows_3 directory
 
     # Create and execute an alert to trigger the workflow
-    create_alert("fp1", AlertStatus.FIRING, datetime.now(tz=pytz.utc))
-    current_alert = AlertDto(
+    first_alert = AlertDto(
         id="grafana-1",
         source=["grafana"],
-        name="server-is-down",
-        message="Grafana is down",
+        name="server-is-under-the-weather",
+        message="Grafana is under the weather",
         status=AlertStatus.FIRING,
         severity="critical",
         fingerprint="fp1",
     )
 
     # Insert the alert into workflow manager to trigger execution
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [first_alert])
 
     # Wait for workflow execution to complete
     workflow_execution = wait_for_workflow_execution(
@@ -1620,6 +1667,7 @@ def test_workflow_executions_after_reprovisioning(
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
     assert len(second_provisioned) == 1  # Should still be 1 workflow
+    assert second_provisioned[0].id == first_provisioned[0].id
 
     # Verify the workflow execution is still attached
     workflow_execution = get_workflow_execution(SINGLE_TENANT_UUID, first_execution_id)
@@ -1628,28 +1676,235 @@ def test_workflow_executions_after_reprovisioning(
     assert workflow_execution.workflow_id == second_provisioned[0].id
 
     # Execute another alert to verify the workflow still works
-    create_alert("fp2", AlertStatus.FIRING, datetime.now(tz=pytz.utc))
-    current_alert = AlertDto(
+    second_alert = AlertDto(
         id="grafana-2",
         source=["grafana"],
-        name="server-is-down",
-        message="Grafana is down again",
+        name="server-is-under-the-weather",
+        message="Grafana is under the weather again",
         status=AlertStatus.FIRING,
         severity="critical",
         fingerprint="fp2",
     )
 
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [second_alert])
 
     # Wait for second workflow execution
-    workflow_execution = wait_for_workflow_execution(
-        SINGLE_TENANT_UUID, second_provisioned[0].id
+    second_workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID,
+        second_provisioned[0].id,
+        exclude_ids=[first_execution_id],
     )
 
     # Verify second execution was also successful
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+    assert second_workflow_execution is not None
+    assert second_workflow_execution.status == "success"
+    assert second_workflow_execution.id != first_execution_id  # Different execution ID
+    assert (
+        second_workflow_execution.workflow_id == second_provisioned[0].id
+    )  # Same workflow ID
+
+
+def test_workflow_with_on_failure_succeeds_after_failing(
+    db_session, workflow_manager, mocker
+):
+    """Test that a workflow with an on-failure action is executed correctly."""
+    # Mock the ConsoleProvider's notify method
+    mock_console = mocker.patch(
+        "keep.providers.console_provider.console_provider.ConsoleProvider._notify"
+    )
+
+    # Make the main action fail but let the on-failure action succeed
+    mock_console.side_effect = [
+        Exception("Action failed"),  # First call (main action) fails
+        Exception("Action failed"),  # Second call (main action) fails
+        Exception("Action failed"),  # Third call (main action) fails
+        "<successful console call>",  # Fourth call (main action) succeeds
+    ]
+
+    # Create the workflow
+    workflow = Workflow(
+        id="on-failure-workflow",
+        name="on-failure-workflow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow with an on-failure action",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_on_failure,
+        last_updated=datetime.now(tz=pytz.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.refresh(workflow)
+
+    # Create an alert to trigger the workflow
+    alert = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+    )
+
+    # Insert the alert into workflow manager to trigger execution
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
+
+    # Wait for workflow execution to complete
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+
+    # Verify that the workflow execution failed but the on-failure action was executed
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
-    assert workflow_execution.id != first_execution_id  # Different execution ID
-    assert (
-        workflow_execution.workflow_id == second_provisioned[0].id
-    )  # Same workflow ID
+
+    # Verify the provider was called 4 times:
+    # 1-3. For the main action (which failed)
+    # 4. For the retry of the main action, which succeeds
+    assert mock_console.call_count == 4
+
+    assert "Tier 1 Alert: server-is-upsidedown" in str(mock_console.call_args_list[-1])
+
+
+def test_workflow_with_on_failure_action(db_session, workflow_manager, mocker):
+    """Test that a workflow with an on-failure action is executed correctly."""
+    # Mock the ConsoleProvider's notify method
+    mock_console = mocker.patch(
+        "keep.providers.console_provider.console_provider.ConsoleProvider._notify"
+    )
+
+    # Now make the main action fail all retries, and the on-failure action should be called
+    mock_console.side_effect = [
+        Exception("Action failed"),  # First call (main action) fails
+        Exception("Action failed"),  # Second call (main action) fails
+        Exception("Action failed"),  # Third call (main action) fails
+        Exception("Action failed"),  # Fourth call (main action) fails
+        "<successful console call>",  # Fifth call (on-failure action) succeeds
+    ]
+
+    # Create the workflow
+    workflow = Workflow(
+        id="on-failure-workflow",
+        name="on-failure-workflow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow with an on-failure action",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_on_failure,
+        last_updated=datetime.now(tz=pytz.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.refresh(workflow)
+
+    # Create an alert to trigger the workflow
+    alert = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+    )
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
+
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+    assert workflow_execution is not None
+    assert workflow_execution.status == "error"
+
+    # Verify the provider was called 5 times:
+    # 1. For the main action (which failed)
+    # 2-4. For the retry of the main action
+    # 5. For the on-failure action
+    assert mock_console.call_count == 5
+
+    # Verify the on-failure action was called with the correct message
+    assert "Workflow on-failure-workflow failed with errors:" in str(
+        mock_console.call_args_list[-1]
+    )
+
+
+def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
+    workflow = Workflow(
+        id="log-every-alert",
+        name="log-every-alert",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="workflow which logs every alert, and fails if alert.should_fail is true",
+        created_by="borat@keephq.dev",
+        interval=0,
+        workflow_raw=LOG_EVERY_ALERT_WORKFLOW,
+        last_updated=datetime.now(),
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Create an alert to trigger the workflow
+    alert1 = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+        should_fail="false",
+    )
+
+    # Create a new alert to trigger the workflow
+    alert2 = AlertDto(
+        id="alert-2",
+        fingerprint="upsdown-2",
+        source=["grafana"],
+        name="server-is-upsidedown",
+        message="Server is upside down again",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+        should_fail="true",
+    )
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert1])
+
+    # Wait for the workflow to execute
+    first_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+    assert first_execution is not None
+    assert first_execution.status == "success"
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert2])
+
+    # Wait for the workflow to execute again
+    second_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, workflow.id, exclude_ids=[first_execution.id]
+    )
+    assert second_execution is not None
+    assert second_execution.status == "error"
+
+    workflowstore = WorkflowStore()
+    # Get all workflows with last execution
+    workflows, _count = workflowstore.get_all_workflows_with_last_execution(
+        SINGLE_TENANT_UUID
+    )
+
+    # Verify that the workflow was executed twice
+    workflow = next(w for w in workflows if w["workflow"].id == workflow.id)
+    assert workflow is not None
+    assert len(workflow["workflow_last_executions"]) == 2
+    first_execution_wf_store = next(
+        w for w in workflow["workflow_last_executions"] if w["id"] == first_execution.id
+    )
+    assert first_execution_wf_store is not None
+    assert first_execution_wf_store["status"] == "success"
+    second_execution_wf_store = next(
+        w
+        for w in workflow["workflow_last_executions"]
+        if w["id"] == second_execution.id
+    )
+    assert second_execution_wf_store is not None
+    assert second_execution_wf_store["status"] == "error"

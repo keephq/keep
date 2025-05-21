@@ -184,7 +184,7 @@ export function IncidentHeader({
       </Modal>
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
-        handleClose={() => setRunWorkflowModalIncident(null)}
+        onClose={() => setRunWorkflowModalIncident(null)}
       />
     </CopilotKit>
   );

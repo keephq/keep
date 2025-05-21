@@ -4,7 +4,7 @@ import Image from "next/image";
 import {
   Chart,
   CategoryScale,
-  LinearScale,
+  LogarithmicScale,
   BarElement,
   Title as ChartTitle,
   Tooltip,
@@ -18,33 +18,110 @@ import {
   getLabels,
   getDataValues,
   getColors,
-  chartOptions,
 } from "./workflow-utils";
+import clsx from "clsx";
 
 Chart.register(
   CategoryScale,
-  LinearScale,
+  LogarithmicScale,
   BarElement,
   ChartTitle,
   Tooltip,
   Legend
 );
 
-const show_real_data = true;
+type BarChartOptions = Parameters<typeof Bar>[0]["options"];
+
+const baseChartOptions: BarChartOptions = {
+  scales: {
+    x: {
+      beginAtZero: true,
+      ticks: {
+        display: false,
+      },
+      grid: {
+        display: false,
+      },
+      border: {
+        display: false,
+      },
+    },
+    y: {
+      ticks: {
+        display: false,
+      },
+      grid: {
+        display: false,
+      },
+      border: {
+        display: false,
+      },
+      type: "logarithmic",
+    },
+  },
+  plugins: {
+    legend: {
+      display: false,
+    },
+  },
+  responsive: true,
+  maintainAspectRatio: false,
+};
+
+const fullChartOptions: BarChartOptions = {
+  ...baseChartOptions,
+  scales: {
+    ...baseChartOptions.scales,
+    y: {
+      ...baseChartOptions.scales?.y,
+      grid: {
+        display: true,
+      },
+      ticks: {
+        display: true,
+        format: {
+          // it's an integer, so no need to show decimals
+          style: "unit",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+          unit: "second",
+          unitDisplay: "narrow",
+        },
+      },
+    },
+  },
+};
 
 export default function WorkflowGraph({
   showLastExecutionStatus = true,
   workflow,
   limit = 15,
   showAll,
-  size,
+  size = "md",
+  full = false,
 }: {
   showLastExecutionStatus?: boolean;
   workflow: Partial<Workflow>;
   limit?: number;
   size?: string;
   showAll?: boolean;
+  full?: boolean;
 }) {
+  let height;
+  switch (size) {
+    case "sm":
+      height = "h-24";
+      break;
+    case "md":
+      height = "h-36";
+      break;
+    case "lg":
+      height = "h-48";
+      break;
+    default:
+      height = "h-36";
+  }
+
   const lastExecutions = useMemo(() => {
     let executions = workflow?.last_executions?.slice(0, limit) || [];
     if (showAll) {
@@ -68,14 +145,9 @@ export default function WorkflowGraph({
     datasets: [
       {
         label: "Execution Time (seconds)",
-        data: getDataValues(lastExecutions, show_real_data),
-        backgroundColor: getColors(
-          lastExecutions,
-          status,
-          true,
-          show_real_data
-        ),
-        borderColor: getColors(lastExecutions, status, false, show_real_data),
+        data: getDataValues(lastExecutions),
+        backgroundColor: getColors(lastExecutions, status, true),
+        borderColor: getColors(lastExecutions, status, false),
         borderWidth: {
           top: 2,
           right: 0,
@@ -88,7 +160,7 @@ export default function WorkflowGraph({
     ],
   };
   function getIcon() {
-    if (show_real_data && hasNoData) {
+    if (hasNoData) {
       return null;
     }
 
@@ -121,37 +193,32 @@ export default function WorkflowGraph({
     }
     return icon;
   }
-  if (hasNoData && show_real_data) {
+  if (hasNoData) {
     return (
-      <div className="flex justify-center items-center text-gray-400 h-36">
+      <div
+        className={clsx(
+          "flex justify-center items-center text-gray-400",
+          height
+        )}
+      >
         No data available
       </div>
     );
   }
 
-  let height = "h-36";
-  switch (size) {
-    case "sm":
-      height = "h-24";
-      break;
-    case "md":
-      height = "h-36";
-
-      break;
-    case "lg":
-      height = "h-48";
-      break;
-    default:
-      height = "h-36";
-  }
-
   return (
     <div
-      className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}
+      className={clsx(
+        "flex flex-row items-end justify-start flex-nowrap w-full",
+        height
+      )}
     >
       {showLastExecutionStatus && <div>{getIcon()}</div>}
-      <div className={`overflow-hidden ${height} w-full`}>
-        <Bar data={chartData} options={chartOptions} />
+      <div className={clsx("overflow-hidden", height, "w-full")}>
+        <Bar
+          data={chartData}
+          options={full ? fullChartOptions : baseChartOptions}
+        />
       </div>
     </div>
   );

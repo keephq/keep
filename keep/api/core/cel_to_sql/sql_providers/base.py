@@ -136,7 +136,7 @@ class BaseCelToSqlProvider:
             return CelToSqlResult(sql="", involved_fields=[])
 
         try:
-            sql_filter = self.__build_sql_filter(with_mapped_props, [])
+            sql_filter = self._build_sql_filter(with_mapped_props, [])
             return CelToSqlResult(sql=sql_filter, involved_fields=involved_fields)
         except NotImplementedError as e:
             raise CelToSqlException(f"Error while converting CEL expression tree to SQL: {str(e)}") from e
@@ -187,13 +187,13 @@ class BaseCelToSqlProvider:
     def _get_order_by_field(self, cel_sort_by: str) -> str:
         return self.get_field_expression(cel_sort_by)
 
-    def __build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
+    def _build_sql_filter(self, abstract_node: Node, stack: list[Node]) -> str:
         stack.append(abstract_node)
         result = None
 
         if isinstance(abstract_node, ParenthesisNode):
             result = self._visit_parentheses(
-                self.__build_sql_filter(abstract_node.expression, stack)
+                self._build_sql_filter(abstract_node.expression, stack)
             )
 
         if isinstance(abstract_node, LogicalNode):
@@ -217,7 +217,7 @@ class BaseCelToSqlProvider:
         if isinstance(abstract_node, CoalesceNode):
             result = self.coalesce(
                 [
-                    self.__build_sql_filter(coalesce_arg, stack)
+                    self._build_sql_filter(coalesce_arg, stack)
                     for coalesce_arg in abstract_node.properties
                 ]
             )
@@ -247,8 +247,8 @@ class BaseCelToSqlProvider:
 
     # region Logical Visitors
     def _visit_logical_node(self, logical_node: LogicalNode, stack: list[Node]) -> str:
-        left = self.__build_sql_filter(logical_node.left, stack)
-        right = self.__build_sql_filter(logical_node.right, stack)
+        left = self._build_sql_filter(logical_node.left, stack)
+        right = self._build_sql_filter(logical_node.right, stack)
 
         if logical_node.operator == LogicalNodeOperator.AND:
             return self._visit_logical_and(left, right)
@@ -276,8 +276,25 @@ class BaseCelToSqlProvider:
             ComparisonNodeOperator.STARTS_WITH,
             ComparisonNodeOperator.ENDS_WITH,
         ]
+        first_operand_data_type = None
+        second_operand_data_type = None
+        force_cast = False
 
         if comparison_node.operator == ComparisonNodeOperator.IN:
+            if (
+                isinstance(comparison_node.first_operand, PropertyAccessNode)
+                and comparison_node.first_operand.data_type == DataType.ARRAY
+            ):
+                return self._visit_in_for_array_datatype(
+                    comparison_node.first_operand,
+                    (
+                        comparison_node.second_operand
+                        if isinstance(comparison_node.second_operand, list)
+                        else [comparison_node.second_operand]
+                    ),
+                    stack,
+                )
+
             return self._visit_in(
                 comparison_node.first_operand,
                 (
@@ -288,48 +305,52 @@ class BaseCelToSqlProvider:
                 stack,
             )
 
-        if isinstance(comparison_node.second_operand, ConstantNode):
-            second_operand = self._visit_constant_node(
-                comparison_node.second_operand.value,
-                self._get_data_type_to_convert(comparison_node),
+        if (
+            comparison_node.operator == ComparisonNodeOperator.EQ
+            and isinstance(comparison_node.first_operand, PropertyAccessNode)
+            and comparison_node.first_operand.data_type == DataType.ARRAY
+        ):
+            return self._visit_equal_for_array_datatype(
+                comparison_node.first_operand,
+                comparison_node.second_operand,
             )
 
-            if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
-                first_operand = self.__build_sql_filter(
-                    comparison_node.first_operand, stack
-                )
-                if should_cast:
-                    first_operand = self.cast(
-                        first_operand,
-                        from_type_to_data_type(
-                            type(comparison_node.second_operand.value)
-                        ),
-                    )
+        if should_cast:
+            if isinstance(comparison_node.first_operand, PropertyAccessNode):
+                first_operand_data_type = comparison_node.first_operand.data_type
 
-            if isinstance(comparison_node.first_operand, CoalesceNode):
-                first_operand = self.cast(
-                    self.__build_sql_filter(comparison_node.first_operand, stack),
-                    from_type_to_data_type(type(comparison_node.second_operand.value)),
-                )
+            if isinstance(comparison_node.first_operand, JsonPropertyAccessNode):
+                first_operand_data_type = comparison_node.first_operand.data_type
+                force_cast = True
 
             if isinstance(comparison_node.first_operand, MultipleFieldsNode):
-                first_operand = self._visit_multiple_fields_node(
-                    comparison_node.first_operand,
-                    (
-                        from_type_to_data_type(
-                            type(comparison_node.second_operand.value)
-                        )
-                        if should_cast
-                        else None
-                    ),
-                    stack,
+                first_operand_data_type = comparison_node.first_operand.data_type
+                force_cast = isinstance(
+                    comparison_node.first_operand.fields[0], JsonPropertyAccessNode
+                )
+
+            if isinstance(comparison_node.second_operand, ConstantNode):
+                second_operand_data_type = from_type_to_data_type(
+                    type(comparison_node.second_operand.value)
+                )
+                second_operand = self._visit_constant_node(
+                    comparison_node.second_operand.value,
+                    first_operand_data_type,
                 )
 
         if first_operand is None:
-            first_operand = self.__build_sql_filter(comparison_node.first_operand, stack)
+            first_operand = self._build_sql_filter(comparison_node.first_operand, stack)
 
         if second_operand is None:
-            second_operand = self.__build_sql_filter(comparison_node.second_operand, stack)
+            second_operand = self._build_sql_filter(
+                comparison_node.second_operand, stack
+            )
+
+        if force_cast or (not first_operand_data_type and second_operand_data_type):
+            first_operand = self.cast(
+                first_operand,
+                second_operand_data_type,
+            )
 
         if comparison_node.operator == ComparisonNodeOperator.EQ:
             result = self._visit_equal(first_operand, second_operand)
@@ -368,6 +389,13 @@ class BaseCelToSqlProvider:
 
         return f"{first_operand} = {second_operand}"
 
+    def _visit_equal_for_array_datatype(
+        self, first_operand: Node, second_operand: Node
+    ) -> str:
+        raise NotImplementedError(
+            "Array datatype comparison is not implemented. Must be implemented in the child class."
+        )
+
     def _visit_not_equal(self, first_operand: str, second_operand: str) -> str:
         if second_operand == "NULL":
             return f"{first_operand} IS NOT NULL"
@@ -388,17 +416,19 @@ class BaseCelToSqlProvider:
 
     def _visit_in(self, first_operand: Node, array: list[ConstantNode], stack: list[Node]) -> str:
         constant_value_type = type(array[0].value)
-        cast_to = from_type_to_data_type(type(array[0].value))
+        cast_to = None
 
         if not all(isinstance(item.value, constant_value_type) for item in array):
             cast_to = DataType.STRING
 
         if isinstance(first_operand, PropertyAccessNode):
-            first_operand_str = self.cast(self._visit_property_access_node(first_operand, stack), cast_to)
+            first_operand_str = self._visit_property_access_node(first_operand, stack)
+            if cast_to:
+                first_operand_str = self.cast(first_operand_str, cast_to)
         elif isinstance(first_operand, MultipleFieldsNode):
             first_operand_str = self._visit_multiple_fields_node(first_operand, cast_to, stack)
         else:
-            first_operand_str = self.__build_sql_filter(first_operand, stack)
+            first_operand_str = self._build_sql_filter(first_operand, stack)
 
         return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
@@ -421,6 +451,34 @@ class BaseCelToSqlProvider:
     ) -> str:
         raise NotImplementedError(
             "'endsWith' method call must be implemented in the child class"
+        )
+
+    def _visit_contains_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'contains' method must be implemented in the child class"
+        )
+
+    def _visit_starts_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'startsWith' method call must be implemented in the child class"
+        )
+
+    def _visit_ends_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'endsWith' method call must be implemented in the child class"
+        )
+
+    def _visit_in_for_array_datatype(
+        self, first_operand: Node, array: list[ConstantNode], stack: list[Node]
+    ) -> str:
+        raise NotImplementedError(
+            "Array datatype IN operator is not implemented. Must be implemented in the child class."
         )
 
     def _visit_contains_method_calling(
@@ -521,7 +579,7 @@ class BaseCelToSqlProvider:
     # region Unary Visitors
     def _visit_unary_node(self, unary_node: UnaryNode, stack: list[Node]) -> str:
         if unary_node.operator == UnaryNodeOperator.NOT:
-            return self._visit_unary_not(self.__build_sql_filter(unary_node.operand, stack))
+            return self._visit_unary_not(self._build_sql_filter(unary_node.operand, stack))
 
         raise NotImplementedError(
             f"{unary_node.operator} unary operator is not supported yet"

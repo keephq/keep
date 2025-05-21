@@ -27,13 +27,7 @@ workflow:
   description: handle alerts
   triggers:
     - type: alert
-      filters:
-        - key: source
-          value: sentry
-        - key: severity
-          value: critical
-        - key: service
-          value: r"(payments|ftp)"
+      cel: source.contains("sentry") && severity == "critical" && (service == "payments" || service == "ftp")
   actions:
     - name: send-slack-message-team-payments
       if: "'{{ alert.service }}' == 'payments'"

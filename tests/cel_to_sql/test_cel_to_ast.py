@@ -16,69 +16,145 @@ from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 
 
 @pytest.mark.parametrize(
-    "cel, operator, expected_constant_type, expected_constant_value",
+    "cel, expected_property_path, operator, expected_constant_type, expected_constant_value",
     [
-        ("fakeProp == 'fake alert'", ComparisonNodeOperator.EQ, str, "fake alert"),
+        (
+            "labels['previous_test_name-1'].tag.newPath['123456']=='fake alert'",
+            ["labels", "previous_test_name-1", "tag", "newPath", "123456"],
+            ComparisonNodeOperator.EQ,
+            str,
+            "fake alert",
+        ),
+        (
+            "object.property.path=='fake alert'",
+            ["object", "property", "path"],
+            ComparisonNodeOperator.EQ,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp == 'fake alert'",
+            ["fakeProp"],
+            ComparisonNodeOperator.EQ,
+            str,
+            "fake alert",
+        ),
         (
             "fakeProp == 'It\\'s value with escaped single-quote'",
+            ["fakeProp"],
             ComparisonNodeOperator.EQ,
             str,
             "It's value with escaped single-quote",
         ),
         (
             'fakeProp == "It\\"s value with escaped double-quote"',
+            ["fakeProp"],
             ComparisonNodeOperator.EQ,
             str,
             'It"s value with escaped double-quote',
         ),
-        ("fakeProp == true", ComparisonNodeOperator.EQ, bool, True),
-        ("fakeProp == 12349983", ComparisonNodeOperator.EQ, int, 12349983),
-        ("fakeProp == 1234.9983", ComparisonNodeOperator.EQ, float, 1234.9983),
+        ("fakeProp == true", ["fakeProp"], ComparisonNodeOperator.EQ, bool, True),
+        (
+            "fakeProp == 12349983",
+            ["fakeProp"],
+            ComparisonNodeOperator.EQ,
+            int,
+            12349983,
+        ),
+        (
+            "fakeProp == 1234.9983",
+            ["fakeProp"],
+            ComparisonNodeOperator.EQ,
+            float,
+            1234.9983,
+        ),
         (
             "fakeProp == 'MON'",
+            ["fakeProp"],
             ComparisonNodeOperator.EQ,
             str,
             "MON",
         ),  # check that day-of-week short names do not get converted to dates
-        ("fakeProp == 'mon'", ComparisonNodeOperator.EQ, str, "mon"),
+        ("fakeProp == 'mon'", ["fakeProp"], ComparisonNodeOperator.EQ, str, "mon"),
         (
             "fakeProp == '2025-01-20'",
+            ["fakeProp"],
             ComparisonNodeOperator.EQ,
             datetime.datetime,
             datetime.datetime(2025, 1, 20),
         ),
         (
             "fakeProp == '2025-01-20T14:35:27.123456'",
+            ["fakeProp"],
             ComparisonNodeOperator.EQ,
             datetime.datetime,
             datetime.datetime(2025, 1, 20, 14, 35, 27, 123456),
         ),
-        ("fakeProp != 'fake alert'", ComparisonNodeOperator.NE, str, "fake alert"),
-        ("fakeProp > 'fake alert'", ComparisonNodeOperator.GT, str, "fake alert"),
-        ("fakeProp >= 'fake alert'", ComparisonNodeOperator.GE, str, "fake alert"),
-        ("fakeProp < 'fake alert'", ComparisonNodeOperator.LT, str, "fake alert"),
-        ("fakeProp <= 'fake alert'", ComparisonNodeOperator.LE, str, "fake alert"),
         (
-            "fakeProp.contains('fake alert')",
+            "fakeProp != 'fake alert'",
+            ["fakeProp"],
+            ComparisonNodeOperator.NE,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp > 'fake alert'",
+            ["fakeProp"],
+            ComparisonNodeOperator.GT,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp >= 'fake alert'",
+            ["fakeProp"],
+            ComparisonNodeOperator.GE,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp < 'fake alert'",
+            ["fakeProp"],
+            ComparisonNodeOperator.LT,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp <= 'fake alert'",
+            ["fakeProp"],
+            ComparisonNodeOperator.LE,
+            str,
+            "fake alert",
+        ),
+        (
+            "fakeProp.contains('\\'±CPU±\\'')",
+            ["fakeProp"],
             ComparisonNodeOperator.CONTAINS,
             str,
-            "fake alert",
+            "'±CPU±'",
         ),
         (
-            "fakeProp.startsWith('fake alert')",
+            "fakeProp.startsWith('\\'±CPU±\\'')",
+            ["fakeProp"],
             ComparisonNodeOperator.STARTS_WITH,
             str,
-            "fake alert",
+            "'±CPU±'",
         ),
         (
-            "fakeProp.endsWith('fake alert')",
+            "fakeProp.endsWith('\\'±CPU±\\'')",
+            ["fakeProp"],
             ComparisonNodeOperator.ENDS_WITH,
             str,
-            "fake alert",
+            "'±CPU±'",
         ),
     ],
 )
-def test_simple_comparison_node(cel, operator, expected_constant_type, expected_constant_value):
+def test_simple_comparison_node(
+    cel,
+    expected_property_path,
+    operator,
+    expected_constant_type,
+    expected_constant_value,
+):
     actual = CelToAstConverter.convert_to_ast(cel)
 
     # Check that the root node is a ComparisonNode
@@ -92,7 +168,8 @@ def test_simple_comparison_node(cel, operator, expected_constant_type, expected_
 
     # Check that first operand is a PropertyAccessNode
     assert isinstance(actual.first_operand, PropertyAccessNode)
-    assert actual.first_operand.path == ["fakeProp"]
+    assert actual.first_operand.path == expected_property_path
+
 
 @pytest.mark.parametrize("cel, args", [
     ("fakeProp in ['string', 12345, true]", ["string", 12345, True]),

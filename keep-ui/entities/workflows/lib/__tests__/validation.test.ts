@@ -3,7 +3,7 @@ import {
   validateAllMustacheVariablesInString,
   validateStepPure,
   validateGlobalPure,
-} from "../validation";
+} from "../validate-definition";
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "../../model/types";
 
@@ -493,27 +493,6 @@ describe("validateGlobalPure", () => {
     expect(result).toContainEqual([
       "interval",
       "Workflow interval cannot be empty.",
-    ]);
-  });
-
-  it("should detect empty alert trigger", () => {
-    const definition: Definition = {
-      properties: {
-        id: "test-workflow",
-        name: "Test Workflow",
-        description: "Test Description",
-        disabled: false,
-        isLocked: false,
-        consts: {},
-        alert: {},
-      },
-      sequence: [],
-    };
-
-    const result = validateGlobalPure(definition);
-    expect(result).toContainEqual([
-      "alert",
-      "Alert trigger should have at least one filter.",
     ]);
   });
 

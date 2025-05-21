@@ -1,0 +1,49 @@
+workflow:
+  id: datadog-log-monitor
+  name: Datadog Log Monitor
+  description: Monitors Datadog logs for specific services and sends Slack notifications when error conditions are detected.
+  triggers:
+    - type: manual
+  steps:
+    - name: check-error-rate
+      provider:
+        type: datadog
+        config: "{{ providers.datadog }}"
+        with:
+          query: "service:keep-github-app"
+          timeframe: "3d"
+          query_type: "logs"
+  actions:
+    - name: trigger-slack
+      condition:
+        - name: threshold-condition
+          type: threshold
+          value: "keep.len({{ steps.check-error-rate.results.logs }})"
+          compare_to: 0
+          compare_type: gt
+      provider:
+        type: slack
+        config: "{{ providers.slack-demo }}"
+        with:
+          channel: db-is-down
+          # Message is always mandatory
+          message: >
+            The db is down. Please investigate.
+          blocks:
+            - type: section
+              text:
+                type: plain_text
+                text: |
+                  Query: {{ steps.check-error-rate.provider_parameters.query }}
+                  Timeframe: {{ steps.check-error-rate.provider_parameters.timeframe }}
+                  Number of logs: keep.len({{ steps.check-error-rate.results.logs }})
+                  From: {{ steps.check-error-rate.provider_parameters.from }}
+                  To: {{ steps.check-error-rate.provider_parameters.to }}
+  providers:
+    db-server-mock:
+      description: Paper DB Server
+      authentication:
+    datadog:
+      authentication:
+        api_key: "{{ env.DATADOG_API_KEY }}"
+        app_key: "{{ env.DATADOG_APP_KEY }}"

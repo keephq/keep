@@ -7,6 +7,7 @@ import clsx from "clsx";
 
 interface CelInputProps {
   id?: string;
+  staticPositionForSuggestions?: boolean;
   value?: string;
   fieldsForSuggestions?: string[];
   onValueChange?: (value: string) => void;
@@ -21,6 +22,7 @@ interface CelInputProps {
 
 const CelInput: FC<CelInputProps> = ({
   id,
+  staticPositionForSuggestions,
   value = "",
   fieldsForSuggestions = [],
   onValueChange,
@@ -41,7 +43,9 @@ const CelInput: FC<CelInputProps> = ({
     >
       <MonacoCelEditor
         editorId={id}
-        className="h-20 relative {}"
+        className={`h-20 relative ${
+          staticPositionForSuggestions ? "suggestions-static-position" : ""
+        }`}
         value={value}
         readOnly={readOnly}
         fieldsForSuggestions={fieldsForSuggestions}
@@ -55,7 +59,7 @@ const CelInput: FC<CelInputProps> = ({
       )}
 
       {placeholder && !value && (
-        <div className="pointer-events-none absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50">
+        <div className="pointer-events-none absolute top-0 w-full h-full flex items-center text-sm text-gray-900 text-opacity-50 truncate">
           {placeholder}
         </div>
       )}

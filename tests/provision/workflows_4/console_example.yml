@@ -4,6 +4,9 @@ workflow:
   description: Print alert message to console
   triggers:
     - type: alert
+      filter:
+        - key: name
+          value: "server-is-under-the-weather"
   steps:
     - name: console-alert
       provider:

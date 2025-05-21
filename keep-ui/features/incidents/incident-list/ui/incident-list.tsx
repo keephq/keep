@@ -47,6 +47,10 @@ import {
 } from "@/entities/incidents/model/models";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useIncidentsTableData } from "./useIncidentsTableData";
+import EnhancedDateRangePickerV2, {
+  AllTimeFrame,
+  TimeFrameV2,
+} from "@/components/ui/DateRangePickerV2";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -76,11 +80,10 @@ export function IncidentList({
 
   const [filterCel, setFilterCel] = useState<string>("");
 
-  const [dateRange, setDateRange] = useState<TimeFrame>({
-    start: null,
-    end: null,
-    paused: false,
-  });
+  const [dateRange, setDateRange] = useState<TimeFrameV2>({
+    type: "all-time",
+    isPaused: false,
+  } as AllTimeFrame);
 
   const {
     isEmptyState,
@@ -217,10 +220,9 @@ export function IncidentList({
 
   const handleClearFilters = () => {
     setDateRange({
-      start: null,
-      end: null,
-      paused: false,
-    });
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame);
     setIncidentsPagination({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
       offset: 0,
@@ -265,11 +267,9 @@ export function IncidentList({
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
-        <EnhancedDateRangePicker
+        <EnhancedDateRangePickerV2
           timeFrame={dateRange}
-          setTimeFrame={(timeFrame) => {
-            setDateRange(timeFrame);
-          }}
+          setTimeFrame={setDateRange}
           timeframeRefreshInterval={20000}
           hasPlay={true}
           pausedByDefault={false}

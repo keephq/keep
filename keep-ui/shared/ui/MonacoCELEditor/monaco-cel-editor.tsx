@@ -94,7 +94,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
         column: model.getLineMaxColumn(model.getLineCount()),
       });
     }
-  }, [props.value]);
+  }, [props.value, editorRef.current]);
 
   const handleEditorDidMount = (
     editor: editor.IStandaloneCodeEditor,

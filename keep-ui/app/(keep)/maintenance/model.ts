@@ -10,6 +10,7 @@ export interface MaintenanceRule {
   updated_at?: Date;
   suppress: boolean;
   enabled: boolean;
+  ignore_statuses: string[];
 }
 
 export interface MaintenanceRuleCreate {
@@ -20,4 +21,5 @@ export interface MaintenanceRuleCreate {
   end_time?: Date;
   duration_seconds?: number;
   enabled: boolean;
+  ignore_statuses: string[];
 }
