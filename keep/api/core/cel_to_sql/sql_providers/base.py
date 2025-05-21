@@ -260,10 +260,10 @@ class BaseCelToSqlProvider:
         )
 
     def _visit_logical_and(self, left: str, right: str) -> str:
-        return f"({left} AND {right})"
+        return f"{left} AND {right}"
 
     def _visit_logical_or(self, left: str, right: str) -> str:
-        return f"({left} OR {right})"
+        return f"{left} OR {right}"
 
     # endregion
 

@@ -12,36 +12,36 @@
     "input_cel": "severity == 'medium' && jsonArray == 'Sam Byron'",
     "description": "Equality with JSON array column",
     "expected_sql_dialect_based": {
-      "mysql": "(severity = 'medium' AND JSON_CONTAINS(entity.jsonArray, '[\"Sam Byron\"]'))",
-      "postgresql": "(severity = 'medium' AND entity.jsonArray::jsonb @> '[\"Sam Byron\"]')",
-      "sqlite": "(severity = 'medium' AND (SELECT 1 FROM json_each(entity.jsonArray) as json_array WHERE json_array.value = 'Sam Byron'))"
+      "mysql": "severity = 'medium' AND JSON_CONTAINS(entity.jsonArray, '[\"Sam Byron\"]')",
+      "postgresql": "severity = 'medium' AND entity.jsonArray::jsonb @> '[\"Sam Byron\"]'",
+      "sqlite": "severity = 'medium' AND (SELECT 1 FROM json_each(entity.jsonArray) as json_array WHERE json_array.value = 'Sam Byron')"
     }
   },
   {
     "input_cel": "alert.severity == 'HIGH'",
     "description": "Queried field refers to multiple JSON columns",
     "expected_sql_dialect_based": {
-      "mysql": "((JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')) = 'HIGH' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')) = 'HIGH'))",
-      "postgresql": "((((alert_enrichments) ->> 'severity')::TEXT = 'HIGH' OR ((alert_event) ->> 'severity')::TEXT = 'HIGH'))",
-      "sqlite": "((CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT) = 'HIGH' OR CAST(json_extract(alert_event, '$.\"severity\"') as TEXT) = 'HIGH'))"
+      "mysql": "(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"severity\"')) = 'HIGH' OR JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"severity\"')) = 'HIGH')",
+      "postgresql": "(((alert_enrichments) ->> 'severity')::TEXT = 'HIGH' OR ((alert_event) ->> 'severity')::TEXT = 'HIGH')",
+      "sqlite": "(CAST(json_extract(alert_enrichments, '$.\"severity\"') as TEXT) = 'HIGH' OR CAST(json_extract(alert_event, '$.\"severity\"') as TEXT) = 'HIGH')"
     }
   },
   {
     "input_cel": "name != 'Payments incident'",
     "description": "Queried field refers to multiple columns",
     "expected_sql_dialect_based": {
-      "mysql": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'",
-      "postgresql": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'",
-      "sqlite": "COALESCE(user_generated_name, ai_generated_name) != 'Payments incident'"
+      "mysql": "(user_generated_name != 'Payments incident' OR ai_generated_name != 'Payments incident')",
+      "postgresql": "(user_generated_name != 'Payments incident' OR ai_generated_name != 'Payments incident')",
+      "sqlite": "(user_generated_name != 'Payments incident' OR ai_generated_name != 'Payments incident')"
     }
   },
   {
     "input_cel": "name in ['Payments incident', 'API incident', 'Network incident', null]",
     "description": "IN operator along with NULL",
     "expected_sql_dialect_based": {
-      "mysql": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)",
-      "postgresql": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)",
-      "sqlite": "(COALESCE(user_generated_name, ai_generated_name) in ('Payments incident', 'API incident', 'Network incident') OR COALESCE(user_generated_name, ai_generated_name) IS NULL)"
+      "mysql": "((user_generated_name in ('Payments incident', 'API incident', 'Network incident')) OR (ai_generated_name in ('Payments incident', 'API incident', 'Network incident') OR ai_generated_name IS NULL))",
+      "postgresql": "((user_generated_name in ('Payments incident', 'API incident', 'Network incident')) OR (ai_generated_name in ('Payments incident', 'API incident', 'Network incident') OR ai_generated_name IS NULL))",
+      "sqlite": "((user_generated_name in ('Payments incident', 'API incident', 'Network incident')) OR (ai_generated_name in ('Payments incident', 'API incident', 'Network incident') OR ai_generated_name IS NULL))"
     }
   },
   {
