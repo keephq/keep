@@ -400,7 +400,6 @@ def test_filter_timeframe_combination_with_queryparams(browser, setup_test_data)
             alert for alert in current_incidents if filter_lambda(alert)
         ]
         # Give the page a moment to process redirects
-        # Give the page a moment to process redirects
         browser.wait_for_timeout(500)
 
         init_test(browser, current_incidents)

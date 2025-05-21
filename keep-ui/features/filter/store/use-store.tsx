@@ -52,7 +52,7 @@ export function useExistingFacetsPanelStore<T>(
   const store = useContext(FacetStoreContext);
   if (!store)
     throw new Error(
-      "useExistingFacetStore must be used within FacetStoreProvider"
+      "useExistingFacetsPanelStore must be used within FacetStoreProvider"
     );
 
   return useStore(store, selector);

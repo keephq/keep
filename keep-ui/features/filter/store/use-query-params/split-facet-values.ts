@@ -29,7 +29,7 @@ export function splitFacetValues(input: string) {
       escapeNext = false;
     } else if (char === "\\") {
       escapeNext = true;
-      current += char; // preserve the backslash for now
+      current += char;
     } else if (char === "'") {
       current += char;
       inQuotes = !inQuotes;
