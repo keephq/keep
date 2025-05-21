@@ -712,6 +712,7 @@ class KeepProvider(BaseProvider):
                     created_by=f"workflow id: {self.context_manager.workflow_id}",
                     workflow=workflow_to_update_yaml,
                     force_update=False,
+                    lookup_by_name=True,
                 )
                 self.logger.info(
                     "Workflow created successfully",
