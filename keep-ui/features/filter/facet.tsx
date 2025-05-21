@@ -132,6 +132,10 @@ export const Facet: React.FC<FacetProps> = ({
     return !!facetState[strValue];
   };
 
+  const isOptionSelectable = (facetOption: FacetOptionDto) => {
+    return facetOption.matches_count > 0 || !!facetConfig?.canHitEmptyState;
+  };
+
   function toggleFacetOption(value: FacetOptionDto["value"]) {
     const strValue = valueToString(value);
     let selectedValues = getSelectedValues();
@@ -204,11 +208,10 @@ export const Facet: React.FC<FacetProps> = ({
         )}
         isSelected={
           !!placeholderOptions[facetOption.value] ||
-          isOptionSelected(facetOption.value)
+          (isOptionSelected(facetOption.value) &&
+            isOptionSelectable(facetOption))
         }
-        isSelectable={
-          facetOption.matches_count > 0 || !!facetConfig?.canHitEmptyState
-        }
+        isSelectable={isOptionSelectable(facetOption)}
         renderLabel={
           facetConfig?.renderOptionLabel
             ? () => facetConfig.renderOptionLabel!(facetOption)
