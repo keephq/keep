@@ -625,7 +625,7 @@ def test_filter_search_timeframe_combination_with_queryparams(
             None,
         )
         expect(
-            browser.locator("[data-testid='timeframe-picker-trigger'] button")
+            browser.locator("button[data-testid='timeframe-picker-trigger']")
         ).to_contain_text("Past 4 hours")
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
