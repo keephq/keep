@@ -58,20 +58,16 @@ def test_mentions_in_incident_comments(browser: Page, setup_test_data, setup_pag
         page.get_by_role("link", name="Test Incident").click()
         
         page.wait_for_load_state("networkidle")
+        # Wait for Activity tab to be visible
+        expect(page.get_by_role("tab", name="Activity")).to_be_visible(timeout=30000)
         page.get_by_role("tab", name="Activity").click()
         page.wait_for_load_state("networkidle")
-
-        page.wait_for_selector("[data-testid='base-input']", timeout=10000)
-        page.get_by_test_id("base-input").click()
-        page.get_by_test_id("base-input").fill("@")
-
-        mention_dropdown = page.locator("div.absolute.top-full.left-0.w-full.z-10")
-        page.wait_for_selector("div.absolute.top-full.left-0.w-full.z-10", timeout=10000)
-
-        # Select the first option in the dropdown
-        first_option = mention_dropdown.locator("div.px-3.py-2.cursor-pointer").first
-        first_option.click()
-
+        
+        # Wait for editor to be fully loaded
+        page.wait_for_selector(".ql-editor", state="visible", timeout=30000)
+        expect(page.locator(".ql-editor")).to_be_visible()
+        page.get_by_role("paragraph").filter(has_text=re.compile(r"^$")).click()
+        page.locator(".ql-editor").fill("@keep This is a comment!")
         # Submit the comment
         page.get_by_role("button", name="Comment").click()
         page.wait_for_load_state("networkidle")
