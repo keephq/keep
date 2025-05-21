@@ -1,5 +1,10 @@
+import { Link } from "@/components/ui/Link";
 import { WorkflowExecutionDetail } from "@/shared/api/workflow-executions";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui";
+import { showSuccessToast } from "@/shared/ui";
+import { useConfig } from "@/utils/hooks/useConfig";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Button, Callout } from "@tremor/react";
 
@@ -15,6 +20,7 @@ export function WorkflowExecutionError({
   eventType: string | undefined;
 }) {
   const api = useApi();
+  const { data: config } = useConfig();
 
   const getCurlCommand = () => {
     let token = api.getToken();
@@ -26,8 +32,24 @@ export function WorkflowExecutionError({
   -H "Content-Type: application/json"`;
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(getCurlCommand());
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(getCurlCommand());
+      showSuccessToast("CURL command copied to clipboard");
+    } catch (err) {
+      showErrorToast(
+        err,
+        <p>
+          Failed to copy CURL command. Please check your browser permissions.{" "}
+          <Link
+            target="_blank"
+            href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+          >
+            Learn more
+          </Link>
+        </p>
+      );
+    }
   };
 
   return (

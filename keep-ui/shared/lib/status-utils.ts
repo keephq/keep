@@ -6,6 +6,16 @@ import {
 } from "@heroicons/react/24/outline";
 import { IoIosGitPullRequest } from "react-icons/io";
 
+/**
+ * Maps an alert/incident status string to the appropriate icon component
+ * 
+ * @param status - The status string to convert to an icon
+ * @returns A React icon component based on the status
+ * 
+ * @example
+ * const AlertIcon = getStatusIcon("firing");
+ * // Returns ExclamationCircleIcon
+ */
 export const getStatusIcon = (status: string) => {
   switch (status.toLowerCase()) {
     case "firing":
@@ -21,6 +31,16 @@ export const getStatusIcon = (status: string) => {
   }
 };
 
+/**
+ * Maps an alert/incident status string to an appropriate color
+ * 
+ * @param status - The status string to convert to a color
+ * @returns A color string (compatible with Tailwind CSS and Tremor)
+ * 
+ * @example
+ * const badgeColor = getStatusColor("firing");
+ * // Returns "red"
+ */
 export const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "firing":

@@ -1,4 +1,4 @@
-import { getNestedValue } from "../object-utils";
+import { getNestedValue, buildNestedObject } from "../object-utils";
 
 describe("object-utils", () => {
   describe("getNestedValue", () => {
@@ -262,6 +262,87 @@ describe("object-utils", () => {
       expect(getNestedValue(alert, "metadata.host.name")).toBe("server-xyz");
       expect(getNestedValue(alert, "metadata.host.ip")).toBe("192.168.1.100");
       expect(getNestedValue(alert, "metadata.service")).toBe(undefined);
+    });
+  });
+
+  describe("buildNestedObject", () => {
+    it("should build a simple object with a single level key", () => {
+      const result = buildNestedObject({}, "name", "John");
+      expect(result).toEqual({ name: "John" });
+    });
+
+    it("should build a nested object with dot notation", () => {
+      const result = buildNestedObject({}, "user.name", "John");
+      expect(result).toEqual({ user: { name: "John" } });
+    });
+
+    it("should build a deeply nested object with multiple levels", () => {
+      const result = buildNestedObject({}, "user.address.city", "New York");
+      expect(result).toEqual({ user: { address: { city: "New York" } } });
+    });
+
+    it("should add to existing object without overwriting other properties", () => {
+      const initial = { user: { name: "John", age: 30 } };
+      const result = buildNestedObject(initial, "user.address.city", "New York");
+      expect(result).toEqual({
+        user: {
+          name: "John",
+          age: 30,
+          address: {
+            city: "New York"
+          }
+        }
+      });
+    });
+
+    it("should handle array-like notation in path", () => {
+      const result = buildNestedObject({}, "users.0.name", "John");
+      expect(result).toEqual({ users: { "0": { name: "John" } } });
+    });
+
+    it("should work with numeric values", () => {
+      const result = buildNestedObject({}, "user.age", 30);
+      expect(result).toEqual({ user: { age: 30 } });
+    });
+
+    it("should work with boolean values", () => {
+      const result = buildNestedObject({}, "user.active", true);
+      expect(result).toEqual({ user: { active: true } });
+    });
+
+    it("should work with array values", () => {
+      const tags = ["javascript", "typescript"];
+      const result = buildNestedObject({}, "user.tags", tags);
+      expect(result).toEqual({ user: { tags } });
+    });
+
+    it("should build multiple paths on the same object", () => {
+      let obj = {};
+      obj = buildNestedObject(obj, "user.name", "John");
+      obj = buildNestedObject(obj, "user.age", 30);
+      obj = buildNestedObject(obj, "user.address.city", "New York");
+      
+      expect(obj).toEqual({
+        user: {
+          name: "John",
+          age: 30,
+          address: {
+            city: "New York"
+          }
+        }
+      });
+    });
+
+    it("should handle empty parts in path (consecutive dots)", () => {
+      // This might not be an intended use case, but testing for unexpected input
+      const result = buildNestedObject({}, "user..name", "John");
+      // Expected behavior would be to create an object with empty string key
+      expect(result).toEqual({ user: { "": { name: "John" } } });
+    });
+
+    it("should handle paths with special characters", () => {
+      const result = buildNestedObject({}, "user.first-name", "John");
+      expect(result).toEqual({ user: { "first-name": "John" } });
     });
   });
 });
