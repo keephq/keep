@@ -738,7 +738,9 @@ def setup_alerts_and_incidents():
     yield test_data
 
 
-def test_run_workflow_from_alert_and_incident(browser: Page):
+def test_run_workflow_from_alert_and_incident(
+    browser: Page, setup_alerts_and_incidents
+):
     page = browser
     log_entries = []
     setup_console_listener(browser, log_entries)
