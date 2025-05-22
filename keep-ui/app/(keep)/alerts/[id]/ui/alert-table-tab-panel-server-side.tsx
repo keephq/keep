@@ -14,7 +14,7 @@ interface Props {
   initialFacets: FacetDto[];
   alerts: AlertDto[];
   alertsTotalCount: number;
-  facetsCel: string;
+  facetsCel: string | null;
   facetsPanelRefreshToken: string | undefined;
   preset: Preset;
   isAsyncLoading: boolean;
