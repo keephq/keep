@@ -9,6 +9,7 @@ import {
   TabList,
   TabPanel,
   TabPanels,
+  Callout,
 } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
@@ -88,17 +89,27 @@ export function AlertDismissModal({
     const dismissUntil =
       selectedTab === 0 ? null : selectedDateTime?.toISOString();
 
+    const enrichments: {
+      dismissed: boolean;
+      note: string;
+      dismissUntil: string;
+    } = {
+      dismissed: !alerts[0]?.dismissed,
+      note: dismissComment,
+      dismissUntil: dismissUntil || "",
+    };
+
     const requestData = {
-      enrichments: {
-        dismissed: !alerts[0]?.dismissed,
-        note: dismissComment,
-        dismissUntil: dismissUntil || "",
-      },
+      enrichments: enrichments,
       fingerprints: alerts.map((alert: AlertDto) => alert.fingerprint),
     };
 
     try {
-      await api.post(`/alerts/batch_enrich`, requestData);
+      // If dismissUntil is set, we don't need to dispose on new alert
+      await api.post(
+        `/alerts/batch_enrich?dispose_on_new_alert=true`,
+        requestData
+      );
       toast.success(`${alerts.length} alerts dismissed successfully!`, {
         position: "top-right",
       });
@@ -152,6 +163,11 @@ export function AlertDismissModal({
         </>
       ) : (
         <>
+          <Callout color="orange" title="Dismissing Alerts" className="mb-2.5">
+            {`This will dismiss the alert until an alert with the same fingerprint comes in${
+              selectedTab === 1 ? ` or until ${selectedDateTime}.` : "."
+            }`}
+          </Callout>
           <TabGroup
             index={selectedTab}
             onIndexChange={(index: number) => handleTabChange(index)}
