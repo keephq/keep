@@ -112,7 +112,7 @@ export const useIncidents = (
         : null,
     async (url: string) => {
       const currentDate = new Date();
-      const result = await api.post(url, filtersParams);
+      const result = await api.post(url, filtersParams ? Object.fromEntries(filtersParams) : {});
       return {
         result,
         responseTimeMs: new Date().getTime() - currentDate.getTime(),
