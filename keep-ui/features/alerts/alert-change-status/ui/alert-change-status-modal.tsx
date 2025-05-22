@@ -1,4 +1,4 @@
-import { Button, Title, Subtitle } from "@tremor/react";
+import { Button, Title, Subtitle, Switch } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState } from "react";
 import { AlertDto, Status } from "@/entities/alerts/model";
@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { Select, showErrorToast } from "@/shared/ui";
+import { Select, showErrorToast, Tooltip } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
@@ -36,6 +36,7 @@ export function AlertChangeStatusModal({
   presetName,
 }: Props) {
   const api = useApi();
+  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const revalidateMultiple = useRevalidateMultiple();
   const { alertsMutator } = useAlerts();
@@ -67,8 +68,8 @@ export function AlertChangeStatusModal({
     }
 
     try {
-      const response = await api.post(
-        `/alerts/enrich?dispose_on_new_alert=true`,
+      await api.post(
+        `/alerts/enrich?dispose_on_new_alert=${disposeOnNewAlert}`,
         {
           enrichments: {
             status: selectedStatus,
@@ -93,20 +94,33 @@ export function AlertChangeStatusModal({
   return (
     <Modal onClose={handleClose} isOpen={!!alert}>
       <Title>Change Alert Status</Title>
-      <Subtitle className="flex items-center">
-        Change status from <strong className="mx-2">{alert.status}</strong> to:
-        <div className="flex-1">
-          <Select
-            options={statusOptions}
-            value={statusOptions.find(
-              (option) => option.value === selectedStatus
-            )}
-            onChange={(option) => setSelectedStatus(option?.value || null)}
-            placeholder="Select new status"
-            className="ml-2"
-          />
+      <div className="flex mt-2.5">
+        <Subtitle>
+          Change status from <strong>{alert.status}</strong> to:
+        </Subtitle>
+        <Select
+          options={statusOptions}
+          value={statusOptions.find(
+            (option) => option.value === selectedStatus
+          )}
+          onChange={(option) => setSelectedStatus(option?.value || null)}
+          placeholder="Select new status"
+          className="ml-2"
+        />
+      </div>
+      <div className="flex justify-between mt-2.5">
+        <div>
+          <Subtitle>Dispose on new alert</Subtitle>
+          <span className="text-xs text-gray-500">
+            This will dispose the status when an alert with the same fingerprint
+            comes in.
+          </span>
         </div>
-      </Subtitle>
+        <Switch
+          checked={disposeOnNewAlert}
+          onChange={(checked) => setDisposeOnNewAlert(checked)}
+        />
+      </div>
       <div className="flex justify-end mt-4 gap-2">
         <Button onClick={handleClose} color="orange" variant="secondary">
           Cancel
