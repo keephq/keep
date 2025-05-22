@@ -118,6 +118,11 @@ alert_field_configurations = [
         data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
+        map_from_pattern="dismissed",
+        map_to=["JSON(alertenrichment.enrichments).*"],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="firingCounter",
         map_to=[
             "JSON(alertenrichment.enrichments).*",
