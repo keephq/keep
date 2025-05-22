@@ -11,15 +11,13 @@ from keep.api.core.facets_handler.base_facets_handler import BaseFacetsHandler
 class SqliteFacetsHandler(BaseFacetsHandler):
 
     def _cast_column(self, column, data_type: DataType):
-        # if data_type == DataType.BOOLEAN:
-        #     return case(
-        #         (column == "true", literal(True)),
-        #         (column == "false", literal(False)),
-        #         (column == "", literal(False)),
-        #         (cast(column, Integer) >= 1, literal(True)),
-        #         (cast(column, Integer) <= 0, literal(False)),
-        #         else_=literal(False),
-        #     )
+        if data_type == DataType.BOOLEAN:
+            return case(
+                (func.lower(column) == "true", literal("true")),
+                (cast(column, Integer) >= 1, literal("true")),
+                (column != "", literal("true")),
+                else_=literal("false"),
+            )
 
         return super()._cast_column(column, data_type)
 

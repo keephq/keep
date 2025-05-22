@@ -9,8 +9,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 from keep.api.models.facet import FacetDto
-from sqlalchemy import Column, String, cast, func, literal, literal_column, select, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import func, literal, literal_column, select, text
 
 
 class BaseFacetsHandler:
@@ -45,17 +44,21 @@ class BaseFacetsHandler:
                 )
             )
             coalecense_args = []
-
+            should_cast = False
             for field_mapping in property_metadata.field_mappings:
                 if isinstance(field_mapping, JsonFieldMapping):
+                    should_cast = True
                     coalecense_args.append(self._handle_json_mapping(field_mapping))
                 elif isinstance(field_mapping, SimpleFieldMapping):
                     coalecense_args.append(self._handle_simple_mapping(field_mapping))
+            select_expression = self._coalesce(coalecense_args)
 
-            select_expressions[select_field] = self._cast_column(
-                self._coalesce(coalecense_args),
-                property_metadata.data_type,
-            ).label(select_field)
+            if should_cast:
+                select_expression = self._cast_column(
+                    select_expression, property_metadata.data_type
+                )
+
+            select_expressions[select_field] = select_expression.label(select_field)
 
         return {
             "new_fields_config": new_fields_config,

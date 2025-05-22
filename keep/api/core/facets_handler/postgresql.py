@@ -2,6 +2,7 @@ from sqlalchemy import cast, func, select
 from sqlalchemy.sql import literal_column
 from sqlalchemy.dialects.postgresql import JSONB
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     PropertyMetadataInfo,
@@ -23,7 +24,9 @@ class PostgreSqlFacetsHandler(BaseFacetsHandler):
             json_table_join.c.value.label("facet_value"),
         ).select_from(base_query, json_table_join)
 
-    def _handle_json_mapping(self, field_mapping: JsonFieldMapping):
+    def _handle_json_mapping(
+        self, field_mapping: JsonFieldMapping, data_type: DataType
+    ):
         all_columns = [field_mapping.json_prop] + [
             f"'{item}'" for item in field_mapping.prop_in_json
         ]

@@ -23,9 +23,10 @@ class MySqlFacetsHandler(BaseFacetsHandler):
     def _cast_column(self, column, data_type: DataType):
         if data_type == DataType.BOOLEAN:
             return case(
-                (func.lower(column) == "true", literal(True)),
-                (cast(column, Integer) >= 1, literal(True)),
-                else_=literal(False),
+                (func.lower(column) == "true", literal("true")),
+                (cast(column, Integer) >= 1, literal("true")),
+                (column != "", literal("true")),
+                else_=literal("false"),
             )
 
         return super()._cast_column(column, data_type)
