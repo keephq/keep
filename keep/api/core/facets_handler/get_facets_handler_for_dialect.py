@@ -1,4 +1,7 @@
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
+    get_cel_to_sql_provider,
+)
 from keep.api.core.db import engine
 from keep.api.core.facets_handler.base_facets_handler import BaseFacetsHandler
 from keep.api.core.facets_handler.mysql import MySqlFacetsHandler
@@ -17,11 +20,17 @@ def get_facets_handler_for_dialect(
     properties_metadata: PropertiesMetadata,
 ) -> BaseFacetsHandler:
     if dialect_name == "sqlite":
-        return SqliteFacetsHandler(properties_metadata)
+        return SqliteFacetsHandler(
+            properties_metadata, get_cel_to_sql_provider(properties_metadata)
+        )
     elif dialect_name == "mysql":
-        return MySqlFacetsHandler(properties_metadata)
+        return MySqlFacetsHandler(
+            properties_metadata, get_cel_to_sql_provider(properties_metadata)
+        )
     elif dialect_name == "postgresql":
-        return PostgreSqlFacetsHandler(properties_metadata)
+        return PostgreSqlFacetsHandler(
+            properties_metadata, get_cel_to_sql_provider(properties_metadata)
+        )
 
     else:
         raise ValueError(f"Unsupported dialect: {engine.dialect.name}")

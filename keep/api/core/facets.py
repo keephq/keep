@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from sqlalchemy import Column, String, cast, func, literal, literal_column, select, text
@@ -34,44 +35,6 @@ def build_facet_selects(
 ):
     return get_facets_handler(properties_metadata).build_facet_selects(facets)
 
-
-def build_facet_subquery_for_column(
-    base_query,
-    column_name: str,
-):
-    return select(
-        func.distinct(literal_column("entity_id")),
-        literal_column(column_name).label("facet_value"),
-    ).select_from(base_query)
-
-
-def build_facet_subquery_for_json_array(
-    base_query,
-    column_name: str,
-):
-    json_table_join = None
-
-    if engine.dialect.name == "sqlite":
-        json_table_join = func.json_each(literal_column(column_name)).table_valued(
-            "value"
-        )
-    elif engine.dialect.name == "postgresql":
-        json_table_join = func.jsonb_array_elements_text(
-            cast(literal_column(column_name), JSONB)
-        ).table_valued("value")
-    elif engine.dialect.name == "mysql":
-        # MySQL throws errors due to JSON_TABLE without LIMIT
-        base_query = base_query.limit(1_000_000).cte(f"{column_name}_base_query")
-        json_table_join = func.json_table(
-            literal_column(column_name), Column("value", String(127))
-        ).table_valued("value")
-
-    return select(
-        func.distinct(base_query.c.entity_id),
-        json_table_join.c.value.label("facet_value"),
-    ).select_from(base_query, json_table_join)
-
-
 def build_facets_data_query(
     base_query,
     facets: list[FacetDto],
@@ -103,55 +66,26 @@ def build_facets_data_query(
     facet_selects_metadata = build_facet_selects(properties_metadata, facets)
     new_fields_config = facet_selects_metadata["new_fields_config"]
     facets_properties_metadata = PropertiesMetadata(new_fields_config)
-    facets_cel_to_sql_instance = get_cel_to_sql_provider(facets_properties_metadata)
 
     base_query_common = base_query.cte("base_query")
 
+    # prevents duplicate queries for the same facet property path and its cel combination
+    visited_facets = set()
     for facet in facets:
-        metadata = facets_properties_metadata.get_property_metadata_for_str(
-            facet.property_path
+        facet_cel = facet_options_query.facet_queries.get(facet.id, "")
+        facet_key = (
+            facet.property_path + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
         )
-        facet_value = []
+        if facet_key in visited_facets:
+            continue
 
-        for item in metadata.field_mappings:
-            if isinstance(item, JsonFieldMapping):
-                facet_value.append(
-                    facets_cel_to_sql_instance.json_extract_as_text(
-                        item.json_prop, item.prop_in_json
-                    )
-                )
-            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                facet_value.append(item.map_to)
-
-        column_name = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
-        facet_source_subquery = None
-        if metadata.data_type == DataType.ARRAY:
-            facet_source_subquery = build_facet_subquery_for_json_array(
-                base_query,
-                column_name,
-            )
-        else:
-            facet_source_subquery = build_facet_subquery_for_column(
-                base_query_common,
-                column_name,
-            )
-
-        facet_source_subquery = facet_source_subquery.filter(
-            text(
-                facets_cel_to_sql_instance.convert_to_sql_str(
-                    facet_options_query.facet_queries[facet.id]
-                )
-            )
-        )
-
-        facet_sub_query = (
-            select(
-                literal(facet.id).label("facet_id"),
-                literal_column("facet_value"),
-                func.count().label("matches_count"),
-            )
-            .select_from(facet_source_subquery)
-            .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        facet_sub_query = get_facets_handler(
+            facets_properties_metadata
+        ).build_facet_subquery(
+            base_query=base_query_common,
+            facet_property_path=facet.property_path,
+            facet_key=facet_key,
+            facet_cel=facet_cel,
         )
 
         # For SQLite we can't limit the subquery
@@ -160,6 +94,7 @@ def build_facets_data_query(
             facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
 
         union_queries.append(facet_sub_query)
+        visited_facets.add(facet_key)
 
     query = None
 
@@ -210,6 +145,13 @@ def get_facet_options(
                     facet_options_query=facet_options_query,
                 )
 
+                db_query_str = str(
+                    db_query.compile(
+                        compile_kwargs={"literal_binds": True},
+                        dialect=engine.dialect,
+                    ),
+                )
+
                 data = session.exec(db_query).all()
             except OperationalError as e:
                 logger.warning(
@@ -238,12 +180,17 @@ def get_facet_options(
                 grouped_by_id_dict[facet_data.facet_id].append(facet_data)
 
             for facet in facets:
+                facet_cel = facet_options_query.facet_queries.get(facet.id, "")
+                facet_key = (
+                    facet.property_path
+                    + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
+                )
                 property_mapping = properties_metadata.get_property_metadata_for_str(
                     facet.property_path
                 )
                 result_dict.setdefault(facet.id, [])
 
-                if facet.id in grouped_by_id_dict:
+                if facet_key in grouped_by_id_dict:
                     result_dict[facet.id] = [
                         FacetOptionDto(
                             display_name=str(facet_value),
@@ -251,7 +198,7 @@ def get_facet_options(
                             matches_count=matches_count,
                         )
                         for facet_id, facet_value, matches_count in grouped_by_id_dict[
-                            facet.id
+                            facet_key
                         ]
                     ]
 
