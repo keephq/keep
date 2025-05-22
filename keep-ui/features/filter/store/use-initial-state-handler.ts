@@ -2,6 +2,7 @@ import { StoreApi, useStore } from "zustand";
 import { FacetsPanelState } from "./create-facets-store";
 import { toFacetState, valueToString } from "./utils";
 import { useEffect } from "react";
+import { FacetState } from "../models";
 
 export function useInitialStateHandler(store: StoreApi<FacetsPanelState>) {
   const facetsConfig = useStore(store, (state) => state.facetsConfig);
@@ -22,7 +23,7 @@ export function useInitialStateHandler(store: StoreApi<FacetsPanelState>) {
       return;
     }
 
-    const facetsStatePatch: Record<string, any | null> = {};
+    const facetsStatePatch: FacetState = {};
 
     facets.forEach((facet) => {
       const facetConfig = facetsConfig?.[facet.id];

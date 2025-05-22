@@ -55,7 +55,6 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           type="checkbox"
           checked={isSelected}
           onClick={handleCheckboxClick}
-          onChange={() => {}}
           style={{ accentColor: "#eb6221" }}
           className="h-4 w-4 rounded border-gray-300 cursor-pointer"
         />

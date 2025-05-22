@@ -1,8 +1,6 @@
 import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
-import { FacetDto, FacetOptionDto, FacetsConfig } from "../models";
-
-export type FacetsState = Record<string, any | null>;
+import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "../models";
 
 export type FacetsPanelState = {
   facetsConfig: FacetsConfig | null;
@@ -26,9 +24,9 @@ export type FacetsPanelState = {
     facetOptionQueries: Record<string, string>
   ) => void;
 
-  facetsState: Record<string, any | null>;
+  facetsState: FacetState;
 
-  patchFacetsState: (facetsStatePatch: Record<string, any | null>) => void;
+  patchFacetsState: (facetsStatePatch: FacetState) => void;
   setFacetState: (facetId: string, state: any) => void;
 
   dirtyFacetIds: string[];

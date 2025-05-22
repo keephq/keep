@@ -13,6 +13,25 @@ export interface AlertsTableDataQuery {
   timeFrame: TimeFrameV2;
 }
 
+function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
+  if (timeFrame === null) {
+    return null;
+  }
+
+  if (timeFrame.type === "relative") {
+    return `lastReceived >= '${new Date(
+      new Date().getTime() - timeFrame.deltaMs
+    ).toISOString()}'`;
+  } else if (timeFrame.type === "absolute") {
+    return [
+      `lastReceived >= '${timeFrame.start.toISOString()}'`,
+      `lastReceived <= '${timeFrame.end.toISOString()}'`,
+    ].join(" && ");
+  }
+
+  return "";
+}
+
 export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   const { useLastAlerts } = useAlerts();
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
@@ -58,31 +77,12 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     return () => clearTimeout(timeout);
   }, [canRevalidate]);
 
-  const getDateRangeCel = () => {
-    if (query?.timeFrame === null) {
-      return null;
-    }
-
-    if (query?.timeFrame.type === "relative") {
-      return `lastReceived >= '${new Date(
-        new Date().getTime() - query.timeFrame.deltaMs
-      ).toISOString()}'`;
-    } else if (query?.timeFrame.type === "absolute") {
-      return [
-        `lastReceived >= '${query.timeFrame.start.toISOString()}'`,
-        `lastReceived <= '${query.timeFrame.end.toISOString()}'`,
-      ].join(" && ");
-    }
-
-    return "";
-  };
-
   function updateAlertsCelDateRange() {
     if (!query?.timeFrame) {
       return;
     }
 
-    const dateRangeCel = getDateRangeCel();
+    const dateRangeCel = getDateRangeCel(query.timeFrame);
 
     setDateRangeCel(dateRangeCel);
 
