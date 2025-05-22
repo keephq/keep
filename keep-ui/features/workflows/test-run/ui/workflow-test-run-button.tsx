@@ -161,7 +161,7 @@ export function WorkflowTestRunButton({
     }
     if (workflowExecutionId !== null) {
       return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" data-testid="wf-test-run-results">
           <div className="flex justify-between items-center">
             <div>
               <Title>Workflow Execution Results</Title>
