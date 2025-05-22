@@ -21,11 +21,11 @@ interface IncidentUpdatePayload {
 }
 
 export interface Filters {
-  status?: string[];
-  severity?: string[];
+  statuses?: string[];
+  severities?: string[];
   assignees?: string[];
+  services?: string[];
   sources?: string[];
-  affected_services?: string[];
 }
 
 export interface IncidentsQuery {
@@ -108,11 +108,11 @@ export const useIncidents = (
   const swrValue = useSWR(
     () =>
       api.isReady() && filtersParams
-        ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
+        ? `/incidents/query`
         : null,
-    async (url) => {
+    async (url: string) => {
       const currentDate = new Date();
-      const result = await api.get(url);
+      const result = await api.post(url, filtersParams);
       return {
         result,
         responseTimeMs: new Date().getTime() - currentDate.getTime(),
