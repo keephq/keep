@@ -217,7 +217,7 @@ def query_incidents(
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
 
-    filters = query.filters.dict(exclude_unset=True)
+    filters = query.filters.dict(exclude_unset=True) if query.filters else {}
 
     logger.info(
         "Fetching incidents from DB",
