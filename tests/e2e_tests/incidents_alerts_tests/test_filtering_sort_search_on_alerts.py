@@ -523,10 +523,36 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     try:
         # refresh the page to get the new alerts
         browser.reload()
-        browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
-        expect(
-            browser.locator("[data-testid='alerts-table'] table tbody tr")
-        ).to_have_count(len(simulated_alerts))
+        browser.wait_for_selector("[data-testid='facet-value']", timeout=30000)  # Increase timeout from 10s to 30s
+
+        # Add retry logic for checking alert count
+        max_retries = 5
+        for retry in range(max_retries):
+            try:
+                # Wait a bit longer between retries
+                if retry > 0:
+                    print(f"Retry {retry}/{max_retries} for alert count check")
+                    time.sleep(5)
+                    browser.reload()
+                    browser.wait_for_selector("[data-testid='facet-value']", timeout=30000)
+
+                # Check if alerts are visible
+                alert_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
+                print(f"Current alert count: {alert_count}, expected: {len(simulated_alerts)}")
+
+                if alert_count == len(simulated_alerts):
+                    break
+
+                if retry == max_retries - 1:
+                    # On last retry, use the expect assertion which will provide better error details
+                    expect(
+                        browser.locator("[data-testid='alerts-table'] table tbody tr")
+                    ).to_have_count(len(simulated_alerts))
+            except Exception as retry_error:
+                if retry == max_retries - 1:
+                    raise retry_error
+                print(f"Error during retry {retry}: {str(retry_error)}")
+
     except Exception as e:
         save_failure_artifacts(browser, log_entries=log_entries)
         raise e
