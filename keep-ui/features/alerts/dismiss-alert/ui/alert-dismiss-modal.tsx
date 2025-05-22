@@ -105,7 +105,6 @@ export function AlertDismissModal({
     };
 
     try {
-      // If dismissUntil is set, we don't need to dispose on new alert
       await api.post(
         `/alerts/batch_enrich?dispose_on_new_alert=true`,
         requestData
