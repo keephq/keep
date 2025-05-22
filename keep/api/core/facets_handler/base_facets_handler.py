@@ -52,9 +52,10 @@ class BaseFacetsHandler:
                 elif isinstance(field_mapping, SimpleFieldMapping):
                     coalecense_args.append(self._handle_simple_mapping(field_mapping))
 
-            select_expressions[select_field] = self._coalesce(coalecense_args).label(
-                select_field
-            )
+            select_expressions[select_field] = self._cast_column(
+                self._coalesce(coalecense_args),
+                property_metadata.data_type,
+            ).label(select_field)
 
         return {
             "new_fields_config": new_fields_config,
@@ -92,6 +93,13 @@ class BaseFacetsHandler:
             .select_from(facet_source_subquery)
             .group_by(literal_column("facet_id"), literal_column("facet_value"))
         )
+
+    def _cast_column(
+        self,
+        column,
+        data_type: DataType,
+    ):
+        return column
 
     def _build_facet_subquery_for_column(
         self, base_query, metadata: PropertyMetadataInfo
