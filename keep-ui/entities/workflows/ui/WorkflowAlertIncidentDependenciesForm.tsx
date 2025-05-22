@@ -3,7 +3,7 @@ import { Button, Text } from "@tremor/react";
 import { TextInput } from "@/components/ui";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { JsonCard } from "@/shared/ui/JsonCard";
-import { buildNestedObject } from "@/shared/lib/buildNestedObject";
+import { buildNestedObject } from "@/shared/lib/object-utils";
 import {
   AlertWorkflowRunPayload,
   IncidentWorkflowRunPayload,

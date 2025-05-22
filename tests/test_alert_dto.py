@@ -1,21 +1,17 @@
 import hashlib
 import urllib.parse
-from datetime import datetime, timedelta
-from time import sleep
+from datetime import datetime, timedelta, timezone
 
+import freezegun
 import pytest
 
-from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from tests.fixtures.client import client, test_app  # noqa
 
 
 def create_basic_alert(name, last_received, **kwargs):
     """Helper function to create AlertDto with minimal fields"""
-    return AlertDto(
-        name=name,
-        lastReceived=last_received,
-        **kwargs
-    )
+    return AlertDto(name=name, lastReceived=last_received, **kwargs)
 
 
 def test_alert_dto_fingerprint_none():
@@ -171,18 +167,22 @@ def test_alert_dto_invalid_timestamps():
             # if no error, fail the test
             pytest.fail(f"Expected ValueError for timestamp {timestamp}")
 
+
 def test_alert_dto_url_encoding():
     """Test that the url is encoded correctly and no exception is raised"""
     unencoded_urls = [
         "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
         "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2#[lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
-        " https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down "
+        " https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down ",
     ]
     for url in unencoded_urls:
-        alert = create_basic_alert(name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=url)
+        alert = create_basic_alert(
+            name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=url
+        )
         unquoted_url = urllib.parse.unquote(str(alert.url))
-        reencoded_url = urllib.parse.quote(unquoted_url, safe='/:?=&')
+        reencoded_url = urllib.parse.quote(unquoted_url, safe="/:?=&")
         assert alert.url == reencoded_url
+
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_alert_started_at(db_session, create_alert, client, test_app):
@@ -199,16 +199,13 @@ def test_alert_started_at(db_session, create_alert, client, test_app):
 
     assert len(alerts) == 1
     assert alerts[0]["fingerprint"] == "Something went wrong"
-    assert alerts[0]["startedAt"] == dt.isoformat(sep=' ')
+    assert alerts[0]["startedAt"] == dt.isoformat(sep=" ")
 
     create_alert(
         "Something went wrong again",
         AlertStatus.FIRING,
         datetime.utcnow(),
-        {
-            "severity": AlertSeverity.CRITICAL.value,
-            "startedAt": dt2.isoformat()
-         },
+        {"severity": AlertSeverity.CRITICAL.value, "startedAt": dt2.isoformat()},
     )
 
     alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
@@ -218,3 +215,50 @@ def test_alert_started_at(db_session, create_alert, client, test_app):
     assert alerts[0]["startedAt"] == dt2.isoformat()
 
 
+def test_alert_dismiss_until_expiry():
+    """Test that an alert becomes un-dismissed after the dismissUntil time is reached"""
+    # Create a fixed reference time
+    now = datetime.now(tz=timezone.utc)
+    dismiss_until = now + timedelta(minutes=1)
+    dismiss_until_str = dismiss_until.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+    # Create alert with dismiss until 1 minute in the future
+    alert = create_basic_alert(
+        name="Dismiss Until Test",
+        last_received="2024-01-01T00:00:00.000Z",
+        dismissed=True,
+        dismissUntil=dismiss_until_str,
+    )
+
+    # At current time, the alert should still be dismissed
+    with freezegun.freeze_time(now):
+        revalidated_alert = AlertDto(**alert.dict())
+        assert revalidated_alert.dismissed is True
+
+    # Advance time by 2 minutes (past the dismissUntil time)
+    with freezegun.freeze_time(now + timedelta(minutes=2)):
+        revalidated_alert = AlertDto(**alert.dict())
+        assert revalidated_alert.dismissed is False
+
+
+def test_alert_dismiss_forever():
+    """Test that an alert with dismissUntil='forever' remains dismissed"""
+    alert = create_basic_alert(
+        name="Dismiss Forever Test",
+        last_received="2024-01-01T00:00:00.000Z",
+        dismissed=True,
+        dismissUntil="forever",
+    )
+
+    # At current time, the alert should be dismissed
+    now = datetime.now(tz=timezone.utc)
+
+    # At current time, the alert should still be dismissed
+    with freezegun.freeze_time(now):
+        revalidated_alert = AlertDto(**alert.dict())
+        assert revalidated_alert.dismissed is True
+
+    # Advance time by 1 year (should still be dismissed)
+    with freezegun.freeze_time(now + timedelta(days=365)):
+        revalidated_alert = AlertDto(**alert.dict())
+        assert revalidated_alert.dismissed is True

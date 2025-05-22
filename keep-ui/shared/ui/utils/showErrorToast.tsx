@@ -32,6 +32,8 @@ export function showErrorToast(
       options
     );
   } else {
+    // Console error for debugging unknown errors
+    console.error("Unknown error:", error);
     toast.error(
       customMessage ||
         (error instanceof Error ? error.message : "Unknown error"),

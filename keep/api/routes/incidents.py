@@ -46,7 +46,10 @@ from keep.api.core.incidents import (
 )
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
-from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.alert import (
+    AlertAudit,
+    CommentMention,
+)
 from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.incident import (
@@ -893,12 +896,14 @@ def add_comment(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ) -> AlertAudit:
     extra = {
         "tenant_id": authenticated_entity.tenant_id,
         "commenter": authenticated_entity.email,
         "comment": change.comment,
         "incident_id": str(incident_id),
+        "tagged_users": change.tagged_users
     }
     logger.info("Adding comment to incident", extra=extra)
     comment = add_audit(
@@ -907,7 +912,21 @@ def add_comment(
         authenticated_entity.email,
         ActionType.INCIDENT_COMMENT,
         change.comment,
+        session=session,
+        commit=False
     )
+
+    if change.tagged_users:
+        for user_email in change.tagged_users:
+            mention = CommentMention(
+                comment_id=comment.id,
+                mentioned_user_id=user_email,
+                tenant_id=authenticated_entity.tenant_id
+            )
+            session.add(mention)
+    
+    session.commit()
+    session.refresh(comment)
 
     if pusher_client:
         pusher_client.trigger(

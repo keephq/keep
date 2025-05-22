@@ -38,6 +38,35 @@ export interface AbsoluteTimeFrame {
 }
 
 export type TimeFrameV2 = AllTimeFrame | RelativeTimeFrame | AbsoluteTimeFrame;
+
+export function areTimeframesEqual(
+  first: TimeFrameV2,
+  second: TimeFrameV2
+): boolean {
+  if (first.type !== second.type) {
+    return false;
+  }
+
+  switch (first.type) {
+    case "all-time":
+      return first.isPaused === (second as AllTimeFrame).isPaused;
+    case "relative": {
+      const secondRelative = second as RelativeTimeFrame;
+      return (
+        first.deltaMs === secondRelative.deltaMs &&
+        first.isPaused === secondRelative.isPaused
+      );
+    }
+    case "absolute": {
+      const secondAbsolute = second as AbsoluteTimeFrame;
+      return (
+        first.start.getTime() === secondAbsolute.start.getTime() &&
+        first.end.getTime() === secondAbsolute.end.getTime()
+      );
+    }
+  }
+}
+
 interface TimePreset {
   badge: string;
   label: string;
@@ -405,6 +434,7 @@ export default function EnhancedDateRangePickerV2({
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <Button
+            data-testid="timeframe-picker-trigger"
             size="xs"
             variant="secondary"
             className={clsx(
@@ -438,6 +468,7 @@ export default function EnhancedDateRangePickerV2({
 
         <Popover.Portal>
           <Popover.Content
+            data-testid="timeframe-picker-content"
             className="z-50 w-[var(--radix-popover-trigger-width)] -mt-px rounded-md rounded-t-none border bg-white shadow-md outline-none"
             align="start"
           >
