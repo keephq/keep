@@ -1,22 +1,36 @@
 import { AlertSeverity } from "@/entities/alerts/ui";
 import { AlertDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { IncidentActivity } from "../incident-activity";
 
 // TODO: REFACTOR THIS TO SUPPORT ANY ACTIVITY TYPE, IT'S A MESS!
 
-export function IncidentActivityItem({ activity }: { activity: any }) {
+export function IncidentActivityItem({ activity }: { activity: IncidentActivity }) {
   const title =
     typeof activity.initiator === "string"
       ? activity.initiator
-      : activity.initiator?.name;
+      : (activity.initiator as AlertDto)?.name;
   const subTitle =
     activity.type === "comment"
       ? " Added a comment. "
       : activity.type === "statuschange"
         ? " Incident status changed. "
-        : activity.initiator?.status === "firing"
+        : (activity.initiator as AlertDto)?.status === "firing"
           ? " triggered"
           : " resolved" + ". ";
+
+  // Process comment text to style mentions if it's a comment with mentions
+  const processCommentText = (text: string) => {
+    if (!text || activity.type !== "comment") return text;
+
+    if (text.includes('<span class="mention">') || text.includes("<p>")) {
+      return <FormattedContent format="html" content={text} />;
+    }
+
+    return text;
+  };
+
   return (
     <div className="relative h-full w-full flex flex-col">
       <div className="flex items-center gap-2">
@@ -32,7 +46,9 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
         </span>
       </div>
       {activity.text && (
-        <div className="font-light text-gray-800">{activity.text}</div>
+        <div className="font-light text-gray-800">
+          {processCommentText(activity.text)}
+        </div>
       )}
     </div>
   );
