@@ -1,4 +1,3 @@
-import asyncio
 import json
 import time
 from datetime import datetime, timedelta
@@ -25,9 +24,14 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identity_managers.db.db_authverifier import (  # noqa
     DbAuthVerifier,
 )
-from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 from keep.workflowmanager.workflowstore import WorkflowStore
+from tests.fixtures.workflow_manager import (
+    workflow_manager,
+    wait_for_workflow_execution,
+)
+
+MAX_WAIT_FOR_WORKFLOW_EXECUTION_COUNT = 30
 
 # This workflow definition is used to test the execution of workflows based on alert firing times.
 # It defines two actions:
@@ -137,58 +141,6 @@ workflow:
           invalid-argument-to-fail-workflow: true
           message: "{{alert.name}} - {{alert.message}}"
 """
-
-
-MAX_WAIT_COUNT = 30
-
-
-def wait_for_workflow_execution(tenant_id, workflow_id, exclude_ids=None):
-    # Wait for the workflow execution to complete
-    workflow_execution = None
-    count = 0
-    while (
-        workflow_execution is None or workflow_execution.status == "in_progress"
-    ) and count < MAX_WAIT_COUNT:
-        try:
-            workflow_execution = get_last_workflow_execution_by_workflow_id(
-                tenant_id, workflow_id, exclude_ids=exclude_ids
-            )
-        except Exception as e:
-            print(
-                f"DEBUG: Poll attempt {count}: execution_id={workflow_execution.id if workflow_execution else None}, "
-                f"status={workflow_execution.status if workflow_execution else None}, "
-                f"error={e}"
-            )
-        finally:
-            time.sleep(1)
-            count += 1
-    return workflow_execution
-
-
-@pytest.fixture
-def workflow_manager():
-    """
-    Fixture to create and manage a WorkflowManager instance.
-    """
-    manager = None
-    try:
-        from keep.workflowmanager.workflowscheduler import WorkflowScheduler
-
-        scheduler = WorkflowScheduler(None)
-        manager = WorkflowManager.get_instance()
-        scheduler.workflow_manager = manager
-        manager.scheduler = scheduler
-        asyncio.run(manager.start())
-        yield manager
-    except Exception:
-        pass
-    if manager:
-        try:
-            manager.stop()
-            # Give some time for threads to clean up
-            time.sleep(1)
-        except Exception as e:
-            print(f"Error stopping workflow manager: {e}")
 
 
 @pytest.fixture
@@ -661,30 +613,30 @@ def test_workflow_execution3(
 
 
 workflow_definition_for_enabled_disabled = """workflow:
-id: %s
-description: Handle alerts based on startedAt timestamp
-triggers:
-- type: alert
-  filters:
-  - key: name
-    value: "server-is-down"
-actions:
-- name: send-slack-message-tier-0
-  if: keep.get_firing_time('{{ alert }}', 'minutes') > 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10
-  provider:
-    type: console
-    with:
-      message: |
-        "Tier 0 Alert: {{ alert.name }} - {{ alert.description }}
-        Alert details: {{ alert }}"
-- name: send-slack-message-tier-1
-  if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 30"
-  provider:
-    type: console
-    with:
-      message: |
-        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
-         Alert details: {{ alert }}"
+  id: %s
+  description: Handle alerts based on startedAt timestamp
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: "server-is-down"
+  actions:
+    - name: send-slack-message-tier-0
+      if: keep.get_firing_time('{{ alert }}', 'minutes') > 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10
+      provider:
+        type: console
+        with:
+          message: |
+            "Tier 0 Alert: {{ alert.name }} - {{ alert.description }}
+            Alert details: {{ alert }}"
+    - name: send-slack-message-tier-1
+      if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 30"
+      provider:
+        type: console
+        with:
+          message: |
+            "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+             Alert details: {{ alert }}"
 """
 
 
@@ -756,7 +708,7 @@ def test_workflow_execution_with_disabled_workflow(
             or enabled_workflow_execution.status == "in_progress"
         )
         and disabled_workflow_execution is None
-    ) and count < MAX_WAIT_COUNT:
+    ) and count < MAX_WAIT_FOR_WORKFLOW_EXECUTION_COUNT:
         enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
         )
@@ -1731,7 +1683,6 @@ def test_workflow_with_on_failure_succeeds_after_failing(
         created_by="test@keephq.dev",
         interval=0,
         workflow_raw=workflow_definition_with_on_failure,
-        last_updated=datetime.now(tz=pytz.utc),
     )
 
     db_session.add(workflow)
@@ -1793,7 +1744,6 @@ def test_workflow_with_on_failure_action(db_session, workflow_manager, mocker):
         created_by="test@keephq.dev",
         interval=0,
         workflow_raw=workflow_definition_with_on_failure,
-        last_updated=datetime.now(tz=pytz.utc),
     )
 
     db_session.add(workflow)
@@ -1839,7 +1789,6 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
         created_by="borat@keephq.dev",
         interval=0,
         workflow_raw=LOG_EVERY_ALERT_WORKFLOW,
-        last_updated=datetime.now(),
     )
     db_session.add(workflow)
     db_session.commit()
