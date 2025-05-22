@@ -50,6 +50,11 @@ fake_field_configurations = [
         map_to="columnWithUnknownType",
     ),
     FieldMappingConfiguration(
+        map_from_pattern="booleanFromJson",
+        map_to=["JSON(alert_event).*"],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="alert.tags.*",
         map_to=["JSON(alert_event).tagsContainer.*"],
     ),

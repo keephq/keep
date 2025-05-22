@@ -106,6 +106,31 @@ def build_facets_data_query(
     return query
 
 
+def map_facet_option_value(value, data_type: DataType):
+    """
+    Maps the value to the appropriate data type.
+    Args:
+        value: The value to be mapped.
+        data_type: The data type to map the value to.
+    Returns:
+        The mapped value.
+    """
+    if data_type == DataType.INTEGER:
+        try:
+            return int(value)
+        except ValueError:
+            return value
+    elif data_type == DataType.FLOAT:
+        try:
+            return float(value)
+        except ValueError:
+            return value
+    elif data_type == DataType.BOOLEAN:
+        return value in ["true", "1"]
+    else:
+        return value
+
+
 def get_facet_options(
     base_query,
     facets: list[FacetDto],
@@ -194,7 +219,9 @@ def get_facet_options(
                     result_dict[facet.id] = [
                         FacetOptionDto(
                             display_name=str(facet_value),
-                            value=facet_value,
+                            value=map_facet_option_value(
+                                facet_value, property_mapping.data_type
+                            ),
                             matches_count=matches_count,
                         )
                         for facet_id, facet_value, matches_count in grouped_by_id_dict[
