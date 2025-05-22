@@ -209,7 +209,7 @@ def get_all_incidents(
     "/query",
     description="Get last incidents",
 )
-def get_incidents_query(
+def query_incidents(
     query: IncidentQueryDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
