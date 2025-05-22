@@ -1,19 +1,15 @@
 import hashlib
 import json
 import logging
-from sqlalchemy import Column, String, cast, func, literal, literal_column, select, text
+from sqlalchemy import select, text
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
-from keep.api.core.cel_to_sql.properties_metadata import (
-    JsonFieldMapping,
-    PropertiesMetadata,
-    SimpleFieldMapping,
-)
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
-from keep.api.core.facets_handler.get_facets_handler_for_dialect import (
-    get_facets_handler,
+from keep.api.core.facets_query_builder.get_facets_query_builder import (
+    get_facets_query_builder,
 )
 from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from uuid import UUID, uuid4
@@ -23,7 +19,6 @@ from sqlmodel import Session
 
 from keep.api.core.db import engine
 from keep.api.models.db.facet import Facet, FacetType
-from sqlalchemy.dialects.postgresql import JSONB
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +28,7 @@ OPTIONS_PER_FACET = 50
 def build_facet_selects(
     properties_metadata: PropertiesMetadata, facets: list[FacetDto]
 ):
-    return get_facets_handler(properties_metadata).build_facet_selects(facets)
+    return get_facets_query_builder(properties_metadata).build_facet_selects(facets)
 
 def build_facets_data_query(
     base_query,
@@ -79,7 +74,7 @@ def build_facets_data_query(
         if facet_key in visited_facets:
             continue
 
-        facet_sub_query = get_facets_handler(
+        facet_sub_query = get_facets_query_builder(
             facets_properties_metadata
         ).build_facet_subquery(
             base_query=base_query_common,

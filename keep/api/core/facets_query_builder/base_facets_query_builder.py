@@ -12,7 +12,7 @@ from keep.api.models.facet import FacetDto
 from sqlalchemy import func, literal, literal_column, select, text
 
 
-class BaseFacetsHandler:
+class BaseFacetsQueryBuilder:
     """
     Base class for facets handlers.
     """

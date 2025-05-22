@@ -8,10 +8,12 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     PropertyMetadataInfo,
     SimpleFieldMapping,
 )
-from keep.api.core.facets_handler.base_facets_handler import BaseFacetsHandler
+from keep.api.core.facets_query_builder.base_facets_query_builder import (
+    BaseFacetsQueryBuilder,
+)
 
 
-class PostgreSqlFacetsHandler(BaseFacetsHandler):
+class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
 
     def _cast_column(self, column, data_type: DataType):
         if data_type == DataType.BOOLEAN:
