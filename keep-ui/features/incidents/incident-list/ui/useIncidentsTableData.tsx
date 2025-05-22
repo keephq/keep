@@ -19,14 +19,11 @@ export interface IncidentsTableDataQuery {
   limit: number;
   offset: number;
   sorting: { id: string; desc: boolean };
-  filterCel: string;
-  timeFrame: TimeFrameV2;
+  filterCel: string | null;
+  timeFrame: TimeFrameV2 | null;
 }
 
-export const useIncidentsTableData = (
-  initialData: PaginatedIncidentsDto | undefined,
-  query: IncidentsTableDataQuery
-) => {
+export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
@@ -37,7 +34,7 @@ export const useIncidentsTableData = (
   incidentsQueryStateRef.current = incidentsQueryState;
 
   const isPaused = useMemo(() => {
-    if (!query) {
+    if (!query.timeFrame) {
       return false;
     }
 
@@ -65,6 +62,10 @@ export const useIncidentsTableData = (
   }, [canRevalidate]);
 
   const getDateRangeCel = () => {
+    if (query.timeFrame === null) {
+      return null;
+    }
+
     if (query?.timeFrame.type === "relative") {
       return `creation_time >= '${new Date(
         new Date().getTime() - query.timeFrame.deltaMs
@@ -81,8 +82,6 @@ export const useIncidentsTableData = (
 
   function updateIncidentsCelDateRange() {
     const dateRangeCel = getDateRangeCel();
-    setIsPolling(true);
-
     setDateRangeCel(dateRangeCel);
 
     if (dateRangeCel) {
@@ -119,11 +118,15 @@ export const useIncidentsTableData = (
     const refreshInterval = Math.max((responseTimeMs || 1000) * 2, 6000);
     const interval = setInterval(() => {
       if (!isPaused && shouldRefreshDate) {
+        setIsPolling(true);
         updateIncidentsCelDateRange();
       }
     }, refreshInterval);
     return () => clearInterval(interval);
   }, [isPaused, shouldRefreshDate]);
+  useEffect(() => {
+    setIsPolling(false);
+  }, [JSON.stringify(query)]);
 
   const mainCelQuery = useMemo(() => {
     const filterArray = ["is_candidate == false", dateRangeCel];
@@ -132,6 +135,10 @@ export const useIncidentsTableData = (
   }, [dateRangeCel]);
 
   useEffect(() => {
+    if (query.filterCel === null) {
+      return;
+    }
+
     setIncidentsQueryState({
       candidate: null,
       predicted: null,
@@ -152,7 +159,7 @@ export const useIncidentsTableData = (
     incidentsQueryState,
     {
       revalidateOnFocus: false,
-      revalidateOnMount: !initialData,
+      revalidateOnMount: true,
       onSuccess: () => {
         refreshDefaultIncidents();
       },
@@ -173,7 +180,6 @@ export const useIncidentsTableData = (
       {
         revalidateOnFocus: false,
         revalidateOnMount: false,
-        fallbackData: initialData,
       }
     );
 
@@ -182,7 +188,7 @@ export const useIncidentsTableData = (
 
   const [paginatedIncidentsToReturn, setPaginatedIncidentsToReturn] = useState<
     PaginatedIncidentsDto | undefined
-  >(initialData);
+  >();
   useEffect(() => {
     if (!paginatedIncidentsFromHook) {
       return;
@@ -203,8 +209,9 @@ export const useIncidentsTableData = (
 
   return {
     incidents: paginatedIncidentsToReturn,
-    incidentsLoading: !isPolling && incidentsLoading,
-    isEmptyState: defaultIncidents.count === 0,
+    incidentsLoading:
+      (!isPolling && incidentsLoading) || !paginatedIncidentsToReturn,
+    isEmptyState: defaultIncidents?.count === 0,
     predictedIncidents,
     isPredictedLoading,
     facetsCel: mainCelQuery,
