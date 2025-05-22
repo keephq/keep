@@ -334,6 +334,7 @@
           "group": "providers",
           "pages": [
             "api-ref/providers/get-providers",
+            "api-ref/providers/get-provider-logs",
             "api-ref/providers/get-installed-providers",
             "api-ref/providers/get-alerts-configuration",
             "api-ref/providers/get-logs",
@@ -349,7 +350,8 @@
             "api-ref/providers/invoke-provider-method",
             "api-ref/providers/install-provider-webhook",
             "api-ref/providers/get-webhook-settings",
-            "api-ref/providers/export-providers"
+            "api-ref/providers/get-healthcheck-providers",
+            "api-ref/providers/healthcheck-provider"
           ]
         },
         {
@@ -358,28 +360,22 @@
             "api-ref/actions/get-actions",
             "api-ref/actions/create-actions",
             "api-ref/actions/put-action",
-            "api-ref/actions/delete-action",
-            "api-ref/actions/add-actions",
-            "api-ref/actions/update-action"
+            "api-ref/actions/delete-action"
           ]
         },
         {
           "group": "healthcheck",
-          "pages": ["api-ref/healthcheck/healthcheck"]
-        },
-        {
-          "group": "topology",
           "pages": [
-            "api-ref/topology/get-topology-data",
-            "api-ref/topology/create-application",
-            "api-ref/topology/delete-application",
-            "api-ref/topology/get-applications",
-            "api-ref/topology/update-application"
+            "api-ref/healthcheck/healthcheck"
           ]
         },
         {
           "group": "alerts",
           "pages": [
+            "api-ref/alerts/fetch-alert-facet-options",
+            "api-ref/alerts/fetch-alert-facets",
+            "api-ref/alerts/fetch-alert-facet-fields",
+            "api-ref/alerts/query-alerts",
             "api-ref/alerts/get-all-alerts",
             "api-ref/alerts/delete-alert",
             "api-ref/alerts/get-alert-history",
@@ -388,66 +384,55 @@
             "api-ref/alerts/webhook-challenge",
             "api-ref/alerts/receive-event",
             "api-ref/alerts/get-alert",
-            "api-ref/alerts/get-multiple-fingerprint-alert-audit",
+            "api-ref/alerts/enrich-alert-note",
+            "api-ref/alerts/batch-enrich-alerts",
             "api-ref/alerts/enrich-alert",
             "api-ref/alerts/unenrich-alert",
             "api-ref/alerts/search-alerts",
+            "api-ref/alerts/get-multiple-fingerprint-alert-audit",
             "api-ref/alerts/get-alert-audit",
-            "api-ref/alerts/get-alerts",
-            "api-ref/alerts/get-alert-quality"
-          ]
-        },
-        {
-          "group": "deduplications",
-          "pages": [
-            "api-ref/deduplications/create-deduplication-rule",
-            "api-ref/deduplications/delete-deduplication-rule",
-            "api-ref/deduplications/get-deduplication-fields",
-            "api-ref/deduplications/get-deduplications",
-            "api-ref/deduplications/update-deduplication-rule"
-          ]
-        },
-        {
-          "group": "maintenance",
-          "pages": [
-            "api-ref/maintenance/create-maintenance-rule",
-            "api-ref/maintenance/delete-maintenance-rule",
-            "api-ref/maintenance/get-maintenance-rules",
-            "api-ref/maintenance/update-maintenance-rule"
+            "api-ref/alerts/get-alert-quality",
+            "api-ref/alerts/get-error-alerts",
+            "api-ref/alerts/dismiss-error-alerts"
           ]
         },
         {
           "group": "incidents",
           "pages": [
-            "api-ref/incidents/change-incident-status",
-            "api-ref/incidents/create-incident-endpoint",
             "api-ref/incidents/get-all-incidents",
+            "api-ref/incidents/create-incident",
+            "api-ref/incidents/get-incidents-meta",
+            "api-ref/incidents/fetch-inicident-facet-options",
+            "api-ref/incidents/fetch-inicident-facets",
+            "api-ref/incidents/fetch-alert-facet-fields",
+            "api-ref/incidents/get-incidents-report",
             "api-ref/incidents/get-incident",
             "api-ref/incidents/update-incident",
             "api-ref/incidents/delete-incident",
-            "api-ref/incidents/update-incident-1",
+            "api-ref/incidents/bulk-delete-incidents",
+            "api-ref/incidents/split-incident",
+            "api-ref/incidents/merge-incidents",
             "api-ref/incidents/get-incident-alerts",
             "api-ref/incidents/add-alerts-to-incident",
             "api-ref/incidents/delete-alerts-from-incident",
-            "api-ref/incidents/confirm-incident",
-            "api-ref/incidents/add-comment",
             "api-ref/incidents/get-future-incidents-for-an-incident",
             "api-ref/incidents/get-incident-workflows",
-            "api-ref/incidents/get-incidents-meta",
-            "api-ref/incidents/merge-incidents",
-            "api-ref/incidents/commit-with-ai",
-            "api-ref/incidents/create-incident",
+            "api-ref/incidents/receive-event",
+            "api-ref/incidents/assign-incident",
+            "api-ref/incidents/change-incident-status",
+            "api-ref/incidents/change-incident-severity",
+            "api-ref/incidents/add-comment",
             "api-ref/incidents/create-with-ai",
-            "api-ref/incidents/receive-event"
+            "api-ref/incidents/commit-with-ai",
+            "api-ref/incidents/confirm-incident",
+            "api-ref/incidents/enrich-incident",
+            "api-ref/incidents/unenrich-incident"
           ]
         },
         {
           "group": "settings",
           "pages": [
             "api-ref/settings/webhook-settings",
-            "api-ref/settings/get-users",
-            "api-ref/settings/create-user",
-            "api-ref/settings/delete-user",
             "api-ref/settings/get-smtp-settings",
             "api-ref/settings/update-smtp-settings",
             "api-ref/settings/delete-smtp-settings",
@@ -456,40 +441,59 @@
             "api-ref/settings/create-key",
             "api-ref/settings/get-keys",
             "api-ref/settings/delete-api-key",
-            "api-ref/settings/get-sso-settings"
+            "api-ref/settings/get-sso-settings",
+            "api-ref/settings/get-tenant-configuration"
           ]
         },
         {
           "group": "workflows",
           "pages": [
+            "api-ref/workflows/fetch-facet-options",
+            "api-ref/workflows/fetch-facets",
+            "api-ref/workflows/fetch-facet-fields",
             "api-ref/workflows/get-workflows",
             "api-ref/workflows/create-workflow",
+            "api-ref/workflows/query-workflows",
             "api-ref/workflows/export-workflows",
+            "api-ref/workflows/run-workflow-with-query-params",
             "api-ref/workflows/run-workflow",
             "api-ref/workflows/run-workflow-from-definition",
+            "api-ref/workflows/get-workflow-executions-by-alert-fingerprint",
             "api-ref/workflows/create-workflow-from-body",
             "api-ref/workflows/get-random-workflow-templates",
+            "api-ref/workflows/query-workflow-templates",
             "api-ref/workflows/get-workflow-by-id",
-            "api-ref/workflows/get-workflow-by-id-1",
             "api-ref/workflows/update-workflow-by-id",
             "api-ref/workflows/delete-workflow-by-id",
             "api-ref/workflows/get-raw-workflow-by-id",
-            "api-ref/workflows/get-workflow-executions-by-alert-fingerprint",
+            "api-ref/workflows/get-workflow-by-id-1",
+            "api-ref/workflows/list-workflow-versions",
+            "api-ref/workflows/get-workflow-runs-by-id",
             "api-ref/workflows/get-workflow-execution-status",
-            "api-ref/workflows/get-workflow-executions"
+            "api-ref/workflows/get-workflow-execution-status-1",
+            "api-ref/workflows/toggle-workflow-state",
+            "api-ref/workflows/read-workflow-secret",
+            "api-ref/workflows/write-workflow-secret",
+            "api-ref/workflows/delete-workflow-secret"
           ]
         },
         {
           "group": "whoami",
-          "pages": ["api-ref/whoami/get-tenant-id"]
+          "pages": [
+            "api-ref/whoami/get-tenant-id"
+          ]
         },
         {
           "group": "pusher",
-          "pages": ["api-ref/pusher/pusher-authentication"]
+          "pages": [
+            "api-ref/pusher/pusher-authentication"
+          ]
         },
         {
           "group": "status",
-          "pages": ["api-ref/status/status"]
+          "pages": [
+            "api-ref/status/status"
+          ]
         },
         {
           "group": "rules",
@@ -516,13 +520,20 @@
           "group": "enrichment",
           "pages": [
             "api-ref/enrichment/get-rules",
-            "api-ref/enrichment/update-rule",
             "api-ref/enrichment/create-rule",
+            "api-ref/enrichment/get-rule",
+            "api-ref/enrichment/update-rule",
             "api-ref/enrichment/delete-rule",
+            "api-ref/enrichment/get-enrichment-events",
+            "api-ref/enrichment/get-enrichment-event-logs",
+            "api-ref/enrichment/execute-rule",
             "api-ref/enrichment/get-extraction-rules",
             "api-ref/enrichment/create-extraction-rule",
             "api-ref/enrichment/update-extraction-rule",
-            "api-ref/enrichment/delete-extraction-rule"
+            "api-ref/enrichment/delete-extraction-rule",
+            "api-ref/enrichment/execute-rule-1",
+            "api-ref/enrichment/get-enrichment-events-1",
+            "api-ref/enrichment/get-enrichment-event-logs-1"
           ]
         },
         {
@@ -547,27 +558,8 @@
         },
         {
           "group": "metrics",
-          "pages": ["api-ref/metrics/get-metrics"]
-        },
-        {
-          "group": "users",
           "pages": [
-            "api-ref/users/create-user",
-            "api-ref/users/delete-user",
-            "api-ref/users/get-users",
-            "api-ref/users/update-user"
-          ]
-        },
-        {
-          "group": "groups",
-          "pages": ["api-ref/groups/get-groups"]
-        },
-        {
-          "group": "mappings",
-          "pages": [
-            "api-ref/mapping/create-mapping",
-            "api-ref/mapping/delete-mapping-by-id",
-            "api-ref/mapping/get-mappings"
+            "api-ref/metrics/get-metrics"
           ]
         },
         {
@@ -582,8 +574,70 @@
         },
         {
           "group": "tags",
-          "pages": ["api-ref/tags/get-tags"]
-        }
+          "pages": [
+            "api-ref/tags/get-tags"
+          ]
+        },
+        {
+          "group": "maintenance",
+          "pages": [
+            "api-ref/maintenance/get-maintenance-rules",
+            "api-ref/maintenance/create-maintenance-rule",
+            "api-ref/maintenance/update-maintenance-rule",
+            "api-ref/maintenance/delete-maintenance-rule"
+          ]
+        },
+        {
+          "group": "topology",
+          "pages": [
+            "api-ref/topology/get-topology-data",
+            "api-ref/topology/get-applications",
+            "api-ref/topology/create-application",
+            "api-ref/topology/update-application",
+            "api-ref/topology/delete-application",
+            "api-ref/topology/pull-topology-data",
+            "api-ref/topology/update-service",
+            "api-ref/topology/create-service",
+            "api-ref/topology/delete-services",
+            "api-ref/topology/update-dependency",
+            "api-ref/topology/create-dependencies",
+            "api-ref/topology/delete-dependency",
+            "api-ref/topology/export-topology-yaml",
+            "api-ref/topology/import-topology-yaml"
+          ]
+        },
+        {
+          "group": "deduplications",
+          "pages": [
+            "api-ref/deduplications/get-deduplications",
+            "api-ref/deduplications/create-deduplication-rule",
+            "api-ref/deduplications/get-deduplication-fields",
+            "api-ref/deduplications/update-deduplication-rule",
+            "api-ref/deduplications/delete-deduplication-rule"
+          ]
+        },
+        {
+          "group": "facets",
+          "pages": [
+            "api-ref/facets/add-facet",
+            "api-ref/facets/delete-facet"
+          ]
+        },
+        {
+          "group": "cel",
+          "pages": [
+            "api-ref/cel/validate"
+          ]
+        },
+        {
+          "group": "provider-images",
+          "pages": [
+            "api-ref/provider-images/upload-provider-image",
+            "api-ref/provider-images/get-provider-image",
+            "api-ref/provider-images/list-provider-images"
+          ]
+        },
+        "api-ref/tenant"
       ]
     },
     {
