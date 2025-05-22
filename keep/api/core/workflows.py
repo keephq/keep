@@ -22,33 +22,56 @@ from keep.api.core.facets import build_facet_selects, get_facet_options, get_fac
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 
 workflow_field_configurations = [
-    FieldMappingConfiguration(map_from_pattern="name", map_to="filter_workflow_name"),
     FieldMappingConfiguration(
-        map_from_pattern="description", map_to="filter_workflow_description"
-    ),
-    FieldMappingConfiguration(map_from_pattern="started", map_to="filter_started"),
-    FieldMappingConfiguration(
-        map_from_pattern="last_execution_status", map_to="filter_last_execution_status"
+        map_from_pattern="name",
+        map_to="filter_workflow_name",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="last_execution_time", map_to="filter_last_execution_time"
+        map_from_pattern="description",
+        map_to="filter_workflow_description",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="disabled", map_to="filter_workflow_is_disabled"
+        map_from_pattern="started", map_to="filter_started", data_type=DataType.DATETIME
     ),
     FieldMappingConfiguration(
-        map_from_pattern="last_updated", map_to="filter_workflow_last_updated"
+        map_from_pattern="last_execution_status",
+        map_to="filter_last_execution_status",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="created_at", map_to="filter_workflow_creation_time"
+        map_from_pattern="last_execution_time",
+        map_to="filter_last_execution_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="created_by", map_to="filter_workflow_created_by"
+        map_from_pattern="disabled",
+        map_to="filter_workflow_is_disabled",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="updated_by", map_to="filter_workflow_updated_by"
+        map_from_pattern="last_updated",
+        map_to="filter_workflow_last_updated",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_at",
+        map_to="filter_workflow_creation_time",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="created_by",
+        map_to="filter_workflow_created_by",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="updated_by",
+        map_to="filter_workflow_updated_by",
+        data_type=DataType.STRING,
     ),
 ]
 alias_column_mapping = {
