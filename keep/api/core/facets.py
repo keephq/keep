@@ -4,13 +4,15 @@ from sqlalchemy import Column, String, cast, func, literal, literal_column, sele
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
-    FieldMappingConfiguration,
     JsonFieldMapping,
     PropertiesMetadata,
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
+)
+from keep.api.core.facets_handler.get_facets_handler_for_dialect import (
+    get_facets_handler,
 )
 from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from uuid import UUID, uuid4
@@ -27,47 +29,10 @@ logger = logging.getLogger(__name__)
 OPTIONS_PER_FACET = 50
 
 
-def build_facet_selects(properties_metadata, facets):
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    new_fields_config: list[FieldMappingConfiguration] = []
-    select_expressions = {}
-
-    for facet in facets:
-        property_metadata = properties_metadata.get_property_metadata_for_str(
-            facet.property_path
-        )
-        if property_metadata is None:
-            continue
-
-        select_field = ("facet_" + facet.property_path.replace(".", "_")).lower()
-
-        new_fields_config.append(
-            FieldMappingConfiguration(
-                map_from_pattern=facet.property_path,
-                map_to=[select_field],
-                data_type=property_metadata.data_type,
-            )
-        )
-        coalla = []
-
-        for field_mapping in property_metadata.field_mappings:
-            if isinstance(field_mapping, JsonFieldMapping):
-                coalla.append(
-                    cel_to_sql_instance.json_extract_as_text(
-                        field_mapping.json_prop, field_mapping.prop_in_json
-                    )
-                )
-            elif isinstance(field_mapping, SimpleFieldMapping):
-                coalla.append(field_mapping.map_to)
-
-        select_expressions[select_field] = literal_column(
-            cel_to_sql_instance.coalesce(coalla) if len(coalla) > 1 else coalla[0]
-        ).label(select_field)
-
-    return {
-        "new_fields_config": new_fields_config,
-        "select_expressions": list(select_expressions.values()),
-    }
+def build_facet_selects(
+    properties_metadata: PropertiesMetadata, facets: list[FacetDto]
+):
+    return get_facets_handler(properties_metadata).build_facet_selects(facets)
 
 
 def build_facet_subquery_for_column(
@@ -247,7 +212,6 @@ def get_facet_options(
 
                 data = session.exec(db_query).all()
             except OperationalError as e:
-                raise e  # TODO: REMOVE IT
                 logger.warning(
                     f"""Failed to execute query for facet options.
                     Facet options: {json.dumps(facet_options_query.dict())}
