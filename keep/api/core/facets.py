@@ -165,13 +165,6 @@ def get_facet_options(
                     facet_options_query=facet_options_query,
                 )
 
-                db_query_str = str(
-                    db_query.compile(
-                        compile_kwargs={"literal_binds": True},
-                        dialect=engine.dialect,
-                    ),
-                )
-
                 data = session.exec(db_query).all()
             except OperationalError as e:
                 logger.warning(
