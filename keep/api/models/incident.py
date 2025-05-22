@@ -301,12 +301,20 @@ class IncidentSorting(Enum):
 
 
 class IncidentListFilterParamsDto(BaseModel):
-    statuses: List[IncidentStatus] = [s.value for s in IncidentStatus]
-    severities: List[IncidentSeverity] = [s.value for s in IncidentSeverity]
-    assignees: List[str]
-    services: List[str]
-    sources: List[str]
+    statuses: Optional[List[IncidentStatus]] = [s.value for s in IncidentStatus]
+    severities: Optional[List[IncidentSeverity]] = [s.value for s in IncidentSeverity]
+    assignees: Optional[List[str]]
+    services: Optional[List[str]]
+    sources: Optional[List[str]]
 
+class IncidentQueryDto(BaseModel):
+    candidate: bool = False
+    predicted: Optional[bool] = None
+    limit: int = 25
+    offset: int = 0
+    sorting: IncidentSorting = IncidentSorting.creation_time
+    filters: Optional[IncidentListFilterParamsDto] = None
+    cel: Optional[str] = None
 
 class IncidentCandidate(BaseModel):
     incident_name: str
