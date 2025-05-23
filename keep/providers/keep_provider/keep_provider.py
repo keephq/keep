@@ -620,7 +620,10 @@ class KeepProvider(BaseProvider):
         self.logger.info(
             "Alerts processed successfully", extra={"alert_count": len(alerts)}
         )
-        return alerts
+        alert_jsons = []
+        for alert in alerts:
+            alert_jsons.append(alert.json())
+        return alert_jsons
 
     def _delete_workflows(self, except_workflow_id=None):
         self.logger.info("Deleting all workflows")
