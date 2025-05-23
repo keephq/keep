@@ -21,11 +21,11 @@ interface IncidentUpdatePayload {
 }
 
 export interface Filters {
-  status?: string[];
-  severity?: string[];
+  statuses?: string[];
+  severities?: string[];
   assignees?: string[];
+  services?: string[];
   sources?: string[];
-  affected_services?: string[];
 }
 
 export interface IncidentsQuery {
@@ -108,11 +108,11 @@ export const useIncidents = (
   const swrValue = useSWR(
     () =>
       api.isReady() && filtersParams
-        ? `/incidents${filtersParams.size ? `?${filtersParams.toString()}` : ""}`
+        ? `/incidents/query`
         : null,
-    async (url) => {
+    async (url: string) => {
       const currentDate = new Date();
-      const result = await api.get(url);
+      const result = await api.post(url, filtersParams);
       return {
         result,
         responseTimeMs: new Date().getTime() - currentDate.getTime(),
@@ -149,7 +149,7 @@ export const useIncidentAlerts = (
       api.isReady()
         ? `/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}`
         : null,
-    async (url) => api.get(url),
+    async (url: string) => api.get(url),
     options
   );
 };
@@ -164,7 +164,7 @@ export const useIncidentFutureIncidents = (
 
   return useSWR<PaginatedIncidentsDto>(
     () => (api.isReady() ? `/incidents/${incidentId}/future_incidents` : null),
-    (url) => api.get(url),
+    (url: string) => api.get(url),
     options
   );
 };
@@ -179,7 +179,7 @@ export const useIncident = (
 
   return useSWR<IncidentDto>(
     () => (api.isReady() && incidentId ? `/incidents/${incidentId}` : null),
-    (url) => api.get(url),
+    (url: string) => api.get(url),
     options
   );
 };
@@ -198,7 +198,7 @@ export const useIncidentWorkflowExecutions = (
       api.isReady()
         ? `/incidents/${incidentId}/workflows?limit=${limit}&offset=${offset}`
         : null,
-    (url) => api.get(url),
+    (url: string) => api.get(url),
     options
   );
 };
@@ -276,7 +276,7 @@ export const useIncidentsMeta = (
 
   return useSWR<IncidentsMetaDto>(
     api.isReady() ? "/incidents/meta" : null,
-    (url) => api.get(url),
+    (url: string) => api.get(url),
     options
   );
 };

@@ -307,6 +307,13 @@ class IncidentListFilterParamsDto(BaseModel):
     services: List[str]
     sources: List[str]
 
+class IncidentQueryDto(BaseModel):
+    candidate: bool = False
+    predicted: Optional[bool] = None
+    limit: int = 25
+    offset: int = 0
+    sorting: IncidentSorting = IncidentSorting.creation_time
+    cel: Optional[str] = None
 
 class IncidentCandidate(BaseModel):
     incident_name: str

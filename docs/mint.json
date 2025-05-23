@@ -422,6 +422,7 @@
             "api-ref/incidents/change-incident-status",
             "api-ref/incidents/create-incident-endpoint",
             "api-ref/incidents/get-all-incidents",
+            "api-ref/incidents/query-incidents",
             "api-ref/incidents/get-incident",
             "api-ref/incidents/update-incident",
             "api-ref/incidents/delete-incident",
