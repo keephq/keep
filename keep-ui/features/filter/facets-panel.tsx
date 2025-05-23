@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Facet } from "./facet";
 import {
   FacetDto,
   FacetOptionDto,
   FacetOptionsQueries,
   FacetsConfig,
-  FacetState,
 } from "./models";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
-import { buildCel } from "./build-cel";
+import { FacetStoreProvider, useFacetsConfig, useNewFacetStore } from "./store";
+import { useStore } from "zustand";
 
 export interface FacetsPanelProps {
   panelId: string;
@@ -54,168 +54,42 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
 }) => {
-  const defaultStateHandledForFacetIds = useMemo(() => new Set<string>(), []);
-  const [facetsState, setFacetsState] = useState<FacetState>({});
-  const [clickedFacetId, setClickedFacetId] = useState<string | null>(null);
-  const [celState, setCelState] = useState("");
-  const [facetOptionQueries, setFacetOptionQueries] =
-    useState<FacetOptionsQueries | null>(null);
-  const facetOptionsRef = useRef<any>(facetOptions);
+  const facetOptionsRef = useRef<Record<string, FacetOptionDto[]>>(facetOptions);
   facetOptionsRef.current = facetOptions;
   const onCelChangeRef = useRef(onCelChange);
   onCelChangeRef.current = onCelChange;
+  const onReloadFacetOptionsRef = useRef(onReloadFacetOptions);
+  onReloadFacetOptionsRef.current = onReloadFacetOptions;
+  const store = useNewFacetStore(facetsConfig);
+  const facetOptionQueries = useStore(
+    store,
+    (state) => state.queriesState.facetOptionQueries
+  );
+  const filterCel = useStore(store, (state) => state.queriesState.filterCel);
 
-  const facetsConfigIdBased = useMemo(() => {
-    const result: FacetsConfig = {};
+  const setAreOptionsReLoading = useStore(
+    store,
+    (state) => state.setAreOptionsReLoading
+  );
+  const setFacetOptions = useStore(store, (state) => state.setFacetOptions);
+  const setFacets = useStore(store, (state) => state.setFacets);
+  const clearFilters = useStore(store, (state) => state.clearFilters);
 
-    if (facets && Array.isArray(facets)) {
-      facets.forEach((facet) => {
-        const facetConfig = facetsConfig?.[facet.name];
-        const sortCallback =
-          facetConfig?.sortCallback ||
-          ((facetOption: FacetOptionDto) => facetOption.matches_count);
-        const renderOptionIcon = facetConfig?.renderOptionIcon;
-        const renderOptionLabel =
-          facetConfig?.renderOptionLabel ||
-          ((facetOption: FacetOptionDto) => (
-            <span className="capitalize">{facetOption.display_name}</span>
-          ));
-        const uncheckedByDefaultOptionValues =
-          facetConfig?.uncheckedByDefaultOptionValues;
-        const canHitEmptyState = !!facetConfig?.canHitEmptyState;
-        result[facet.id] = {
-          sortCallback,
-          renderOptionIcon,
-          renderOptionLabel,
-          uncheckedByDefaultOptionValues,
-          canHitEmptyState,
-        };
-      });
-    }
-
-    return result;
-  }, [facetsConfig, facets]);
-  const facetsConfigIdBasedRef = useRef(facetsConfigIdBased);
-  facetsConfigIdBasedRef.current = facetsConfigIdBased;
-
-  function getFacetState(facetId: string): Set<string> {
-    if (
-      !defaultStateHandledForFacetIds.has(facetId) &&
-      facetsConfigIdBased[facetId]?.uncheckedByDefaultOptionValues
-    ) {
-      const facetState = new Set<string>(...(facetsState[facetId] || []));
-      const facet = facets.find((f) => f.id === facetId);
-
-      if (facet) {
-        facetsConfigIdBased[facetId]?.uncheckedByDefaultOptionValues.forEach(
-          (optionValue) => facetState.add(optionValue)
-        );
-        defaultStateHandledForFacetIds.add(facetId);
-      }
-
-      facetsState[facetId] = facetState;
-    }
-
-    return facetsState[facetId] || new Set<string>();
-  }
-
-  const isOptionSelected = (facet_id: string, option_id: string) => {
-    return !facetsState[facet_id] || !facetsState[facet_id].has(option_id);
-  };
-
+  useEffect(
+    () => setAreOptionsReLoading(areFacetOptionsLoading),
+    [areFacetOptionsLoading, setAreOptionsReLoading]
+  );
+  useEffect(
+    () => setFacetOptions(facetOptions),
+    [facetOptions, setFacetOptions]
+  );
+  useEffect(() => setFacets(facets), [facets, setFacets]);
   useEffect(() => {
-    var cel = buildCel(
-      facets,
-      facetOptionsRef.current,
-      facetsState,
-      facetsConfigIdBasedRef.current
-    );
-    setCelState(cel);
-  }, [facetsState, facets, setCelState]);
-
+    filterCel !== null && onCelChangeRef.current?.(filterCel);
+  }, [filterCel]);
   useEffect(() => {
-    if (facetOptionQueries) {
-      onReloadFacetOptions && onReloadFacetOptions(facetOptionQueries);
-    }
+    facetOptionQueries && onReloadFacetOptionsRef.current?.(facetOptionQueries);
   }, [JSON.stringify(facetOptionQueries)]);
-
-  useEffect(() => {
-    const facetOptionQueries: FacetOptionsQueries = {};
-
-    if (!facets || !Array.isArray(facets)) {
-      return;
-    }
-
-    facets.forEach((facet) => {
-      const otherFacets = facets.filter((f) => f.id !== facet.id);
-
-      facetOptionQueries[facet.id] = buildCel(
-        otherFacets,
-        facetOptions,
-        facetsState,
-        facetsConfigIdBasedRef.current
-      );
-    });
-    setFacetOptionQueries(facetOptionQueries);
-    onCelChangeRef.current && onCelChangeRef.current(celState);
-  }, [celState, setFacetOptionQueries]);
-
-  function toggleFacetOption(facetId: string, value: string) {
-    setClickedFacetId(facetId);
-    const facetState = getFacetState(facetId);
-
-    if (isOptionSelected(facetId, value)) {
-      facetState.add(value);
-    } else {
-      facetState.delete(value);
-    }
-
-    setFacetsState({ ...facetsState, [facetId]: facetState });
-  }
-
-  function selectOneFacetOption(facetId: string, optionValue: string): void {
-    setClickedFacetId(facetId);
-    const facetState = getFacetState(facetId);
-
-    facetOptions[facetId].forEach((facetOption) => {
-      if (facetOption.display_name === optionValue) {
-        facetState.delete(optionValue);
-        return;
-      }
-
-      facetState.add(facetOption.display_name);
-    });
-    setFacetsState({
-      ...facetsState,
-      [facetId]: facetState,
-    });
-  }
-
-  function selectAllFacetOptions(facetId: string) {
-    setClickedFacetId(facetId);
-    const facetState = getFacetState(facetId);
-
-    Object.values(facetOptions[facetId]).forEach((option) =>
-      facetState.delete(option.display_name)
-    );
-
-    setFacetsState({
-      ...facetsState,
-      [facetId]: facetState,
-    });
-  }
-
-  function clearFilters(): void {
-    Object.keys(facetsState).forEach((facetId) => facetsState[facetId].clear());
-    defaultStateHandledForFacetIds.clear();
-
-    const newFacetsState: FacetState = {};
-
-    facets.forEach((facet) => {
-      newFacetsState[facet.id] = getFacetState(facet.id);
-    });
-    setFacetsState(newFacetsState);
-  }
 
   useEffect(
     function clearFiltersWhenTokenChange(): void {
@@ -224,7 +98,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [clearFiltersToken]
+    [clearFiltersToken, clearFilters]
   );
 
   return (
@@ -251,48 +125,34 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             Reset
           </button>
         </div>
-
-        {!facets &&
-          [undefined, undefined, undefined].map((facet, index) => (
-            <Facet
-              key={index}
-              name={""}
-              isStatic={true}
-              isOpenByDefault={true}
-              optionsLoading={true}
-              optionsReloading={false}
-              facetState={new Set()}
-              facetKey={`${index}`}
-            />
-          ))}
-
-        {facets &&
-          facets.map((facet, index) => (
-            <Facet
-              key={facet.id + index}
-              name={facet.name}
-              isStatic={facet.is_static}
-              options={facetOptions?.[facet.id]}
-              optionsLoading={!facetOptions?.[facet.id]}
-              optionsReloading={
-                areFacetOptionsLoading &&
-                !!facet.id &&
-                clickedFacetId !== facet.id
-              }
-              onSelect={(value) => toggleFacetOption(facet.id, value)}
-              onSelectOneOption={(value) =>
-                selectOneFacetOption(facet.id, value)
-              }
-              onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
-              facetState={getFacetState(facet.id)}
-              facetKey={facet.id}
-              facetConfig={facetsConfigIdBased[facet.id]}
-              onLoadOptions={() =>
-                onLoadFacetOptions && onLoadFacetOptions(facet.id)
-              }
-              onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
-            />
-          ))}
+        <FacetStoreProvider store={store}>
+          {!facets &&
+            [undefined, undefined, undefined].map((_, index) => (
+              <Facet
+                facet={
+                  {
+                    id: index.toString(),
+                    name: "",
+                    is_static: true,
+                  } as FacetDto
+                }
+                key={index}
+                isOpenByDefault={true}
+              />
+            ))}
+          {facets &&
+            facets.map((facet, index) => (
+              <Facet
+                key={facet.id}
+                facet={facet}
+                options={facetOptions?.[facet.id]}
+                onLoadOptions={() =>
+                  onLoadFacetOptions && onLoadFacetOptions(facet.id)
+                }
+                onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
+              />
+            ))}
+        </FacetStoreProvider>
       </div>
     </section>
   );

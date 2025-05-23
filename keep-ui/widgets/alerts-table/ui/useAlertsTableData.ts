@@ -13,12 +13,31 @@ export interface AlertsTableDataQuery {
   timeFrame: TimeFrameV2;
 }
 
+function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
+  if (timeFrame === null) {
+    return null;
+  }
+
+  if (timeFrame.type === "relative") {
+    return `lastReceived >= '${new Date(
+      new Date().getTime() - timeFrame.deltaMs
+    ).toISOString()}'`;
+  } else if (timeFrame.type === "absolute") {
+    return [
+      `lastReceived >= '${timeFrame.start.toISOString()}'`,
+      `lastReceived <= '${timeFrame.end.toISOString()}'`,
+    ].join(" && ");
+  }
+
+  return "";
+}
+
 export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   const { useLastAlerts } = useAlerts();
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
-  const [dateRangeCel, setDateRangeCel] = useState<string | null>("");
+  const [dateRangeCel, setDateRangeCel] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
@@ -28,6 +47,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     string | undefined
   >(undefined);
   incidentsQueryStateRef.current = alertsQueryState;
+  const isDateRangeInit = useRef(false);
 
   const isPaused = useMemo(() => {
     if (!query) {
@@ -57,23 +77,12 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     return () => clearTimeout(timeout);
   }, [canRevalidate]);
 
-  const getDateRangeCel = () => {
-    if (query?.timeFrame.type === "relative") {
-      return `lastReceived >= '${new Date(
-        new Date().getTime() - query.timeFrame.deltaMs
-      ).toISOString()}'`;
-    } else if (query?.timeFrame.type === "absolute") {
-      return [
-        `lastReceived >= '${query.timeFrame.start.toISOString()}'`,
-        `lastReceived <= '${query.timeFrame.end.toISOString()}'`,
-      ].join(" && ");
+  function updateAlertsCelDateRange() {
+    if (!query?.timeFrame) {
+      return;
     }
 
-    return null;
-  };
-
-  function updateAlertsCelDateRange() {
-    const dateRangeCel = getDateRangeCel();
+    const dateRangeCel = getDateRangeCel(query.timeFrame);
 
     setDateRangeCel(dateRangeCel);
 
@@ -82,7 +91,10 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     }
 
     // if date does not change, just reload the data
-    setFacetsPanelRefreshToken(uuidv4());
+    if (isDateRangeInit.current) {
+      setFacetsPanelRefreshToken(uuidv4());
+    }
+    isDateRangeInit.current = true;
     mutateAlerts();
   }
 
@@ -124,13 +136,16 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   }, [JSON.stringify(query)]);
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = [query?.searchCel, dateRangeCel];
+    if (!query || dateRangeCel === null) {
+      return null;
+    }
 
+    const filterArray = [query?.searchCel, dateRangeCel];
     return filterArray.filter(Boolean).join(" && ");
   }, [query?.searchCel, dateRangeCel]);
 
   useEffect(() => {
-    if (!query) {
+    if (!query || mainCelQuery === null) {
       setAlertsQueryState(undefined);
       return;
     }
@@ -141,8 +156,6 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
       sortOptions: query.sortOptions,
       cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
     };
-
-    (alertsQuery as any).source = "useAlertsTableData"; // TODO: TO REMOVE
 
     setAlertsQueryState(alertsQuery);
   }, [
