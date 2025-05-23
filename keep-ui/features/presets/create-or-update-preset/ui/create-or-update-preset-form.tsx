@@ -153,7 +153,11 @@ export function CreateOrUpdatePresetForm({
   };
 
   return (
-    <form className="space-y-2" onSubmit={addOrUpdatePreset}>
+    <form
+      data-testid="preset-form"
+      className="space-y-2"
+      onSubmit={addOrUpdatePreset}
+    >
       <div className="text-lg font-semibold">
         <p>{presetName ? "Update preset" : "Enter new preset name"}</p>
       </div>
@@ -163,6 +167,7 @@ export function CreateOrUpdatePresetForm({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <TextInput
+              data-testid="preset-name-input"
               // TODO: don't show error until user tries to save
               error={!presetName}
               errorMessage="Preset name is required"
@@ -253,6 +258,7 @@ export function CreateOrUpdatePresetForm({
           Close
         </Button>
         <Button
+          data-testid="save-preset-button"
           disabled={!presetName}
           type="submit"
           size="lg"

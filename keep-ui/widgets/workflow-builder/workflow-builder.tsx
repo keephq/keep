@@ -286,7 +286,7 @@ export function WorkflowBuilder({
           <div className={clsx("absolute top-0 left-0 w-10 h-10 z-50")}>
             {leftColumnMode !== "yaml" ? (
               <button
-                className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
+                className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md cursor-pointer"
                 onClick={() => setLeftColumnMode("yaml")}
                 data-testid="wf-open-editor-button"
                 title="Show YAML editor"
@@ -294,22 +294,20 @@ export function WorkflowBuilder({
                 <CodeBracketIcon className="size-5" />
               </button>
             ) : (
-              <div className="flex gap-0.5 h-full">
-                <button
-                  className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
-                  onClick={() => setLeftColumnMode(null)}
-                  data-testid="wf-close-yaml-editor-button"
-                  title="Hide YAML editor"
-                >
-                  <CodeBracketIcon className="size-5" />
-                </button>
-              </div>
+              <button
+                className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
+                onClick={() => setLeftColumnMode(null)}
+                data-testid="wf-close-yaml-editor-button"
+                title="Hide YAML editor"
+              >
+                <CodeBracketIcon className="size-5" />
+              </button>
             )}
           </div>
           <div className={clsx("absolute top-10 left-0 w-10 h-10 z-50")}>
             {leftColumnMode !== "chat" ? (
               <button
-                className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md"
+                className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md cursor-pointer"
                 onClick={() => setLeftColumnMode("chat")}
                 data-testid="wf-open-chat-button"
                 title="Show AI Assistant"
@@ -317,16 +315,14 @@ export function WorkflowBuilder({
                 <SparklesIcon className="size-5" />
               </button>
             ) : (
-              <div className="flex gap-0.5 h-full">
-                <button
-                  className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
-                  onClick={() => setLeftColumnMode(null)}
-                  data-testid="wf-close-chat-button"
-                  title="Hide AI Assistant"
-                >
-                  <SparklesIcon className="size-5" />
-                </button>
-              </div>
+              <button
+                className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
+                onClick={() => setLeftColumnMode(null)}
+                data-testid="wf-close-chat-button"
+                title="Hide AI Assistant"
+              >
+                <SparklesIcon className="size-5" />
+              </button>
             )}
           </div>
           <ReactFlowProvider>

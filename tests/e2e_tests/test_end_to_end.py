@@ -57,6 +57,12 @@ from tests.e2e_tests.utils import (
 #    - Copy the generated code to a new test function.
 
 
+def get_workflow_yaml(file_name):
+    file_path = os.path.join(os.path.dirname(__file__), file_name)
+    with open(file_path, "r") as file:
+        return file.read()
+
+
 def close_all_toasts(page: Page):
     # First check if there are any toasts
     if page.locator(".Toastify__close-button").count() == 0:
@@ -481,11 +487,6 @@ def test_paste_workflow_yaml_quotes_preserved(browser: Page):
     log_entries = []
     setup_console_listener(page, log_entries)
 
-    def get_workflow_yaml(file_name):
-        file_path = os.path.join(os.path.dirname(__file__), file_name)
-        with open(file_path, "r") as file:
-            return file.read()
-
     workflow_yaml = get_workflow_yaml("workflow-quotes-sample.yaml")
 
     try:
@@ -674,6 +675,54 @@ def test_workflow_inputs(browser: Page):
         expect(page.locator(".bg-gray-100 > .overflow-auto").first).to_contain_text(
             "Alert Name: GrafanaDown"
         )
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_workflow_test_run(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    yaml_content = get_workflow_yaml("workflow-inputs-alert.yaml")
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Create workflow").click()
+        page.get_by_role("button", name="Start from scratch").click()
+        page.get_by_test_id("wf-open-editor-button").click()
+        editor = page.get_by_test_id("wf-builder-yaml-editor").locator(".monaco-editor")
+        editor.click()
+        page.keyboard.press("ControlOrMeta+KeyA")
+        page.keyboard.press("Backspace")
+        page.evaluate(
+            """async (text) => {
+            return await navigator.clipboard.writeText(text);
+        }""",
+            yaml_content,
+        )
+        page.keyboard.press("ControlOrMeta+KeyV")
+        page.wait_for_timeout(500)
+        page.get_by_test_id("wf-builder-main-test-run-button").click()
+        # Fill inputs
+        page.locator("div").filter(
+            has_text=re.compile(
+                r"^nodefault \*A no default examplesThis field is required$"
+            )
+        ).get_by_role("textbox").fill("shalom")
+        page.get_by_role("button", name="Run", exact=True).click()
+        # Fill alert dependencies
+        alert_dependencies_form = page.get_by_test_id("wf-alert-dependencies-form")
+        expect(alert_dependencies_form).to_be_visible()
+        alert_dependencies_form.locator("input[name='name']").fill("GrafanaDown")
+        alert_dependencies_form.get_by_test_id(
+            "wf-alert-dependencies-form-submit"
+        ).click()
+        results = page.get_by_test_id("wf-test-run-results")
+        expect(results).to_be_visible()
+        results.get_by_role("button", name="Running action echo").click()
+        expect(results).to_contain_text("GrafanaDown")
+        expect(results).not_to_contain_text("Failed to run step")
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise

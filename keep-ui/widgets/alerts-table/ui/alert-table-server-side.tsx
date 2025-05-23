@@ -75,6 +75,7 @@ import EnhancedDateRangePickerV2, {
   TimeFrameV2,
 } from "@/components/ui/DateRangePickerV2";
 import { AlertsTableDataQuery } from "./useAlertsTableData";
+import { useTimeframeState } from "@/components/ui/useTimeframeState";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -103,7 +104,7 @@ interface Props {
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
-  facetsCel: string;
+  facetsCel: string | null;
   facetsPanelRefreshToken: string | undefined;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
@@ -136,11 +137,9 @@ export function AlertTableServerSide({
     null
   );
   const [grouping, setGrouping] = useState<GroupingState>([]);
-  const [filterCel, setFilterCel] = useState<string>("");
-  const [searchCel, setSearchCel] = useState<string>("");
-  const [facetsDateRangeCel, setFacetsDateRangeCel] = useState<string | null>(
-    ""
-  );
+  const [filterCel, setFilterCel] = useState<string | null>(null);
+  const [searchCel, setSearchCel] = useState<string | null>(null);
+
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
   const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
@@ -150,10 +149,14 @@ export function AlertTableServerSide({
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
   const { theme } = useAlertTableTheme();
-  const [timeFrame, setTimeFrame] = useState<TimeFrameV2>({
-    type: "all-time",
-    isPaused: false,
-  } as AllTimeFrame);
+  const [timeFrame, setTimeFrame] = useTimeframeState({
+    enableQueryParams: true,
+    defaultTimeframe: {
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame,
+  });
+
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -191,6 +194,10 @@ export function AlertTableServerSide({
 
   useEffect(
     function whenQueryChange() {
+      if (filterCel === null || searchCel === null || timeFrame === null) {
+        return;
+      }
+
       if (onQueryChange) {
         const limit = paginationState.pageSize;
         const offset = limit * paginationState.pageIndex;
@@ -564,17 +571,21 @@ export function AlertTableServerSide({
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
-          <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          <span data-testid="preset-page-title">
+            <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          </span>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
-            <EnhancedDateRangePickerV2
-              timeFrame={timeFrame}
-              setTimeFrame={setTimeFrame}
-              hasPlay={true}
-              hasRewind={false}
-              hasForward={false}
-              hasZoomOut={false}
-              enableYearNavigation
-            />
+            {timeFrame && (
+              <EnhancedDateRangePickerV2
+                timeFrame={timeFrame}
+                setTimeFrame={setTimeFrame}
+                hasPlay={true}
+                hasRewind={false}
+                hasForward={false}
+                hasZoomOut={false}
+                enableYearNavigation
+              />
+            )}
 
             <SettingsSelection table={table} presetName={presetName} />
           </div>

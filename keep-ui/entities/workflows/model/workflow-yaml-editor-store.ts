@@ -19,7 +19,11 @@ const defaultState: WorkflowYAMLEditorStateValues = {
 type WorkflowYAMLEditorState = WorkflowYAMLEditorStateValues & {
   setWorkflowId: (workflowId: string | null) => void;
   setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void;
-  setValidationErrors: (validationErrors: YamlValidationError[]) => void;
+  setValidationErrors: (
+    validationErrors:
+      | YamlValidationError[]
+      | ((prev: YamlValidationError[]) => YamlValidationError[])
+  ) => void;
   requestSave: () => void;
 };
 
@@ -30,8 +34,19 @@ export const useWorkflowYAMLEditorStore = create<WorkflowYAMLEditorState>()(
       setWorkflowId: (workflowId: string | null) => set({ workflowId }),
       setHasUnsavedChanges: (hasUnsavedChanges: boolean) =>
         set({ hasUnsavedChanges }),
-      setValidationErrors: (validationErrors: YamlValidationError[]) =>
-        set({ validationErrors }),
+      setValidationErrors: (
+        validationErrors:
+          | YamlValidationError[]
+          | ((prev: YamlValidationError[]) => YamlValidationError[])
+      ) => {
+        if (typeof validationErrors === "function") {
+          set((state) => ({
+            validationErrors: validationErrors(state.validationErrors),
+          }));
+        } else {
+          set({ validationErrors });
+        }
+      },
       requestSave: () =>
         set((state) => ({ saveRequestCount: state.saveRequestCount + 1 })),
     }),

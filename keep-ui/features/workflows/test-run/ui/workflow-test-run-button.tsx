@@ -12,7 +12,15 @@ import { WorkflowExecutionResults } from "@/features/workflow-execution-results"
 import { WorkflowAlertIncidentDependenciesForm } from "@/entities/workflows/ui/WorkflowAlertIncidentDependenciesForm";
 import { useWorkflowTestRun } from "../model/useWorkflowTestRun";
 import { v4 as uuidv4 } from "uuid";
+import { AlertWorkflowRunPayload } from "../../manual-run-workflow/model/types";
+import { IncidentWorkflowRunPayload } from "../../manual-run-workflow/model/types";
+import { WorkflowInputsForm } from "../../manual-run-workflow/ui/WorkflowInputsForm";
 
+const manualEventPayload = {
+  id: "manual-run",
+  name: "manual-run",
+  source: ["manual"],
+};
 interface WorkflowTestRunButtonProps {
   workflowId: string;
   definition: DefinitionV2 | null;
@@ -30,6 +38,10 @@ export function WorkflowTestRunButton({
     null
   );
   const [error, setError] = useState<Error | null>(null);
+
+  const [inputsValues, setInputsValues] = useState<Record<string, any> | null>(
+    null
+  );
 
   const yamlString = useMemo(() => {
     if (!definition?.value) {
@@ -58,21 +70,47 @@ export function WorkflowTestRunButton({
   const testRunWorkflow = useWorkflowTestRun();
 
   const closeWorkflowExecutionResultsModal = () => {
+    setInputsValues(null);
     setIsTestRunModalOpen(false);
     setWorkflowExecutionId(null);
     setError(null);
   };
 
-  const handleTestRunWorkflow = async (
-    eventType: "alert" | "incident",
-    eventPayload: any
-  ) => {
+  const handleTestRunWorkflow = async ({
+    inputsValues = null,
+    alertValues = null,
+    incidentValues = null,
+  }: {
+    inputsValues?: Record<string, any> | null;
+    alertValues?: AlertWorkflowRunPayload | null;
+    incidentValues?: IncidentWorkflowRunPayload | null;
+  }) => {
     if (!yamlString) {
       showErrorToast(new Error("Workflow is not initialized"));
       return;
     }
     try {
-      const result = await testRunWorkflow(yamlString, eventType, eventPayload);
+      let result;
+      if (alertValues) {
+        result = await testRunWorkflow(yamlString, {
+          ...alertValues,
+          inputs: inputsValues ?? undefined,
+        });
+      } else if (incidentValues) {
+        result = await testRunWorkflow(yamlString, {
+          ...incidentValues,
+          inputs: inputsValues ?? undefined,
+        });
+      } else {
+        result = await testRunWorkflow(yamlString, {
+          type: "alert",
+          body: {
+            ...manualEventPayload,
+            lastReceived: new Date().toISOString(),
+          },
+          inputs: inputsValues ?? undefined,
+        });
+      }
       if (!result) {
         setError(new Error("Failed to test run workflow"));
         return;
@@ -87,24 +125,6 @@ export function WorkflowTestRunButton({
             )
       );
     }
-  };
-
-  const handleClickTestRun = () => {
-    if (!dependencies) {
-      showErrorToast(new Error("Failed to parse workflow dependencies"));
-      return;
-    }
-    setIsTestRunModalOpen(true);
-    if (!dependencies.alert.length && !dependencies.incident.length) {
-      handleTestRunWorkflow("alert", {
-        id: "manual-run",
-        name: "manual-run",
-        lastReceived: new Date().toISOString(),
-        source: ["manual"],
-      });
-      return;
-    }
-    // else will be handled in onSubmit of WorkflowAlertDependenciesForm
   };
 
   const alertStaticFields = useMemo(() => {
@@ -149,6 +169,23 @@ export function WorkflowTestRunButton({
     },
   ];
 
+  const handleClickTestRun = () => {
+    if (!dependencies) {
+      showErrorToast(new Error("Failed to parse workflow dependencies"));
+      return;
+    }
+    setIsTestRunModalOpen(true);
+    if (
+      !dependencies.inputs.length &&
+      !dependencies.alert.length &&
+      !dependencies.incident.length
+    ) {
+      handleTestRunWorkflow({});
+      return;
+    }
+    // else will be handled in onSubmit of WorkflowAlertDependenciesForm
+  };
+
   const renderModalContent = () => {
     if (error !== null) {
       return (
@@ -161,7 +198,7 @@ export function WorkflowTestRunButton({
     }
     if (workflowExecutionId !== null) {
       return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" data-testid="wf-test-run-results">
           <div className="flex justify-between items-center">
             <div>
               <Title>Workflow Execution Results</Title>
@@ -186,6 +223,20 @@ export function WorkflowTestRunButton({
           </Callout>
         );
       }
+      if (dependencies.inputs.length > 0 && !inputsValues) {
+        return (
+          <WorkflowInputsForm
+            workflowInputs={definition?.value?.properties?.inputs ?? []}
+            onSubmit={(inputs) => {
+              setInputsValues(inputs);
+              if (!dependencies.alert.length && !dependencies.incident.length) {
+                handleTestRunWorkflow({ inputsValues: inputs });
+              }
+            }}
+            onCancel={closeWorkflowExecutionResultsModal}
+          />
+        );
+      }
       if (dependencies.alert.length > 0) {
         return (
           <WorkflowAlertIncidentDependenciesForm
@@ -193,7 +244,12 @@ export function WorkflowTestRunButton({
             dependencies={dependencies.alert}
             staticFields={alertStaticFields}
             onCancel={closeWorkflowExecutionResultsModal}
-            onSubmit={(payload) => handleTestRunWorkflow("alert", payload)}
+            onSubmit={({ type, body }) =>
+              handleTestRunWorkflow({
+                alertValues: { type, body },
+                inputsValues,
+              })
+            }
             submitLabel="Test Run with Payload"
           />
         );
@@ -205,7 +261,12 @@ export function WorkflowTestRunButton({
             dependencies={dependencies.incident}
             staticFields={incidentStaticFields}
             onCancel={closeWorkflowExecutionResultsModal}
-            onSubmit={(payload) => handleTestRunWorkflow("incident", payload)}
+            onSubmit={({ type, body }) =>
+              handleTestRunWorkflow({
+                incidentValues: { type, body },
+                inputsValues,
+              })
+            }
             submitLabel="Test Run with Payload"
           />
         );
