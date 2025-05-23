@@ -72,16 +72,31 @@ describe("useCelState", () => {
     );
   });
 
-  it("should not update query params when enableQueryParams is false", () => {
-    const { result } = renderHook(() =>
-      useCelState({ enableQueryParams: false, defaultCel: "" })
-    );
+  describe("when enableQueryParams is false", () => {
+    it("should not update query params", () => {
+      const { result } = renderHook(() =>
+        useCelState({ enableQueryParams: false, defaultCel: "" })
+      );
 
-    act(() => {
-      result.current[1]("name.contains('cpu')");
+      act(() => {
+        result.current[1]("name.contains('cpu')");
+      });
+
+      expect(replaceMock).not.toHaveBeenCalled();
     });
 
-    expect(replaceMock).not.toHaveBeenCalled();
+    it("should not have initial state from queryparams", () => {
+      (useSearchParams as jest.Mock).mockReturnValue(
+        new URLSearchParams({
+          cel: "name.contains('cpu')",
+        })
+      );
+      const { result } = renderHook(() =>
+        useCelState({ enableQueryParams: false, defaultCel: "" })
+      );
+
+      expect(result.current[0]).toBe("");
+    });
   });
 
   it("should remove cel query param when celState is reset to defaultCel", () => {

@@ -12,9 +12,13 @@ export function useCelState({
   const searchParams = useSearchParams();
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
-  const [celState, setCelState] = useState(
-    () => searchParams.get(celQueryParamName) || defaultCel || ""
-  );
+  const [celState, setCelState] = useState(() => {
+    if (!enableQueryParams) {
+      return defaultCel || "";
+    }
+
+    return searchParams.get(celQueryParamName) || defaultCel || "";
+  });
 
   // Clean up cel param when pathname changes
   useEffect(() => {
