@@ -571,7 +571,9 @@ export function AlertTableServerSide({
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
-          <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          <span data-testid="preset-page-title">
+            <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          </span>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
             {timeFrame && (
               <EnhancedDateRangePickerV2

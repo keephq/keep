@@ -656,3 +656,103 @@ def test_filter_search_timeframe_combination_with_queryparams(
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
+
+
+def test_adding_new_preset(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    try:
+        facet_name = "severity"
+        alert_property_name = "severity"
+
+        def filter_lambda(alert):
+            return "high" in alert["name"].lower()
+
+        current_alerts = query_alerts(cell_query="", limit=1000)["results"]
+        init_test(browser, current_alerts, max_retries=3)
+        filtered_alerts = [alert for alert in current_alerts if filter_lambda(alert)]
+
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        # Wait for navigation to complete to either signin or providers page
+        # (since we might get redirected automatically)
+        browser.wait_for_load_state("networkidle")
+
+        cel_input_locator = browser.locator(".alerts-cel-input")
+        cel_input_locator.click()
+        browser.keyboard.type("name.contains('high')")
+        browser.keyboard.press("Enter")
+        browser.wait_for_timeout(500)
+
+        # check that alerts are filtered by the preset CEL
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_alerts,
+            alert_property_name,
+        )
+        assert_alerts_by_column(
+            browser,
+            current_alerts,
+            filter_lambda,
+            alert_property_name,
+            None,
+        )
+
+        browser.locator("[data-testid='save-preset-button']").click()
+
+        preset_form_locator = browser.locator("[data-testid='preset-form']")
+        expect(browser.locator("[data-testid='alerts-count-badge']")).to_contain_text(
+            str(len(filtered_alerts))
+        )
+        preset_form_locator.locator("[data-testid='preset-name-input']").fill(
+            "Test preset"
+        )
+
+        preset_form_locator.locator(
+            "[data-testid='counter-shows-firing-only-switch']"
+        ).click()
+
+        preset_form_locator.locator("[data-testid='save-preset-button']").click()
+        preset_locator = browser.locator(
+            "[data-testid='preset-link-container']", has_text="Test preset"
+        )
+        expect(preset_locator).to_be_visible()
+        expect(preset_locator.locator("[data-testid='preset-badge']")).to_contain_text(
+            str(len(filtered_alerts))
+        )
+        expect(browser.locator(".alerts-cel-input .view-lines")).to_have_text(
+            "name.contains('high')"
+        )
+        expect(browser.locator("[data-testid='preset-page-title']")).to_contain_text(
+            "Test preset"
+        )
+
+        # Refresh in order to check that the preset and corresponding data is open
+        browser.reload()
+        expect(browser.locator(".alerts-cel-input .view-lines")).to_have_text(
+            "name.contains('high')"
+        )
+        expect(browser.locator("[data-testid='preset-page-title']")).to_contain_text(
+            "Test preset"
+        )
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_alerts,
+            alert_property_name,
+        )
+        assert_alerts_by_column(
+            browser,
+            current_alerts,
+            filter_lambda,
+            alert_property_name,
+            None,
+        )
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
