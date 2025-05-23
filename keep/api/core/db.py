@@ -61,7 +61,7 @@ from keep.api.models.ai_external import (
     ExternalAIConfigAndMetadata,
     ExternalAIConfigAndMetadataDto,
 )
-from keep.api.models.alert import AlertStatus
+from keep.api.models.alert import AlertStatus, AlertDto
 from keep.api.models.db.action import Action
 from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
@@ -2105,9 +2105,14 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
 
+        def json_serialize(obj):
+            if isinstance(obj, AlertDto):
+                return obj.dict()
+            raise TypeError("Type %s not serializable" % type(obj))
+
         try:
             # backward comptability - try to serialize the workflow results
-            json.dumps(workflow_results)
+            json.dumps(workflow_results, default=json_serialize)
             # if that's ok, use the original way
             workflow_execution.results = workflow_results
         except Exception:
