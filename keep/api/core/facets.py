@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
@@ -30,8 +31,9 @@ def build_facet_selects(
 ):
     return get_facets_query_builder(properties_metadata).build_facet_selects(facets)
 
+
 def build_facets_data_query(
-    base_query,
+    base_query_factory: lambda facet_property_path, select_statement: Any,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
     facet_options_query: FacetOptionsQueryDto,
@@ -58,14 +60,13 @@ def build_facets_data_query(
 
     # Main Query: JSON Extraction and Counting
     union_queries = []
-    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    new_fields_config = facet_selects_metadata["new_fields_config"]
-    facets_properties_metadata = PropertiesMetadata(new_fields_config)
-
-    base_query_common = base_query.cte("base_query")
+    # facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    # new_fields_config = facet_selects_metadata["new_fields_config"]
+    # facets_properties_metadata = PropertiesMetadata(new_fields_config)
 
     # prevents duplicate queries for the same facet property path and its cel combination
     visited_facets = set()
+    facets_query_builder = get_facets_query_builder(properties_metadata)
     for facet in facets:
         facet_cel = facet_options_query.facet_queries.get(facet.id, "")
         facet_key = (
@@ -74,10 +75,11 @@ def build_facets_data_query(
         if facet_key in visited_facets:
             continue
 
-        facet_sub_query = get_facets_query_builder(
-            facets_properties_metadata
-        ).build_facet_subquery(
-            base_query=base_query_common,
+        facet_sub_query = facets_query_builder.build_facet_subquery(
+            base_query=base_query_factory(
+                facet.property_path,
+                facets_query_builder.build_facet_select(facet.property_path),
+            ),
             facet_property_path=facet.property_path,
             facet_key=facet_key,
             facet_cel=facet_cel,
@@ -127,7 +129,7 @@ def map_facet_option_value(value, data_type: DataType):
 
 
 def get_facet_options(
-    base_query,
+    base_query_factory: lambda facet_property_path, select_statement: Any,
     facets: list[FacetDto],
     facet_options_query: FacetOptionsQueryDto,
     properties_metadata: PropertiesMetadata,
@@ -159,14 +161,21 @@ def get_facet_options(
         with Session(engine) as session:
             try:
                 db_query = build_facets_data_query(
-                    base_query=base_query,
+                    base_query_factory=base_query_factory,
                     facets=valid_facets,
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
                 )
 
+                db_query_str = str(
+                    db_query.compile(
+                        dialect=engine.dialect, compile_kwargs={"literal_binds": True}
+                    )
+                )
+
                 data = session.exec(db_query).all()
             except OperationalError as e:
+                raise e  # TODO: TO REMOVE
                 logger.warning(
                     f"""Failed to execute query for facet options.
                     Facet options: {json.dumps(facet_options_query.dict())}

@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Tuple
+from typing import Any, Tuple
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import OperationalError
@@ -419,20 +419,28 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    select_expressions = facet_selects_metadata["select_expressions"]
+    # facet_selects_metadata = build_facet_selects(properties_metadata, facets)
+    # select_expressions = facet_selects_metadata["select_expressions"]
 
-    select_expressions.append(LastAlert.alert_id.label("entity_id"))
+    # select_expressions.append(LastAlert.alert_id.label("entity_id"))
 
-    base_query_cte = __build_query_for_filtering(
-        tenant_id=tenant_id,
-        select_args=select_expressions,
-        cel=facet_options_query.cel,
-        force_fetch=True,
-    )["query"]
+    # base_query_cte = __build_query_for_filtering(
+    #     tenant_id=tenant_id,
+    #     select_args=select_expressions,
+    #     cel=facet_options_query.cel,
+    #     force_fetch=True,
+    # )["query"]
+
+    def base_query_factory(facet_property_path: str, select_statement):
+        return __build_query_for_filtering(
+            tenant_id=tenant_id,
+            select_args=[select_statement, LastAlert.alert_id.label("entity_id")],
+            cel=facet_options_query.cel,
+            force_fetch=True,
+        )["query"]
 
     return get_facet_options(
-        base_query=base_query_cte,
+        base_query_factory=base_query_factory,
         facets=facets,
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,

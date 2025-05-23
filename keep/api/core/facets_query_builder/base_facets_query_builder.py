@@ -23,6 +23,30 @@ class BaseFacetsQueryBuilder:
         self.properties_metadata = properties_metadata
         self.cel_to_sql = cel_to_sql
 
+    def build_facet_select(self, facet_property_path):
+        property_metadata = self.properties_metadata.get_property_metadata_for_str(
+            facet_property_path
+        )
+
+        select_field = ("facet_" + facet_property_path.replace(".", "_")).lower()
+
+        coalecense_args = []
+        should_cast = False
+        for field_mapping in property_metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                should_cast = True
+                coalecense_args.append(self._handle_json_mapping(field_mapping))
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                coalecense_args.append(self._handle_simple_mapping(field_mapping))
+        select_expression = self._coalesce(coalecense_args)
+
+        if should_cast:
+            select_expression = self._cast_column(
+                select_expression, property_metadata.data_type
+            )
+
+        return select_expression.label(select_field)
+
     def build_facet_selects(self, facets: list[FacetDto]):
         new_fields_config: list[FieldMappingConfiguration] = []
         select_expressions = {}
