@@ -309,11 +309,12 @@ class StatuscakeProvider(BaseProvider):
                 self.logger.error("Alert id is missing", extra={"alert": alert})
                 continue
 
+            url = alert.get("website_url", None)
+
             alert = AlertDto(
                 id=alert.get("id", ""),
                 name=alert.get("name", ""),
                 status=status,
-                url=alert.get("website_url", ""),
                 uptime=alert.get("uptime", 0),
                 source=["statuscake"],
                 paused=alert.get("paused", False),
@@ -322,6 +323,8 @@ class StatuscakeProvider(BaseProvider):
                 contact_groups=alert.get("contact_groups", []),
                 tags=alert.get("tags", []),
             )
+            if url:
+                alert.url = url
             # use id as fingerprint
             alert.fingerprint = alert_id
             alert_dtos.append(alert)
