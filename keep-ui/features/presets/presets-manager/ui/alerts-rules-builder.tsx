@@ -151,6 +151,32 @@ const SQL_QUERY_PLACEHOLDER = `SELECT *
 FROM alerts
 WHERE severity = 'critical' and status = 'firing'`;
 
+const constructCELRules = (preset?: Preset) => {
+  // Check if selectedPreset is defined and has options
+  if (preset && preset.options) {
+    // New version: single "CEL" key
+    const celOption = preset.options.find((option) => option.label === "CEL");
+    if (celOption) {
+      return celOption.value;
+    }
+    // Older version: Concatenate multiple fields
+    else {
+      return preset.options
+        .map((option) => {
+          // Assuming the older format is exactly "x='y'" (x equals y)
+          // We split the string by '=', then trim and quote the value part
+          let [key, value] = option.value.split("=");
+          // Trim spaces and single quotes (if any) from the value
+          value = value.trim().replace(/^'(.*)'$/, "$1");
+          // Return the correctly formatted CEL expression
+          return `${key.trim()}=="${value}"`;
+        })
+        .join(" && ");
+    }
+  }
+  return ""; // Default to empty string if no preset or options are found
+};
+
 export const AlertsRulesBuilder = ({
   table,
   selectedPreset,
@@ -178,13 +204,12 @@ export const AlertsRulesBuilder = ({
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(
-    searchParams?.get("cel") || defaultQuery
-  );
+
   const [appliedCel, setAppliedCel] = useCelState({
-    enableQueryParams: true,
-    defaultCel: defaultQuery,
+    enableQueryParams: shouldSetQueryParam,
+    defaultCel: constructCELRules(selectedPreset),
   });
+  const [celRules, setCELRules] = useState(appliedCel);
 
   const parsedCELRulesToQuery = parseCEL(celRules);
 
@@ -219,32 +244,6 @@ export const AlertsRulesBuilder = ({
   const handleSelectChange = (selectedOption: any) => {
     setCELRules(selectedOption.value);
     toggleSuggestions();
-  };
-
-  const constructCELRules = (preset?: Preset) => {
-    // Check if selectedPreset is defined and has options
-    if (preset && preset.options) {
-      // New version: single "CEL" key
-      const celOption = preset.options.find((option) => option.label === "CEL");
-      if (celOption) {
-        return celOption.value;
-      }
-      // Older version: Concatenate multiple fields
-      else {
-        return preset.options
-          .map((option) => {
-            // Assuming the older format is exactly "x='y'" (x equals y)
-            // We split the string by '=', then trim and quote the value part
-            let [key, value] = option.value.split("=");
-            // Trim spaces and single quotes (if any) from the value
-            value = value.trim().replace(/^'(.*)'$/, "$1");
-            // Return the correctly formatted CEL expression
-            return `${key.trim()}=="${value}"`;
-          })
-          .join(" && ");
-      }
-    }
-    return ""; // Default to empty string if no preset or options are found
   };
 
   useEffect(() => {
