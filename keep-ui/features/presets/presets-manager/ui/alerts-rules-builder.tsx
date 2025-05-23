@@ -436,6 +436,7 @@ export const AlertsRulesBuilder = ({
           {/* Buttons next to the Textarea */}
           {showSave && (
             <Button
+              data-testid="save-preset-button"
               icon={FiSave}
               color="orange"
               variant="secondary"

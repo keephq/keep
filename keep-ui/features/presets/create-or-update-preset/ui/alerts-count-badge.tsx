@@ -58,7 +58,7 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
             vertical ? "flex-col" : "flex-row"
           } items-center gap-2`}
         >
-          <Badge size="xl" color="orange">
+          <Badge data-testid="alerts-count-badge" size="xl" color="orange">
             {totalCount}
           </Badge>
           <Text className="text-sm">

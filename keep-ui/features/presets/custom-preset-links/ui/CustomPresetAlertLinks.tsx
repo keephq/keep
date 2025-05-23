@@ -92,6 +92,7 @@ export const AlertPresetLink = ({
         isDeletable={isDeletable}
         onDelete={() => deletePreset && deletePreset(preset.id, preset.name)}
         isExact={true}
+        testId="preset"
         renderBeforeCount={renderBeforeCount}
         className={clsx(
           "flex items-center space-x-2 p-1 text-slate-400 font-medium rounded-lg",
