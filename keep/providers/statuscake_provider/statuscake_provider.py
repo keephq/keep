@@ -294,17 +294,38 @@ class StatuscakeProvider(BaseProvider):
 
         response = self.__get_paginated_data(paths=["uptime"])
 
-        return [
-            AlertDto(
-                id=alert["id"],
-                name=alert["name"],
-                status=alert["status"],
-                url=alert["website_url"],
-                uptime=alert["uptime"],
-                source="statuscake",
+        self.logger.info(f"Got {len(response)} uptime alerts")
+
+        alert_dtos = []
+        for alert in response:
+
+            if alert.get("status").lower() == "up":
+                status = AlertStatus.RESOLVED
+            else:
+                status = AlertStatus.FIRING
+
+            alert_id = alert.get("id", None)
+            if not alert_id:
+                self.logger.error("Alert id is missing", extra={"alert": alert})
+                continue
+
+            alert = AlertDto(
+                id=alert.get("id", ""),
+                name=alert.get("name", ""),
+                status=status,
+                url=alert.get("website_url", ""),
+                uptime=alert.get("uptime", 0),
+                source=["statuscake"],
+                paused=alert.get("paused", False),
+                test_type=alert.get("test_type", ""),
+                check_rate=alert.get("check_rate", 0),
+                contact_groups=alert.get("contact_groups", []),
+                tags=alert.get("tags", []),
             )
-            for alert in response
-        ]
+            # use id as fingerprint
+            alert.fingerprint = alert_id
+            alert_dtos.append(alert)
+        return alert_dtos
 
     def _get_alerts(self) -> list[AlertDto]:
         alerts = []
