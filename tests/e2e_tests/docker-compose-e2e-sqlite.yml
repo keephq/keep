@@ -12,6 +12,7 @@ services:
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - SENTRY_DISABLED=true
+      - ALLOW_DB_DOWNGRADE=true
 
   # Backend Services
   keep-backend:
@@ -21,9 +22,12 @@ services:
       - AUTH_TYPE=NO_AUTH
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - MIGRATIONS_PATH=/tmp/migrations
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+    volumes:
+      - backend-migrations:/tmp
     ports:
       - "8080:8080"
 
@@ -104,4 +108,6 @@ services:
       - prometheus-server-for-test-target
 
 volumes:
+  backend-migrations:
   grafana-storage: {}
+
