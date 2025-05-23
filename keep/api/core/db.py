@@ -2105,19 +2105,14 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
 
-        def json_serialize(obj):
-            if isinstance(obj, AlertDto):
-                return obj.dict()
-            raise TypeError("Type %s not serializable" % type(obj))
-
         try:
-            # backward comptability - try to serialize the workflow results
-            json.dumps(workflow_results, default=json_serialize)
+            # backward compatibility - try to serialize the workflow results
+            json.dumps(workflow_results)
             # if that's ok, use the original way
             workflow_execution.results = workflow_results
         except Exception:
             # if that's not ok, use the Keep way (e.g. alerdto is not json serializable)
-            logger.warning(
+            logger.debug(
                 "Failed to serialize workflow results, using fastapi encoder",
             )
             # use some other way to serialize the workflow results
