@@ -217,8 +217,6 @@ def query_incidents(
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
 
-    filters = query.filters.dict(exclude_unset=True) if query.filters else {}
-
     logger.info(
         "Fetching incidents from DB",
         extra={
@@ -226,7 +224,7 @@ def query_incidents(
             "limit": query.limit,
             "offset": query.offset,
             "sorting": query.sorting,
-            "filters": filters,
+            "filters": {},
         },
     )
 
@@ -260,7 +258,7 @@ def query_incidents(
                 "limit": query.limit,
                 "offset": query.offset,
                 "sorting": query.sorting,
-                "filters": filters,
+                "filters": {},
             },
         )
         return result

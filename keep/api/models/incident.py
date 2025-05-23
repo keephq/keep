@@ -307,20 +307,12 @@ class IncidentListFilterParamsDto(BaseModel):
     services: List[str]
     sources: List[str]
 
-class IncidentQueryFiltersDto(BaseModel):
-    status: List[IncidentStatus] = Query(None),
-    severity: List[IncidentSeverity] = Query(None),
-    assignees: List[str] = Query(None),
-    sources: List[str] = Query(None),
-    affected_services: List[str] = Query(None),
-
 class IncidentQueryDto(BaseModel):
     candidate: bool = False
     predicted: Optional[bool] = None
     limit: int = 25
     offset: int = 0
     sorting: IncidentSorting = IncidentSorting.creation_time
-    filters: Optional[IncidentQueryFiltersDto] = None
     cel: Optional[str] = None
 
 class IncidentCandidate(BaseModel):
