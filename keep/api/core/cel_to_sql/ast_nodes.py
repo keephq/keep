@@ -1,6 +1,6 @@
 import datetime
 from types import NoneType
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from enum import Enum
 
@@ -20,6 +20,13 @@ class Node(BaseModel):
 
     node_type: str = Field(default=None)
 
+    @property
+    def __str(self):
+        """
+        Returns string representation of Node. The property used for debugging
+        """
+        return str(self)
+
 
 class ConstantNode(Node):
     """
@@ -36,6 +43,14 @@ class ConstantNode(Node):
     value: Any = Field()
 
     def __str__(self):
+        if self.value is None:
+            return "null"
+        if isinstance(self.value, str):
+            return f"'{self.value}'"
+        if isinstance(self.value, bool):
+            return "true" if self.value else "false"
+        if isinstance(self.value, (int, float)):
+            return str(self.value)
         return self.value
 
 class ParenthesisNode(Node):
@@ -82,8 +97,7 @@ class LogicalNode(Node):
     right: Node = Field()
 
     def __str__(self):
-        return f"{self.left} {self.operator} {self.right}"
-
+        return f"{self.left} {self.operator.value} {self.right }"
 
 class ComparisonNodeOperator(Enum):
     LT = "<"
@@ -120,7 +134,22 @@ class ComparisonNode(Node):
     second_operand: Optional[Node | Any] = Field()
 
     def __str__(self):
-        return f"{self.first_operand} {self.operator} {self.second_operand}"
+        operand_value = None
+
+        if self.operator == ComparisonNodeOperator.IN:
+            operand_value = (
+                f"[{', '.join([str(item) for item in self.second_operand])}]"
+            )
+        elif self.operator in [
+            ComparisonNodeOperator.CONTAINS,
+            ComparisonNodeOperator.STARTS_WITH,
+            ComparisonNodeOperator.ENDS_WITH,
+        ]:
+            return f"{self.first_operand}.{self.operator.value}({self.second_operand})"
+        else:
+            operand_value = str(self.second_operand)
+
+        return f"{self.first_operand} {self.operator.value} {operand_value}"
 
 
 class UnaryNodeOperator(Enum):
@@ -148,64 +177,7 @@ class UnaryNode(Node):
     operand: Optional[Node] = Field()
 
     def __str__(self):
-        return f"{self.operator}{self.operand}"
-
-
-# TODO: To remove this class as it's not needed anymore
-class MemberAccessNode(Node):
-    """
-    A node representing member access in CEL abstract syntax tree (AST).
-    Attributes:
-        member_name (str): The name of the member being accessed.
-    Methods:
-        __str__(): Returns the member name as a string.
-    """
-    node_type: str = Field(default="MemberAccessNode", const=True)
-    member_name: Optional[str]  # TODO: to remove
-
-    def __str__(self):
-        return self.member_name
-
-
-# TODO: To remove this class as it's not needed anymore
-class MethodAccessNode(MemberAccessNode):
-    """
-    Represents a method access node in CEL abstract syntax tree (AST).
-    Examples:
-        alert.name.contains('error')
-        alert.name.startsWith('sys')
-        alert.name.endsWith('log')
-    Inherits from:
-        MemberAccessNode
-
-    Attributes:
-        member_name (str): The name of the member being accessed.
-        args (List[str], optional): A list of arguments for the method. Defaults to None.
-
-    Methods:
-        copy() -> MethodAccessNode:
-            Creates a copy of the current MethodAccessNode instance.
-        
-        __str__() -> str:
-            Returns a string representation of the method access node in the format:
-            "member_name(arg1, arg2, ...)".
-    """
-    node_type: str = Field(default="MethodAccessNode", const=True)
-    member_name: str
-    args: List[ConstantNode] = None
-
-    def copy(self):
-        return MethodAccessNode(
-            member_name=self.member_name, args=self.args.copy() if self.args else None
-        )
-
-    def __str__(self):
-        args = []
-
-        for arg_node in self.args or []:
-            args.append(str(arg_node))
-
-        return f"{self.member_name}({', '.join(args)})"
+        return f"{self.operator.value}{self.operand}"
 
 
 class DataType(Enum):
@@ -257,7 +229,7 @@ def from_type_to_data_type(_type: type) -> DataType:
     )
 
 
-class PropertyAccessNode(MemberAccessNode):
+class PropertyAccessNode(Node):
     """
     Represents a node in CEL abstract syntax tree (AST) that accesses a property of an object.
     Examples:
@@ -269,12 +241,6 @@ class PropertyAccessNode(MemberAccessNode):
     Methods:
         __init__(member_name, value: Any):
             Initializes the PropertyAccessNode with the given member name and value.
-        is_function_call() -> bool:
-            Determines if the member access represents a function call.
-        get_property_path() -> str:
-            Constructs and returns the property path as a string.
-        get_method_access_node() -> MethodAccessNode:
-            Retrieves the MethodAccessNode if the value represents a method access.
         __str__() -> str:
             Returns a string representation of the PropertyAccessNode.
     """
@@ -282,27 +248,29 @@ class PropertyAccessNode(MemberAccessNode):
     path: list[str] = Field(default=None)
     data_type: DataType = Field(default=None)
 
-    def is_function_call(self) -> bool:
-        member_access_node = self.get_method_access_node()
+    def __str__(self):
+        return ".".join(self.path)
 
-        return member_access_node is not None
 
-    # TODO: To remove this method as it's not needed anymore
-    def get_property_path(self) -> list[str]:
-        return self.path
+class CoalesceNode(Node):
+    """
+    Represents a Coalesce node in an abstract syntax tree (AST).
 
-    # TODO: To remove this method as it's not needed anymore
-    def get_method_access_node(self) -> MethodAccessNode:
-        if isinstance(self.value, MethodAccessNode):
-            return self.value
+    A CoalesceNode is used to represent a coalesce operation, which evaluates
+    a list of properties and returns the first non-null value.
 
-        if isinstance(self.value, PropertyAccessNode):
-            return self.value.get_method_access_node()
+    Attributes:
+        properties (List[PropertyAccessNode]): A list of PropertyAccessNode
+            objects representing the properties to be evaluated in the coalesce
+            operation.
 
-        return None
+    Methods:
+        __str__(): Returns a string representation of the coalesce operation
+            in the format "coalesce(prop1, prop2, ...)".
+    """
+
+    node_type: str = Field(default="CoalesceNode", const=True)
+    properties: list[PropertyAccessNode] = Field(default=None)
 
     def __str__(self):
-        if self.value:
-            return f"{self.member_name}.{self.value}"
-
-        return self.member_name
+        return f"coalesce({', '.join([str(prop) for prop in self.properties])})"

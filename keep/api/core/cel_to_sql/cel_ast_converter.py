@@ -265,7 +265,6 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
                 return
 
             raise NotImplementedError(f"Method '{right}' not implemented")
-
         else:
             raise ValueError("No member access stack")
 

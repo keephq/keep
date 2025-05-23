@@ -3,11 +3,11 @@ from typing import Any, List
 from sqlalchemy import Dialect, String
 
 from keep.api.core.cel_to_sql.ast_nodes import (
+    CoalesceNode,
     ComparisonNodeOperator,
     ConstantNode,
     DataType,
     LogicalNodeOperator,
-    MemberAccessNode,
     Node,
     LogicalNode,
     ComparisonNode,
@@ -27,7 +27,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     SimpleFieldMapping,
 )
 from celpy import CELParseError
-
+from keep.api.core.cel_to_sql.cel_ast_rebuilder import CelAstRebuilder
 
 class CelToSqlException(Exception):
     pass
@@ -78,9 +78,9 @@ class BaseCelToSqlProvider:
             Converts a constant value to an SQL string.
         _visit_multiple_fields_node(multiple_fields_node: MultipleFieldsNode) -> str:
             Visits a multiple fields node and converts it to an SQL string.
-        _visit_member_access_node(member_access_node: MemberAccessNode) -> str:
-            Visits a member access node and converts it to an SQL string.
         _visit_property_access_node(property_access_node: PropertyAccessNode) -> str:
+            Visits a member access node and converts it to an SQL string.
+        _visit_property_access_node(sproperty_access_node: PropertyAccessNode) -> str:
             Visits a property access node and converts it to an SQL string.
         _visit_index_property(property_path: str) -> str:
             Abstract method to handle index properties. Must be implemented in the child class.
@@ -128,6 +128,7 @@ class BaseCelToSqlProvider:
             with_mapped_props, involved_fields = (
                 self.properties_mapper.map_props_in_ast(original_query)
             )
+            with_mapped_props = CelAstRebuilder(with_mapped_props).rebuild()
         except PropertiesMappingException as e:
             raise CelToSqlException(f"Error while mapping columns: {str(e)}") from e
 
@@ -201,8 +202,8 @@ class BaseCelToSqlProvider:
         if isinstance(abstract_node, ComparisonNode):
             result = self._visit_comparison_node(abstract_node, stack)
 
-        if isinstance(abstract_node, MemberAccessNode):
-            result = self._visit_member_access_node(abstract_node, stack)
+        if isinstance(abstract_node, PropertyAccessNode):
+            result = self._visit_property_access_node(abstract_node, stack)
 
         if isinstance(abstract_node, UnaryNode):
             result = self._visit_unary_node(abstract_node, stack)
@@ -212,6 +213,14 @@ class BaseCelToSqlProvider:
 
         if isinstance(abstract_node, MultipleFieldsNode):
             result = self._visit_multiple_fields_node(abstract_node, None, stack)
+
+        if isinstance(abstract_node, CoalesceNode):
+            result = self.coalesce(
+                [
+                    self._build_sql_filter(coalesce_arg, stack)
+                    for coalesce_arg in abstract_node.properties
+                ]
+            )
 
         if result:
             stack.pop()
@@ -251,10 +260,10 @@ class BaseCelToSqlProvider:
         )
 
     def _visit_logical_and(self, left: str, right: str) -> str:
-        return f"({left} AND {right})"
+        return f"{left} AND {right}"
 
     def _visit_logical_or(self, left: str, right: str) -> str:
-        return f"({left} OR {right})"
+        return f"{left} OR {right}"
 
     # endregion
 
@@ -421,35 +430,49 @@ class BaseCelToSqlProvider:
         else:
             first_operand_str = self._build_sql_filter(first_operand, stack)
 
-        constant_nodes_without_none = []
-        is_none_found = False
+        return f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value) for c in array])})"
 
-        for item in array:
-            if isinstance(item, ConstantNode):
-                if item.value is None:
-                    is_none_found = True
-                    continue
-                constant_nodes_without_none.append(item)
+    def _visit_contains_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'contains' method must be implemented in the child class"
+        )
 
-        or_queries = []
+    def _visit_starts_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'startsWith' method call must be implemented in the child class"
+        )
 
-        if len(constant_nodes_without_none) > 0:
-            or_queries.append(
-                f"{first_operand_str} in ({ ', '.join([self._visit_constant_node(c.value, self._get_data_type_to_convert(first_operand)) for c in constant_nodes_without_none])})"
-            )
+    def _visit_ends_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'endsWith' method call must be implemented in the child class"
+        )
 
-        if is_none_found:
-            or_queries.append(self._visit_equal(first_operand_str, "NULL"))
+    def _visit_contains_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'contains' method must be implemented in the child class"
+        )
 
-        if len(or_queries) == 0:
-            return self._visit_constant_node(False)
+    def _visit_starts_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'startsWith' method call must be implemented in the child class"
+        )
 
-        final_query = or_queries[0]
-
-        for query in or_queries[1:]:
-            final_query = self._visit_logical_or(final_query, query)
-
-        return final_query
+    def _visit_ends_with_method_calling(
+        self, property_path: str, method_args: List[ConstantNode]
+    ) -> str:
+        raise NotImplementedError(
+            "'endsWith' method call must be implemented in the child class"
+        )
 
     def _visit_in_for_array_datatype(
         self, first_operand: Node, array: list[ConstantNode], stack: list[Node]
@@ -509,6 +532,9 @@ class BaseCelToSqlProvider:
         if isinstance(node, ComparisonNode):
             return self._get_data_type_to_convert(node.first_operand)
 
+        if isinstance(node, CoalesceNode):
+            return None
+
         raise NotImplementedError(
             f"Cannot find data type to convert for {type(node).__name__} node"
         )
@@ -530,12 +556,14 @@ class BaseCelToSqlProvider:
 
         return self.coalesce(coalesce_args)
 
-    def _visit_member_access_node(self, member_access_node: MemberAccessNode, stack) -> str:
-        if isinstance(member_access_node, PropertyAccessNode):
-            return self._visit_property_access_node(member_access_node, stack)
+    def _visit_property_access_node(
+        self, property_access_node: PropertyAccessNode, stack
+    ) -> str:
+        if isinstance(property_access_node, PropertyAccessNode):
+            return self._visit_property_access_node(property_access_node, stack)
 
         raise NotImplementedError(
-            f"{type(member_access_node).__name__} member access node is not supported yet"
+            f"{type(property_access_node).__name__} member access node is not supported yet"
         )
 
     def _visit_property_access_node(self, property_access_node: PropertyAccessNode, stack: list[Node]) -> str:
@@ -551,9 +579,7 @@ class BaseCelToSqlProvider:
     # region Unary Visitors
     def _visit_unary_node(self, unary_node: UnaryNode, stack: list[Node]) -> str:
         if unary_node.operator == UnaryNodeOperator.NOT:
-            return self._visit_unary_not(
-                self._build_sql_filter(unary_node.operand, stack)
-            )
+            return self._visit_unary_not(self._build_sql_filter(unary_node.operand, stack))
 
         raise NotImplementedError(
             f"{unary_node.operator} unary operator is not supported yet"
