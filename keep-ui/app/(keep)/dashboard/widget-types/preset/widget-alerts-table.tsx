@@ -90,17 +90,17 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
         ),
       },
       name: {
-        columnTemplate: "1fr",
+        gridColumnTemplate: "minmax(100px, 1fr)",
         renderValue: (alert: any) => (
-          <div title={alert.name} className="max-w-full truncate">
+          <div title={alert.name} className="truncate overflow-hidden text-ellipsis">
             {alert.name}
           </div>
         ),
       },
       description: {
-        gridColumnTemplate: "1fr",
+        gridColumnTemplate: "minmax(100px, 1fr)",
         renderValue: (alert: any) => (
-          <div title={alert.description} className="max-w-full truncate">
+          <div title={alert.description} className="truncate overflow-hidden text-ellipsis">
             {alert.description}
           </div>
         ),
@@ -165,7 +165,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
             columnValue = columnMeta.renderValue(alert);
           } else {
             columnValue = (
-              <div className="max-w-32 truncate">{getNestedValue(alert, column)}</div>
+              <div className="truncate overflow-hidden text-ellipsis">{getNestedValue(alert, column)}</div>
             );
           }
           const _columnsGapClass =
@@ -196,6 +196,9 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
 
           if (columnMeta?.gridColumnTemplate) {
             gridColumnTemplate = columnMeta.gridColumnTemplate;
+          } else {
+            // Default sizing for arbitrary columns
+            gridColumnTemplate = "minmax(auto, 1fr)";
           }
 
           return gridColumnTemplate;
@@ -206,14 +209,16 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
 
   return (
     <div
-      style={{
-        background,
-        gridTemplateColumns: gridTemplateColumns,
-      }}
-      className="bg-opacity-25 grid max-w-full overflow-y-auto overflow-x-hidden border rounded-md px-2"
+      style={{ background }}
+      className="bg-opacity-25 max-w-full overflow-x-auto border rounded-md"
     >
-      {renderHeaders()}
-      {renderTableBody()}
+      <div
+        style={{ gridTemplateColumns }}
+        className="grid min-w-fit px-2"
+      >
+        {renderHeaders()}
+        {renderTableBody()}
+      </div>
     </div>
   );
 };
