@@ -54,16 +54,8 @@ def build_facets_data_query(
     """
     instance = get_cel_to_sql_provider(properties_metadata)
 
-    if facet_options_query.cel:
-        base_query = base_query.filter(
-            text(instance.convert_to_sql_str(facet_options_query.cel))
-        )
-
     # Main Query: JSON Extraction and Counting
     union_queries = []
-    # facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    # new_fields_config = facet_selects_metadata["new_fields_config"]
-    # facets_properties_metadata = PropertiesMetadata(new_fields_config)
 
     # prevents duplicate queries for the same facet property path and its cel combination
     visited_facets = set()
@@ -76,24 +68,34 @@ def build_facets_data_query(
         if facet_key in visited_facets:
             continue
 
+        base_query = base_query_factory(
+            facet.property_path,
+            facets_query_builder.build_facet_select(
+                entity_id_column=entity_id_column,
+                facet_property_path=facet.property_path,
+                facet_key=facet_key,
+            ),
+        )
+        cel_queries = [
+            facet_options_query.cel,
+            facet_options_query.facet_queries.get(facet.id, None),
+        ]
+        final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
+
+        if final_cel:
+            base_query = base_query.filter(text(instance.convert_to_sql_str(final_cel)))
+
         facet_sub_query = facets_query_builder.build_facet_subquery(
             entity_id_column=entity_id_column,
-            base_query=base_query_factory(
-                facet.property_path,
-                facets_query_builder.build_facet_select(
-                    entity_id_column=entity_id_column,
-                    facet_property_path=facet.property_path,
-                    facet_key=facet_key,
-                ),
-            ),
+            base_query=base_query,
             facet_property_path=facet.property_path,
             facet_cel=facet_cel,
         )
 
         # For SQLite we can't limit the subquery
         # so we limit the result after the result is fetched in get_facet_options
-        if engine.dialect.name != "sqlite":
-            facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
+        # if engine.dialect.name != "sqlite":
+        #     facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
 
         union_queries.append(facet_sub_query)
         visited_facets.add(facet_key)
@@ -226,7 +228,7 @@ def get_facet_options(
                             value=map_facet_option_value(
                                 facet_value, property_mapping.data_type
                             ),
-                            matches_count=matches_count,
+                            matches_count=0 if matches_count is None else matches_count,
                         )
                         for facet_id, facet_value, matches_count in grouped_by_id_dict[
                             facet_key

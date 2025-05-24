@@ -1,4 +1,4 @@
-from sqlalchemy import literal_column
+from sqlalchemy import CTE, literal_column
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
@@ -28,24 +28,9 @@ class BaseFacetsQueryBuilder:
             facet_property_path
         )
 
-        coalecense_args = []
-        should_cast = False
-        for field_mapping in property_metadata.field_mappings:
-            if isinstance(field_mapping, JsonFieldMapping):
-                should_cast = True
-                coalecense_args.append(self._handle_json_mapping(field_mapping))
-            elif isinstance(field_mapping, SimpleFieldMapping):
-                coalecense_args.append(self._handle_simple_mapping(field_mapping))
-        select_expression = self._coalesce(coalecense_args)
-
-        if should_cast:
-            select_expression = self._cast_column(
-                select_expression, property_metadata.data_type
-            )
-
         return [
             literal(facet_key).label("facet_id"),
-            select_expression.label("facet_value"),
+            self._get_select_for_column(property_metadata).label("facet_value"),
             func.count(func.distinct(entity_id_column)).label("matches_count"),
         ]
 
@@ -110,9 +95,9 @@ class BaseFacetsQueryBuilder:
                 metadata,
             )
 
-        facet_source_subquery = facet_source_subquery.filter(
-            text(self.cel_to_sql.convert_to_sql_str(facet_cel))
-        )
+        # facet_source_subquery = facet_source_subquery.filter(
+        #     text(self.cel_to_sql.convert_to_sql_str(facet_cel))
+        # )
 
         # return (
         #     select(
@@ -124,9 +109,33 @@ class BaseFacetsQueryBuilder:
         #     .group_by(literal_column("facet_id"), literal_column("facet_value"))
         # )
 
+        if isinstance(facet_source_subquery, CTE):
+            return select(
+                literal_column("facet_id"),
+                literal_column("facet_value"),
+                literal_column("matches_count"),
+            ).select_from(facet_source_subquery)
+
         return facet_source_subquery.group_by(
             literal_column("facet_id"), literal_column("facet_value")
         )
+
+    def _get_select_for_column(self, property_metadata: PropertyMetadataInfo):
+        coalecense_args = []
+        should_cast = False
+
+        for field_mapping in property_metadata.field_mappings:
+            if isinstance(field_mapping, JsonFieldMapping):
+                should_cast = True
+                coalecense_args.append(self._handle_json_mapping(field_mapping))
+            elif isinstance(field_mapping, SimpleFieldMapping):
+                coalecense_args.append(self._handle_simple_mapping(field_mapping))
+            select_expression = self._coalesce(coalecense_args)
+
+        if should_cast:
+            return self._cast_column(select_expression, property_metadata.data_type)
+
+        return select_expression
 
     def _cast_column(
         self,
