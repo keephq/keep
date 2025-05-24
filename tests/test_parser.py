@@ -390,6 +390,81 @@ class TestReusableActionWithWorkflow:
         )
         assert len(context_manager.actions_context) == 1
 
+    def test_load_engine_config(self, db_session):
+        parser = Parser()
+
+        # load workflow configuration with templating
+        workflow_configuration = yaml.safe_load(
+            """
+            workflow:
+              id: servicenow
+              description: create a ticket in servicenow when an alert is triggered
+              templating: jinja2
+              triggers:
+                - type: alert
+                  filters:
+                    - key: source
+                      value: r"(grafana|prometheus)"
+            """
+        )
+
+        workflow = workflow_configuration.get("workflow") or workflow_configuration.get(
+            "alert"
+        )
+
+        templating = parser._parse_templating(
+            workflow=workflow,
+        )
+
+        assert templating == "jinja2"
+
+        # load workflow configuration without templating
+        workflow_configuration = yaml.safe_load(
+            """
+            workflow:
+              id: servicenow
+              description: create a ticket in servicenow when an alert is triggered
+              triggers:
+                - type: alert
+                  filters:
+                    - key: source
+                      value: r"(grafana|prometheus)"
+            """
+        )
+
+        workflow = workflow_configuration.get("workflow") or workflow_configuration.get(
+            "alert"
+        )
+
+        templating = parser._parse_templating(
+            workflow=workflow,
+        )
+
+        assert templating == "mustache"
+
+        # load workflow configuration with invalid templating
+        workflow_configuration = yaml.safe_load(
+            """
+            workflow:
+              id: servicenow
+              description: create a ticket in servicenow when an alert is triggered
+              templating: invalid
+              triggers:
+                - type: alert
+                  filters:
+                    - key: source
+                      value: r"(grafana|prometheus)"
+            """
+        )
+
+        workflow = workflow_configuration.get("workflow") or workflow_configuration.get(
+            "alert"
+        )
+
+        with pytest.raises(ValueError):
+            parser._parse_templating(
+                workflow=workflow,
+            )
 
 class TestParserUtils:
 
