@@ -434,13 +434,14 @@ def get_alert_facets_data(
     def base_query_factory(facet_property_path: str, select_statement):
         return __build_query_for_filtering(
             tenant_id=tenant_id,
-            select_args=[select_statement, LastAlert.alert_id.label("entity_id")],
+            select_args=select_statement,
             cel=facet_options_query.cel,
             force_fetch=True,
         )["query"]
 
     return get_facet_options(
         base_query_factory=base_query_factory,
+        entity_id_column=LastAlert.alert_id,
         facets=facets,
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,

@@ -23,12 +23,10 @@ class BaseFacetsQueryBuilder:
         self.properties_metadata = properties_metadata
         self.cel_to_sql = cel_to_sql
 
-    def build_facet_select(self, facet_property_path):
+    def build_facet_select(self, entity_id_column, facet_key: str, facet_property_path):
         property_metadata = self.properties_metadata.get_property_metadata_for_str(
             facet_property_path
         )
-
-        select_field = ("facet_" + facet_property_path.replace(".", "_")).lower()
 
         coalecense_args = []
         should_cast = False
@@ -45,8 +43,13 @@ class BaseFacetsQueryBuilder:
                 select_expression, property_metadata.data_type
             )
 
-        return select_expression.label(select_field)
+        return [
+            literal(facet_key).label("facet_id"),
+            select_expression.label("facet_value"),
+            func.count(func.distinct(entity_id_column)).label("matches_count"),
+        ]
 
+    # TODO: TO REMOVE
     def build_facet_selects(self, facets: list[FacetDto]):
         new_fields_config: list[FieldMappingConfiguration] = []
         select_expressions = {}
@@ -90,7 +93,7 @@ class BaseFacetsQueryBuilder:
         }
 
     def build_facet_subquery(
-        self, base_query, facet_key: str, facet_property_path: str, facet_cel: str
+        self, base_query, entity_id_column, facet_property_path: str, facet_cel: str
     ):
         metadata = self.properties_metadata.get_property_metadata_for_str(
             facet_property_path
@@ -111,14 +114,18 @@ class BaseFacetsQueryBuilder:
             text(self.cel_to_sql.convert_to_sql_str(facet_cel))
         )
 
-        return (
-            select(
-                literal(facet_key).label("facet_id"),
-                literal_column("facet_value"),
-                func.count().label("matches_count"),
-            )
-            .select_from(facet_source_subquery)
-            .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        # return (
+        #     select(
+        #         literal_column("facet_id").label("facet_id"),
+        #         literal_column("facet_value").label("facet_value"),
+        #         literal_column("matches_count").label("matches_count"),
+        #     )
+        #     .select_from(facet_source_subquery)
+        #     .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        # )
+
+        return facet_source_subquery.group_by(
+            literal_column("facet_id"), literal_column("facet_value")
         )
 
     def _cast_column(
@@ -131,18 +138,20 @@ class BaseFacetsQueryBuilder:
     def _build_facet_subquery_for_column(
         self, base_query, metadata: PropertyMetadataInfo
     ):
-        coalecense_args = []
+        # coalecense_args = []
 
-        for item in metadata.field_mappings:
-            if isinstance(item, JsonFieldMapping):
-                coalecense_args.append(self._handle_json_mapping(item))
-            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                coalecense_args.append(self._handle_simple_mapping(item))
+        # for item in metadata.field_mappings:
+        #     if isinstance(item, JsonFieldMapping):
+        #         coalecense_args.append(self._handle_json_mapping(item))
+        #     elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
+        #         coalecense_args.append(self._handle_simple_mapping(item))
 
-        return select(
-            func.distinct(literal_column("entity_id")),
-            self._coalesce(coalecense_args).label("facet_value"),
-        ).select_from(base_query)
+        return base_query
+
+        # return select(
+        #     func.distinct(literal_column("entity_id")),
+        #     self._coalesce(coalecense_args).label("facet_value"),
+        # ).select_from(base_query)
 
     def _build_facet_subquery_for_json_array(
         self,

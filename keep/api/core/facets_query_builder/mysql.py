@@ -42,6 +42,7 @@ class MySqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         json_table_join = func.json_table(
             literal_column(column_name), Column("value", String(127))
         ).table_valued("value")
+
         return select(
             func.distinct(base_query.c.entity_id),
             json_table_join.c.value.label("facet_value"),

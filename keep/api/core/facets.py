@@ -34,6 +34,7 @@ def build_facet_selects(
 
 def build_facets_data_query(
     base_query_factory: lambda facet_property_path, select_statement: Any,
+    entity_id_column: any,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
     facet_options_query: FacetOptionsQueryDto,
@@ -76,12 +77,16 @@ def build_facets_data_query(
             continue
 
         facet_sub_query = facets_query_builder.build_facet_subquery(
+            entity_id_column=entity_id_column,
             base_query=base_query_factory(
                 facet.property_path,
-                facets_query_builder.build_facet_select(facet.property_path),
+                facets_query_builder.build_facet_select(
+                    entity_id_column=entity_id_column,
+                    facet_property_path=facet.property_path,
+                    facet_key=facet_key,
+                ),
             ),
             facet_property_path=facet.property_path,
-            facet_key=facet_key,
             facet_cel=facet_cel,
         )
 
@@ -130,6 +135,7 @@ def map_facet_option_value(value, data_type: DataType):
 
 def get_facet_options(
     base_query_factory: lambda facet_property_path, select_statement: Any,
+    entity_id_column: any,
     facets: list[FacetDto],
     facet_options_query: FacetOptionsQueryDto,
     properties_metadata: PropertiesMetadata,
@@ -162,6 +168,7 @@ def get_facet_options(
             try:
                 db_query = build_facets_data_query(
                     base_query_factory=base_query_factory,
+                    entity_id_column=entity_id_column,
                     facets=valid_facets,
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
