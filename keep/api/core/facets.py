@@ -2,13 +2,10 @@ import hashlib
 import json
 import logging
 from typing import Any
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
-    get_cel_to_sql_provider,
-)
 from keep.api.core.facets_query_builder.get_facets_query_builder import (
     get_facets_query_builder,
 )
@@ -24,99 +21,6 @@ from keep.api.models.db.facet import Facet, FacetType
 logger = logging.getLogger(__name__)
 
 OPTIONS_PER_FACET = 50
-
-
-def build_facet_selects(
-    properties_metadata: PropertiesMetadata, facets: list[FacetDto]
-):
-    return get_facets_query_builder(properties_metadata).build_facet_selects(facets)
-
-
-def build_facets_data_query(
-    base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
-    entity_id_column: any,
-    facets: list[FacetDto],
-    properties_metadata: PropertiesMetadata,
-    facet_options_query: FacetOptionsQueryDto,
-):
-    """
-    Builds a SQL query to extract and count facet data based on the provided parameters.
-
-    Args:
-        dialect (str): The SQL dialect to use (e.g., 'postgresql', 'mysql').
-        base_query: The base SQLAlchemy query object to build upon.
-        facets (list[FacetDto]): A list of facet data transfer objects specifying the facets to be queried.
-        properties_metadata (PropertiesMetadata): Metadata about the properties to be used in the query.
-        cel (str): A CEL (Common Expression Language) string to filter the base query.
-
-    Returns:
-        sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
-    """
-    instance = get_cel_to_sql_provider(properties_metadata)
-
-    # Main Query: JSON Extraction and Counting
-    union_queries = []
-
-    # prevents duplicate queries for the same facet property path and its cel combination
-    visited_facets = set()
-    facets_query_builder = get_facets_query_builder(properties_metadata)
-    for facet in facets:
-        facet_cel = facet_options_query.facet_queries.get(facet.id, "")
-        facet_key = (
-            facet.property_path + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
-        )
-        if facet_key in visited_facets:
-            continue
-
-        cel_queries = [
-            facet_options_query.cel,
-            facet_options_query.facet_queries.get(facet.id, None),
-        ]
-        final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
-        involved_fields = []
-        sql_filter = None
-
-        if final_cel:
-            cel_to_sql_result = instance.convert_to_sql_str_v2(final_cel)
-            involved_fields = cel_to_sql_result.involved_fields
-            sql_filter = cel_to_sql_result.sql
-
-        base_query = base_query_factory(
-            facet.property_path,
-            involved_fields,
-            facets_query_builder.build_facet_select(
-                entity_id_column=entity_id_column,
-                facet_property_path=facet.property_path,
-                facet_key=facet_key,
-            ),
-        )
-
-        if sql_filter:
-            base_query = base_query.filter(text(sql_filter))
-
-        facet_sub_query = facets_query_builder.build_facet_subquery(
-            entity_id_column=entity_id_column,
-            base_query=base_query,
-            facet_property_path=facet.property_path,
-            facet_cel=facet_cel,
-        )
-
-        # For SQLite we can't limit the subquery
-        # so we limit the result after the result is fetched in get_facet_options
-        # if engine.dialect.name != "sqlite":
-        #     facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
-
-        union_queries.append(facet_sub_query)
-        visited_facets.add(facet_key)
-
-    query = None
-
-    if len(union_queries) > 1:
-        query = union_queries[0].union_all(*union_queries[1:])
-    else:
-        query = union_queries[0]
-
-    return query
 
 
 def map_facet_option_value(value, data_type: DataType):
@@ -177,11 +81,12 @@ def get_facet_options(
     if valid_facets:
         with Session(engine) as session:
             try:
-                db_query = build_facets_data_query(
+                db_query = get_facets_query_builder(
+                    properties_metadata
+                ).build_facets_data_query(
                     base_query_factory=base_query_factory,
                     entity_id_column=entity_id_column,
                     facets=valid_facets,
-                    properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
                 )
 

@@ -15,14 +15,10 @@ from keep.api.core.facets_query_builder.base_facets_query_builder import (
 
 class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
 
-    def build_facet_subquery(
-        self, base_query, entity_id_column, facet_property_path, facet_cel
-    ):
+    def build_facet_subquery(self, base_query, facet_property_path, facet_cel):
         return (
             super()
-            .build_facet_subquery(
-                base_query, entity_id_column, facet_property_path, facet_cel
-            )
+            .build_facet_subquery(base_query, facet_property_path, facet_cel)
             .limit(50)
         )
 

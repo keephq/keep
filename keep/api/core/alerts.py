@@ -20,7 +20,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 from keep.api.core.db import engine
 
 # This import is required to create the tables
-from keep.api.core.facets import build_facet_selects, get_facet_options, get_facets
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     Alert,

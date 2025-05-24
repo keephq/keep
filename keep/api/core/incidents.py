@@ -19,7 +19,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
     get_cel_to_sql_provider,
 )
 from keep.api.core.db import engine, enrich_incidents_with_alerts
-from keep.api.core.facets import get_facet_options, get_facets, build_facet_selects
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.alert import (
     Alert,
     AlertEnrichment,

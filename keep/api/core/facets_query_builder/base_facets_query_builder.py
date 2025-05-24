@@ -1,3 +1,5 @@
+import hashlib
+from typing import Any
 from sqlalchemy import CTE, literal_column
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -8,7 +10,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
-from keep.api.models.facet import FacetDto
+from keep.api.models.facet import FacetDto, FacetOptionsQueryDto
 from sqlalchemy import func, literal, literal_column, select, text
 
 
@@ -23,6 +25,85 @@ class BaseFacetsQueryBuilder:
         self.properties_metadata = properties_metadata
         self.cel_to_sql = cel_to_sql
 
+    def build_facets_data_query(
+        self,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        entity_id_column: any,
+        facets: list[FacetDto],
+        facet_options_query: FacetOptionsQueryDto,
+    ):
+        """
+        Builds a SQL query to extract and count facet data based on the provided parameters.
+
+        Args:
+            dialect (str): The SQL dialect to use (e.g., 'postgresql', 'mysql').
+            base_query: The base SQLAlchemy query object to build upon.
+            facets (list[FacetDto]): A list of facet data transfer objects specifying the facets to be queried.
+            properties_metadata (PropertiesMetadata): Metadata about the properties to be used in the query.
+            cel (str): A CEL (Common Expression Language) string to filter the base query.
+
+        Returns:
+            sqlalchemy.sql.Selectable: A SQLAlchemy selectable object representing the constructed query.
+        """
+        # Main Query: JSON Extraction and Counting
+        union_queries = []
+
+        # prevents duplicate queries for the same facet property path and its cel combination
+        visited_facets = set()
+
+        for facet in facets:
+            facet_cel = facet_options_query.facet_queries.get(facet.id, "")
+            facet_key = (
+                facet.property_path
+                + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
+            )
+            if facet_key in visited_facets:
+                continue
+
+            cel_queries = [
+                facet_options_query.cel,
+                facet_options_query.facet_queries.get(facet.id, None),
+            ]
+            final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
+            involved_fields = []
+            sql_filter = None
+
+            if final_cel:
+                cel_to_sql_result = self.cel_to_sql.convert_to_sql_str_v2(final_cel)
+                involved_fields = cel_to_sql_result.involved_fields
+                sql_filter = cel_to_sql_result.sql
+
+            base_query = base_query_factory(
+                facet.property_path,
+                involved_fields,
+                self.build_facet_select(
+                    entity_id_column=entity_id_column,
+                    facet_property_path=facet.property_path,
+                    facet_key=facet_key,
+                ),
+            )
+
+            if sql_filter:
+                base_query = base_query.filter(text(sql_filter))
+
+            facet_sub_query = self.build_facet_subquery(
+                base_query=base_query,
+                facet_property_path=facet.property_path,
+                facet_cel=facet_cel,
+            )
+
+            union_queries.append(facet_sub_query)
+            visited_facets.add(facet_key)
+
+        query = None
+
+        if len(union_queries) > 1:
+            query = union_queries[0].union_all(*union_queries[1:])
+        else:
+            query = union_queries[0]
+
+        return query
+
     def build_facet_select(self, entity_id_column, facet_key: str, facet_property_path):
         property_metadata = self.properties_metadata.get_property_metadata_for_str(
             facet_property_path
@@ -34,51 +115,8 @@ class BaseFacetsQueryBuilder:
             func.count(func.distinct(entity_id_column)).label("matches_count"),
         ]
 
-    # TODO: TO REMOVE
-    def build_facet_selects(self, facets: list[FacetDto]):
-        new_fields_config: list[FieldMappingConfiguration] = []
-        select_expressions = {}
-
-        for facet in facets:
-            property_metadata = self.properties_metadata.get_property_metadata_for_str(
-                facet.property_path
-            )
-            if property_metadata is None:
-                continue
-
-            select_field = ("facet_" + facet.property_path.replace(".", "_")).lower()
-
-            new_fields_config.append(
-                FieldMappingConfiguration(
-                    map_from_pattern=facet.property_path,
-                    map_to=[select_field],
-                    data_type=property_metadata.data_type,
-                )
-            )
-            coalecense_args = []
-            should_cast = False
-            for field_mapping in property_metadata.field_mappings:
-                if isinstance(field_mapping, JsonFieldMapping):
-                    should_cast = True
-                    coalecense_args.append(self._handle_json_mapping(field_mapping))
-                elif isinstance(field_mapping, SimpleFieldMapping):
-                    coalecense_args.append(self._handle_simple_mapping(field_mapping))
-            select_expression = self._coalesce(coalecense_args)
-
-            if should_cast:
-                select_expression = self._cast_column(
-                    select_expression, property_metadata.data_type
-                )
-
-            select_expressions[select_field] = select_expression.label(select_field)
-
-        return {
-            "new_fields_config": new_fields_config,
-            "select_expressions": list(select_expressions.values()),
-        }
-
     def build_facet_subquery(
-        self, base_query, entity_id_column, facet_property_path: str, facet_cel: str
+        self, base_query, facet_property_path: str, facet_cel: str
     ):
         metadata = self.properties_metadata.get_property_metadata_for_str(
             facet_property_path
