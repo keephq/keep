@@ -33,7 +33,7 @@ def build_facet_selects(
 
 
 def build_facets_data_query(
-    base_query_factory: lambda facet_property_path, select_statement: Any,
+    base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
     entity_id_column: any,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
@@ -68,22 +68,31 @@ def build_facets_data_query(
         if facet_key in visited_facets:
             continue
 
+        cel_queries = [
+            facet_options_query.cel,
+            facet_options_query.facet_queries.get(facet.id, None),
+        ]
+        final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
+        involved_fields = []
+        sql_filter = None
+
+        if final_cel:
+            cel_to_sql_result = instance.convert_to_sql_str_v2(final_cel)
+            involved_fields = cel_to_sql_result.involved_fields
+            sql_filter = cel_to_sql_result.sql
+
         base_query = base_query_factory(
             facet.property_path,
+            involved_fields,
             facets_query_builder.build_facet_select(
                 entity_id_column=entity_id_column,
                 facet_property_path=facet.property_path,
                 facet_key=facet_key,
             ),
         )
-        cel_queries = [
-            facet_options_query.cel,
-            facet_options_query.facet_queries.get(facet.id, None),
-        ]
-        final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
 
-        if final_cel:
-            base_query = base_query.filter(text(instance.convert_to_sql_str(final_cel)))
+        if sql_filter:
+            base_query = base_query.filter(text(sql_filter))
 
         facet_sub_query = facets_query_builder.build_facet_subquery(
             entity_id_column=entity_id_column,

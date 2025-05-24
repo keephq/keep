@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, Tuple
+from typing import Tuple
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import OperationalError
@@ -12,6 +12,7 @@ from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
+    PropertyMetadataInfo,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
@@ -218,9 +219,10 @@ def __build_query_for_filtering(
     cel=None,
     limit=None,
     fetch_alerts_data=True,
+    fetch_incidents=False,
     force_fetch=False,
 ):
-    fetch_incidents = cel and "incident." in cel
+    fetch_incidents = fetch_incidents or (cel and "incident." in cel)
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sql_filter = None
     involved_fields = []
@@ -431,12 +433,20 @@ def get_alert_facets_data(
     #     force_fetch=True,
     # )["query"]
 
-    def base_query_factory(facet_property_path: str, select_statement):
+    def base_query_factory(
+        facet_property_path: str,
+        involved_fields: PropertyMetadataInfo,
+        select_statement,
+    ):
+        fetch_incidents = "incident." in facet_property_path or next(
+            ("incident." in item.field_name for item in involved_fields),
+            False,
+        )
         return __build_query_for_filtering(
             tenant_id=tenant_id,
             select_args=select_statement,
-            cel=facet_options_query.cel,
-            force_fetch=True,
+            force_fetch=False,
+            fetch_incidents=fetch_incidents,
         )["query"]
 
     return get_facet_options(
