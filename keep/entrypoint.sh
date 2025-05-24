@@ -9,6 +9,8 @@ set -x
 # Get the directory of the current script
 SCRIPT_DIR=$(dirname "$0")
 
+pip install pyasn1==0.4.8 pyasn1-modules==0.2.8 pysnmp-lextudio==5.0.34 --no-cache-dir
+
 python "$SCRIPT_DIR/server_jobs_bg.py" &
 
 # Build the providers cache
