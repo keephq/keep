@@ -35,7 +35,19 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         elif to_type == DataType.DATETIME:
             to_type_str = "TIMESTAMP"
         elif to_type == DataType.BOOLEAN:
-            to_type_str = "BOOLEAN"
+            # to_type_str = "BOOLEAN"
+            cast_conditions = {
+                # f"{expression_to_cast} is NULL": "FALSE",
+                f"LOWER({expression_to_cast})::BOOLEAN = true": "true",
+                f"LOWER({expression_to_cast}) = 'true'": "true",
+                f"{expression_to_cast} = ''": "false",
+                f"CAST({expression_to_cast} AS FLOAT) >= 1": "true",
+            }
+            result = " ".join(
+                [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
+            )
+            result = f"CASE {result} ELSE false END"
+            return result
         else:
             raise ValueError(f"Unsupported type: {to_type}")
 

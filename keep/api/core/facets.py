@@ -1,16 +1,16 @@
+import hashlib
 import json
 import logging
-from sqlalchemy import Column, String, cast, func, literal, literal_column, select, text
+from typing import Any
+from sqlalchemy import select, text
 from sqlalchemy.exc import OperationalError
 from keep.api.core.cel_to_sql.ast_nodes import DataType
-from keep.api.core.cel_to_sql.properties_metadata import (
-    FieldMappingConfiguration,
-    JsonFieldMapping,
-    PropertiesMetadata,
-    SimpleFieldMapping,
-)
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
+)
+from keep.api.core.facets_query_builder.get_facets_query_builder import (
+    get_facets_query_builder,
 )
 from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from uuid import UUID, uuid4
@@ -20,95 +20,21 @@ from sqlmodel import Session
 
 from keep.api.core.db import engine
 from keep.api.models.db.facet import Facet, FacetType
-from sqlalchemy.dialects.postgresql import JSONB
 
 logger = logging.getLogger(__name__)
 
 OPTIONS_PER_FACET = 50
 
 
-def build_facet_selects(properties_metadata, facets):
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    new_fields_config: list[FieldMappingConfiguration] = []
-    select_expressions = {}
-
-    for facet in facets:
-        property_metadata = properties_metadata.get_property_metadata_for_str(
-            facet.property_path
-        )
-        if property_metadata is None:
-            continue
-
-        select_field = ("facet_" + facet.property_path.replace(".", "_")).lower()
-
-        new_fields_config.append(
-            FieldMappingConfiguration(
-                map_from_pattern=facet.property_path,
-                map_to=[select_field],
-                data_type=property_metadata.data_type,
-            )
-        )
-        coalla = []
-
-        for field_mapping in property_metadata.field_mappings:
-            if isinstance(field_mapping, JsonFieldMapping):
-                coalla.append(
-                    cel_to_sql_instance.json_extract_as_text(
-                        field_mapping.json_prop, field_mapping.prop_in_json
-                    )
-                )
-            elif isinstance(field_mapping, SimpleFieldMapping):
-                coalla.append(field_mapping.map_to)
-
-        select_expressions[select_field] = literal_column(
-            cel_to_sql_instance.coalesce(coalla) if len(coalla) > 1 else coalla[0]
-        ).label(select_field)
-
-    return {
-        "new_fields_config": new_fields_config,
-        "select_expressions": list(select_expressions.values()),
-    }
-
-
-def build_facet_subquery_for_column(
-    base_query,
-    column_name: str,
+def build_facet_selects(
+    properties_metadata: PropertiesMetadata, facets: list[FacetDto]
 ):
-    return select(
-        func.distinct(literal_column("entity_id")),
-        literal_column(column_name).label("facet_value"),
-    ).select_from(base_query)
-
-
-def build_facet_subquery_for_json_array(
-    base_query,
-    column_name: str,
-):
-    json_table_join = None
-
-    if engine.dialect.name == "sqlite":
-        json_table_join = func.json_each(literal_column(column_name)).table_valued(
-            "value"
-        )
-    elif engine.dialect.name == "postgresql":
-        json_table_join = func.jsonb_array_elements_text(
-            cast(literal_column(column_name), JSONB)
-        ).table_valued("value")
-    elif engine.dialect.name == "mysql":
-        # MySQL throws errors due to JSON_TABLE without LIMIT
-        base_query = base_query.limit(1_000_000).cte(f"{column_name}_base_query")
-        json_table_join = func.json_table(
-            literal_column(column_name), Column("value", String(127))
-        ).table_valued("value")
-
-    return select(
-        func.distinct(base_query.c.entity_id),
-        json_table_join.c.value.label("facet_value"),
-    ).select_from(base_query, json_table_join)
+    return get_facets_query_builder(properties_metadata).build_facet_selects(facets)
 
 
 def build_facets_data_query(
-    base_query,
+    base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+    entity_id_column: any,
     facets: list[FacetDto],
     properties_metadata: PropertiesMetadata,
     facet_options_query: FacetOptionsQueryDto,
@@ -128,73 +54,60 @@ def build_facets_data_query(
     """
     instance = get_cel_to_sql_provider(properties_metadata)
 
-    if facet_options_query.cel:
-        base_query = base_query.filter(
-            text(instance.convert_to_sql_str(facet_options_query.cel))
-        )
-
     # Main Query: JSON Extraction and Counting
     union_queries = []
-    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    new_fields_config = facet_selects_metadata["new_fields_config"]
-    facets_properties_metadata = PropertiesMetadata(new_fields_config)
-    facets_cel_to_sql_instance = get_cel_to_sql_provider(facets_properties_metadata)
 
-    base_query_common = base_query.cte("base_query")
-
+    # prevents duplicate queries for the same facet property path and its cel combination
+    visited_facets = set()
+    facets_query_builder = get_facets_query_builder(properties_metadata)
     for facet in facets:
-        metadata = facets_properties_metadata.get_property_metadata_for_str(
-            facet.property_path
+        facet_cel = facet_options_query.facet_queries.get(facet.id, "")
+        facet_key = (
+            facet.property_path + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
         )
-        facet_value = []
+        if facet_key in visited_facets:
+            continue
 
-        for item in metadata.field_mappings:
-            if isinstance(item, JsonFieldMapping):
-                facet_value.append(
-                    facets_cel_to_sql_instance.json_extract_as_text(
-                        item.json_prop, item.prop_in_json
-                    )
-                )
-            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                facet_value.append(item.map_to)
+        cel_queries = [
+            facet_options_query.cel,
+            facet_options_query.facet_queries.get(facet.id, None),
+        ]
+        final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
+        involved_fields = []
+        sql_filter = None
 
-        column_name = f"{facets_cel_to_sql_instance.coalesce([facets_cel_to_sql_instance.cast(item, DataType.STRING) for item in facet_value])}"
-        facet_source_subquery = None
-        if metadata.data_type == DataType.ARRAY:
-            facet_source_subquery = build_facet_subquery_for_json_array(
-                base_query,
-                column_name,
-            )
-        else:
-            facet_source_subquery = build_facet_subquery_for_column(
-                base_query_common,
-                column_name,
-            )
+        if final_cel:
+            cel_to_sql_result = instance.convert_to_sql_str_v2(final_cel)
+            involved_fields = cel_to_sql_result.involved_fields
+            sql_filter = cel_to_sql_result.sql
 
-        facet_source_subquery = facet_source_subquery.filter(
-            text(
-                facets_cel_to_sql_instance.convert_to_sql_str(
-                    facet_options_query.facet_queries[facet.id]
-                )
-            )
+        base_query = base_query_factory(
+            facet.property_path,
+            involved_fields,
+            facets_query_builder.build_facet_select(
+                entity_id_column=entity_id_column,
+                facet_property_path=facet.property_path,
+                facet_key=facet_key,
+            ),
         )
 
-        facet_sub_query = (
-            select(
-                literal(facet.id).label("facet_id"),
-                literal_column("facet_value"),
-                func.count().label("matches_count"),
-            )
-            .select_from(facet_source_subquery)
-            .group_by(literal_column("facet_id"), literal_column("facet_value"))
+        if sql_filter:
+            base_query = base_query.filter(text(sql_filter))
+
+        facet_sub_query = facets_query_builder.build_facet_subquery(
+            entity_id_column=entity_id_column,
+            base_query=base_query,
+            facet_property_path=facet.property_path,
+            facet_cel=facet_cel,
         )
 
         # For SQLite we can't limit the subquery
         # so we limit the result after the result is fetched in get_facet_options
-        if engine.dialect.name != "sqlite":
-            facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
+        # if engine.dialect.name != "sqlite":
+        #     facet_sub_query = facet_sub_query.limit(OPTIONS_PER_FACET)
 
         union_queries.append(facet_sub_query)
+        visited_facets.add(facet_key)
 
     query = None
 
@@ -206,8 +119,34 @@ def build_facets_data_query(
     return query
 
 
+def map_facet_option_value(value, data_type: DataType):
+    """
+    Maps the value to the appropriate data type.
+    Args:
+        value: The value to be mapped.
+        data_type: The data type to map the value to.
+    Returns:
+        The mapped value.
+    """
+    if data_type == DataType.INTEGER:
+        try:
+            return int(value)
+        except ValueError:
+            return value
+    elif data_type == DataType.FLOAT:
+        try:
+            return float(value)
+        except ValueError:
+            return value
+    elif data_type == DataType.BOOLEAN:
+        return value in ["true", "1"]
+    else:
+        return value
+
+
 def get_facet_options(
-    base_query,
+    base_query_factory: lambda facet_property_path, select_statement: Any,
+    entity_id_column: any,
     facets: list[FacetDto],
     facet_options_query: FacetOptionsQueryDto,
     properties_metadata: PropertiesMetadata,
@@ -239,15 +178,22 @@ def get_facet_options(
         with Session(engine) as session:
             try:
                 db_query = build_facets_data_query(
-                    base_query=base_query,
+                    base_query_factory=base_query_factory,
+                    entity_id_column=entity_id_column,
                     facets=valid_facets,
                     properties_metadata=properties_metadata,
                     facet_options_query=facet_options_query,
                 )
 
+                db_query_str = str(
+                    db_query.compile(
+                        dialect=engine.dialect, compile_kwargs={"literal_binds": True}
+                    )
+                )
+
                 data = session.exec(db_query).all()
             except OperationalError as e:
-                raise e  # TODO: REMOVE IT
+                raise e  # TODO: TO REMOVE
                 logger.warning(
                     f"""Failed to execute query for facet options.
                     Facet options: {json.dumps(facet_options_query.dict())}
@@ -274,20 +220,27 @@ def get_facet_options(
                 grouped_by_id_dict[facet_data.facet_id].append(facet_data)
 
             for facet in facets:
+                facet_cel = facet_options_query.facet_queries.get(facet.id, "")
+                facet_key = (
+                    facet.property_path
+                    + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
+                )
                 property_mapping = properties_metadata.get_property_metadata_for_str(
                     facet.property_path
                 )
                 result_dict.setdefault(facet.id, [])
 
-                if facet.id in grouped_by_id_dict:
+                if facet_key in grouped_by_id_dict:
                     result_dict[facet.id] = [
                         FacetOptionDto(
                             display_name=str(facet_value),
-                            value=facet_value,
-                            matches_count=matches_count,
+                            value=map_facet_option_value(
+                                facet_value, property_mapping.data_type
+                            ),
+                            matches_count=0 if matches_count is None else matches_count,
                         )
                         for facet_id, facet_value, matches_count in grouped_by_id_dict[
-                            facet.id
+                            facet_key
                         ]
                     ]
 
