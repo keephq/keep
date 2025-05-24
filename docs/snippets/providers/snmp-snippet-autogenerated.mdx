@@ -1,0 +1,44 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **listen_address**: IP address to listen on for SNMP traps (required: False, sensitive: False)
+- **port**: UDP port to listen on for SNMP traps (required: False, sensitive: False)
+- **community**: SNMP community string for authentication (required: False, sensitive: True)
+- **severity_mapping**: JSON mapping of OID patterns to Keep severity levels (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **receive_traps**: Receive and process SNMP traps (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query snmp
+      provider: snmp
+      config: "{{ provider.my_provider_name }}"
+      
+        
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query snmp
+      provider: snmp
+      config: "{{ provider.my_provider_name }}"
+      
+        
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
