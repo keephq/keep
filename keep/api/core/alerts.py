@@ -421,18 +421,6 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    # facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    # select_expressions = facet_selects_metadata["select_expressions"]
-
-    # select_expressions.append(LastAlert.alert_id.label("entity_id"))
-
-    # base_query_cte = __build_query_for_filtering(
-    #     tenant_id=tenant_id,
-    #     select_args=select_expressions,
-    #     cel=facet_options_query.cel,
-    #     force_fetch=True,
-    # )["query"]
-
     def base_query_factory(
         facet_property_path: str,
         involved_fields: PropertyMetadataInfo,

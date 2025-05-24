@@ -535,31 +535,6 @@ def get_incident_facets_data(
     else:
         facets = static_facets
 
-    force_fetch_alerts = next(
-        (True for facet in facets if "alert." in facet.property_path),
-        False,
-    )
-
-    force_fetch_linked_incidents = next(
-        (True for facet in facets if "hasLinkedIncident" in facet.property_path),
-        False,
-    )
-
-    # facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    # select_expressions = facet_selects_metadata["select_expressions"]
-
-    # select_expressions.append(Incident.id.label("entity_id"))
-
-    # base_query = __build_base_incident_query(
-    #     tenant_id,
-    #     select_expressions,
-    #     force_fetch_alerts=force_fetch_alerts,
-    #     force_fetch_has_linked_incident=force_fetch_linked_incidents,
-    # )["query"]
-
-    # if allowed_incident_ids:
-    #     base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
-
     def base_query_factory(
         facet_property_path: str,
         involved_fields: PropertyMetadataInfo,
