@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 OPTIONS_PER_FACET = 50
 
 
+def build_facet_selects(
+    properties_metadata: PropertiesMetadata, facets: list[FacetDto]
+):
+    return None
+
+
 def map_facet_option_value(value, data_type: DataType):
     """
     Maps the value to the appropriate data type.

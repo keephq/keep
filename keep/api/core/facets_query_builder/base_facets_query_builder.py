@@ -65,31 +65,12 @@ class BaseFacetsQueryBuilder:
                 facet_options_query.facet_queries.get(facet.id, None),
             ]
             final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
-            involved_fields = []
-            sql_filter = None
-
-            if final_cel:
-                cel_to_sql_result = self.cel_to_sql.convert_to_sql_str_v2(final_cel)
-                involved_fields = cel_to_sql_result.involved_fields
-                sql_filter = cel_to_sql_result.sql
-
-            base_query = base_query_factory(
-                facet.property_path,
-                involved_fields,
-                self.build_facet_select(
-                    entity_id_column=entity_id_column,
-                    facet_property_path=facet.property_path,
-                    facet_key=facet_key,
-                ),
-            )
-
-            if sql_filter:
-                base_query = base_query.filter(text(sql_filter))
 
             facet_sub_query = self.build_facet_subquery(
-                base_query=base_query,
+                entity_id_column=entity_id_column,
+                base_query_factory=base_query_factory,
                 facet_property_path=facet.property_path,
-                facet_cel=facet_cel,
+                facet_cel=final_cel,
             )
 
             union_queries.append(facet_sub_query)
@@ -116,11 +97,39 @@ class BaseFacetsQueryBuilder:
         ]
 
     def build_facet_subquery(
-        self, base_query, facet_property_path: str, facet_cel: str
+        self,
+        entity_id_column,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        facet_property_path: str,
+        facet_cel: str,
     ):
         metadata = self.properties_metadata.get_property_metadata_for_str(
             facet_property_path
         )
+        facet_key = (
+            facet_property_path + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
+        )
+
+        involved_fields = []
+        sql_filter = None
+
+        if facet_cel:
+            cel_to_sql_result = self.cel_to_sql.convert_to_sql_str_v2(facet_cel)
+            involved_fields = cel_to_sql_result.involved_fields
+            sql_filter = cel_to_sql_result.sql
+
+        base_query = base_query_factory(
+            facet_property_path,
+            involved_fields,
+            self.build_facet_select(
+                entity_id_column=entity_id_column,
+                facet_property_path=facet_property_path,
+                facet_key=facet_key,
+            ),
+        )
+
+        if sql_filter:
+            base_query = base_query.filter(text(sql_filter))
 
         if metadata.data_type == DataType.ARRAY:
             facet_source_subquery = self._build_facet_subquery_for_json_array(
@@ -132,20 +141,6 @@ class BaseFacetsQueryBuilder:
                 base_query,
                 metadata,
             )
-
-        # facet_source_subquery = facet_source_subquery.filter(
-        #     text(self.cel_to_sql.convert_to_sql_str(facet_cel))
-        # )
-
-        # return (
-        #     select(
-        #         literal_column("facet_id").label("facet_id"),
-        #         literal_column("facet_value").label("facet_value"),
-        #         literal_column("matches_count").label("matches_count"),
-        #     )
-        #     .select_from(facet_source_subquery)
-        #     .group_by(literal_column("facet_id"), literal_column("facet_value"))
-        # )
 
         if isinstance(facet_source_subquery, CTE):
             return select(

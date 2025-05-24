@@ -1,3 +1,4 @@
+from typing import Any
 from sqlalchemy import Integer, String, case, cast, func, literal, select
 from sqlalchemy.sql import literal_column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -15,10 +16,21 @@ from keep.api.core.facets_query_builder.base_facets_query_builder import (
 
 class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
 
-    def build_facet_subquery(self, base_query, facet_property_path, facet_cel):
+    def build_facet_subquery(
+        self,
+        entity_id_column,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        facet_property_path: str,
+        facet_cel: str,
+    ):
         return (
             super()
-            .build_facet_subquery(base_query, facet_property_path, facet_cel)
+            .build_facet_subquery(
+                entity_id_column=entity_id_column,
+                base_query_factory=base_query_factory,
+                facet_property_path=facet_property_path,
+                facet_cel=facet_cel,
+            )
             .limit(50)
         )
 
