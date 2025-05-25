@@ -429,8 +429,8 @@ def delete_workflow(workflow_id: str, info: Info):
     return resp
 
 
-def apply_workflow(file: str, info: Info):
-    """Helper function to apply a single workflow."""
+def apply_workflow(file: str, info: Info, lookup_by_name: bool = True):
+    """Helper function to apply a single workflow. By default, workflow created or updated by name, since it's the most common use case for CLI."""
     with open(file, "rb") as f:
         files = {"file": (os.path.basename(file), f)}
         workflow_endpoint = info.keep_api_url + "/workflows"
@@ -439,6 +439,7 @@ def apply_workflow(file: str, info: Info):
             workflow_endpoint,
             headers={"x-api-key": info.api_key, "accept": "application/json"},
             files=files,
+            params={"lookup_by_name": lookup_by_name},
         )
         return response
 
@@ -457,8 +458,14 @@ def apply_workflow(file: str, info: Info):
     help="Delete all existing workflows and apply the new ones",
     default=False,
 )
+@click.option(
+    "--lookup-by-name",
+    is_flag=True,
+    help="Lookup workflows by name instead of ID",
+    default=True,
+)
 @pass_info
-def apply(info: Info, file: str, full_sync: bool):
+def apply(info: Info, file: str, full_sync: bool, lookup_by_name: bool):
     """Apply a workflow or multiple workflows from a directory."""
     if os.path.isdir(file):
         if full_sync:
@@ -485,7 +492,9 @@ def apply(info: Info, file: str, full_sync: bool):
             if filename.endswith(".yml") or filename.endswith(".yaml"):
                 click.echo(click.style(f"Applying workflow {filename}", bold=True))
                 full_path = os.path.join(file, filename)
-                response = apply_workflow(full_path, info)
+                response = apply_workflow(
+                    full_path, info, lookup_by_name=lookup_by_name
+                )
                 # Handle response for each file
                 if response.ok:
                     click.echo(
@@ -501,7 +510,7 @@ def apply(info: Info, file: str, full_sync: bool):
                         )
                     )
     else:
-        response = apply_workflow(file, info)
+        response = apply_workflow(file, info, lookup_by_name=lookup_by_name)
         if response.ok:
             click.echo(click.style(f"Workflow {file} applied successfully", bold=True))
         else:
