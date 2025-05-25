@@ -113,6 +113,16 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                     icon={AiOutlineSwap}
                     count={feedAlertsTotalCount}
                     testId="menu-alerts-feed"
+                    onClick={(e) => {
+                      // If we're already on the feed page, force a reload
+                      if (
+                        decodeURIComponent(window.location.pathname) ===
+                        "/alerts/feed"
+                      ) {
+                        e.preventDefault();
+                        window.location.href = "/alerts/feed";
+                      }
+                    }}
                   >
                     <Subtitle className="text-xs">Feed</Subtitle>
                   </LinkWithIcon>
