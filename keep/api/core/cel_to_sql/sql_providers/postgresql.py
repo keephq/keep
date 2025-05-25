@@ -153,7 +153,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         constant_node_value = self._visit_constant_node(second_operand.value)
 
         if constant_node_value == "NULL":
-            return f"{prop}::jsonb @> '[null]' OR {prop} IS NULL"
+            return f"({prop}::jsonb @> '[null]' OR {prop} IS NULL OR jsonb_array_length({prop}::jsonb) = 0)"
         elif constant_node_value.startswith("'") and constant_node_value.endswith("'"):
             constant_node_value = constant_node_value[1:-1]
         return f"{prop}::jsonb @> '[\"{constant_node_value}\"]'"

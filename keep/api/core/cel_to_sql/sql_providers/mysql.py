@@ -172,7 +172,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         constant_node_value = self._visit_constant_node(second_operand.value)
 
         if constant_node_value == "NULL":
-            return f"(JSON_CONTAINS({prop}, '[null]') OR {prop} IS NULL)"
+            return f"(JSON_CONTAINS({prop}, '[null]') OR {prop} IS NULL OR JSON_LENGTH({prop}) = 0)"
         elif constant_node_value.startswith("'") and constant_node_value.endswith("'"):
             constant_node_value = constant_node_value[1:-1]
         return f"JSON_CONTAINS({prop}, '[\"{constant_node_value}\"]')"

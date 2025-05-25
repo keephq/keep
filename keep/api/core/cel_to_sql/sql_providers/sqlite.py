@@ -108,8 +108,11 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             raise NotImplementedError(
                 f"Array datatype comparison is not supported for {type(second_operand).__name__} node"
             )
-
         prop = self._visit_property_access_node(first_operand, [])
+
+        if second_operand.value is None:
+            return f"({prop} IS NULL OR {prop} = '[]')"
+
         value = self._visit_constant_node(second_operand.value)[1:-1]
 
         return f"(SELECT 1 FROM json_each({prop}) as json_array WHERE json_array.value = '{value}')"
@@ -121,7 +124,12 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             PropertyAccessNode(path=["json_array", "value"]), array, stack
         )
         column = self._visit_property_access_node(first_operand, [])
-
-        return (
+        array_filter = (
             f"(SELECT 1 FROM json_each({column}) as json_array WHERE {in_opratation})"
         )
+        is_none_in_list = next((True for item in array if item.value is None), False)
+
+        if is_none_in_list:
+            return f"({column} = '[]' OR {column} IS NULL OR {array_filter})"
+
+        return array_filter
