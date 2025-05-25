@@ -80,6 +80,7 @@ export const LinkWithIcon = ({
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      data-testid={`${testId}-link-container`}
     >
       <Link
         tabIndex={tabIndex}
