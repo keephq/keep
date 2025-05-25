@@ -1,5 +1,5 @@
 from typing import Any
-from sqlalchemy import CTE, literal_column
+from sqlalchemy import CTE, func, literal, literal_column, select, text
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
@@ -10,7 +10,6 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 from keep.api.core.facets_query_builder.utils import get_facet_key
 from keep.api.models.facet import FacetDto, FacetOptionsQueryDto
-from sqlalchemy import func, literal, literal_column, select, text
 
 
 class BaseFacetsQueryBuilder:
