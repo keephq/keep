@@ -3,7 +3,7 @@ import importlib
 import inspect
 import logging
 
-from keep.api.models.user import ResourcePermission, Role
+from keep.api.models.user import ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import ALL_RESOURCES, AuthVerifierBase
@@ -59,7 +59,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         )
 
     @abc.abstractmethod
-    def get_users(self) -> str | dict:
+    def get_users(self) -> list[User]:
         """
         Get users
 

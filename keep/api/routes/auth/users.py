@@ -50,8 +50,7 @@ def get_users(
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
-    users = identity_manager.get_users()
-    return users
+    return identity_manager.get_users()
 
 
 @router.delete("/{user_email}", description="Delete a user")
