@@ -96,15 +96,8 @@ def get_facet_options(
                     facet_options_query=facet_options_query,
                 )
 
-                db_query_str = str(
-                    db_query.compile(
-                        dialect=engine.dialect, compile_kwargs={"literal_binds": True}
-                    )
-                )
-
                 data = session.exec(db_query).all()
             except OperationalError as e:
-                raise e  # TODO: TO REMOVE
                 logger.warning(
                     f"""Failed to execute query for facet options.
                     Facet options: {json.dumps(facet_options_query.dict())}

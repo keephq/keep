@@ -37,14 +37,16 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         elif to_type == DataType.BOOLEAN:
             # to_type_str = "BOOLEAN"
             cast_conditions = {
-                # f"{expression_to_cast} is NULL": "FALSE",
-                f"LOWER({expression_to_cast})::BOOLEAN = true": "true",
                 f"LOWER({expression_to_cast}) = 'true'": "true",
                 f"{expression_to_cast} = ''": "false",
-                f"CAST({expression_to_cast} AS FLOAT) >= 1": "true",
+                # regex match ensures safe casting to float
+                f"{expression_to_cast} ~ '^[-+]?[0-9]*\\.?[0-9]+$' AND CAST({expression_to_cast} AS FLOAT) >= 1": "true",
             }
             result = " ".join(
-                [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
+                [
+                    f"WHEN {condition} THEN {value}"
+                    for condition, value in cast_conditions.items()
+                ]
             )
             result = f"CASE {result} ELSE false END"
             return result

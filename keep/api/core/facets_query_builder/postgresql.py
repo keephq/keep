@@ -61,7 +61,14 @@ class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         if data_type == DataType.BOOLEAN:
             return case(
                 (func.lower(column) == "true", literal("true")),
-                (cast(column, Integer) >= 1, literal("true")),
+                (func.lower(column) == "false", literal("false")),
+                (
+                    column.op("~")("^[0-9]+$"),
+                    case(
+                        (cast(column, Integer) >= 1, literal("true")),
+                        else_=literal("false"),
+                    ),
+                ),
                 (column != "", literal("true")),
                 else_=literal("false"),
             )
