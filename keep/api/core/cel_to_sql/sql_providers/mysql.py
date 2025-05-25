@@ -27,8 +27,9 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             cast_conditions = {
                 # f"{expression_to_cast} is NULL": "FALSE",
                 f"LOWER({expression_to_cast}) = 'true'": "TRUE",
-                f"{expression_to_cast} = ''": "FALSE",
+                f"LOWER({expression_to_cast}) = 'false'": "FALSE",
                 f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
+                f"{expression_to_cast} != ''": "TRUE",
             }
             result = " ".join(
                 [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]

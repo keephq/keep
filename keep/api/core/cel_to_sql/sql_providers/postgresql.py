@@ -38,9 +38,10 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             # to_type_str = "BOOLEAN"
             cast_conditions = {
                 f"LOWER({expression_to_cast}) = 'true'": "true",
-                f"{expression_to_cast} = ''": "false",
+                f"LOWER({expression_to_cast}) = 'false'": "false",
                 # regex match ensures safe casting to float
                 f"{expression_to_cast} ~ '^[-+]?[0-9]*\\.?[0-9]+$' AND CAST({expression_to_cast} AS FLOAT) >= 1": "true",
+                f"LOWER({expression_to_cast}) != ''": "true",
             }
             result = " ".join(
                 [
