@@ -102,6 +102,13 @@ export const AlertPresetLink = ({
               !isDragging,
           }
         )}
+        onClick={(e) => {
+          // If we're already on this preset page, force a reload
+          if (window.location.pathname === href) {
+            e.preventDefault();
+            window.location.href = href;
+          }
+        }}
       >
         <Subtitle
           className={clsx("truncate text-xs max-w-24", {

@@ -123,23 +123,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     }
   }, [searchParams, alerts]);
 
-  useEffect(() => {
-    const celParam = searchParams?.get("cel");
-
-    // If there's no CEL parameter in the URL, reset the table state
-    // This handles the case when user clicks "Feed" and CEL gets removed from URL
-    if (!celParam) {
-      setAlertsTableDataQuery({
-        searchCel: "",
-        filterCel: "",
-        limit: 25,
-        offset: 0,
-        timeFrame: { type: "all-time", isPaused: false },
-      });
-      setAlertsQueryState(undefined);
-    }
-  }, [searchParams]);
-
   const alertsQueryStateRef = useRef(alertsQueryState);
 
   const reloadAlerts = useCallback(
