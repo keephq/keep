@@ -10,14 +10,14 @@ import {
   TableRow,
 } from "@tremor/react";
 import {
+  createColumnHelper,
   DisplayColumnDef,
   ExpandedState,
-  createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MdRemoveCircle, MdModeEdit, MdPlayArrow } from "react-icons/md";
+import { MdModeEdit, MdPlayArrow, MdRemoveCircle } from "react-icons/md";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { toast } from "react-toastify";
 import { ExtractionRule } from "./model";
@@ -30,20 +30,9 @@ import { showErrorToast } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { useRouter } from "next/navigation";
 import RunExtractionModal from "./run-extraction-modal";
+import { extractNamedGroups } from "@/shared/lib/regex-utils";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
-
-export function extractNamedGroups(regex: string): string[] {
-  const namedGroupPattern = /\(\?P<([a-zA-Z0-9]+)>[^)]*\)/g;
-  let match;
-  const groupNames = [];
-
-  while ((match = namedGroupPattern.exec(regex)) !== null) {
-    groupNames.push(match[1]);
-  }
-
-  return groupNames;
-}
 
 interface Props {
   extractions: ExtractionRule[];
