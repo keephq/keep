@@ -4,7 +4,7 @@
  */
 export function extractNamedGroups(regex: string): string[] {
   const namedGroupPattern = /\(\?P<([a-zA-Z0-9_]+)>[^)]*\)/g;
-  return Array.from(
-    regex.matchAll(namedGroupPattern).map((execArray) => execArray[1])
+  return Array.from(regex.matchAll(namedGroupPattern)).map(
+    (execArray) => execArray[1]
   );
 }
