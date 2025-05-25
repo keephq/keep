@@ -357,16 +357,21 @@ class WorkflowManager:
                         if "source" in cel:
                             try:
                                 self.logger.info(
-                                    "Checking if source needs to be replaced"
+                                    "Checking if source needs to be replaced",
+                                    extra={
+                                        "cel": cel,
+                                        "trigger": trigger,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                    },
                                 )
                                 pattern = r'source\s*==\s*[\'"]([^\'"]+)[\'"]'
                                 replacement = r'source.contains("\1")'
                                 cel = re.sub(pattern, replacement, cel)
-                            except Exception as e:
+                            except Exception:
                                 self.logger.exception(
                                     "Error replacing source in CEL",
                                     extra={
-                                        "exception": e,
                                         "cel": cel,
                                         "trigger": trigger,
                                         "workflow_id": workflow_model.id,

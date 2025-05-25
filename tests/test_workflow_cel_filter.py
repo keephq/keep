@@ -11,6 +11,10 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 @pytest.fixture
 def workflow_manager():
     manager = WorkflowManager.get_instance()
+
+    if not manager:
+        delattr(WorkflowManager, "_instance")
+        manager = WorkflowManager.get_instance()
     return manager
 
 
