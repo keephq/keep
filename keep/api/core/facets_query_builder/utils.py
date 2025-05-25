@@ -12,6 +12,8 @@ def get_facet_key(facet_property_path: str, filter_cel, facet_cel: str) -> str:
     Returns:
         str: A unique key for the facet.
     """
+    filter_cel = filter_cel or ""
+    facet_cel = facet_cel or ""
     return (
         facet_property_path
         + hashlib.sha1((filter_cel + facet_cel).encode("utf-8")).hexdigest()

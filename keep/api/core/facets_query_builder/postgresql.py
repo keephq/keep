@@ -1,13 +1,13 @@
 from typing import Any
-from sqlalchemy import Integer, String, case, cast, func, literal, select
+from sqlalchemy import Integer, String, case, cast, func, lateral, literal, select
 from sqlalchemy.sql import literal_column
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import true
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     PropertyMetadataInfo,
-    SimpleFieldMapping,
 )
 from keep.api.core.facets_query_builder.base_facets_query_builder import (
     BaseFacetsQueryBuilder,
@@ -16,8 +16,30 @@ from keep.api.core.facets_query_builder.base_facets_query_builder import (
 
 class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
 
+    def _get_select_for_column(self, property_metadata: PropertyMetadataInfo):
+        if property_metadata.data_type == DataType.ARRAY:
+            return literal_column(
+                f'"{property_metadata.field_name.replace("_", "")}_array".value'
+            )
+
+        if property_metadata.data_type == DataType.UUID:
+            return cast(super()._get_select_for_column(property_metadata), String)
+
+        if next(
+            (
+                True
+                for item in property_metadata.field_mappings
+                if not isinstance(item, JsonFieldMapping)
+            ),
+            False,
+        ):
+            return cast(super()._get_select_for_column(property_metadata), String)
+
+        return super()._get_select_for_column(property_metadata)
+
     def build_facet_subquery(
         self,
+        facet_key: str,
         entity_id_column,
         base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
         facet_property_path: str,
@@ -26,12 +48,13 @@ class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         return (
             super()
             .build_facet_subquery(
+                facet_key=facet_key,
                 entity_id_column=entity_id_column,
                 base_query_factory=base_query_factory,
                 facet_property_path=facet_property_path,
                 facet_cel=facet_cel,
             )
-            .limit(50)
+            .limit(50)  # Limit number of returned options per facet by 50
         )
 
     def _cast_column(self, column, data_type: DataType):
@@ -49,29 +72,17 @@ class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         self, base_query, metadata: PropertyMetadataInfo
     ):
         column_name = metadata.field_mappings[0].map_to
-        json_table_join = func.jsonb_array_elements_text(
-            cast(literal_column(column_name), JSONB)
-        ).table_valued("value")
-        return select(
-            func.distinct(base_query.c.entity_id),
-            json_table_join.c.value.label("facet_value"),
-        ).select_from(base_query, json_table_join)
-
-    def _build_facet_subquery_for_column(
-        self, base_query, metadata: PropertyMetadataInfo
-    ):
-        coalecense_args = []
-
-        for item in metadata.field_mappings:
-            if isinstance(item, JsonFieldMapping):
-                coalecense_args.append(self._handle_json_mapping(item))
-            elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-                coalecense_args.append(self._handle_simple_mapping(item))
-
-        return select(
-            func.distinct(literal_column("entity_id")),
-            cast(self._coalesce(coalecense_args), String).label("facet_value"),
-        ).select_from(base_query)
+        alias = metadata.field_name.replace("_", "") + "_array"
+        json_table_join = lateral(
+            (
+                select(
+                    func.jsonb_array_elements_text(
+                        cast(literal_column(column_name), JSONB)
+                    ).label("value")
+                )
+            )
+        )
+        return base_query.outerjoin(json_table_join.alias(alias), true())
 
     def _handle_json_mapping(self, field_mapping: JsonFieldMapping):
         all_columns = [field_mapping.json_prop] + [

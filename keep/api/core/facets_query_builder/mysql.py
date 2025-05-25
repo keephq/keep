@@ -8,7 +8,6 @@ from sqlalchemy import (
     func,
     literal,
     literal_column,
-    select,
 )
 from sqlmodel import true
 
@@ -26,6 +25,7 @@ class MySqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
 
     def build_facet_subquery(
         self,
+        facet_key: str,
         entity_id_column,
         base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
         facet_property_path: str,
@@ -34,12 +34,13 @@ class MySqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         return (
             super()
             .build_facet_subquery(
+                facet_key=facet_key,
                 entity_id_column=entity_id_column,
                 base_query_factory=base_query_factory,
                 facet_property_path=facet_property_path,
                 facet_cel=facet_cel,
             )
-            .limit(50)
+            .limit(50)  # Limit number of returned options per facet by 50
         )
 
     def _cast_column(self, column, data_type: DataType):

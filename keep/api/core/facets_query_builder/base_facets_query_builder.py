@@ -137,10 +137,7 @@ class BaseFacetsQueryBuilder:
                 metadata,
             )
         else:
-            facet_source_subquery = self._build_facet_subquery_for_column(
-                base_query,
-                metadata,
-            )
+            facet_source_subquery = base_query
 
         if isinstance(facet_source_subquery, CTE):
             return select(
@@ -176,24 +173,6 @@ class BaseFacetsQueryBuilder:
         data_type: DataType,
     ):
         return column
-
-    def _build_facet_subquery_for_column(
-        self, base_query, metadata: PropertyMetadataInfo
-    ):
-        # coalecense_args = []
-
-        # for item in metadata.field_mappings:
-        #     if isinstance(item, JsonFieldMapping):
-        #         coalecense_args.append(self._handle_json_mapping(item))
-        #     elif isinstance(metadata.field_mappings[0], SimpleFieldMapping):
-        #         coalecense_args.append(self._handle_simple_mapping(item))
-
-        return base_query
-
-        # return select(
-        #     func.distinct(literal_column("entity_id")),
-        #     self._coalesce(coalecense_args).label("facet_value"),
-        # ).select_from(base_query)
 
     def _build_facet_subquery_for_json_array(
         self,

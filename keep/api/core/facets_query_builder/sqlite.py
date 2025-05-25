@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, case, cast, func, literal, literal_column, select
+from sqlalchemy import Integer, case, cast, func, literal, literal_column
 from sqlmodel import true
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
@@ -37,7 +37,7 @@ class SqliteFacetsHandler(BaseFacetsQueryBuilder):
         column_name = metadata.field_mappings[0].map_to
         alias = metadata.field_name.replace("_", "") + "_array"
         json_table_join = func.json_each(literal_column(column_name)).table_valued(
-            alias + "_array"
+            "value"
         )
         return base_query.outerjoin(json_table_join.alias(alias), true())
 
