@@ -6,7 +6,10 @@ import clsx from "clsx";
 import { useState } from "react";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { RowStyle } from "@/entities/alerts/model/useAlertRowStyle";
-import { getRowClassName, getCellClassName } from "@/widgets/alerts-table/lib/alert-table-utils";
+import {
+  getRowClassName,
+  getCellClassName,
+} from "@/widgets/alerts-table/lib/alert-table-utils";
 
 interface GroupedRowProps {
   row: Row<AlertDto>;
@@ -29,9 +32,24 @@ export const GroupedRow = ({
 
   if (row.getIsGrouped()) {
     const groupingColumnId = row.groupingColumnId;
-    const groupValue = groupingColumnId
+
+    let groupValue = groupingColumnId
       ? row.getValue(groupingColumnId)
       : "Unknown Group";
+
+    if (groupingColumnId === "incident") {
+      const incidentsDto = row.original.incident_dto;
+      const incidentIds = row.getValue(groupingColumnId);
+      if (!incidentIds || incidentIds === "undefined") {
+        groupValue = "No Incidents";
+      } else {
+        groupValue = incidentsDto
+          ?.map((incident) => {
+            return incident.user_generated_name || incident.ai_generated_name;
+          })
+          .join(", ");
+      }
+    }
 
     return (
       <>
