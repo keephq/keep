@@ -28,6 +28,7 @@ import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
+import { useCelState } from "@/features/cel-input/use-cel-state";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -150,6 +151,32 @@ const SQL_QUERY_PLACEHOLDER = `SELECT *
 FROM alerts
 WHERE severity = 'critical' and status = 'firing'`;
 
+const constructCELRules = (preset?: Preset) => {
+  // Check if selectedPreset is defined and has options
+  if (preset && preset.options) {
+    // New version: single "CEL" key
+    const celOption = preset.options.find((option) => option.label === "CEL");
+    if (celOption) {
+      return celOption.value;
+    }
+    // Older version: Concatenate multiple fields
+    else {
+      return preset.options
+        .map((option) => {
+          // Assuming the older format is exactly "x='y'" (x equals y)
+          // We split the string by '=', then trim and quote the value part
+          let [key, value] = option.value.split("=");
+          // Trim spaces and single quotes (if any) from the value
+          value = value.trim().replace(/^'(.*)'$/, "$1");
+          // Return the correctly formatted CEL expression
+          return `${key.trim()}=="${value}"`;
+        })
+        .join(" && ");
+    }
+  }
+  return ""; // Default to empty string if no preset or options are found
+};
+
 export const AlertsRulesBuilder = ({
   table,
   selectedPreset,
@@ -177,33 +204,19 @@ export const AlertsRulesBuilder = ({
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(
-    searchParams?.get("cel") || defaultQuery
-  );
+
+  const [appliedCel, setAppliedCel] = useCelState({
+    enableQueryParams: shouldSetQueryParam,
+    defaultCel: constructCELRules(selectedPreset),
+  });
+  const [celRules, setCELRules] = useState(appliedCel);
+
   const parsedCELRulesToQuery = parseCEL(celRules);
 
   const isDynamic =
     selectedPreset && !STATIC_PRESETS_NAMES.includes(selectedPreset.name);
 
   const action = isDynamic ? "update" : "create";
-
-  const setQueryParam = (key: string, value: string) => {
-    const current = new URLSearchParams(
-      Array.from(searchParams ? searchParams.entries() : [])
-    );
-
-    if (value) {
-      current.set(key, value);
-    } else {
-      current.delete(key);
-    }
-
-    // cast to string
-    const search = current.toString();
-    // or const query = `${'?'.repeat(search.length && 1)}${search}`;
-    const query = search ? `?${search}` : "";
-    router.push(`${pathname}${query}`);
-  };
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
@@ -218,11 +231,10 @@ export const AlertsRulesBuilder = ({
 
   const handleClearInput = useCallback(() => {
     setCELRules("");
-    onCelChanges && onCelChanges(celRules);
+    setAppliedCel("");
+    onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
-    if (shouldSetQueryParam) setQueryParam("cel", "");
-    onApplyFilter();
-    updateOutputCEL?.(celRules);
+    setIsValidCEL(true);
   }, [table]);
 
   const toggleSuggestions = () => {
@@ -232,33 +244,6 @@ export const AlertsRulesBuilder = ({
   const handleSelectChange = (selectedOption: any) => {
     setCELRules(selectedOption.value);
     toggleSuggestions();
-    onApplyFilter();
-  };
-
-  const constructCELRules = (preset?: Preset) => {
-    // Check if selectedPreset is defined and has options
-    if (preset && preset.options) {
-      // New version: single "CEL" key
-      const celOption = preset.options.find((option) => option.label === "CEL");
-      if (celOption) {
-        return celOption.value;
-      }
-      // Older version: Concatenate multiple fields
-      else {
-        return preset.options
-          .map((option) => {
-            // Assuming the older format is exactly "x='y'" (x equals y)
-            // We split the string by '=', then trim and quote the value part
-            let [key, value] = option.value.split("=");
-            // Trim spaces and single quotes (if any) from the value
-            value = value.trim().replace(/^'(.*)'$/, "$1");
-            // Return the correctly formatted CEL expression
-            return `${key.trim()}=="${value}"`;
-          })
-          .join(" && ");
-      }
-    }
-    return ""; // Default to empty string if no preset or options are found
   };
 
   useEffect(() => {
@@ -290,19 +275,6 @@ export const AlertsRulesBuilder = ({
     }
   }, [selectedPreset, searchParams]);
 
-  // FIX: this is not working as expected on cold load, e.g. ?cel=id=="123"
-  // the filter is not applied until the user hits enter
-  useEffect(() => {
-    // This effect waits for celRules to update and applies the filter only on the initial render
-    if (isFirstRender.current && celRules.length > 0) {
-      onApplyFilter();
-      isFirstRender.current = false;
-    } else if (!selectedPreset) {
-      isFirstRender.current = false;
-    }
-    // This effect should only run when celRules updates and on initial render
-  }, [celRules]);
-
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
     const textArea = textAreaRef.current;
@@ -322,27 +294,17 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
-        if (shouldSetQueryParam) setQueryParam("cel", celRules);
-        onApplyFilter();
-        updateOutputCEL?.(celRules);
+        setAppliedCel(celRules);
         if (showToast)
           toast.success("Condition applied", { position: "top-right" });
       }
     }
   };
 
-  const onApplyFilter = () => {
-    if (onCelChanges) {
-      onCelChanges(celRules);
-      return;
-    }
-
-    if (celRules.length === 0) {
-      return table?.resetGlobalFilter();
-    }
-
-    table?.setGlobalFilter(celRules);
-  };
+  useEffect(() => {
+    updateOutputCEL?.(appliedCel);
+    onCelChanges?.(appliedCel);
+  }, [appliedCel, updateOutputCEL]);
 
   const onGenerateQuery = () => {
     setCELRules(formatQuery(query, "cel"));
@@ -474,6 +436,7 @@ export const AlertsRulesBuilder = ({
           {/* Buttons next to the Textarea */}
           {showSave && (
             <Button
+              data-testid="save-preset-button"
               icon={FiSave}
               color="orange"
               variant="secondary"

@@ -570,9 +570,10 @@ def add_or_update_workflow(
     provisioned_file: str | None = None,
     force_update: bool = False,
     is_test: bool = False,
+    lookup_by_name: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
-        if provisioned:
+        if provisioned or lookup_by_name:
             # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
