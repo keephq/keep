@@ -341,7 +341,46 @@ class WorkflowManager:
                                 )
                                 continue
 
-                        compiled_ast = self.cel_environment.compile(trigger["cel"])
+                        cel = trigger.get("cel", "")
+                        if not cel:
+                            self.logger.warning(
+                                "Trigger is missing cel",
+                                extra={
+                                    "trigger": trigger,
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                            continue
+
+                        # source is a special case which can be used as string comparison although it is a list
+                        if "source" in cel:
+                            try:
+                                self.logger.info(
+                                    "Checking if source needs to be replaced",
+                                    extra={
+                                        "cel": cel,
+                                        "trigger": trigger,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                    },
+                                )
+                                pattern = r'source\s*==\s*[\'"]([^\'"]+)[\'"]'
+                                replacement = r'source.contains("\1")'
+                                cel = re.sub(pattern, replacement, cel)
+                            except Exception:
+                                self.logger.exception(
+                                    "Error replacing source in CEL",
+                                    extra={
+                                        "cel": cel,
+                                        "trigger": trigger,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                    },
+                                )
+                                continue
+
+                        compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
                         activation = celpy.json_to_cel(event.dict())
                         try:
