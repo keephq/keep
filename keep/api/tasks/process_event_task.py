@@ -183,9 +183,12 @@ def __save_to_db(
 
         for formatted_event in formatted_events:
             formatted_event.pushed = True
-            formatted_event.startedAt = started_at_for_fingerprints.get(
+
+            started_at = started_at_for_fingerprints.get(
                 formatted_event.fingerprint, None
             )
+            if started_at:
+                formatted_event.startedAt = str(started_at)
 
             if KEEP_CALCULATE_START_FIRING_TIME_ENABLED:
                 # calculate startFiring time
