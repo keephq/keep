@@ -5,17 +5,8 @@ import pytest
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.workflow import Workflow
-from keep.workflowmanager.workflowmanager import WorkflowManager
 
-
-@pytest.fixture
-def workflow_manager():
-    manager = WorkflowManager.get_instance()
-
-    if not manager:
-        delattr(WorkflowManager, "_instance")
-        manager = WorkflowManager.get_instance()
-    return manager
+# from keep.workflowmanager.workflowmanager import WorkflowManager
 
 
 @pytest.fixture
