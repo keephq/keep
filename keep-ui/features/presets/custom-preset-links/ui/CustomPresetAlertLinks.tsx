@@ -104,7 +104,7 @@ export const AlertPresetLink = ({
         )}
         onClick={(e) => {
           // If we're already on this preset page, force a reload
-          if (window.location.pathname === href) {
+          if (decodeURIComponent(window.location.pathname) === href) {
             e.preventDefault();
             window.location.href = href;
           }
