@@ -434,9 +434,12 @@ class BaseCelToSqlProvider:
                 ),
                 False,
             ):
-                first_operand_str = self.cast(
-                    first_operand_str, first_operand.data_type
-                )
+                if first_operand.data_type:
+                    first_operand_str = self.cast(
+                        first_operand_str, first_operand.data_type
+                    )
+                first_operand_str = first_operand_str
+
         else:
             first_operand_str = self._build_sql_filter(first_operand, stack)
 

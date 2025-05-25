@@ -541,12 +541,16 @@ def get_incident_facets_data(
         select_statement,
     ):
         force_fetch_alerts = "alert" in facet_property_path or next(
-            ("alert" in item.field_name for item in involved_fields), False
+            (True for item in involved_fields if "alert" in item.field_name), False
         )
         force_fetch_has_linked_incident = (
             "hasLinkedIncident" in facet_property_path
             or next(
-                ("hasLinkedIncident" in item.field_name for item in involved_fields),
+                (
+                    True
+                    for item in involved_fields
+                    if "hasLinkedIncident" in item.field_name
+                ),
                 False,
             )
         )

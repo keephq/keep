@@ -427,7 +427,7 @@ def get_alert_facets_data(
         select_statement,
     ):
         fetch_incidents = "incident." in facet_property_path or next(
-            ("incident." in item.field_name for item in involved_fields),
+            (True for item in involved_fields if "incident." in item.field_name),
             False,
         )
         return __build_query_for_filtering(
