@@ -7,6 +7,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.workflow import Workflow
 
 # from keep.workflowmanager.workflowmanager import WorkflowManager
+from tests.fixtures.workflow_manager import workflow_manager  # noqa
 
 
 @pytest.fixture
