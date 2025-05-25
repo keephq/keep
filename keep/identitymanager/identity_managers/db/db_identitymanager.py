@@ -108,3 +108,6 @@ class DbIdentityManager(BaseIdentityManager):
 
     def get_auth_verifier(self, scopes) -> DbAuthVerifier:
         return DbAuthVerifier(scopes)
+
+    def update_user(self, user_email: str, update_data: dict) -> User:
+        raise NotImplementedError("DbIdentityManager.update_user")
