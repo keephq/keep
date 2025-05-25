@@ -24,6 +24,7 @@ class SqliteFacetsHandler(BaseFacetsQueryBuilder):
         if data_type == DataType.BOOLEAN:
             return case(
                 (func.lower(column) == "true", literal("true")),
+                (func.lower(column) == "false", literal("false")),
                 (cast(column, Integer) >= 1, literal("true")),
                 (column != "", literal("true")),
                 else_=literal("false"),
