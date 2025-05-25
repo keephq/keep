@@ -1,5 +1,5 @@
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 const celQueryParamName = "cel";
 const defaultOptions = { enableQueryParams: false, defaultCel: "" };
 
@@ -7,22 +7,27 @@ export function useCelState({
   enableQueryParams,
   defaultCel,
 }: typeof defaultOptions) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [celState, setCelState] = useState(
-    () => searchParams.get(celQueryParamName) || defaultCel || ""
-  );
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+  const [celState, setCelState] = useState(() => {
+    if (!enableQueryParams) {
+      return defaultCel || "";
+    }
+
+    return searchParams.get(celQueryParamName) || defaultCel || "";
+  });
 
   // Clean up cel param when pathname changes
   useEffect(() => {
     return () => {
-      const newParams = new URLSearchParams(window.location.search);
+      const newParams = new URLSearchParams(searchParamsRef.current);
       if (newParams.has(celQueryParamName)) {
         newParams.delete(celQueryParamName);
-        window.history.replaceState(
-          null,
-          "",
-          `${window.location.pathname}${newParams.toString() ? '?' + newParams.toString() : ''}`
+        router.replace(
+          `${window.location.pathname}${newParams.toString() ? "?" + newParams.toString() : ""}`
         );
       }
     };
@@ -30,26 +35,22 @@ export function useCelState({
 
   useEffect(() => {
     if (!enableQueryParams) return;
+    const paramsCopy = new URLSearchParams(searchParamsRef.current);
 
-    const params = new URLSearchParams(window.location.search);
-
-    if (params.get(celQueryParamName) === celState) {
+    if (paramsCopy.get(celQueryParamName) === celState) {
       return;
     }
 
-    params.delete(celQueryParamName);
+    paramsCopy.delete(celQueryParamName);
 
     if (celState && celState !== defaultCel) {
-      params.set(celQueryParamName, celState);
+      paramsCopy.set(celQueryParamName, celState);
     }
 
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}?${params}`
+    router.replace(
+      `${window.location.pathname}${paramsCopy.toString() ? "?" + paramsCopy.toString() : ""}`
     );
   }, [celState, enableQueryParams, defaultCel]);
-
 
   return [celState, setCelState] as const;
 }
