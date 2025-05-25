@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Table, Card, Button } from "@tremor/react";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
@@ -34,7 +34,6 @@ import {
   AlertPresetManager,
   evalWithContext,
 } from "@/features/presets/presets-manager";
-import { TitleAndFilters } from "@/widgets/alerts-table/ui/TitleAndFilters";
 import { severityMapping } from "@/entities/alerts/model";
 import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
@@ -58,7 +57,6 @@ import {
 import AlertPaginationServerSide from "@/widgets/alerts-table/ui/alert-pagination-server-side";
 import { FacetDto } from "@/features/filter";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
-import { TimeFrame } from "@/components/ui/DateRangePicker";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
@@ -72,7 +70,6 @@ import { useIsShiftKeyHeld } from "@/features/keyboard-shortcuts";
 import SettingsSelection from "./SettingsSelection";
 import EnhancedDateRangePickerV2, {
   AllTimeFrame,
-  TimeFrameV2,
 } from "@/components/ui/DateRangePickerV2";
 import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
@@ -291,6 +288,11 @@ export function AlertTableServerSide({
     // if presetName is alert-history, do not open sidebar
     if (presetName === "alert-history") {
       return;
+    }
+
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      return; // Don't open sidebar if text is selected
     }
 
     // Update viewed alerts
@@ -571,7 +573,9 @@ export function AlertTableServerSide({
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
-          <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          <span data-testid="preset-page-title">
+            <PageTitle className="capitalize inline">{presetName}</PageTitle>
+          </span>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
             {timeFrame && (
               <EnhancedDateRangePickerV2
