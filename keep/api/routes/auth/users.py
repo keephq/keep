@@ -110,8 +110,9 @@ async def update_user(
         raise HTTPException(status_code=400, detail="No update data provided")
 
     try:
-        updated_user = identity_manager.update_user(user_email, update_data)
-        return updated_user
-    except Exception as e:
-        logger.error(f"Error updating user: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to update user")
+        return identity_manager.update_user(user_email, update_data)
+    except NotImplementedError:
+        raise HTTPException(
+            status_code=501,
+            detail="Updating users is not supported by this identity manager",
+        )
