@@ -64,17 +64,11 @@ class MySqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         self, base_query, metadata: PropertyMetadataInfo
     ):
         column_name = metadata.field_mappings[0].map_to
-        # MySQL throws errors for JSON_TABLE if the CTE is not limited to a certain number of rows
-        # base_query = base_query.limit(1_000_000).cte(f"{column_name}_base_query")
 
         json_table_join = func.json_table(
             literal_column(column_name),
             Column(metadata.field_name + "_array", String(127)),
         ).table_valued("value")
-
-        # select(literal_column("value").label("value")).select_from(json_table_join).cte(
-        #     "cte_tabulyaciya"
-        # )
 
         base_query = base_query.outerjoin(json_table_join, true())
 

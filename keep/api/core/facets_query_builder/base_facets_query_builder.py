@@ -3,13 +3,13 @@ from typing import Any
 from sqlalchemy import CTE, literal_column
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
-    FieldMappingConfiguration,
     JsonFieldMapping,
     PropertiesMetadata,
     PropertyMetadataInfo,
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
+from keep.api.core.facets_query_builder.utils import get_facet_key
 from keep.api.models.facet import FacetDto, FacetOptionsQueryDto
 from sqlalchemy import func, literal, literal_column, select, text
 
@@ -53,9 +53,10 @@ class BaseFacetsQueryBuilder:
 
         for facet in facets:
             facet_cel = facet_options_query.facet_queries.get(facet.id, "")
-            facet_key = (
-                facet.property_path
-                + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
+            facet_key = get_facet_key(
+                facet_property_path=facet.property_path,
+                filter_cel=facet_options_query.cel,
+                facet_cel=facet_cel,
             )
             if facet_key in visited_facets:
                 continue
@@ -67,6 +68,7 @@ class BaseFacetsQueryBuilder:
             final_cel = " && ".join(filter(lambda cel: cel, cel_queries))
 
             facet_sub_query = self.build_facet_subquery(
+                facet_key=facet_key,
                 entity_id_column=entity_id_column,
                 base_query_factory=base_query_factory,
                 facet_property_path=facet.property_path,
@@ -98,6 +100,7 @@ class BaseFacetsQueryBuilder:
 
     def build_facet_subquery(
         self,
+        facet_key: str,
         entity_id_column,
         base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
         facet_property_path: str,
@@ -105,9 +108,6 @@ class BaseFacetsQueryBuilder:
     ):
         metadata = self.properties_metadata.get_property_metadata_for_str(
             facet_property_path
-        )
-        facet_key = (
-            facet_property_path + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
         )
 
         involved_fields = []

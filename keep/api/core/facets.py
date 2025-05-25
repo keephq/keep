@@ -9,6 +9,7 @@ from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.facets_query_builder.get_facets_query_builder import (
     get_facets_query_builder,
 )
+from keep.api.core.facets_query_builder.utils import get_facet_key
 from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from uuid import UUID, uuid4
 
@@ -131,10 +132,10 @@ def get_facet_options(
                 grouped_by_id_dict[facet_data.facet_id].append(facet_data)
 
             for facet in facets:
-                facet_cel = facet_options_query.facet_queries.get(facet.id, "")
-                facet_key = (
-                    facet.property_path
-                    + hashlib.sha1(facet_cel.encode("utf-8")).hexdigest()
+                facet_key = get_facet_key(
+                    facet.property_path,
+                    facet_options_query.cel,
+                    facet_options_query.facet_queries[facet.id],
                 )
                 property_mapping = properties_metadata.get_property_metadata_for_str(
                     facet.property_path
