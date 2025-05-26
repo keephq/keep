@@ -22,6 +22,10 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         return f"JSON_UNQUOTE({self._json_extract(column, path)})"
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"JSON_CONTAINS_PATH({column}, 'one', '$.{property_path_str}')"
+
     def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type == DataType.BOOLEAN:
             cast_conditions = {
