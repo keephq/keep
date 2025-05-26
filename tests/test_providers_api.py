@@ -45,13 +45,13 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
     def test_invoke_method_success(
         self,
-        db_session,
-        test_app,
-        mock_provider_in_db,
         mock_get_provider,
         mock_secret_manager_factory,
         mock_auth_verifier,
         client,
+        mock_provider_in_db,
+        db_session,
+        test_app,
     ):
         """Test successful method invocation."""
         # Setup API key
@@ -90,12 +90,7 @@ class TestInvokeProviderMethod:
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     def test_invoke_method_provider_not_found(
-        self,
-        db_session,
-        test_app,
-        mock_provider_in_db,
-        client,
-        mock_auth_verifier,
+        self, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation when provider is not found."""
         # Setup API key
@@ -124,13 +119,13 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
     def test_invoke_method_not_found(
         self,
-        db_session,
-        test_app,
         mock_get_provider,
         mock_secret_manager_factory,
         mock_auth_verifier,
         client,
         mock_provider_in_db,
+        db_session,
+        test_app,
     ):
         """Test method invocation when method doesn't exist on provider."""
         # Setup API key
@@ -170,13 +165,13 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
     def test_invoke_method_provider_configuration_exception(
         self,
-        db_session,
-        test_app,
         mock_get_provider,
         mock_secret_manager_factory,
         mock_auth_verifier,
         client,
         mock_provider_in_db,
+        db_session,
+        test_app,
     ):
         """Test method invocation when provider configuration is invalid."""
         # Setup API key
@@ -214,13 +209,13 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
     def test_invoke_method_provider_method_exception(
         self,
-        db_session,
-        test_app,
         mock_get_provider,
         mock_secret_manager_factory,
         mock_auth_verifier,
         client,
         mock_provider_in_db,
+        db_session,
+        test_app,
     ):
         """Test method invocation when provider method raises ProviderMethodException."""
         # Setup API key
@@ -259,12 +254,7 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     @patch("keep.api.routes.providers._get_default_provider_config")
     def test_invoke_method_default_provider(
-        self,
-        db_session,
-        test_app,
-        mock_get_default_config,
-        mock_auth_verifier,
-        client,
+        self, mock_get_default_config, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation with default provider (not in database)."""
         # Setup API key
@@ -308,11 +298,7 @@ class TestInvokeProviderMethod:
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     def test_invoke_method_default_provider_missing_info(
-        self,
-        db_session,
-        test_app,
-        mock_auth_verifier,
-        client,
+        self, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation with default provider but missing provider info."""
         # Setup API key
@@ -343,13 +329,13 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
     def test_invoke_method_invalid_parameters(
         self,
-        db_session,
-        test_app,
         mock_get_provider,
         mock_secret_manager_factory,
         mock_auth_verifier,
         client,
         mock_provider_in_db,
+        db_session,
+        test_app,
     ):
         """Test method invocation with invalid parameters."""
         # Setup API key
