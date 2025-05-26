@@ -304,3 +304,90 @@ def test_auth0_switching_between_tenants(db_session, client, test_app):
         ee.identitymanager.identity_managers.auth0.auth0_authverifier.jwks_client = (
             original_jwks_client
         )
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "AUTH0",
+            "AUTH0_DOMAIN": "test-domain.auth0.com",
+            "AUTH0_AUDIENCE": "test-audience",
+        },
+    ],
+    indirect=True,
+)
+def test_update_user_not_found(db_session, client, test_app):
+    """Tests update_user endpoint when the user is not found"""
+
+    # Generate test keys
+    private_key_pem, public_key_pem = generate_test_keys()
+
+    # Create payload with tenant ID
+    tenant_id = "test-tenant"
+    payload = {
+        "iss": "https://test-domain.auth0.com/",
+        "sub": "test-user-id",
+        "aud": "test-audience",
+        "exp": int(time.time()) + 3600,
+        "iat": int(time.time()),
+        "keep_tenant_ids": [{"tenant_id": tenant_id}],
+        "keep_role": "admin",
+        "email": "test@example.com",
+        "scope": "write:settings",  # Add required scope for user update
+    }
+
+    # Sign the JWT with our private key
+    token = jwt.encode(
+        payload, private_key_pem, algorithm="RS256", headers={"kid": "test-key-id"}
+    )
+
+    # Add keepActiveTenant prefix
+    active_tenant_token = f"keepActiveTenant={tenant_id}&{token}"
+
+    # Create a mock JWKS client with our public key
+    mock_jwks_client = MockJWKSClient(public_key_pem)
+
+    # Patch the jwks_client in the auth0_authverifier module
+    from ee.identitymanager.identity_managers.auth0.auth0_authverifier import (
+        jwks_client,
+    )
+
+    # Save the original to restore later
+    original_jwks_client = jwks_client
+
+    try:
+        # Replace the module-level client with our mock
+        import ee.identitymanager.identity_managers.auth0.auth0_authverifier
+
+        ee.identitymanager.identity_managers.auth0.auth0_authverifier.jwks_client = (
+            mock_jwks_client
+        )
+
+        # Mock the Auth0 client to simulate a 404 response
+        from unittest.mock import patch
+        from fastapi import HTTPException
+
+        def mock_update_user(*args, **kwargs):
+            raise HTTPException(status_code=404, detail="User not found")
+
+        with patch(
+            "ee.identitymanager.identity_managers.auth0.auth0_identitymanager.Auth0IdentityManager.update_user",
+            side_effect=mock_update_user,
+        ):
+            # Try to update a non-existent user
+            response = client.put(
+                "/auth/users/nonexistent@example.com",
+                json={"role": "admin"},
+                headers={"Authorization": f"Bearer {active_tenant_token}"},
+            )
+
+            # Verify that we get a 404 response
+            assert response.status_code == 404
+            assert response.json()["detail"] == "User not found"
+
+    finally:
+        # Restore the original jwks_client
+        ee.identitymanager.identity_managers.auth0.auth0_authverifier.jwks_client = (
+            original_jwks_client
+        )

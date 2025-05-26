@@ -1717,6 +1717,20 @@ def query_alerts(
     return alerts
 
 
+def get_started_at_for_alerts(
+    tenant_id,
+    fingerprints: list[str],
+    session: Optional[Session] = None,
+) -> dict[str, datetime]:
+    with existed_or_new_session(session) as session:
+        statement = select(LastAlert.fingerprint, LastAlert.first_timestamp).where(
+            LastAlert.tenant_id == tenant_id,
+            LastAlert.fingerprint.in_(fingerprints),
+        )
+        result = session.exec(statement).all()
+        return {row[0]: row[1] for row in result}
+
+
 def get_last_alerts(
     tenant_id,
     provider_id=None,
