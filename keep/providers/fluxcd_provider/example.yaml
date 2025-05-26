@@ -1,0 +1,53 @@
+apiVersion: keep.sh/v1
+kind: Provider
+metadata:
+  name: flux-cd
+spec:
+  type: fluxcd
+  authentication:
+    # Option 1: Using kubeconfig file content (recommended for external access)
+    kubeconfig: |
+      apiVersion: v1
+      kind: Config
+      clusters:
+      - name: my-cluster
+        cluster:
+          server: https://kubernetes.example.com
+          certificate-authority-data: BASE64_ENCODED_CA_CERT
+      users:
+      - name: my-user
+        user:
+          token: MY_TOKEN
+      contexts:
+      - name: my-context
+        context:
+          cluster: my-cluster
+          user: my-user
+      current-context: my-context
+    context: my-context
+    namespace: flux-system
+
+# Alternative configurations (uncomment one of these):
+
+# Option 2: Using API server and token
+# apiVersion: keep.sh/v1
+# kind: Provider
+# metadata:
+#   name: flux-cd
+# spec:
+#   type: fluxcd
+#   authentication:
+#     api-server: https://kubernetes.example.com
+#     token: MY_TOKEN
+#     namespace: flux-system
+#     insecure: false  # Set to true to skip TLS verification
+
+# Option 3: Using in-cluster configuration (when running inside Kubernetes)
+# apiVersion: keep.sh/v1
+# kind: Provider
+# metadata:
+#   name: flux-cd
+# spec:
+#   type: fluxcd
+#   authentication:
+#     namespace: flux-system

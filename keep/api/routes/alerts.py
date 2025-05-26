@@ -407,17 +407,19 @@ def assign_alert(
     )
 
     assignees_last_receievd = {}  # the last received(s) that are assigned to someone
-    status = "acknowledged"
+    status = None
     enrichment = get_enrichment(tenant_id, fingerprint)
     if enrichment:
         assignees_last_receievd = enrichment.enrichments.get("assignees", {})
-        status = enrichment.enrichments.get("status", "acknowledged")
+        status = enrichment.enrichments.get("status")
     if unassign:
         assignees_last_receievd.pop(last_received, None)
     else:
         assignees_last_receievd[last_received] = user_email
 
-    enrichments = {"assignees": assignees_last_receievd, "status": status}
+    enrichments = {"assignees": assignees_last_receievd}
+    if not status:
+        enrichments["status"] = "acknowledged"
 
     enrichment_bl = EnrichmentsBl(tenant_id)
     enrichment_bl.enrich_entity(
@@ -426,6 +428,7 @@ def assign_alert(
         action_type=ActionType.ACKNOWLEDGE,
         action_description=f"Alert assigned to {user_email}, status: {status}",
         action_callee=user_email,
+        dispose_on_new_alert=True,
     )
 
     try:

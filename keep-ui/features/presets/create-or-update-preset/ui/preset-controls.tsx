@@ -61,6 +61,7 @@ export const PresetControls: React.FC<PresetControlsProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <Switch
+            data-testid="counter-shows-firing-only-switch"
             id="counterShowsFiringOnly"
             checked={counterShowsFiringOnly}
             onChange={() => setCounterShowsFiringOnly(!counterShowsFiringOnly)}
