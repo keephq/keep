@@ -28,7 +28,6 @@ def mock_provider_in_db(db_session: Session):
         consumer=False,
         pulling_enabled=True,
         last_pull_time=None,
-        provisioned=True,  # This is important - the query filters by provisioned=1
         provider_metadata={},
     )
     db_session.add(provider)
