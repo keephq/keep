@@ -138,6 +138,12 @@ class StatuscakeProvider(BaseProvider):
                 data.extend(response["data"])
                 if page == response["metadata"]["page_count"]:
                     break
+                else:
+                    page += 1
+            self.logger.info(
+                f"Successfully got {len(data)} items from {paths}",
+                extra={"data": data},
+            )
             return data
 
         except Exception as e:
@@ -256,39 +262,43 @@ class StatuscakeProvider(BaseProvider):
 
         response = self.__get_paginated_data(paths=["pagespeed"])
 
-        return [
-            AlertDto(
+        alert_dtos = []
+        for alert in response:
+            status = alert.get("latest_stats", {}).get("has_issues", False)
+            if status:
+                status = AlertStatus.FIRING
+            else:
+                status = AlertStatus.RESOLVED
+
+            alert_dto = AlertDto(
                 name=alert["name"],
                 url=alert["website_url"],
                 location=alert["location"],
                 alert_smaller=alert["alert_smaller"],
                 alert_bigger=alert["alert_bigger"],
                 alert_slower=alert["alert_slower"],
-                status=alert["status"],
-                source="statuscake",
+                status=status,
+                source=["statuscake"],
+                latest_stats=alert.get("latest_stats", {}),
+                fingerprint=alert.get("id"),
             )
-            for alert in response
-        ]
+            alert_dtos.append(alert_dto)
+        return alert_dtos
 
     def __get_ssl_alerts_dto(self) -> list[AlertDto]:
 
         response = self.__get_paginated_data(paths=["ssl"])
-
-        return [
-            AlertDto(
-                id=alert["id"],
-                url=alert["website_url"],
-                issuer_common_name=alert["issuer_common_name"],
-                cipher=alert["cipher"],
-                cipher_score=alert["cipher_score"],
-                certificate_score=alert["certificate_score"],
-                certificate_status=alert["certificate_status"],
-                valid_from=alert["valid_from"],
-                valid_until=alert["valid_until"],
-                source="statuscake",
+        alert_dtos = []
+        self.logger.info(f"Got {len(response)} ssl alerts")
+        for alert in response:
+            url = alert.get("website_url", None)
+            alert_dto = AlertDto(
+                name=f"Certificate for {url}",
+                **alert,
+                source=["statuscake"],
             )
-            for alert in response
-        ]
+            alert_dtos.append(alert_dto)
+        return alert_dtos
 
     def __get_uptime_alerts_dto(self) -> list[AlertDto]:
 
@@ -427,5 +437,9 @@ if __name__ == "__main__":
         provider_id="statuscake",
         config=config,
     )
-
+    provider.setup_webhook(
+        tenant_id="singletenant",
+        keep_api_url="http://localhost:8000/api/v1/alert",
+        api_key="test_api_key",
+    )
     provider._get_alerts()
