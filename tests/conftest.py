@@ -18,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
+from playwright.sync_api import Page
 
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -559,6 +560,19 @@ def browser():
         yield page
         context.close()
         browser.close()
+
+
+@pytest.fixture
+def auth_page(browser: Page):
+    """Fresh page with clean cookies for auth tests"""
+    # Get the browser from the page
+    browser_instance = browser.context.browser
+    if not browser_instance:
+        raise ValueError("Browser instance not found")
+    auth_context = browser_instance.new_context()
+    auth_page = auth_context.new_page()
+    yield auth_page
+    auth_context.close()
 
 
 def _create_valid_event(d, lastReceived=None):
