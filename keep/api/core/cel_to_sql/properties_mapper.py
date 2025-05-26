@@ -159,8 +159,7 @@ class PropertiesMapper:
             mapped_property, property_metadata = self._map_property(
                 property_access_node=abstract_node.operand, throw_mapping_error=False
             )
-            if property_metadata:
-                involved_fields.append(property_metadata)
+            involved_fields.append(property_metadata)
             return UnaryNode(operator=UnaryNodeOperator.HAS, operand=mapped_property)
 
         operand = self.__visit_nodes(abstract_node.operand, involved_fields)
@@ -368,10 +367,15 @@ class PropertiesMapper:
         )
 
         if not property_metadata:
-            if not throw_mapping_error:
-                return property_access_node, None
-
             joined_path = ".".join(property_access_node.path)
+
+            if not throw_mapping_error:
+                return property_access_node, PropertyMetadataInfo(
+                    field_name=joined_path,
+                    field_mappings=[SimpleFieldMapping(joined_path)],
+                    enum_values=None,
+                )
+
             raise PropertiesMappingException(
                 f'Missing mapping configuration for property "{joined_path}"'
             )
