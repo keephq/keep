@@ -1,8 +1,6 @@
-import json
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, patch, MagicMock
-from fastapi.testclient import TestClient
+from unittest.mock import Mock, patch
 from sqlmodel import Session
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -21,14 +19,16 @@ def mock_provider_in_db(db_session: Session):
         id="test_provider_id",
         tenant_id=SINGLE_TENANT_UUID,
         name="test_provider",
+        description="Test provider",
         type="mock",
         installed_by="test_user",
         installation_time=datetime.now(),
         configuration_key="test_secret_key",
         validatedScopes={},
+        consumer=False,
         pulling_enabled=True,
-        description="Test provider",
         last_pull_time=None,
+        provisioned=True,  # This is important - the query filters by provisioned=1
         provider_metadata={},
     )
     db_session.add(provider)
@@ -51,6 +51,7 @@ class TestInvokeProviderMethod:
         client,
         mock_provider_in_db,
         db_session,
+        test_app,
     ):
         """Test successful method invocation."""
         # Setup API key
@@ -89,7 +90,7 @@ class TestInvokeProviderMethod:
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     def test_invoke_method_provider_not_found(
-        self, mock_auth_verifier, client, db_session
+        self, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation when provider is not found."""
         # Setup API key
@@ -124,6 +125,7 @@ class TestInvokeProviderMethod:
         client,
         mock_provider_in_db,
         db_session,
+        test_app,
     ):
         """Test method invocation when method doesn't exist on provider."""
         # Setup API key
@@ -169,6 +171,7 @@ class TestInvokeProviderMethod:
         client,
         mock_provider_in_db,
         db_session,
+        test_app,
     ):
         """Test method invocation when provider configuration is invalid."""
         # Setup API key
@@ -212,6 +215,7 @@ class TestInvokeProviderMethod:
         client,
         mock_provider_in_db,
         db_session,
+        test_app,
     ):
         """Test method invocation when provider method raises ProviderMethodException."""
         # Setup API key
@@ -250,7 +254,7 @@ class TestInvokeProviderMethod:
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     @patch("keep.api.routes.providers._get_default_provider_config")
     def test_invoke_method_default_provider(
-        self, mock_get_default_config, mock_auth_verifier, client, db_session
+        self, mock_get_default_config, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation with default provider (not in database)."""
         # Setup API key
@@ -294,7 +298,7 @@ class TestInvokeProviderMethod:
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     def test_invoke_method_default_provider_missing_info(
-        self, mock_auth_verifier, client, db_session
+        self, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation with default provider but missing provider info."""
         # Setup API key
@@ -331,6 +335,7 @@ class TestInvokeProviderMethod:
         client,
         mock_provider_in_db,
         db_session,
+        test_app,
     ):
         """Test method invocation with invalid parameters."""
         # Setup API key
