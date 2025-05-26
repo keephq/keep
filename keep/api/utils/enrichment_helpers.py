@@ -98,6 +98,11 @@ def calculate_firing_time_since_last_resolved(
         if previous_alert:
             if isinstance(previous_alert, list):
                 previous_alert = previous_alert[0]
+            if (
+                previous_alert.status == AlertStatus.RESOLVED.value
+                and alert.status == AlertStatus.FIRING.value
+            ):
+                return alert.lastReceived
             # if the previous alert has firing time since last resolved, we need to return it
             if previous_alert.firingStartTimeSinceLastResolved:
                 return previous_alert.firingStartTimeSinceLastResolved
