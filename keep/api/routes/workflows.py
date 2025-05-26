@@ -574,6 +574,7 @@ async def create_workflow(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
+    lookup_by_name: bool = Query(False),
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
@@ -582,7 +583,11 @@ async def create_workflow(
     # Create the workflow
     try:
         workflow = workflowstore.create_workflow(
-            tenant_id=tenant_id, created_by=created_by, workflow=workflow_raw_data
+            tenant_id=tenant_id,
+            created_by=created_by,
+            workflow=workflow_raw_data,
+            force_update=False,
+            lookup_by_name=lookup_by_name,
         )
     except Exception:
         logger.exception(

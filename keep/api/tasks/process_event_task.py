@@ -29,6 +29,7 @@ from keep.api.core.db import (
     get_enrichment_with_session,
     get_last_alert_hashes_by_fingerprints,
     get_session_sync,
+    get_started_at_for_alerts,
     set_last_alert,
 )
 from keep.api.core.dependencies import get_pusher_client
@@ -176,8 +177,19 @@ def __save_to_db(
         enriched_formatted_events = []
         saved_alerts = []
 
+        fingerprints = [event.fingerprint for event in formatted_events]
+        started_at_for_fingerprints = get_started_at_for_alerts(
+            tenant_id, fingerprints, session=session
+        )
+
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+
+            started_at = started_at_for_fingerprints.get(
+                formatted_event.fingerprint, None
+            )
+            if started_at:
+                formatted_event.startedAt = str(started_at)
 
             if KEEP_CALCULATE_START_FIRING_TIME_ENABLED:
                 # calculate startFiring time
