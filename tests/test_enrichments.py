@@ -458,6 +458,9 @@ def test_enrichment_with_elastic(
         json=mock_alert_dto.dict(),
     )
 
+    # wait for the alert to be indexed
+    sleep(1)
+
     # now query the feed preset to get the alerts
     response = client.get(
         "/preset/feed/alerts",

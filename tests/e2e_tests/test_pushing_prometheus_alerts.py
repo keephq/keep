@@ -106,8 +106,9 @@ def test_pulling_prometheus_alerts_to_provider(
 
             # Try to get to the Feed page
             feed_link = browser.get_by_role("link", name="Feed")
-            feed_link.wait_for(state="visible")
-            feed_link.click(timeout=10000)  # Increase timeout to 10 seconds
+            feed_link.click()
+
+            browser.wait_for_url("**/alerts/feed")
 
             # Wait for alerts to load with increased timeout
             alert_element = browser.wait_for_selector(
@@ -151,8 +152,8 @@ def test_pulling_prometheus_alerts_to_provider(
         )
 
         providers_link = browser.get_by_role("link", name="Providers")
-        providers_link.wait_for(state="visible")
-        providers_link.click(timeout=10000, force=True)  # Use force if needed
+        providers_link.click()
+        browser.wait_for_url("**/providers")
 
     except Exception as e:
         print(f"Failed to click Providers link: {e}")
