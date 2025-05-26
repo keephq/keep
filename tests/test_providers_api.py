@@ -7,6 +7,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.provider import Provider
 from keep.providers.base.provider_exceptions import ProviderMethodException
 from keep.providers.providers_factory import ProviderConfigurationException
+from keep.exceptions.provider_exception import ProviderException
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 VALID_API_KEY = "valid_api_key"
@@ -369,3 +370,50 @@ class TestInvokeProviderMethod:
         # Assertions
         assert response.status_code == 400
         assert "Invalid request: Invalid parameter type" in response.json()["detail"]
+
+    @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
+    @patch("keep.api.routes.providers.SecretManagerFactory.get_secret_manager")
+    @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
+    def test_invoke_method_provider_exception(
+        self,
+        mock_get_provider,
+        mock_secret_manager_factory,
+        mock_auth_verifier,
+        client,
+        mock_provider_in_db,
+        db_session,
+        test_app,
+    ):
+        """Test method invocation with invalid parameters."""
+        # Setup API key
+        setup_api_key(
+            db_session, VALID_API_KEY, tenant_id=SINGLE_TENANT_UUID, role="admin"
+        )
+
+        # Setup mocks
+        mock_auth_entity = Mock()
+        mock_auth_entity.tenant_id = SINGLE_TENANT_UUID
+        mock_auth_verifier.return_value = lambda: mock_auth_entity
+
+        mock_secret_manager = Mock()
+        mock_secret_manager.read_secret.return_value = {
+            "authentication": {"key": "value"}
+        }
+        mock_secret_manager_factory.return_value = mock_secret_manager
+
+        mock_provider_instance = Mock()
+        mock_provider_instance.test_method.side_effect = ProviderException(
+            "chat_id is required"
+        )
+        mock_get_provider.return_value = mock_provider_instance
+
+        # Make request
+        response = client.post(
+            f"/providers/{mock_provider_in_db.id}/invoke/test_method",
+            json={"param1": "value1"},
+            headers={"x-api-key": VALID_API_KEY},
+        )
+
+        # Assertions
+        assert response.status_code == 400
+        assert "Invalid request: chat_id is required" in response.json()["detail"]

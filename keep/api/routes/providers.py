@@ -21,6 +21,7 @@ from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.provider_exceptions import (
@@ -695,6 +696,13 @@ def invoke_provider_method(
             extra={"provider_id": provider_id, "method": method},
         )
         raise HTTPException(status_code=e.status_code, detail=e.message) from e
+
+    except ProviderException as e:
+        logger.exception(
+            "Failed to invoke method",
+            extra={"provider_id": provider_id, "method": method},
+        )
+        raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}") from e
 
     except (ValueError, TypeError) as e:
         logger.exception(
