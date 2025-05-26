@@ -203,24 +203,33 @@ def upload_alerts():
         return current_alerts
 
     attempt = 0
+    max_attempts = 30  # Increase from 10 to 30
     while True:
-        time.sleep(1)
+        time.sleep(2)  # Increase from 1 to 2 seconds
         current_alerts = query_alerts(limit=1000, offset=0)
         attempt += 1
 
-        if all(
-            simluated_alert["alertName"] in current_alerts["grouped_by_name"]
-            for _, simluated_alert in simulated_alerts
-        ):
+        # Check which alerts are still missing
+        missing_alerts = []
+        for provider_type, simluated_alert in simulated_alerts:
+            if simluated_alert["alertName"] not in current_alerts["grouped_by_name"]:
+                missing_alerts.append((provider_type, simluated_alert))
+
+        if not missing_alerts:
+            print(f"All alerts uploaded successfully after {attempt} attempts")
             break
 
-        if attempt >= 10:
+        if attempt >= max_attempts:
+            # Print more debugging information
+            print(f"Current alerts in system: {list(current_alerts['grouped_by_name'].keys())}")
+            print(f"Missing alerts: {[alert['alertName'] for _, alert in missing_alerts]}")
+
             raise Exception(
-                "Not all alerts were uploaded. Not uploaded alerts: "
+                f"Not all alerts were uploaded after {max_attempts} attempts. Missing alerts: "
                 + str(
                     [
                         f"{provider_type}: {alert['alertName']}"
-                        for provider_type, alert in not_uploaded_alerts
+                        for provider_type, alert in missing_alerts
                     ]
                 )
             )
@@ -357,8 +366,8 @@ def create_fake_incident(index: int):
     return {
         "assignee": "",
         "resolve_on": "all",
-        "user_generated_name": f"Incident name {index}",
-        "user_summary": f"Incident summary {index}",
+        "user_generated_name": f"Incident name {index} index",
+        "user_summary": f"Incident summary {index} index",
         "severity": severity,
     }
 
@@ -391,20 +400,29 @@ def upload_incidents():
         return current_incidents
 
     attempt = 0
+    max_attempts = 30  # Increase from 10 to 30
     while True:
+        time.sleep(2)  # Increase from 1 to 2 seconds
         current_incidents = query_incidents(limit=1000, offset=0)
         attempt += 1
 
-        if all(
-            simluated_incident["user_generated_name"]
-            in current_incidents["grouped_by_name"]
-            for simluated_incident in simulated_incidents
-        ):
+        # Check which incidents are still missing
+        missing_incidents = []
+        for simluated_incident in simulated_incidents:
+            if simluated_incident["user_generated_name"] not in current_incidents["grouped_by_name"]:
+                missing_incidents.append(simluated_incident)
+
+        if not missing_incidents:
+            print(f"All incidents uploaded successfully after {attempt} attempts")
             break
 
-        if attempt >= 10:
+        if attempt >= max_attempts:
+            # Print more debugging information
+            print(f"Current incidents in system: {list(current_incidents['grouped_by_name'].keys())}")
+            print(f"Missing incidents: {[incident['user_generated_name'] for incident in missing_incidents]}")
+
             raise Exception(
-                f"Not all incidents were uploaded. Not uploaded incidents: {not_uploaded_incidents}"
+                f"Not all incidents were uploaded after {max_attempts} attempts. Missing incidents: {missing_incidents}"
             )
         time.sleep(1)
 

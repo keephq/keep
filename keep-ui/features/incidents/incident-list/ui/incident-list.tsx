@@ -17,6 +17,7 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { Icon } from "@tremor/react";
 import {
+  KeepLoader,
   PageSubtitle,
   PageTitle,
   SeverityBorderIcon,
@@ -43,14 +44,14 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import {
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
-  DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+  DEFAULT_INCIDENTS_CHECKED_OPTIONS,
 } from "@/entities/incidents/model/models";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useIncidentsTableData } from "./useIncidentsTableData";
 import EnhancedDateRangePickerV2, {
   AllTimeFrame,
-  TimeFrameV2,
 } from "@/components/ui/DateRangePickerV2";
+import { useTimeframeState } from "@/components/ui/useTimeframeState";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -63,7 +64,6 @@ interface Pagination {
 }
 
 export function IncidentList({
-  initialData,
   initialFacetsData,
 }: {
   initialData?: PaginatedIncidentsDto;
@@ -78,21 +78,25 @@ export function IncidentList({
     DEFAULT_INCIDENTS_SORTING,
   ]);
 
-  const [filterCel, setFilterCel] = useState<string>("");
+  const [filterCel, setFilterCel] = useState<string | null>(null);
 
-  const [dateRange, setDateRange] = useState<TimeFrameV2>({
-    type: "all-time",
-    isPaused: false,
-  } as AllTimeFrame);
+  const [dateRange, setDateRange] = useTimeframeState({
+    enableQueryParams: true,
+    defaultTimeframe: {
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame,
+  });
 
   const {
     isEmptyState,
     incidents,
+    incidentsLoading,
     incidentsError,
     predictedIncidents,
     isPredictedLoading,
     facetsCel,
-  } = useIncidentsTableData(initialData, {
+  } = useIncidentsTableData({
     candidate: null,
     predicted: null,
     limit: incidentsPagination.limit,
@@ -151,7 +155,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
-        uncheckedByDefaultOptionValues: DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+        checkedByDefaultOptionValues: DEFAULT_INCIDENTS_CHECKED_OPTIONS,
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -231,6 +235,10 @@ export function IncidentList({
   };
 
   function renderIncidents() {
+    if (incidentsLoading) {
+      return <KeepLoader></KeepLoader>;
+    }
+
     if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
@@ -267,17 +275,19 @@ export function IncidentList({
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
-        <EnhancedDateRangePickerV2
-          timeFrame={dateRange}
-          setTimeFrame={setDateRange}
-          timeframeRefreshInterval={20000}
-          hasPlay={true}
-          pausedByDefault={false}
-          hasRewind={false}
-          hasForward={false}
-          hasZoomOut={false}
-          enableYearNavigation
-        />
+        {dateRange && (
+          <EnhancedDateRangePickerV2
+            timeFrame={dateRange}
+            setTimeFrame={setDateRange}
+            timeframeRefreshInterval={20000}
+            hasPlay={true}
+            pausedByDefault={false}
+            hasRewind={false}
+            hasForward={false}
+            hasZoomOut={false}
+            enableYearNavigation
+          />
+        )}
       </div>
     );
   };
