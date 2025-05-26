@@ -42,6 +42,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
                 SELECT 1
                 FROM json_each(json_extract(json_column, '$.a.b'))
                 WHERE json_each.key = 'c'
+            )
             ```
         """
         json_each_exp = None
