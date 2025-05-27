@@ -68,7 +68,9 @@ alert_field_configurations = [
         data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="startedAt", map_to="startedAt", data_type=DataType.DATETIME
+        map_from_pattern="startedAt",
+        map_to="lastalert.first_timestamp",
+        data_type=DataType.DATETIME
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.id",
