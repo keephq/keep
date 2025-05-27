@@ -7,8 +7,7 @@ import asyncio
 import json
 import logging
 
-from event_generator.db import engine, Base, AsyncSessionLocal
-from event_generator.models import EventModel
+from event_generator.db import engine, Base
 from event_generator.api import event_router
 from event_generator.schemas import EventPostBody
 from event_generator.settings import config_settings
@@ -19,33 +18,6 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
-
-
-
-async def generate_events(events: list[EventPostBody]):
-    """Generate events every EVENT_GENERATOR_INTERVAL seconds."""
-    while True:
-        for event in events:
-            try:
-                async with AsyncSessionLocal() as session:
-                    event = EventModel(
-                        name=event.name,
-                        description=event.description,
-                        severity=event.severity,
-                        environment=event.environment,
-                        product_name=event.product_name,
-                        service=event.service,
-                        operator=event.operator,
-                        run_id=event.run_id,
-                    )
-                    session.add(event)
-                    await session.commit()
-                    logger.debug(f"Generated event in DB")
-            except Exception:
-                logger.exception(f"Error generating event")
-            finally:
-                await session.close()
-                await asyncio.sleep(config_settings.EVENT_GENERATOR_INTERVAL)
 
 
 async def wait_for_mysql_connection(delay=3):
@@ -75,21 +47,8 @@ async def lifespan(app: FastAPI):
     # Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    with open(config_settings.SAMPLE_EVENTS_FILE_PATH, "r") as file:
-        events = json.load(file)
-        events = [
-            EventPostBody(**event) for event in events
-        ]
-        # shuffle events
 
-    # Start background task
-    task = asyncio.create_task(generate_events(events))
     yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
 
 
 def create_app():
@@ -98,6 +57,8 @@ def create_app():
         lifespan=lifespan,
         title="Event Generator",
     )
+    app.state.event_generator_task = None
+    app.state.event_index = 0  # only if not already set
 
     # Include routes
     app.include_router(event_router)
