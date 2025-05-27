@@ -18,12 +18,12 @@ jobs:
         run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Docker image for Keep Server
-        run: docker build -t curiosity2023/soliton-ip-keep-alert-management-server:latest -f ./docker/Dockerfile.api
+        run: docker build -t curiosity2023/soliton-ip-keep-alert-management-server:latest -f ./docker/Dockerfile.api .
 
       - name: Push Docker image
         run: docker push curiosity2023/soliton-ip-keep-alert-management-server:latest
 
-  docker-keep-web:
+  docker-keep-ui:
     runs-on: ubuntu-latest
 
     steps:
