@@ -193,16 +193,16 @@ export default function IncidentsTable({
         />
       ),
     }),
-    columnHelper.display({
-      id: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <IncidentChangeStatusSelect
-          incidentId={row.original.id}
-          value={row.original.status}
-        />
-      ),
-    }),
+    // columnHelper.display({
+    //   id: "status",
+    //   header: "Status",
+    //   cell: ({ row }) => (
+    //     <IncidentChangeStatusSelect
+    //       incidentId={row.original.id}
+    //       value={row.original.status}
+    //     />
+    //   ),
+    // }),
     columnHelper.display({
       id: "name",
       header: "Incident",
@@ -229,30 +229,30 @@ export default function IncidentsTable({
       id: "alerts_count",
       header: "Alerts",
     }),
-    columnHelper.display({
-      id: "alert_sources",
-      header: "Sources",
-      cell: ({ row }) =>
-        row.original.alert_sources.map((alert_source, index) => (
-          <DynamicImageProviderIcon
-            key={alert_source}
-            className={clsx(
-              "inline-block",
-              index == 0
-                ? ""
-                : "-ml-2 bg-white border-white border-2 rounded-full"
-            )}
-            alt={alert_source}
-            height={24}
-            width={24}
-            title={alert_source}
-            src={`/icons/${alert_source}-icon.png`}
-          />
-        )),
-    }),
+    // columnHelper.display({
+    //   id: "alert_sources",
+    //   header: "Sources",
+    //   cell: ({ row }) =>
+    //     row.original.alert_sources.map((alert_source, index) => (
+    //       <DynamicImageProviderIcon
+    //         key={alert_source}
+    //         className={clsx(
+    //           "inline-block",
+    //           index == 0
+    //             ? ""
+    //             : "-ml-2 bg-white border-white border-2 rounded-full"
+    //         )}
+    //         alt={alert_source}
+    //         height={24}
+    //         width={24}
+    //         title={alert_source}
+    //         src={`/icons/${alert_source}-icon.png`}
+    //       />
+    //     )),
+    // }),
     columnHelper.display({
       id: "services",
-      header: "Involved Services",
+      header: "Services",
       cell: ({ row }) => {
         const maxServices = 2;
         const notNullServices = row.original.services.filter(
@@ -275,13 +275,13 @@ export default function IncidentsTable({
         );
       },
     }),
-    columnHelper.display({
-      id: "assignee",
-      header: "Assignee",
-      cell: ({ row }) => (
-        <UserStatefulAvatar email={row.original.assignee} size="xs" />
-      ),
-    }),
+    // columnHelper.display({
+    //   id: "assignee",
+    //   header: "Assignee",
+    //   cell: ({ row }) => (
+    //     <UserStatefulAvatar email={row.original.assignee} size="xs" />
+    //   ),
+    // }),
     columnHelper.accessor("creation_time", {
       id: "creation_time",
       header: "Created At",
@@ -376,12 +376,12 @@ export default function IncidentsTable({
 
   return (
     <>
-      <SelectedRowActions
+      {/* <SelectedRowActions
         selectedRowIds={selectedRowIds}
         onMergeInitiated={handleMergeInitiated}
         onDelete={handleDeleteMultiple}
         onGenerateReport={generateReport}
-      />
+      /> */}
       {incidents.items.length > 0 ? (
         <Card className="p-0 overflow-hidden">
           <IncidentTableComponent table={table} />

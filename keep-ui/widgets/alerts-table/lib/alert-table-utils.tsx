@@ -62,6 +62,7 @@ export const DEFAULT_COLS = [
   "description",
   "lastReceived",
   "alertMenu",
+  "service",
 ];
 export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
@@ -441,72 +442,72 @@ export const useAlertTableCols = (
           }),
         ]
       : []),
-    columnHelper.accessor("status", {
-      id: "status",
-      header: () => <></>, // Empty header like source column
-      enableGrouping: true,
-      getGroupingValue: (row) => row.status,
-      maxSize: 16,
-      minSize: 16,
-      size: 16,
-      enableResizing: false,
-      cell: (context) => (
-        <div className="flex items-center justify-center">
-          <Icon
-            icon={getStatusIcon(context.getValue())}
-            size="sm"
-            color={getStatusColor(context.getValue())}
-            className="!p-0 h-32px w-32px"
-            tooltip={context.getValue()}
-          />
-        </div>
-      ),
-      meta: {
-        tdClassName: "!p-0 w-4 sm:w-8 !box-border", // Same styling as source
-        thClassName: "!p-0 w-4 sm:w-8 !box-border",
-      },
-    }),
+    // columnHelper.accessor("status", {
+    //   id: "status",
+    //   header: () => <></>, // Empty header like source column
+    //   enableGrouping: true,
+    //   getGroupingValue: (row) => row.status,
+    //   maxSize: 16,
+    //   minSize: 16,
+    //   size: 16,
+    //   enableResizing: false,
+    //   cell: (context) => (
+    //     <div className="flex items-center justify-center">
+    //       <Icon
+    //         icon={getStatusIcon(context.getValue())}
+    //         size="sm"
+    //         color={getStatusColor(context.getValue())}
+    //         className="!p-0 h-32px w-32px"
+    //         tooltip={context.getValue()}
+    //       />
+    //     </div>
+    //   ),
+    //   meta: {
+    //     tdClassName: "!p-0 w-4 sm:w-8 !box-border", // Same styling as source
+    //     thClassName: "!p-0 w-4 sm:w-8 !box-border",
+    //   },
+    // }),
     // Source column with exact 40px width ( see alert-table-headers )
-    columnHelper.accessor("source", {
-      id: "source",
-      header: () => <></>,
-      minSize: 24,
-      maxSize: 24,
-      size: 24, // Fixed size that won't change
-      enableSorting: false,
-      getGroupingValue: (row) => row.source,
-      enableResizing: false,
-      cell: (context) => {
-        return (
-          <div className="flex items-center justify-center w-[24px] h-[24px]">
-            {context.getValue().map((source, index) => {
-              return (
-                <DynamicImageProviderIcon
-                  className={clsx(
-                    "inline-block",
-                    // Use fixed pixel sizes instead of responsive sizing
-                    "size-6",
-                    index == 0 ? "" : "-ml-2"
-                  )}
-                  key={source}
-                  alt={source}
-                  height={24}
-                  width={24}
-                  title={source}
-                  providerType={source}
-                  src={`/icons/${source}-icon.png`}
-                  id={`${source}-icon-${index}`}
-                />
-              );
-            })}
-          </div>
-        );
-      },
-      meta: {
-        tdClassName: "!p-1 w-10 !box-border !flex-none", // Force fixed width with flex-none
-        thClassName: "!p-1 w-10 !box-border !flex-none",
-      },
-    }),
+    // columnHelper.accessor("source", {
+    //   id: "source",
+    //   header: () => <></>,
+    //   minSize: 24,
+    //   maxSize: 24,
+    //   size: 24, // Fixed size that won't change
+    //   enableSorting: false,
+    //   getGroupingValue: (row) => row.source,
+    //   enableResizing: false,
+    //   cell: (context) => {
+    //     return (
+    //       <div className="flex items-center justify-center w-[24px] h-[24px]">
+    //         {context.getValue().map((source, index) => {
+    //           return (
+    //             <DynamicImageProviderIcon
+    //               className={clsx(
+    //                 "inline-block",
+    //                 // Use fixed pixel sizes instead of responsive sizing
+    //                 "size-6",
+    //                 index == 0 ? "" : "-ml-2"
+    //               )}
+    //               key={source}
+    //               alt={source}
+    //               height={24}
+    //               width={24}
+    //               title={source}
+    //               providerType={source}
+    //               src={`/icons/${source}-icon.png`}
+    //               id={`${source}-icon-${index}`}
+    //             />
+    //           );
+    //         })}
+    //       </div>
+    //     );
+    //   },
+    //   meta: {
+    //     tdClassName: "!p-1 w-10 !box-border !flex-none", // Force fixed width with flex-none
+    //     thClassName: "!p-1 w-10 !box-border !flex-none",
+    //   },
+    // }),
     // Name column butted up against source
     columnHelper.accessor("name", {
       id: "name",
@@ -644,31 +645,31 @@ export const useAlertTableCols = (
     }),
     ...filteredAndGeneratedCols,
     ...extraColumns,
-    ...((isMenuDisplayed
-      ? [
-          columnHelper.display({
-            id: "alertMenu",
-            minSize: 120,
-            cell: (context) =>
-              MenuComponent ? (
-                MenuComponent(context.row.original)
-              ) : (
-                <AlertMenu
-                  presetName={presetName.toLowerCase()}
-                  alert={context.row.original}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setTicketModalAlert={setTicketModalAlert}
-                  setNoteModalAlert={setNoteModalAlert}
-                />
-              ),
-            meta: {
-              tdClassName: "p-0 md:p-2",
-              thClassName: "p-0 md:p-2",
-            },
-          }),
-        ]
-      : []) as ColumnDef<AlertDto>[]),
+    // ...((isMenuDisplayed
+    //   ? [
+    //       columnHelper.display({
+    //         id: "alertMenu",
+    //         minSize: 120,
+    //         cell: (context) =>
+    //           MenuComponent ? (
+    //             MenuComponent(context.row.original)
+    //           ) : (
+    //             <AlertMenu
+    //               presetName={presetName.toLowerCase()}
+    //               alert={context.row.original}
+    //               setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+    //               setDismissModalAlert={setDismissModalAlert}
+    //               setChangeStatusAlert={setChangeStatusAlert}
+    //               setTicketModalAlert={setTicketModalAlert}
+    //               setNoteModalAlert={setNoteModalAlert}
+    //             />
+    //           ),
+    //         meta: {
+    //           tdClassName: "p-0 md:p-2",
+    //           thClassName: "p-0 md:p-2",
+    //         },
+    //       }),
+    //     ]
+    //   : []) as ColumnDef<AlertDto>[]),
   ] as ColumnDef<AlertDto>[];
 };

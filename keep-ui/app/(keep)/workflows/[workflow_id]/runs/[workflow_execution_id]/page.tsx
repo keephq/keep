@@ -16,5 +16,5 @@ export default async function WorkflowExecutionPage(props: {
 }
 
 export const metadata: Metadata = {
-  title: "Keep - Workflow Execution Results",
+  title: "Vina - Workflow Execution Results",
 };

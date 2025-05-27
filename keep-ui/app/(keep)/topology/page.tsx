@@ -6,7 +6,7 @@ import { TopologyApplication, TopologyService } from "./model";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
 
 export const metadata = {
-  title: "Keep - Service Topology",
+  title: "Vina - Service Topology",
   description: "See service topology and information about your services",
 };
 

@@ -5,7 +5,7 @@ export default function Page() {
 }
 
 export const metadata = {
-  title: "Keep - AI Correlation",
+  title: "Vina - AI Correlation",
   description:
     "Correlate Alerts and Incidents with AI to identify patterns and trends.",
 };

@@ -5,7 +5,7 @@ export default function Page() {
 }
 
 export const metadata = {
-  title: "Keep - Maintenance Rules Management",
+  title: "Vina - Maintenance Rules Management",
   description:
     "Manage maintenance windows to ignore alerts during scheduled downtimes.",
 };

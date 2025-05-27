@@ -125,7 +125,7 @@ export default function AlertActions({
       >
         Dismiss {selectedAlertsFingerprints.length} alert(s)
       </Button>
-      <Button
+      {/* <Button
         icon={PlusIcon}
         size="xs"
         color="orange"
@@ -134,7 +134,7 @@ export default function AlertActions({
         tooltip="Save current filter as a view"
       >
         Create Preset
-      </Button>
+      </Button> */}
       <Button
         icon={PlusIcon}
         size="xs"

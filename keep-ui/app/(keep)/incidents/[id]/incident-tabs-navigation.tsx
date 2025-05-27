@@ -10,15 +10,15 @@ import { IncidentDto } from "@/entities/incidents/model";
 import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
 
 export const tabs = [
-  { icon: BellAlertIcon, label: "Alerts", path: "alerts" },
-  { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
-  { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
-  {
-    icon: IoIosGitNetwork,
-    label: "Topology",
-    path: "topology",
-  },
-  { icon: Workflows, label: "Workflows", path: "workflows" },
+  { icon: BellAlertIcon, label: "Alerts", path: "alerts", prefetch: true },
+  // { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
+  // { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
+  // {
+  //   icon: IoIosGitNetwork,
+  //   label: "Topology",
+  //   path: "topology",
+  // },
+  // { icon: Workflows, label: "Workflows", path: "workflows" },
 ];
 
 export function IncidentTabsNavigation() {

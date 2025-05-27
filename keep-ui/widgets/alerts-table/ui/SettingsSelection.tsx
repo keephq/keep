@@ -74,9 +74,9 @@ export default function SettingsSelection({
               <TabGroup className="flex flex-col flex-1">
                 <TabList className="mb-4">
                   <Tab data-testid="tab-columns">Columns</Tab>
-                  <Tab data-testid="tab-theme">Theme</Tab>
+                  {/* <Tab data-testid="tab-theme">Theme</Tab>
                   <Tab data-testid="tab-row-style">Row Style</Tab>
-                  <Tab data-testid="tab-action-tray">Action Tray</Tab>
+                  <Tab data-testid="tab-action-tray">Action Tray</Tab> */}
                 </TabList>
                 <TabPanels className="flex-1 overflow-hidden">
                   <TabPanel className="h-full" data-testid="panel-columns">

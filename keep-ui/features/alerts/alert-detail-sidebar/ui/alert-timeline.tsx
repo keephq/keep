@@ -5,6 +5,7 @@ import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { AlertDto, AuditEvent } from "@/entities/alerts/model";
 import { getInitials } from "@/components/navbar/UserAvatar";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import vinaLogo from "@/public/icons/vina.png";
 
 const formatTimestamp = (timestamp: Date | string) => {
   const date = timestamp.toString().endsWith("Z")
@@ -47,8 +48,8 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
     >
       {entry.user_id.toLowerCase() === "system" ? (
         <DynamicImageProviderIcon
-          src="/icons/keep-icon.png"
-          alt="Keep Logo"
+          src={vinaLogo}
+          alt="Vina Logo"
           width={40}
           height={40}
           providerType="keep"

@@ -27,6 +27,6 @@ export default async function PageWithId(props: {
 }
 
 export const metadata: Metadata = {
-  title: "Keep - Workflow Builder",
+  title: "Vina - Workflow Builder",
   description: "Build workflows with a UI builder.",
 };

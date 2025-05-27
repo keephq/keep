@@ -26,7 +26,7 @@ export async function generateMetadata(props: {
   const incident = await getIncidentWithErrorHandling(params.id);
   const incidentName = getIncidentName(incident);
   return {
-    title: `Keep — ${incidentName} — Activity`,
+    title: `Vina — ${incidentName} — Activity`,
     description: incident.user_summary || incident.generated_summary,
   };
 }

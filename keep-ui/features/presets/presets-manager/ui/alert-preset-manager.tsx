@@ -123,7 +123,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
           onCelChanges={onCelChanges}
         />
 
-        <Button
+        {/* <Button
           variant="secondary"
           tooltip="Test alerts"
           size="sm"
@@ -131,7 +131,7 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
           onClick={handleAddAlertModalOpen}
           className="ml-2"
           color="orange"
-        ></Button>
+        ></Button> */}
 
         {/* Error alerts button with notification counter */}
         {errorAlerts && errorAlerts.length > 0 && (

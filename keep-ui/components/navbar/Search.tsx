@@ -32,61 +32,39 @@ import { useConfig } from "utils/hooks/useConfig";
 import { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
+import vinaPng from "../../public/icons/vina.png"
+
 
 const NAVIGATION_OPTIONS = [
   {
     icon: VscDebugDisconnect,
-    label: "Go to the providers page",
+    label: "Go to the incidents page",
     shortcut: ["p"],
-    navigate: "/providers",
+    navigate: "/incidents",
   },
   {
     icon: AiOutlineAlert,
-    label: "Go to alert console",
+    label: "Go to feed alerts",
     shortcut: ["g"],
     navigate: "/alerts/feed",
   },
   {
     icon: AiOutlineGroup,
-    label: "Go to alert quality",
-    shortcut: ["q"],
-    navigate: "/alerts/quality",
+    label: "Go to Deduplication",
+    shortcut: ["d"],
+    navigate: "/deduplication",
   },
   {
     icon: MdOutlineEngineering,
-    label: "Go to alert groups",
-    shortcut: ["g"],
-    navigate: "/rules",
+    label: "Go to Correlations",
+    shortcut: ["c"],
+    navigate: "/correlations",
   },
   {
     icon: LuWorkflow,
     label: "Go to the workflows page",
     shortcut: ["wf"],
     navigate: "/workflows",
-  },
-  {
-    icon: UserGroupIcon,
-    label: "Go to users management",
-    shortcut: ["u"],
-    navigate: "/settings?selectedTab=users",
-  },
-  {
-    icon: GlobeAltIcon,
-    label: "Go to generic webhook",
-    shortcut: ["w"],
-    navigate: "/settings?selectedTab=webhook",
-  },
-  {
-    icon: EnvelopeIcon,
-    label: "Go to SMTP settings",
-    shortcut: ["s"],
-    navigate: "/settings?selectedTab=smtp",
-  },
-  {
-    icon: KeyIcon,
-    label: "Go to API key",
-    shortcut: ["a"],
-    navigate: "/settings?selectedTab=users&userSubTab=api-keys",
   },
 ];
 
@@ -129,7 +107,7 @@ export const Search = ({ session }: SearchProps) => {
     },
   ];
 
-  const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
+  const OPTIONS = [...NAVIGATION_OPTIONS];
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -163,11 +141,11 @@ export const Search = ({ session }: SearchProps) => {
 
   const queriedOptions = query.length
     ? OPTIONS.filter((option) =>
-        option.label
-          .toLowerCase()
-          .replace(/\s+/g, "")
-          .includes(query.toLowerCase().replace(/\s+/g, ""))
-      )
+      option.label
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .includes(query.toLowerCase().replace(/\s+/g, ""))
+    )
     : OPTIONS;
 
   // Tenant switcher function
@@ -221,9 +199,8 @@ export const Search = ({ session }: SearchProps) => {
               {({ active }) => (
                 <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
                   <Icon
-                    className={`py-2 px-0 ${
-                      active ? "bg-orange-400 text-white" : "text-gray-900"
-                    }`}
+                    className={`py-2 px-0 ${active ? "bg-orange-400 text-white" : "text-gray-900"
+                      }`}
                     icon={option.icon}
                     color="orange"
                   />
@@ -259,9 +236,8 @@ export const Search = ({ session }: SearchProps) => {
               {({ active }) => (
                 <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
                   <Icon
-                    className={`py-2 px-0 ${
-                      active ? "bg-orange-400 text-white" : "text-gray-900"
-                    }`}
+                    className={`py-2 px-0 ${active ? "bg-orange-400 text-white" : "text-gray-900"
+                      }`}
                     icon={option.icon}
                     color="orange"
                   />
@@ -271,7 +247,7 @@ export const Search = ({ session }: SearchProps) => {
             </ComboboxOption>
           ))}
         </List>
-        <List>
+        {/* <List>
           <ListItem className="pl-2">
             <Subtitle>External Sources</Subtitle>
           </ListItem>
@@ -284,9 +260,8 @@ export const Search = ({ session }: SearchProps) => {
               {({ active }) => (
                 <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
                   <Icon
-                    className={`py-2 px-0 ${
-                      active ? "bg-orange-400 text-white" : "text-gray-900"
-                    }`}
+                    className={`py-2 px-0 ${active ? "bg-orange-400 text-white" : "text-gray-900"
+                      }`}
                     icon={option.icon}
                     color="orange"
                   />
@@ -295,7 +270,7 @@ export const Search = ({ session }: SearchProps) => {
               )}
             </ComboboxOption>
           ))}
-        </List>
+        </List> */}
       </ListItem>
     );
   };
@@ -344,7 +319,7 @@ export const Search = ({ session }: SearchProps) => {
                   className="focus:outline-none flex items-center"
                   disabled={isLoading}
                 >
-                  <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+                  <Image className="w-8" src={vinaPng} alt="Vina Logo" />
                   {tenantLogoUrl && (
                     <Image
                       src={tenantLogoUrl || ""}
@@ -356,7 +331,7 @@ export const Search = ({ session }: SearchProps) => {
                   )}
                 </Popover.Button>
 
-                <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                {/* <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                   <div className="py-1 divide-y divide-gray-200">
                     <div className="px-3 py-2 text-xs font-medium text-gray-500">
                       Switch Tenant
@@ -364,11 +339,10 @@ export const Search = ({ session }: SearchProps) => {
                     {session.user.tenantIds?.map((tenant) => (
                       <button
                         key={tenant.tenant_id}
-                        className={`block w-full text-left px-4 py-2 text-sm ${
-                          tenant.tenant_id === session.tenantId
+                        className={`block w-full text-left px-4 py-2 text-sm ${tenant.tenant_id === session.tenantId
                             ? "bg-orange-50 text-orange-700 font-medium"
                             : "text-gray-700 hover:bg-gray-50"
-                        }`}
+                          }`}
                         onClick={() => switchTenant(tenant.tenant_id)}
                         disabled={
                           tenant.tenant_id === session.tenantId || isLoading
@@ -378,13 +352,13 @@ export const Search = ({ session }: SearchProps) => {
                       </button>
                     ))}
                   </div>
-                </Popover.Panel>
+                </Popover.Panel> */}
               </>
             )}
           </Popover>
         ) : (
           <Link href="/" className="flex items-center">
-            <Image className="w-8" src={KeepPng} alt="Keep Logo" />
+            <Image className="w-8" src={vinaPng} alt="Vina Logo" />
             {hasTenantLogo && (
               <Image
                 src={tenantLogoUrl || ""}

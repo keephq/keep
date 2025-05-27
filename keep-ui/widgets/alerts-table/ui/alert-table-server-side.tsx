@@ -429,8 +429,8 @@ export function AlertTableServerSide({
     // todo: remove searchParams after reading
     router.replace(
       pathname +
-        "?" +
-        searchParamsWithoutCreateIncidentsFromLastAlerts.toString()
+      "?" +
+      searchParamsWithoutCreateIncidentsFromLastAlerts.toString()
     );
     // call create incident with AI from last 25 alerts
     // api/incidents?createIncidentsFromLastAlerts=25

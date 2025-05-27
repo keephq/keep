@@ -148,7 +148,7 @@ export default function IncidentAlerts({ incident }: Props) {
     isMenuDisplayed: true,
     presetName: "incident-alerts",
     presetNoisy: false,
-    MenuComponent: MenuComponent,
+    // MenuComponent: MenuComponent,
     extraColumns: extraColumns,
   });
 
@@ -162,15 +162,14 @@ export default function IncidentAlerts({ incident }: Props) {
       columnOrder: [
         "severity",
         "checkbox",
-        "status",
-        "source",
+
         "name",
         "description",
         "is_created_by_ai",
       ],
       columnVisibility: { extraPayload: false, assignee: false },
       columnPinning: {
-        left: ["severity", "checkbox", "status", "source", "name"],
+        left: ["severity", "checkbox", "name"],
         right: ["alertMenu"],
       },
       rowSelection,
@@ -266,11 +265,11 @@ export default function IncidentAlerts({ incident }: Props) {
 
   return (
     <>
-      <IncidentAlertsActions
+      {/* <IncidentAlertsActions
         incidentId={incident.id}
         selectedFingerprints={selectedFingerprints}
         resetAlertsSelection={() => table.resetRowSelection()}
-      />
+      /> */}
       <Card className="p-0 overflow-x-auto h-[calc(100vh-30rem)]">
         <Table className="[&>table]:table-fixed group">
           <TableHead>
@@ -311,7 +310,7 @@ export default function IncidentAlerts({ incident }: Props) {
               table={table}
               showSkeleton={false}
               theme={theme}
-              onRowClick={() => {}}
+              onRowClick={() => { }}
               lastViewedAlert={null}
               presetName={"incident-alerts"}
             />

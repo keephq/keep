@@ -10,6 +10,6 @@ export default function Page() {
 }
 
 export const metadata = {
-  title: "Keep - Settings",
+  title: "Vina - Settings",
   description: "Configure your Keep.",
 };

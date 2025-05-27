@@ -29,7 +29,7 @@ export function IncidentDropdownMenu({
             handleEdit(incident);
           }}
         />
-        <DropdownMenu.Item
+        {/* <DropdownMenu.Item
           icon={PlayIcon}
           label="Run workflow"
           onClick={(e) => {
@@ -37,7 +37,7 @@ export function IncidentDropdownMenu({
             e.stopPropagation();
             handleRunWorkflow(incident);
           }}
-        />
+        /> */}
         <DropdownMenu.Item
           icon={TrashIcon}
           label="Delete"

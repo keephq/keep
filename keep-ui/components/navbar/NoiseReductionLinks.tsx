@@ -124,7 +124,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </li>
         </TogglableLink>
 
-        <TogglableLink
+        {/* <TogglableLink
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_SERVICE_TOPOLOGY}
         >
           <li>
@@ -173,7 +173,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           <li>
             <AILink></AILink>
           </li>
-        </TogglableLink>
+        </TogglableLink> */}
       </Disclosure.Panel>
     </Disclosure>
   );

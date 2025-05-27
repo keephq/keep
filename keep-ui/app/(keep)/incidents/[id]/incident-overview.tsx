@@ -327,11 +327,11 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 merged_into_incident_id={incident.merged_into_incident_id}
               />
             )}
-            <div className="mt-2">
+            {/* <div className="mt-2">
               <SameIncidentField incident={incident} />
-            </div>
+            </div> */}
           </div>
-          <div className="flex flex-col gap-2">
+          {/* <div className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <FieldHeader>Services</FieldHeader>
@@ -525,7 +525,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                 />
               </div>
             </div>
-          </div>
+          </div> */}
           <div>
             <FollowingIncidents incident={incident} />
           </div>
@@ -561,7 +561,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
         {incident?.enrichments && "rca_points" in incident.enrichments && (
           <RootCauseAnalysis points={incident.enrichments.rca_points} />
         )}
-        <div>
+        {/* <div>
           <FieldHeader>Resolve on</FieldHeader>
           <Badge
             size="sm"
@@ -575,7 +575,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           >
             {incident.resolve_on}
           </Badge>
-        </div>
+        </div> */}
       </div>
     </div>
   );

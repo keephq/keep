@@ -18,6 +18,6 @@ export default async function WorkflowBuilderPage(props: PageProps) {
 }
 
 export const metadata: Metadata = {
-  title: "Keep - Workflow Builder",
+  title: "Vina - Workflow Builder",
   description: "Build workflows with a UI builder.",
 };

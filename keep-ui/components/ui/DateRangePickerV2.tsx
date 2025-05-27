@@ -545,7 +545,7 @@ export default function EnhancedDateRangePickerV2({
         </Popover.Portal>
       </Popover.Root>
 
-      <div className="flex items-center relative z-0 gap-x-2 ml-2 h-full">
+      {/* <div className="flex items-center relative z-0 gap-x-2 ml-2 h-full">
         <div className="flex h-full">
           {hasPlay &&
             (timeFrame.type === "relative" ||
@@ -597,7 +597,7 @@ export default function EnhancedDateRangePickerV2({
             icon={ZoomOut}
           />
         )}
-      </div>
+      </div> */}
     </div>
   );
 }

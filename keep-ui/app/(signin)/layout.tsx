@@ -1,8 +1,9 @@
 import { Card, Text } from "@tremor/react";
 import Image from "next/image";
+import vinaLogo from "../../public/icons/vina.png"
 
 export const metadata = {
-  title: "Keep",
+  title: "Vina",
   description: "The open-source alert management and AIOps platform",
 };
 
@@ -18,15 +19,15 @@ export default function RootLayout({
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
               <Image
-                src="/keep_big.svg"
-                alt="Keep Logo"
+                src={vinaLogo}
+                alt="Vina Logo"
                 width={48}
                 height={48}
                 priority
                 className="object-contain h-full"
               />
               <Text className="text-tremor-title font-bold text-tremor-content-strong">
-                Keep
+                Vina
               </Text>
             </div>
             <Card

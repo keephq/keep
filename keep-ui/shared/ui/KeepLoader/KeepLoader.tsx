@@ -1,6 +1,7 @@
 import { Subtitle, Title } from "@tremor/react";
 import clsx from "clsx";
 import Image from "next/image";
+import vinaPng from "../../../public/icons/vina.png";
 
 export function KeepLoader({
   includeMinHeight = true,
@@ -23,8 +24,8 @@ export function KeepLoader({
       {...props}
     >
       <Image
-        className="animate-bounce -my-10"
-        src="/keep.svg"
+        className="my-5"
+        src={vinaPng}
         alt="loading"
         width={200}
         height={200}

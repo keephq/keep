@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import "./logo-error.css";
+import vinaLogo from "@/public/icons/vina.png";
 
 export interface KeepLogoErrorProps {
   width?: number;
@@ -83,8 +84,8 @@ export const KeepLogoError = ({
             >
               <div>
                 <Image
-                  src="/keep.svg"
-                  alt="Keep Logo"
+                  src={vinaLogo}
+                  alt="Vina Logo"
                   width={width}
                   height={height}
                   className="w-full h-full"
@@ -98,8 +99,8 @@ export const KeepLogoError = ({
             >
               <div>
                 <Image
-                  src="/keep.svg"
-                  alt="Keep Logo"
+                  src={vinaLogo}
+                  alt="Vina Logo"
                   width={width}
                   height={height}
                   className="w-full h-full"
@@ -113,8 +114,8 @@ export const KeepLogoError = ({
             >
               <div>
                 <Image
-                  src="/keep.svg"
-                  alt="Keep Logo"
+                  src={vinaLogo}
+                  alt="Vina Logo"
                   width={width}
                   height={height}
                   className="w-full h-full"

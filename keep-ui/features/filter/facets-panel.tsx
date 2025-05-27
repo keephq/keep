@@ -65,6 +65,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   const onCelChangeRef = useRef(onCelChange);
   onCelChangeRef.current = onCelChange;
 
+  const LIST_OF_FACETS = ["severity", "service"];
+
   const facetsConfigIdBased = useMemo(() => {
     const result: FacetsConfig = {};
 
@@ -268,30 +270,32 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
 
         {facets &&
           facets.map((facet, index) => (
-            <Facet
-              key={facet.id + index}
-              name={facet.name}
-              isStatic={facet.is_static}
-              options={facetOptions?.[facet.id]}
-              optionsLoading={!facetOptions?.[facet.id]}
-              optionsReloading={
-                areFacetOptionsLoading &&
-                !!facet.id &&
-                clickedFacetId !== facet.id
-              }
-              onSelect={(value) => toggleFacetOption(facet.id, value)}
-              onSelectOneOption={(value) =>
-                selectOneFacetOption(facet.id, value)
-              }
-              onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
-              facetState={getFacetState(facet.id)}
-              facetKey={facet.id}
-              facetConfig={facetsConfigIdBased[facet.id]}
-              onLoadOptions={() =>
-                onLoadFacetOptions && onLoadFacetOptions(facet.id)
-              }
-              onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
-            />
+            LIST_OF_FACETS.includes(facet.name.toLocaleLowerCase()) && (
+              <Facet
+                key={facet.id + index}
+                name={facet.name}
+                isStatic={facet.is_static}
+                options={facetOptions?.[facet.id]}
+                optionsLoading={!facetOptions?.[facet.id]}
+                optionsReloading={
+                  areFacetOptionsLoading &&
+                  !!facet.id &&
+                  clickedFacetId !== facet.id
+                }
+                onSelect={(value) => toggleFacetOption(facet.id, value)}
+                onSelectOneOption={(value) =>
+                  selectOneFacetOption(facet.id, value)
+                }
+                onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
+                facetState={getFacetState(facet.id)}
+                facetKey={facet.id}
+                facetConfig={facetsConfigIdBased[facet.id]}
+                onLoadOptions={() =>
+                  onLoadFacetOptions && onLoadFacetOptions(facet.id)
+                }
+                onDelete={() => onDeleteFacet && onDeleteFacet(facet.id)}
+              />
+            )
           ))}
       </div>
     </section>

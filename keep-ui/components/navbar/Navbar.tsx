@@ -21,7 +21,7 @@ export default async function NavbarInner() {
           <IncidentsLinks session={session} />
           <AlertsLinks session={session} />
           <NoiseReductionLinks session={session} />
-          <DashboardLinks />
+          {/* <DashboardLinks /> */}
         </div>
         <UserInfo session={session} />
       </Menu>

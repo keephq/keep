@@ -5,7 +5,7 @@ export default function Page() {
 }
 
 export const metadata = {
-  title: "Keep - Event Extraction",
+  title: "Vina - Event Extraction",
   description:
     "Map new event attributes from existing event attributes with Regex",
 };

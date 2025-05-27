@@ -78,7 +78,7 @@ export function IncidentHeader({
             </Subtitle>
           </div>
 
-          {!incident.is_candidate && (
+          {/* {!incident.is_candidate && (
             <div className="flex">
               <Button
                 color="orange"
@@ -109,7 +109,7 @@ export function IncidentHeader({
                 Edit Incident
               </Button>
             </div>
-          )}
+          )} */}
         </div>
         <div className="flex justify-start items-center text-sm gap-2">
           <div className="prose-2xl flex-grow flex gap-1">

@@ -33,7 +33,12 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
     return null;
   }
   const { userRole, user } = session;
-  const { name, image, email } = user;
+  const { name, image, email } = {
+    name: "Vina User",
+    email: "vina@solitontech.com",
+    image: "/default-avatar.png",
+
+  }
 
   const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
@@ -97,7 +102,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             <Subtitle className="text-xs">Providers</Subtitle>
           </LinkWithIcon>
         </li>
-        <li className="flex text-xs items-center gap-2">
+        {/* <li className="flex text-xs items-center gap-2">
           <LinkWithIcon
             icon={FaSlack}
             href="https://slack.keephq.dev/"
@@ -115,7 +120,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
           >
             Docs
           </LinkWithIcon>
-        </li>
+        </li> */}
         <div className="flex items-center justify-between">
           {session && <UserDropdown session={session} />}
           <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
