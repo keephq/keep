@@ -1,0 +1,86 @@
+services:
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    image: curiosity2023/log_assist_ui:latest
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - KEEP_METRICS=true
+      - KEEP_WORKFLOWS_DIRECTORY=${KEEP_WORKFLOWS_DIRECTORY}
+      - KEEP_PROVIDERS=${KEEP_PROVIDERS}
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - LOG_FORMAT=dev_terminal
+    volumes:
+      - ./state:/state
+      - ./keep_provisions:/keep_provisions
+    depends_on:
+      - event-generator
+      - postgres
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  mysql:
+    image: mysql:latest
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  event-generator:
+    build:
+      context: event_generator
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      - DEBUG=${DEBUG}
+      - EVENT_GENERATOR_INTERVAL=${EVENT_GENERATOR_INTERVAL}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - SAMPLE_EVENTS_FILE_PATH=${SAMPLE_EVENTS_FILE_PATH}
+    volumes:
+      - ./event_generator/event_generator:/app/event_generator
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+  postgres_data:
+
+networks:
+  keep-network:
+    name: keep_network

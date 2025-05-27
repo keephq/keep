@@ -1,0 +1,232 @@
+[
+  {
+    "run_id": "I2C1001",
+    "operator": "alice",
+    "service": "BusTimingMonitor",
+    "name": "SCL Frequency Drift",
+    "description": "SCL line toggling at 105 kHz (target 100 kHz).",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "PVS"
+  },
+  {
+    "run_id": "I2C1001",
+    "operator": "alice",
+    "service": "SignalIntegrityAnalyzer",
+    "name": "Bus Noise Level",
+    "description": "Bus noise level measured at 10 mV (within spec).",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "PVS"
+  },
+  {
+    "run_id": "I2C1001",
+    "operator": "alice",
+    "service": "ProtocolAnalyzer",
+    "name": "NACK Spike",
+    "description": "Detected 5 NACKs in the last 1 000 transfers.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "PVS"
+  },
+  {
+    "run_id": "I2C1001",
+    "operator": "alice",
+    "service": "TimingGenerator",
+    "name": "Clock Stretch Exceeded",
+    "description": "Clock stretching observed for 1.2 ms (>1 ms threshold).",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "PVS"
+  },
+  {
+    "run_id": "I2C1001",
+    "operator": "alice",
+    "service": "ErrorMonitor",
+    "name": "Bus Busy Hang",
+    "description": "I²C bus stuck busy—no STOP condition detected.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "PVS"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "PullUpNetworkMonitor",
+    "name": "Weak Pull-up Detection",
+    "description": "Pull-up resistor strength below 2 kΩ threshold.",
+    "environment": "production",
+    "severity": "low",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "BusTimingMonitor",
+    "name": "SDA Rise Time",
+    "description": "SDA line rise time measured at 300 ns (within spec).",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "SignalIntegrityAnalyzer",
+    "name": "EMI Baseline",
+    "description": "Baseline EMI noise measured at 5 mV.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "VoltageLeakDetector",
+    "name": "Bus Voltage Stable",
+    "description": "Bus voltage steady at 3.3 V with <1% variation.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "ProtocolAnalyzer",
+    "name": "Unexpected START Condition",
+    "description": "Detected 2 unexpected START conditions in last 500 transfers.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "BusTimingMonitor",
+    "name": "SCL Frequency Deviation",
+    "description": "SCL line toggling at 95 kHz (target 100 kHz).",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "TimingGenerator",
+    "name": "Clock Stretch Near Threshold",
+    "description": "Clock stretching observed for 0.9 ms (>0.8 ms warning threshold).",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "ProtocolAnalyzer",
+    "name": "NACK Flood",
+    "description": "50 NACKs detected in 1,000 transfers.",
+    "environment": "production",
+    "severity": "high",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I2C1002",
+    "operator": "bob",
+    "service": "ErrorMonitor",
+    "name": "Bus Arbitration Lost",
+    "description": "Master lost arbitration, bus stuck busy.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "VisionAI"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "PullUpNetworkMonitor",
+    "name": "Weak Pull-up Strength",
+    "description": "I³C pull-up resistor network strength below 1.5 kΩ threshold.",
+    "environment": "production",
+    "severity": "low",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "BusTimingMonitor",
+    "name": "Bus Idle Time",
+    "description": "Average bus idle time measured at 20 µs (within expected range).",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "IBIMonitor",
+    "name": "In-Band Interrupt Rate",
+    "description": "Detected 2 in-band interrupts per 1 000 transfers (normal).",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "CCCMonitor",
+    "name": "CCC Command Reception",
+    "description": "Common Command Code 0x06 received successfully.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "TimingGenerator",
+    "name": "Clock Stretch Exceeded",
+    "description": "Observed clock stretching of 0.9 ms (>0.8 ms warning threshold).",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "DAAMonitor",
+    "name": "Dynamic Addr Assign Delay",
+    "description": "Dynamic address assignment took 15 ms (>10 ms warning threshold).",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "SignalIntegrityAnalyzer",
+    "name": "EMI Noise Spike",
+    "description": "Bus EMI noise spiked to 25 mV (>20 mV warning threshold).",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "ProtocolAnalyzer",
+    "name": "Frequent NACKs",
+    "description": "20 NACKs detected in last 1 000 transfers.",
+    "environment": "production",
+    "severity": "high",
+    "product_name": "VisionAI-I3C"
+  },
+  {
+    "run_id": "I3C2001",
+    "operator": "charlie",
+    "service": "ErrorMonitor",
+    "name": "Bus Collision Detected",
+    "description": "Simultaneous master arbitration resulted in bus collision—bus locked.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "VisionAI-I3C"
+  }
+]

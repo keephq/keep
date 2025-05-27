@@ -41,18 +41,19 @@ jobs:
       - name: Push Docker image
         run: docker push curiosity2023/soliton-ip-keep-alert-management-ui:latest
     
-  # docker-keep-event-generator:
-  #   runs-on: ubuntu-latest
+  docker-keep-event-generator:
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Log in to Docker Hub
-  #       run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-  #     - name: Build Docker image for Event Generator
-  #       run: docker build -t curiosity2023/soliton-ip-keep-alert-management-event_generator:latest -f ./log_assist/event_generator/Dockerfile .
+      - name: Build Docker image for Event Generator
+        run: docker build -t curiosity2023/soliton-ip-keep-alert-management-event-generator:latest .
+        working-directory: ./alert-manager/event_generator
 
-  #     - name: Push Docker image
-  #       run: docker push curiosity2023/soliton-ip-keep-alert-management-event_generator:latest
+      - name: Push Docker image
+        run: docker push curiosity2023/soliton-ip-keep-alert-management-event-generator:latest

@@ -1,0 +1,235 @@
+[
+  {
+    "run_id": "run001",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Wafer Alignment Completed",
+    "description": "Wafer alignment completed successfully.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run002",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Camera Exposure Adjusted",
+    "description": "Camera exposure setting automatically adjusted.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run003",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Autofocus Sensor Unstable",
+    "description": "Autofocus sensor readings unstable, indicating potential focus drift.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run004",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Image Processing Timeout",
+    "description": "Image processing timeout detected, causing inspection delay or skip.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run101",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Stage Initialization Completed",
+    "description": "Motion stage homing and initialization finished.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run102",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Temperature Stabilized",
+    "description": "Inspection chamber temperature steady within ±0.1 °C.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run103",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Illumination Calibrated",
+    "description": "LED illumination intensity auto-calibrated.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run104",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Vibration Level Elevated",
+    "description": "Vibration sensor reading exceeded 0.5 g.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run105",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Throughput Degradation Detected",
+    "description": "Average processing time per tile increased by 20%.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run106",
+    "operator": "charlie",
+    "service": "WaferInspection",
+    "name": "Defect Detection Model Crash",
+    "description": "AI inference engine crashed unexpectedly.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Stage Homing Completed",
+    "description": "Motion stage homing sequence finished.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Chamber Temperature Stable",
+    "description": "Temperature drift within ±0.05 °C.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Illumination Calibration Passed",
+    "description": "LED array calibration successful.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Autofocus Drift Warning",
+    "description": "Autofocus readings drifting by >0.2 µm.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Vibration Threshold Exceeded",
+    "description": "Vibration sensor >0.6 g detected.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Processing Latency High",
+    "description": "Tile processing latency >200 ms.",
+    "environment": "production",
+    "severity": "high",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run201",
+    "operator": "clara",
+    "service": "WaferInspection",
+    "name": "Defect Detection Model Crash",
+    "description": "AI inference engine crashed unexpectedly.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "WaferInspector"
+  },
+  {
+    "run_id": "run301",
+    "operator": "clara",
+    "service": "DefectAlertManager",
+    "name": "System Startup Completed",
+    "description": "Inspection subsystem initialized successfully.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "DefectSuite"
+  },
+  {
+    "run_id": "run301",
+    "operator": "clara",
+    "service": "DefectAlertManager",
+    "name": "Sensor Self-Test Passed",
+    "description": "All optical and autofocus sensors passed self-test.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "DefectSuite"
+  },
+  {
+    "run_id": "run301",
+    "operator": "clara",
+    "service": "DefectAlertManager",
+    "name": "Network Connection Established",
+    "description": "Edge compute unit connected to central server.",
+    "environment": "production",
+    "severity": "info",
+    "product_name": "DefectSuite"
+  },
+  {
+    "run_id": "run301",
+    "operator": "clara",
+    "service": "DefectAlertManager",
+    "name": "Temperature Drift Warning",
+    "description": "Inspection chamber temperature drifted by >0.2 °C.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "DefectSuite"
+  },
+  {
+    "run_id": "run301",
+    "operator": "clara",
+    "service": "DefectAlertManager",
+    "name": "Image Quality Degradation",
+    "description": "Contrast ratio dropped below 80%.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "DefectSuite"
+  },
+  {
+    "run_id": "run301",
+    "operator": "clara",
+    "service": "DefectAlertManager",
+    "name": "Critical Defect Detected",
+    "description": "Nanoparticle cluster detected on wafer surface.",
+    "environment": "production",
+    "severity": "critical",
+    "product_name": "DefectSuite"
+  }
+]
+
+
+
