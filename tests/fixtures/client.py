@@ -10,7 +10,7 @@ from keep.api.models.db.tenant import TenantApiKey
 
 
 @pytest.fixture
-def test_app(monkeypatch, request):
+def test_app(monkeypatch, request, db_session):
     # Store original setup_logging function
     import keep.api.logging
 
