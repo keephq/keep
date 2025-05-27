@@ -1,9 +1,8 @@
 services:
   keep-frontend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-frontend-common
-    image: curiosity2023/log_assist_ui:latest
+    image: curiosity2023/soliton-ip-keep-alert-management-ui:latest
+    ports:
+      - "3000:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
@@ -13,10 +12,9 @@ services:
       - keep-backend
 
   keep-backend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    image: curiosity2023/soliton-ip-keep-alert-management-server:latest
+    ports:
+      - "8080:8080"
     environment:
       - AUTH_TYPE=NO_AUTH
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
@@ -32,10 +30,17 @@ services:
       - event-generator
       - postgres
 
-  keep-websocket-server:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-websocket-server-common
+  keep-websocket-server-common:
+    image: quay.io/soketi/soketi:1.4-16-debian
+    ports:
+      - "6001:6001"
+      - "9601:9601"
+    environment:
+      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
+      - SOKETI_DEBUG=1
+      - SOKETI_DEFAULT_APP_ID=1
+      - SOKETI_DEFAULT_APP_KEY=keepappkey
+      - SOKETI_DEFAULT_APP_SECRET=keepappsecret
 
   mysql:
     image: mysql:latest
@@ -61,9 +66,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   event-generator:
-    build:
-      context: event_generator
-      dockerfile: Dockerfile
+    image: curiosity2023/soliton-ip-keep-alert-management-event-generator:latest
     ports:
       - "8081:8081"
     environment:

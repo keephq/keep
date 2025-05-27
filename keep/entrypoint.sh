@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pip install --no-cache-dir "pyOpenSSL>=23.3.0" "cryptography>=41.0.0"
+
 # Exit immediately if a command exits with a non-zero status
 set -e
 

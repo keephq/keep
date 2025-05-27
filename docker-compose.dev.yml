@@ -1,19 +1,19 @@
 services:
-  keep-frontend-dev:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-frontend-common
-    environment:
-      - API_URL=http://keep-backend-dev:8080
-      - SENTRY_DISABLED=true
-    build:
-      dockerfile: docker/Dockerfile.dev.ui
-    volumes:
-      - ./keep-ui:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - keep-backend-dev
+  # keep-frontend-dev:
+  #   extends:
+  #     file: docker-compose.common.yml
+  #     service: keep-frontend-common
+  #   environment:
+  #     - API_URL=http://keep-backend-dev:8080
+  #     - SENTRY_DISABLED=true
+  #   build:
+  #     dockerfile: docker/Dockerfile.dev.ui
+  #   volumes:
+  #     - ./keep-ui:/app
+  #     - /app/node_modules
+  #     - /app/.next
+  #   depends_on:
+  #     - keep-backend-dev
 
   keep-backend-dev:
     extends:
