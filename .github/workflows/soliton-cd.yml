@@ -1,0 +1,58 @@
+name: Continuous Delivery | Docker Hub
+
+on:
+  push:
+    branches:
+      - soliton-main
+      - users/abishlal/intial-ui-revamp
+
+jobs:
+  docker-keep-server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker image for Keep Server
+        run: docker build -t curiosity2023/soliton-ip-keep-alert-management-server:latest -f ./docker/Dockerfile.api
+
+      - name: Push Docker image
+        run: docker push curiosity2023/soliton-ip-keep-alert-management-server:latest
+
+  docker-keep-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker image for Keep ui
+        run: docker build -t curiosity2023/soliton-ip-keep-alert-management-ui:latest -f ../docker/Dockerfile.ui .
+        working-directory: ./keep-ui
+
+      
+      - name: Push Docker image
+        run: docker push curiosity2023/soliton-ip-keep-alert-management-ui:latest
+    
+  # docker-keep-event-generator:
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Log in to Docker Hub
+  #       run: echo "${{ secrets.DOCKER_SECRET }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+  #     - name: Build Docker image for Event Generator
+  #       run: docker build -t curiosity2023/soliton-ip-keep-alert-management-event_generator:latest -f ./log_assist/event_generator/Dockerfile .
+
+  #     - name: Push Docker image
+  #       run: docker push curiosity2023/soliton-ip-keep-alert-management-event_generator:latest
