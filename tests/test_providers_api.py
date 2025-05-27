@@ -252,9 +252,9 @@ class TestInvokeProviderMethod:
         assert "Method failed" in response.json()["detail"]
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
-    @patch("keep.api.routes.providers._get_default_provider_config")
+    @patch("keep.api.routes.providers.ProvidersFactory.get_provider")
     def test_invoke_method_default_provider(
-        self, mock_get_default_config, mock_auth_verifier, client, db_session, test_app
+        self, mock_get_provider, mock_auth_verifier, client, db_session, test_app
     ):
         """Test method invocation with default provider (not in database)."""
         # Setup API key
@@ -267,62 +267,22 @@ class TestInvokeProviderMethod:
         mock_auth_entity.tenant_id = SINGLE_TENANT_UUID
         mock_auth_verifier.return_value = lambda: mock_auth_entity
 
-        mock_get_default_config.return_value = (
-            "default-test",
-            "mock",
-            {"authentication": {"key": "value"}},
-        )
+        mock_provider_instance = Mock()
+        mock_provider_instance.test_method.return_value = {"result": "default_success"}
+        mock_get_provider.return_value = mock_provider_instance
 
-        with patch(
-            "keep.api.routes.providers.ProvidersFactory.get_provider"
-        ) as mock_get_provider:
-            mock_provider_instance = Mock()
-            mock_provider_instance.test_method.return_value = {
-                "result": "default_success"
-            }
-            mock_get_provider.return_value = mock_provider_instance
-
-            # Make request with default provider
-            response = client.post(
-                "/providers/default-test/invoke/test_method",
-                json={
-                    "providerInfo": {"provider_type": "mock", "key": "value"},
-                    "param1": "value1",
-                },
-                headers={"x-api-key": VALID_API_KEY},
-            )
-
-            # Assertions
-            assert response.status_code == 200
-            assert response.json() == {"result": "default_success"}
-
-    @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
-    def test_invoke_method_default_provider_missing_info(
-        self, mock_auth_verifier, client, db_session, test_app
-    ):
-        """Test method invocation with default provider but missing provider info."""
-        # Setup API key
-        setup_api_key(
-            db_session, VALID_API_KEY, tenant_id=SINGLE_TENANT_UUID, role="admin"
-        )
-
-        # Setup mocks
-        mock_auth_entity = Mock()
-        mock_auth_entity.tenant_id = SINGLE_TENANT_UUID
-        mock_auth_verifier.return_value = lambda: mock_auth_entity
-
-        # Make request with default provider but no providerInfo
+        # Make request with default provider
         response = client.post(
             "/providers/default-test/invoke/test_method",
-            json={"param1": "value1"},
+            json={
+                "param1": "value1",
+            },
             headers={"x-api-key": VALID_API_KEY},
         )
 
         # Assertions
-        assert response.status_code == 400
-        assert (
-            "Provider info required for default providers" in response.json()["detail"]
-        )
+        assert response.status_code == 200
+        assert response.json() == {"result": "default_success"}
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     @patch("keep.api.routes.providers.SecretManagerFactory.get_secret_manager")

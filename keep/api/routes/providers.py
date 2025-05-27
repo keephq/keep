@@ -10,6 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
+from sqlalchemy.exc import NoResultFound
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
@@ -622,13 +623,50 @@ async def install_provider_oauth2(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-def _get_default_provider_config(provider_info: dict) -> tuple[str, str, dict]:
-    provider_id = provider_info.pop("provider_id")
-    provider_type = provider_info.pop("provider_type", None) or provider_id
-    provider_config = {
-        "authentication": provider_info,
-    }
-    return provider_id, provider_type, provider_config
+def _get_provider(tenant_id: str, provider_id: str, session: Session):
+    """
+    Get provider configuration from database or default providers.
+
+    Returns:
+        dict: Contains provider_id, provider_type, config
+    """
+    context_manager = ContextManager(tenant_id=tenant_id)
+
+    if provider_id.startswith("default-"):
+        try:
+            provider_type = provider_id.split("-")[1]
+            return ProvidersFactory.get_provider(
+                context_manager,
+                provider_id,
+                provider_type,
+                {"authentication": {}},  # default providers shouldn't have auth config
+            )
+        except IndexError:
+            raise HTTPException(
+                400,
+                detail="Default provider must be in the format default-<provider_type>",
+            )
+
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+
+    try:
+        # Try to get provider from database
+        provider = session.exec(
+            select(Provider).where(
+                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+            )
+        ).one()
+
+        provider_config = secret_manager.read_secret(
+            provider.configuration_key, is_json=True
+        )
+
+        return ProvidersFactory.get_provider(
+            context_manager, provider.id, provider.type, provider_config
+        )
+
+    except NoResultFound as e:
+        raise HTTPException(404, detail="Provider not found") from e
 
 
 @router.post(
@@ -651,33 +689,21 @@ def invoke_provider_method(
     )
 
     try:
-        # Step 1: Get provider configuration
-        provider_config = _get_provider_configuration(
-            tenant_id, provider_id, body, session
-        )
-
-        # Step 2: Initialize provider and invoke method
-        context_manager = ContextManager(tenant_id=tenant_id)
-        provider_instance = ProvidersFactory.get_provider(
-            context_manager,
-            provider_config["provider_id"],
-            provider_config["provider_type"],
-            provider_config["config"],
-        )
+        provider_instance = _get_provider(tenant_id, provider_id, session)
 
         # Check if method exists
         func: Callable | None = getattr(provider_instance, method, None)
         if not func:
             raise HTTPException(400, detail="Method not found")
 
-        # Invoke the method
-        response = func(**provider_config["method_params"])
+        # Invoke the method with the body as params
+        response = func(**body)
 
         logger.info(
             "Successfully invoked provider method",
             extra={
-                "provider_id": provider_config["provider_id"],
-                "provider_type": provider_config["provider_type"],
+                "provider_id": provider_instance.provider_id,
+                "provider_type": provider_instance.provider_type,
                 "method": method,
             },
         )
@@ -702,14 +728,14 @@ def invoke_provider_method(
             "Failed to invoke method",
             extra={"provider_id": provider_id, "method": method},
         )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}") from e
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     except (ValueError, TypeError) as e:
         logger.exception(
             "Invalid request parameters",
             extra={"provider_id": provider_id, "method": method},
         )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}") from e
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     except HTTPException:
         # Re-raise HTTPExceptions without modification (from _get_provider_configuration)
@@ -720,72 +746,11 @@ def invoke_provider_method(
             "Unexpected error while invoking provider method",
             extra={
                 "provider_id": provider_id,
-                "provider_type": provider_config.get("provider_type", "unknown"),
                 "method": method,
+                "method_params": body,
             },
         )
         raise HTTPException(status_code=500, detail="Internal server error") from e
-
-
-def _get_provider_configuration(
-    tenant_id: str, provider_id: str, body: dict | None, session: Session
-) -> dict:
-    """
-    Extract provider configuration from database or request body.
-
-    Returns:
-        dict: Contains provider_id, provider_type, config, and method_params
-    """
-    from sqlalchemy.exc import NoResultFound
-
-    context_manager = ContextManager(tenant_id=tenant_id)
-    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-
-    if not body:
-        raise HTTPException(400, detail="No body provided")
-
-    provider_info = body.pop("providerInfo", None)
-    method_params = body
-
-    try:
-        # Try to get provider from database
-        provider = session.exec(
-            select(Provider).where(
-                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
-            )
-        ).one()
-
-        provider_config = secret_manager.read_secret(
-            provider.configuration_key, is_json=True
-        )
-
-        return {
-            "provider_id": provider.id,
-            "provider_type": provider.type,
-            "config": provider_config,
-            "method_params": method_params,
-        }
-
-    except NoResultFound as e:
-        # Handle default providers (those starting with "default-")
-        if not provider_id.startswith("default-"):
-            raise HTTPException(404, detail="Provider not found") from e
-
-        if not provider_info:
-            raise HTTPException(
-                400, detail="Provider info required for default providers"
-            ) from e
-
-        provider_id_parsed, provider_type, provider_config = (
-            _get_default_provider_config(provider_info)
-        )
-
-        return {
-            "provider_id": provider_id_parsed,
-            "provider_type": provider_type,
-            "config": provider_config,
-            "method_params": method_params,
-        }
 
 
 # Webhook related endpoints
