@@ -1,0 +1,108 @@
+services:
+  keep-frontend:
+    image: curiosity2023/soliton-ip-keep-alert-management-ui:latest
+    ports:
+      - "24000:3000"
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
+      - POSTHOG_HOST=https://ingest.keephq.dev
+      - NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
+      - PUSHER_HOST=localhost
+      - PUSHER_PORT=6001
+      - PUSHER_APP_KEY=keepappkey
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME}
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    image: curiosity2023/soliton-ip-keep-alert-management-server:latest
+    ports:
+      - "24001:8080"
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+      - KEEP_METRICS=true
+      - KEEP_WORKFLOWS_DIRECTORY=${KEEP_WORKFLOWS_DIRECTORY}
+      - KEEP_PROVIDERS=${KEEP_PROVIDERS}
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - LOG_FORMAT=dev_terminal
+      - PORT=8080
+      - SECRET_MANAGER_TYPE=FILE
+      - SECRET_MANAGER_DIRECTORY=/state
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME}
+      - PUSHER_APP_ID=1
+      - PUSHER_APP_KEY=keepappkey
+      - PUSHER_APP_SECRET=keepappsecret
+      - PUSHER_HOST=keep-websocket-server-common
+      - PUSHER_PORT=6001
+      - USE_NGROK=false
+    volumes:
+      - ./state:/state
+    depends_on:
+      - event-generator
+      - postgres
+
+  keep-websocket-server-common:
+    image: quay.io/soketi/soketi:1.4-16-debian
+    ports:
+      - "6001:6001"
+      - "9601:9601"
+    environment:
+      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
+      - SOKETI_DEBUG=1
+      - SOKETI_DEFAULT_APP_ID=1
+      - SOKETI_DEFAULT_APP_KEY=keepappkey
+      - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+
+  mysql:
+    image: mysql:latest
+    ports:
+      - "24002:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "24003:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  event-generator:
+    image: curiosity2023/soliton-ip-keep-alert-management-event-generator:latest
+    ports:
+      - "24004:8081"
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      - DEBUG=${DEBUG}
+      - EVENT_GENERATOR_INTERVAL=${EVENT_GENERATOR_INTERVAL}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - SAMPLE_EVENTS_FILE_PATH=${SAMPLE_EVENTS_FILE_PATH}
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+  postgres_data:
+
+networks:
+  keep-network:
+    name: keep_network

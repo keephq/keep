@@ -31,9 +31,9 @@ import { useFacetPotentialFields } from "@/features/filter";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
-  { value: 'source=="CameraModule"', label: 'source == "CameraModule"' },
-  { value: 'message.contains("CPU")', label: 'message.contains("CPU")' },
-  { value: "description.contains('error')", label: "description.contains('error')" },
+  { value: 'name.contains("Laser")', label: 'name.contains("Laser")' },
+  { value: 'service.contains("Wafer")', label: 'service.contains("Wafer")' },
+  { value: "description.contains('Image')", label: "description.contains('Image')" },
 ]
 
 const CustomOption = (props: any) => {
@@ -351,13 +351,13 @@ export const AlertsRulesBuilder = ({
 
   const fields: Field[] = table
     ? table
-        .getAllColumns()
-        .filter(({ getIsPinned }) => getIsPinned() === false)
-        .map(({ id, columnDef }) => ({
-          name: id,
-          label: columnDef.header as string,
-          operators: getOperators(id),
-        }))
+      .getAllColumns()
+      .filter(({ getIsPinned }) => getIsPinned() === false)
+      .map(({ id, columnDef }) => ({
+        name: id,
+        label: columnDef.header as string,
+        operators: getOperators(id),
+      }))
     : customFields
       ? customFields
       : [];
@@ -441,17 +441,17 @@ export const AlertsRulesBuilder = ({
                       minimal
                         ? undefined
                         : {
-                            ...customComponents,
-                            MenuList: (props) => (
-                              <CustomMenuList
-                                {...props}
-                                docsUrl={
-                                  config?.KEEP_DOCS_URL ||
-                                  "https://docs.keephq.dev"
-                                }
-                              />
-                            ),
-                          }
+                          ...customComponents,
+                          MenuList: (props) => (
+                            <CustomMenuList
+                              {...props}
+                              docsUrl={
+                                config?.KEEP_DOCS_URL ||
+                                "https://docs.keephq.dev"
+                              }
+                            />
+                          ),
+                        }
                     }
                     onBlur={() => setShowSuggestions(false)}
                   />
