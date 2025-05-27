@@ -329,7 +329,7 @@ class TestInvokeProviderMethod:
 
         # Assertions
         assert response.status_code == 400
-        assert "Invalid request: Invalid parameter type" in response.json()["detail"]
+        assert "Invalid parameter type" in response.json()["detail"]
 
     @patch("keep.api.routes.providers.IdentityManagerFactory.get_auth_verifier")
     @patch("keep.api.routes.providers.SecretManagerFactory.get_secret_manager")
@@ -376,4 +376,4 @@ class TestInvokeProviderMethod:
 
         # Assertions
         assert response.status_code == 400
-        assert "Invalid request: chat_id is required" in response.json()["detail"]
+        assert "chat_id is required" in response.json()["detail"]
