@@ -1,6 +1,6 @@
 [
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "transfer arm",
     "name": "Wafer Loaded",
@@ -11,7 +11,7 @@
     "timestamp": "2024-06-21T10:02:00Z"
   },
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "laser module",
     "name": "Laser Scan Started",
@@ -22,7 +22,7 @@
     "timestamp": "2024-06-21T10:03:00Z"
   },
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "image processing",
     "name": "Image Analysis Initiated",
@@ -33,7 +33,7 @@
     "timestamp": "2024-06-21T10:04:00Z"
   },
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "image processing",
     "name": "Image Latency Warning",
@@ -44,7 +44,7 @@
     "timestamp": "2024-06-21T10:07:00Z"
   },
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "wafer throughput monitor",
     "name": "Throughput Decrease",
@@ -55,7 +55,7 @@
     "timestamp": "2024-06-21T10:09:00Z"
   },
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "laser module",
     "name": "Focus Adjustment Failure",
@@ -66,18 +66,18 @@
     "timestamp": "2024-06-21T10:10:00Z"
   },
   {
-    "run_id": "run001",
+    "run_id": "001",
     "operator": "charlie",
     "service": "image processing",
     "name": "Module Nonresponsive",
     "description": "Image Processing Module ceased responding (code-ERR220).",
     "environment": "production",
-    "severity": "high",
+    "severity": "critical",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T10:11:00Z"
   },
   {
-    "run_id": "run022",
+    "run_id": "022",
     "operator": "danielle",
     "service": "wafer loader",
     "name": "Wafer Placed",
@@ -88,7 +88,7 @@
     "timestamp": "2024-06-21T11:20:00Z"
   },
   {
-    "run_id": "run022",
+    "run_id": "022",
     "operator": "danielle",
     "service": "process controller",
     "name": "Process Sequence Start",
@@ -99,7 +99,7 @@
     "timestamp": "2024-06-21T11:21:00Z"
   },
   {
-    "run_id": "run022",
+    "run_id": "022",
     "operator": "danielle",
     "service": "application server",
     "name": "Transaction Retry",
@@ -110,7 +110,7 @@
     "timestamp": "2024-06-21T11:26:00Z"
   },
   {
-    "run_id": "run022",
+    "run_id": "022",
     "operator": "danielle",
     "service": "database",
     "name": "Connection Pool Saturated",
@@ -121,7 +121,7 @@
     "timestamp": "2024-06-21T11:32:00Z"
   },
   {
-    "run_id": "run022",
+    "run_id": "022",
     "operator": "danielle",
     "service": "application server",
     "name": "Unable to Log Process Step",
@@ -132,7 +132,7 @@
     "timestamp": "2024-06-21T11:32:30Z"
   },
   {
-    "run_id": "run022",
+    "run_id": "022",
     "operator": "danielle",
     "service": "tool monitor",
     "name": "Tool Idle Warning",
@@ -143,7 +143,18 @@
     "timestamp": "2024-06-21T11:33:00Z"
   },
   {
-    "run_id": "run046",
+    "service": "wafer throughput monitor",
+    "run_id": "022",
+    "operator": "danielle",
+    "name": "Throughput Alert",
+    "description": "Wafer throughput below expected rate: 2 wafers in last 10 minutes.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferPro9000",
+    "timestamp": "2024-06-21T11:35:00Z"
+  },
+  {
+    "run_id": "046",
     "operator": "sachin",
     "service": "configuration manager",
     "name": "Config Push Attempt",
@@ -154,7 +165,7 @@
     "timestamp": "2024-06-21T12:15:00Z"
   },
   {
-    "run_id": "run046",
+    "run_id": "046",
     "operator": "sachin",
     "service": "instrument manager",
     "name": "Config Update Rejected",
@@ -165,7 +176,7 @@
     "timestamp": "2024-06-21T12:16:15Z"
   },
   {
-    "run_id": "run046",
+    "run_id": "046",
     "operator": "sachin",
     "service": "process monitor",
     "name": "Performance Outlier Detected",
@@ -176,7 +187,7 @@
     "timestamp": "2024-06-21T12:19:00Z"
   },
   {
-    "run_id": "run046",
+    "run_id": "046",
     "operator": "sachin",
     "service": "data QA",
     "name": "Metric Deviation",
@@ -187,7 +198,7 @@
     "timestamp": "2024-06-21T12:20:45Z"
   },
   {
-    "run_id": "run046",
+    "run_id": "046",
     "operator": "sachin",
     "service": "instrument manager",
     "name": "Version Check Failed",
@@ -198,7 +209,18 @@
     "timestamp": "2024-06-21T12:22:10Z"
   },
   {
-    "run_id": "run077",
+    "service": "wafer throughput monitor",
+    "run_id": "046",
+    "operator": "sachin",
+    "name": "Throughput Alert",
+    "description": "Wafer throughput below expected rate: 3 wafers in last 10 minutes.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferPro9000",
+    "timestamp": "2024-06-21T12:25:00Z"
+  },
+  {
+    "run_id": "077",
     "operator": "emma",
     "service": "handler control",
     "name": "Wafer Assigned for Movement",
@@ -209,7 +231,7 @@
     "timestamp": "2024-06-21T13:10:00Z"
   },
   {
-    "run_id": "run077",
+    "run_id": "077",
     "operator": "emma",
     "service": "handler control",
     "name": "Handler Arm Pick Initiated",
@@ -220,7 +242,7 @@
     "timestamp": "2024-06-21T13:11:00Z"
   },
   {
-    "run_id": "run077",
+    "run_id": "077",
     "operator": "emma",
     "service": "handler control",
     "name": "Movement Delay Detected",
@@ -231,7 +253,7 @@
     "timestamp": "2024-06-21T13:13:00Z"
   },
   {
-    "run_id": "run077",
+    "run_id": "077",
     "operator": "emma",
     "service": "handler control",
     "name": "Timeout Position Not Reached",
@@ -242,7 +264,7 @@
     "timestamp": "2024-06-21T13:15:00Z"
   },
   {
-    "run_id": "run077",
+    "run_id": "077",
     "operator": "emma",
     "service": "handler control",
     "name": "Handler Arm Stuck",
@@ -253,18 +275,18 @@
     "timestamp": "2024-06-21T13:17:00Z"
   },
   {
-    "run_id": "run077",
+    "run_id": "077",
     "operator": "emma",
     "service": "handler diagnostics",
     "name": "Subsystem Self-Check Failed",
     "description": "Handler subsystem self-check failed (Error: excessive load on actuator).",
     "environment": "production",
-    "severity": "high",
+    "severity": "critical",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T13:18:00Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "loader module",
     "name": "Wafer In Process",
@@ -275,7 +297,7 @@
     "timestamp": "2024-06-21T14:02:00Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "loader module",
     "name": "Arm Movement Delay",
@@ -286,7 +308,7 @@
     "timestamp": "2024-06-21T14:03:00Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "application service",
     "name": "Memory Usage Spike",
@@ -297,7 +319,7 @@
     "timestamp": "2024-06-21T14:05:00Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "process controller",
     "name": "Communication Retry",
@@ -308,7 +330,7 @@
     "timestamp": "2024-06-21T14:07:00Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "chamber module",
     "name": "Temperature Spike Detected",
@@ -319,18 +341,18 @@
     "timestamp": "2024-06-21T14:08:00Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "system monitor",
     "name": "Emergency Halt",
     "description": "Emergency halt triggered for Tool-05, operator requested for intervention.",
     "environment": "production",
-    "severity": "high",
+    "severity": "critical",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T14:08:30Z"
   },
   {
-    "run_id": "run071",
+    "run_id": "071",
     "operator": "janet",
     "service": "engineering",
     "name": "Unscheduled Maintenance Initiated",
@@ -341,7 +363,7 @@
     "timestamp": "2024-06-21T14:10:00Z"
   },
   {
-    "run_id": "run075",
+    "run_id": "075",
     "operator": "maya",
     "service": "software deployment",
     "name": "Software Update",
@@ -352,7 +374,7 @@
     "timestamp": "2024-06-21T13:00:00Z"
   },
   {
-    "run_id": "run075",
+    "run_id": "075",
     "operator": "maya",
     "service": "process controller",
     "name": "Resumed Processing",
@@ -363,7 +385,7 @@
     "timestamp": "2024-06-21T13:02:00Z"
   },
   {
-    "run_id": "run075",
+    "run_id": "075",
     "operator": "maya",
     "service": "process controller",
     "name": "Memory Usage Rising",
@@ -374,7 +396,7 @@
     "timestamp": "2024-06-21T13:10:00Z"
   },
   {
-    "run_id": "run075",
+    "run_id": "075",
     "operator": "maya",
     "service": "process controller",
     "name": "Memory Threshold Exceeded",
@@ -385,7 +407,7 @@
     "timestamp": "2024-06-21T13:25:00Z"
   },
   {
-    "run_id": "run075",
+    "run_id": "075",
     "operator": "maya",
     "service": "process controller",
     "name": "Controller Unresponsive (OOM)",
@@ -396,7 +418,7 @@
     "timestamp": "2024-06-21T13:40:00Z"
   },
   {
-    "run_id": "run075",
+    "run_id": "075",
     "operator": "maya",
     "service": "wafer status monitor",
     "name": "Wafers in Unknown Status",
@@ -407,7 +429,7 @@
     "timestamp": "2024-06-21T13:41:00Z"
   },
   {
-    "run_id": "run067",
+    "run_id": "067",
     "operator": "maria",
     "service": "laser measurement module",
     "name": "Scan Complete",
@@ -418,7 +440,7 @@
     "timestamp": "2024-06-21T14:00:00Z"
   },
   {
-    "run_id": "run067",
+    "run_id": "067",
     "operator": "maria",
     "service": "image acquisition module",
     "name": "Data Received",
@@ -429,7 +451,7 @@
     "timestamp": "2024-06-21T14:01:00Z"
   },
   {
-    "run_id": "run067",
+    "run_id": "067",
     "operator": "maria",
     "service": "image acquisition module",
     "name": "Transfer Delay",
@@ -440,7 +462,7 @@
     "timestamp": "2024-06-21T14:03:00Z"
   },
   {
-    "run_id": "run067",
+    "run_id": "067",
     "operator": "maria",
     "service": "data analytics module",
     "name": "No Data Received",
@@ -451,7 +473,7 @@
     "timestamp": "2024-06-21T14:04:00Z"
   },
   {
-    "run_id": "run067",
+    "run_id": "067",
     "operator": "maria",
     "service": "image acquisition module",
     "name": "Buffer Overflow",
@@ -462,7 +484,7 @@
     "timestamp": "2024-06-21T14:06:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "instrument network",
     "name": "Instrument Disconnected",
@@ -473,7 +495,7 @@
     "timestamp": "2024-06-21T15:00:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "log manager",
     "name": "Log Storage Increase",
@@ -484,7 +506,7 @@
     "timestamp": "2024-06-21T15:10:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "instrument system",
     "name": "High Memory Usage",
@@ -495,7 +517,7 @@
     "timestamp": "2024-06-21T15:30:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "instrument network",
     "name": "Instrument Reconnected",
@@ -506,7 +528,7 @@
     "timestamp": "2024-06-21T15:35:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "log manager",
     "name": "Bulk Log Upload Started",
@@ -517,7 +539,7 @@
     "timestamp": "2024-06-21T15:36:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "network monitor",
     "name": "Temporary Network Congestion",
@@ -528,7 +550,7 @@
     "timestamp": "2024-06-21T15:38:00Z"
   },
   {
-    "run_id": "run159",
+    "run_id": "159",
     "operator": "harish",
     "service": "log manager",
     "name": "Log Upload Complete",

@@ -13,13 +13,14 @@ workflow:
   services: []
   steps:
     - name: get-alerts-from-mysql
-      if: keep.eq("", '{{ last_workflow_run_time }}') == False
       provider:
         type: mysql
         config: "{{ providers.MySQL Logs Database }}"
         with:
-          query: select * from monitoring_events where ts > '{{ last_workflow_run_time }}' ORDER BY ts DESC;
+          query: SELECT * FROM monitoring_events WHERE ts > ( CASE WHEN '{{ last_workflow_run_time }}' = '' THEN '1970-01-01T00:00:00Z' ELSE '{{ last_workflow_run_time }}' END ) ORDER BY ts DESC;
           as_dict: true
+      vars:
+        new_last_workflow_run_time: "{{ last_workflow_run_time || '1970-01-01T00:00:00Z' }}"
   actions:
     - name: http-action
       foreach: " {{ steps.get-alerts-from-mysql.results }}"
@@ -40,3 +41,4 @@ workflow:
             service: "{{ foreach.value.service }}"
             operator: "{{ foreach.value.operator }}"
             run_id: "{{ foreach.value.run_id }}"
+            fingerprint: "{{ foreach.value.id }}"
