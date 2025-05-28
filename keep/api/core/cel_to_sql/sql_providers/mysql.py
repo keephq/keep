@@ -30,16 +30,15 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         if to_type == DataType.BOOLEAN:
             cast_conditions = {
                 # f"{expression_to_cast} is NULL": "FALSE",
-                f"{expression_to_cast} = 'true'": "TRUE",
-                f"{expression_to_cast} = 'false'": "FALSE",
-                f"{expression_to_cast} = ''": "FALSE",
+                f"LOWER({expression_to_cast}) = 'true'": "TRUE",
+                f"LOWER({expression_to_cast}) = 'false'": "FALSE",
                 f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
-                f"CAST({expression_to_cast} AS SIGNED) <= 0": "FALSE",
+                f"{expression_to_cast} != ''": "TRUE",
             }
             result = " ".join(
                 [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
             )
-            result = f"CASE {result} ELSE NULL END"
+            result = f"CASE {result} ELSE FALSE END"
             return result
 
         if not force:
@@ -177,7 +176,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         constant_node_value = self._visit_constant_node(second_operand.value)
 
         if constant_node_value == "NULL":
-            return f"(JSON_CONTAINS({prop}, '[null]') OR {prop} IS NULL)"
+            return f"(JSON_CONTAINS({prop}, '[null]') OR {prop} IS NULL OR JSON_LENGTH({prop}) = 0)"
         elif constant_node_value.startswith("'") and constant_node_value.endswith("'"):
             constant_node_value = constant_node_value[1:-1]
         return f"JSON_CONTAINS({prop}, '[\"{constant_node_value}\"]')"

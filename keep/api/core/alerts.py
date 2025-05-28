@@ -12,6 +12,7 @@ from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
+    PropertyMetadataInfo,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
@@ -19,7 +20,7 @@ from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect 
 from keep.api.core.db import engine
 
 # This import is required to create the tables
-from keep.api.core.facets import build_facet_selects, get_facet_options, get_facets
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     Alert,
@@ -118,6 +119,11 @@ alert_field_configurations = [
         data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
+        map_from_pattern="dismissed",
+        map_to=["JSON(alertenrichment.enrichments).*"],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="firingCounter",
         map_to=[
             "JSON(alertenrichment.enrichments).*",
@@ -213,9 +219,10 @@ def __build_query_for_filtering(
     cel=None,
     limit=None,
     fetch_alerts_data=True,
+    fetch_incidents=False,
     force_fetch=False,
 ):
-    fetch_incidents = cel and "incident." in cel
+    fetch_incidents = fetch_incidents or (cel and "incident." in cel)
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sql_filter = None
     involved_fields = []
@@ -414,20 +421,25 @@ def get_alert_facets_data(
     else:
         facets = static_facets
 
-    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    select_expressions = facet_selects_metadata["select_expressions"]
-
-    select_expressions.append(LastAlert.alert_id.label("entity_id"))
-
-    base_query_cte = __build_query_for_filtering(
-        tenant_id=tenant_id,
-        select_args=select_expressions,
-        cel=facet_options_query.cel,
-        force_fetch=True,
-    )["query"]
+    def base_query_factory(
+        facet_property_path: str,
+        involved_fields: PropertyMetadataInfo,
+        select_statement,
+    ):
+        fetch_incidents = "incident." in facet_property_path or next(
+            (True for item in involved_fields if "incident." in item.field_name),
+            False,
+        )
+        return __build_query_for_filtering(
+            tenant_id=tenant_id,
+            select_args=select_statement,
+            force_fetch=False,
+            fetch_incidents=fetch_incidents,
+        )["query"]
 
     return get_facet_options(
-        base_query=base_query_cte,
+        base_query_factory=base_query_factory,
+        entity_id_column=LastAlert.alert_id,
         facets=facets,
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,

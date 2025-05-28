@@ -417,12 +417,34 @@ class BaseCelToSqlProvider:
         if not all(isinstance(item.value, constant_value_type) for item in array):
             cast_to = DataType.STRING
 
-        if isinstance(first_operand, PropertyAccessNode):
+        if isinstance(first_operand, JsonPropertyAccessNode):
+            first_operand_str = self._visit_property_access_node(first_operand, stack)
+            if first_operand.data_type:
+                first_operand_str = self.cast(
+                    first_operand_str, first_operand.data_type
+                )
+        elif isinstance(first_operand, PropertyAccessNode):
             first_operand_str = self._visit_property_access_node(first_operand, stack)
             if cast_to:
                 first_operand_str = self.cast(first_operand_str, cast_to)
         elif isinstance(first_operand, MultipleFieldsNode):
-            first_operand_str = self._visit_multiple_fields_node(first_operand, cast_to, stack)
+            first_operand_str = self._visit_multiple_fields_node(
+                first_operand, None, stack
+            )
+            if next(
+                (
+                    item
+                    for item in iter(first_operand.fields)
+                    if isinstance(item, JsonPropertyAccessNode)
+                ),
+                False,
+            ):
+                if first_operand.data_type:
+                    first_operand_str = self.cast(
+                        first_operand_str, first_operand.data_type
+                    )
+                first_operand_str = first_operand_str
+
         else:
             first_operand_str = self._build_sql_filter(first_operand, stack)
 
