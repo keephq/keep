@@ -82,15 +82,13 @@ def test_pulling_prometheus_alerts_to_provider(
         timeout=10000
     )  # Increase timeout to 10 seconds
 
-    # Wait for page to stabilize before reloading
-    browser.wait_for_load_state("networkidle")
-    browser.reload()
-    browser.wait_for_load_state("domcontentloaded")
-    browser.wait_for_load_state("networkidle")
-
     # Try to get to the Feed page and wait for alerts
     max_attemps = 5
     alert_found = False
+
+    # Try to get to the Feed page
+    feed_link = browser.get_by_role("link", name="Feed")
+    feed_link.click()
 
     for attempt in range(max_attemps):
         try:
@@ -103,10 +101,6 @@ def test_pulling_prometheus_alerts_to_provider(
                 overlays.forEach(overlay => overlay.remove());
             }"""
             )
-
-            # Try to get to the Feed page
-            feed_link = browser.get_by_role("link", name="Feed")
-            feed_link.click()
 
             browser.wait_for_url("**/alerts/feed")
 
