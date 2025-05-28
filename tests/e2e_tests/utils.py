@@ -229,13 +229,15 @@ def get_token(tenant_id=None):
     )
 
 
-def save_failure_artifacts(page, log_entries=[], prefix=""):
+def save_failure_artifacts(page, log_entries=[], prefix="", suffix=""):
     """Save screenshots, HTML content, and console logs on test failure."""
 
     current_test_name = get_current_test_name()
 
     if prefix:
         current_test_name = prefix + "_" + current_test_name
+    if suffix:
+        current_test_name = current_test_name + "_" + suffix
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")

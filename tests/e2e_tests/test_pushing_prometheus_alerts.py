@@ -192,9 +192,12 @@ def test_pulling_prometheus_alerts_to_provider(
     try:
 
         def handle_dialog(dialog):
-            print("Disconnecting provider dialog appeared...")
+            print("Disconnecting provider dialog appeared")
             dialog.accept()
             print("Provider disconnected dialog accepted")
+            save_failure_artifacts(
+                browser, suffix="delete_provider_dialog_after_accept"
+            )
 
         provider_button.click()
         # Delete the provider
@@ -202,9 +205,9 @@ def test_pulling_prometheus_alerts_to_provider(
         delete_button.wait_for(state="visible")
         browser.once("dialog", handle_dialog)
         delete_button.click()
-        save_failure_artifacts(browser, prefix="delete_provider_dialog_after_click")
+        save_failure_artifacts(browser, suffix="delete_provider_dialog_after_click")
     except Exception:
-        save_failure_artifacts(browser, prefix="delete_provider")
+        save_failure_artifacts(browser, suffix="delete_provider")
         raise
 
     # Assert provider was deleted with increased timeout
