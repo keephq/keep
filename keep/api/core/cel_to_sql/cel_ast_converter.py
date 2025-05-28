@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 import celpy.celparser
@@ -42,6 +43,7 @@ datetime_regex = re.compile(
     r"(?:\s(\d{2}):(\d{2}):(\d{2}))?$"  # Optional time: HH:MM:SS
 )
 
+logger = logging.getLogger(__name__)
 
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
@@ -49,9 +51,13 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     @classmethod
     def convert_to_ast(cls_, cel: str) -> Node:
         d = cls_()
-        celpy_ast = d.celpy_env.compile(cel)
-        d.visit(celpy_ast)
-        return d.stack[0]
+        try:
+            celpy_ast = d.celpy_env.compile(cel)
+            d.visit(celpy_ast)
+            return d.stack[0]
+        except Exception as e:
+            logger.warning('Error converting "%s" CEL to AST. Error: %s', cel, e)
+            raise e
 
     def __init__(self) -> None:
         self.celpy_env = celpy.Environment()
