@@ -836,7 +836,7 @@ def setup_page_logging(browser, console_logs):
         "console",
         lambda msg: (
             console_logs.append(
-                f"{datetime.now()}: {msg.text}, location: {msg.location}"
+                f"{datetime.now()}: {msg.type.upper()} {msg.text}, location: {msg.location}"
             )
         ),
     )

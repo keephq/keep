@@ -154,6 +154,8 @@ def test_pulling_prometheus_alerts_to_provider(
         # Alternative approach - go directly to the URL
         browser.goto("http://localhost:3000/providers")
 
+    save_failure_artifacts(browser, suffix="providers_page_before_delete")
+
     # Wait for page to load
     browser.wait_for_load_state("networkidle")
 
@@ -189,9 +191,6 @@ def test_pulling_prometheus_alerts_to_provider(
             print("Disconnecting provider dialog appeared")
             dialog.accept()
             print("Provider disconnected dialog accepted")
-            save_failure_artifacts(
-                browser, suffix="delete_provider_dialog_after_accept"
-            )
 
         provider_button.click()
         # Delete the provider
