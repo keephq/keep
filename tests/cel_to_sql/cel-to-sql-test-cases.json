@@ -304,5 +304,32 @@
       "mysql": "columnWithUnknownType <= 100",
       "postgresql": "(columnWithUnknownType)::FLOAT <= 100"
     }
+  },
+  {
+    "input_cel": "has(alert.some.path)",
+    "description": "HAS operation for multiple JSON columns",
+    "expected_sql_dialect_based": {
+      "sqlite": "(EXISTS (SELECT 1 FROM json_each(json_extract(alert_enrichments, '$.\"some\"')) WHERE json_each.key = 'path') OR EXISTS (SELECT 1 FROM json_each(json_extract(alert_event, '$.\"some\"')) WHERE json_each.key = 'path'))",
+      "mysql": "(JSON_CONTAINS_PATH(alert_enrichments, 'one', '$.\"some\".\"path\"') OR JSON_CONTAINS_PATH(alert_event, 'one', '$.\"some\".\"path\"'))",
+      "postgresql": "(JSONB_PATH_EXISTS(alert_enrichments::JSONB, '$.\"some\".\"path\"') OR JSONB_PATH_EXISTS(alert_event::JSONB, '$.\"some\".\"path\"'))"
+    }
+  },
+  {
+    "input_cel": "has(severity)",
+    "description": "HAS operation for simple existing field",
+    "expected_sql_dialect_based": {
+      "sqlite": "TRUE",
+      "mysql": "TRUE",
+      "postgresql": "TRUE"
+    }
+  },
+  {
+    "input_cel": "has(unexistingField)",
+    "description": "HAS operation for simple not existing field",
+    "expected_sql_dialect_based": {
+      "sqlite": "FALSE",
+      "mysql": "FALSE",
+      "postgresql": "FALSE"
+    }
   }
 ]

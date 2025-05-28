@@ -126,6 +126,7 @@ class ComparisonNode(Node):
 class UnaryNodeOperator(Enum):
     NOT = "!"
     NEG = "-"
+    HAS = "has"
 
 
 class UnaryNode(Node):
@@ -148,6 +149,9 @@ class UnaryNode(Node):
     operand: Optional[Node] = Field()
 
     def __str__(self):
+        if self.operator == UnaryNodeOperator.HAS:
+            return f"{self.operand}({self.operator})"
+
         return f"{self.operator}{self.operand}"
 
 

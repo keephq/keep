@@ -293,7 +293,17 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         raise NotImplementedError("Dot ident not implemented")
 
     def ident_arg(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Ident arg not implemented")
+        token_value = tree.children[0].value
+
+        if token_value == UnaryNodeOperator.HAS.value:
+            self.stack.append(
+                UnaryNode(operator=UnaryNodeOperator.HAS, operand=self.stack.pop()[0])
+            )
+            return
+
+        raise NotImplementedError(
+            "Ident arg not implemented for token_value:" + token_value
+        )
 
     def ident(self, tree: lark.Tree) -> None:
         property_member = PropertyAccessNode(

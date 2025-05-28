@@ -17,6 +17,51 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"json_extract({column}, '$.{property_path_str}')"
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        """
+        Generates a SQL expression to check if a JSON column contains a specific path.
+
+        This method constructs a SQL query using SQLite's JSON functions to determine
+        whether a JSON object in a specified column contains a given path. The path is
+        represented as a list of keys, and the method supports both single-level and
+        nested paths.
+
+        Args:
+            column (str): The name of the JSON column in the database table.
+            path (list[str]): A list of keys representing the JSON path to check.
+
+        Returns:
+            str: A SQL expression that evaluates to true if the specified path exists
+                 in the JSON column.
+
+        Example:
+            For a JSON column `json_column` and a path `['a', 'b', 'c']`, the method
+            generates a SQL query similar to:
+            ```
+            EXISTS (
+                SELECT 1
+                FROM json_each(json_extract(json_column, '$.a.b'))
+                WHERE json_each.key = 'c'
+            )
+            ```
+        """
+        json_each_exp = None
+        key_name = None
+        if len(path) == 1:
+            json_each_exp = f"json_each({column})"
+            key_name = path[0]
+        else:
+            last_key = path[-1]
+            other_keys = path[:-1]
+            json_each_exp = (
+                f"json_each({self.json_extract_as_text(column, other_keys)})"
+            )
+            key_name = last_key
+
+        return (
+            f"EXISTS (SELECT 1 FROM {json_each_exp} WHERE json_each.key = '{key_name}')"
+        )
+
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:
             to_type_str = "TEXT"

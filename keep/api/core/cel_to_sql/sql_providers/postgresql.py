@@ -25,6 +25,10 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         json_property_path = " -> ".join(all_columns[:-1])
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"JSONB_PATH_EXISTS({column}::JSONB, '$.{property_path_str}')"
+
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:
             to_type_str = "TEXT"
