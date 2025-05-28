@@ -160,13 +160,16 @@ def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
     log_stream = io.StringIO()
     try:
         # A patched version of smtplib.SMTP that captures the SMTP session output
+        logger.info("Testing SMTP")
         server = PatchedSMTP(
             settings.host, settings.port, timeout=10, log_stream=log_stream
         )
         if settings.secure:
+            logger.info("Configuring TLS")
             server.starttls()
 
         if settings.username and settings.password:
+            logger.info("Configuring user and pass")
             server.login(settings.username, settings.password.get_secret_value())
 
         # Send a test email to the user's email to ensure it works
@@ -175,14 +178,16 @@ def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
         message["To"] = settings.to_email
         message["Subject"] = "Test SMTP Settings"
 
+        logger.info("Sending test email")
         server.sendmail(settings.from_email, [settings.to_email], message.as_string())
         server.quit()
         # Get the SMTP session log
         smtp_log = log_stream.getvalue().splitlines()
         log_stream.close()
-
+        logger.info("Finished to send test email")
         return True, "SMTP settings are correct and an email has been sent.", smtp_log
     except Exception as e:
+        logger.exception("Failed to test SMTP")
         return False, str(e), log_stream.getvalue().splitlines()
 
 

@@ -168,7 +168,15 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
   const onTest = async () => {
     try {
       if (!validateTestFields()) return;
-      const result = await api.post(`/settings/smtp/test`);
+
+      // Prepare the payload with current settings
+      const payload = { ...settings };
+      // Convert port to number if it's a string
+      if (typeof payload.port === "string") {
+        payload.port = parseInt(payload.port, 10);
+      }
+
+      const result = await api.post(`/settings/smtp/test`, payload);
 
       setTestResult({
         status: true,
