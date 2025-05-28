@@ -53,7 +53,7 @@ jobs:
 
       - name: Build Docker image for Event Generator
         run: docker build -t curiosity2023/soliton-ip-keep-alert-management-event-generator:latest .
-        working-directory: ./alert-manager/event_generator
+        working-directory: ./event_generator
 
       - name: Push Docker image
         run: docker push curiosity2023/soliton-ip-keep-alert-management-event-generator:latest
