@@ -190,12 +190,19 @@ def test_pulling_prometheus_alerts_to_provider(
                 raise
 
     try:
+
+        def handle_dialog(dialog):
+            print("Disconnecting provider dialog appeared...")
+            dialog.accept()
+            print("Provider disconnected dialog accepted")
+
         provider_button.click()
         # Delete the provider
         delete_button = browser.get_by_role("button", name="Disconnect")
         delete_button.wait_for(state="visible")
-        browser.once("dialog", lambda dialog: dialog.accept())
+        browser.once("dialog", handle_dialog)
         delete_button.click()
+        save_failure_artifacts(browser, prefix="delete_provider_dialog_after_click")
     except Exception:
         save_failure_artifacts(browser, prefix="delete_provider")
         raise
