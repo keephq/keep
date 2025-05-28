@@ -72,7 +72,7 @@
     "name": "Module Nonresponsive",
     "description": "Image Processing Module ceased responding (code-ERR220).",
     "environment": "production",
-    "severity": "high",
+    "severity": "critical",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T10:11:00Z"
   },
@@ -143,6 +143,17 @@
     "timestamp": "2024-06-21T11:33:00Z"
   },
   {
+    "service": "wafer throughput monitor",
+    "run_id": "022",
+    "operator": "danielle",
+    "name": "Throughput Alert",
+    "description": "Wafer throughput below expected rate: 2 wafers in last 10 minutes.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferPro9000",
+    "timestamp": "2024-06-21T11:35:00Z"
+  },
+  {
     "run_id": "046",
     "operator": "sachin",
     "service": "configuration manager",
@@ -196,6 +207,17 @@
     "severity": "high",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T12:22:10Z"
+  },
+  {
+    "service": "wafer throughput monitor",
+    "run_id": "046",
+    "operator": "sachin",
+    "name": "Throughput Alert",
+    "description": "Wafer throughput below expected rate: 3 wafers in last 10 minutes.",
+    "environment": "production",
+    "severity": "warning",
+    "product_name": "WaferPro9000",
+    "timestamp": "2024-06-21T12:25:00Z"
   },
   {
     "run_id": "077",
@@ -259,7 +281,7 @@
     "name": "Subsystem Self-Check Failed",
     "description": "Handler subsystem self-check failed (Error: excessive load on actuator).",
     "environment": "production",
-    "severity": "high",
+    "severity": "critical",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T13:18:00Z"
   },
@@ -325,7 +347,7 @@
     "name": "Emergency Halt",
     "description": "Emergency halt triggered for Tool-05, operator requested for intervention.",
     "environment": "production",
-    "severity": "high",
+    "severity": "critical",
     "product_name": "WaferPro9000",
     "timestamp": "2024-06-21T14:08:30Z"
   },
