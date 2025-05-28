@@ -73,7 +73,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         "Others"
     ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue", "topology", "incident"]
+        Literal[
+            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
+        ]
     ] = []
     WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
 
@@ -266,6 +268,31 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     for part in parts:
                         r = r[part]
                     value = r
+                # support smth like results[0][0].message.source
+                # 1. first convert to results[0][0]["message"]["source"]
+                # 2. use eval
+                elif value.startswith("results["):
+                    self.logger.info("Trying to convert")
+
+                    # try convert
+                    def convert_dot_to_bracket(match):
+                        return f'["{match.group(1)}"]'
+
+                    converted_value = value
+                    bracket_pattern = r"\.([a-zA-Z_][a-zA-Z0-9_]*)"
+                    converted_value = re.sub(
+                        bracket_pattern, convert_dot_to_bracket, converted_value
+                    )
+                    try:
+                        # this is secured since if we are here it means converted_value starts with results[
+                        value = eval(
+                            converted_value, {"__builtins__": {}}, {"results": results}
+                        )
+                    except Exception:
+                        self.logger.exception(
+                            "Could not parse results", extra={"value": value}
+                        )
+
                 if disposable:
                     disposable_enrichments[enrichment["key"]] = value
                 else:
