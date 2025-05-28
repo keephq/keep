@@ -17,6 +17,51 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"json_extract({column}, '$.{property_path_str}')"
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        """
+        Generates a SQL expression to check if a JSON column contains a specific path.
+
+        This method constructs a SQL query using SQLite's JSON functions to determine
+        whether a JSON object in a specified column contains a given path. The path is
+        represented as a list of keys, and the method supports both single-level and
+        nested paths.
+
+        Args:
+            column (str): The name of the JSON column in the database table.
+            path (list[str]): A list of keys representing the JSON path to check.
+
+        Returns:
+            str: A SQL expression that evaluates to true if the specified path exists
+                 in the JSON column.
+
+        Example:
+            For a JSON column `json_column` and a path `['a', 'b', 'c']`, the method
+            generates a SQL query similar to:
+            ```
+            EXISTS (
+                SELECT 1
+                FROM json_each(json_extract(json_column, '$.a.b'))
+                WHERE json_each.key = 'c'
+            )
+            ```
+        """
+        json_each_exp = None
+        key_name = None
+        if len(path) == 1:
+            json_each_exp = f"json_each({column})"
+            key_name = path[0]
+        else:
+            last_key = path[-1]
+            other_keys = path[:-1]
+            json_each_exp = (
+                f"json_each({self.json_extract_as_text(column, other_keys)})"
+            )
+            key_name = last_key
+
+        return (
+            f"EXISTS (SELECT 1 FROM {json_each_exp} WHERE json_each.key = '{key_name}')"
+        )
+
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:
             to_type_str = "TEXT"
@@ -29,16 +74,15 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         elif to_type == DataType.BOOLEAN:
             cast_conditions = {
                 # f"{expression_to_cast} is NULL": "FALSE",
-                f"{expression_to_cast} = 'true'": "TRUE",
-                f"{expression_to_cast} = 'false'": "FALSE",
-                f"{expression_to_cast} = ''": "FALSE",
+                f"LOWER({expression_to_cast}) = 'true'": "TRUE",
+                f"LOWER({expression_to_cast}) = 'false'": "FALSE",
                 f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
-                f"CAST({expression_to_cast} AS SIGNED) <= 0": "FALSE",
+                f"{expression_to_cast} != ''": "TRUE",
             }
             result = " ".join(
                 [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
             )
-            result = f"CASE {result} ELSE NULL END"
+            result = f"CASE {result} ELSE FALSE END"
             return result
         else:
             raise ValueError(f"Unsupported type: {type}")
@@ -109,8 +153,11 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             raise NotImplementedError(
                 f"Array datatype comparison is not supported for {type(second_operand).__name__} node"
             )
-
         prop = self._visit_property_access_node(first_operand, [])
+
+        if second_operand.value is None:
+            return f"({prop} IS NULL OR {prop} = '[]')"
+
         value = self._visit_constant_node(second_operand.value)[1:-1]
 
         return f"(SELECT 1 FROM json_each({prop}) as json_array WHERE json_array.value = '{value}')"
@@ -122,7 +169,12 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             PropertyAccessNode(path=["json_array", "value"]), array, stack
         )
         column = self._visit_property_access_node(first_operand, [])
-
-        return (
+        array_filter = (
             f"(SELECT 1 FROM json_each({column}) as json_array WHERE {in_opratation})"
         )
+        is_none_in_list = next((True for item in array if item.value is None), False)
+
+        if is_none_in_list:
+            return f"({column} = '[]' OR {column} IS NULL OR {array_filter})"
+
+        return array_filter

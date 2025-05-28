@@ -196,6 +196,7 @@ def test_simple_comparison_node_in(cel, args):
     [
         ("!fakeProp", UnaryNodeOperator.NOT),
         ("-fakeProp", UnaryNodeOperator.NEG),
+        ("has(fakeProp)", UnaryNodeOperator.HAS),
     ],
 )
 def test_simple_unary_node(cel, operator):
