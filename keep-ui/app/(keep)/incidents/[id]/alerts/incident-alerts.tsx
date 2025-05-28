@@ -148,7 +148,7 @@ export default function IncidentAlerts({ incident }: Props) {
     isMenuDisplayed: true,
     presetName: "incident-alerts",
     presetNoisy: false,
-    // MenuComponent: MenuComponent,
+    MenuComponent: MenuComponent,
     extraColumns: extraColumns,
   });
 
