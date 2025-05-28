@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 from playwright.sync_api import Page, expect
 
-from tests.e2e_tests.utils import save_failure_artifacts
+from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 
 # Dear developer, thank you for checking E2E tests!
 # For instructions, please check test_end_to_end.py.
@@ -43,7 +43,7 @@ def test_pulling_prometheus_alerts_to_provider(
         raise Exception("Prometheus didn't fire alerts within the expected time")
 
     # Create prometheus provider
-    browser.goto("http://localhost:3000/providers")
+    init_e2e_test(browser, next_url="/providers")
     browser.get_by_placeholder("Filter providers...").click()
     browser.get_by_placeholder("Filter providers...").fill("prometheus")
     browser.get_by_placeholder("Filter providers...").press("Enter")
