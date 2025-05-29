@@ -646,31 +646,31 @@ export const useAlertTableCols = (
     }),
     ...filteredAndGeneratedCols,
     ...extraColumns,
-    // ...((isMenuDisplayed
-    //   ? [
-    //       columnHelper.display({
-    //         id: "alertMenu",
-    //         minSize: 120,
-    //         cell: (context) =>
-    //           MenuComponent ? (
-    //             MenuComponent(context.row.original)
-    //           ) : (
-    //             <AlertMenu
-    //               presetName={presetName.toLowerCase()}
-    //               alert={context.row.original}
-    //               setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-    //               setDismissModalAlert={setDismissModalAlert}
-    //               setChangeStatusAlert={setChangeStatusAlert}
-    //               setTicketModalAlert={setTicketModalAlert}
-    //               setNoteModalAlert={setNoteModalAlert}
-    //             />
-    //           ),
-    //         meta: {
-    //           tdClassName: "p-0 md:p-2",
-    //           thClassName: "p-0 md:p-2",
-    //         },
-    //       }),
-    //     ]
-    //   : []) as ColumnDef<AlertDto>[]),
+    ...((isMenuDisplayed
+      ? [
+        columnHelper.display({
+          id: "alertMenu",
+          minSize: 120,
+          cell: (context) =>
+            MenuComponent ? (
+              MenuComponent(context.row.original)
+            ) : (
+              <AlertMenu
+                presetName={presetName.toLowerCase()}
+                alert={context.row.original}
+                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                setDismissModalAlert={setDismissModalAlert}
+                setChangeStatusAlert={setChangeStatusAlert}
+                setTicketModalAlert={setTicketModalAlert}
+                setNoteModalAlert={setNoteModalAlert}
+              />
+            ),
+          meta: {
+            tdClassName: "p-0 md:p-2",
+            thClassName: "p-0 md:p-2",
+          },
+        }),
+      ]
+      : []) as ColumnDef<AlertDto>[]),
   ] as ColumnDef<AlertDto>[];
 };
