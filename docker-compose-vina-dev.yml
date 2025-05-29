@@ -23,9 +23,10 @@ services:
       - keep-backend
 
   keep-backend:
-    image: curiosity2023/soliton-ip-keep-alert-management-server:latest
     ports:
       - "24001:8080"
+    build:
+      dockerfile: docker/Dockerfile.dev.api
     environment:
       - AUTH_TYPE=NO_AUTH
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
@@ -46,9 +47,9 @@ services:
       - PUSHER_PORT=6001
       - USE_NGROK=false
     volumes:
+      - .:/app
       - ./state:/state
       - ./keep/keep_provisions:/keep_provisions
-
     depends_on:
       - event-generator
       - postgres
@@ -89,7 +90,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   event-generator:
-    image: curiosity2023/soliton-ip-keep-alert-management-event-generator:latest
+    build:
+      context: ./event_generator
+      dockerfile: Dockerfile
     ports:
       - "24004:8081"
     environment:
