@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from keep.api.core.db import create_workflow_execution, get_workflow_execution
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.provider import Provider
 from keep.api.models.db.workflow import Workflow
 from keep.functions import cyaml
@@ -259,3 +260,99 @@ def test_workflow_postgres_results(db_session):
         results_db.results.get("keep-action")[0][0].get("name")
         == "Packloss for host in production !"
     )
+
+
+def test_workflow_enrichment_with_nested_results(db_session, create_alert):
+    """Test that reproduces the bug where enrichment doesn't work with results[0][0] access pattern"""
+
+    workflow_enrichment = """workflow:
+  name: Enrichment Test
+  description: Test enrichment with nested results access
+  disabled: false
+  triggers:
+    - type: manual
+  inputs: []
+  consts: {}
+  owners: []
+  services: []
+  steps:
+    - name: mock-step
+      provider:
+        type: mock
+        config: "{{ providers.mock-provider }}"
+        with:
+            enrich_alert:
+                - key: originalSource
+                  value: results[0][0].message.source
+                - key: messageId
+                  value: results[0][0].message._id
+            command_output:
+                -
+                    - message:
+                        source: "server-01"
+                        level: "ERROR"
+                        content: "Database connection failed"
+                        _id: "msg123"
+"""
+
+    workflow_db = Workflow(
+        id="enrichment-test",
+        name="enrichment-test",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test enrichment with nested results",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_enrichment,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=5678,
+        fingerprint="5678",
+        event_id="5678",
+        event_type="manual",
+    )
+
+    alert_dto = AlertDto(id="1234", name="blabla", fingerprint="fpw1")
+    # store it in the db cuz we need to query it
+    dt = datetime.utcnow()
+    create_alert(
+        "fpw1",
+        AlertStatus.FIRING,
+        dt,
+    )
+    workflow.context_manager.set_event_context(alert_dto)
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    from keep.searchengine.searchengine import SearchEngine
+
+    search_engine = SearchEngine(tenant_id=workflow.context_manager.tenant_id)
+    alert = search_engine.search_alerts_by_cel(cel_query="fingerprint == 'fpw1'")
+    # assert
+    alert = alert[0]
+    assert alert.fingerprint == "fpw1"
+    assert alert.originalSource == "server-01"
+    assert alert.messageId == "msg123"

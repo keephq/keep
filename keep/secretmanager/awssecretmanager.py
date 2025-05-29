@@ -11,6 +11,9 @@ from keep.secretmanager.secretmanager import BaseSecretManager
 tracer = trace.get_tracer(__name__)
 
 SECRET_MANAGER_TAGS = config("AWS_SECRET_MANAGER_TAGS", default=None)
+ROTATION_ENABLED = config("AWS_SECRET_ROTATION_ENABLED", default=False, cast=bool)
+ROTATION_DAYS = config("AWS_SECRET_ROTATION_DAYS", default=30, cast=int)
+ROTATION_LAMBDA_ARN = config("AWS_SECRET_ROTATION_LAMBDA_ARN", default=None)
 
 
 class AwsSecretManager(BaseSecretManager):
@@ -67,7 +70,6 @@ class AwsSecretManager(BaseSecretManager):
             except ClientError as e:
                 if e.response["Error"]["Code"] == "ResourceNotFoundException":
                     try:
-                        # Create new secret if it doesn't exist
                         self.client.create_secret(
                             Name=secret_name,
                             SecretString=secret_value,
@@ -78,6 +80,36 @@ class AwsSecretManager(BaseSecretManager):
                             "Secret created successfully",
                             extra={"secret_name": secret_name},
                         )
+
+                        # Apply rotation policy if enabled
+                        if ROTATION_ENABLED and ROTATION_LAMBDA_ARN:
+                            try:
+                                self.client.rotate_secret(
+                                    SecretId=secret_name,
+                                    RotationLambdaARN=ROTATION_LAMBDA_ARN,
+                                    RotationRules={
+                                        "AutomaticallyAfterDays": ROTATION_DAYS
+                                    },
+                                    RotateImmediately=False,
+                                )
+                                self.logger.info(
+                                    "Rotation policy configured successfully",
+                                    extra={
+                                        "secret_name": secret_name,
+                                        "rotation_days": ROTATION_DAYS,
+                                    },
+                                )
+                            except ClientError as rot_error:
+                                self.logger.error(
+                                    "Failed to configure rotation policy",
+                                    extra={
+                                        "secret_name": secret_name,
+                                        "error": str(rot_error),
+                                        "error_code": rot_error.response["Error"][
+                                            "Code"
+                                        ],
+                                    },
+                                )
                     except Exception as e:
                         self.logger.error(
                             "Unexpected error while creating secret",

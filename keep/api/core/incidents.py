@@ -12,13 +12,14 @@ from keep.api.core.cel_to_sql.properties_mapper import (
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
+    PropertyMetadataInfo,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
 from keep.api.core.db import engine, enrich_incidents_with_alerts
-from keep.api.core.facets import get_facet_options, get_facets, build_facet_selects
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.alert import (
     Alert,
     AlertEnrichment,
@@ -534,33 +535,38 @@ def get_incident_facets_data(
     else:
         facets = static_facets
 
-    force_fetch_alerts = next(
-        (True for facet in facets if "alert." in facet.property_path),
-        False,
-    )
-
-    force_fetch_linked_incidents = next(
-        (True for facet in facets if "hasLinkedIncident" in facet.property_path),
-        False,
-    )
-
-    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    select_expressions = facet_selects_metadata["select_expressions"]
-
-    select_expressions.append(Incident.id.label("entity_id"))
-
-    base_query = __build_base_incident_query(
-        tenant_id,
-        select_expressions,
-        force_fetch_alerts=force_fetch_alerts,
-        force_fetch_has_linked_incident=force_fetch_linked_incidents,
-    )["query"]
-
-    if allowed_incident_ids:
-        base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
+    def base_query_factory(
+        facet_property_path: str,
+        involved_fields: PropertyMetadataInfo,
+        select_statement,
+    ):
+        force_fetch_alerts = "alert" in facet_property_path or next(
+            (True for item in involved_fields if "alert" in item.field_name), False
+        )
+        force_fetch_has_linked_incident = (
+            "hasLinkedIncident" in facet_property_path
+            or next(
+                (
+                    True
+                    for item in involved_fields
+                    if "hasLinkedIncident" in item.field_name
+                ),
+                False,
+            )
+        )
+        base_query = __build_base_incident_query(
+            tenant_id,
+            select_statement,
+            force_fetch_alerts=force_fetch_alerts,
+            force_fetch_has_linked_incident=force_fetch_has_linked_incident,
+        )["query"]
+        if allowed_incident_ids:
+            base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
+        return base_query
 
     return get_facet_options(
-        base_query=base_query,
+        base_query_factory=base_query_factory,
+        entity_id_column=Incident.id,
         facets=facets,
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,

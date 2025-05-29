@@ -224,6 +224,11 @@ class BaseCelToSqlProvider:
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        raise NotImplementedError(
+            "Extracting JSON is not implemented. Must be implemented in the child class."
+        )
+
     def coalesce(self, args):
         if len(args) == 1:
             return args[0]
@@ -412,12 +417,34 @@ class BaseCelToSqlProvider:
         if not all(isinstance(item.value, constant_value_type) for item in array):
             cast_to = DataType.STRING
 
-        if isinstance(first_operand, PropertyAccessNode):
+        if isinstance(first_operand, JsonPropertyAccessNode):
+            first_operand_str = self._visit_property_access_node(first_operand, stack)
+            if first_operand.data_type:
+                first_operand_str = self.cast(
+                    first_operand_str, first_operand.data_type
+                )
+        elif isinstance(first_operand, PropertyAccessNode):
             first_operand_str = self._visit_property_access_node(first_operand, stack)
             if cast_to:
                 first_operand_str = self.cast(first_operand_str, cast_to)
         elif isinstance(first_operand, MultipleFieldsNode):
-            first_operand_str = self._visit_multiple_fields_node(first_operand, cast_to, stack)
+            first_operand_str = self._visit_multiple_fields_node(
+                first_operand, None, stack
+            )
+            if next(
+                (
+                    item
+                    for item in iter(first_operand.fields)
+                    if isinstance(item, JsonPropertyAccessNode)
+                ),
+                False,
+            ):
+                if first_operand.data_type:
+                    first_operand_str = self.cast(
+                        first_operand_str, first_operand.data_type
+                    )
+                first_operand_str = first_operand_str
+
         else:
             first_operand_str = self._build_sql_filter(first_operand, stack)
 
@@ -551,15 +578,62 @@ class BaseCelToSqlProvider:
     # region Unary Visitors
     def _visit_unary_node(self, unary_node: UnaryNode, stack: list[Node]) -> str:
         if unary_node.operator == UnaryNodeOperator.NOT:
-            return self._visit_unary_not(
-                self._build_sql_filter(unary_node.operand, stack)
-            )
+            return self._visit_unary_not(unary_node.operand, stack)
+        if unary_node.operator == UnaryNodeOperator.HAS:
+            return self._visit_unary_has(unary_node.operand, stack)
 
         raise NotImplementedError(
             f"{unary_node.operator} unary operator is not supported yet"
         )
 
-    def _visit_unary_not(self, operand: str) -> str:
-        return f"NOT ({operand})"
+    def _visit_unary_not(self, operand: Node, stack) -> str:
+        return f"NOT ({self._build_sql_filter(operand, stack)})"
+
+    def _visit_unary_has(self, operand: Node, stack) -> str:
+        if isinstance(operand, JsonPropertyAccessNode):
+            return self._json_contains_path(
+                operand.json_property_name, operand.property_to_extract
+            )
+        if isinstance(operand, PropertyAccessNode):
+            # In case when it's simple property access and property metadata exists for path, we match all rows (return TRUE)
+            # otherwise, we filter out all rows (return FALSE)
+            return (
+                "TRUE"
+                if self.properties_metadata.get_property_metadata(operand.path)
+                else "FALSE"
+            )
+        if isinstance(operand, MultipleFieldsNode):
+            return self._build_sql_filter(
+                self.__convert_to_or(
+                    [
+                        UnaryNode(operator=UnaryNodeOperator.HAS, operand=field)
+                        for field in operand.fields
+                    ]
+                ),
+                stack,
+            )
+
+        return "FALSE"
+
+    def __convert_to_or(self, expressions: Node) -> LogicalNode:
+        """
+        Converts a list of expressions to an OR expression.
+        Args:
+            expressions (Node): The list of expressions to convert.
+        Returns:
+            str: The resulting OR expression.
+        """
+        node = None
+        for expression in expressions:
+            if node is None:
+                node = expression
+                continue
+
+            node = LogicalNode(
+                left=node,
+                operator=LogicalNodeOperator.OR,
+                right=expression,
+            )
+        return node
 
     # endregion

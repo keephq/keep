@@ -9,6 +9,15 @@
     }
   },
   {
+    "input_cel": "booleanFromJson == true",
+    "description": "Equality with boolean from JSON",
+    "expected_sql_dialect_based": {
+      "mysql": "CASE WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"'))) = 'true' THEN TRUE WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"'))) = 'false' THEN FALSE WHEN CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"')) AS SIGNED) >= 1 THEN TRUE WHEN JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"')) != '' THEN TRUE ELSE FALSE END = TRUE",
+      "postgresql": "CASE WHEN LOWER((alert_event) ->> 'booleanFromJson') = 'true' THEN true WHEN LOWER((alert_event) ->> 'booleanFromJson') = 'false' THEN false WHEN (alert_event) ->> 'booleanFromJson' ~ '^[-+]?[0-9]*\\.?[0-9]+$' AND CAST((alert_event) ->> 'booleanFromJson' AS FLOAT) >= 1 THEN true WHEN LOWER((alert_event) ->> 'booleanFromJson') != '' THEN true ELSE false END = true",
+      "sqlite": "CASE WHEN LOWER(json_extract(alert_event, '$.\"booleanFromJson\"')) = 'true' THEN TRUE WHEN LOWER(json_extract(alert_event, '$.\"booleanFromJson\"')) = 'false' THEN FALSE WHEN CAST(json_extract(alert_event, '$.\"booleanFromJson\"') AS SIGNED) >= 1 THEN TRUE WHEN json_extract(alert_event, '$.\"booleanFromJson\"') != '' THEN TRUE ELSE FALSE END = true"
+    }
+  },
+  {
     "input_cel": "severity == 'medium' && jsonArray == 'Sam Byron'",
     "description": "Equality with JSON array column",
     "expected_sql_dialect_based": {
@@ -45,6 +54,15 @@
     }
   },
   {
+    "input_cel": "booleanFromJson in [true,false]",
+    "description": "IN operator along with boolean from JSON",
+    "expected_sql_dialect_based": {
+      "mysql": "CASE WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"'))) = 'true' THEN TRUE WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"'))) = 'false' THEN FALSE WHEN CAST(JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"')) AS SIGNED) >= 1 THEN TRUE WHEN JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"booleanFromJson\"')) != '' THEN TRUE ELSE FALSE END in (TRUE, FALSE)",
+      "postgresql": "CASE WHEN LOWER((alert_event) ->> 'booleanFromJson') = 'true' THEN true WHEN LOWER((alert_event) ->> 'booleanFromJson') = 'false' THEN false WHEN (alert_event) ->> 'booleanFromJson' ~ '^[-+]?[0-9]*\\.?[0-9]+$' AND CAST((alert_event) ->> 'booleanFromJson' AS FLOAT) >= 1 THEN true WHEN LOWER((alert_event) ->> 'booleanFromJson') != '' THEN true ELSE false END in (true, false)",
+      "sqlite": "CASE WHEN LOWER(json_extract(alert_event, '$.\"booleanFromJson\"')) = 'true' THEN TRUE WHEN LOWER(json_extract(alert_event, '$.\"booleanFromJson\"')) = 'false' THEN FALSE WHEN CAST(json_extract(alert_event, '$.\"booleanFromJson\"') AS SIGNED) >= 1 THEN TRUE WHEN json_extract(alert_event, '$.\"booleanFromJson\"') != '' THEN TRUE ELSE FALSE END in (true, false)"
+    }
+  },
+  {
     "input_cel": "!(name in ['Payments incident', 'API incident', 'Network incident', null])",
     "description": "IN operator along with NOT and NULL",
     "expected_sql_dialect_based": {
@@ -57,9 +75,9 @@
     "input_cel": "severity == 'medium' && (jsonArray in ['grafana', 'datadog', 'prometheus', null])",
     "description": "IN operator along with ARRAY datatype",
     "expected_sql_dialect_based": {
-      "mysql": "(severity = 'medium' AND (((JSON_CONTAINS(entity.jsonArray, '[\"grafana\"]') OR JSON_CONTAINS(entity.jsonArray, '[\"datadog\"]')) OR JSON_CONTAINS(entity.jsonArray, '[\"prometheus\"]')) OR (JSON_CONTAINS(entity.jsonArray, '[null]') OR entity.jsonArray IS NULL)))",
-      "postgresql": "(severity = 'medium' AND (((entity.jsonArray::jsonb @> '[\"grafana\"]' OR entity.jsonArray::jsonb @> '[\"datadog\"]') OR entity.jsonArray::jsonb @> '[\"prometheus\"]') OR entity.jsonArray::jsonb @> '[null]' OR entity.jsonArray IS NULL))",
-      "sqlite": "(severity = 'medium' AND (SELECT 1 FROM json_each(entity.jsonArray) as json_array WHERE (CAST(json_array.value as TEXT) in ('grafana', 'datadog', 'prometheus') OR CAST(json_array.value as TEXT) IS NULL)))"
+      "mysql": "(severity = 'medium' AND (((JSON_CONTAINS(entity.jsonArray, '[\"grafana\"]') OR JSON_CONTAINS(entity.jsonArray, '[\"datadog\"]')) OR JSON_CONTAINS(entity.jsonArray, '[\"prometheus\"]')) OR (JSON_CONTAINS(entity.jsonArray, '[null]') OR entity.jsonArray IS NULL OR JSON_LENGTH(entity.jsonArray) = 0)))",
+      "postgresql": "(severity = 'medium' AND (((entity.jsonArray::jsonb @> '[\"grafana\"]' OR entity.jsonArray::jsonb @> '[\"datadog\"]') OR entity.jsonArray::jsonb @> '[\"prometheus\"]') OR (entity.jsonArray::jsonb @> '[null]' OR entity.jsonArray IS NULL OR jsonb_array_length(entity.jsonArray::jsonb) = 0)))",
+      "sqlite": "(severity = 'medium' AND (entity.jsonArray = '[]' OR entity.jsonArray IS NULL OR (SELECT 1 FROM json_each(entity.jsonArray) as json_array WHERE (CAST(json_array.value as TEXT) in ('grafana', 'datadog', 'prometheus') OR CAST(json_array.value as TEXT) IS NULL))))"
     }
   },
   {
@@ -303,6 +321,33 @@
       "sqlite": "CAST(columnWithUnknownType as REAL) <= 100",
       "mysql": "columnWithUnknownType <= 100",
       "postgresql": "(columnWithUnknownType)::FLOAT <= 100"
+    }
+  },
+  {
+    "input_cel": "has(alert.some.path)",
+    "description": "HAS operation for multiple JSON columns",
+    "expected_sql_dialect_based": {
+      "sqlite": "(EXISTS (SELECT 1 FROM json_each(json_extract(alert_enrichments, '$.\"some\"')) WHERE json_each.key = 'path') OR EXISTS (SELECT 1 FROM json_each(json_extract(alert_event, '$.\"some\"')) WHERE json_each.key = 'path'))",
+      "mysql": "(JSON_CONTAINS_PATH(alert_enrichments, 'one', '$.\"some\".\"path\"') OR JSON_CONTAINS_PATH(alert_event, 'one', '$.\"some\".\"path\"'))",
+      "postgresql": "(JSONB_PATH_EXISTS(alert_enrichments::JSONB, '$.\"some\".\"path\"') OR JSONB_PATH_EXISTS(alert_event::JSONB, '$.\"some\".\"path\"'))"
+    }
+  },
+  {
+    "input_cel": "has(severity)",
+    "description": "HAS operation for simple existing field",
+    "expected_sql_dialect_based": {
+      "sqlite": "TRUE",
+      "mysql": "TRUE",
+      "postgresql": "TRUE"
+    }
+  },
+  {
+    "input_cel": "has(unexistingField)",
+    "description": "HAS operation for simple not existing field",
+    "expected_sql_dialect_based": {
+      "sqlite": "FALSE",
+      "mysql": "FALSE",
+      "postgresql": "FALSE"
     }
   }
 ]
