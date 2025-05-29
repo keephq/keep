@@ -26,8 +26,6 @@ services:
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
-    volumes:
-      - backend-migrations:/tmp
     ports:
       - "8080:8080"
 
@@ -108,6 +106,5 @@ services:
       - prometheus-server-for-test-target
 
 volumes:
-  backend-migrations:
   grafana-storage: {}
 

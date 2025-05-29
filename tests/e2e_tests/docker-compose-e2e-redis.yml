@@ -29,8 +29,6 @@ services:
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
-    volumes:
-      - backend-migrations:/tmp
     depends_on:
       - keep-redis
 
@@ -47,4 +45,3 @@ services:
 
 volumes:
   postgres-data:
-  backend-migrations:

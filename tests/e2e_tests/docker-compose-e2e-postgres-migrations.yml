@@ -2,19 +2,17 @@ services:
   ## Keep Services with NO_AUTH
   # Database Service
   keep-database:
-    image: mysql:latest
+    image: postgres:13
     environment:
-      - MYSQL_ROOT_PASSWORD=keep
-      - MYSQL_DATABASE=keep
-    volumes:
-      - mysql-data:/var/lib/mysql
+      POSTGRES_USER: keepuser
+      POSTGRES_PASSWORD: keeppassword
+      POSTGRES_DB: keepdb
     ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-custom.conf:/etc/postgresql/conf.d/custom.conf
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   # Frontend Services
   keep-frontend:
@@ -25,11 +23,9 @@ services:
     environment:
       - AUTH_TYPE=NO_AUTH
       - NEXTAUTH_SECRET=secret
-      - NEXTAUTH_URL=http://localhost:3000
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - SENTRY_DISABLED=true
-      - ALLOW_DB_DOWNGRADE=true
 
   # Backend Services
   keep-backend:
@@ -39,48 +35,44 @@ services:
       - "8080:8080"
     environment:
       - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
-      - MIGRATIONS_PATH=/tmp/migrations
+      - MIGRATION_PATH=/tmp/migrations
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
       - REDIS_HOST=${REDIS_HOST:-localhost}
+      - ALLOW_DB_DOWNGRADE=true
+    volumes:
+      - backend-migrations:/tmp
     depends_on:
-      keep-database:
-        condition: service_healthy
+      - keep-database
 
-  keep-redis:
-    image: redis/redis-stack
-    ports:
-      - "6379:6379"
-      - "8082:8001"
   ## Keep Services with DB
   # Database Service (5433)
   keep-database-db-auth:
-    image: mysql:latest
+    image: postgres:13
     environment:
-      - MYSQL_ROOT_PASSWORD=keep
-      - MYSQL_DATABASE=keep
-    volumes:
-      - mysql-data:/var/lib/mysql-auth-db
+      POSTGRES_USER: keepuser
+      POSTGRES_PASSWORD: keeppassword
+      POSTGRES_DB: keepdb
     ports:
-      - "3307:3306"
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql-auth-db/data
+      - ./postgres-custom.conf:/etc/postgresql-auth-db/conf.d/custom.conf
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   # Frontend Services (3001)
   keep-frontend-db-auth:
+    # to be replaced in github actions
     image: "%KEEPFRONTEND_IMAGE%"
     ports:
       - "3001:3000"
     environment:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
-      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      - POSTHOG_DISABLED=true
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
       - POSTHOG_DISABLED=true
@@ -89,6 +81,7 @@ services:
 
   # Backend Services (8081)
   keep-backend-db-auth:
+    # to be replaced in github actions
     image: "%KEEPBACKEND_IMAGE%"
     ports:
       - "8081:8080"
@@ -104,7 +97,7 @@ services:
       - PUSHER_PORT=6001
       - USE_NGROK=false
       - AUTH_TYPE=DB
-      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database-db-auth:3306/keep
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database-db-auth:5432/keepdb
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
@@ -115,8 +108,7 @@ services:
       # - REDIS=${REDIS:-false}
       # - REDIS_HOST=${REDIS_HOST:-localhost}
     depends_on:
-      keep-database-db-auth:
-        condition: service_healthy
+      - keep-database-db-auth
 
   # Other Services (Common)
   keep-websocket-server:
@@ -132,6 +124,11 @@ services:
     ports:
       - "9090:9090"
 
+  keep-redis:
+    image: redis/redis-stack
+    ports:
+      - "6379:6379"
+      - "8082:8001"
   grafana:
     image: grafana/grafana-enterprise:11.4.0
     user: "472" # Grafana's default user ID
@@ -147,5 +144,6 @@ services:
       - prometheus-server-for-test-target
 
 volumes:
-  mysql-data:
+  postgres-data:
+  backend-migrations:
   grafana-storage: {}
