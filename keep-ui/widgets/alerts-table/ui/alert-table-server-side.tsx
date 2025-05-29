@@ -622,7 +622,6 @@ export function AlertTableServerSide({
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
-              key={searchCel}
               usePropertyPathsSuggestions={true}
               entityName={"alerts"}
               facetOptionsCel={facetsCel}
