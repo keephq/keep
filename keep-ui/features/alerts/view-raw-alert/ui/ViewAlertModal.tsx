@@ -29,6 +29,7 @@ const READ_ONLY_FIELDS = [
   "fingerprint",
   "event_id",
   "firingStartTime",
+  "firingStartTimeSinceLastResolved",
   "apiKeyRef",
   "providerId",
   "providerType",

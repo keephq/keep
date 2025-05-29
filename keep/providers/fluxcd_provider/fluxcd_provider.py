@@ -2,13 +2,21 @@
 FluxCD Provider is a class that allows to get Flux CD resources and map them to keep services and applications.
 """
 
+import dataclasses
+import logging
 import os
 import tempfile
-import logging
-import dataclasses
-import pydantic
-from typing import Dict, List, Any, Optional, Union, Tuple  # noqa: F401 - Used for type hints
+from typing import (  # noqa: F401 - Used for type hints
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 from unittest.mock import MagicMock  # For testing
+
+import pydantic
 
 try:
     from kubernetes import client, config
@@ -31,7 +39,13 @@ except ImportError as e:
 
     # Mock classes for documentation generation
     class TopologyServiceInDto:  # noqa: F811
-        def __init__(self, source_provider_id=None, service=None, display_name=None, repository=None):
+        def __init__(
+            self,
+            source_provider_id=None,
+            service=None,
+            display_name=None,
+            repository=None,
+        ):
             self.source_provider_id = source_provider_id
             self.service = service
             self.display_name = display_name
@@ -59,12 +73,21 @@ except ImportError as e:
             self.authentication = authentication or {}
 
     class ProviderScope:  # noqa: F811
-        def __init__(self, name, description, mandatory=False, mandatory_for_webhook=False, alias=None):
+        def __init__(
+            self,
+            name,
+            description,
+            mandatory=False,
+            mandatory_for_webhook=False,
+            alias=None,
+        ):
             self.name = name
             self.description = description
             self.mandatory = mandatory
             self.mandatory_for_webhook = mandatory_for_webhook
             self.alias = alias
+
+
 from keep.providers.models.provider_method import ProviderMethodDTO
 
 
@@ -73,13 +96,14 @@ class FluxcdProviderAuthConfig:
     """
     FluxCD authentication configuration.
     """
+
     kubeconfig: str = dataclasses.field(
         default=None,
         metadata={
             "required": False,
             "description": "Kubeconfig file content",
             "sensitive": True,
-        }
+        },
     )
     context: str = dataclasses.field(
         default=None,
@@ -87,7 +111,7 @@ class FluxcdProviderAuthConfig:
             "required": False,
             "description": "Kubernetes context to use",
             "sensitive": False,
-        }
+        },
     )
     namespace: str = dataclasses.field(
         default="flux-system",
@@ -95,7 +119,7 @@ class FluxcdProviderAuthConfig:
             "required": False,
             "description": "Namespace where Flux CD is installed",
             "sensitive": False,
-        }
+        },
     )
     api_server: str = dataclasses.field(
         default=None,
@@ -103,7 +127,7 @@ class FluxcdProviderAuthConfig:
             "required": False,
             "description": "Kubernetes API server URL",
             "sensitive": False,
-        }
+        },
     )
     token: str = dataclasses.field(
         default=None,
@@ -111,7 +135,7 @@ class FluxcdProviderAuthConfig:
             "required": False,
             "description": "Kubernetes API token",
             "sensitive": True,
-        }
+        },
     )
     insecure: bool = dataclasses.field(
         default=False,
@@ -119,7 +143,7 @@ class FluxcdProviderAuthConfig:
             "required": False,
             "description": "Skip TLS verification",
             "sensitive": False,
-        }
+        },
     )
 
 
@@ -206,10 +230,10 @@ class FluxcdProvider(BaseTopologyProvider):
         auth_config = dict(config.authentication or {})
 
         # Handle api-server parameter for backward compatibility
-        if 'api-server' in auth_config:
-            api_server_value = auth_config.pop('api-server')
+        if "api-server" in auth_config:
+            api_server_value = auth_config.pop("api-server")
             # Always set api_server from api-server if it exists
-            auth_config['api_server'] = api_server_value
+            auth_config["api_server"] = api_server_value
 
         # Initialize with default values
         self.authentication_config = FluxcdProviderAuthConfig(**auth_config)
@@ -220,6 +244,7 @@ class FluxcdProvider(BaseTopologyProvider):
         # Check Kubernetes client version for compatibility
         try:
             import kubernetes
+
             k8s_version = getattr(kubernetes, "__version__", "unknown")
             self.logger.debug(f"Kubernetes client version: {k8s_version}")
 
@@ -261,8 +286,13 @@ class FluxcdProvider(BaseTopologyProvider):
 
         # Log the current configuration for debugging
         self.logger.debug(f"Using namespace: {self.authentication_config.namespace}")
-        if hasattr(self.authentication_config, 'api_server') and self.authentication_config.api_server:
-            self.logger.debug(f"Using API server: {self.authentication_config.api_server}")
+        if (
+            hasattr(self.authentication_config, "api_server")
+            and self.authentication_config.api_server
+        ):
+            self.logger.debug(
+                f"Using API server: {self.authentication_config.api_server}"
+            )
 
     @property
     def k8s_client(self) -> Any:
@@ -302,11 +332,17 @@ class FluxcdProvider(BaseTopologyProvider):
                     os.unlink(temp_path)
 
             # Try to load from API server and token
-            elif (hasattr(self.authentication_config, 'api_server') and self.authentication_config.api_server and self.authentication_config.token):
+            elif (
+                hasattr(self.authentication_config, "api_server")
+                and self.authentication_config.api_server
+                and self.authentication_config.token
+            ):
                 self.logger.debug("Loading Kubernetes client from API server and token")
                 configuration = client.Configuration()
                 configuration.host = self.authentication_config.api_server
-                configuration.api_key = {"authorization": f"Bearer {self.authentication_config.token}"}
+                configuration.api_key = {
+                    "authorization": f"Bearer {self.authentication_config.token}"
+                }
                 configuration.verify_ssl = not self.authentication_config.insecure
                 client.Configuration.set_default(configuration)
                 self._k8s_client = client.CustomObjectsApi()
@@ -314,7 +350,9 @@ class FluxcdProvider(BaseTopologyProvider):
             # Try to load from in-cluster configuration
             else:
                 try:
-                    self.logger.debug("Loading Kubernetes client from in-cluster configuration")
+                    self.logger.debug(
+                        "Loading Kubernetes client from in-cluster configuration"
+                    )
                     config.load_incluster_config()
                     self._k8s_client = client.CustomObjectsApi()
                 except config.config_exception.ConfigException:
@@ -335,11 +373,13 @@ class FluxcdProvider(BaseTopologyProvider):
                     "exception": str(e),
                     "error_type": error_type,
                     "authentication_method": (
-                        "kubeconfig" if self.authentication_config.kubeconfig else
-                        "api_server" if self.authentication_config.api_server else
-                        "in_cluster"
-                    )
-                }
+                        "kubeconfig"
+                        if self.authentication_config.kubeconfig
+                        else "api_server"
+                        if self.authentication_config.api_server
+                        else "in_cluster"
+                    ),
+                },
             )
             # Return None instead of raising an exception to make the provider more robust
             return None
@@ -401,8 +441,10 @@ class FluxcdProvider(BaseTopologyProvider):
                 extra={
                     "exception": error_message,
                     "error_type": error_type,
-                    "namespace": self.authentication_config.namespace if hasattr(self, 'authentication_config') else "unknown"
-                }
+                    "namespace": self.authentication_config.namespace
+                    if hasattr(self, "authentication_config")
+                    else "unknown",
+                },
             )
             authenticated = f"{error_type}: {error_message}"
         return {
@@ -437,7 +479,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing GitRepository resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
     def __list_helm_repositories(self):
         """
@@ -460,7 +502,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing HelmRepository resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
     def __list_helm_charts(self):
         """
@@ -483,7 +525,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing HelmChart resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
     def __list_oci_repositories(self):
         """
@@ -506,7 +548,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing OCIRepository resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
     def __list_buckets(self):
         """
@@ -529,7 +571,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing Bucket resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
     def __list_kustomizations(self):
         """
@@ -552,7 +594,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing Kustomization resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
     def __list_helm_releases(self):
         """
@@ -575,9 +617,11 @@ class FluxcdProvider(BaseTopologyProvider):
                 "Error listing HelmRelease resources",
                 extra={"exception": str(e)},
             )
-            raise
+            return {"items": []}
 
-    def __get_resource_events(self, resource_name: str, resource_kind: str) -> List[Any]:
+    def __get_resource_events(
+        self, resource_name: str, resource_kind: str
+    ) -> List[Any]:
         """
         Get events for a specific resource.
 
@@ -634,7 +678,9 @@ class FluxcdProvider(BaseTopologyProvider):
                 return f"{endpoint}/{bucket}"
         return None
 
-    def __get_alerts_from_resource(self, resource: Dict[str, Any], resource_kind: str) -> List[Dict[str, Any]]:
+    def __get_alerts_from_resource(
+        self, resource: Dict[str, Any], resource_kind: str
+    ) -> List[Dict[str, Any]]:
         """
         Get alerts from a resource's status and events.
 
@@ -655,13 +701,17 @@ class FluxcdProvider(BaseTopologyProvider):
         # Check resource status conditions
         conditions = resource.get("status", {}).get("conditions", [])
         for condition in conditions:
-            if condition.get("status") != "True" and condition.get("type") != "Ready":  # noqa: E712
+            if (
+                condition.get("status") != "True" and condition.get("type") != "Ready"
+            ):  # noqa: E712
                 alert = {
                     "id": f"{uid}-{condition.get('type')}",
                     "name": f"{resource_kind} {name} - {condition.get('type')}",
                     "description": condition.get("message", "Resource not ready"),
                     "status": "firing",
-                    "severity": "critical" if condition.get("type") == "Ready" else "high",
+                    "severity": "critical"
+                    if condition.get("type") == "Ready"
+                    else "high",
                     "source": f"fluxcd-{resource_kind.lower()}",
                     "resource": {
                         "name": name,
@@ -685,7 +735,12 @@ class FluxcdProvider(BaseTopologyProvider):
                 "name": f"{resource_kind} {name} - {event.reason}",
                 "description": event.message,
                 "status": "firing",
-                "severity": "critical" if any(x in event.reason.lower() for x in ["failed", "error", "timeout", "backoff", "crash"]) else "high",
+                "severity": "critical"
+                if any(
+                    x in event.reason.lower()
+                    for x in ["failed", "error", "timeout", "backoff", "crash"]
+                )
+                else "high",
                 "source": f"fluxcd-{resource_kind.lower()}-event",
                 "resource": {
                     "name": name,
@@ -715,7 +770,7 @@ class FluxcdProvider(BaseTopologyProvider):
             return {
                 "healthy": False,
                 "components": {},
-                "error": "No Kubernetes client available"
+                "error": "No Kubernetes client available",
             }
 
         try:
@@ -747,21 +802,20 @@ class FluxcdProvider(BaseTopologyProvider):
                 # A deployment is healthy if it has the desired number of replicas available
                 desired = deployment.spec.replicas
                 available = deployment.status.available_replicas or 0
-                healthy = available == desired  # This is a valid comparison, no need to change
+                healthy = (
+                    available == desired
+                )  # This is a valid comparison, no need to change
 
                 components[name] = {
                     "healthy": healthy,
                     "desired_replicas": desired,
-                    "available_replicas": available
+                    "available_replicas": available,
                 }
 
                 if not healthy:
                     all_healthy = False
 
-            return {
-                "healthy": all_healthy,
-                "components": components
-            }
+            return {"healthy": all_healthy, "components": components}
         except Exception as e:
             error_type = type(e).__name__
             error_message = str(e)
@@ -770,13 +824,15 @@ class FluxcdProvider(BaseTopologyProvider):
                 extra={
                     "exception": error_message,
                     "error_type": error_type,
-                    "namespace": self.authentication_config.namespace if hasattr(self, 'authentication_config') else "unknown"
-                }
+                    "namespace": self.authentication_config.namespace
+                    if hasattr(self, "authentication_config")
+                    else "unknown",
+                },
             )
             return {
                 "healthy": False,
                 "components": {},
-                "error": f"{error_type}: {error_message}"
+                "error": f"{error_type}: {error_message}",
             }
 
     def _get_alerts(self) -> List[Dict[str, Any]]:
@@ -801,7 +857,9 @@ class FluxcdProvider(BaseTopologyProvider):
         alerts = []
 
         if self.k8s_client is None:
-            self.logger.warning("No Kubernetes client available, returning empty alerts list")
+            self.logger.warning(
+                "No Kubernetes client available, returning empty alerts list"
+            )
             return alerts
 
         try:
@@ -815,32 +873,58 @@ class FluxcdProvider(BaseTopologyProvider):
             helm_releases_result = self.__list_helm_releases()
 
             # Safely get items from results
-            git_repositories = git_repositories_result.get("items", []) if git_repositories_result else []
-            helm_repositories = helm_repositories_result.get("items", []) if helm_repositories_result else []
-            helm_charts = helm_charts_result.get("items", []) if helm_charts_result else []
-            oci_repositories = oci_repositories_result.get("items", []) if oci_repositories_result else []
+            git_repositories = (
+                git_repositories_result.get("items", [])
+                if git_repositories_result
+                else []
+            )
+            helm_repositories = (
+                helm_repositories_result.get("items", [])
+                if helm_repositories_result
+                else []
+            )
+            helm_charts = (
+                helm_charts_result.get("items", []) if helm_charts_result else []
+            )
+            oci_repositories = (
+                oci_repositories_result.get("items", [])
+                if oci_repositories_result
+                else []
+            )
             buckets = buckets_result.get("items", []) if buckets_result else []
-            kustomizations = kustomizations_result.get("items", []) if kustomizations_result else []
-            helm_releases = helm_releases_result.get("items", []) if helm_releases_result else []
+            kustomizations = (
+                kustomizations_result.get("items", []) if kustomizations_result else []
+            )
+            helm_releases = (
+                helm_releases_result.get("items", []) if helm_releases_result else []
+            )
 
             # Get alerts from all resources
             for resource in git_repositories:
-                alerts.extend(self.__get_alerts_from_resource(resource, "GitRepository"))
+                alerts.extend(
+                    self.__get_alerts_from_resource(resource, "GitRepository")
+                )
 
             for resource in helm_repositories:
-                alerts.extend(self.__get_alerts_from_resource(resource, "HelmRepository"))
+                alerts.extend(
+                    self.__get_alerts_from_resource(resource, "HelmRepository")
+                )
 
             for resource in helm_charts:
                 alerts.extend(self.__get_alerts_from_resource(resource, "HelmChart"))
 
             for resource in oci_repositories:
-                alerts.extend(self.__get_alerts_from_resource(resource, "OCIRepository"))
+                alerts.extend(
+                    self.__get_alerts_from_resource(resource, "OCIRepository")
+                )
 
             for resource in buckets:
                 alerts.extend(self.__get_alerts_from_resource(resource, "Bucket"))
 
             for resource in kustomizations:
-                alerts.extend(self.__get_alerts_from_resource(resource, "Kustomization"))
+                alerts.extend(
+                    self.__get_alerts_from_resource(resource, "Kustomization")
+                )
 
             for resource in helm_releases:
                 alerts.extend(self.__get_alerts_from_resource(resource, "HelmRelease"))
@@ -869,7 +953,9 @@ class FluxcdProvider(BaseTopologyProvider):
         service_topology = {}
 
         if self.k8s_client is None:
-            self.logger.warning("No Kubernetes client available, returning empty topology")
+            self.logger.warning(
+                "No Kubernetes client available, returning empty topology"
+            )
             return [], {}
 
         try:
@@ -885,16 +971,36 @@ class FluxcdProvider(BaseTopologyProvider):
             helm_releases_result = self.__list_helm_releases()
 
             # Safely get items from results
-            git_repositories = git_repositories_result.get("items", []) if git_repositories_result else []
-            helm_repositories = helm_repositories_result.get("items", []) if helm_repositories_result else []
-            helm_charts = helm_charts_result.get("items", []) if helm_charts_result else []
-            oci_repositories = oci_repositories_result.get("items", []) if oci_repositories_result else []
+            git_repositories = (
+                git_repositories_result.get("items", [])
+                if git_repositories_result
+                else []
+            )
+            helm_repositories = (
+                helm_repositories_result.get("items", [])
+                if helm_repositories_result
+                else []
+            )
+            helm_charts = (
+                helm_charts_result.get("items", []) if helm_charts_result else []
+            )
+            oci_repositories = (
+                oci_repositories_result.get("items", [])
+                if oci_repositories_result
+                else []
+            )
             buckets = buckets_result.get("items", []) if buckets_result else []
-            kustomizations = kustomizations_result.get("items", []) if kustomizations_result else []
-            helm_releases = helm_releases_result.get("items", []) if helm_releases_result else []
+            kustomizations = (
+                kustomizations_result.get("items", []) if kustomizations_result else []
+            )
+            helm_releases = (
+                helm_releases_result.get("items", []) if helm_releases_result else []
+            )
 
             # Process source resources
-            for repo in git_repositories + helm_repositories + oci_repositories + buckets:
+            for repo in (
+                git_repositories + helm_repositories + oci_repositories + buckets
+            ):
                 uid = repo["metadata"]["uid"]
                 name = repo["metadata"]["name"]
                 kind = repo["kind"]
@@ -924,9 +1030,19 @@ class FluxcdProvider(BaseTopologyProvider):
 
                 # Add dependency to source repository
                 if source_kind and source_name:
-                    for repo in git_repositories + helm_repositories + oci_repositories + buckets:
-                        if repo["kind"] == source_kind and repo["metadata"]["name"] == source_name:
-                            service_topology[uid].dependencies[repo["metadata"]["uid"]] = "source"
+                    for repo in (
+                        git_repositories
+                        + helm_repositories
+                        + oci_repositories
+                        + buckets
+                    ):
+                        if (
+                            repo["kind"] == source_kind
+                            and repo["metadata"]["name"] == source_name
+                        ):
+                            service_topology[uid].dependencies[
+                                repo["metadata"]["uid"]
+                            ] = "source"
                             break
 
             # Process Kustomizations
@@ -947,9 +1063,19 @@ class FluxcdProvider(BaseTopologyProvider):
 
                 # Add dependency to source repository
                 if source_kind and source_name:
-                    for repo in git_repositories + helm_repositories + oci_repositories + buckets:
-                        if repo["kind"] == source_kind and repo["metadata"]["name"] == source_name:
-                            service_topology[uid].dependencies[repo["metadata"]["uid"]] = "source"
+                    for repo in (
+                        git_repositories
+                        + helm_repositories
+                        + oci_repositories
+                        + buckets
+                    ):
+                        if (
+                            repo["kind"] == source_kind
+                            and repo["metadata"]["name"] == source_name
+                        ):
+                            service_topology[uid].dependencies[
+                                repo["metadata"]["uid"]
+                            ] = "source"
                             break
 
             # Process HelmReleases
@@ -972,15 +1098,31 @@ class FluxcdProvider(BaseTopologyProvider):
 
                 # Add dependency to source repository or chart
                 if source_kind and source_name:
-                    for repo in git_repositories + helm_repositories + oci_repositories + buckets:
-                        if repo["kind"] == source_kind and repo["metadata"]["name"] == source_name:
-                            service_topology[uid].dependencies[repo["metadata"]["uid"]] = "source"
+                    for repo in (
+                        git_repositories
+                        + helm_repositories
+                        + oci_repositories
+                        + buckets
+                    ):
+                        if (
+                            repo["kind"] == source_kind
+                            and repo["metadata"]["name"] == source_name
+                        ):
+                            service_topology[uid].dependencies[
+                                repo["metadata"]["uid"]
+                            ] = "source"
                             break
 
                     # Check if it depends on a HelmChart
                     for chart in helm_charts:
-                        if chart["metadata"]["name"] == spec.get("chart") and chart["spec"].get("sourceRef", {}).get("name") == source_name:
-                            service_topology[uid].dependencies[chart["metadata"]["uid"]] = "chart"
+                        if (
+                            chart["metadata"]["name"] == spec.get("chart")
+                            and chart["spec"].get("sourceRef", {}).get("name")
+                            == source_name
+                        ):
+                            service_topology[uid].dependencies[
+                                chart["metadata"]["uid"]
+                            ] = "chart"
                             break
 
             return list(service_topology.values()), {}
@@ -993,8 +1135,10 @@ class FluxcdProvider(BaseTopologyProvider):
                 extra={
                     "exception": error_message,
                     "error_type": error_type,
-                    "namespace": self.authentication_config.namespace if hasattr(self, 'authentication_config') else "unknown"
-                }
+                    "namespace": self.authentication_config.namespace
+                    if hasattr(self, "authentication_config")
+                    else "unknown",
+                },
             )
             # Return empty topology to make the provider more robust
             return [], {"error": f"{error_type}: {error_message}"}
@@ -1036,7 +1180,9 @@ class FluxcdProvider(BaseTopologyProvider):
         self.logger.info("Getting resources from Flux CD")
 
         if self.k8s_client is None:
-            self.logger.warning("No Kubernetes client available, returning empty resources")
+            self.logger.warning(
+                "No Kubernetes client available, returning empty resources"
+            )
             return {
                 "git_repositories": [],
                 "helm_repositories": [],
@@ -1044,7 +1190,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "oci_repositories": [],
                 "buckets": [],
                 "kustomizations": [],
-                "helm_releases": []
+                "helm_releases": [],
             }
 
         # Use the provided namespace or fall back to the one in the config
@@ -1061,13 +1207,31 @@ class FluxcdProvider(BaseTopologyProvider):
             helm_releases_result = self.__list_helm_releases()
 
             # Safely get items from results
-            git_repositories = git_repositories_result.get("items", []) if git_repositories_result else []
-            helm_repositories = helm_repositories_result.get("items", []) if helm_repositories_result else []
-            helm_charts = helm_charts_result.get("items", []) if helm_charts_result else []
-            oci_repositories = oci_repositories_result.get("items", []) if oci_repositories_result else []
+            git_repositories = (
+                git_repositories_result.get("items", [])
+                if git_repositories_result
+                else []
+            )
+            helm_repositories = (
+                helm_repositories_result.get("items", [])
+                if helm_repositories_result
+                else []
+            )
+            helm_charts = (
+                helm_charts_result.get("items", []) if helm_charts_result else []
+            )
+            oci_repositories = (
+                oci_repositories_result.get("items", [])
+                if oci_repositories_result
+                else []
+            )
             buckets = buckets_result.get("items", []) if buckets_result else []
-            kustomizations = kustomizations_result.get("items", []) if kustomizations_result else []
-            helm_releases = helm_releases_result.get("items", []) if helm_releases_result else []
+            kustomizations = (
+                kustomizations_result.get("items", []) if kustomizations_result else []
+            )
+            helm_releases = (
+                helm_releases_result.get("items", []) if helm_releases_result else []
+            )
 
             # Organize resources by type
             resources = {
@@ -1077,7 +1241,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "oci_repositories": oci_repositories,
                 "buckets": buckets,
                 "kustomizations": kustomizations,
-                "helm_releases": helm_releases
+                "helm_releases": helm_releases,
             }
 
             return resources
@@ -1090,8 +1254,10 @@ class FluxcdProvider(BaseTopologyProvider):
                 extra={
                     "exception": error_message,
                     "error_type": error_type,
-                    "namespace": self.authentication_config.namespace if hasattr(self, 'authentication_config') else "unknown"
-                }
+                    "namespace": self.authentication_config.namespace
+                    if hasattr(self, "authentication_config")
+                    else "unknown",
+                },
             )
             # Return empty resources with error information to make the provider more robust
             return {
@@ -1102,5 +1268,5 @@ class FluxcdProvider(BaseTopologyProvider):
                 "buckets": [],
                 "kustomizations": [],
                 "helm_releases": [],
-                "error": f"{error_type}: {error_message}"
+                "error": f"{error_type}: {error_message}",
             }

@@ -141,23 +141,37 @@ class PropertiesMapper:
             return self._visit_member_access_node(abstract_node, involved_fields)
 
         if isinstance(abstract_node, UnaryNode):
-            operand = self.__visit_nodes(abstract_node.operand, involved_fields)
-
-            if operand is None:
-                return UnaryNode(
-                    operator=abstract_node.operator, operand=ConstantNode(value=True)
-                )
-
-            return UnaryNode(
-                operator=abstract_node.operator,
-                operand=self.__visit_nodes(abstract_node.operand, involved_fields),
-            )
+            return self.__visit_unary_node(abstract_node, involved_fields)
 
         if isinstance(abstract_node, ConstantNode):
             return abstract_node
 
         raise NotImplementedError(
             f"{type(abstract_node).__name__} node type is not supported yet"
+        )
+
+    def __visit_unary_node(
+        self, abstract_node: UnaryNode, involved_fields: list[PropertyMetadataInfo]
+    ):
+        if abstract_node.operator == UnaryNodeOperator.HAS and isinstance(
+            abstract_node.operand, PropertyAccessNode
+        ):
+            mapped_property, property_metadata = self._map_property(
+                property_access_node=abstract_node.operand, throw_mapping_error=False
+            )
+            involved_fields.append(property_metadata)
+            return UnaryNode(operator=UnaryNodeOperator.HAS, operand=mapped_property)
+
+        operand = self.__visit_nodes(abstract_node.operand, involved_fields)
+
+        if operand is None:
+            return UnaryNode(
+                operator=abstract_node.operator, operand=ConstantNode(value=True)
+            )
+
+        return UnaryNode(
+            operator=abstract_node.operator,
+            operand=self.__visit_nodes(abstract_node.operand, involved_fields),
         )
 
     def __visit_comparison_node(
@@ -346,7 +360,7 @@ class PropertiesMapper:
         raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
 
     def _map_property(
-        self, property_access_node: PropertyAccessNode
+        self, property_access_node: PropertyAccessNode, throw_mapping_error=True
     ) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
         property_metadata = self.properties_metadata.get_property_metadata(
             property_access_node.path
@@ -354,6 +368,14 @@ class PropertiesMapper:
 
         if not property_metadata:
             joined_path = ".".join(property_access_node.path)
+
+            if not throw_mapping_error:
+                return property_access_node, PropertyMetadataInfo(
+                    field_name=joined_path,
+                    field_mappings=[SimpleFieldMapping(joined_path)],
+                    enum_values=None,
+                )
+
             raise PropertiesMappingException(
                 f'Missing mapping configuration for property "{joined_path}"'
             )

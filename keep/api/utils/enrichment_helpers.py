@@ -84,6 +84,36 @@ def calculated_start_firing_time(
         return alert.lastReceived
 
 
+def calculate_firing_time_since_last_resolved(
+    alert: AlertDto, previous_alert: AlertDto | list[AlertDto]
+) -> int:
+    """
+    Calculate the firing counter of an alert based on the previous alert.
+    """
+    # if the alert is resolved, there is no firing time.
+    if alert.status == AlertStatus.RESOLVED.value:
+        return None
+    else:
+        # if there is previous alert, we need to check if it has firing time
+        if previous_alert:
+            if isinstance(previous_alert, list):
+                previous_alert = previous_alert[0]
+            if (
+                previous_alert.status == AlertStatus.RESOLVED.value
+                and alert.status == AlertStatus.FIRING.value
+            ):
+                return alert.lastReceived
+            # if the previous alert has firing time since last resolved, we need to return it
+            if previous_alert.firingStartTimeSinceLastResolved:
+                return previous_alert.firingStartTimeSinceLastResolved
+        else:
+            # if there is no previous alert, we need to check if the alert is firing
+            if alert.status == AlertStatus.FIRING.value:
+                return alert.lastReceived
+            else:
+                return None
+
+
 def calculated_firing_counter(
     alert: AlertDto, previous_alert: AlertDto | list[AlertDto]
 ) -> int:
@@ -157,8 +187,9 @@ def convert_db_alerts_to_dto_alerts(
                         alert.event["incident"] = ",".join(
                             str(incident.id) for incident in alert._incidents
                         )
-                        alert.event['incident_dto'] = [
-                            IncidentDto.from_db_incident(incident) for incident in alert._incidents
+                        alert.event["incident_dto"] = [
+                            IncidentDto.from_db_incident(incident)
+                            for incident in alert._incidents
                         ]
                 try:
                     if alert_to_incident is not None:

@@ -55,6 +55,7 @@ export const isDateTimeColumn = (columnId: string): boolean => {
     "createdAt",
     "updatedAt",
     "firingStartTime",
+    "firingStartTimeSinceLastResolved",
   ];
   return dateTimeColumns.includes(columnId);
 };

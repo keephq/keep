@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 import celpy.celparser
@@ -42,6 +43,7 @@ datetime_regex = re.compile(
     r"(?:\s(\d{2}):(\d{2}):(\d{2}))?$"  # Optional time: HH:MM:SS
 )
 
+logger = logging.getLogger(__name__)
 
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
@@ -49,9 +51,13 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     @classmethod
     def convert_to_ast(cls_, cel: str) -> Node:
         d = cls_()
-        celpy_ast = d.celpy_env.compile(cel)
-        d.visit(celpy_ast)
-        return d.stack[0]
+        try:
+            celpy_ast = d.celpy_env.compile(cel)
+            d.visit(celpy_ast)
+            return d.stack[0]
+        except Exception as e:
+            logger.warning('Error converting "%s" CEL to AST. Error: %s', cel, e)
+            raise e
 
     def __init__(self) -> None:
         self.celpy_env = celpy.Environment()
@@ -293,7 +299,17 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         raise NotImplementedError("Dot ident not implemented")
 
     def ident_arg(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Ident arg not implemented")
+        token_value = tree.children[0].value
+
+        if token_value == UnaryNodeOperator.HAS.value:
+            self.stack.append(
+                UnaryNode(operator=UnaryNodeOperator.HAS, operand=self.stack.pop()[0])
+            )
+            return
+
+        raise NotImplementedError(
+            "Ident arg not implemented for token_value:" + token_value
+        )
 
     def ident(self, tree: lark.Tree) -> None:
         property_member = PropertyAccessNode(
