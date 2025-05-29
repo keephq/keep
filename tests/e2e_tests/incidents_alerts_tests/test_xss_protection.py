@@ -27,7 +27,7 @@ def test_xss_protection_in_incident_list(browser: Page, xss_incident):
         dialog.dismiss()
 
     try:
-        browser.context.on("dialog", handle_dialog)
+        browser.on("dialog", handle_dialog)
 
         # Initialize the test
         init_e2e_test(browser, next_url="/incidents")
@@ -49,3 +49,6 @@ def test_xss_protection_in_incident_list(browser: Page, xss_incident):
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
+
+    finally:
+        browser.remove_listener("dialog", handle_dialog)
