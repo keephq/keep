@@ -4,7 +4,6 @@ SNMP Provider for receiving SNMP traps.
 
 import asyncio
 import json
-import logging
 import socket
 import threading
 from datetime import datetime
@@ -128,6 +127,7 @@ class SnmpProvider(BaseProvider):
             daemon=True
         )
         self.trap_thread.start()
+        self.logger.info(f"SNMP trap receiver thread started successfully on {self.authentication_config.listen_address}:{self.authentication_config.port}")
         
         return {"status": "SNMP trap receiver started"}
     
@@ -152,7 +152,7 @@ class SnmpProvider(BaseProvider):
             # Configure community string for SNMP v1 and v2c
             config.addV1System(
                 self.snmp_engine,
-                'my-area',
+                'keep-snmp-security-domain',
                 self.authentication_config.community
             )
             
@@ -406,14 +406,38 @@ class SnmpProvider(BaseProvider):
         }
     
     def dispose(self):
-        """Clean up resources."""
-        if self.running:
-            self.logger.info("Stopping SNMP trap receiver")
-            self.running = False
+        """Clean up resources and release all ports used by the SNMP trap receiver."""
+        if not self.running:
+            return
             
-            if self.snmp_engine:
-                self.snmp_engine.transportDispatcher.jobFinished(1)
+        self.logger.info("Stopping SNMP trap receiver")
+        self.running = False
+        
+        if self.snmp_engine:
+            try:
+                transport_dispatcher = self.snmp_engine.transportDispatcher
+                
+                transport_dispatcher.jobFinished(1)
+                
+                transport_dispatcher.closeDispatcher()
+                
+                self.logger.info(f"SNMP engine transport dispatcher stopped, port {self.authentication_config.port} released")
+                
+            except Exception as e:
+                self.logger.error(f"Error during SNMP engine cleanup: {e}")
+            finally:
                 self.snmp_engine = None
+        
+     
+        if self.trap_thread and self.trap_thread.is_alive():
+            try:
+                self.trap_thread.join(timeout=5.0) 
+                if self.trap_thread.is_alive():
+                    self.logger.warning("SNMP trap thread did not stop gracefully within timeout")
+            except Exception as e:
+                self.logger.error(f"Error joining SNMP trap thread: {e}")
+            finally:
+                self.trap_thread = None
     
     @property
     def is_consumer(self) -> bool:
