@@ -25,6 +25,10 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         json_property_path = " -> ".join(all_columns[:-1])
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"JSONB_PATH_EXISTS({column}::JSONB, '$.{property_path_str}')"
+
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:
             to_type_str = "TEXT"
@@ -35,7 +39,22 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         elif to_type == DataType.DATETIME:
             to_type_str = "TIMESTAMP"
         elif to_type == DataType.BOOLEAN:
-            to_type_str = "BOOLEAN"
+            # to_type_str = "BOOLEAN"
+            cast_conditions = {
+                f"LOWER({expression_to_cast}) = 'true'": "true",
+                f"LOWER({expression_to_cast}) = 'false'": "false",
+                # regex match ensures safe casting to float
+                f"{expression_to_cast} ~ '^[-+]?[0-9]*\\.?[0-9]+$' AND CAST({expression_to_cast} AS FLOAT) >= 1": "true",
+                f"LOWER({expression_to_cast}) != ''": "true",
+            }
+            result = " ".join(
+                [
+                    f"WHEN {condition} THEN {value}"
+                    for condition, value in cast_conditions.items()
+                ]
+            )
+            result = f"CASE {result} ELSE false END"
+            return result
         else:
             raise ValueError(f"Unsupported type: {to_type}")
 
@@ -138,7 +157,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         constant_node_value = self._visit_constant_node(second_operand.value)
 
         if constant_node_value == "NULL":
-            return f"{prop}::jsonb @> '[null]' OR {prop} IS NULL"
+            return f"({prop}::jsonb @> '[null]' OR {prop} IS NULL OR jsonb_array_length({prop}::jsonb) = 0)"
         elif constant_node_value.startswith("'") and constant_node_value.endswith("'"):
             constant_node_value = constant_node_value[1:-1]
         return f"{prop}::jsonb @> '[\"{constant_node_value}\"]'"

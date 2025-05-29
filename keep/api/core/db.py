@@ -570,9 +570,10 @@ def add_or_update_workflow(
     provisioned_file: str | None = None,
     force_update: bool = False,
     is_test: bool = False,
+    lookup_by_name: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
-        if provisioned:
+        if provisioned or lookup_by_name:
             # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
@@ -1714,6 +1715,20 @@ def query_alerts(
         alerts = query.all()
 
     return alerts
+
+
+def get_started_at_for_alerts(
+    tenant_id,
+    fingerprints: list[str],
+    session: Optional[Session] = None,
+) -> dict[str, datetime]:
+    with existed_or_new_session(session) as session:
+        statement = select(LastAlert.fingerprint, LastAlert.first_timestamp).where(
+            LastAlert.tenant_id == tenant_id,
+            LastAlert.fingerprint.in_(fingerprints),
+        )
+        result = session.exec(statement).all()
+        return {row[0]: row[1] for row in result}
 
 
 def get_last_alerts(

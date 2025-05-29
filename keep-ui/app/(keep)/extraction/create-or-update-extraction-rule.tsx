@@ -16,12 +16,12 @@ import {
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { ExtractionRule } from "./model";
-import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { AlertsRulesBuilder } from "@/features/presets/presets-manager";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { extractNamedGroups } from "@/shared/lib/regex-utils";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;

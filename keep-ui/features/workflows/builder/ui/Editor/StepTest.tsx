@@ -13,20 +13,13 @@ import { useConfig } from "@/utils/hooks/useConfig";
 export function useTestStep() {
   const api = useApi();
   async function testStep(
-    providerInfo: { provider_id: string; provider_type: string },
+    providerId: string,
     method: "_query" | "_notify",
     methodParams: Record<string, any>
   ) {
-    return await api.post(
-      `/providers/${providerInfo.provider_id}/invoke/${method}`,
-      {
-        ...methodParams,
-        providerInfo: {
-          provider_id: providerInfo.provider_id,
-          provider_type: providerInfo.provider_type,
-        },
-      }
-    );
+    return await api.post(`/providers/${providerId}/invoke/${method}`, {
+      ...methodParams,
+    });
   }
 
   return testStep;
@@ -166,7 +159,7 @@ export function TestRunStepForm({
         setIsLoading(true);
         setErrors({});
         const result = await testStep(
-          providerInfo,
+          providerInfo.provider_id,
           method,
           resultingParameters
         );

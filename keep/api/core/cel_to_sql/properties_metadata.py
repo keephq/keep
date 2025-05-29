@@ -92,9 +92,7 @@ class PropertiesMetadata:
             If the property path matches a known field or a wildcard pattern, it returns the corresponding mappings.
             Supports JSON type mappings and simple field mappings.
     """
-    def __init__(
-        self, fields_mapping_configurations: list[FieldMappingConfiguration], foo=False
-    ):
+    def __init__(self, fields_mapping_configurations: list[FieldMappingConfiguration]):
         self.wildcard_configurations: dict[FieldMappingConfiguration] = {}
         self.known_configurations: dict[FieldMappingConfiguration] = {}
         for field_mapping in fields_mapping_configurations:

@@ -80,6 +80,7 @@ class StatuscakeProvider(BaseProvider):
         """
         Validate that the user has the required scopes to use the provider
         """
+        self.logger.info("Validating scopes for Statuscake provider")
         try:
             response = requests.get(
                 url=self.__get_url(paths=["uptime"]),
@@ -87,6 +88,7 @@ class StatuscakeProvider(BaseProvider):
             )
 
             if response.status_code == 200:
+                self.logger.info("Successfully validated scopes for Statuscake")
                 scopes = {"alerts": True}
 
             else:
@@ -105,11 +107,14 @@ class StatuscakeProvider(BaseProvider):
         return scopes
 
     def validate_config(self):
+        self.logger.info("Validating configuration for Statuscake provider")
         self.authentication_config = StatuscakeProviderAuthConfig(
             **self.config.authentication
         )
         if self.authentication_config.api_key is None:
+            self.logger.error("Statuscake API Key is missing")
             raise ValueError("Statuscake API Key is required")
+        self.logger.info("Configuration validated successfully")
 
     def __get_auth_headers(self):
         if self.authentication_config.api_key is not None:
@@ -138,6 +143,12 @@ class StatuscakeProvider(BaseProvider):
                 data.extend(response["data"])
                 if page == response["metadata"]["page_count"]:
                     break
+                else:
+                    page += 1
+            self.logger.info(
+                f"Successfully got {len(data)} items from {paths}",
+                extra={"data": data},
+            )
             return data
 
         except Exception as e:
@@ -148,6 +159,7 @@ class StatuscakeProvider(BaseProvider):
 
     def __update_contact_group(self, contact_group_id, keep_api_url):
         try:
+            self.logger.info(f"Updating contact group {contact_group_id}")
             response = requests.put(
                 url=self.__get_url(["contact-groups", contact_group_id]),
                 headers=self.__get_auth_headers(),
@@ -157,6 +169,7 @@ class StatuscakeProvider(BaseProvider):
             )
             if response.status_code != 204:
                 raise Exception(response.text)
+            self.logger.info(f"Successfully updated contact group {contact_group_id}")
         except Exception as e:
             self.logger.error(
                 "Error while updating contact group", extra={"exception": str(e)}
@@ -165,6 +178,7 @@ class StatuscakeProvider(BaseProvider):
 
     def __create_contact_group(self, keep_api_url: str, contact_group_name: str):
         try:
+            self.logger.info(f"Creating contact group: {contact_group_name}")
             response = requests.post(
                 url=self.__get_url(paths=["contact-groups"]),
                 headers=self.__get_auth_headers(),
@@ -190,7 +204,9 @@ class StatuscakeProvider(BaseProvider):
         self.logger.info("Attempting to install webhook in statuscake")
         keep_api_url = f"{keep_api_url}&api_key={api_key}"
         contact_group_name = f"Keep-{self.provider_id}"
+        self.logger.info("Getting contact groups for webhook setup")
         contact_groups = self.__get_paginated_data(paths=["contact-groups"])
+
         for contact_group in contact_groups:
             if contact_group["name"] == contact_group_name:
                 self.logger.info(
@@ -208,16 +224,29 @@ class StatuscakeProvider(BaseProvider):
             )
 
         alerts_to_update = ["heartbeat", "uptime", "pagespeed", "ssl"]
+        self.logger.info(f"Updating alerts for types: {alerts_to_update}")
 
         for alert_type in alerts_to_update:
+            self.logger.info(f"Processing {alert_type} alerts")
             alerts = self.__get_paginated_data(paths=[alert_type])
             for alert in alerts:
                 if contact_group_id not in alert["contact_groups"]:
                     alert["contact_groups"].append(contact_group_id)
-                    self.__update_alert(
-                        data={"contact_groups[]": alert["contact_groups"]},
-                        paths=[alert_type, alert["id"]],
-                    )
+                    try:
+                        self.__update_alert(
+                            data={"contact_groups[]": alert["contact_groups"]},
+                            paths=[alert_type, alert["id"]],
+                        )
+                    except Exception:
+                        self.logger.exception(
+                            "Error while updating alert",
+                            extra={
+                                "alert_type": alert_type,
+                                "alert_id": alert.get("id"),
+                            },
+                        )
+
+        self.logger.info("Webhook setup completed successfully")
 
     def __update_alert(self, data: dict, paths: list):
         try:
@@ -228,19 +257,25 @@ class StatuscakeProvider(BaseProvider):
                 data=data,
             )
             if not response.ok:
-                raise Exception(response.text)
-            self.logger.info(
-                "Successfully updated alert", extra={"data": data, "paths": paths}
-            )
+                self.logger.error(
+                    "Error while updating alert",
+                    extra={"response": response.text, "data": data, "paths": paths},
+                )
+                # best effort
+                pass
+            else:
+                self.logger.info(
+                    "Successfully updated alert", extra={"data": data, "paths": paths}
+                )
         except Exception as e:
             self.logger.error("Error while updating alert", extra={"exception": str(e)})
             raise e
 
     def __get_heartbeat_alerts_dto(self) -> list[AlertDto]:
-
+        self.logger.info("Getting heartbeat alerts from Statuscake")
         response = self.__get_paginated_data(paths=["heartbeat"])
 
-        return [
+        alert_dtos = [
             AlertDto(
                 id=alert["id"],
                 name=alert["name"],
@@ -251,62 +286,94 @@ class StatuscakeProvider(BaseProvider):
             )
             for alert in response
         ]
+        self.logger.info(f"Got {len(alert_dtos)} heartbeat alerts")
+        return alert_dtos
 
     def __get_pagespeed_alerts_dto(self) -> list[AlertDto]:
-
+        self.logger.info("Getting pagespeed alerts from Statuscake")
         response = self.__get_paginated_data(paths=["pagespeed"])
 
-        return [
-            AlertDto(
+        alert_dtos = []
+        for alert in response:
+            status = alert.get("latest_stats", {}).get("has_issues", False)
+            if status:
+                status = AlertStatus.FIRING
+            else:
+                status = AlertStatus.RESOLVED
+
+            alert_dto = AlertDto(
                 name=alert["name"],
                 url=alert["website_url"],
                 location=alert["location"],
                 alert_smaller=alert["alert_smaller"],
                 alert_bigger=alert["alert_bigger"],
                 alert_slower=alert["alert_slower"],
-                status=alert["status"],
-                source="statuscake",
+                status=status,
+                source=["statuscake"],
+                latest_stats=alert.get("latest_stats", {}),
+                fingerprint=alert.get("id"),
             )
-            for alert in response
-        ]
+            alert_dtos.append(alert_dto)
+        self.logger.info(f"Got {len(alert_dtos)} pagespeed alerts")
+        return alert_dtos
 
     def __get_ssl_alerts_dto(self) -> list[AlertDto]:
-
+        self.logger.info("Getting SSL alerts from Statuscake")
         response = self.__get_paginated_data(paths=["ssl"])
-
-        return [
-            AlertDto(
-                id=alert["id"],
-                url=alert["website_url"],
-                issuer_common_name=alert["issuer_common_name"],
-                cipher=alert["cipher"],
-                cipher_score=alert["cipher_score"],
-                certificate_score=alert["certificate_score"],
-                certificate_status=alert["certificate_status"],
-                valid_from=alert["valid_from"],
-                valid_until=alert["valid_until"],
-                source="statuscake",
+        alert_dtos = []
+        self.logger.info(f"Got {len(response)} ssl alerts")
+        for alert in response:
+            url = alert.get("website_url", None)
+            alert_dto = AlertDto(
+                name=f"Certificate for {url}",
+                **alert,
+                source=["statuscake"],
             )
-            for alert in response
-        ]
+            alert_dtos.append(alert_dto)
+        return alert_dtos
 
     def __get_uptime_alerts_dto(self) -> list[AlertDto]:
-
+        self.logger.info("Getting uptime alerts from Statuscake")
         response = self.__get_paginated_data(paths=["uptime"])
 
-        return [
-            AlertDto(
-                id=alert["id"],
-                name=alert["name"],
-                status=alert["status"],
-                url=alert["website_url"],
-                uptime=alert["uptime"],
-                source="statuscake",
+        self.logger.info(f"Got {len(response)} uptime alerts")
+
+        alert_dtos = []
+        for alert in response:
+
+            if alert.get("status").lower() == "up":
+                status = AlertStatus.RESOLVED
+            else:
+                status = AlertStatus.FIRING
+
+            alert_id = alert.get("id", None)
+            if not alert_id:
+                self.logger.error("Alert id is missing", extra={"alert": alert})
+                continue
+
+            url = alert.get("website_url", None)
+
+            alert = AlertDto(
+                id=alert.get("id", ""),
+                name=alert.get("name", ""),
+                status=status,
+                uptime=alert.get("uptime", 0),
+                source=["statuscake"],
+                paused=alert.get("paused", False),
+                test_type=alert.get("test_type", ""),
+                check_rate=alert.get("check_rate", 0),
+                contact_groups=alert.get("contact_groups", []),
+                tags=alert.get("tags", []),
             )
-            for alert in response
-        ]
+            if url:
+                alert.url = url
+            # use id as fingerprint
+            alert.fingerprint = alert_id
+            alert_dtos.append(alert)
+        return alert_dtos
 
     def _get_alerts(self) -> list[AlertDto]:
+        self.logger.info("Starting to collect all alerts from Statuscake")
         alerts = []
         try:
             self.logger.info("Collecting alerts (heartbeats) from Statuscake")
@@ -336,6 +403,9 @@ class StatuscakeProvider(BaseProvider):
         except Exception as e:
             self.logger.error("Error getting uptime from Statuscake: %s", e)
 
+        self.logger.info(
+            f"Successfully collected {len(alerts)} total alerts from Statuscake"
+        )
         return alerts
 
     @staticmethod
@@ -403,5 +473,9 @@ if __name__ == "__main__":
         provider_id="statuscake",
         config=config,
     )
-
+    provider.setup_webhook(
+        tenant_id="singletenant",
+        keep_api_url="http://localhost:8000/api/v1/alert",
+        api_key="test_api_key",
+    )
     provider._get_alerts()

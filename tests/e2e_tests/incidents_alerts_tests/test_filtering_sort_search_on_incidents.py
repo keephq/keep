@@ -1,7 +1,9 @@
+from datetime import datetime, timedelta, timezone
 import re
 import pytest
 from playwright.sync_api import expect, Page
 from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
+    query_incidents,
     setup_incidents_alerts,
 )
 from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
@@ -31,9 +33,12 @@ def init_test(browser: Page, incidents, max_retries=3):
                 raise e
 
     browser.wait_for_selector("[data-testid='facet-value']")
+    browser.wait_for_selector("table[data-testid='incidents-table']")
 
+
+def display_all_available_incidents(browser: Page):
     # to select status filters that are initially not selected
-    for status in ["resolved", "deleted"]:
+    for status in ["resolved", "deleted", "acknowledged"]:
         facet_option = (
             browser.locator("[data-testid='facet']", has_text="Status")
             .locator("[data-testid='facet-value']", has_text=status)
@@ -126,6 +131,37 @@ def setup_test_data():
     yield setup_incidents_alerts()
 
 
+def test_initial_loading(browser, setup_test_data):
+    try:
+        incidents = setup_test_data["incidents"]
+        # verify intial loading of incidents page
+        init_test(browser, incidents)
+        filter_predicate = lambda alert: (alert["status"] in ["firing", "acknowledged"])
+
+        assert_incidents_by_column(
+            browser,
+            incidents,
+            filter_predicate,
+            "status",
+            None,
+        )
+        # select all statuses
+        display_all_available_incidents(browser)
+
+        # verify what happens if "reset" in facets panel is clicked
+        browser.locator("#incidents-facets button", has_text="reset").click()
+        assert_incidents_by_column(
+            browser,
+            incidents,
+            filter_predicate,
+            "status",
+            None,
+        )
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+
 facet_test_cases = {
     "severity": {
         "incident_property_name": "severity",
@@ -154,6 +190,7 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
         incidents = setup_test_data["incidents"]
 
         init_test(browser, incidents)
+        display_all_available_incidents(browser)
 
         assert_facet(browser, facet_name, incidents, incident_property_name)
 
@@ -188,6 +225,7 @@ def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
         current_incidents = setup_test_data["incidents"]
         incidents_alert = setup_test_data["incidents_alert"]
         init_test(browser, current_incidents)
+        display_all_available_incidents(browser)
 
         # region Add custom facet
         browser.locator("button", has_text="Add Facet").click()
@@ -291,6 +329,8 @@ def test_sort_asc_dsc(
         current_incidents = setup_test_data["incidents"]
         name_column_index = 3
         init_test(browser, current_incidents)
+        display_all_available_incidents(browser)
+
         try:
             expect(
                 browser.locator("table[data-testid='incidents-table'] tbody tr")
@@ -335,6 +375,81 @@ def test_sort_asc_dsc(
                             f"Expected: {incident['user_generated_name']} but got: {column_locator.text_content()}"
                         )
                         continue
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+
+def test_filter_timeframe_combination_with_queryparams(browser, setup_test_data):
+    try:
+        facet_name = "status"
+        incident_property_name = "status"
+        column_index = None
+        value = "firing"
+
+        def filter_lambda(incident):
+            return incident[incident_property_name] == value and datetime.fromisoformat(
+                incident["creation_time"]
+            ).replace(tzinfo=timezone.utc) >= (
+                datetime.now(timezone.utc) - timedelta(hours=4)
+            )
+
+        current_incidents = query_incidents(cell_query="", limit=1000)["results"]
+
+        filtered_incidents = [
+            alert for alert in current_incidents if filter_lambda(alert)
+        ]
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        init_test(browser, current_incidents)
+        display_all_available_incidents(browser)
+
+        option = browser.locator("[data-testid='facet-value']", has_text=value)
+        option.hover()
+
+        option.locator("button", has_text="Only").click()
+        browser.wait_for_timeout(500)
+
+        # select timeframe
+        browser.locator("button[data-testid='timeframe-picker-trigger']").click()
+        browser.locator(
+            "[data-testid='timeframe-picker-content'] button", has_text="Past 4 hours"
+        ).click()
+
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_incidents,
+            incident_property_name,
+        )
+        assert_incidents_by_column(
+            browser,
+            filtered_incidents,
+            lambda alert: True,
+            incident_property_name,
+            column_index,
+        )
+
+        # Refresh in order to check that filters/facets are restored
+        # It will use the URL query params from previous filters
+        browser.reload()
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_incidents,
+            incident_property_name,
+        )
+        assert_incidents_by_column(
+            browser,
+            filtered_incidents,
+            lambda alert: True,
+            incident_property_name,
+            column_index,
+        )
+        expect(
+            browser.locator("button[data-testid='timeframe-picker-trigger']")
+        ).to_contain_text("Past 4 hours")
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
