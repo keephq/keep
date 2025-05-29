@@ -67,5 +67,19 @@ export function getConfig(): InternalConfig {
     KEEP_HIDE_SENSITIVE_FIELDS:
       process.env.KEEP_HIDE_SENSITIVE_FIELDS === "true",
     KEEP_WORKFLOW_DEBUG: process.env.KEEP_WORKFLOW_DEBUG === "true",
+    HIDE_NAVBAR_DEDUPLICATION:
+      process.env.HIDE_NAVBAR_DEDUPLICATION?.toLowerCase() === "true",
+    HIDE_NAVBAR_WORKFLOWS:
+      process.env.HIDE_NAVBAR_WORKFLOWS?.toLowerCase() === "true",
+    HIDE_NAVBAR_SERVICE_TOPOLOGY:
+      process.env.HIDE_NAVBAR_SERVICE_TOPOLOGY?.toLowerCase() === "true",
+    HIDE_NAVBAR_MAPPING:
+      process.env.HIDE_NAVBAR_MAPPING?.toLowerCase() === "true",
+    HIDE_NAVBAR_EXTRACTION:
+      process.env.HIDE_NAVBAR_EXTRACTION?.toLowerCase() === "true",
+    HIDE_NAVBAR_MAINTENANCE_WINDOW:
+      process.env.HIDE_NAVBAR_MAINTENANCE_WINDOW?.toLowerCase() === "true",
+    HIDE_NAVBAR_AI_PLUGINS:
+      process.env.HIDE_NAVBAR_AI_PLUGINS?.toLowerCase() === "true",
   };
 }

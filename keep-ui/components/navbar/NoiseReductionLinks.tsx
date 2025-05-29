@@ -27,6 +27,7 @@ type TogglableLinkProps = {
 
 const TogglableLink = ({ children, disabledConfigKey }: TogglableLinkProps) => {
   const { data: tenantConfig, isLoading } = useTenantConfiguration();
+  const { data: envConfig } = useConfig();
 
   if (isLoading || !tenantConfig) {
     return (
@@ -40,7 +41,10 @@ const TogglableLink = ({ children, disabledConfigKey }: TogglableLinkProps) => {
     );
   }
 
-  if (!tenantConfig?.[disabledConfigKey]) {
+  if (
+    !tenantConfig?.[disabledConfigKey] &&
+    !(envConfig as any)?.[disabledConfigKey]
+  ) {
     return <>{children}</>;
   }
 };
