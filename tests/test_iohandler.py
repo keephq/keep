@@ -75,7 +75,13 @@ def test_with_function(context_manager):
     ]
 )
 def test_with_arithmetic_functions(context_manager, test_input, expected_output):
-    iohandler = IOHandler(context_manager)
+    # Mustache
+    iohandler = MustacheIOHandler(context_manager)
+    s = iohandler.render(test_input)
+    assert s == expected_output
+    
+    # Jinja2
+    iohandler = Jinja2IOHandler(context_manager)
     s = iohandler.render(test_input)
     assert s == expected_output
 
