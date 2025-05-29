@@ -244,6 +244,7 @@
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/smtp-provider",
+            "providers/documentation/snmp-provider",
             "providers/documentation/snowflake-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
