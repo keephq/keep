@@ -20,6 +20,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import {
   useIncidentAlerts,
   usePollIncidentAlerts,
+  useAlertsByRunID,
 } from "utils/hooks/useIncidents";
 import React, { useEffect, useState } from "react";
 import { IncidentDto, useIncidentActions } from "@/entities/incidents/model";
@@ -61,15 +62,23 @@ export default function IncidentAlerts({ incident }: Props) {
   });
 
   const {
-    data: alerts,
+    data,
     isLoading: _alertsLoading,
     error: alertsError,
     mutate: mutateAlerts,
-  } = useIncidentAlerts(
+  } = useAlertsByRunID(
     incident.id,
     alertsPagination.limit,
     alertsPagination.offset
   );
+  console.log("IncidentAlerts data", data);
+  const alerts = {
+    items: data?.results ?? [],
+    count: data?.count ?? 0,
+    limit: alertsPagination.limit,
+    offset: alertsPagination.offset,
+  }
+  console.log("IncidentAlerts", alerts)
   const { unlinkAlertsFromIncident } = useIncidentActions();
 
   const { theme } = useAlertTableTheme();

@@ -101,6 +101,13 @@ export interface PaginatedIncidentAlertsDto {
   items: AlertDto[];
 }
 
+export interface PaginatedIncidentAlertsByRunIdDto {
+  limit: number;
+  offset: number;
+  count: number;
+  results: AlertDto[];
+}
+
 export interface IncidentsMetaDto {
   statuses: string[];
   severities: string[];

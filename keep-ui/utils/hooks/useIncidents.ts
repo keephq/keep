@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
+  PaginatedIncidentAlertsByRunIdDto,
 } from "@/entities/incidents/model/models";
 
 interface IncidentUpdatePayload {
@@ -150,6 +151,34 @@ export const useIncidentAlerts = (
         ? `/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}`
         : null,
     async (url) => api.get(url),
+    options
+  );
+};
+
+export const useAlertsByRunID = (
+  runId: string,
+  limit: number = 20,
+  offset: number = 0,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
+  runId = "001"
+  return useSWR<PaginatedIncidentAlertsByRunIdDto>(
+    () =>
+      api.isReady()
+        ? `/alerts/query`
+        : null,
+    async (url) =>
+      api.post(
+        url,
+        {
+          cel: `run_id == '${runId}'`,
+          limit: limit,
+          offset: offset,
+        },
+      ),
     options
   );
 };
