@@ -11,7 +11,7 @@ import { useAlertsByRunID, useIncident, useIncidentAlerts } from "@/utils/hooks/
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts", prefetch: true },
-  // { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
+  { icon: CiViewTimeline, label: "Alerts by Run", path: "alerts-by-run", prefetch: true },
   // { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   // {
   //   icon: IoIosGitNetwork,
@@ -25,7 +25,8 @@ export function IncidentTabsNavigation() {
   // Using type assertion because this component only renders on the /incidents/[id] routes
   const { id } = useParams<{ id: string }>() as { id: string };
   const pathname = usePathname();
-  const { data: alerts } = useAlertsByRunID(id);
+  const { data: alerts } = useIncidentAlerts(id);
+  const { data: alerts_by_run } = useAlertsByRunID(id);
 
   return (
     <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted">
@@ -36,7 +37,7 @@ export function IncidentTabsNavigation() {
           isActive={pathname?.endsWith(tab.path)}
           href={`/incidents/${id}/${tab.path}`}
           prefetch={!!tab.prefetch}
-          count={tab.path === "alerts" ? alerts?.count : undefined}
+          count={tab.path === "alerts" ? alerts?.count : tab.path === "alerts-by-run" ? alerts_by_run?.count : undefined}
         >
           {tab.label}
         </TabNavigationLink>

@@ -18,7 +18,7 @@ import {
 } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import {
-  useIncidentAlerts,
+  useAlertsByRunID,
   usePollIncidentAlerts,
 } from "utils/hooks/useIncidents";
 import React, { useEffect, useState } from "react";
@@ -65,7 +65,7 @@ export default function IncidentAlerts({ incident }: Props) {
     isLoading: _alertsLoading,
     error: alertsError,
     mutate: mutateAlerts,
-  } = useIncidentAlerts(
+  } = useAlertsByRunID(
     incident.id,
     alertsPagination.limit,
     alertsPagination.offset
