@@ -154,8 +154,9 @@ export const useIncidentAlerts = (
     options
   );
 };
+
 export const useAlertsByRunID = (
-  runId: string,
+  incidentId: string,
   limit: number = 20,
   offset: number = 0,
   options: SWRConfiguration = {
@@ -163,22 +164,40 @@ export const useAlertsByRunID = (
   }
 ) => {
   const api = useApi();
-  runId = "001"; // Presumably this is for testing; otherwise remove or make dynamic
 
   return useSWR<PaginatedIncidentAlertsDto>(
-    () => (api.isReady() ? `/alerts/query` : null),
-    async (url) => {
-      const response = await api.post(
-        url,
-        {
-          cel: `run_id == '${runId}'`,
-          limit,
-          offset,
-        }
+    () => (api.isReady() ? `alerts-by-run-id:${incidentId}:${limit}:${offset}` : null),
+    async () => {
+      // Step 1: Fetch incident alerts
+      const incidentAlerts = await api.get(
+        `/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}`
       );
 
-      // Convert results -> items
+      if (!incidentAlerts || incidentAlerts.items.length === 0) {
+        // Return incident alerts as-is if empty
+        return incidentAlerts;
+      }
+
+      const runId = incidentAlerts.items[0]?.run_id;
+
+      if (!runId) {
+        // If run_id is missing, return empty result
+        return {
+          ...incidentAlerts,
+          items: [],
+          count: 0,
+        };
+      }
+
+      // Step 2: Fetch alerts by run_id
+      const response = await api.post(`/alerts/query`, {
+        cel: `run_id == '${runId}'`,
+        limit,
+        offset,
+      });
+
       const { results, ...rest } = response;
+
       return {
         ...rest,
         items: results,
@@ -187,7 +206,6 @@ export const useAlertsByRunID = (
     options
   );
 };
-
 export const useIncidentFutureIncidents = (
   incidentId: string,
   options: SWRConfiguration = {
