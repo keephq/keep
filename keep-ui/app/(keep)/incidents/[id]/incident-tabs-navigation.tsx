@@ -7,7 +7,7 @@ import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
 import { BellAlertIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
 import { IncidentDto } from "@/entities/incidents/model";
-import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
+import { useAlertsByRunID, useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts", prefetch: true },
@@ -25,7 +25,7 @@ export function IncidentTabsNavigation() {
   // Using type assertion because this component only renders on the /incidents/[id] routes
   const { id } = useParams<{ id: string }>() as { id: string };
   const pathname = usePathname();
-  const { data: alerts } = useIncidentAlerts(id);
+  const { data: alerts } = useAlertsByRunID(id);
 
   return (
     <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted">

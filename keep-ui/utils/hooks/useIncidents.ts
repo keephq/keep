@@ -154,7 +154,6 @@ export const useIncidentAlerts = (
     options
   );
 };
-
 export const useAlertsByRunID = (
   runId: string,
   limit: number = 20,
@@ -164,21 +163,27 @@ export const useAlertsByRunID = (
   }
 ) => {
   const api = useApi();
-  runId = "001"
-  return useSWR<PaginatedIncidentAlertsByRunIdDto>(
-    () =>
-      api.isReady()
-        ? `/alerts/query`
-        : null,
-    async (url) =>
-      api.post(
+  runId = "001"; // Presumably this is for testing; otherwise remove or make dynamic
+
+  return useSWR<PaginatedIncidentAlertsDto>(
+    () => (api.isReady() ? `/alerts/query` : null),
+    async (url) => {
+      const response = await api.post(
         url,
         {
           cel: `run_id == '${runId}'`,
-          limit: limit,
-          offset: offset,
-        },
-      ),
+          limit,
+          offset,
+        }
+      );
+
+      // Convert results -> items
+      const { results, ...rest } = response;
+      return {
+        ...rest,
+        items: results,
+      };
+    },
     options
   );
 };
