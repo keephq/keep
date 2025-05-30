@@ -14,7 +14,6 @@ import { v4 as uuidv4 } from "uuid";
 import {
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
-  PaginatedIncidentAlertsByRunIdDto,
 } from "@/entities/incidents/model/models";
 
 interface IncidentUpdatePayload {
