@@ -53,7 +53,6 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
-import AlertPaginationServerSide from "@/widgets/alerts-table/ui/alert-pagination-server-side";
 import { FacetDto, Pagination } from "@/features/filter";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { v4 as uuidV4 } from "uuid";
