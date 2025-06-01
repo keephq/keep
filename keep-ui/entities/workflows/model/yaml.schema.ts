@@ -5,6 +5,7 @@ import {
   IncidentEventEnum,
   OnFailureSchema,
   WithSchema,
+  WorkflowConstsSchema,
   WorkflowInputSchema,
 } from "./schema";
 import { Provider } from "@/shared/api/providers";
@@ -216,7 +217,7 @@ export const YamlWorkflowDefinitionSchema = z.object({
       debug: z.boolean().optional(),
       triggers: z.array(TriggerSchema).min(1),
       inputs: z.array(WorkflowInputSchema).optional(),
-      consts: z.record(z.string(), z.string()).optional(),
+      consts: WorkflowConstsSchema.optional(),
       strategy: WorkflowStrategySchema.optional(),
       "on-failure": YamlStepOrActionSchema.partial({
         id: true,
@@ -284,7 +285,7 @@ export function getYamlWorkflowDefinitionSchema(
       debug: z.boolean().optional(),
       triggers: z.array(TriggerSchema).min(1),
       inputs: z.array(WorkflowInputSchema).optional(),
-      consts: z.record(z.string(), z.string()).optional(),
+      consts: WorkflowConstsSchema.optional(),
       owners: z.array(z.string()).optional(),
       // [doe.john@example.com, doe.jane@example.com, NOC]
       permissions: z.array(z.string()).optional(),
