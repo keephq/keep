@@ -45,12 +45,14 @@ def test_functions_diff(test_description, given, expected):
         functions.diff(given) == expected
     ), f"{test_description}: Expected {given} to return {expected}"
 
+
 def test_keep_add_function():
     """
     Test the add function
     """
     assert functions.add(1, 2) == 3
     assert functions.add(1, 2, 3) == 6
+
 
 def test_keep_sub_function():
     """
@@ -59,12 +61,14 @@ def test_keep_sub_function():
     assert functions.sub(1, 2) == -1
     assert functions.sub(1, 2, 3) == -4
 
+
 def test_keep_mul_function():
     """
     Test the multiply function
     """
     assert functions.mul(1, 2) == 2
     assert functions.mul(1, 2, 3) == 6
+
 
 def test_keep_div_function():
     """
@@ -73,12 +77,14 @@ def test_keep_div_function():
     assert functions.div(6, 2) == 3
     assert functions.div(6, 2, 3) == 1
 
+
 def test_keep_mod_function():
     """
     Test the mod function
     """
     assert functions.mod(1, 2) == 1
     assert functions.mod(1, 2, 3) == 1
+
 
 def test_keep_exp_function():
     """
@@ -87,6 +93,7 @@ def test_keep_exp_function():
     assert functions.exp(1, 2) == 1
     assert functions.exp(1, 2, 3) == 1
 
+
 def test_keep_fdiv_function():
     """
     Test the fdiv function
@@ -94,12 +101,14 @@ def test_keep_fdiv_function():
     assert functions.fdiv(10, 3) == 3
     assert functions.fdiv(10, 3, 2) == 1
 
+
 def test_keep_eq_function():
     """
     Test the eq function
     """
     assert functions.eq(1, 2) == False
     assert functions.eq(1, 1) == True
+
 
 def test_keep_len_function():
     """
@@ -1170,3 +1179,33 @@ def test_timestamp_delta_with_utcnow():
     assert result == datetime.datetime(
         2023, 1, 1, 13, 0, 0, tzinfo=datetime.timezone.utc
     )
+
+
+def test_from_timestamp():
+    """
+    Test from_timestamp
+    """
+    dt = datetime.datetime(2024, 6, 1, 12, 20, 49, tzinfo=datetime.timezone.utc)
+    timestamp = dt.timestamp()
+    result = functions.from_timestamp(timestamp)
+    assert result == dt
+
+
+def test_from_timestamp_from_string():
+    """
+    Test from_timestamp from string
+    """
+    dt = datetime.datetime(2024, 6, 1, 12, 20, 49, tzinfo=datetime.timezone.utc)
+    timestamp = str(dt.timestamp())
+    result = functions.from_timestamp(timestamp)
+    assert result == dt
+
+
+def test_from_timestamp_with_timezone():
+    """
+    Test from_timestamp with timezone
+    """
+    dt = datetime.datetime(2024, 6, 1, 12, 0, 0, tzinfo=pytz.timezone("Europe/Berlin"))
+    timestamp = dt.timestamp()
+    result = functions.from_timestamp(timestamp, "Europe/Berlin")
+    assert result == dt
