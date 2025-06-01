@@ -387,4 +387,37 @@ describe("parseWorkflowYamlToJSON", () => {
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
   });
+
+  it("should validate different types of constants", () => {
+    const yamlWithVars = `
+  workflow:
+    id: test-workflow
+    name: Test Workflow
+    description: Test workflow
+    triggers:
+      - type: manual
+    steps:
+      - name: print
+        provider:
+          type: mock
+          with:
+            message: "{{ consts.string }}"
+    consts:
+      string: "string"
+      number: 1
+      boolean: true
+      object: { key: "value" }
+      list: [1, 2, 3]
+      object-as-yaml:
+        key: value
+        key1: value1
+`;
+
+    const result = parseWorkflowYamlToJSON(
+      yamlWithVars,
+      workflowSchemaWithProviders
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+  });
 });
