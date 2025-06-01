@@ -18,12 +18,26 @@ function extractMustacheValue(mustacheString: string): string {
   return match ? match[1] : "";
 }
 
+function flattenSequence(sequence: V2Step[]): V2Step[] {
+  const flatSequence: V2Step[] = [];
+  for (const step of sequence) {
+    if (step.componentType === "container") {
+      flatSequence.push(step);
+      flatSequence.push(...flattenSequence(step.sequence || []));
+    } else {
+      flatSequence.push(step);
+    }
+  }
+  return flatSequence;
+}
+
 export const validateMustacheVariableName = (
   variableName: string,
   currentStep: V2Step,
   definition: Definition,
   secrets: Record<string, string>
 ) => {
+  const flatSequence = flattenSequence(definition.sequence);
   const cleanedVariableName = extractMustacheValue(variableName);
   const parts = cleanedVariableName.split(".");
   if (!parts.every((part) => part.length > 0)) {
@@ -66,13 +80,13 @@ export const validateMustacheVariableName = (
     // - it's not the current step (can't access own results, only enrich_alert and enrich_incident can access their own results)
     // - it's above the current step
     // - if it's a step it cannot access actions since they run after steps
-    const step = definition.sequence.find(
+    const step = flatSequence.find(
       (step) => step.id === stepName || step.name === stepName
     );
-    const stepIndex = definition.sequence.findIndex(
+    const stepIndex = flatSequence.findIndex(
       (step) => step.id === stepName || step.name === stepName
     );
-    const currentStepIndex = definition.sequence.findIndex(
+    const currentStepIndex = flatSequence.findIndex(
       (step) => step.id === currentStep.id
     );
     if (!step) {
