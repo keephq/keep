@@ -125,13 +125,6 @@ export function ExistingWorkflowsState({
   const showSearchEmptyState =
     isTableEmpty && !!searchCel && !showFilterEmptyState;
 
-  const setPaginationStateCallback = useCallback(
-    (pageIndex: number, limit: number, offset: number) => {
-      setPaginationState({ limit, offset });
-    },
-    [setPaginationState]
-  );
-
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
       ["Last execution status"]: {
