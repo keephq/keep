@@ -38,7 +38,8 @@ from keep.api.core.workflows import (
     get_workflow_facets_data,
     get_workflow_potential_facet_fields,
 )
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.db.incident import IncidentSeverity
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.incident import IncidentDto
 from keep.api.models.query import QueryDto
@@ -319,8 +320,20 @@ def get_event_from_body(body: dict, tenant_id: str):
     # Handle UI triggered events
     if event_class == AlertDto:
         event_body["id"] = event_body.get("fingerprint", "manual-run")
+        if "severity" in event_body:
+            try:
+                event_body["severity"] = AlertSeverity(event_body["severity"].lower())
+            except ValueError:
+                pass
     elif event_class == IncidentDto:
         event_body["id"] = event_body.get("id", "manual-run")
+        if "severity" in event_body:
+            try:
+                event_body["severity"] = IncidentSeverity(
+                    event_body["severity"].lower()
+                )
+            except ValueError:
+                pass
     event_body["name"] = event_body.get("name", "manual-run")
     event_body["lastReceived"] = event_body.get(
         "lastReceived", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
