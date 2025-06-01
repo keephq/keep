@@ -21,9 +21,6 @@ import React, {
   useState,
 } from "react";
 import IncidentTableComponent from "./incident-table-component";
-import Markdown from "react-markdown";
-import remarkRehype from "remark-rehype";
-import rehypeRaw from "rehype-raw";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import { Button, Link } from "@/components/ui";
 import { MergeIncidentsModal } from "@/features/incidents/merge-incidents";
@@ -39,6 +36,7 @@ import {
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
+import { MarkdownHTML } from "@/shared/ui/MarkdownHTML/MarkdownHTML";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
@@ -215,12 +213,9 @@ export default function IncidentsTable({
             {getIncidentName(row.original)}
           </Link>
           <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
-            <Markdown
-              remarkPlugins={[remarkRehype]}
-              rehypePlugins={[rehypeRaw]}
-            >
+            <MarkdownHTML>
               {row.original.user_summary || row.original.generated_summary}
-            </Markdown>
+            </MarkdownHTML>
           </div>
         </div>
       ),
