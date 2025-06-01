@@ -2,6 +2,18 @@ import { z } from "zod";
 
 const ManualTriggerValueSchema = z.literal("true");
 
+export const WorkflowConstsSchema = z.record(
+  z.string(),
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.record(z.string(), z.any()),
+    z.object({}),
+    z.array(z.any()),
+  ])
+);
+
 const TriggerSchemaBase = z.object({
   id: z.string(),
   name: z.string(),
