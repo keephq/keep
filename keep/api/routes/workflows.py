@@ -61,6 +61,7 @@ from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
+from keep.providers.providers_factory import ProviderConfigurationException
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -371,7 +372,16 @@ def run_workflow(
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
 
     workflow_store = WorkflowStore()
-    workflow = workflow_store.get_workflow(tenant_id, workflow_id)
+    try:
+        workflow = workflow_store.get_workflow(tenant_id, workflow_id)
+    except ValueError as e:
+        logger.exception(
+            "Invalid workflow configuration",
+            extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+        )
+        raise HTTPException(
+            status_code=400, detail=f"Invalid workflow configuration: {e}"
+        ) from e
 
     # if there are workflow permissions, check if the user has access
     if not Workflow.check_run_permissions(
@@ -412,6 +422,9 @@ def run_workflow(
             event,
             inputs=inputs,
         )
+    except HTTPException:
+        # re-raise http exceptions as is
+        raise
     except Exception as e:
         logger.exception(
             "Failed to run workflow",
@@ -423,7 +436,7 @@ def run_workflow(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to run workflow {workflow_id}: {e}",
-        )
+        ) from e
 
     logger.info(
         "Workflow ran successfully",
@@ -496,6 +509,22 @@ async def run_workflow_from_definition(
             workflow_from_db = workflowstore.get_workflow(tenant_id, workflow_id)
             # get_workflow looks by workflow name if id is not found, so we need to assign the final id from db
             workflow_id = workflow_from_db.workflow_id
+        except ProviderConfigurationException as e:
+            logger.exception(
+                "Invalid provider configuration",
+                extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+            )
+            raise HTTPException(
+                status_code=400, detail=f"Invalid provider configuration: {e}"
+            ) from e
+        except ValueError as e:
+            logger.exception(
+                "Invalid workflow configuration",
+                extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+            )
+            raise HTTPException(
+                status_code=400, detail=f"Invalid workflow configuration: {e}"
+            ) from e
         except HTTPException:
             # if workflow_id is not found, use dummy workflow id for test run
             workflow_id = None
