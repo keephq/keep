@@ -9,7 +9,7 @@ import {
 import { Button, Text } from "@tremor/react";
 import { SingleValueProps, components, GroupBase } from "react-select";
 import { Select } from "@/shared/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 export interface PaginationState {
   limit: number;
@@ -36,7 +36,8 @@ interface Props {
   pageSizeOptions?: number[];
   isRefreshAllowed: boolean;
   isRefreshing: boolean;
-  onStateChange: (pageIndex: number, pageSize: number, offset: number) => void;
+  state: PaginationState;
+  onStateChange: (paginationState: PaginationState) => void;
   onRefresh: () => void;
 }
 
@@ -45,6 +46,7 @@ export function Pagination({
   pageSizeOptions,
   isRefreshAllowed,
   isRefreshing,
+  state,
   onStateChange,
   onRefresh,
 }: Props) {
@@ -61,16 +63,20 @@ export function Pagination({
     [pageSizeOptionsMemoized]
   );
 
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(pageSizeOptionsMemoized[0]);
   const pagesCount = useMemo(
-    () => Math.ceil(totalCount / pageSize),
-    [totalCount, pageSize]
+    () => Math.ceil(totalCount / state.limit),
+    [totalCount, state]
   );
-  useEffect(
-    () => onStateChange(pageIndex, pageSize, pageIndex * pageSize),
-    [pageIndex, pageSize, onStateChange]
-  );
+  const pageIndex = useMemo(() => {
+    return Math.ceil(state.offset / state.limit);
+  }, [state]);
+
+  function setPageIndex(pageIndex: number): void {
+    onStateChange({
+      limit: state.limit,
+      offset: pageIndex * state.limit,
+    });
+  }
 
   return (
     <div className="flex justify-between items-center">
@@ -81,11 +87,11 @@ export function Pagination({
         <Select
           components={{ SingleValue }}
           value={{
-            value: pageSize.toString(),
-            label: pageSize.toString(),
+            value: state.limit.toString(),
+            label: state.limit.toString(),
           }}
           onChange={(selectedOption) =>
-            setPageSize(Number(selectedOption!.value))
+            onStateChange({ ...state, limit: Number(selectedOption!.value) })
           }
           options={selectOptions}
           menuPlacement="top"
