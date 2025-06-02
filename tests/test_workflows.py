@@ -356,3 +356,105 @@ def test_workflow_enrichment_with_nested_results(db_session, create_alert):
     assert alert.fingerprint == "fpw1"
     assert alert.originalSource == "server-01"
     assert alert.messageId == "msg123"
+
+
+def test_workflow_alert_creation(db_session):
+    workflow_alert = """workflow:
+  id: keep-alert-generator
+  name: Keep Alert Generator
+  description: Creates new alerts within the Keep system with customizable parameters and descriptions.
+  triggers:
+    - type: manual
+
+  actions:
+    - name: create-alert
+      provider:
+        type: keep
+        with:
+          alert:
+            name: "Alert created from the workflow"
+            description: "This alert was created from the create_alert_in_keep.yml example workflow."
+            labels:
+              environment: production
+            severity: critical
+            fingerprint: fingerprint-test
+"""
+
+    workflow_db = Workflow(
+        id="alert-test",
+        name="test-test",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test alert",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_alert,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    from freezegun import freeze_time
+
+    with freeze_time("2024-02-01 10:00:00"):
+        manager = WorkflowManager.get_instance()
+        workflow_execution_id = create_workflow_execution(
+            workflow_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            tenant_id=SINGLE_TENANT_UUID,
+            triggered_by="test executor",
+            execution_number=11234,
+            event_type="manual",
+        )
+        manager._run_workflow(
+            workflow=workflow, workflow_execution_id=workflow_execution_id
+        )
+
+        from keep.searchengine.searchengine import SearchEngine
+
+        search_engine = SearchEngine(tenant_id=workflow.context_manager.tenant_id)
+        alert = search_engine.search_alerts_by_cel(
+            cel_query="fingerprint == 'fingerprint-test'"
+        )
+        # assert
+        alert = alert[0]
+        assert alert.fingerprint == "fingerprint-test"
+        assert alert.lastReceived.startswith("2024-02-01T10:00:00")
+
+    with freeze_time("2024-02-15 10:00:00"):
+        manager = WorkflowManager.get_instance()
+        workflow_execution_id = create_workflow_execution(
+            workflow_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            tenant_id=SINGLE_TENANT_UUID,
+            triggered_by="test executor",
+            execution_number=11235,
+            event_type="manual",
+        )
+        manager._run_workflow(
+            workflow=workflow, workflow_execution_id=workflow_execution_id
+        )
+
+        from keep.searchengine.searchengine import SearchEngine
+
+        search_engine = SearchEngine(tenant_id=workflow.context_manager.tenant_id)
+        alert = search_engine.search_alerts_by_cel(
+            cel_query="fingerprint == 'fingerprint-test'"
+        )
+        # assert
+        alert = alert[0]
+        assert alert.fingerprint == "fingerprint-test"
+        assert alert.lastReceived.startswith("2024-02-15T10:00:00")
