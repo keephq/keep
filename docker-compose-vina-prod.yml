@@ -45,6 +45,7 @@ services:
       - PUSHER_HOST=keep-websocket-server-common
       - PUSHER_PORT=6001
       - USE_NGROK=false
+      - INCIDENT_MANAGER_URL=${INCIDENT_MANAGER_URL}
     volumes:
       - ./state:/state
     depends_on:
@@ -108,8 +109,9 @@ services:
       - DEBUG=${DEBUG}
       - LOG_LEVEL=${LOG_LEVEL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - VECTOR_DB_URL=${VECTOR_DB_URL}
     volumes:
-      - incident-manager-data:/incident_manager
+      - incident-manager-data:/data
 
 volumes:
   mysql_data:
