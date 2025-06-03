@@ -55,6 +55,7 @@ from keep.api.routes import (
     topology,
     whoami,
     workflows,
+    incident_manager,
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
@@ -299,6 +300,9 @@ def get_app(
     app.include_router(cel.router, prefix="/cel", tags=["cel"])
     app.include_router(
         provider_images.router, prefix="/provider-images", tags=["provider-images"]
+    )
+    app.include_router(
+        incident_manager.router, prefix="/incident-manager", tags=["incident-manager"]
     )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
