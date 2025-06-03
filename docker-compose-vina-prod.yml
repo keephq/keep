@@ -50,6 +50,7 @@ services:
     depends_on:
       - event-generator
       - postgres
+      - incident-manager
 
   keep-websocket-server-common:
     image: quay.io/soketi/soketi:1.4-16-debian
@@ -99,9 +100,21 @@ services:
     depends_on:
       - mysql
 
+  incident-manager:
+    image: curiosity2023/soliton-ip-keep-alert-management-incident-manager:latest
+    ports:
+      - "24005:8082"
+    environment:
+      - DEBUG=${DEBUG}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - incident-manager-data:/incident_manager
+
 volumes:
   mysql_data:
   postgres_data:
+  incident-manager-data:
 
 networks:
   keep-network:

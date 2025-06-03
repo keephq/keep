@@ -162,37 +162,37 @@ export default function IncidentsTable({
         thClassName: "p-0",
       },
     }),
-    columnHelper.display({
-      id: "selected",
-      minSize: 32,
-      maxSize: 32,
-      header: (context) => {
-        const selectedRows = Object.entries(
-          context.table.getSelectedRowModel().rowsById
-        ).map(([alertId]) => {
-          return alertId;
-        });
+    // columnHelper.display({
+    //   id: "selected",
+    //   minSize: 32,
+    //   maxSize: 32,
+    //   header: (context) => {
+    //     const selectedRows = Object.entries(
+    //       context.table.getSelectedRowModel().rowsById
+    //     ).map(([alertId]) => {
+    //       return alertId;
+    //     });
 
-        return (
-          <TableIndeterminateCheckbox
-            checked={context.table.getIsAllRowsSelected()}
-            indeterminate={
-              context.table.getIsSomeRowsSelected() && selectedRows.length > 0
-            }
-            onChange={context.table.getToggleAllRowsSelectedHandler()}
-            onClick={(e) => e.stopPropagation()}
-          />
-        );
-      },
-      cell: (context) => (
-        <TableIndeterminateCheckbox
-          checked={context.row.getIsSelected()}
-          indeterminate={context.row.getIsSomeSelected()}
-          onChange={context.row.getToggleSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-    }),
+    //     return (
+    //       <TableIndeterminateCheckbox
+    //         checked={context.table.getIsAllRowsSelected()}
+    //         indeterminate={
+    //           context.table.getIsSomeRowsSelected() && selectedRows.length > 0
+    //         }
+    //         onChange={context.table.getToggleAllRowsSelectedHandler()}
+    //         onClick={(e) => e.stopPropagation()}
+    //       />
+    //     );
+    //   },
+    //   cell: (context) => (
+    //     <TableIndeterminateCheckbox
+    //       checked={context.row.getIsSelected()}
+    //       indeterminate={context.row.getIsSomeSelected()}
+    //       onChange={context.row.getToggleSelectedHandler()}
+    //       onClick={(e) => e.stopPropagation()}
+    //     />
+    //   ),
+    // }),
     // columnHelper.display({
     //   id: "status",
     //   header: "Status",

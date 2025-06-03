@@ -7,11 +7,12 @@ import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
 import { BellAlertIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
 import { IncidentDto } from "@/entities/incidents/model";
-import { useAlertsByRunID, useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
+import { useAlertsByRunID, useIncident, useIncidentAlerts, useSimilarIncidents } from "@/utils/hooks/useIncidents";
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts", prefetch: true },
   { icon: CiViewTimeline, label: "Alerts by Run", path: "alerts-by-run", prefetch: true },
+  { icon: BoltIcon, label: "Similar Incidents", path: "similar-incidents", prefetch: true },
   // { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   // {
   //   icon: IoIosGitNetwork,
@@ -27,6 +28,7 @@ export function IncidentTabsNavigation() {
   const pathname = usePathname();
   const { data: alerts } = useIncidentAlerts(id);
   const { data: alerts_by_run } = useAlertsByRunID(id);
+  const { data: incident } = useSimilarIncidents(id)
 
   return (
     <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted">
@@ -37,11 +39,12 @@ export function IncidentTabsNavigation() {
           isActive={pathname?.endsWith(tab.path)}
           href={`/incidents/${id}/${tab.path}`}
           prefetch={!!tab.prefetch}
-          count={tab.path === "alerts" ? alerts?.count : tab.path === "alerts-by-run" ? alerts_by_run?.count : undefined}
+          count={tab.path === "alerts" ? alerts?.count : tab.path === "alerts-by-run" ? alerts_by_run?.count : tab.path === "similar-incidents" ? incident?.items?.length : undefined}
         >
           {tab.label}
         </TabNavigationLink>
-      ))}
-    </TabLinkNavigation>
+      ))
+      }
+    </TabLinkNavigation >
   );
 }
