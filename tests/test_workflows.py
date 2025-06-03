@@ -458,3 +458,196 @@ def test_workflow_alert_creation(db_session):
         alert = alert[0]
         assert alert.fingerprint == "fingerprint-test"
         assert alert.lastReceived.startswith("2024-02-15T10:00:00")
+
+
+def test_workflow_python(db_session):
+    workflow = """workflow:
+  id: random-python
+  name: random-python
+  triggers:
+    - type: manual
+  steps:
+    - name: random
+      provider:
+        config: "{{ providers.default-python }}"
+        type: python
+        with:
+          imports: random
+          code: |-
+            random.randint(1, 100)
+  actions:
+    - name: random-print
+      provider:
+        type: console
+        with:
+          message: "Random number: {{ steps.random.results }}"
+"""
+    workflow_db = Workflow(
+        id="test-python",
+        name="test-python",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test python",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    assert "Random number:" in wf_execution.results.get("random-print")[0]
+
+
+def test_workflow_bash(db_session):
+    workflow = """workflow:
+  id: random-bash
+  name: random-bash
+  triggers:
+    - type: manual
+  steps:
+    - name: bash-step
+      provider:
+        type: bash
+        with:
+          command: echo -n 5
+  actions:
+    - name: bash-if
+      if: "{{ steps.bash-step.results.stdout }} == '5' "
+      provider:
+        type: console
+        with:
+          message: "It is actually 5!"
+"""
+    workflow_db = Workflow(
+        id="test-bash",
+        name="test-bash",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test bash",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    assert wf_execution.results.get("bash-step")[0].get("stdout") == "5"
+
+
+def test_workflow_bash_python(db_session):
+    workflow = """workflow:
+  id: random-bash
+  name: random-bash
+  triggers:
+    - type: manual
+  steps:
+    - name: bash-step
+      provider:
+        type: bash
+        with:
+          shell: true
+          command: |
+            cat << 'EOF' > script.py
+            import random
+            print(random.randint(1, 100))
+            EOF
+            python script.py && rm script.py
+"""
+    workflow_db = Workflow(
+        id="test-bash",
+        name="test-bash",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test bash",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    assert wf_execution.results.get("bash-step")[0].get("return_code") == 0
