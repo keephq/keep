@@ -23,7 +23,6 @@ async def wait_for_vector_db(delay=3) -> MilvusVectorStore:
     while True:
         try:
             vector_store = MilvusVectorStore(
-                uri=config_settings.VECTOR_DB_URL,
                 host=config_settings.VECTOR_DB_HOST,
                 port=config_settings.VECTOR_DB_PORT,
                 collection_name="incident_collection",
