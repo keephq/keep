@@ -58,13 +58,11 @@ async def retrieve_related_incidents(
     Returns:
         list[str]: A list of related incident IDs.
     """
-    print(f"{INCIDENT_MANAGER_URL=}")
     # Placeholder for actual retrieval logic
     logger.info(f"Retrieving related incidents for incident ID: {incident_id}")
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{INCIDENT_MANAGER_URL}/retrieve-related-incidents",
-            params={"incident_id": incident_id}
+            f"{INCIDENT_MANAGER_URL}/retrieve-related-incidents/{incident_id}",
         )
         if response.status_code != 200:
             logger.error(f"Failed to retrieve related incidents: {response.text}")
@@ -74,7 +72,6 @@ async def retrieve_related_incidents(
                 count=0,
                 items=[]
             )
-        print(f"Response: {response.json()}")
         data = response.json()
         return RelatedIncidentsDto(
             limit=0,
@@ -136,30 +133,22 @@ async def get_all_related_incidents(
         },
     )
 
-    # get all preset ids that the user has access to
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        authenticated_entity.tenant_id
-    )
     # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
-    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
-        resource_type="incident",
-        authenticated_entity=authenticated_entity,
-    )
-    print(f"Allowed incident IDs: {allowed_incident_ids}")
     related_incidents = await retrieve_related_incidents(
         incident_id=incident_id,
     )
     related_incident_ids = [
         str(incident.id) for incident in related_incidents.items
     ]
-    # use the related incident ids if not in allowed_incident_ids
-    if allowed_incident_ids:
-        allowed_incident_ids = [
-            incident_id for incident_id in allowed_incident_ids
-            if incident_id in set(related_incident_ids)
-        ]
-    else:
-        allowed_incident_ids = related_incident_ids
+    # Here, allowed_incident_ids is overridden to only include related incidents
+    allowed_incident_ids = related_incident_ids
+    if not allowed_incident_ids:
+        return IncidentsPaginatedResultsDto(
+            limit=0,
+            offset=0,
+            count=0,
+            items=[],
+        )
 
     incident_bl = IncidentBl(tenant_id, session=None, pusher_client=None)
 

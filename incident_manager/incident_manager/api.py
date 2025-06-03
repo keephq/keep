@@ -40,7 +40,7 @@ async def create_incident(
     )
 
 
-@incident_router.get("/retrieve-related-incidents")
+@incident_router.get("/retrieve-related-incidents/{incident_id}")
 async def retrieve_related_incidents(
     incident_id: str,
     vector_db_index: vector_db_index_dependency,

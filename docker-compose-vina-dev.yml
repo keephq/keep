@@ -118,12 +118,15 @@ services:
       - DEBUG=${DEBUG}
       - LOG_LEVEL=${LOG_LEVEL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - VECTOR_DB_URL=${VECTOR_DB_URL}
     volumes:
       - ./incident_manager/incident_manager:/app/incident_manager
+      - vector_db:/data
 
 volumes:
   mysql_data:
   postgres_data:
+  vector_db:
 
 networks:
   keep-network:

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 1536
     SIMILARITY_CUTOFF: float = 0.9
     SIMILARITY_TOP_K: int = 15
+    VECTOR_DB_URL: str = "/data/milvus_vector_db.db"
 
 
 config_settings = Settings()
