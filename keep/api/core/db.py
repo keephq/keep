@@ -1197,8 +1197,7 @@ def get_workflow_execution(
             joinedload(WorkflowExecution.workflow_to_alert_execution),
             joinedload(WorkflowExecution.workflow_to_incident_execution),
         )
-        result = session.exec(execution_with_relations).first()
-        return result
+        return session.exec(execution_with_relations).one()
 
 
 def get_workflow_execution_with_logs(
@@ -1210,9 +1209,6 @@ def get_workflow_execution_with_logs(
         execution = get_workflow_execution(
             tenant_id, workflow_execution_id, is_test_run
         )
-        if not execution:
-            # todo: raise an exception
-            return None, []
         logs = session.exec(
             select(WorkflowExecutionLog).where(
                 WorkflowExecutionLog.workflow_execution_id == workflow_execution_id

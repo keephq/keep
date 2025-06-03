@@ -29,6 +29,7 @@ from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflow import Workflow
+from sqlalchemy.exc import NoResultFound
 
 
 class WorkflowStore:
@@ -43,7 +44,13 @@ class WorkflowStore:
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ):
-        return get_workflow_execution(tenant_id, workflow_execution_id, is_test_run)
+        try:
+            return get_workflow_execution(tenant_id, workflow_execution_id, is_test_run)
+        except NoResultFound:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow execution {workflow_execution_id} not found",
+            )
 
     def get_workflow_execution_with_logs(
         self,
@@ -51,9 +58,15 @@ class WorkflowStore:
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ):
-        return get_workflow_execution_with_logs(
-            tenant_id, workflow_execution_id, is_test_run
-        )
+        try:
+            return get_workflow_execution_with_logs(
+                tenant_id, workflow_execution_id, is_test_run
+            )
+        except NoResultFound:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow execution {workflow_execution_id} not found",
+            )
 
     def create_workflow(
         self,
