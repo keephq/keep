@@ -24,6 +24,8 @@ async def wait_for_vector_db(delay=3) -> MilvusVectorStore:
         try:
             vector_store = MilvusVectorStore(
                 uri=config_settings.VECTOR_DB_URL,
+                host=config_settings.VECTOR_DB_HOST,
+                port=config_settings.VECTOR_DB_PORT,
                 collection_name="incident_collection",
                 dim=config_settings.EMBEDDING_DIMENSION,
             )
@@ -43,10 +45,8 @@ async def lifespan(app: FastAPI):
     # Retry until MySQL is ready
     vector_store = await wait_for_vector_db()
     logger.info("VectorDB is ready. Proceeding with app startup.")
-    
-    vector_db_index = VectorStoreIndex.from_vector_store(
-        vector_store=vector_store
-    )
+
+    vector_db_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
     app.state.vector_db_index = vector_db_index
     yield
 

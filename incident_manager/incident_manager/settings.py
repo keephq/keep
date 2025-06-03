@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
+
 class Settings(BaseSettings):
     """Pydantic settings class for the settings module."""
 
@@ -19,7 +20,9 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 1536
     SIMILARITY_CUTOFF: float = 0.9
     SIMILARITY_TOP_K: int = 15
-    VECTOR_DB_URL: str = "/data/milvus_vector_db.db"
+    VECTOR_DB_URL: str | None = None
+    VECTOR_DB_HOST: str | None = None
+    VECTOR_DB_PORT: int | None = None
 
 
 config_settings = Settings()

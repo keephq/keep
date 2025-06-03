@@ -11,7 +11,7 @@ import { useAlertsByRunID, useIncident, useIncidentAlerts, useSimilarIncidents }
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts", prefetch: true },
-  { icon: CiViewTimeline, label: "Alerts by Run", path: "alerts-by-run", prefetch: true },
+  { icon: CiViewTimeline, label: "Context", path: "alerts-by-run", prefetch: true },
   { icon: BoltIcon, label: "Similar Incidents", path: "similar-incidents", prefetch: true },
   // { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   // {
