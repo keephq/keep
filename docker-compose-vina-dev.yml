@@ -1,6 +1,5 @@
 services:
   keep-frontend:
-    image: curiosity2023/soliton-ip-keep-alert-management-ui:latest
     ports:
       - "24000:3000"
     environment:
@@ -105,6 +104,19 @@ services:
       - mysql
     volumes:
       - ./event_generator/local_data:/event_generator/local_data
+
+  incident-manager:
+    build:
+      context: ./incident_manager
+      dockerfile: Dockerfile
+    ports:
+      - "24005:8082"
+    environment:
+      - DEBUG=${DEBUG}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./incident_manager/incident_manager:/app/incident_manager
 
 volumes:
   mysql_data:

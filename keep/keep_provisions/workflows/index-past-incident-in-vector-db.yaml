@@ -1,0 +1,30 @@
+workflow:
+  id: 12345678-1234-5678-1234-123456789012
+  name: Index Past Incident in Vector DB
+  description: Indexes past incidents from a PostgreSQL database into a vector database, with configurable intervals and data mapping.
+  disabled: false
+  triggers:
+    - type: incident
+      events:
+        - created
+  inputs: []
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: http-action
+      provider:
+        type: http
+        config: "{{ providers.default-http }}"
+        with:
+          url: http://incident-manager:8082/index-incident
+          method: POST
+          headers:
+            accept: application/json
+            Content-Type: application/json
+          body:
+            incidents:
+              - id: "{{ incident.id }}"
+                user_generated_name: "{{ incident.user_generated_name }}"
+                user_summary: " {{ incident.user_summary }}"

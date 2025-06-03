@@ -9,17 +9,21 @@ from llama_index.core.vector_stores.types import (
 )
 from llama_index.core.schema import QueryBundle
 from llama_index.core.schema import Document
+from llama_index.core.postprocessor import SimilarityPostprocessor
+
 
 from incident_manager.dependencies import vector_db_index_dependency
 
 logger = logging.getLogger(__name__)
 incident_router = APIRouter()
+postprocessor = SimilarityPostprocessor(similarity_cutoff=0.9)
 
 
 @incident_router.post("/index-incident")
 async def create_incident(
     incidents: IncidentBulkPostBody, vector_db_index: vector_db_index_dependency
 ) -> None:
+    print(incidents)
     documents = [
         Document(
             text=incident.user_generated_name,
@@ -56,15 +60,17 @@ async def retrieve_related_incidents(
         logger.warning(f"No incidents found with ID: {incident_id}")
         return []
     incident_embedding = nodes[0].embedding
-    related_nodes = vector_db_index.as_retriever(
+    retriever = vector_db_index.as_retriever(
         similarity_top_k=top_k,
+        similarity_threshold=0.9,
     )
-    related_nodes = await related_nodes.aretrieve(
+    related_nodes = await retriever.aretrieve(
         str_or_query_bundle=QueryBundle(
             query_str="",
             embedding=incident_embedding,
         )
     )
+    related_nodes = postprocessor.postprocess_nodes(related_nodes)
     return [
         IncidentDto(
             id=node.metadata["incident_id"],
@@ -72,4 +78,5 @@ async def retrieve_related_incidents(
             user_summary=node.metadata["user_summary"],
         )
         for node in related_nodes
+        if node.metadata.get("incident_id") != incident_id
     ]
