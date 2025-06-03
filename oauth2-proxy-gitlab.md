@@ -1,0 +1,239 @@
+# OAuth2‑Proxy + Keep + GitLab SSO
+
+A **step‑by‑step cookbook** for adding single‑sign‑on to [Keep](https://github.com/keephq) with your **self‑hosted GitLab** using [oauth2‑proxy](https://oauth2‑proxy.github.io/) and the NGINX Ingress Controller.
+
+> **Conventions used below**
+>
+> * `<keep-host>`             – public FQDN where users access Keep (e.g. `keep.example.com`)
+> * `<gitlab-host>`           – URL of your GitLab instance (e.g. `gitlab.example.com`)
+> * `<registry-host>`         – container registry that stores images (omit if you use the public images)
+> * Kubernetes namespace **`keep`** – feel free to change it everywhere if you prefer another namespace.
+
+---
+
+## 1  Prerequisites
+
+| What                                        | Why                                                   |
+| ------------------------------------------- | ----------------------------------------------------- |
+| Kubernetes cluster & `keep` namespace       | Where Keep, oauth2‑proxy and Services live            |
+| **ingress‑nginx** (or compatible)           | Provides the `auth_request` feature oauth2‑proxy uses |
+| GitLab 15 + at `https://<gitlab-host>`      | OpenID‑Connect issuer                                 |
+| Helm 3.x & offline charts/images (optional) | If your cluster has no Internet egress                |
+
+---
+
+## 2  Create the GitLab OAuth application
+
+1. **GitLab ▸ Admin → Applications → New**
+2. Name → `keep‑sso`
+3. Redirect URI → `https://<keep-host>/oauth2/callback`
+4. Scopes → `openid profile email` (+ `read_api` if you plan to gate access by group/project)
+5. Save – copy the generated **Application ID** and **Secret**.
+
+---
+
+## 3  Kubernetes secrets & config
+
+```bash
+# 3.1 Generate a 32‑byte cookie secret
+echo "$(openssl rand -base64 32 | head -c 32 | base64)" > cookie.b64
+
+# 3.2 Store GitLab credentials and cookie secret
+kubectl -n keep create secret generic oauth2-proxy \
+  --from-literal=client-id=<GITLAB_APP_ID> \
+  --from-literal=client-secret=<GITLAB_APP_SECRET> \
+  --from-file=cookie-secret=cookie.b64
+
+# 3.3 Add gitlab credentials and cookie secret using OAUTH2_PROXY ENV variables
+OAUTH2_PROXY_CLIENT_ID=<GITLAB_APP_ID> 
+OAUTH2_PROXY_CLIENT_SECRET=<GITLAB_APP_SECRET> 
+OAUTH2_PROXY_COOKIE_SECRET=cookie.b64
+
+# (optional) store GitLab’s custom CA certificate
+kubectl -n keep create secret generic gitlab-ca \
+  --from-file=gitlab-ca.pem
+```
+
+```yaml
+# 3.4 oauth2_proxy.cfg (ConfigMap)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy
+  namespace: keep
+data:
+  oauth2_proxy.cfg: |
+    email_domains = ["*"]
+    upstreams     = ["file:///dev/null"]   # we only use auth‑request mode
+    provider      = "gitlab"
+    cookie_name   = "keep-dev" #if empty, will use default cookie name: _oauth2_proxy
+    cookie_secure = true
+```
+
+---
+
+## 4  Deploy **oauth2‑proxy** (Helm)
+
+```yaml
+# values.oauth2-proxy.yaml – minimal baseline
+image:                     # replace with public image if desired
+  repository: <registry-host>/oauth2-proxy/oauth2-proxy
+  tag: v7.9.0
+
+config:
+  configFile: |-
+    # content comes from the ConfigMap above
+
+extraArgs:
+  oidc-issuer-url: https://<gitlab-host>
+  set-xauthrequest: "true"            # add X-Auth-Request-*/X-Forwarded-* headers
+  pass-authorization-header: "true"   # add Authorization: Bearer <id_token>
+  # provider-ca-file: /ca/gitlab-ca.pem   # enable if you mounted a corporate CA or use ssl-insecure-skip-verify: "true" to disable SSL check.
+extraVolumes:
+  - name: gitlab-ca
+    secret:
+      secretName: gitlab-ca
+extraVolumeMounts:
+  - name: gitlab-ca
+    mountPath: /ca/gitlab-ca.pem
+    subPath: gitlab-ca.pem
+    readOnly: true
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false   # we only need an internal Service
+```
+
+```bash
+helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
+helm upgrade --install oauth2-proxy oauth2-proxy/oauth2-proxy \
+     -n keep -f values.oauth2-proxy.yaml
+```
+
+*Lab‑only shortcut*: instead of mounting the CA you can temporarily add
+`ssl-insecure-skip-verify: "true"` under `extraArgs`.
+
+---
+
+## 5  Patch (or create) Keep’s Ingress resource
+
+Add **three** annotations so ingress‑nginx delegates auth to the Service:
+
+```yaml
+global:
+  ingress:
+    annotations:
+      nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.keep.svc.cluster.local/oauth2/auth"
+      nginx.ingress.kubernetes.io/auth-signin: "https://<keep-host>/oauth2/start?rd=$request_uri"
+      nginx.ingress.kubernetes.io/auth-response-headers: "authorization,x-auth-request-user,x-auth-request-email,x-forwarded-user,x-forwarded-email,x-forwarded-groups"
+```
+
+Redeploy Keep (or patch the Ingress manually).
+
+---
+
+## 6  Environment variables for Keep
+
+```yaml
+backend:
+  env:
+    - name: AUTH_TYPE
+      value: OAUTH2PROXY
+    - name: KEEP_OAUTH2_PROXY_USER_HEADER
+      value: x-auth-request-email
+    - name: KEEP_OAUTH2_PROXY_ROLE_HEADER
+      value: x-auth-request-groups
+    - name: KEEP_OAUTH2_PROXY_AUTO_CREATE_USER
+      value: true
+    - name: KEEP_OAUTH2_PROXY_ADMIN_ROLE
+      vakue: <your gitlab group that will have admin role in your keep ui>
+    - name: KEEP_OAUTH2_PROXY_NOC_ROLE
+      value: <your gitlab group that wont have access to your keep ui>
+
+frontend:
+  env:
+    # Public URL the **browser** should use
+    - name: NEXTAUTH_URL
+      value: "https://<keep-host>"
+
+    # URL the **server‑side** Next.js code can always reach
+    - name: NEXTAUTH_URL_INTERNAL
+      value: "http://keep-frontend.keep.svc.cluster.local:3000"
+
+    # API URLs
+    - name: API_URL_CLIENT   # browser → ingress
+      value: "/v2"
+    - name: API_URL          # server → backend Service (no auth‑proxy)
+      value: "http://keep-backend.keep.svc.cluster.local:8080"
+
+    #Oauth2-Proxy
+    - name: AUTH_TYPE
+      value: OAUTH2PROXY
+    - name: KEEP_OAUTH2_PROXY_USER_HEADER
+      value: x-auth-request-email
+    - name: KEEP_OAUTH2_PROXY_ROLE_HEADER
+      value: x-auth-request-groups
+```
+
+Roll out the frontend:
+
+```bash
+kubectl -n keep rollout restart deploy/keep-frontend
+```
+
+---
+
+## 7  Quick validation
+
+```bash
+# 7.1 Call auth endpoint without cookie – expect 401
+curl -I http://oauth2-proxy.keep.svc.cluster.local/oauth2/auth
+
+# 7.2 Copy the keep-dev cookie from your browser session
+curl -I --cookie "keep-dev=<COOKIE>" \
+     http://oauth2-proxy.keep.svc.cluster.local/oauth2/auth   # expect 200
+```
+
+Browser smoke‑test:
+
+* `https://<keep-host>` → redirect to GitLab → sign in → return to Keep.
+* DevTools ▸ Network → `/api/auth/session` returns **200**.
+
+---
+
+## 8  Troubleshooting
+
+| Symptom                                                       | Common cause & remedy                                                                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TLS error** `x509: certificate signed by unknown authority` | Mount your GitLab CA (`provider-ca-file`) or set `ssl-insecure-skip-verify=true` (dev only).                                                |
+| Ingress logs `auth request unexpected status: 502`            | `auth-url` is pointing at the external host – use the internal Service DNS (`http://oauth2-proxy.keep.svc.cluster.local`).                  |
+| Browser loops at `/signin?callbackUrl=…`                      | ① `set-xauthrequest` not enabled, or ② `auth-response-headers` not set, or ③ backend receives calls through oauth2‑proxy (`API_URL` wrong). |
+| Redirect to `0.0.0.0:3000` or pod name                        | `NEXTAUTH_URL` missing at **build time**; rebuild UI or override env.                                                                       |
+| 401 from `/oauth2/auth` even with cookie                      | Cookie expired / clocks out of sync. Clear cookie and re‑login.                                                                             |
+
+---
+
+## 9  Clean‑up
+
+```bash
+helm -n keep uninstall oauth2-proxy
+helm -n keep uninstall keep          # if you want to remove Keep
+kubectl -n keep delete secret oauth2-proxy gitlab-ca
+```
+
+---
+
+### Appendix A – Generate a 32‑byte cookie secret
+
+```bash
+openssl rand -hex 16 | xxd -r -p | base64
+```
+
+### Appendix B – Sync images to an offline registry (example)
+
+```bash
+skopeo copy docker://quay.io/oauth2-proxy/oauth2-proxy:v7.9.0 \
+             docker://<registry-host>/oauth2-proxy/oauth2-proxy:v7.9.0
+```
