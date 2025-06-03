@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     VECTOR_DB_COLLECTION_NAME: str = "incidents"
     EMBEDDING_DIMENSION: int = 1536
+    SIMILARITY_CUTOFF: float = 0.9
+    SIMILARITY_TOP_K: int = 15
 
 
 config_settings = Settings()

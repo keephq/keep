@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import Depends, APIRouter
-from incident_manager.schemas import IncidentBulkPostBody, IncidentDto
 from llama_index.core.vector_stores.types import (
     MetadataFilter,
     MetadataFilters,
@@ -12,11 +11,13 @@ from llama_index.core.schema import Document
 from llama_index.core.postprocessor import SimilarityPostprocessor
 
 
+from incident_manager.schemas import IncidentBulkPostBody, IncidentDto
+from incident_manager.settings import config_settings
 from incident_manager.dependencies import vector_db_index_dependency
 
 logger = logging.getLogger(__name__)
 incident_router = APIRouter()
-postprocessor = SimilarityPostprocessor(similarity_cutoff=0.9)
+postprocessor = SimilarityPostprocessor(similarity_cutoff=config_settings.SIMILARITY_CUTOFF)
 
 
 @incident_router.post("/index-incident")
@@ -61,8 +62,7 @@ async def retrieve_related_incidents(
         return []
     incident_embedding = nodes[0].embedding
     retriever = vector_db_index.as_retriever(
-        similarity_top_k=top_k,
-        similarity_threshold=0.9,
+        similarity_top_k=config_settings.SIMILARITY_TOP_K,
     )
     related_nodes = await retriever.aretrieve(
         str_or_query_bundle=QueryBundle(
