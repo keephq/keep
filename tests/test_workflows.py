@@ -523,7 +523,7 @@ def test_workflow_python(db_session):
     )
 
     wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
-    assert "Random number:" in wf_execution.results.get("random-print")
+    assert "Random number:" in wf_execution.results.get("random-print")[0]
 
 
 def test_workflow_bash(db_session):
