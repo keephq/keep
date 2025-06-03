@@ -165,7 +165,10 @@ export const useAlertsByRunID = (
   const api = useApi();
 
   return useSWR<PaginatedIncidentAlertsDto>(
-    () => (api.isReady() ? `alerts-by-run-id:${incidentId}:${limit}:${offset}` : null),
+    () =>
+      api.isReady()
+        ? `alerts-by-run-id:${incidentId}:${limit}:${offset}`
+        : null,
     async () => {
       // Step 1: Fetch incident alerts
       const incidentAlerts = await api.get(
@@ -205,6 +208,18 @@ export const useAlertsByRunID = (
     options
   );
 };
+
+export const useSimilarIncidents = (incidentId: string) => {
+  const api = useApi();
+  return useSWR<PaginatedIncidentsDto>(
+    () =>
+      api.isReady()
+        ? `/incident-manager/retrieve-related-incidents/${incidentId}`
+        : null,
+    (url: string) => api.get(url)
+  );
+};
+
 export const useIncidentFutureIncidents = (
   incidentId: string,
   options: SWRConfiguration = {
@@ -289,7 +304,10 @@ export const usePollIncidentAlerts = (incidentId: string) => {
   }, [bind, unbind, handleIncoming]);
 };
 
-export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) => {
+export const usePollIncidents = (
+  mutateIncidents: any,
+  paused: boolean = false
+) => {
   const { bind, unbind } = useWebsocket();
   const [incidentChangeToken, setIncidentChangeToken] = useState<
     string | undefined
