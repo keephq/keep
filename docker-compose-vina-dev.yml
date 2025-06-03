@@ -1,5 +1,7 @@
 services:
   keep-frontend:
+    build:
+      dockerfile: docker/Dockerfile.dev.ui
     ports:
       - "24000:3000"
     environment:
@@ -45,6 +47,7 @@ services:
       - PUSHER_HOST=keep-websocket-server-common
       - PUSHER_PORT=6001
       - USE_NGROK=false
+      - INCIDENT_MANAGER_URL=http://incident-manager:8082
     volumes:
       - .:/app
       - ./state:/state

@@ -44,7 +44,6 @@ async def create_incident(
 async def retrieve_related_incidents(
     incident_id: str,
     vector_db_index: vector_db_index_dependency,
-    top_k: int = 10,
 ) -> list[IncidentDto]:
     nodes = vector_db_index.vector_store.get_nodes(
         filters=MetadataFilters(
