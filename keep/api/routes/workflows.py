@@ -1070,7 +1070,7 @@ def get_workflow_execution_status(
 ) -> WorkflowExecutionDTO:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
-    workflow_execution = workflowstore.get_workflow_execution(
+    workflow_execution, logs = workflowstore.get_workflow_execution_with_logs(
         workflow_execution_id=workflow_execution_id,
         tenant_id=tenant_id,
     )
@@ -1097,7 +1097,7 @@ def get_workflow_execution_status(
         event_id = workflow_execution.workflow_to_incident_execution.incident_id
         event_type = "incident"
 
-    workflow_execution_dto = WorkflowExecutionDTO(
+    return WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_name=workflow.name if workflow else None,
         workflow_id=workflow_execution.workflow_id,
@@ -1114,13 +1114,12 @@ def get_workflow_execution_status(
                 message=log.message,
                 context=log.context if log.context else {},
             )
-            for log in workflow_execution.logs
+            for log in logs
         ],
         results=workflow_execution.results,
         event_id=event_id,
         event_type=event_type,
     )
-    return workflow_execution_dto
 
 
 @router.put(
