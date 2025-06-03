@@ -141,7 +141,7 @@ export default function SimilarIncidentsTable({
     });
 
 
-    if (isLoading || error || !incidentItems) {
+    if (isLoading || error || !incidentItems?.items || incidentItems.items.length === 0) {
         return (
             <EmptyStateCard
                 className="w-full"
