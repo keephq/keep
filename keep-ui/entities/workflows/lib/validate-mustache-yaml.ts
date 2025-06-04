@@ -186,6 +186,26 @@ export const validateMustacheVariableForYAMLStep = (
     }
     return null;
   }
+  if (parts[0] === "inputs") {
+    const inputName = parts?.[1];
+    if (!inputName) {
+      return [
+        `Variable: '${cleanedVariableName}' - To access an input, you need to specify the input name.`,
+        "warning",
+      ];
+    }
+    if (!definition.inputs?.find((i) => i.name === inputName)) {
+      return [
+        `Variable: '${cleanedVariableName}' - Input '${inputName}' not defined. ${
+          definition.inputs?.length
+            ? `Available inputs: ${definition.inputs.map((i) => i.name).join(", ")}`
+            : "Define inputs in the workflow definition under 'inputs'."
+        }`,
+        "error",
+      ];
+    }
+    return null;
+  }
   if (parts[0] === "consts") {
     const constName = parts[1];
     if (!constName) {
@@ -200,6 +220,7 @@ export const validateMustacheVariableForYAMLStep = (
         "error",
       ];
     }
+    return null;
   }
   if (parts[0] === "steps") {
     const stepName = parts[1];

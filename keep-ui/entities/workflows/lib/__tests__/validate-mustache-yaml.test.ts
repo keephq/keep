@@ -29,6 +29,13 @@ describe("validateMustacheVariableNameForYAML", () => {
     id: "test-workflow",
     name: "Test Workflow",
     description: "Test Description",
+    inputs: [
+      {
+        name: "message",
+        description: "The message to log to the console",
+        type: "string",
+      },
+    ],
     triggers: [
       {
         type: "manual",
@@ -536,6 +543,35 @@ describe("validateMustacheVariableNameForYAML", () => {
     );
     expect(result).toEqual([
       "Variable: 'vars.test' - Variable 'test' not found in step definition.",
+      "error",
+    ]);
+  });
+
+  it("should validate inputs variable", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "inputs.message",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toBeNull();
+  });
+
+  it("should return an error if inputs variable is not found", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "inputs.missing",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toEqual([
+      "Variable: 'inputs.missing' - Input 'missing' not defined. Available inputs: message",
       "error",
     ]);
   });

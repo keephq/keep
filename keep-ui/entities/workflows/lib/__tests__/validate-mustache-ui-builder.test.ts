@@ -127,6 +127,13 @@ describe("validateAllMustacheVariablesInString", () => {
       disabled: false,
       isLocked: false,
       consts: {},
+      inputs: [
+        {
+          name: "test",
+          description: "Test Input",
+          type: "string",
+        },
+      ],
     },
   };
   const mockSecrets = {};
@@ -293,5 +300,27 @@ describe("validateAllMustacheVariablesInString", () => {
       mockSecrets
     );
     expect(result).toEqual(["Variable: 'unknown.var' - unknown variable."]);
+  });
+
+  it("should validate inputs variable", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ inputs.test }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("should return an error if inputs variable is not found", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ inputs.missing }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual([
+      "Variable: 'inputs.missing' - Input 'missing' not defined. Available inputs: test",
+    ]);
   });
 });

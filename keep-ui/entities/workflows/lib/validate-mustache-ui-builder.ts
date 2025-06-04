@@ -155,6 +155,20 @@ export const validateMustacheVariableForUIBuilderStep = (
       return `Variable: '${cleanedVariableName}' - To access the results of a step, use 'results' as suffix.`;
     }
   }
+  if (parts[0] === "inputs") {
+    const inputName = parts?.[1];
+    if (!inputName) {
+      return `Variable: '${cleanedVariableName}' - To access an input, you need to specify the input name.`;
+    }
+    if (!definition.properties.inputs?.find((i) => i.name === inputName)) {
+      return `Variable: '${cleanedVariableName}' - Input '${inputName}' not defined. ${
+        definition.properties.inputs?.length
+          ? `Available inputs: ${definition.properties.inputs.map((i) => i.name).join(", ")}`
+          : "Define inputs in the workflow definition under 'inputs'."
+      }`;
+    }
+    return null;
+  }
   return `Variable: '${cleanedVariableName}' - unknown variable.`;
 };
 
