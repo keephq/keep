@@ -4,7 +4,7 @@ import { CorrelationSidebarBody } from "./CorrelationSidebarBody";
 import { CorrelationFormType } from "./types";
 import { Drawer } from "@/shared/ui/Drawer";
 import { Rule } from "@/utils/hooks/useRules";
-import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
+import { DefaultRuleGroupType } from "react-querybuilder";
 import { convertCelAstToQueryBuilderAst } from "./convert-cel-ast-to-query-builder-ast/convert-cel-ast-to-query-builder-ast.function";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
