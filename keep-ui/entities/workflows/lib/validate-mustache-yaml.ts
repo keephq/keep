@@ -9,6 +9,8 @@ import { Provider } from "@/shared/api/providers";
 import { ALLOWED_MUSTACHE_VARIABLE_REGEX } from "./mustache";
 import { checkProviderNeedsInstallation } from "./validate-definition";
 
+type Optional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
+
 /**
  * Validates a mustache variable name in a YAML workflow definition.
  *
@@ -23,7 +25,7 @@ import { checkProviderNeedsInstallation } from "./validate-definition";
  */
 export const validateMustacheVariableForYAMLStep = (
   cleanedVariableName: string,
-  currentStep: YamlStepOrAction,
+  currentStep: Optional<YamlStepOrAction, "provider">,
   currentStepType: "step" | "action",
   definition: YamlWorkflowDefinition["workflow"],
   secrets: Record<string, string>,
@@ -110,7 +112,7 @@ export const validateMustacheVariableForYAMLStep = (
         (p) => p.details.name === providerName
       );
       if (doesProviderNeedInstallation && !installedProvider) {
-        const providerType = currentStep.provider.type;
+        const providerType = currentStep.provider?.type;
         const availableProvidersOfType = installedProviders.filter(
           (p) => p.type === providerType
         );
@@ -128,7 +130,7 @@ export const validateMustacheVariableForYAMLStep = (
         (p) => p.details.name === providerName
       );
       if (!provider) {
-        const providerType = currentStep.provider.type;
+        const providerType = currentStep.provider?.type;
         const availableProvidersOfType = installedProviders.filter(
           (p) => p.type === providerType
         );
