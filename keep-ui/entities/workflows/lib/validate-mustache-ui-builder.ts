@@ -32,7 +32,6 @@ export const validateMustacheVariableForUIBuilderStep = (
     // wtf exception, should never happen
     throw new Error("Current step not found in the sequence");
   }
-  console.log("flatSequence", flatSequence);
   if (!cleanedVariableName) {
     return "Empty mustache variable.";
   }
@@ -106,6 +105,7 @@ export const validateMustacheVariableForUIBuilderStep = (
     if (!definition.properties.consts?.[constName]) {
       return `Variable: '${cleanedVariableName}' - Constant '${constName}' not found.`;
     }
+    return null;
   }
   if (parts[0] === "steps") {
     const stepName = parts[1];
