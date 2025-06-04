@@ -17,17 +17,3 @@ export function extractMustacheVariables(yamlString: string): string[] {
       .filter((variable) => variable.length > 0 && !variable.endsWith("."))
   );
 }
-
-/**
- * Extracts the trimmed value from mustache syntax by removing curly brackets.
- *
- * @param mustacheString - A string containing mustache syntax like "{{ variable }}"
- * @returns The trimmed inner value without curly brackets
- */
-export function extractMustacheValue(mustacheString: string): string {
-  // Use regex to match content between {{ and }} and trim whitespace
-  const match = mustacheString.match(/\{\{\s*(.*?)\s*\}\}/);
-
-  // Return the captured group if found, otherwise return empty string
-  return match ? match[1] : "";
-}

@@ -115,7 +115,7 @@ describe("validateMustacheVariableNameForYAML", () => {
           api_key: "test-key",
         },
       },
-      id: "test-provider",
+      id: "test-provider-notrequiringinstallation",
       display_name: "Test Provider",
       can_query: false,
       can_notify: false,
