@@ -27,6 +27,7 @@ export const PresetsNoise = ({ presets }: PresetsNoiseProps) => {
     async () => {
       let shouldDoNoise = false;
 
+      // Iterate through noisy presets and find first that has an Alert that should trigger noise
       for (let noisyPreset of noisyPresets) {
         const noisyAlertsCelRules = [
           "status == 'firing' && deleted == false && dismissed == false",
