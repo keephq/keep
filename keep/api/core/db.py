@@ -1179,24 +1179,42 @@ def push_logs_to_db(log_entries):
 
 
 def get_workflow_execution(
-    tenant_id: str, workflow_execution_id: str, is_test_run: bool | None = None
+    tenant_id: str,
+    workflow_execution_id: str,
+    is_test_run: bool | None = None,
 ):
     with Session(engine) as session:
-        base_query = session.query(WorkflowExecution)
+        base_query = select(WorkflowExecution)
         if is_test_run is not None:
-            base_query = base_query.filter(
+            base_query = base_query.where(
                 WorkflowExecution.is_test_run == is_test_run,
             )
-        base_query = base_query.filter(
+        base_query = base_query.where(
             WorkflowExecution.id == workflow_execution_id,
             WorkflowExecution.tenant_id == tenant_id,
         )
-        execution_with_logs = base_query.options(
-            joinedload(WorkflowExecution.logs),
+        execution_with_relations = base_query.options(
             joinedload(WorkflowExecution.workflow_to_alert_execution),
             joinedload(WorkflowExecution.workflow_to_incident_execution),
-        ).one()
-    return execution_with_logs
+        )
+        return session.exec(execution_with_relations).one()
+
+
+def get_workflow_execution_with_logs(
+    tenant_id: str,
+    workflow_execution_id: str,
+    is_test_run: bool | None = None,
+):
+    with Session(engine) as session:
+        execution = get_workflow_execution(
+            tenant_id, workflow_execution_id, is_test_run
+        )
+        logs = session.exec(
+            select(WorkflowExecutionLog).where(
+                WorkflowExecutionLog.workflow_execution_id == workflow_execution_id
+            )
+        ).all()
+        return execution, logs
 
 
 def get_last_workflow_executions(tenant_id: str, limit=20):
