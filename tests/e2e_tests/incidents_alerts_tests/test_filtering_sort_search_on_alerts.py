@@ -778,27 +778,23 @@ def test_adding_new_noisy_preset(
         # Wait for navigation to complete to either signin or providers page
         # (since we might get redirected automatically)
         browser.wait_for_load_state("networkidle")
-
         cel_input_locator = browser.locator(".alerts-cel-input")
         cel_input_locator.click()
         browser.keyboard.type("name.contains('high')")
         browser.keyboard.press("Enter")
         browser.wait_for_timeout(500)
-
         browser.locator("[data-testid='save-preset-button']").click()
-
         preset_form_locator = browser.locator("[data-testid='preset-form']")
         preset_form_locator.locator("[data-testid='preset-name-input']").fill(
             "Test noisy preset"
         )
-
         preset_form_locator.locator("[data-testid='is-noisy-switch']").click()
-
         preset_form_locator.locator("[data-testid='save-preset-button']").click()
         expect(
             browser.locator("[data-testid='noisy-presets-audio-player'].playing")
         ).to_have_count(1)
         browser.reload()
+
         # check that it's still playing after reloading
         expect(
             browser.locator("[data-testid='noisy-presets-audio-player'].playing")
