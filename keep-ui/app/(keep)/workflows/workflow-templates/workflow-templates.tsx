@@ -50,13 +50,6 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
     return mockWorkflows;
   }, [mockWorkflows, mockLoading, paginationState]);
 
-  const setPaginationStateCallback = useCallback(
-    (pageIndex: number, limit: number, offset: number) => {
-      setPaginationState({ limit, offset });
-    },
-    [setPaginationState]
-  );
-
   function renderBody() {
     if (mockError) {
       return <ErrorComponent error={mockError} reset={() => refresh()} />;
@@ -105,7 +98,8 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
             isRefreshing={false}
             pageSizeOptions={[12]}
             onRefresh={() => {}}
-            onStateChange={setPaginationStateCallback}
+            state={paginationState}
+            onStateChange={setPaginationState}
           />
         </div>
       </>
