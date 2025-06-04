@@ -799,6 +799,7 @@ def test_adding_new_noisy_preset(
             browser.locator("[data-testid='noisy-presets-audio-player'].playing")
         ).to_have_count(1)
         browser.reload()
+        # check that it's still playing after reloading
         expect(
             browser.locator("[data-testid='noisy-presets-audio-player'].playing")
         ).to_have_count(1)
