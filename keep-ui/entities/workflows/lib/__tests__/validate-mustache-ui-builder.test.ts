@@ -218,6 +218,22 @@ describe("validateAllMustacheVariablesInString", () => {
       mockSecrets
     );
     expect(result2).toEqual([]);
+
+    const result3 = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ foreach.value }}",
+      telegramAction,
+      definition,
+      mockSecrets
+    );
+    expect(result3).toEqual([]);
+
+    const result4 = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ value }}",
+      telegramAction,
+      definition,
+      mockSecrets
+    );
+    expect(result4).toEqual([]);
   });
 
   it("should return an error if bracket notation is used", () => {
@@ -230,5 +246,52 @@ describe("validateAllMustacheVariablesInString", () => {
     expect(result).toEqual([
       "Variable: 'steps[\'python-step\'].results' - bracket notation is not supported, use dot notation instead.",
     ]);
+  });
+
+  it("should validate vars variables", () => {
+    const step: V2Step = {
+      id: "step1",
+      name: "First Step",
+      componentType: "task",
+      type: "step-test",
+      properties: {
+        actionParams: [],
+        stepParams: [],
+        vars: { test: "test" },
+      },
+    };
+    const definition = {
+      ...mockDefinition,
+      sequence: [step],
+    };
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ vars.test }}",
+      step,
+      definition,
+      mockSecrets
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("should return an error if vars variable is not found", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ vars.test }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual([
+      "Variable: 'vars.test' - Variable 'test' not found in step definition.",
+    ]);
+  });
+
+  it("should return an error for unknown variables", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ unknown.var }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual(["Variable: 'unknown.var' - unknown variable."]);
   });
 });

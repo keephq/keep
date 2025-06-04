@@ -7,6 +7,7 @@
 import { YamlStepOrAction, YamlWorkflowDefinition } from "../model/yaml.types";
 import { Provider } from "@/shared/api/providers";
 import { ALLOWED_MUSTACHE_VARIABLE_REGEX } from "./mustache";
+import { checkProviderNeedsInstallation } from "./validate-definition";
 
 /**
  * Validates a mustache variable name in a YAML workflow definition.
@@ -28,7 +29,7 @@ export const validateMustacheVariableForYAMLStep = (
   secrets: Record<string, string>,
   providers: Provider[] | null,
   installedProviders: Provider[] | null
-) => {
+): [string, "error" | "warning" | "info"] | null => {
   if (!cleanedVariableName) {
     return ["Empty mustache variable.", "warning"];
   }
@@ -63,6 +64,24 @@ export const validateMustacheVariableForYAMLStep = (
       "warning",
     ];
   }
+  if (parts[0] === "foreach") {
+    if (currentStep.foreach) {
+      return null;
+    }
+    return [
+      `Variable: '${cleanedVariableName}' - 'foreach' can only be used in a step with foreach.`,
+      "warning",
+    ];
+  }
+  if (parts[0] === "value") {
+    if (currentStep.foreach) {
+      return null;
+    }
+    return [
+      `Variable: '${cleanedVariableName}' - 'value' can only be used in a step with foreach.`,
+      "warning",
+    ];
+  }
   if (parts[0] === "providers") {
     const providerName = parts[1];
     if (!providerName) {
@@ -81,7 +100,26 @@ export const validateMustacheVariableForYAMLStep = (
       const provider = providers.find((p) => p.type === providerType);
       if (!provider) {
         return [
-          `Variable: '${cleanedVariableName}' - Provider '${providerName}' not found.`,
+          `Variable: '${cleanedVariableName}' - Unknown provider type '${providerType}'.`,
+          "warning",
+        ];
+      }
+      const doesProviderNeedInstallation =
+        checkProviderNeedsInstallation(provider);
+      const installedProvider = installedProviders.find(
+        (p) => p.details.name === providerName
+      );
+      if (doesProviderNeedInstallation && !installedProvider) {
+        const providerType = currentStep.provider.type;
+        const availableProvidersOfType = installedProviders.filter(
+          (p) => p.type === providerType
+        );
+        return [
+          `Variable: '${cleanedVariableName}' - Provider '${providerName}' is not installed.${
+            availableProvidersOfType.length > 0
+              ? ` Available '${providerType}' providers: ${availableProvidersOfType.map((p) => p.details.name).join(", ")}`
+              : ""
+          }`,
           "warning",
         ];
       }
@@ -130,11 +168,28 @@ export const validateMustacheVariableForYAMLStep = (
     }
     return null;
   }
+  if (parts[0] === "vars") {
+    const varName = parts?.[1];
+    if (!varName) {
+      return [
+        `Variable: '${cleanedVariableName}' - To access a variable, you need to specify the variable name.`,
+        "warning",
+      ];
+    }
+    if (!currentStep.vars?.[varName]) {
+      return [
+        `Variable: '${cleanedVariableName}' - Variable '${varName}' not found in step definition.`,
+        "error",
+      ];
+    }
+    return null;
+  }
   if (parts[0] === "consts") {
     const constName = parts[1];
     if (!constName) {
       return [
         `Variable: '${cleanedVariableName}' - To access a constant, you need to specify the constant name.`,
+        "warning",
       ];
     }
     if (!definition.consts?.[constName]) {
@@ -206,5 +261,5 @@ export const validateMustacheVariableForYAMLStep = (
       ];
     }
   }
-  return null;
+  return [`Variable: '${cleanedVariableName}' - unknown variable.`, "warning"];
 };

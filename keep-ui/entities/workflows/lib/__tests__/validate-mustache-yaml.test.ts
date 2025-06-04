@@ -3,6 +3,28 @@ import { Provider } from "@/shared/api/providers";
 import { YamlWorkflowDefinition } from "../../model/yaml.types";
 
 describe("validateMustacheVariableNameForYAML", () => {
+  const stepWithVars = {
+    name: "step-with-vars",
+    provider: {
+      type: "step-test",
+      config: "test-config",
+      with: {},
+    },
+    vars: {
+      test: "test",
+    },
+  };
+  const stepWithForeach = {
+    name: "step-with-foreach",
+    foreach: "{{steps.First Step.results}}",
+    provider: {
+      type: "step-test",
+      config: "test-config",
+      with: {
+        param1: "{{.}}",
+      },
+    },
+  };
   const mockWorkflowDefinition: YamlWorkflowDefinition["workflow"] = {
     id: "test-workflow",
     name: "Test Workflow",
@@ -33,17 +55,8 @@ describe("validateMustacheVariableNameForYAML", () => {
           },
         },
       },
-      {
-        name: "step-with-foreach",
-        foreach: "{{steps.First Step.results}}",
-        provider: {
-          type: "step-test",
-          config: "test-config",
-          with: {
-            param1: "{{.}}",
-          },
-        },
-      },
+      stepWithForeach,
+      stepWithVars,
     ],
   };
 
@@ -81,6 +94,30 @@ describe("validateMustacheVariableNameForYAML", () => {
       health: false,
       installed: true,
       linked: true,
+      last_alert_received: "",
+    },
+    {
+      type: "notrequiringinstallation",
+      config: {},
+      details: {
+        name: "test-config",
+        authentication: {
+          api_key: "test-key",
+        },
+      },
+      id: "test-provider",
+      display_name: "Test Provider",
+      can_query: false,
+      can_notify: false,
+      tags: [],
+      validatedScopes: {},
+      pulling_available: false,
+      pulling_enabled: true,
+      categories: ["Others"],
+      coming_soon: false,
+      health: false,
+      installed: false,
+      linked: false,
       last_alert_received: "",
     },
   ];
@@ -234,7 +271,7 @@ describe("validateMustacheVariableNameForYAML", () => {
 
   it("should validate default provider access", () => {
     const result = validateMustacheVariableForYAMLStep(
-      "providers.default-test",
+      "providers.default-notrequiringinstallation",
       mockWorkflowDefinition!.steps![0],
       "step",
       mockWorkflowDefinition,
@@ -272,7 +309,7 @@ describe("validateMustacheVariableNameForYAML", () => {
       mockInstalledProviders
     );
     expect(result).toEqual([
-      "Variable: 'providers.default-nonexistent' - Provider 'default-nonexistent' not found.",
+      "Variable: 'providers.default-nonexistent' - Unknown provider type 'nonexistent'.",
       "warning",
     ]);
   });
@@ -441,6 +478,65 @@ describe("validateMustacheVariableNameForYAML", () => {
     expect(result).toEqual([
       "Variable: '.' - short syntax can only be used in a step with foreach.",
       "warning",
+    ]);
+  });
+
+  it("should return an error if foreach or value is used in a step without foreach", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "foreach.value",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toEqual([
+      "Variable: 'foreach.value' - 'foreach' can only be used in a step with foreach.",
+      "warning",
+    ]);
+
+    const result2 = validateMustacheVariableForYAMLStep(
+      "value",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result2).toEqual([
+      "Variable: 'value' - 'value' can only be used in a step with foreach.",
+      "warning",
+    ]);
+  });
+
+  it("should validate vars variable", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "vars.test",
+      stepWithVars,
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toBeNull();
+  });
+
+  it("should return an error if vars variable is not found", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "vars.test",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toEqual([
+      "Variable: 'vars.test' - Variable 'test' not found in step definition.",
+      "error",
     ]);
   });
 });

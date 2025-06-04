@@ -23,7 +23,7 @@ export const validateMustacheVariableForUIBuilderStep = (
   _currentStep: V2Step,
   definition: Definition,
   secrets: Record<string, string>
-) => {
+): string | null => {
   const flatSequence = flattenSequence(definition.sequence);
   const currentStep = flatSequence.find(
     (step) => step.name === _currentStep.name || step.id === _currentStep.id
@@ -55,6 +55,18 @@ export const validateMustacheVariableForUIBuilderStep = (
   if (!parts.every((part) => part.length > 0)) {
     return `Variable: '${cleanedVariableName}' - Parts cannot be empty.`;
   }
+  if (parts[0] === "foreach") {
+    if (currentStep.parentId) {
+      return null;
+    }
+    return `Variable: '${cleanedVariableName}' - 'foreach' can only be used in a step with foreach.`;
+  }
+  if (parts[0] === "value") {
+    if (currentStep.parentId) {
+      return null;
+    }
+    return `Variable: '${cleanedVariableName}' - 'value' can only be used in a step with foreach.`;
+  }
   if (parts[0] === "alert") {
     // todo: validate alert properties
     return null;
@@ -70,6 +82,19 @@ export const validateMustacheVariableForUIBuilderStep = (
     }
     if (!secrets[secretName]) {
       return `Variable: '${cleanedVariableName}' - Secret '${secretName}' not found.`;
+    }
+    return null;
+  }
+  if (parts[0] === "vars") {
+    const varName = parts?.[1];
+    if (!varName) {
+      return `Variable: '${cleanedVariableName}' - To access a variable, you need to specify the variable name.`;
+    }
+    if (
+      currentStep.componentType !== "task" ||
+      !currentStep.properties.vars?.[varName]
+    ) {
+      return `Variable: '${cleanedVariableName}' - Variable '${varName}' not found in step definition.`;
     }
     return null;
   }
@@ -130,7 +155,7 @@ export const validateMustacheVariableForUIBuilderStep = (
       return `Variable: '${cleanedVariableName}' - To access the results of a step, use 'results' as suffix.`;
     }
   }
-  return null;
+  return `Variable: '${cleanedVariableName}' - unknown variable.`;
 };
 
 function flattenSequence(
