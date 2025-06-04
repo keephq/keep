@@ -3,7 +3,7 @@ import { parseDocument } from "yaml";
 import type { editor, Uri } from "monaco-editor";
 import { MarkerSeverity, getSeverityString } from "./utils";
 import { YamlValidationError } from "../model/types";
-import { validateMustacheVariableNameForYAML } from "@/entities/workflows/lib/validate-yaml";
+import { validateMustacheVariableForYAMLStep } from "@/entities/workflows/lib/validate-mustache-yaml";
 import {
   getCurrentPath,
   parseWorkflowYamlStringToJSON,
@@ -154,7 +154,7 @@ export function useYamlValidation({
                 : null;
 
             if (currentStep) {
-              const result = validateMustacheVariableNameForYAML(
+              const result = validateMustacheVariableForYAMLStep(
                 variableContent,
                 currentStep,
                 currentStepType,

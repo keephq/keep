@@ -1,8 +1,8 @@
 import { Definition, V2ActionStep, V2Step } from "../../model/types";
 import {
-  validateAllMustacheVariablesInString,
-  validateMustacheVariableName,
-} from "../validate-definition";
+  validateAllMustacheVariablesForUIBuilderStep,
+  validateMustacheVariableForUIBuilderStep,
+} from "../validate-mustache-ui-builder";
 
 describe("validateMustacheVariableName", () => {
   const mockDefinition: Definition = {
@@ -40,8 +40,8 @@ describe("validateMustacheVariableName", () => {
   const mockSecrets = {};
 
   it("should validate alert variables", () => {
-    const result = validateMustacheVariableName(
-      "{{ alert.name }}",
+    const result = validateMustacheVariableForUIBuilderStep(
+      "alert.name",
       mockDefinition.sequence[0],
       mockDefinition,
       mockSecrets
@@ -50,8 +50,8 @@ describe("validateMustacheVariableName", () => {
   });
 
   it("should validate incident variables", () => {
-    const result = validateMustacheVariableName(
-      "{{ incident.title }}",
+    const result = validateMustacheVariableForUIBuilderStep(
+      "incident.title",
       mockDefinition.sequence[0],
       mockDefinition,
       mockSecrets
@@ -60,8 +60,8 @@ describe("validateMustacheVariableName", () => {
   });
 
   it("should validate step results access", () => {
-    const result = validateMustacheVariableName(
-      "{{ steps.First Step.results }}",
+    const result = validateMustacheVariableForUIBuilderStep(
+      "steps.First Step.results",
       mockDefinition.sequence[1],
       mockDefinition,
       mockSecrets
@@ -70,38 +70,38 @@ describe("validateMustacheVariableName", () => {
   });
 
   it("should prevent accessing current step results", () => {
-    const result = validateMustacheVariableName(
-      "{{ steps.First Step.results }}",
+    const result = validateMustacheVariableForUIBuilderStep(
+      "steps.First Step.results",
       mockDefinition.sequence[0],
       mockDefinition,
       mockSecrets
     );
     expect(result).toBe(
-      "Variable: '{{ steps.First Step.results }}' - You can't access the results of the current step."
+      "Variable: 'steps.First Step.results' - You can't access the results of the current step."
     );
   });
 
   it("should prevent accessing future step results", () => {
-    const result = validateMustacheVariableName(
-      "{{ steps.Second Step.results }}",
+    const result = validateMustacheVariableForUIBuilderStep(
+      "steps.Second Step.results",
       mockDefinition.sequence[0],
       mockDefinition,
       mockSecrets
     );
     expect(result).toBe(
-      "Variable: '{{ steps.Second Step.results }}' - You can't access the results of a step that appears after the current step."
+      "Variable: 'steps.Second Step.results' - You can't access the results of a step that appears after the current step."
     );
   });
 
   it("should prevent accessing action results from a step", () => {
-    const result = validateMustacheVariableName(
-      "{{ steps.Second Step.results }}",
+    const result = validateMustacheVariableForUIBuilderStep(
+      "steps.Second Step.results",
       mockDefinition.sequence[0],
       mockDefinition,
       mockSecrets
     );
     expect(result).toBe(
-      "Variable: '{{ steps.Second Step.results }}' - You can't access the results of a step that appears after the current step."
+      "Variable: 'steps.Second Step.results' - You can't access the results of a step that appears after the current step."
     );
   });
 });
@@ -132,7 +132,7 @@ describe("validateAllMustacheVariablesInString", () => {
   const mockSecrets = {};
 
   it("should validate multiple variables in a string", () => {
-    const result = validateAllMustacheVariablesInString(
+    const result = validateAllMustacheVariablesForUIBuilderStep(
       "Alert: {{ alert.name }} with severity {{ alert.severity }}",
       mockDefinition.sequence[0],
       mockDefinition,
@@ -142,14 +142,14 @@ describe("validateAllMustacheVariablesInString", () => {
   });
 
   it("should detect invalid variables in a string", () => {
-    const result = validateAllMustacheVariablesInString(
+    const result = validateAllMustacheVariablesForUIBuilderStep(
       "Invalid: {{ invalid.var }} and {{ steps.Future Step.results }}",
       mockDefinition.sequence[0],
       mockDefinition,
       mockSecrets
     );
     expect(result).toContain(
-      "Variable: '{{ steps.Future Step.results }}' - a 'Future Step' step that doesn't exist."
+      "Variable: 'steps.Future Step.results' - a 'Future Step' step that doesn't exist."
     );
   });
 
@@ -202,12 +202,33 @@ describe("validateAllMustacheVariablesInString", () => {
         consts: {},
       },
     };
-    const result = validateAllMustacheVariablesInString(
+    const result = validateAllMustacheVariablesForUIBuilderStep(
       "keep.dictget({{steps.python-step.results}} , '{{foreach.value.fingerprint}}', 'default') == '{{foreach.value.fingerprint}}'",
       telegramAction, // telegram step
       definition,
       mockSecrets
     );
     expect(result).toEqual([]);
+
+    // short syntax
+    const result2 = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ . }}",
+      telegramAction, // telegram step
+      definition,
+      mockSecrets
+    );
+    expect(result2).toEqual([]);
+  });
+
+  it("should return an error if bracket notation is used", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ steps['python-step'].results }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual([
+      "Variable: 'steps[\'python-step\'].results' - bracket notation is not supported, use dot notation instead.",
+    ]);
   });
 });
