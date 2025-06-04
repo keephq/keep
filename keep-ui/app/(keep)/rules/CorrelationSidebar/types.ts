@@ -15,4 +15,5 @@ export type CorrelationFormType = {
   multiLevel: boolean;
   multiLevelPropertyName?: string;
   threshold: number;
+  assignee?: string;
 };
