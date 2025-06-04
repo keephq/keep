@@ -126,7 +126,9 @@ describe("validateAllMustacheVariablesInString", () => {
       description: "Test Description",
       disabled: false,
       isLocked: false,
-      consts: {},
+      consts: {
+        test: "test",
+      },
       inputs: [
         {
           name: "test",
@@ -321,6 +323,28 @@ describe("validateAllMustacheVariablesInString", () => {
     );
     expect(result).toEqual([
       "Variable: 'inputs.missing' - Input 'missing' not defined. Available inputs: test",
+    ]);
+  });
+
+  it("should validate consts variable", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ consts.test }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("should return an error if consts variable is not found", () => {
+    const result = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ consts.missing }}",
+      mockDefinition.sequence[0],
+      mockDefinition,
+      mockSecrets
+    );
+    expect(result).toEqual([
+      "Variable: 'consts.missing' - Constant 'missing' not found.",
     ]);
   });
 });

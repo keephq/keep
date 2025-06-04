@@ -29,6 +29,9 @@ describe("validateMustacheVariableNameForYAML", () => {
     id: "test-workflow",
     name: "Test Workflow",
     description: "Test Description",
+    consts: {
+      test: "test",
+    },
     inputs: [
       {
         name: "message",
@@ -572,6 +575,35 @@ describe("validateMustacheVariableNameForYAML", () => {
     );
     expect(result).toEqual([
       "Variable: 'inputs.missing' - Input 'missing' not defined. Available inputs: message",
+      "error",
+    ]);
+  });
+
+  it("should validate consts variable", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "consts.test",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toBeNull();
+  });
+
+  it("should return an error if consts variable is not found", () => {
+    const result = validateMustacheVariableForYAMLStep(
+      "consts.missing",
+      mockWorkflowDefinition!.steps![0],
+      "step",
+      mockWorkflowDefinition,
+      mockSecrets,
+      mockProviders,
+      mockInstalledProviders
+    );
+    expect(result).toEqual([
+      "Variable: 'consts.missing' - Constant 'missing' not found.",
       "error",
     ]);
   });
