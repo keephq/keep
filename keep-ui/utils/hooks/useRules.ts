@@ -28,7 +28,7 @@ export type Rule = {
   multi_level: boolean;
   multi_level_property_name: string | null;
   threshold: number;
-  assignee: string | null;
+  assignee: string | undefined;
 };
 
 export const useRules = (options?: SWRConfiguration) => {
