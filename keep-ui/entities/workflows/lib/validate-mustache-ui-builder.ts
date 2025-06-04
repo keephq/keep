@@ -39,7 +39,7 @@ export const validateMustacheVariableForUIBuilderStep = (
     if (currentStep.parentId) {
       return null;
     }
-    return `Variable: '${cleanedVariableName}' - needs to be used in a for loop.`;
+    return `Variable: '${cleanedVariableName}' - short syntax can only be used in a step with foreach.`;
   }
   if (!ALLOWED_MUSTACHE_VARIABLE_REGEX.test(cleanedVariableName)) {
     if (

@@ -92,18 +92,6 @@ describe("validateMustacheVariableName", () => {
       "Variable: 'steps.Second Step.results' - You can't access the results of a step that appears after the current step."
     );
   });
-
-  it("should prevent accessing action results from a step", () => {
-    const result = validateMustacheVariableForUIBuilderStep(
-      "steps.Second Step.results",
-      mockDefinition.sequence[0],
-      mockDefinition,
-      mockSecrets
-    );
-    expect(result).toBe(
-      "Variable: 'steps.Second Step.results' - You can't access the results of a step that appears after the current step."
-    );
-  });
 });
 
 describe("validateAllMustacheVariablesInString", () => {
@@ -163,6 +151,19 @@ describe("validateAllMustacheVariablesInString", () => {
   });
 
   it("should validate reference of variable in step in foreach container", () => {
+    const pythonStep: V2Step = {
+      id: "step1",
+      name: "python-step",
+      componentType: "task",
+      type: "step-python",
+      properties: {
+        actionParams: [],
+        stepParams: ["code"],
+        with: {
+          code: "[x for x in range(100)]",
+        },
+      },
+    };
     const telegramAction: V2ActionStep = {
       id: "telegram-action",
       name: "telegram-action",
@@ -178,19 +179,7 @@ describe("validateAllMustacheVariablesInString", () => {
     };
     const definition: Definition = {
       sequence: [
-        {
-          id: "step1",
-          name: "python-step",
-          componentType: "task",
-          type: "step-python",
-          properties: {
-            actionParams: [],
-            stepParams: ["code"],
-            with: {
-              code: "[x for x in range(100)]",
-            },
-          },
-        },
+        pythonStep,
         {
           id: "foreach-step",
           name: "foreach-step",
@@ -219,6 +208,17 @@ describe("validateAllMustacheVariablesInString", () => {
     );
     expect(result).toEqual([]);
 
+    const resultFailure1 = validateAllMustacheVariablesForUIBuilderStep(
+      "'{{foreach.value.fingerprint}}', 'default') == '{{foreach.value.fingerprint}}'",
+      pythonStep,
+      definition,
+      mockSecrets
+    );
+    expect(resultFailure1).toEqual([
+      "Variable: 'foreach.value.fingerprint' - 'foreach' can only be used in a step with foreach.",
+      "Variable: 'foreach.value.fingerprint' - 'foreach' can only be used in a step with foreach.",
+    ]);
+
     // short syntax
     const result2 = validateAllMustacheVariablesForUIBuilderStep(
       "{{ . }}",
@@ -228,21 +228,33 @@ describe("validateAllMustacheVariablesInString", () => {
     );
     expect(result2).toEqual([]);
 
+    const resultFailure2 = validateAllMustacheVariablesForUIBuilderStep(
+      "{{ . }}",
+      pythonStep,
+      definition,
+      mockSecrets
+    );
+    expect(resultFailure2).toEqual([
+      "Variable: '.' - short syntax can only be used in a step with foreach.",
+    ]);
+
     const result3 = validateAllMustacheVariablesForUIBuilderStep(
-      "{{ foreach.value }}",
+      "{{ value }}",
       telegramAction,
       definition,
       mockSecrets
     );
     expect(result3).toEqual([]);
 
-    const result4 = validateAllMustacheVariablesForUIBuilderStep(
+    const resultFailure3 = validateAllMustacheVariablesForUIBuilderStep(
       "{{ value }}",
-      telegramAction,
+      pythonStep,
       definition,
       mockSecrets
     );
-    expect(result4).toEqual([]);
+    expect(resultFailure3).toEqual([
+      "Variable: 'value' - 'value' can only be used in a step with foreach.",
+    ]);
   });
 
   it("should return an error if bracket notation is used", () => {
