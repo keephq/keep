@@ -1,4 +1,6 @@
-# OAuth2‑Proxy + Keep + GitLab SSO
+---
+title: "Example: OAuth2‑Proxy + Keep + GitLab SSO"
+---
 
 A **step‑by‑step cookbook** for adding single‑sign‑on to [Keep](https://github.com/keephq) with your **self‑hosted GitLab** using [oauth2‑proxy](https://oauth2‑proxy.github.io/) and the NGINX Ingress Controller.
 
@@ -11,7 +13,7 @@ A **step‑by‑step cookbook** for adding single‑sign‑on to [Keep](https://
 
 ---
 
-## 1  Prerequisites
+## 1. Prerequisites
 
 | What                                        | Why                                                   |
 | ------------------------------------------- | ----------------------------------------------------- |
@@ -22,7 +24,7 @@ A **step‑by‑step cookbook** for adding single‑sign‑on to [Keep](https://
 
 ---
 
-## 2  Create the GitLab OAuth application
+## 2. Create the GitLab OAuth application
 
 1. **GitLab ▸ Admin → Applications → New**
 2. Name → `keep‑sso`
@@ -32,7 +34,7 @@ A **step‑by‑step cookbook** for adding single‑sign‑on to [Keep](https://
 
 ---
 
-## 3  Kubernetes secrets & config
+## 3. Kubernetes secrets & config
 
 ```bash
 # 3.1 Generate a 32‑byte cookie secret
@@ -45,8 +47,8 @@ kubectl -n keep create secret generic oauth2-proxy \
   --from-file=cookie-secret=cookie.b64
 
 # 3.3 Add gitlab credentials and cookie secret using OAUTH2_PROXY ENV variables
-OAUTH2_PROXY_CLIENT_ID=<GITLAB_APP_ID> 
-OAUTH2_PROXY_CLIENT_SECRET=<GITLAB_APP_SECRET> 
+OAUTH2_PROXY_CLIENT_ID=<GITLAB_APP_ID>
+OAUTH2_PROXY_CLIENT_SECRET=<GITLAB_APP_SECRET>
 OAUTH2_PROXY_COOKIE_SECRET=cookie.b64
 
 # (optional) store GitLab’s custom CA certificate
@@ -72,7 +74,7 @@ data:
 
 ---
 
-## 4  Deploy **oauth2‑proxy** (Helm)
+## 4. Deploy **oauth2‑proxy** (Helm)
 
 ```yaml
 # values.oauth2-proxy.yaml – minimal baseline
@@ -117,7 +119,7 @@ helm upgrade --install oauth2-proxy oauth2-proxy/oauth2-proxy \
 
 ---
 
-## 5  Patch (or create) Keep’s Ingress resource
+## 5. Patch (or create) Keep’s Ingress resource
 
 Add **three** annotations so ingress‑nginx delegates auth to the Service:
 
@@ -134,7 +136,7 @@ Redeploy Keep (or patch the Ingress manually).
 
 ---
 
-## 6  Environment variables for Keep
+## 6. Environment variables for Keep
 
 ```yaml
 backend:
@@ -185,7 +187,7 @@ kubectl -n keep rollout restart deploy/keep-frontend
 
 ---
 
-## 7  Quick validation
+## 7. Quick validation
 
 ```bash
 # 7.1 Call auth endpoint without cookie – expect 401
@@ -203,7 +205,7 @@ Browser smoke‑test:
 
 ---
 
-## 8  Troubleshooting
+## 8. Troubleshooting
 
 | Symptom                                                       | Common cause & remedy                                                                                                                       |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -215,7 +217,7 @@ Browser smoke‑test:
 
 ---
 
-## 9  Clean‑up
+## 9. Clean‑up
 
 ```bash
 helm -n keep uninstall oauth2-proxy
@@ -225,13 +227,13 @@ kubectl -n keep delete secret oauth2-proxy gitlab-ca
 
 ---
 
-### Appendix A – Generate a 32‑byte cookie secret
+## Appendix A – Generate a 32‑byte cookie secret
 
 ```bash
 openssl rand -hex 16 | xxd -r -p | base64
 ```
 
-### Appendix B – Sync images to an offline registry (example)
+## Appendix B – Sync images to an offline registry (example)
 
 ```bash
 skopeo copy docker://quay.io/oauth2-proxy/oauth2-proxy:v7.9.0 \
