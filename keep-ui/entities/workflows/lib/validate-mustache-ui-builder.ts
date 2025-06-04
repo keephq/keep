@@ -127,7 +127,7 @@ export const validateMustacheVariableForUIBuilderStep = (
       (step) => step.id === currentStep.id
     );
     if (!step) {
-      return `Variable: '${cleanedVariableName}' - a '${stepName}' step that doesn't exist.`;
+      return `Variable: '${cleanedVariableName}' - a '${stepName}' step doesn't exist.`;
     }
     const isCurrentStep = step.id === currentStep.id;
     if (isCurrentStep) {
@@ -143,12 +143,7 @@ export const validateMustacheVariableForUIBuilderStep = (
       return `Variable: '${cleanedVariableName}' - You can't access the results of an action from a step.`;
     }
 
-    if (
-      parts.length > 2 &&
-      (parts[2] === "results" ||
-        parts[2].startsWith("results.") ||
-        parts[2].startsWith("results["))
-    ) {
+    if (parts.length > 2 && parts[2] === "results") {
       // todo: validate results properties
       return null;
     } else {

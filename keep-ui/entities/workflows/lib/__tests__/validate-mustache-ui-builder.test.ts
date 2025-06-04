@@ -158,7 +158,7 @@ describe("validateAllMustacheVariablesInString", () => {
       mockSecrets
     );
     expect(result).toContain(
-      "Variable: 'steps.Future Step.results' - a 'Future Step' step that doesn't exist."
+      "Variable: 'steps.Future Step.results' - a 'Future Step' step doesn't exist."
     );
   });
 

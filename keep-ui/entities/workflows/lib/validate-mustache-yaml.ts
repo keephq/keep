@@ -235,9 +235,9 @@ export const validateMustacheVariableForYAMLStep = (
     // - it's not the current step (can't access own results, only enrich_alert and enrich_incident can access their own results)
     // - it's above the current step
     // - if it's a step it cannot access actions since they run after steps
-    const step = definition.steps?.find((s) => s.name === stepName);
     const stepIndex =
       definition.steps?.findIndex((s) => s.name === stepName) ?? -1;
+    const step = stepIndex !== -1 ? definition.steps?.[stepIndex] : null;
     const currentStepIndex =
       currentStepType === "step"
         ? (definition.steps?.findIndex((s) => s.name === currentStep.name) ??
@@ -265,16 +265,11 @@ export const validateMustacheVariableForYAMLStep = (
 
     if (!definition.steps?.some((step) => step.name === stepName)) {
       return [
-        `Variable: '${cleanedVariableName}' - a '${stepName}' step that doesn't exist.`,
+        `Variable: '${cleanedVariableName}' - a '${stepName}' step doesn't exist.`,
         "error",
       ];
     }
-    if (
-      parts.length > 2 &&
-      (parts[2] === "results" ||
-        parts[2].startsWith("results.") ||
-        parts[2].startsWith("results["))
-    ) {
+    if (parts.length > 2 && parts[2] === "results") {
       // todo: validate results properties
       return null;
     } else {
