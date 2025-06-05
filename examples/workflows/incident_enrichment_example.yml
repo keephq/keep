@@ -1,0 +1,60 @@
+workflow:
+  id: incident-enrichment-example  
+  description: Example workflow showing how to use incident form enrichments for ticket creation
+  triggers:
+    - type: incident
+      filters:
+        - key: status
+          value: firing
+        # Only trigger for incidents that have custom enrichments
+        - key: enrichments
+          value: "{{ incident.enrichments | length > 0 }}"
+  
+  steps:
+    - name: log-enrichment-data
+      provider:
+        type: console
+        with:
+          message: |
+            New incident created with enrichments:
+            Incident ID: {{ incident.id }}
+            Name: {{ incident.user_generated_name }}
+            
+            Custom Fields:
+            {% for key, value in incident.enrichments.items() %}
+            - {{ key }}: {{ value }}
+            {% endfor %}
+
+    - name: create-ticket-with-enrichments
+      condition: "{{ incident.enrichments.create_ticket == true }}"
+      provider:
+        type: jira
+        with:
+          project_key: "{{ incident.enrichments.project_key }}"
+          summary: "{{ incident.enrichments.ticket_title or incident.user_generated_name }}"
+          description: |
+            Incident: {{ incident.user_generated_name }}
+            Priority: {{ incident.enrichments.priority }}
+            Expected Resolution: {{ incident.enrichments.resolution_date }}
+            
+            Description:
+            {{ incident.enrichments.description or incident.user_summary }}
+            
+            Business Impact: {{ incident.enrichments.business_impact }}
+            Affected Systems: {{ incident.enrichments.affected_systems }}
+          
+          issue_type: "{{ incident.enrichments.issue_type or 'Bug' }}"
+          
+          # Map enrichment priority to Jira priority
+          custom_fields:
+            priority: 
+              name: "{{ incident.enrichments.priority }}"
+
+    - name: update-incident-with-ticket
+      condition: "{{ steps.create-ticket-with-enrichments.results }}"
+      provider:
+        type: keep
+        with:
+          enrichments:
+            jira_ticket_id: "{{ steps.create-ticket-with-enrichments.results.issue.key }}"
+            jira_ticket_url: "{{ steps.create-ticket-with-enrichments.results.ticket_url }}"
