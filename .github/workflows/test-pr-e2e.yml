@@ -300,7 +300,7 @@ jobs:
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
-  
+
   run-postgresql-without-redis:
     needs: [build-frontend, build-backend, prepare-test-environment]
     uses: ./.github/workflows/run-e2e-tests.yml
@@ -311,12 +311,23 @@ jobs:
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
-  
+
   run-sqlite-without-redis:
     needs: [build-frontend, build-backend, prepare-test-environment]
     uses: ./.github/workflows/run-e2e-tests.yml
     with:
       db-type: sqlite
+      redis_enabled: false
+      python-version: 3.11
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+      backend-image-name: ${{ needs.build-backend.outputs.image_name }}
+      frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
+
+  run-migrations-tests:
+    needs: [build-frontend, build-backend, prepare-test-environment]
+    uses: ./.github/workflows/run-migrations-e2e-tests.yml
+    with:
+      db-type: postgres-migrations
       redis_enabled: false
       python-version: 3.11
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
