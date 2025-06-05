@@ -11,6 +11,7 @@ import { Table } from "@tanstack/react-table";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   selectedAlertsFingerprints: string[];
@@ -112,7 +113,16 @@ export default function AlertActions({
   };
 
   return (
-    <div className="w-full flex justify-end items-center">
+    <div className="w-full flex gap-2.5 justify-end items-center">
+      <Button
+        icon={XMarkIcon}
+        size="xs"
+        color="slate"
+        title="Clear Selection"
+        onClick={clearRowSelection}
+      >
+        Clear Selection
+      </Button>
       <Button
         icon={SilencedDoorbellNotification}
         size="xs"
@@ -129,7 +139,6 @@ export default function AlertActions({
         icon={PlusIcon}
         size="xs"
         color="orange"
-        className="ml-2.5"
         onClick={async () => await addOrUpdatePreset()}
         tooltip="Save current filter as a view"
       >
@@ -139,7 +148,6 @@ export default function AlertActions({
         icon={PlusIcon}
         size="xs"
         color="orange"
-        className="ml-2.5"
         onClick={showIncidentSelector}
         tooltip="Associate events with incident"
       >
@@ -149,7 +157,6 @@ export default function AlertActions({
         icon={RocketIcon}
         size="xs"
         color="orange"
-        className="ml-2.5"
         onClick={showCreateIncidentWithAI}
         tooltip={
           config?.OPEN_AI_API_KEY_SET
