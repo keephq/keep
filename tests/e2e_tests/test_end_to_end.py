@@ -634,7 +634,9 @@ def test_yaml_editor_yaml_invalid(browser: Page):
         expect(errors_list).to_contain_text("Property enrich_incident is not allowed.")
         expect(errors_list).to_contain_text("Property enrich_alert is not allowed.")
         expect(errors_list).to_contain_text(
-            'Variable: steps.clickhouse-step.results.level - a "clickhouse-step" step doesn\'t exist.'
+            re.compile(
+                r"Variable.*steps\.clickhouse-step\.results\.level.*step doesn\'t exist"
+            )
         )
 
     except Exception:

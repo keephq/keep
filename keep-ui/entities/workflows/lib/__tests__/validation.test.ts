@@ -165,7 +165,10 @@ describe("validateStepPure", () => {
       mockProviders,
       mockInstalledProviders,
       mockSecrets,
-      mockDefinition
+      {
+        ...mockDefinition,
+        sequence: [step],
+      }
     );
     expect(result).toEqual([]);
   });

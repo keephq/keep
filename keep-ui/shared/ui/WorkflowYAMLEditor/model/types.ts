@@ -1,6 +1,6 @@
 import type { editor } from "monaco-editor";
 
-export type YamlValidationErrorSeverity = "error" | "warning" | "info" | "hint";
+export type YamlValidationErrorSeverity = "error" | "warning" | "info";
 
 export type YamlValidationError = {
   message: string;
