@@ -118,11 +118,11 @@ function visitComparisonNode(
 }
 
 function visitLogicalNode(node: CelAst.LogicalNode): DefaultRuleGroupType {
-  const left = convertCelAstToQueryBuilderAst(
+  const left = visitCelAstNode(
     ((node as CelAst.LogicalNode).left as any).expression ??
       (node as CelAst.LogicalNode).left
   );
-  const right = convertCelAstToQueryBuilderAst(
+  const right = visitCelAstNode(
     ((node as CelAst.LogicalNode).right as any).expression ??
       (node as CelAst.LogicalNode).right
   );
@@ -151,17 +151,13 @@ function visitLogicalNode(node: CelAst.LogicalNode): DefaultRuleGroupType {
   };
 }
 
-export function convertCelAstToQueryBuilderAst(
-  node: CelAst.Node
-): DefaultRuleGroupType {
+export function visitCelAstNode(node: CelAst.Node): DefaultRuleGroupType {
   switch (node.node_type) {
     case "LogicalNode": {
       return visitLogicalNode(node as CelAst.LogicalNode);
     }
     case "ParenthesisNode": {
-      return convertCelAstToQueryBuilderAst(
-        (node as CelAst.ParenthesisNode).expression
-      );
+      return visitCelAstNode((node as CelAst.ParenthesisNode).expression);
     }
     case "ComparisonNode": {
       return visitComparisonNode(node as CelAst.ComparisonNode);
@@ -173,4 +169,28 @@ export function convertCelAstToQueryBuilderAst(
     default:
       throw new Error(`Unsupported node type: ${node.node_type}`);
   }
+}
+
+export function convertCelAstToQueryBuilderAst(
+  node: CelAst.Node
+): DefaultRuleGroupType {
+  const rulesGroup = visitCelAstNode(node);
+
+  if (rulesGroup.combinator === "or") {
+    // React Query Builder requires all rules to be within "and" combinator groups to function correctly.
+    // Therefore, if an "or" group contains any element that is not itself an "or" or "and" group,
+    // we wrap that element in a new "and" group to ensure compatibility.
+    rulesGroup.rules = rulesGroup.rules.map((rule) => {
+      if (!(rule as any).combinator) {
+        return {
+          combinator: "and",
+          rules: [rule],
+        };
+      }
+
+      return rule;
+    });
+  }
+
+  return rulesGroup;
 }

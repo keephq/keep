@@ -61,19 +61,6 @@ export const CorrelationSidebar = ({
       const query = convertCelAstToQueryBuilderAst(
         selectedRule.definition_cel_ast
       );
-      const anyCombinator = query.rules?.some((rule) => "combinator" in rule);
-
-      const queryInGroup: DefaultRuleGroupType = {
-        ...query,
-        rules: anyCombinator
-          ? query.rules
-          : [
-              {
-                combinator: "and",
-                rules: query.rules,
-              },
-            ],
-      };
 
       const timeunit = selectedRule.timeunit ?? "seconds";
 
@@ -88,7 +75,7 @@ export const CorrelationSidebar = ({
         requireApprove: selectedRule.require_approve,
         resolveOn: selectedRule.resolve_on,
         createOn: selectedRule.create_on,
-        query: queryInGroup,
+        query,
         incidents: selectedRule.incidents,
         incidentNameTemplate: selectedRule.incident_name_template || "",
         incidentPrefix: selectedRule.incident_prefix || "",
