@@ -1,150 +1,10 @@
 import { Provider } from "@/shared/api/providers";
 import { Definition, V2Step } from "../model/types";
 import { getWithParams } from "./parser";
+import { validateAllMustacheVariablesForUIBuilderStep } from "./validate-mustache-ui-builder";
 
 export type ValidationResult = [string, string];
 export type ValidationError = [string, "error" | "warning" | "info"];
-/**
- * Extracts the trimmed value from mustache syntax by removing curly brackets.
- *
- * @param mustacheString - A string containing mustache syntax like "{{ variable }}"
- * @returns The trimmed inner value without curly brackets
- */
-function extractMustacheValue(mustacheString: string): string {
-  // Use regex to match content between {{ and }} and trim whitespace
-  const match = mustacheString.match(/\{\{\s*(.*?)\s*\}\}/);
-
-  // Return the captured group if found, otherwise return empty string
-  return match ? match[1] : "";
-}
-
-function flattenSequence(sequence: V2Step[]): V2Step[] {
-  const flatSequence: V2Step[] = [];
-  for (const step of sequence) {
-    if (step.componentType === "container") {
-      flatSequence.push(step);
-      flatSequence.push(...flattenSequence(step.sequence || []));
-    } else {
-      flatSequence.push(step);
-    }
-  }
-  return flatSequence;
-}
-
-export const validateMustacheVariableName = (
-  variableName: string,
-  currentStep: V2Step,
-  definition: Definition,
-  secrets: Record<string, string>
-) => {
-  const flatSequence = flattenSequence(definition.sequence);
-  const cleanedVariableName = extractMustacheValue(variableName);
-  const parts = cleanedVariableName.split(".");
-  if (!parts.every((part) => part.length > 0)) {
-    return `Variable: '${variableName}' - Parts cannot be empty.`;
-  }
-  if (parts[0] === "alert") {
-    // todo: validate alert properties
-    return null;
-  }
-  if (parts[0] === "incident") {
-    // todo: validate incident properties
-    return null;
-  }
-  if (parts[0] === "secrets") {
-    const secretName = parts[1];
-    if (!secretName) {
-      return `Variable: '${variableName}' - To access a secret, you need to specify the secret name.`;
-    }
-    if (!secrets[secretName]) {
-      return `Variable: '${variableName}' - Secret '${secretName}' not found.`;
-    }
-    return null;
-  }
-  if (parts[0] === "consts") {
-    const constName = parts[1];
-    if (!constName) {
-      return `Variable: '${variableName}' - To access a constant, you need to specify the constant name.`;
-    }
-    if (!definition.properties.consts?.[constName]) {
-      return `Variable: '${variableName}' - Constant '${constName}' not found.`;
-    }
-  }
-  if (parts[0] === "steps") {
-    const stepName = parts[1];
-    if (!stepName) {
-      return `Variable: '${variableName}' - To access the results of a step, you need to specify the step name.`;
-    }
-    // todo: check if
-    // - the step exists
-    // - it's not the current step (can't access own results, only enrich_alert and enrich_incident can access their own results)
-    // - it's above the current step
-    // - if it's a step it cannot access actions since they run after steps
-    const step = flatSequence.find(
-      (step) => step.id === stepName || step.name === stepName
-    );
-    const stepIndex = flatSequence.findIndex(
-      (step) => step.id === stepName || step.name === stepName
-    );
-    const currentStepIndex = flatSequence.findIndex(
-      (step) => step.id === currentStep.id
-    );
-    if (!step) {
-      return `Variable: '${variableName}' - a '${stepName}' step that doesn't exist.`;
-    }
-    const isCurrentStep = step.id === currentStep.id;
-    if (isCurrentStep) {
-      return `Variable: '${variableName}' - You can't access the results of the current step.`;
-    }
-    if (stepIndex > currentStepIndex) {
-      return `Variable: '${variableName}' - You can't access the results of a step that appears after the current step.`;
-    }
-    if (
-      currentStep.type.startsWith("step-") &&
-      step.type.startsWith("action-")
-    ) {
-      return `Variable: '${variableName}' - You can't access the results of an action from a step.`;
-    }
-
-    if (
-      parts[2] === "results" ||
-      parts[2].startsWith("results.") ||
-      parts[2].startsWith("results[")
-    ) {
-      // todo: validate results properties
-      return null;
-    } else {
-      return `Variable: '${variableName}' - To access the results of a step, use 'results' as suffix.`;
-    }
-  }
-  return null;
-};
-
-export const validateAllMustacheVariablesInString = (
-  string: string,
-  currentStep: V2Step,
-  definition: Definition,
-  secrets: Record<string, string>
-) => {
-  const regex = /\{\{([^}]+)\}\}/g;
-  const matches = string.match(regex);
-  if (!matches) {
-    return [];
-  }
-  const errors: string[] = [];
-  matches.forEach((match) => {
-    const error = validateMustacheVariableName(
-      match,
-      currentStep,
-      definition,
-      secrets
-    );
-    if (error) {
-      errors.push(error);
-    }
-  });
-  return errors;
-};
 
 export const checkProviderNeedsInstallation = (
   providerObject: Pick<Provider, "type" | "config">
@@ -278,7 +138,7 @@ export function validateStepPure(
     (step.componentType === "task" || step.componentType === "container") &&
     step.properties.if
   ) {
-    const variableErrors = validateAllMustacheVariablesInString(
+    const variableErrors = validateAllMustacheVariablesForUIBuilderStep(
       step.properties.if,
       step,
       definition,
@@ -290,7 +150,7 @@ export function validateStepPure(
   }
   if (step.componentType === "task" && step.properties.with?.enrich_alert) {
     const values = step.properties.with.enrich_alert.map((item) => item.value);
-    const variableErrors = validateAllMustacheVariablesInString(
+    const variableErrors = validateAllMustacheVariablesForUIBuilderStep(
       values.join(","),
       step,
       definition,
@@ -304,7 +164,7 @@ export function validateStepPure(
     const values = step.properties.with.enrich_incident.map(
       (item) => item.value
     );
-    const variableErrors = validateAllMustacheVariablesInString(
+    const variableErrors = validateAllMustacheVariablesForUIBuilderStep(
       values.join(","),
       step,
       definition,
@@ -322,7 +182,7 @@ export function validateStepPure(
       if (!step.properties.value) {
         validationErrors.push(["Condition value cannot be empty.", "error"]);
       }
-      const variableErrorsValue = validateAllMustacheVariablesInString(
+      const variableErrorsValue = validateAllMustacheVariablesForUIBuilderStep(
         step.properties.value?.toString() ?? "",
         step,
         definition,
@@ -337,12 +197,13 @@ export function validateStepPure(
           "error",
         ]);
       }
-      const variableErrorsCompareTo = validateAllMustacheVariablesInString(
-        step.properties.compare_to?.toString() ?? "",
-        step,
-        definition,
-        secrets
-      );
+      const variableErrorsCompareTo =
+        validateAllMustacheVariablesForUIBuilderStep(
+          step.properties.compare_to?.toString() ?? "",
+          step,
+          definition,
+          secrets
+        );
       variableErrorsCompareTo.forEach((error) => {
         validationErrors.push([error, "error"]);
       });
@@ -351,7 +212,7 @@ export function validateStepPure(
       if (!step.properties.assert) {
         validationErrors.push(["Condition assert cannot be empty.", "error"]);
       }
-      const variableErrors = validateAllMustacheVariablesInString(
+      const variableErrors = validateAllMustacheVariablesForUIBuilderStep(
         step.properties.assert,
         step,
         definition,
@@ -397,7 +258,7 @@ export function validateStepPure(
     }
     for (const [key, value] of Object.entries(withParams)) {
       if (typeof value === "string") {
-        const variableErrors = validateAllMustacheVariablesInString(
+        const variableErrors = validateAllMustacheVariablesForUIBuilderStep(
           value,
           step,
           definition,
@@ -413,7 +274,7 @@ export function validateStepPure(
     if (!step.properties.value) {
       validationErrors.push(["Foreach value cannot be empty.", "error"]);
     }
-    const variableErrors = validateAllMustacheVariablesInString(
+    const variableErrors = validateAllMustacheVariablesForUIBuilderStep(
       step.properties.value,
       step,
       definition,

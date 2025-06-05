@@ -20,9 +20,8 @@ export function getSeverityString(
       return "error";
     case MarkerSeverity.Warning:
       return "warning";
-    case MarkerSeverity.Hint:
-      return "hint";
     case MarkerSeverity.Info:
+    case MarkerSeverity.Hint:
     default:
       return "info";
   }

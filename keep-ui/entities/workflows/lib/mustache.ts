@@ -1,4 +1,5 @@
-const MUSTACHE_REGEX = /\{\{\s*(.*?)\s*\}\}/g;
+export const MUSTACHE_REGEX = /\{\{\s*(.*?)\s*\}\}/g;
+export const ALLOWED_MUSTACHE_VARIABLE_REGEX = /^[a-zA-Z0-9._-\s]+$/;
 
 /**
  * Extracts all mustache variables from a string.
