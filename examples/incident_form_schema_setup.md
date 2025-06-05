@@ -132,8 +132,8 @@ workflow:
         type: keep
         with:
           enrichments:
-            jira_ticket_id: "{{ steps.create-jira-ticket.results.issue.key }}"
-            jira_ticket_url: "{{ steps.create-jira-ticket.results.ticket_url }}"
+            ticket_id: "{{ steps.create-jira-ticket.results.issue.key }}"
+            ticket_url: "{{ steps.create-jira-ticket.results.ticket_url }}"
 ```
 
 ## Step 3: Test the Integration
@@ -143,6 +143,7 @@ workflow:
 3. Check that the workflow triggers and creates a Jira ticket
 4. Verify the ticket contains the enrichment data
 5. Confirm the incident is enriched with ticket information
+6. Check that the incident table shows a clickable ticket link in the "Ticket" column
 
 ## Available Field Types
 
@@ -289,6 +290,22 @@ curl -X DELETE "${KEEP_API_URL}/incidents/form-schema"
 5. **Document field purposes**: Use clear labels and descriptions for all fields
 6. **Regular cleanup**: Remove unused enrichment fields to keep the schema clean
 
+## Ticket Link Display
+
+When workflows enrich incidents with ticket information, the incidents table automatically displays clickable ticket links:
+
+- **Required enrichments**: `ticket_url` (the clickable link)
+- **Optional enrichments**: `ticket_id` (custom display text)
+- **Automatic fallback**: If only `ticket_url` is provided, the last segment of the URL path is used as display text
+- **Link behavior**: Opens ticket in new tab with external link icon
+
+Example enrichment from workflow:
+```yaml
+enrichments:
+  ticket_id: "PROJ-123"           # Display text
+  ticket_url: "https://company.atlassian.net/browse/PROJ-123"  # Link URL
+```
+
 ## Troubleshooting
 
 ### Form Not Appearing
@@ -305,3 +322,8 @@ curl -X DELETE "${KEEP_API_URL}/incidents/form-schema"
 - Verify field names match between form schema and workflow
 - Check that required fields are filled before incident creation
 - Use default values in workflows: `{{ incident.enrichments.field_name or 'default' }}`
+
+### Ticket Links Not Showing
+- Verify the incident has `ticket_url` enrichment
+- Check that the URL starts with `http` or `https`
+- Ensure the workflow properly enriches the incident with ticket information

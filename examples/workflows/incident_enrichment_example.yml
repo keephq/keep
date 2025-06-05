@@ -56,5 +56,5 @@ workflow:
         type: keep
         with:
           enrichments:
-            jira_ticket_id: "{{ steps.create-ticket-with-enrichments.results.issue.key }}"
-            jira_ticket_url: "{{ steps.create-ticket-with-enrichments.results.ticket_url }}"
+            ticket_id: "{{ steps.create-ticket-with-enrichments.results.issue.key }}"
+            ticket_url: "{{ steps.create-ticket-with-enrichments.results.ticket_url }}"
