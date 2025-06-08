@@ -20,8 +20,26 @@ export function useCelState({
     return searchParams.get(celQueryParamName) || defaultCel || "";
   });
 
-  // Clean up cel param when pathname changes
+  // Track if this is the initial mount
+  const isInitialMount = useRef(true);
+  const previousPathname = useRef(pathname);
+
+  // Clean up cel param when pathname changes (but not on initial mount)
   useEffect(() => {
+    // Skip cleanup on initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousPathname.current = pathname;
+      return;
+    }
+
+    // Only run cleanup if pathname actually changed
+    if (previousPathname.current === pathname) {
+      return;
+    }
+
+    previousPathname.current = pathname;
+
     return () => {
       const newParams = new URLSearchParams(searchParamsRef.current);
       if (newParams.has(celQueryParamName)) {
@@ -31,7 +49,7 @@ export function useCelState({
         );
       }
     };
-  }, [pathname]);
+  }, [pathname, router]);
 
   useEffect(() => {
     if (!enableQueryParams) return;
@@ -50,7 +68,7 @@ export function useCelState({
     router.replace(
       `${window.location.pathname}${paramsCopy.toString() ? "?" + paramsCopy.toString() : ""}`
     );
-  }, [celState, enableQueryParams, defaultCel]);
+  }, [celState, enableQueryParams, defaultCel, router]);
 
   return [celState, setCelState] as const;
 }

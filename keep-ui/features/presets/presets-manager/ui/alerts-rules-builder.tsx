@@ -205,9 +205,14 @@ export const AlertsRulesBuilder = ({
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
 
+  // Prioritize URL query parameter over preset CEL rules
+  const urlCel = searchParams.get("cel");
+  const presetCel = constructCELRules(selectedPreset);
+  const initialCel = urlCel || presetCel;
+
   const [appliedCel, setAppliedCel] = useCelState({
     enableQueryParams: shouldSetQueryParam,
-    defaultCel: constructCELRules(selectedPreset),
+    defaultCel: initialCel,
   });
   const [celRules, setCELRules] = useState(appliedCel);
 

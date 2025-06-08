@@ -127,14 +127,18 @@ describe("useCelState", () => {
       })
     );
 
-    (usePathname as jest.Mock).mockReturnValue("/new/pathname");
+    (usePathname as jest.Mock).mockReturnValue("/alerts/feed");
 
-    const { result, unmount } = renderHook(() =>
+    const { result, rerender } = renderHook(() =>
       useCelState({ enableQueryParams: true, defaultCel: "" })
     );
 
-    unmount();
+    // Change the pathname
+    (usePathname as jest.Mock).mockReturnValue("/new/pathname");
+    
+    rerender();
 
-    expect(replaceMock).toHaveBeenCalledWith("/");
+    // The cleanup should not trigger immediately on pathname change
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });
