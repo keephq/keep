@@ -119,8 +119,11 @@ export function WorkflowYAMLValidationErrors({
             ) : (
               <InformationCircleIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
             )}
-            <span className="text-sm">
-              {error.lineNumber}:{error.column} {error.message}
+            <span className="text-sm flex">
+              <span className="opacity-70 min-w-12">
+                {error.lineNumber}:{error.column}
+              </span>
+              <span>{error.message}</span>
             </span>
           </div>
         ))}

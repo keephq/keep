@@ -1,17 +1,33 @@
 workflow:
-  id: severity-mapping-example
-  name: Severity Mapping Example
-  description: Demonstrates how to use constant mappings to standardize alert severity levels.
+  id: consts-severity-queries-mapping
+  name: Severity and Queries Mapping Example
+  description: Demonstrates how to use constant mappings to standardize alert severity levels and queries.
   triggers:
     - type: manual
-
   consts:
-    severities: '{"s1": "critical","s2": "error","s3": "warning","s4": "info","critical": "critical","error": "error","warning": "warning","info": "info"}'
-
+    ts: 1748465504
+    queries:
+      get-all-tables:
+        query: "SELECT table_name FROM information_schema.tables;"
+      user-query:
+        query: "select * from user where user.id == %user_id%;"
+    severities:
+      s1: critical
+      s2: error
+      s3: warning
+      s4: info
+      critical: critical
+      error: error
+  steps:
+    - name: print-user-query
+      provider:
+        type: console
+        with:
+          message: keep.replace('{{consts.queries.user-query.query}}', '%user_id%', '999') # will print "select * from user where user.id == 999;"
   actions:
     - name: echo
       provider:
         type: console
         with:
           logger: true
-          message: keep.dictget( '{{ consts.severities }}', '{{ alert.severity }}', 'info')
+          message: keep.dictget({{ consts.severities }}, '{{ alert.severity }}', 'info')

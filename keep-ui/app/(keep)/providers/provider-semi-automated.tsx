@@ -1,13 +1,12 @@
 import useSWR from "swr";
 import { Provider } from "@/shared/api/providers";
 import { Subtitle, Title, Text, Icon } from "@tremor/react";
-import { CopyBlock, a11yLight, railscast } from "react-code-blocks";
+import { CopyBlock, a11yLight } from "react-code-blocks";
 import Image from "next/image";
 import { ArrowLongRightIcon } from "@heroicons/react/24/outline";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { MarkdownHTML } from "@/shared/ui/MarkdownHTML/MarkdownHTML";
 
 interface WebhookSettings {
   webhookDescription: string;
@@ -89,7 +88,7 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
       {settingsNotEmpty && <CopyBlock {...settings} />}
       {webhookMarkdown && (
         <div className="prose text-wrap">
-          <Markdown remarkPlugins={[remarkGfm]}>{webhookMarkdown}</Markdown>
+          <MarkdownHTML>{webhookMarkdown}</MarkdownHTML>
         </div>
       )}
     </div>

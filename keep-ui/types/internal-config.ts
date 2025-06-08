@@ -30,4 +30,11 @@ export interface InternalConfig {
   KEEP_HIDE_SENSITIVE_FIELDS: boolean;
   // Show debug info in workflow builder UI
   KEEP_WORKFLOW_DEBUG: boolean;
+  HIDE_NAVBAR_DEDUPLICATION: boolean;
+  HIDE_NAVBAR_WORKFLOWS: boolean;
+  HIDE_NAVBAR_SERVICE_TOPOLOGY: boolean;
+  HIDE_NAVBAR_MAPPING: boolean;
+  HIDE_NAVBAR_EXTRACTION: boolean;
+  HIDE_NAVBAR_MAINTENANCE_WINDOW: boolean;
+  HIDE_NAVBAR_AI_PLUGINS: boolean;
 }

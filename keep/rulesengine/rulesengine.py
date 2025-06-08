@@ -138,7 +138,12 @@ class RulesEngine:
                                 rule_groups = self._extract_subrules(
                                     rule.definition_cel
                                 )
-                                firing_count = sum([alert.event.get("firingCounter", 1) for alert in incident.alerts])
+                                firing_count = sum(
+                                    [
+                                        alert.event.get("firingCounter", 1)
+                                        for alert in incident.alerts
+                                    ]
+                                )
                                 alerts_count = max(incident.alerts_count, firing_count)
                                 if alerts_count >= rule.threshold:
                                     if not rule.require_approve:
@@ -151,10 +156,8 @@ class RulesEngine:
                                             )
                                             incident.is_visible = True
                                         elif rule.create_on == "all":
-                                            incident = (
-                                                self._process_event_for_history_based_rule(
-                                                    incident, rule, session
-                                                )
+                                            incident = self._process_event_for_history_based_rule(
+                                                incident, rule, session
                                             )
 
                                 send_created_event = incident.is_visible
@@ -335,6 +338,7 @@ class RulesEngine:
                 session=session,
                 incident_name=incident_name,
                 past_incident=existed_incident,
+                assignee=rule.assignee,
             )
             return incident, True
         return None, False

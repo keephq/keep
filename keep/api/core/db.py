@@ -1009,9 +1009,7 @@ def get_workflow_executions(
     is_test_run: bool = False,
 ):
     with Session(engine) as session:
-        query = session.query(
-            WorkflowExecution,
-        ).filter(
+        query = session.query(WorkflowExecution,).filter(
             WorkflowExecution.tenant_id == tenant_id,
             WorkflowExecution.workflow_id == workflow_id,
             WorkflowExecution.is_test_run == False,
@@ -1179,24 +1177,42 @@ def push_logs_to_db(log_entries):
 
 
 def get_workflow_execution(
-    tenant_id: str, workflow_execution_id: str, is_test_run: bool | None = None
+    tenant_id: str,
+    workflow_execution_id: str,
+    is_test_run: bool | None = None,
 ):
     with Session(engine) as session:
-        base_query = session.query(WorkflowExecution)
+        base_query = select(WorkflowExecution)
         if is_test_run is not None:
-            base_query = base_query.filter(
+            base_query = base_query.where(
                 WorkflowExecution.is_test_run == is_test_run,
             )
-        base_query = base_query.filter(
+        base_query = base_query.where(
             WorkflowExecution.id == workflow_execution_id,
             WorkflowExecution.tenant_id == tenant_id,
         )
-        execution_with_logs = base_query.options(
-            joinedload(WorkflowExecution.logs),
+        execution_with_relations = base_query.options(
             joinedload(WorkflowExecution.workflow_to_alert_execution),
             joinedload(WorkflowExecution.workflow_to_incident_execution),
-        ).one()
-    return execution_with_logs
+        )
+        return session.exec(execution_with_relations).one()
+
+
+def get_workflow_execution_with_logs(
+    tenant_id: str,
+    workflow_execution_id: str,
+    is_test_run: bool | None = None,
+):
+    with Session(engine) as session:
+        execution = get_workflow_execution(
+            tenant_id, workflow_execution_id, is_test_run
+        )
+        logs = session.exec(
+            select(WorkflowExecutionLog).where(
+                WorkflowExecutionLog.workflow_execution_id == workflow_execution_id
+            )
+        ).all()
+        return execution, logs
 
 
 def get_last_workflow_executions(tenant_id: str, limit=20):
@@ -2185,6 +2201,7 @@ def create_rule(
     multi_level=False,
     multi_level_property_name=None,
     threshold=1,
+    assignee=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -2207,6 +2224,7 @@ def create_rule(
             multi_level=multi_level,
             multi_level_property_name=multi_level_property_name,
             threshold=threshold,
+            assignee=assignee,
         )
         session.add(rule)
         session.commit()
@@ -2232,6 +2250,7 @@ def update_rule(
     multi_level,
     multi_level_property_name,
     threshold,
+    assignee=None,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -2259,6 +2278,7 @@ def update_rule(
             rule.multi_level = multi_level
             rule.multi_level_property_name = multi_level_property_name
             rule.threshold = threshold
+            rule.assignee = assignee
             session.commit()
             session.refresh(rule)
             return rule
@@ -2358,6 +2378,7 @@ def create_incident_for_grouping_rule(
     rule_fingerprint,
     incident_name: str = None,
     past_incident: Optional[Incident] = None,
+    assignee: str | None = None,
     session: Optional[Session] = None,
 ):
 
@@ -2374,6 +2395,7 @@ def create_incident_for_grouping_rule(
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,
+            assignee=assignee,
         )
         session.add(incident)
         session.flush()
@@ -3889,9 +3911,7 @@ def get_last_incidents(
         List[Incident]: A list of Incident objects.
     """
     with Session(engine) as session:
-        query = session.query(
-            Incident,
-        ).filter(
+        query = session.query(Incident,).filter(
             Incident.tenant_id == tenant_id,
             Incident.is_candidate == is_candidate,
             Incident.is_visible == True,

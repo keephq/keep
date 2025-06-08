@@ -65,16 +65,91 @@ describe("convertCelAstToQueryBuilderAst", () => {
       combinator: "or",
       rules: [
         {
-          field: "field1",
-          operator: ">",
-          value: 10,
-          id: expect.any(String),
+          combinator: "and",
+          rules: [
+            {
+              field: "field1",
+              operator: ">",
+              value: 10,
+              id: expect.any(String),
+            },
+          ],
         },
         {
-          field: "field2",
-          operator: "<",
-          value: 20,
-          id: expect.any(String),
+          combinator: "and",
+          rules: [
+            {
+              field: "field2",
+              operator: "<",
+              value: 20,
+              id: expect.any(String),
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("should convert a LogicalNode with OR operator containing LogicalNode with AND operator", () => {
+    const logicalNode: CelAst.LogicalNode = {
+      node_type: "LogicalNode",
+      operator: CelAst.LogicalNodeOperator.OR,
+      left: {
+        node_type: "LogicalNode",
+        left: {
+          node_type: "ComparisonNode",
+          first_operand: { path: ["field1"] } as CelAst.PropertyAccessNode,
+          operator: CelAst.ComparisonNodeOperator.GT,
+          second_operand: { value: 10 },
+        } as CelAst.ComparisonNode,
+        operator: CelAst.LogicalNodeOperator.AND,
+        right: {
+          node_type: "ComparisonNode",
+          first_operand: { path: ["field2"] } as CelAst.PropertyAccessNode,
+          operator: CelAst.ComparisonNodeOperator.LE,
+          second_operand: { value: 10 },
+        } as CelAst.ComparisonNode,
+      } as CelAst.LogicalNode,
+      right: {
+        node_type: "ComparisonNode",
+        first_operand: { path: ["field3"] } as CelAst.PropertyAccessNode,
+        operator: CelAst.ComparisonNodeOperator.LT,
+        second_operand: { value: 20 },
+      } as CelAst.ComparisonNode,
+    };
+
+    const result = convertCelAstToQueryBuilderAst(logicalNode);
+
+    expect(result).toEqual({
+      combinator: "or",
+      rules: [
+        {
+          combinator: "and",
+          rules: [
+            {
+              field: "field1",
+              operator: ">",
+              value: 10,
+              id: expect.any(String),
+            },
+            {
+              field: "field2",
+              operator: "<=",
+              value: 10,
+              id: expect.any(String),
+            },
+          ],
+        },
+        {
+          combinator: "and",
+          rules: [
+            {
+              field: "field3",
+              operator: "<",
+              value: 20,
+              id: expect.any(String),
+            },
+          ],
         },
       ],
     });
