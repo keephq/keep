@@ -1,6 +1,5 @@
 import React, { FC } from "react";
-import ReactMarkdown from "react-markdown";
-
+import { MarkdownHTML } from "../MarkdownHTML/MarkdownHTML";
 interface FormattedContentProps {
   content: string | null | undefined;
   format?: "markdown" | "html" | null;
@@ -30,7 +29,7 @@ export const FormattedContent: FC<FormattedContentProps> = ({
         prose-code:text-sm prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
         prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline"
       >
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <MarkdownHTML>{content}</MarkdownHTML>
       </div>
     );
   }
@@ -43,8 +42,9 @@ export const FormattedContent: FC<FormattedContentProps> = ({
           prose-p:text-base prose-p:leading-7
           prose-ul:list-disc prose-ul:pl-6
           prose-ol:list-decimal prose-ol:pl-6"
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
+      >
+        <MarkdownHTML>{content}</MarkdownHTML>
+      </div>
     );
   }
 

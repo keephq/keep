@@ -13,6 +13,7 @@ The **Functions** in Keep Workflow Engine are utilities that can be used to mani
 **Description:** Adds all provided numbers together. All arguments are converted to integers.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -30,6 +31,7 @@ steps:
 **Description:** Subtracts all subsequent numbers from the first number. All arguments are converted to integers.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -47,6 +49,7 @@ steps:
 **Description:** Multiplies all provided numbers together. All arguments are converted to integers.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -64,6 +67,7 @@ steps:
 **Description:** Divides the first number by all subsequent numbers. All arguments are converted to integers. Returns an integer if the division result is whole, otherwise returns a floating-point number.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -82,6 +86,7 @@ steps:
 **Description:** Calculates the remainder of dividing the first number by all subsequent numbers sequentially. All arguments are converted to integers.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -99,6 +104,7 @@ steps:
 **Description:** Raises the first number to the power equal to the product of all subsequent numbers. All arguments are converted to integers.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -116,6 +122,7 @@ steps:
 **Description:** Performs integer division of the first number by all subsequent numbers sequentially. All arguments are converted to integers.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -133,6 +140,7 @@ steps:
 **Description:** Checks if two values are equal.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -153,6 +161,7 @@ steps:
 **Description:** Converts a string to uppercase.
 
 **Example:**
+
 ```yaml
 steps:
   - name: example-step
@@ -163,6 +172,7 @@ steps:
 ```
 
 ---
+
 ### `lowercase`
 
 **Description:** Converts a string to lowercase.
@@ -176,6 +186,7 @@ steps:
       with:
         message: "keep.lowercase('HELLO WORLD')" # Output: "hello world"
 ```
+
 ---
 
 ### `capitalize`
@@ -207,6 +218,7 @@ steps:
       with:
         message: keep.title("hello world") # Output: "Hello World"
 ```
+
 ---
 
 ### `split`
@@ -468,6 +480,23 @@ steps:
 ---
 
 ## Date and Time Functions
+
+### `from_timestamp`
+
+**Description:** Converts unix timestamp int, float or string to datetime object, with optional timezone option.
+
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: console
+      with:
+        message: keep.from_timestamp(1717244449.0) # will print "2024-06-01 12:20:49+00:00"
+        # or with timezone
+        # message: keep.from_timestamp(1717244449.0, "Europe/Berlin") # will print "2024-06-01 14:20:49+02:00"
+```
 
 ### `utcnow`
 

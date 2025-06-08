@@ -21,9 +21,11 @@ logger = logging.getLogger(__name__)
 
 _len = len
 
+
 def add(*args) -> [int, float]:
     args = list(map(int, args))
     return sum(args)
+
 
 def sub(*args) -> [int, float]:
     args = list(map(int, args))
@@ -32,12 +34,14 @@ def sub(*args) -> [int, float]:
         result -= arg
     return result
 
+
 def mul(*args) -> [int, float]:
     args = list(map(int, args))
     result = args[0]
     for arg in args[1:]:
         result *= arg
     return result
+
 
 def div(*args) -> [int, float]:
     args = list(map(int, args))
@@ -46,12 +50,14 @@ def div(*args) -> [int, float]:
         result /= arg
     return int(result) if result.is_integer() else result
 
+
 def mod(*args) -> [int, float]:
     args = list(map(int, args))
     result = args[0]
     for arg in args[1:]:
         result %= arg
     return result
+
 
 def exp(*args) -> [int, float]:
     args = list(map(int, args))
@@ -60,6 +66,7 @@ def exp(*args) -> [int, float]:
         result **= arg
     return result
 
+
 def fdiv(*args) -> [int, float]:
     args = list(map(int, args))
     result = args[0]
@@ -67,8 +74,10 @@ def fdiv(*args) -> [int, float]:
         result //= arg
     return result
 
+
 def eq(a, b) -> bool:
     return a == b
+
 
 def all(iterable) -> bool:
     # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -212,6 +221,17 @@ def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
             return ""
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
+
+
+def from_timestamp(
+    timestamp: int | float | str, timezone: str = "UTC"
+) -> datetime.datetime | str:
+    try:
+        if isinstance(timestamp, str):
+            timestamp = float(timestamp)
+        return datetime.datetime.fromtimestamp(timestamp, tz=pytz.timezone(timezone))
+    except Exception:
+        return ""
 
 
 def to_timestamp(dt: datetime.datetime | str = "") -> int:

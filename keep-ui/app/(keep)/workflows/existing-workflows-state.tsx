@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@tremor/react";
 import { ArrowUpOnSquareStackIcon } from "@heroicons/react/24/outline";
 import {
@@ -60,6 +60,8 @@ export function ExistingWorkflowsState({
   const [paginationState, setPaginationState] = useState<PaginationState>(
     DEFAULT_WORKFLOWS_PAGINATION
   );
+  const paginationStateRef = useRef(paginationState);
+  paginationStateRef.current = paginationState;
   const [workflowsQuery, setWorkflowsQuery] = useState<WorkflowsQuery>(
     DEFAULT_WORKFLOWS_QUERY
   );
@@ -85,6 +87,12 @@ export function ExistingWorkflowsState({
 
     setWorkflowsQuery(query);
   }, [searchCel, filterCel, paginationState]);
+
+  // When filterCel or searchCel changes, we need to reset pagination state offset to 0
+  useEffect(
+    () => setPaginationState({ ...paginationStateRef.current, offset: 0 }),
+    [filterCel, searchCel]
+  );
 
   // Only fetch data when the user is authenticated
   /**
@@ -116,13 +124,6 @@ export function ExistingWorkflowsState({
   const showFilterEmptyState = isTableEmpty && !!filterCel;
   const showSearchEmptyState =
     isTableEmpty && !!searchCel && !showFilterEmptyState;
-
-  const setPaginationStateCallback = useCallback(
-    (pageIndex: number, limit: number, offset: number) => {
-      setPaginationState({ limit, offset });
-    },
-    [setPaginationState]
-  );
 
   const facetsConfig: FacetsConfig = useMemo(() => {
     return {
@@ -333,7 +334,8 @@ export function ExistingWorkflowsState({
                       isRefreshing={false}
                       pageSizeOptions={[12, 24, 48]}
                       onRefresh={() => {}}
-                      onStateChange={setPaginationStateCallback}
+                      state={paginationState}
+                      onStateChange={setPaginationState}
                     />
                   </div>
                 </div>

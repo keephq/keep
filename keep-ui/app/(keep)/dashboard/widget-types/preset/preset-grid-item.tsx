@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import TimeAgo from "react-timeago";
 import { useSearchParams } from "next/navigation";
 import WidgetAlertsTable from "./widget-alerts-table";
+import CelInput from "@/features/cel-input/cel-input";
 
 interface GridItemProps {
   item: WidgetData;
@@ -107,9 +108,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
         <Tooltip.Provider>
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              <div className="border py-0.5 px-1 rounded-md text-orange-500 truncate">
-                {presetCel}
-              </div>
+              <CelInput value={presetCel} readOnly></CelInput>
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Content sideOffset={5}>
