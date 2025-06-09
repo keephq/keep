@@ -196,7 +196,7 @@ export function AlertTable({
   const [grouping, setGrouping] = useState<GroupingState>([]);
   
   const groupExpansionState = useGroupExpansion(true);
-  const { collapseAll, expandAll } = groupExpansionState;
+  const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
   
   const isGroupingActive = grouping.length > 0;
 
@@ -388,26 +388,15 @@ export function AlertTable({
             />
             
             {isGroupingActive && (
-              <div className="flex gap-2">
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={collapseAll}
-                  icon={ChevronUpIcon}
-                  tooltip="Collapse all groups"
-                >
-                  Collapse All
-                </Button>
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={expandAll}
-                  icon={ChevronDownIcon}
-                  tooltip="Expand all groups"
-                >
-                  Expand All
-                </Button>
-              </div>
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={toggleAll}
+                icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
+                tooltip={areAllGroupsExpanded() ? "Collapse all groups" : "Expand all groups"}
+              >
+                {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
+              </Button>
             )}
           </div>
         )}

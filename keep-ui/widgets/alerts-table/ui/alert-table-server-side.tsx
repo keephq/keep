@@ -456,7 +456,7 @@ export function AlertTableServerSide({
 
   // Add group expansion state
   const groupExpansionState = useGroupExpansion(true);
-  const { collapseAll, expandAll } = groupExpansionState;
+  const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
 
   // Check if grouping is active
   const isGroupingActive = grouping.length > 0;
@@ -627,28 +627,17 @@ export function AlertTableServerSide({
               table={table}
             />
             
-            {/* Add Collapse/Expand All button when grouping is active */}
+            {/* Add toggle button when grouping is active */}
             {isGroupingActive && (
-              <div className="flex gap-2">
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={collapseAll}
-                  icon={ChevronUpIcon}
-                  tooltip="Collapse all groups"
-                >
-                  Collapse All
-                </Button>
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={expandAll}
-                  icon={ChevronDownIcon}
-                  tooltip="Expand all groups"
-                >
-                  Expand All
-                </Button>
-              </div>
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={toggleAll}
+                icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
+                tooltip={areAllGroupsExpanded() ? "Collapse all groups" : "Expand all groups"}
+              >
+                {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
+              </Button>
             )}
           </div>
         )}

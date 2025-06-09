@@ -67,6 +67,41 @@ export function useGroupExpansion(defaultExpanded: boolean = true) {
     [expandedGroups, defaultExpanded]
   );
 
+  // Check if all groups are collapsed
+  const areAllGroupsCollapsed = useCallback(() => {
+    if (allGroupKeys.size === 0) return false;
+    
+    for (const key of allGroupKeys) {
+      if (isGroupExpanded(key)) {
+        return false;
+      }
+    }
+    return true;
+  }, [allGroupKeys, isGroupExpanded]);
+
+  // Check if all groups are expanded
+  const areAllGroupsExpanded = useCallback(() => {
+    if (allGroupKeys.size === 0) return true;
+    
+    for (const key of allGroupKeys) {
+      if (!isGroupExpanded(key)) {
+        return false;
+      }
+    }
+    return true;
+  }, [allGroupKeys, isGroupExpanded]);
+
+  // Toggle all groups based on current state
+  const toggleAll = useCallback(() => {
+    // If all are collapsed or mixed state, expand all
+    // If all are expanded, collapse all
+    if (areAllGroupsExpanded()) {
+      collapseAll();
+    } else {
+      expandAll();
+    }
+  }, [areAllGroupsExpanded, collapseAll, expandAll]);
+
   return {
     isGroupExpanded,
     toggleGroup,
@@ -75,5 +110,8 @@ export function useGroupExpansion(defaultExpanded: boolean = true) {
     setGroupExpanded,
     initializeGroup,
     expandedGroups,
+    areAllGroupsCollapsed,
+    areAllGroupsExpanded,
+    toggleAll,
   };
 }
