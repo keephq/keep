@@ -38,7 +38,8 @@ from keep.api.core.workflows import (
     get_workflow_facets_data,
     get_workflow_potential_facet_fields,
 )
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.db.incident import IncidentSeverity
 from keep.api.models.facet import FacetOptionsQueryDto
 from keep.api.models.incident import IncidentDto
 from keep.api.models.query import QueryDto
@@ -60,6 +61,7 @@ from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
+from keep.providers.providers_factory import ProviderConfigurationException
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -319,8 +321,20 @@ def get_event_from_body(body: dict, tenant_id: str):
     # Handle UI triggered events
     if event_class == AlertDto:
         event_body["id"] = event_body.get("fingerprint", "manual-run")
+        if "severity" in event_body:
+            try:
+                event_body["severity"] = AlertSeverity(event_body["severity"].lower())
+            except ValueError:
+                pass
     elif event_class == IncidentDto:
         event_body["id"] = event_body.get("id", "manual-run")
+        if "severity" in event_body:
+            try:
+                event_body["severity"] = IncidentSeverity(
+                    event_body["severity"].lower()
+                )
+            except ValueError:
+                pass
     event_body["name"] = event_body.get("name", "manual-run")
     event_body["lastReceived"] = event_body.get(
         "lastReceived", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
@@ -358,7 +372,16 @@ def run_workflow(
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
 
     workflow_store = WorkflowStore()
-    workflow = workflow_store.get_workflow(tenant_id, workflow_id)
+    try:
+        workflow = workflow_store.get_workflow(tenant_id, workflow_id)
+    except ValueError as e:
+        logger.exception(
+            "Invalid workflow configuration",
+            extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+        )
+        raise HTTPException(
+            status_code=400, detail=f"Invalid workflow configuration: {e}"
+        ) from e
 
     # if there are workflow permissions, check if the user has access
     if not Workflow.check_run_permissions(
@@ -399,6 +422,9 @@ def run_workflow(
             event,
             inputs=inputs,
         )
+    except HTTPException:
+        # re-raise http exceptions as is
+        raise
     except Exception as e:
         logger.exception(
             "Failed to run workflow",
@@ -410,7 +436,7 @@ def run_workflow(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to run workflow {workflow_id}: {e}",
-        )
+        ) from e
 
     logger.info(
         "Workflow ran successfully",
@@ -483,6 +509,22 @@ async def run_workflow_from_definition(
             workflow_from_db = workflowstore.get_workflow(tenant_id, workflow_id)
             # get_workflow looks by workflow name if id is not found, so we need to assign the final id from db
             workflow_id = workflow_from_db.workflow_id
+        except ProviderConfigurationException as e:
+            logger.exception(
+                "Invalid provider configuration",
+                extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+            )
+            raise HTTPException(
+                status_code=400, detail=f"Invalid provider configuration: {e}"
+            ) from e
+        except ValueError as e:
+            logger.exception(
+                "Invalid workflow configuration",
+                extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+            )
+            raise HTTPException(
+                status_code=400, detail=f"Invalid workflow configuration: {e}"
+            ) from e
         except HTTPException:
             # if workflow_id is not found, use dummy workflow id for test run
             workflow_id = None
@@ -1047,7 +1089,7 @@ def delete_workflow_by_id(
 @router.get("/runs/{workflow_execution_id}")
 @router.get(
     "/{workflow_id}/runs/{workflow_execution_id}",
-    description="Get a workflow execution status",
+    description="Get a workflow execution status, results, and logs",
 )
 def get_workflow_execution_status(
     workflow_execution_id: str,
@@ -1057,16 +1099,10 @@ def get_workflow_execution_status(
 ) -> WorkflowExecutionDTO:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
-    workflow_execution = workflowstore.get_workflow_execution(
+    workflow_execution, logs = workflowstore.get_workflow_execution_with_logs(
         workflow_execution_id=workflow_execution_id,
         tenant_id=tenant_id,
     )
-
-    if not workflow_execution:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Workflow execution {workflow_execution_id} not found",
-        )
 
     workflow = get_workflow_by_id_db(
         tenant_id=tenant_id,
@@ -1084,7 +1120,7 @@ def get_workflow_execution_status(
         event_id = workflow_execution.workflow_to_incident_execution.incident_id
         event_type = "incident"
 
-    workflow_execution_dto = WorkflowExecutionDTO(
+    return WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_name=workflow.name if workflow else None,
         workflow_id=workflow_execution.workflow_id,
@@ -1101,13 +1137,12 @@ def get_workflow_execution_status(
                 message=log.message,
                 context=log.context if log.context else {},
             )
-            for log in workflow_execution.logs
+            for log in logs
         ],
         results=workflow_execution.results,
         event_id=event_id,
         event_type=event_type,
     )
-    return workflow_execution_dto
 
 
 @router.put(

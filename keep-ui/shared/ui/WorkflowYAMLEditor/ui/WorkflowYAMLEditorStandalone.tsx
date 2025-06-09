@@ -42,7 +42,8 @@ export function WorkflowYAMLEditorStandalone({
     setWorkflowId(workflowId);
   }, [workflowId, setWorkflowId]);
 
-  const isValid = validationErrors?.length === 0;
+  const isValid =
+    validationErrors?.filter((e) => e.severity === "error").length === 0;
 
   const { updateWorkflow } = useWorkflowActions();
   const { data: { providers } = {} } = useProviders();
