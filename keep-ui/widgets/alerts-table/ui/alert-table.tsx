@@ -46,9 +46,9 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { AlertsTableBody } from "./alerts-table-body";
 // TODO: replace with generic pagination
 import AlertPagination from "./alert-pagination";
-import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
-import { Button } from "@tremor/react";
+import { PageTitle } from "@/shared/ui";
+import SettingsSelection from "./SettingsSelection";
 
 interface PresetTab {
   name: string;
@@ -341,29 +341,14 @@ export function AlertTable({
 
   return (
     <div ref={a11yContainerRef} className="h-full flex flex-col">
-      <TitleAndFilters
-        totalAlertsCount={alerts.length}
-        filteredAlertsCount={filteredAlerts.length}
-        table={table}
-        title={
-          <div className="flex items-center justify-between">
-            <span data-testid={`${presetName.toLowerCase()}-table-header`}>
-              <PageTitle>{presetName}</PageTitle>
-            </span>
-            <SettingsSelection table={table} presetName={presetName} />
-          </div>
-        }
-        facets={alertFacets}
-        dynamicFacets={dynamicFacets}
-        onDynamicFacetsChange={setDynamicFacets}
-        facetFilters={facetFilters}
-        onFacetFiltersChange={setFacetFilters}
-        setParentClearFiltersTriggered={setClearFiltersTriggered}
-        clearFiltersTriggered={clearFiltersTriggered}
-        showSkeleton={showSkeleton}
-        showSearchAndFilters={selectedAlertsFingerprints.length === 0}
-        onRefresh={mutateAlerts}
-      />
+      <div className="flex-none">
+        <div className="flex justify-between">
+          <span data-testid={`${presetName.toLowerCase()}-table-header`}>
+            <PageTitle>{presetName}</PageTitle>
+          </span>
+          <SettingsSelection table={table} presetName={presetName} />
+        </div>
+      </div>
       <div className="flex justify-between mt-4 mb-2">
         {selectedAlertsFingerprints.length ? (
           <AlertActions
@@ -378,31 +363,16 @@ export function AlertTable({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <div className="flex items-center justify-between w-full">
-            <div className="flex-1">
-              <AlertPresetManager
-                presetName={presetName}
-                onCelChanges={(newCel) => {
-                  table.setGlobalFilter(newCel);
-                }}
-                table={table}
-              />
-            </div>
-            
-            {isGroupingActive && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={toggleAll}
-                icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
-                tooltip={areAllGroupsExpanded() ? "Collapse all groups" : "Expand all groups"}
-                className="ml-2"
-                color="orange"
-              >
-                {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
-              </Button>
-            )}
-          </div>
+          <AlertPresetManager
+            presetName={presetName}
+            onCelChanges={(newCel) => {
+              table.setGlobalFilter(newCel);
+            }}
+            table={table}
+            isGroupingActive={isGroupingActive}
+            onToggleAllGroups={toggleAll}
+            areAllGroupsExpanded={areAllGroupsExpanded}
+          />
         )}
       </div>
       <Card className="flex-1 overflow-y-scroll p-0 pb-4">

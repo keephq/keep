@@ -73,7 +73,6 @@ import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
-import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -620,30 +619,14 @@ export function AlertTableServerSide({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <div className="flex items-center justify-between w-full">
-            <div className="flex-1">
-              <AlertPresetManager
-                presetName={presetName}
-                onCelChanges={setSearchCel}
-                table={table}
-              />
-            </div>
-            
-            {/* Add toggle button when grouping is active */}
-            {isGroupingActive && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={toggleAll}
-                icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
-                tooltip={areAllGroupsExpanded() ? "Collapse all groups" : "Expand all groups"}
-                className="ml-2"
-                color="orange"
-              >
-                {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
-              </Button>
-            )}
-          </div>
+          <AlertPresetManager
+            presetName={presetName}
+            onCelChanges={setSearchCel}
+            table={table}
+            isGroupingActive={isGroupingActive}
+            onToggleAllGroups={toggleAll}
+            areAllGroupsExpanded={areAllGroupsExpanded}
+          />
         )}
       </div>
 
