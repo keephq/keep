@@ -361,9 +361,7 @@ class ProvidersService:
                     event_subscriber = EventSubscriber.get_instance()
                     event_subscriber.remove_consumer(provider_model.id)
                 except Exception:
-                    err_msg = f"Failed to update consumer provider with id: {provider_id}, type: {provider.type}"
-                    logger.exception(err_msg)
-                    raise HTTPException(status_code=400, detail=err_msg)
+                    logger.exception("Failed to unregister provider as a consumer")
 
             try:
                 provider = ProvidersFactory.get_provider(
