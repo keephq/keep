@@ -305,7 +305,9 @@ class ProvidersService:
                     event_subscriber.remove_consumer(provider.id)
                     event_subscriber.add_consumer(provider_instance)
                 except Exception:
-                    logger.exception(f"Failed to update consumer provider id: {provider_id}, type: {provider.type}")
+                    err_msg = f"Failed to update consumer provider with id: {provider_id}, type: {provider.type}"
+                    logger.exception(err_msg)
+                    raise HTTPException(status_code=400, detail=err_msg)
             
             session.commit()
 
