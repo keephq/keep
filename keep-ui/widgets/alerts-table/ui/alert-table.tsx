@@ -109,7 +109,7 @@ export function AlertTable({
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
-  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED || false;
+  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const { theme } = useAlertTableTheme();
 
@@ -131,9 +131,10 @@ export function AlertTable({
   );
 
   const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
-    `${presetName}-viewed-alerts`,
+    `viewed-alerts-${presetName}`,
     []
   );
+  const [clearFiltersTriggered, setClearFiltersTriggered] = useState(false);
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
   const handleFacetDelete = (facetKey: string) => {
@@ -187,17 +188,16 @@ export function AlertTable({
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
     useState<boolean>(false);
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
 
+  // Add grouping state and group expansion state
   const [grouping, setGrouping] = useState<GroupingState>([]);
-  
   const groupExpansionState = useGroupExpansion(true);
   const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
-  
   const isGroupingActive = grouping.length > 0;
 
   const filteredAlerts = alerts.filter((alert) => {
@@ -340,16 +340,16 @@ export function AlertTable({
   };
 
   return (
-    <div ref={a11yContainerRef} className="h-full flex flex-col">
-      <div className="flex-none">
-        <div className="flex justify-between">
-          <span data-testid={`${presetName.toLowerCase()}-table-header`}>
-            <PageTitle>{presetName}</PageTitle>
-          </span>
-          <SettingsSelection table={table} presetName={presetName} />
-        </div>
+    <div className="h-screen flex flex-col gap-4">
+      <div className="px-4 flex-none">
+        <TitleAndFilters
+          table={table}
+          alerts={alerts}
+          presetName={presetName}
+        />
       </div>
-      <div className="flex justify-between mt-4 mb-2">
+
+      <div className="h-14 px-4 flex-none">
         {selectedAlertsFingerprints.length ? (
           <AlertActions
             selectedAlertsFingerprints={selectedAlertsFingerprints}
@@ -363,41 +363,71 @@ export function AlertTable({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <AlertPresetManager
+          <AlertPresetManager 
+            table={table} 
             presetName={presetName}
-            onCelChanges={(newCel) => {
-              table.setGlobalFilter(newCel);
-            }}
-            table={table}
             isGroupingActive={isGroupingActive}
             onToggleAllGroups={toggleAll}
             areAllGroupsExpanded={areAllGroupsExpanded}
           />
         )}
       </div>
-      <Card className="flex-1 overflow-y-scroll p-0 pb-4">
-        <Table className="[&>table]:table-fixed">
-          <AlertsTableHeaders
-            columns={columns}
-            table={table}
-            presetName={presetName}
-            a11yContainerRef={a11yContainerRef}
-            columnTimeFormats={columnTimeFormats}
-            setColumnTimeFormats={setColumnTimeFormats}
-            columnListFormats={columnListFormats}
-            setColumnListFormats={setColumnListFormats}
-          />
-          <AlertsTableBody
-            table={table}
-            showSkeleton={showSkeleton}
-            theme={theme}
-            onRowClick={handleRowClick}
-            lastViewedAlert={lastViewedAlert}
-            presetName={presetName}
-            groupExpansionState={groupExpansionState}
-          />
-        </Table>
-      </Card>
+
+      <div className="flex-grow px-4 pb-4">
+        <div className="h-full flex gap-4">
+          <div className="w-32 min-w-[12rem] overflow-y-auto">
+            <AlertFacets
+              className="sticky top-0"
+              alerts={alerts}
+              facetFilters={facetFilters}
+              setFacetFilters={setFacetFilters}
+              dynamicFacets={dynamicFacets}
+              setDynamicFacets={setDynamicFacets}
+              onDelete={handleFacetDelete}
+              table={table}
+              showSkeleton={showSkeleton}
+            />
+          </div>
+
+          <div className="flex-1 flex flex-col min-w-0">
+            <Card className="h-full flex flex-col p-0 overflow-x-auto">
+              <div className="flex-grow flex flex-col">
+                <div ref={a11yContainerRef} className="sr-only" />
+
+                <div className="flex-grow">
+                  <Table
+                    className={clsx(
+                      "[&>table]:table-fixed [&>table]:w-full",
+                      "overflow-x-auto",
+                      "w-full"
+                    )}
+                  >
+                    <AlertsTableHeaders
+                      columns={columns}
+                      table={table}
+                      presetName={presetName}
+                      a11yContainerRef={a11yContainerRef}
+                      columnTimeFormats={columnTimeFormats}
+                      setColumnTimeFormats={setColumnTimeFormats}
+                      columnListFormats={columnListFormats}
+                      setColumnListFormats={setColumnListFormats}
+                    />
+                    <AlertsTableBody
+                      table={table}
+                      showSkeleton={showSkeleton}
+                      theme={theme}
+                      onRowClick={handleRowClick}
+                      lastViewedAlert={lastViewedAlert}
+                      presetName={presetName}
+                      groupExpansionState={groupExpansionState}
+                    />
+                  </Table>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
 
       <div className="h-16 px-4 flex-none pl-[14rem]">
         <AlertPagination
