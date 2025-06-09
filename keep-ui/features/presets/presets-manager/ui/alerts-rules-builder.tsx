@@ -259,22 +259,6 @@ export const AlertsRulesBuilder = ({
     };
   }, []);
 
-  useEffect(() => {
-    setCELRules(defaultQuery);
-  }, [defaultQuery]);
-
-  useEffect(() => {
-    // Use the constructCELRules function to set the initial value of celRules
-    const initialCELRules = constructCELRules(selectedPreset);
-    if (
-      searchParams?.get("cel") // Check if the cel query is present in the URL and set it as the initial value
-    ) {
-      setCELRules(searchParams.get("cel") || "");
-    } else {
-      setCELRules(initialCELRules);
-    }
-  }, [selectedPreset, searchParams]);
-
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
     const textArea = textAreaRef.current;

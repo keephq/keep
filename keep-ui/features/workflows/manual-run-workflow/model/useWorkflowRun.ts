@@ -137,7 +137,8 @@ export const useWorkflowRun = (workflow: Workflow) => {
     [workflow?.providers, providers]
   );
   const uniqueNotInstalledProviders = [...new Set(notInstalledProviders)];
-  const allProvidersInstalled = notInstalledProviders.length === 0;
+  const allProvidersInstalled =
+    notInstalledProviders && notInstalledProviders.length === 0;
 
   if (!workflow) {
     return {
@@ -193,7 +194,9 @@ export const useWorkflowRun = (workflow: Workflow) => {
       const { workflow_execution_id } = result;
       router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
     } catch (error) {
-      showErrorToast(error, "Failed to start workflow");
+      showErrorToast(error, undefined, {
+        messagePrefix: "Failed to start workflow",
+      });
     } finally {
       setIsRunning(false);
     }

@@ -753,6 +753,52 @@ def test_adding_new_preset(
             alert_property_name,
             None,
         )
+        # check that alerts noise is not playing
+        expect(
+            browser.locator("[data-testid='noisy-presets-audio-player'].playing")
+        ).to_have_count(0)
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+
+def test_adding_new_noisy_preset(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    try:
+        current_alerts = query_alerts(cell_query="", limit=1000)["results"]
+        init_test(browser, current_alerts, max_retries=3)
+
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        # Wait for navigation to complete to either signin or providers page
+        # (since we might get redirected automatically)
+        browser.wait_for_load_state("networkidle")
+        cel_input_locator = browser.locator(".alerts-cel-input")
+        cel_input_locator.click()
+        browser.keyboard.type("name.contains('high')")
+        browser.keyboard.press("Enter")
+        browser.wait_for_timeout(500)
+        browser.locator("[data-testid='save-preset-button']").click()
+        preset_form_locator = browser.locator("[data-testid='preset-form']")
+        preset_form_locator.locator("[data-testid='preset-name-input']").fill(
+            "Test noisy preset"
+        )
+        preset_form_locator.locator("[data-testid='is-noisy-switch']").click()
+        preset_form_locator.locator("[data-testid='save-preset-button']").click()
+        expect(
+            browser.locator("[data-testid='noisy-presets-audio-player'].playing")
+        ).to_have_count(1)
+        browser.reload()
+
+        # check that it's still playing after reloading
+        expect(
+            browser.locator("[data-testid='noisy-presets-audio-player'].playing")
+        ).to_have_count(1)
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise

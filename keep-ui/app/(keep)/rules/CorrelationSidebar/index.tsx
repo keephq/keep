@@ -4,7 +4,7 @@ import { CorrelationSidebarBody } from "./CorrelationSidebarBody";
 import { CorrelationFormType } from "./types";
 import { Drawer } from "@/shared/ui/Drawer";
 import { Rule } from "@/utils/hooks/useRules";
-import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
+import { DefaultRuleGroupType } from "react-querybuilder";
 import { convertCelAstToQueryBuilderAst } from "./convert-cel-ast-to-query-builder-ast/convert-cel-ast-to-query-builder-ast.function";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
@@ -28,6 +28,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationFormType = {
   multiLevel: false,
   multiLevelPropertyName: "",
   threshold: 1,
+  assignee: undefined,
   query: {
     combinator: "or",
     rules: [
@@ -60,19 +61,6 @@ export const CorrelationSidebar = ({
       const query = convertCelAstToQueryBuilderAst(
         selectedRule.definition_cel_ast
       );
-      const anyCombinator = query.rules?.some((rule) => "combinator" in rule);
-
-      const queryInGroup: DefaultRuleGroupType = {
-        ...query,
-        rules: anyCombinator
-          ? query.rules
-          : [
-              {
-                combinator: "and",
-                rules: query.rules,
-              },
-            ],
-      };
 
       const timeunit = selectedRule.timeunit ?? "seconds";
 
@@ -87,13 +75,14 @@ export const CorrelationSidebar = ({
         requireApprove: selectedRule.require_approve,
         resolveOn: selectedRule.resolve_on,
         createOn: selectedRule.create_on,
-        query: queryInGroup,
+        query,
         incidents: selectedRule.incidents,
         incidentNameTemplate: selectedRule.incident_name_template || "",
         incidentPrefix: selectedRule.incident_prefix || "",
         multiLevel: selectedRule.multi_level,
         multiLevelPropertyName: selectedRule.multi_level_property_name || "",
         threshold: selectedRule.threshold || 1,
+        assignee: selectedRule.assignee,
       };
     }
 
