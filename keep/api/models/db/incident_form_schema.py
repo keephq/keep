@@ -30,7 +30,7 @@ class IncidentFormSchema(SQLModel, table=True):
         sa_column=Column(TEXT),
         description="Schema description"
     )
-    fields: List[FormFieldSchema] = Field(
+    fields: List[dict] = Field(
         sa_column=Column(JSON),
         description="JSON array of form field definitions"
     )

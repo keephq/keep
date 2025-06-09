@@ -2,9 +2,8 @@
  * Hook for managing incident form schemas
  */
 
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import useSWR from "swr";
-import { getApiURL } from "@/shared/lib/utils";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export interface FormFieldSchema {
   name: string;
@@ -48,18 +47,17 @@ export interface IncidentFormSchemaDto {
  * Hook to fetch the incident form schema for the current tenant
  */
 export function useIncidentFormSchema() {
-  const apiUrl = useApiUrl();
+  const api = useApi();
+  
+  const cacheKey = api.isReady() ? "/incidents/form-schema" : null;
   
   const { data, error, mutate } = useSWR<IncidentFormSchema>(
-    `${apiUrl}/incidents/form-schema`,
-    (url: string) => fetch(url).then((res) => {
-      if (res.status === 404) {
+    cacheKey,
+    () => api.get("/incidents/form-schema").catch((err) => {
+      if (err.status === 404) {
         return null; // No schema configured
       }
-      if (!res.ok) {
-        throw new Error(`Failed to fetch form schema: ${res.statusText}`);
-      }
-      return res.json();
+      throw err;
     })
   );
 
@@ -75,32 +73,14 @@ export function useIncidentFormSchema() {
  * Hook to create or update incident form schema
  */
 export function useIncidentFormSchemaActions() {
-  const apiUrl = useApiUrl();
+  const api = useApi();
   
   const createOrUpdateSchema = async (schema: IncidentFormSchemaDto): Promise<IncidentFormSchema> => {
-    const response = await fetch(`${apiUrl}/incidents/form-schema`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(schema),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to save form schema: ${response.statusText}`);
-    }
-    
-    return response.json();
+    return api.post("/incidents/form-schema", schema);
   };
   
   const deleteSchema = async (): Promise<void> => {
-    const response = await fetch(`${apiUrl}/incidents/form-schema`, {
-      method: "DELETE",
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to delete form schema: ${response.statusText}`);
-    }
+    return api.delete("/incidents/form-schema");
   };
   
   return {

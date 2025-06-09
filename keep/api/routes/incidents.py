@@ -47,6 +47,7 @@ from keep.api.core.incidents import (
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
 from keep.api.models.incident_form_schema import (
+    FormFieldSchema,
     IncidentFormSchemaDto,
     IncidentFormSchemaResponse,
 )
@@ -345,6 +346,280 @@ def get_incidents_report(
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
         )
+
+
+# Incident Form Schema endpoints
+@router.get(
+    "/form-schema",
+    description="Get incident form schema for tenant",
+    response_model=Optional[IncidentFormSchemaResponse],
+)
+def get_incident_form_schema(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:incidents-form-schema"])
+    ),
+    session: Session = Depends(get_session),
+) -> Optional[IncidentFormSchemaResponse]:
+    """Get the incident form schema for the tenant."""
+    tenant_id = authenticated_entity.tenant_id
+    
+    logger.info(
+        "Fetching incident form schema",
+        extra={"tenant_id": tenant_id},
+    )
+    
+    schema = session.get(IncidentFormSchema, tenant_id)
+    if not schema:
+        logger.info(
+            "No incident form schema found for tenant",
+            extra={"tenant_id": tenant_id},
+        )
+        return None
+        
+    logger.info(
+        "Found incident form schema",
+        extra={
+            "tenant_id": tenant_id,
+            "schema_name": schema.name,
+            "field_count": len(schema.fields),
+        },
+    )
+        
+    # Convert fields to dicts for the response to avoid Pydantic validation issues
+    fields_as_dicts = []
+    for field in schema.fields:
+        if isinstance(field, FormFieldSchema):
+            fields_as_dicts.append(field.dict())
+        elif isinstance(field, dict):
+            fields_as_dicts.append(field)
+        else:
+            # Handle case where it might be some other type
+            try:
+                if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
+                    fields_as_dicts.append(field.dict())
+                elif hasattr(field, '__dict__'):
+                    fields_as_dicts.append(field.__dict__)
+                else:
+                    # Skip invalid fields rather than crashing
+                    logger.warning(f"Skipping unsupported field type: {type(field)}")
+                    continue
+            except Exception as e:
+                logger.error(f"Failed to convert field to dict: {e}")
+                continue
+    
+    return IncidentFormSchemaResponse(
+        tenant_id=schema.tenant_id,
+        name=schema.name,
+        description=schema.description,
+        fields=fields_as_dicts,
+        is_active=schema.is_active,
+        created_by=schema.created_by,
+        created_at=schema.created_at,
+        updated_at=schema.updated_at,
+    )
+
+
+@router.post(
+    "/form-schema",
+    description="Create or update incident form schema for tenant",
+    response_model=IncidentFormSchemaResponse,
+)
+def create_or_update_incident_form_schema(
+    schema_data: IncidentFormSchemaDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incidents-form-schema"])
+    ),
+    session: Session = Depends(get_session),
+) -> IncidentFormSchemaResponse:
+    """Create or update the incident form schema for the tenant."""
+    from datetime import datetime
+    
+    tenant_id = authenticated_entity.tenant_id
+    user_email = authenticated_entity.email
+    
+    logger.info(
+        "Creating or updating incident form schema",
+        extra={
+            "tenant_id": tenant_id,
+            "schema_name": schema_data.name,
+            "field_count": len(schema_data.fields),
+            "user": user_email,
+        },
+    )
+    
+    # Check if schema already exists
+    existing_schema = session.get(IncidentFormSchema, tenant_id)
+    
+    if existing_schema:
+        logger.info(
+            "Updating existing incident form schema",
+            extra={"tenant_id": tenant_id},
+        )
+        
+        # Convert fields to dicts before storing to ensure proper JSON serialization
+        fields_as_dicts_for_storage = []
+        for field in schema_data.fields:
+            if isinstance(field, FormFieldSchema):
+                field_dict = field.dict()
+                # Convert enum values to strings for JSON serialization
+                if 'type' in field_dict and hasattr(field_dict['type'], 'value'):
+                    field_dict['type'] = field_dict['type'].value
+                fields_as_dicts_for_storage.append(field_dict)
+            else:
+                fields_as_dicts_for_storage.append(field)
+        
+        # Update existing schema
+        existing_schema.name = schema_data.name
+        existing_schema.description = schema_data.description
+        existing_schema.fields = fields_as_dicts_for_storage
+        existing_schema.is_active = schema_data.is_active
+        existing_schema.updated_at = datetime.utcnow()
+            
+        session.add(existing_schema)
+        session.commit()
+        session.refresh(existing_schema)
+        
+        # Convert fields to dicts for the response to avoid Pydantic validation issues
+        fields_as_dicts = []
+        for field in existing_schema.fields:
+            if isinstance(field, FormFieldSchema):
+                fields_as_dicts.append(field.dict())
+            elif isinstance(field, dict):
+                fields_as_dicts.append(field)
+            else:
+                # Handle case where it might be some other type
+                try:
+                    if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
+                        fields_as_dicts.append(field.dict())
+                    elif hasattr(field, '__dict__'):
+                        fields_as_dicts.append(field.__dict__)
+                    else:
+                        # Skip invalid fields rather than crashing
+                        logger.warning(f"Skipping unsupported field type: {type(field)}")
+                        continue
+                except Exception as e:
+                    logger.error(f"Failed to convert field to dict: {e}")
+                    continue
+        
+        return IncidentFormSchemaResponse(
+            tenant_id=existing_schema.tenant_id,
+            name=existing_schema.name,
+            description=existing_schema.description,
+            fields=fields_as_dicts,
+            is_active=existing_schema.is_active,
+            created_by=existing_schema.created_by,
+            created_at=existing_schema.created_at,
+            updated_at=existing_schema.updated_at,
+        )
+    else:
+        logger.info(
+            "Creating new incident form schema",
+            extra={"tenant_id": tenant_id},
+        )
+        
+        # Convert fields to dicts before storing to ensure proper JSON serialization
+        fields_as_dicts_for_storage = []
+        for field in schema_data.fields:
+            if isinstance(field, FormFieldSchema):
+                field_dict = field.dict()
+                # Convert enum values to strings for JSON serialization
+                if 'type' in field_dict and hasattr(field_dict['type'], 'value'):
+                    field_dict['type'] = field_dict['type'].value
+                fields_as_dicts_for_storage.append(field_dict)
+            else:
+                fields_as_dicts_for_storage.append(field)
+        
+        # Create new schema
+        new_schema = IncidentFormSchema(
+            tenant_id=tenant_id,
+            name=schema_data.name,
+            description=schema_data.description,
+            fields=fields_as_dicts_for_storage,
+            is_active=schema_data.is_active,
+            created_by=user_email,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        
+        session.add(new_schema)
+        session.commit()
+        session.refresh(new_schema)
+        
+        logger.info(
+            "Successfully created incident form schema",
+            extra={"tenant_id": tenant_id, "schema_name": new_schema.name},
+        )
+        
+        # Convert fields to dicts for the response to avoid Pydantic validation issues
+        fields_as_dicts = []
+        for field in new_schema.fields:
+            if isinstance(field, FormFieldSchema):
+                fields_as_dicts.append(field.dict())
+            elif isinstance(field, dict):
+                fields_as_dicts.append(field)
+            else:
+                # Handle case where it might be some other type
+                try:
+                    if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
+                        fields_as_dicts.append(field.dict())
+                    elif hasattr(field, '__dict__'):
+                        fields_as_dicts.append(field.__dict__)
+                    else:
+                        # Skip invalid fields rather than crashing
+                        logger.warning(f"Skipping unsupported field type: {type(field)}")
+                        continue
+                except Exception as e:
+                    logger.error(f"Failed to convert field to dict: {e}")
+                    continue
+        
+        return IncidentFormSchemaResponse(
+            tenant_id=new_schema.tenant_id,
+            name=new_schema.name,
+            description=new_schema.description,
+            fields=fields_as_dicts,
+            is_active=new_schema.is_active,
+            created_by=new_schema.created_by,
+            created_at=new_schema.created_at,
+            updated_at=new_schema.updated_at,
+        )
+
+
+@router.delete(
+    "/form-schema",
+    description="Delete incident form schema for tenant",
+    status_code=204,
+)
+def delete_incident_form_schema(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:incidents-form-schema"])
+    ),
+) -> Response:
+    """Delete the incident form schema for the tenant."""
+    tenant_id = authenticated_entity.tenant_id
+    
+    logger.info(
+        "Deleting incident form schema",
+        extra={"tenant_id": tenant_id},
+    )
+    
+    with Session(get_session()) as session:
+        schema = session.get(IncidentFormSchema, tenant_id)
+        if not schema:
+            logger.warning(
+                "Attempted to delete non-existent form schema",
+                extra={"tenant_id": tenant_id},
+            )
+            raise HTTPException(status_code=404, detail="Form schema not found")
+            
+        session.delete(schema)
+        session.commit()
+        
+        logger.info(
+            "Successfully deleted incident form schema",
+            extra={"tenant_id": tenant_id},
+        )
+        
+    return Response(status_code=204)
 
 
 @router.get(
@@ -1160,186 +1435,3 @@ async def unenrich_incident(
 
     return Response(status_code=202)
 
-
-# Incident Form Schema endpoints
-@router.get(
-    "/form-schema",
-    description="Get incident form schema for tenant",
-    response_model=Optional[IncidentFormSchemaResponse],
-)
-def get_incident_form_schema(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:incident"])
-    ),
-) -> Optional[IncidentFormSchemaResponse]:
-    """Get the incident form schema for the tenant."""
-    tenant_id = authenticated_entity.tenant_id
-    
-    logger.info(
-        "Fetching incident form schema",
-        extra={"tenant_id": tenant_id},
-    )
-    
-    with Session(get_session()) as session:
-        schema = session.get(IncidentFormSchema, tenant_id)
-        if not schema:
-            logger.info(
-                "No incident form schema found for tenant",
-                extra={"tenant_id": tenant_id},
-            )
-            return None
-            
-        logger.info(
-            "Found incident form schema",
-            extra={
-                "tenant_id": tenant_id,
-                "schema_name": schema.name,
-                "field_count": len(schema.fields),
-            },
-        )
-            
-        return IncidentFormSchemaResponse(
-            tenant_id=schema.tenant_id,
-            name=schema.name,
-            description=schema.description,
-            fields=schema.fields,
-            is_active=schema.is_active,
-            created_by=schema.created_by,
-            created_at=schema.created_at,
-            updated_at=schema.updated_at,
-        )
-
-
-@router.post(
-    "/form-schema",
-    description="Create or update incident form schema for tenant",
-    response_model=IncidentFormSchemaResponse,
-)
-def create_or_update_incident_form_schema(
-    schema_data: IncidentFormSchemaDto,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-) -> IncidentFormSchemaResponse:
-    """Create or update the incident form schema for the tenant."""
-    from datetime import datetime
-    
-    tenant_id = authenticated_entity.tenant_id
-    user_email = authenticated_entity.email
-    
-    logger.info(
-        "Creating or updating incident form schema",
-        extra={
-            "tenant_id": tenant_id,
-            "schema_name": schema_data.name,
-            "field_count": len(schema_data.fields),
-            "user": user_email,
-        },
-    )
-    
-    with Session(get_session()) as session:
-        # Check if schema already exists
-        existing_schema = session.get(IncidentFormSchema, tenant_id)
-        
-        if existing_schema:
-            logger.info(
-                "Updating existing incident form schema",
-                extra={"tenant_id": tenant_id},
-            )
-            
-            # Update existing schema
-            existing_schema.name = schema_data.name
-            existing_schema.description = schema_data.description
-            existing_schema.fields = schema_data.fields
-            existing_schema.is_active = schema_data.is_active
-            existing_schema.updated_at = datetime.utcnow()
-            
-            session.add(existing_schema)
-            session.commit()
-            session.refresh(existing_schema)
-            
-            return IncidentFormSchemaResponse(
-                tenant_id=existing_schema.tenant_id,
-                name=existing_schema.name,
-                description=existing_schema.description,
-                fields=existing_schema.fields,
-                is_active=existing_schema.is_active,
-                created_by=existing_schema.created_by,
-                created_at=existing_schema.created_at,
-                updated_at=existing_schema.updated_at,
-            )
-        else:
-            logger.info(
-                "Creating new incident form schema",
-                extra={"tenant_id": tenant_id},
-            )
-            
-            # Create new schema
-            new_schema = IncidentFormSchema(
-                tenant_id=tenant_id,
-                name=schema_data.name,
-                description=schema_data.description,
-                fields=schema_data.fields,
-                is_active=schema_data.is_active,
-                created_by=user_email,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
-            )
-            
-            session.add(new_schema)
-            session.commit()
-            session.refresh(new_schema)
-            
-            logger.info(
-                "Successfully created incident form schema",
-                extra={"tenant_id": tenant_id, "schema_name": new_schema.name},
-            )
-            
-            return IncidentFormSchemaResponse(
-                tenant_id=new_schema.tenant_id,
-                name=new_schema.name,
-                description=new_schema.description,
-                fields=new_schema.fields,
-                is_active=new_schema.is_active,
-                created_by=new_schema.created_by,
-                created_at=new_schema.created_at,
-                updated_at=new_schema.updated_at,
-            )
-
-
-@router.delete(
-    "/form-schema",
-    description="Delete incident form schema for tenant",
-    status_code=204,
-)
-def delete_incident_form_schema(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-) -> Response:
-    """Delete the incident form schema for the tenant."""
-    tenant_id = authenticated_entity.tenant_id
-    
-    logger.info(
-        "Deleting incident form schema",
-        extra={"tenant_id": tenant_id},
-    )
-    
-    with Session(get_session()) as session:
-        schema = session.get(IncidentFormSchema, tenant_id)
-        if not schema:
-            logger.warning(
-                "Attempted to delete non-existent form schema",
-                extra={"tenant_id": tenant_id},
-            )
-            raise HTTPException(status_code=404, detail="Form schema not found")
-            
-        session.delete(schema)
-        session.commit()
-        
-        logger.info(
-            "Successfully deleted incident form schema",
-            extra={"tenant_id": tenant_id},
-        )
-        
-    return Response(status_code=204)

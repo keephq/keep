@@ -45,7 +45,6 @@ class FormFieldSchema(BaseModel):
         max_length=500
     )
     required: bool = Field(False, description="Whether field is required")
-    default_value: Optional[Any] = Field(None, description="Default value")
     
     # For select/radio fields
     options: Optional[List[str]] = Field(
@@ -54,6 +53,8 @@ class FormFieldSchema(BaseModel):
         min_items=1,
         max_items=50
     )
+    
+    default_value: Optional[Any] = Field(None, description="Default value")
     
     # For text/textarea fields
     placeholder: Optional[str] = Field(
