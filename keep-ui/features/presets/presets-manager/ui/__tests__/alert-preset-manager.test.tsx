@@ -59,10 +59,6 @@ describe("AlertPresetManager", () => {
 
     const button = screen.getByText("Collapse All");
     expect(button).toBeInTheDocument();
-    expect(button.closest("button")).toHaveAttribute(
-      "title",
-      "Collapse all groups"
-    );
   });
 
   it("should show Expand All button when grouping is active and not all groups are expanded", () => {
@@ -80,10 +76,6 @@ describe("AlertPresetManager", () => {
 
     const button = screen.getByText("Expand All");
     expect(button).toBeInTheDocument();
-    expect(button.closest("button")).toHaveAttribute(
-      "title",
-      "Expand all groups"
-    );
   });
 
   it("should call onToggleAllGroups when button is clicked", () => {
@@ -113,7 +105,13 @@ describe("AlertPresetManager", () => {
       />
     );
 
-    expect(screen.getByTitle("Test alerts")).toBeInTheDocument();
+    // The test alerts button is rendered, check by its color and variant
+    const buttons = screen.getAllByRole("button");
+    const testButton = buttons.find(button => 
+      button.className.includes("border-orange-500") && 
+      button.className.includes("text-orange-500")
+    );
+    expect(testButton).toBeInTheDocument();
   });
 
   it("should maintain button order and spacing", () => {

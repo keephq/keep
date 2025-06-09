@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { GroupedRow } from "@/widgets/alerts-table/ui/alert-grouped-row";
 import { Table, Row, Column } from "@tanstack/react-table";
-import { AlertDto, Status, Severity } from "@/entities/alerts/model";
+import { AlertDto, Status, Severity } from "@/entities/alerts/model/types";
 
 describe("GroupedRow", () => {
   const createMockAlert = (fingerprint: string, name: string): AlertDto => ({
