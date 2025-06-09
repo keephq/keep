@@ -1,0 +1,313 @@
+---
+title: "Incident Ticketing Integration"
+description: "Seamlessly integrate incident management with external ticketing systems through enrichments and custom forms"
+---
+
+Keep's incident ticketing integration provides a powerful way to bridge your incident management workflow with external ticketing systems like Jira, ServiceNow, Linear, and others. This integration works through two key mechanisms: **ticket enrichments** and **incident form schemas**.
+
+## Ticket Enrichments
+
+### Special Enrichment Fields
+
+Keep recognizes two special enrichment fields that enable automatic ticket linking in the UI:
+
+- **`ticket_url`**: The direct URL to the ticket in your external system
+- **`ticket_id`**: The unique identifier of the ticket (e.g., JIRA-123, INC0001234)
+
+When these enrichments are present on an incident, Keep automatically displays:
+- A clickable ticket link in the incidents table
+- Direct navigation to the external ticketing system
+- Visual indicators showing which incidents have associated tickets
+
+### How Ticket Enrichments Work
+
+Ticket enrichments can be added to incidents through several methods:
+
+1. **Workflow Automation**: Automatically create tickets and add enrichments when incidents are created
+2. **Manual Enrichment**: Add ticket information manually through the UI
+3. **API Integration**: Use Keep's API to programmatically add ticket enrichments
+4. **Form Schema**: Collect ticket information during incident creation
+
+## Incident Form Schemas
+
+### Overview
+
+Incident Form Schemas provide a flexible way to collect additional information during incident creation. These custom forms are tenant-specific and allow you to:
+
+- Define custom fields for incident creation
+- Collect structured data that becomes incident enrichments
+- Integrate with ticketing workflows
+- Standardize incident information across your organization
+
+### Creating Form Schemas
+
+Form schemas are defined through Keep's API and can include various field types:
+
+#### Supported Field Types
+
+- **Text**: Single-line text input
+- **Textarea**: Multi-line text input  
+- **Select**: Dropdown with predefined options
+- **Radio**: Radio button selection
+- **Checkbox**: Boolean checkbox
+- **Number**: Numeric input with optional min/max values
+- **Date**: Date picker input
+
+#### Example Form Schema
+
+```json
+{
+  "name": "Production Incident Form",
+  "description": "Standard form for production incidents with Jira integration",
+  "fields": [
+    {
+      "name": "jira_project",
+      "label": "Jira Project",
+      "type": "select",
+      "description": "Target Jira project for ticket creation",
+      "required": true,
+      "options": ["PROD", "OPS", "SUPPORT", "INFRA"],
+      "default_value": "PROD"
+    },
+    {
+      "name": "priority",
+      "label": "Priority Level",
+      "type": "select",
+      "options": ["Critical", "High", "Medium", "Low"],
+      "default_value": "Medium"
+    },
+    {
+      "name": "business_impact",
+      "label": "Business Impact",
+      "type": "textarea",
+      "placeholder": "Describe the business impact...",
+      "max_length": 1000
+    },
+    {
+      "name": "requires_immediate_attention",
+      "label": "Urgent Issue",
+      "type": "checkbox",
+      "description": "Requires immediate escalation",
+      "default_value": false
+    },
+    {
+      "name": "estimated_users_affected",
+      "label": "Estimated Users Affected",
+      "type": "number",
+      "min_value": 0,
+      "max_value": 1000000
+    }
+  ],
+  "is_active": true
+}
+```
+
+### API Endpoints
+
+#### Get Form Schema
+```bash
+GET /incidents/form-schema
+```
+
+Retrieves the current incident form schema for the tenant. Returns `null` if no schema is configured.
+
+#### Create or Update Form Schema
+```bash
+POST /incidents/form-schema
+Content-Type: application/json
+
+{
+  "name": "My Incident Form",
+  "description": "Custom incident creation form",
+  "fields": [...],
+  "is_active": true
+}
+```
+
+#### Delete Form Schema
+```bash
+DELETE /incidents/form-schema
+```
+
+Removes the incident form schema for the tenant.
+
+### Permissions
+
+Form schema operations require specific permissions:
+- **`read:incidents-form-schema`**: View form schemas
+- **`write:incidents-form-schema`**: Create/update form schemas  
+- **`delete:incidents-form-schema`**: Delete form schemas
+
+### Data Flow
+
+1. **Form Definition**: Admin creates form schema with custom fields
+2. **Incident Creation**: User fills out form during incident creation
+3. **Enrichment Storage**: Form data is stored as incident enrichments
+4. **Workflow Integration**: Workflows can access form data for ticket creation
+
+## Integration Workflows
+
+### Automatic Ticket Creation
+
+Here's an example workflow that automatically creates Jira tickets based on form data:
+
+```yaml
+workflow:
+  id: create-jira-ticket-from-form
+  description: Create Jira ticket when incident is created with form data
+  triggers:
+    - type: incident
+      filters:
+        - key: "jira_project"
+          value: ".*"  # Any value indicates form was filled
+  actions:
+    - name: create-jira-ticket
+      provider:
+        type: jira
+        with:
+          url: "{{ providers.jira.url }}"
+          username: "{{ providers.jira.username }}"
+          password: "{{ providers.jira.password }}"
+          project: "{{ incident.jira_project }}"
+          issue_type: "Incident"
+          summary: "{{ incident.name }}"
+          description: |
+            Incident: {{ incident.name }}
+            Severity: {{ incident.severity }}
+            Business Impact: {{ incident.business_impact }}
+            Users Affected: {{ incident.estimated_users_affected }}
+            
+            Created by Keep at {{ incident.created_at }}
+          priority: "{{ incident.priority }}"
+    - name: enrich-incident-with-ticket
+      provider:
+        type: keep
+        with:
+          enrichments:
+            ticket_url: "{{ steps.create-jira-ticket.ticket_url }}"
+            ticket_id: "{{ steps.create-jira-ticket.ticket_key }}"
+```
+
+### ServiceNow Integration
+
+```yaml
+workflow:
+  id: create-servicenow-incident
+  description: Create ServiceNow incident with form data
+  triggers:
+    - type: incident
+      filters:
+        - key: "requires_immediate_attention"
+          value: true
+  actions:
+    - name: create-servicenow-incident
+      provider:
+        type: service-now
+        with:
+          instance: "{{ providers.servicenow.instance }}"
+          username: "{{ providers.servicenow.username }}"
+          password: "{{ providers.servicenow.password }}"
+          table: "incident"
+          short_description: "{{ incident.name }}"
+          description: "{{ incident.business_impact }}"
+          urgency: "1"  # High urgency for immediate attention
+          impact: "{{ incident.priority }}"
+    - name: enrich-with-servicenow-ticket
+      provider:
+        type: keep
+        with:
+          enrichments:
+            ticket_url: "{{ steps.create-servicenow-incident.ticket_url }}"
+            ticket_id: "{{ steps.create-servicenow-incident.sys_id }}"
+```
+
+## UI Integration
+
+### Incidents Table
+
+When incidents have ticket enrichments, the incidents table displays:
+- **Ticket Link Column**: Clickable links to external tickets
+- **Ticket ID Badge**: Visual indicator of ticket association
+- **Quick Actions**: Direct navigation to ticketing system
+
+### Incident Details
+
+In the incident details view:
+- **Ticket Information Panel**: Shows linked ticket details
+- **Form Data Display**: All form-submitted data appears as enrichments
+- **Action Buttons**: Quick links to ticket management actions
+
+### Form Rendering
+
+The incident creation form automatically renders based on the configured schema:
+- **Field Validation**: Client-side and server-side validation
+- **Conditional Fields**: Dynamic field display based on selections
+- **Data Persistence**: Form data persists as incident enrichments
+
+## Best Practices
+
+### Form Schema Design
+
+1. **Keep Forms Focused**: Include only essential fields for your workflow
+2. **Use Clear Labels**: Make field purposes obvious to users
+3. **Provide Defaults**: Set sensible default values to speed up form completion
+4. **Validate Input**: Use field constraints to ensure data quality
+5. **Group Related Fields**: Organize fields logically for better UX
+
+### Enrichment Naming
+
+1. **Use Consistent Naming**: Establish naming conventions for enrichment keys
+2. **Include Context**: Prefix fields with system names (e.g., `jira_project`, `snow_priority`)
+3. **Reserve Special Fields**: Only use `ticket_url` and `ticket_id` for actual ticket links
+
+### Workflow Integration
+
+1. **Handle Missing Data**: Check for field existence before using in workflows
+2. **Provide Fallbacks**: Have default behavior when form data is incomplete
+3. **Update Tickets**: Keep ticket information synchronized with incident updates
+4. **Error Handling**: Gracefully handle ticket creation failures
+
+## Troubleshooting
+
+### Common Issues
+
+**Form Schema Not Appearing**
+- Verify form schema is active (`is_active: true`)
+- Check user permissions for form schema access
+- Ensure schema is properly saved via API
+
+**Ticket Links Not Showing**
+- Confirm `ticket_url` and `ticket_id` enrichments are present
+- Verify enrichment values are valid URLs/IDs
+- Check incident table column configuration
+
+**Workflow Not Triggering**
+- Validate workflow filters match form field names exactly
+- Ensure incident has required enrichments from form
+- Check workflow permissions and provider configurations
+
+### API Debugging
+
+Enable debug logging to troubleshoot form schema and enrichment issues:
+
+```bash
+# Check form schema
+curl -H "Authorization: Bearer $TOKEN" \
+  "$KEEP_URL/incidents/form-schema"
+
+# Verify enrichments on incident
+curl -H "Authorization: Bearer $TOKEN" \
+  "$KEEP_URL/incidents/$INCIDENT_ID"
+
+# Test workflow execution
+curl -H "Authorization: Bearer $TOKEN" \
+  "$KEEP_URL/workflows/runs?incident_id=$INCIDENT_ID"
+```
+
+## Security Considerations
+
+- **Input Validation**: All form inputs are validated server-side
+- **XSS Prevention**: Form data is sanitized before display
+- **Permission Checks**: Schema operations require appropriate permissions
+- **Data Encryption**: Sensitive form data follows Keep's encryption standards
+- **Audit Logging**: All form schema changes are logged for compliance

@@ -90,7 +90,7 @@
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview", "incidents/facets"]
+      "pages": ["incidents/overview", "incidents/ticketing-integration", "incidents/facets"]
     },
     {
       "group": "Workflow Automation",
