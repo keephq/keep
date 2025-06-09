@@ -69,7 +69,7 @@ def create_fake_alert(index: int, provider_type: str):
 
     if index % 4 == 0:
         title = "High CPU Usage"
-        status = "resolved"
+        status = "firing"
         severity = "warning"
         custom_tag = "environment:development"
     elif index % 3 == 0:
@@ -125,6 +125,9 @@ def create_fake_alert(index: int, provider_type: str):
                 "env": custom_tag,
             },
             "id": test_alert_id,
+            # Add deleted and dismissed fields for noisy preset functionality
+            "deleted": False,
+            "dismissed": False,
         }
     elif provider_type == "prometheus":
         if index % 5 == 0:
@@ -139,7 +142,7 @@ def create_fake_alert(index: int, provider_type: str):
         }
         STATUS_MAP = {
             "firing": "firing",
-            "resolved": "firing",
+            "resolved": "resolved",
         }
         alert_name = f"{title} {provider_type} {index} summary"
 
@@ -166,6 +169,9 @@ def create_fake_alert(index: int, provider_type: str):
             "custom_tags": {
                 "env": custom_tag,
             },
+            # Add deleted and dismissed fields for noisy preset functionality
+            "deleted": False,
+            "dismissed": False,
         }
 
 

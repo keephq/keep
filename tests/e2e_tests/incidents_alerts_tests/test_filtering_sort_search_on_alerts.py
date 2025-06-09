@@ -790,11 +790,18 @@ def test_adding_new_noisy_preset(
         )
         preset_form_locator.locator("[data-testid='is-noisy-switch']").click()
         preset_form_locator.locator("[data-testid='save-preset-button']").click()
+        
+        # Wait for the preset to be saved and the PresetsNoise component to update
+        browser.wait_for_timeout(2000)
+        
         expect(
             browser.locator("[data-testid='noisy-presets-audio-player'].playing")
         ).to_have_count(1)
         browser.reload()
 
+        # Wait for the page to load and PresetsNoise component to check alerts
+        browser.wait_for_timeout(2000)
+        
         # check that it's still playing after reloading
         expect(
             browser.locator("[data-testid='noisy-presets-audio-player'].playing")
