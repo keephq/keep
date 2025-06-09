@@ -1343,4 +1343,3 @@ def delete_incident_form_schema(
         )
         
     return Response(status_code=204)
-EOF < /dev/null

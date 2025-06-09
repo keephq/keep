@@ -2,7 +2,7 @@
  * Hook for managing incident form schemas
  */
 
-import { useApiUrl } from "@/shared/lib/hooks/useConfig";
+import { useApiUrl } from "@/utils/hooks/useConfig";
 import useSWR from "swr";
 import { getApiURL } from "@/shared/lib/utils";
 

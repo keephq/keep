@@ -2,7 +2,7 @@
  * Smart ticket link component that renders a clickable link with ticket ID
  */
 
-import { ExternalLinkIcon } from "@heroicons/react/24/outline";
+import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 
 interface TicketLinkProps {
   url?: string;
@@ -50,7 +50,7 @@ export function TicketLink({ url, id, className }: TicketLinkProps) {
       title={`Open ${displayId} in new tab`}
     >
       {displayId}
-      <ExternalLinkIcon className="h-3 w-3" />
+      <ArrowTopRightOnSquareIcon className="h-3 w-3" />
     </a>
   );
 }
