@@ -72,6 +72,8 @@ import EnhancedDateRangePickerV2, {
 import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -451,6 +453,14 @@ export function AlertTableServerSide({
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
+
+  // Add group expansion state
+  const groupExpansionState = useGroupExpansion(true);
+  const { collapseAll, expandAll } = groupExpansionState;
+
+  // Check if grouping is active
+  const isGroupingActive = grouping.length > 0;
+
   function renderTable() {
     if (
       !showSkeleton &&
@@ -564,6 +574,7 @@ export function AlertTableServerSide({
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
           presetName={presetName}
+          groupExpansionState={groupExpansionState}
         />
       </Table>
     );
@@ -609,11 +620,37 @@ export function AlertTableServerSide({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <AlertPresetManager
-            presetName={presetName}
-            onCelChanges={setSearchCel}
-            table={table}
-          />
+          <div className="flex items-center justify-between w-full">
+            <AlertPresetManager
+              presetName={presetName}
+              onCelChanges={setSearchCel}
+              table={table}
+            />
+            
+            {/* Add Collapse/Expand All button when grouping is active */}
+            {isGroupingActive && (
+              <div className="flex gap-2">
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={collapseAll}
+                  icon={ChevronUpIcon}
+                  tooltip="Collapse all groups"
+                >
+                  Collapse All
+                </Button>
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={expandAll}
+                  icon={ChevronDownIcon}
+                  tooltip="Expand all groups"
+                >
+                  Expand All
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

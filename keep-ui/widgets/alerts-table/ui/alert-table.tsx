@@ -17,6 +17,8 @@ import {
   SortingState,
   useReactTable,
   VisibilityState,
+  GroupingState,
+  getGroupedRowModel,
 } from "@tanstack/react-table";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import {
@@ -44,6 +46,9 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { AlertsTableBody } from "./alerts-table-body";
 // TODO: replace with generic pagination
 import AlertPagination from "./alert-pagination";
+import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { Button } from "@tremor/react";
 
 interface PresetTab {
   name: string;
@@ -104,7 +109,7 @@ export function AlertTable({
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
-  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
+  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED || false;
 
   const { theme } = useAlertTableTheme();
 
@@ -126,7 +131,7 @@ export function AlertTable({
   );
 
   const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
-    `viewed-alerts-${presetName}`,
+    `${presetName}-viewed-alerts`,
     []
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
@@ -182,11 +187,18 @@ export function AlertTable({
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
     useState<boolean>(false);
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
+
+  const [grouping, setGrouping] = useState<GroupingState>([]);
+  
+  const groupExpansionState = useGroupExpansion(true);
+  const { collapseAll, expandAll } = groupExpansionState;
+  
+  const isGroupingActive = grouping.length > 0;
 
   const filteredAlerts = alerts.filter((alert) => {
     // First apply tab filter
@@ -266,6 +278,7 @@ export function AlertTable({
         right: ["alertMenu"],
       },
       sorting: sorting,
+      grouping: grouping,
     },
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -278,12 +291,15 @@ export function AlertTable({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
     columnResizeMode: "onChange",
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,
+    enableGrouping: true,
+    onGroupingChange: setGrouping,
   });
 
   const selectedAlertsFingerprints = Object.keys(
@@ -324,19 +340,31 @@ export function AlertTable({
   };
 
   return (
-    // Add h-screen to make it full height and remove the default flex-col gap
-    <div className="h-screen flex flex-col gap-4">
-      {/* Add padding to account for any top nav/header */}
-      <div className="px-4 flex-none">
-        <TitleAndFilters
-          table={table}
-          alerts={alerts}
-          presetName={presetName}
-        />
-      </div>
-
-      {/* Make actions/presets section fixed height */}
-      <div className="h-14 px-4 flex-none">
+    <div ref={a11yContainerRef} className="h-full flex flex-col">
+      <TitleAndFilters
+        totalAlertsCount={alerts.length}
+        filteredAlertsCount={filteredAlerts.length}
+        table={table}
+        title={
+          <div className="flex items-center justify-between">
+            <span data-testid={`${presetName.toLowerCase()}-table-header`}>
+              <PageTitle>{presetName}</PageTitle>
+            </span>
+            <SettingsSelection table={table} presetName={presetName} />
+          </div>
+        }
+        facets={alertFacets}
+        dynamicFacets={dynamicFacets}
+        onDynamicFacetsChange={setDynamicFacets}
+        facetFilters={facetFilters}
+        onFacetFiltersChange={setFacetFilters}
+        setParentClearFiltersTriggered={setClearFiltersTriggered}
+        clearFiltersTriggered={clearFiltersTriggered}
+        showSkeleton={showSkeleton}
+        showSearchAndFilters={selectedAlertsFingerprints.length === 0}
+        onRefresh={mutateAlerts}
+      />
+      <div className="flex justify-between mt-4 mb-2">
         {selectedAlertsFingerprints.length ? (
           <AlertActions
             selectedAlertsFingerprints={selectedAlertsFingerprints}
@@ -350,73 +378,64 @@ export function AlertTable({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <AlertPresetManager table={table} presetName={presetName} />
+          <div className="flex items-center justify-between w-full">
+            <AlertPresetManager
+              presetName={presetName}
+              onCelChanges={(newCel) => {
+                table.setGlobalFilter(newCel);
+              }}
+              table={table}
+            />
+            
+            {isGroupingActive && (
+              <div className="flex gap-2">
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={collapseAll}
+                  icon={ChevronUpIcon}
+                  tooltip="Collapse all groups"
+                >
+                  Collapse All
+                </Button>
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={expandAll}
+                  icon={ChevronDownIcon}
+                  tooltip="Expand all groups"
+                >
+                  Expand All
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
+      <Card className="flex-1 overflow-y-scroll p-0 pb-4">
+        <Table className="[&>table]:table-fixed">
+          <AlertsTableHeaders
+            columns={columns}
+            table={table}
+            presetName={presetName}
+            a11yContainerRef={a11yContainerRef}
+            columnTimeFormats={columnTimeFormats}
+            setColumnTimeFormats={setColumnTimeFormats}
+            columnListFormats={columnListFormats}
+            setColumnListFormats={setColumnListFormats}
+          />
+          <AlertsTableBody
+            table={table}
+            showSkeleton={showSkeleton}
+            theme={theme}
+            onRowClick={handleRowClick}
+            lastViewedAlert={lastViewedAlert}
+            presetName={presetName}
+            groupExpansionState={groupExpansionState}
+          />
+        </Table>
+      </Card>
 
-      {/* Main content area - uses flex-grow to fill remaining space */}
-      <div className="flex-grow px-4 pb-4">
-        <div className="h-full flex gap-4">
-          {/* Facets sidebar */}
-          <div className="w-32 min-w-[12rem] overflow-y-auto">
-            <AlertFacets
-              className="sticky top-0"
-              alerts={alerts}
-              facetFilters={facetFilters}
-              setFacetFilters={setFacetFilters}
-              dynamicFacets={dynamicFacets}
-              setDynamicFacets={setDynamicFacets}
-              onDelete={handleFacetDelete}
-              table={table}
-              showSkeleton={showSkeleton}
-            />
-          </div>
-
-          {/* Table section */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <Card className="h-full flex flex-col p-0 overflow-x-auto">
-              <div className="flex-grow flex flex-col">
-                <div ref={a11yContainerRef} className="sr-only" />
-
-                {/* Make table wrapper scrollable */}
-                <div className="flex-grow">
-                  <Table
-                    className={clsx(
-                      // Keep table-fixed layout to enforce column widths
-                      "[&>table]:table-fixed [&>table]:w-full",
-                      // Control overflow behavior
-                      "overflow-x-auto",
-                      // Ensure the table uses the full width of its container
-                      "w-full"
-                    )}
-                  >
-                    <AlertsTableHeaders
-                      columns={columns}
-                      table={table}
-                      presetName={presetName}
-                      a11yContainerRef={a11yContainerRef}
-                      columnTimeFormats={columnTimeFormats}
-                      setColumnTimeFormats={setColumnTimeFormats}
-                      columnListFormats={columnListFormats}
-                      setColumnListFormats={setColumnListFormats}
-                    />
-                    <AlertsTableBody
-                      table={table}
-                      showSkeleton={showSkeleton}
-                      theme={theme}
-                      onRowClick={handleRowClick}
-                      lastViewedAlert={lastViewedAlert}
-                      presetName={presetName}
-                    />
-                  </Table>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Pagination footer - fixed height */}
       <div className="h-16 px-4 flex-none pl-[14rem]">
         <AlertPagination
           table={table}
