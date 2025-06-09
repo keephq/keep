@@ -27,9 +27,9 @@ interface Props {
   areAllGroupsExpanded?: () => boolean;
 }
 
-export function AlertPresetManager({ 
-  presetName, 
-  table, 
+export function AlertPresetManager({
+  presetName,
+  table,
   onCelChanges,
   isGroupingActive = false,
   onToggleAllGroups,
@@ -135,21 +135,6 @@ export function AlertPresetManager({
           onCelChanges={onCelChanges}
         />
 
-        {/* Group expansion toggle button */}
-        {isGroupingActive && onToggleAllGroups && areAllGroupsExpanded && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={onToggleAllGroups}
-            icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
-            tooltip={areAllGroupsExpanded() ? "Collapse all groups" : "Expand all groups"}
-            className="ml-2"
-            color="orange"
-          >
-            {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
-          </Button>
-        )}
-
         <Button
           variant="secondary"
           tooltip="Test alerts"
@@ -160,6 +145,24 @@ export function AlertPresetManager({
           color="orange"
         ></Button>
 
+        {/* Group expansion toggle button */}
+        {isGroupingActive && onToggleAllGroups && areAllGroupsExpanded && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onToggleAllGroups}
+            icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
+            tooltip={
+              areAllGroupsExpanded()
+                ? "Collapse all groups"
+                : "Expand all groups"
+            }
+            className="ml-2"
+            color="orange"
+          >
+            {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
+          </Button>
+        )}
         {/* Error alerts button with notification counter */}
         {errorAlerts && errorAlerts.length > 0 && (
           <div className="relative inline-flex ml-2">
