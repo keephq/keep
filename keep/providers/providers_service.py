@@ -171,7 +171,7 @@ class ProvidersService:
         context_manager = ContextManager(tenant_id=tenant_id)
         try:
             provider = ProvidersFactory.get_provider(
-                context_manager, provider_id, provider_type, config
+                context_manager, provider_unique_id, provider_type, config
             )
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -298,6 +298,15 @@ class ProvidersService:
             provider.installed_by = updated_by
             provider.validatedScopes = validated_scopes
             provider.pulling_enabled = pulling_enabled
+
+            if provider.consumer:
+                try:
+                    event_subscriber = EventSubscriber.get_instance()
+                    event_subscriber.remove_consumer(provider.id)
+                    event_subscriber.add_consumer(provider_instance)
+                except Exception:
+                    logger.exception(f"Failed to update consumer provider id: {provider_id}, type: {provider.type}")
+            
             session.commit()
 
             logger.info(
@@ -348,7 +357,7 @@ class ProvidersService:
             if provider_model.consumer:
                 try:
                     event_subscriber = EventSubscriber.get_instance()
-                    event_subscriber.remove_consumer(provider_model)
+                    event_subscriber.remove_consumer(provider_model.id)
                 except Exception:
                     logger.exception("Failed to unregister provider as a consumer")
 
