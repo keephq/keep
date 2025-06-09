@@ -379,21 +379,25 @@ export function AlertTable({
           />
         ) : (
           <div className="flex items-center justify-between w-full">
-            <AlertPresetManager
-              presetName={presetName}
-              onCelChanges={(newCel) => {
-                table.setGlobalFilter(newCel);
-              }}
-              table={table}
-            />
+            <div className="flex-1">
+              <AlertPresetManager
+                presetName={presetName}
+                onCelChanges={(newCel) => {
+                  table.setGlobalFilter(newCel);
+                }}
+                table={table}
+              />
+            </div>
             
             {isGroupingActive && (
               <Button
-                size="xs"
+                size="sm"
                 variant="secondary"
                 onClick={toggleAll}
                 icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
                 tooltip={areAllGroupsExpanded() ? "Collapse all groups" : "Expand all groups"}
+                className="ml-2"
+                color="orange"
               >
                 {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
               </Button>
