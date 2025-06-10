@@ -33,6 +33,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
                 f"LOWER({expression_to_cast}) = 'true'": "TRUE",
                 f"LOWER({expression_to_cast}) = 'false'": "FALSE",
                 f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
+                f"CAST({expression_to_cast} AS SIGNED) <= 1": "FALSE",
                 f"{expression_to_cast} != ''": "TRUE",
             }
             result = " ".join(
