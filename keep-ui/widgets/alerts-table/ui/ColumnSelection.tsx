@@ -9,30 +9,37 @@ import {
   DEFAULT_COLS_VISIBILITY,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { AlertDto } from "@/entities/alerts/model";
+import { usePresetColumnState } from "@/entities/presets/model";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
   presetName: string;
+  presetId?: string;
   onClose?: () => void;
 }
 
 export default function ColumnSelection({
   table,
   presetName,
+  presetId,
   onClose,
 }: AlertColumnsSelectProps) {
   const tableColumns = table.getAllColumns();
 
-  const [columnVisibility, setColumnVisibility] =
-    useLocalStorage<VisibilityState>(
-      `column-visibility-${presetName}`,
-      DEFAULT_COLS_VISIBILITY
-    );
-
-  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
-    `column-order-${presetName}`,
-    DEFAULT_COLS
-  );
+  // Use the new unified column state hook
+  // For now, we'll use backend if presetId is provided, otherwise fall back to local storage
+  const {
+    columnVisibility,
+    columnOrder,
+    setColumnVisibility,
+    setColumnOrder,
+    isLoading,
+    useBackend,
+  } = usePresetColumnState({
+    presetName,
+    presetId,
+    useBackend: !!presetId, // Enable backend usage when preset ID is available
+  });
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -44,7 +51,7 @@ export default function ColumnSelection({
     column.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const onMultiSelectChange = (event: FormEvent<HTMLFormElement>) => {
+  const onMultiSelectChange = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -69,15 +76,29 @@ export default function ColumnSelection({
       (id) => selectedColumnIds.includes(id) || !filteredColumns.includes(id)
     );
 
-    setColumnVisibility(newColumnVisibility);
-    setColumnOrder(finalOrder);
-    onClose?.();
+    try {
+      await Promise.all([
+        setColumnVisibility(newColumnVisibility),
+        setColumnOrder(finalOrder)
+      ]);
+      onClose?.();
+    } catch (error) {
+      console.error("Failed to save column configuration:", error);
+      // Don't close on error, let user try again
+    }
   };
 
   return (
     <form onSubmit={onMultiSelectChange} className="flex flex-col h-full">
       <div className="flex-1 overflow-hidden flex flex-col">
-        <span className="text-gray-400 text-sm mb-2">Set table fields</span>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-gray-400 text-sm">Set table fields</span>
+          {useBackend && (
+            <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+              Synced across devices
+            </span>
+          )}
+        </div>
         <TextInput
           icon={FiSearch}
           placeholder="Search fields..."
@@ -103,8 +124,14 @@ export default function ColumnSelection({
           </ul>
         </div>
       </div>
-      <Button className="mt-4" color="orange" type="submit">
-        Save changes
+      <Button 
+        className="mt-4" 
+        color="orange" 
+        type="submit"
+        loading={isLoading}
+        disabled={isLoading}
+      >
+        {isLoading ? "Saving..." : "Save changes"}
       </Button>
     </form>
   );

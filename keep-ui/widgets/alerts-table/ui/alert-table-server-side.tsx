@@ -98,6 +98,7 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
+  presetId?: string;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -119,6 +120,7 @@ export function AlertTableServerSide({
   initialFacets,
   isAsyncLoading = false,
   presetName,
+  presetId,
   facetsCel,
   facetsPanelRefreshToken,
   isRefreshAllowed = true,
@@ -599,7 +601,7 @@ export function AlertTableServerSide({
               />
             )}
 
-            <SettingsSelection table={table} presetName={presetName} />
+            <SettingsSelection table={table} presetName={presetName} presetId={presetId} />
           </div>
         </div>
       </div>

@@ -1,13 +1,21 @@
 // TODO: move to entities/alerts/models
 
 interface Option {
-  readonly label: string;
-  readonly value: string;
+  label: string;
+  value: string;
 }
 
-export interface Tag {
-  id: string;
+interface Tag {
+  id?: string;
   name: string;
+}
+
+export interface ColumnConfiguration {
+  column_visibility: Record<string, boolean>;
+  column_order: string[];
+  column_rename_mapping: Record<string, string>;
+  column_time_formats: Record<string, string>;
+  column_list_formats: Record<string, string>;
 }
 
 export interface Preset {

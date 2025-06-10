@@ -20,11 +20,13 @@ import { ActionTraySelection } from "@/widgets/alerts-table/ui/ActionTraySelecti
 interface SettingsSelectionProps {
   table: Table<AlertDto>;
   presetName: string;
+  presetId?: string;
 }
 
 export default function SettingsSelection({
   table,
   presetName,
+  presetId,
 }: SettingsSelectionProps) {
   const arrowRef = useRef(null);
   const { refs, floatingStyles, context } = useFloating({
@@ -83,6 +85,7 @@ export default function SettingsSelection({
                     <ColumnSelection
                       table={table}
                       presetName={presetName}
+                      presetId={presetId}
                       onClose={close}
                     />
                   </TabPanel>
