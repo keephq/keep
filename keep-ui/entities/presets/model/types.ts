@@ -5,7 +5,7 @@ interface Option {
   value: string;
 }
 
-interface Tag {
+export interface Tag {
   id?: string;
   name: string;
 }
