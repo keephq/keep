@@ -71,7 +71,7 @@ class SqlWorkflowRepository(WorkflowRepository):
             is_test=is_test,
             lookup_by_name=lookup_by_name,
         )
-        return self.__from_db_to_dto(db_workflow)
+        return self.__workflow_from_db_to_dto(db_workflow)
 
     def delete_workflow(self, tenant_id, workflow_id):
         delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
@@ -83,7 +83,7 @@ class SqlWorkflowRepository(WorkflowRepository):
 
     def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
         return [
-            self.__from_db_to_dto(db_workflow)
+            self.__workflow_from_db_to_dto(db_workflow)
             for db_workflow in get_all_provisioned_workflows(tenant_id=tenant_id)
         ]
 
@@ -91,7 +91,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         self, tenant_id: str, exclude_disabled: bool = False
     ) -> List[WorkflowDalModel]:
         return [
-            self.__from_db_to_dto(db_workflow)
+            self.__workflow_from_db_to_dto(db_workflow)
             for db_workflow in get_all_workflows(
                 tenant_id=tenant_id, exclude_disabled=exclude_disabled
             )
@@ -104,7 +104,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         db_workflow = get_workflow_by_id(tenant_id=tenant_id, workflow_id=workflow_id)
 
         if db_workflow is not None:
-            return self.__from_db_to_dto(db_workflow)
+            return self.__workflow_from_db_to_dto(db_workflow)
 
         return None
 
@@ -152,7 +152,7 @@ class SqlWorkflowRepository(WorkflowRepository):
             fetch_last_executions=fetch_last_executions,
         )
 
-    def __from_db_to_dto(self, db_workflow: WorkflowModel) -> WorkflowDalModel:
+    def __workflow_from_db_to_dto(self, db_workflow: WorkflowModel) -> WorkflowDalModel:
         return WorkflowDalModel(
             id=db_workflow.id,
             tenant_id=db_workflow.tenant_id,

@@ -67,13 +67,13 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_provisioned_workflows(self, tenant_id: str):
+    def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
         pass
 
     @abstractmethod
     def get_all_workflows(
         self, tenant_id: str, exclude_disabled: bool = False
-    ) -> List[Workflow]:
+    ) -> List[WorkflowDalModel]:
         pass
 
     @abstractmethod
@@ -81,7 +81,7 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
-    def get_workflow_by_id(self, tenant_id: str, workflow_id: str):
+    def get_workflow_by_id(self, tenant_id: str, workflow_id: str) -> WorkflowDalModel:
         pass
 
     @abstractmethod
