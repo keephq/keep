@@ -41,7 +41,7 @@ jest.mock('@/utils/hooks/useConfig', () => ({
 }));
 
 jest.mock('@/entities/alerts/model', () => ({
-  useAlertTableTheme: jest.fn(() => ({ theme: 'default' })),
+  useAlertTableTheme: () => ({ theme: {} }),
   useAlerts: jest.fn(() => ({
     useAlertAudit: jest.fn(() => ({
       data: [],
@@ -49,7 +49,20 @@ jest.mock('@/entities/alerts/model', () => ({
       mutate: jest.fn(),
     })),
   })),
-  useAlertRowStyle: jest.fn(() => ['default', jest.fn()]),
+  useAlertRowStyle: () => [{}],
+  AlertDto: jest.fn(),
+  Status: {
+    OPEN: "open",
+    CLOSED: "closed",
+    ACKNOWLEDGED: "acknowledged",
+  },
+  Severity: {
+    CRITICAL: "critical",
+    HIGH: "high",
+    MEDIUM: "medium",
+    LOW: "low",
+    INFO: "info",
+  },
 }));
 
 jest.mock('@/utils/hooks/useExpandedRows', () => ({
@@ -91,10 +104,44 @@ jest.mock('../incident-alert-actions', () => ({
 
 // Mock alert table utilities to render our test content
 jest.mock('@/widgets/alerts-table/lib/alert-table-utils', () => ({
-  useAlertTableCols: jest.fn(() => [
+  useAlertTableCols: jest.fn(({ MenuComponent }: any) => [
     { id: 'name', header: 'Name', cell: ({ row }: any) => row.original.name },
     { id: 'severity', header: 'Severity', cell: ({ row }: any) => row.original.severity },
+    { 
+      id: 'alertMenu', 
+      header: 'Actions',
+      MenuComponent: MenuComponent,
+      cell: ({ row }: any) => MenuComponent(row.original)
+    },
   ]),
+}));
+
+// Mock the incident alert action tray
+jest.mock('../incident-alert-action-tray', () => ({
+  IncidentAlertActionTray: ({ alert, onViewAlert, onUnlink, isCandidate }: any) => (
+    <div className="flex items-center">
+      <button
+        aria-label="View Alert Details"
+        onClick={(e) => {
+          e.stopPropagation();
+          onViewAlert(alert);
+        }}
+      >
+        View
+      </button>
+      {!isCandidate && (
+        <button
+          aria-label="Unlink from incident"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUnlink(alert);
+          }}
+        >
+          Unlink
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 // Mock the actual component that renders alerts with action buttons
@@ -103,18 +150,11 @@ jest.mock('@/widgets/alerts-table/ui/alerts-table-body', () => ({
     <tbody data-testid="alerts-table-body">
       {table.getRowModel().rows.map((row: any) => (
         <tr key={row.id} onClick={() => onRowClick(row.original)} data-testid={`alert-row-${row.id}`}>
-          <td>{row.original.name}</td>
-          <td>
-            <button
-              data-testid={`view-alert-${row.id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRowClick(row.original);
-              }}
-            >
-              View Details
-            </button>
-          </td>
+          {row.getVisibleCells().map((cell: any) => (
+            <td key={cell.id}>
+              {cell.column.columnDef.cell(cell.getContext())}
+            </td>
+          ))}
         </tr>
       ))}
     </tbody>
@@ -147,6 +187,12 @@ jest.mock('@/features/alerts/alert-detail-sidebar', () => ({
       </div>
     );
   },
+}));
+
+// Mock ViewAlertModal
+jest.mock("@/features/alerts/view-raw-alert", () => ({
+  ViewAlertModal: ({ alert, handleClose }: any) => 
+    alert ? <div data-testid="view-alert-modal">ViewAlertModal</div> : null,
 }));
 
 const { useIncidentAlerts } = require('@/utils/hooks/useIncidents');
@@ -221,6 +267,13 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     },
   ];
 
+  const mockIncidentAlerts = {
+    items: mockAlerts,
+    count: 2,
+    limit: 20,
+    offset: 0,
+  };
+
   beforeEach(() => {
     // Reset AlertSidebar state
     alertSidebarState = {
@@ -230,12 +283,7 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
 
     // Mock successful data fetching
     useIncidentAlerts.mockReturnValue({
-      data: {
-        items: mockAlerts,
-        count: 2,
-        limit: 20,
-        offset: 0,
-      },
+      data: mockIncidentAlerts,
       isLoading: false,
       error: null,
       mutate: jest.fn(),
@@ -277,9 +325,10 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   it('should open AlertSidebar when clicking view details button', async () => {
     render(<IncidentAlerts incident={mockIncident} />);
 
-    // Click the view details button for the second alert
-    const viewButton = screen.getByTestId('view-alert-alert-2');
-    fireEvent.click(viewButton);
+    // Note: The view button actually opens ViewAlertModal, not AlertSidebar
+    // Let's click directly on the row to test AlertSidebar
+    const alertRow = screen.getByTestId('alert-row-alert-2');
+    fireEvent.click(alertRow);
 
     // Verify AlertSidebar is opened with correct alert
     await waitFor(() => {
@@ -331,8 +380,8 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     });
     expect(alertSidebarState.alert?.name).toBe('Test Alert 1');
 
-    // Click on second alert to switch
-    fireEvent.click(screen.getByTestId('view-alert-alert-2'));
+    // Click on second alert row to switch
+    fireEvent.click(screen.getByTestId('alert-row-alert-2'));
 
     await waitFor(() => {
       const sidebarContent = screen.getByTestId('alert-sidebar-content');
@@ -368,5 +417,56 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     render(<IncidentAlerts incident={mockIncident} />);
 
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+  });
+
+  it('should open ViewAlertModal when clicking view button in action tray', async () => {
+    useIncidentAlerts.mockReturnValue({
+      data: mockIncidentAlerts,
+      isLoading: false,
+      error: null,
+      mutate: jest.fn(),
+    });
+
+    render(<IncidentAlerts incident={mockIncident} />);
+
+    // Click the view button in the action tray
+    const viewButtons = screen.getAllByLabelText('View Alert Details');
+    fireEvent.click(viewButtons[0]);
+
+    // Check that ViewAlertModal is opened (not AlertSidebar)
+    await waitFor(() => {
+      expect(screen.getByTestId('view-alert-modal')).toBeInTheDocument();
+      expect(screen.queryByTestId('alert-sidebar')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should have both ViewAlertModal and AlertSidebar when appropriate', async () => {
+    useIncidentAlerts.mockReturnValue({
+      data: mockIncidentAlerts,
+      isLoading: false,
+      error: null,
+      mutate: jest.fn(),
+    });
+
+    render(<IncidentAlerts incident={mockIncident} />);
+
+    // First, open ViewAlertModal with view button
+    const viewButtons = screen.getAllByLabelText('View Alert Details');
+    fireEvent.click(viewButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('view-alert-modal')).toBeInTheDocument();
+    });
+
+    // Then, click on alert row to open AlertSidebar
+    const alertRows = screen.getAllByTestId(/^alert-row-/);
+    const firstAlertRow = alertRows[0];
+    fireEvent.click(firstAlertRow);
+
+    // Both should be open now
+    await waitFor(() => {
+      expect(screen.getByTestId('view-alert-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('alert-sidebar')).toBeInTheDocument();
+    });
   });
 });

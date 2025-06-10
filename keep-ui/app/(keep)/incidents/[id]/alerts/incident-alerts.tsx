@@ -33,6 +33,7 @@ import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
 import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
+import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { IncidentAlertActionTray } from "./incident-alert-action-tray";
 import { BellAlertIcon } from "@heroicons/react/24/outline";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
@@ -97,7 +98,10 @@ export default function IncidentAlerts({ incident }: Props) {
   }, [alerts, pagination]);
   usePollIncidentAlerts(incident.id);
 
-  // Replace ViewAlertModal state with AlertSidebar state
+  // State for ViewAlertModal (opened by view button)
+  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
+  
+  // State for AlertSidebar (opened by row click)
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -133,9 +137,8 @@ export default function IncidentAlerts({ incident }: Props) {
         <IncidentAlertActionTray
           alert={alert}
           onViewAlert={(alert) => {
-            // Open the AlertSidebar instead of ViewAlertModal
-            setSelectedAlert(alert);
-            setIsSidebarOpen(true);
+            // Open the ViewAlertModal when clicking the view button
+            setViewAlertModal(alert);
           }}
           onUnlink={async (alert) => {
             if (!incident.is_candidate) {
@@ -348,8 +351,14 @@ export default function IncidentAlerts({ incident }: Props) {
         <TablePagination table={table} />
       </div>
 
-      {/* Replace ViewAlertModal with AlertSidebar */}
-      {/* AlertSidebar provides a consistent experience with the main alerts table */}
+      {/* ViewAlertModal - opened by the view button in the action tray */}
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => setViewAlertModal(null)}
+        mutate={() => mutateAlerts()}
+      />
+
+      {/* AlertSidebar - opened by clicking on the alert row */}
       <AlertSidebar
         isOpen={isSidebarOpen}
         toggle={handleSidebarClose}
