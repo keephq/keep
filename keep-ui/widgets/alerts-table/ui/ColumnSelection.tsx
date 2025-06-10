@@ -26,8 +26,8 @@ export default function ColumnSelection({
 }: AlertColumnsSelectProps) {
   const tableColumns = table.getAllColumns();
 
-  // Use the new unified column state hook
-  // For now, we'll use backend if presetId is provided, otherwise fall back to local storage
+  // Use the unified column state hook - it will automatically determine
+  // whether to use backend or local storage based on preset type
   const {
     columnVisibility,
     columnOrder,
@@ -38,7 +38,7 @@ export default function ColumnSelection({
   } = usePresetColumnState({
     presetName,
     presetId,
-    useBackend: !!presetId, // Enable backend usage when preset ID is available
+    useBackend: !!presetId, // Try to use backend if preset ID is available
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,6 +77,7 @@ export default function ColumnSelection({
     );
 
     try {
+      // Both setters now return promises for consistency
       await Promise.all([
         setColumnVisibility(newColumnVisibility),
         setColumnOrder(finalOrder)
@@ -128,10 +129,10 @@ export default function ColumnSelection({
         className="mt-4" 
         color="orange" 
         type="submit"
-        loading={isLoading}
-        disabled={isLoading}
+        loading={useBackend && isLoading}
+        disabled={useBackend && isLoading}
       >
-        {isLoading ? "Saving..." : "Save changes"}
+        {useBackend && isLoading ? "Saving..." : "Save changes"}
       </Button>
     </form>
   );
