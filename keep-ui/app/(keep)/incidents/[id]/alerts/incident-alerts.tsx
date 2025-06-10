@@ -32,12 +32,14 @@ import { TablePagination } from "@/shared/ui";
 import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
+import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
 import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { IncidentAlertActionTray } from "./incident-alert-action-tray";
 import { BellAlertIcon } from "@heroicons/react/24/outline";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { useAlertTableTheme } from "@/entities/alerts/model";
+
 interface Props {
   incident: IncidentDto;
 }
@@ -96,9 +98,16 @@ export default function IncidentAlerts({ incident }: Props) {
   }, [alerts, pagination]);
   usePollIncidentAlerts(incident.id);
 
-  // Add new state for the ViewAlertModal
+  // State for ViewAlertModal (opened by view button)
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
+  
+  // State for AlertSidebar (opened by row click)
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  
+  // Add state for incident selector modal (needed by AlertSidebar)
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] = useState(false);
 
   const extraColumns = [
     columnHelper.accessor("is_created_by_ai", {
@@ -127,7 +136,10 @@ export default function IncidentAlerts({ incident }: Props) {
       <div className="opacity-0 group-hover/row:opacity-100">
         <IncidentAlertActionTray
           alert={alert}
-          onViewAlert={setViewAlertModal}
+          onViewAlert={(alert) => {
+            // Open the ViewAlertModal when clicking the view button
+            setViewAlertModal(alert);
+          }}
           onUnlink={async (alert) => {
             if (!incident.is_candidate) {
               await unlinkAlertsFromIncident(
@@ -264,6 +276,12 @@ export default function IncidentAlerts({ incident }: Props) {
     });
   }
 
+  // Handler for closing the sidebar
+  const handleSidebarClose = () => {
+    setIsSidebarOpen(false);
+    setSelectedAlert(null);
+  };
+
   return (
     <>
       <IncidentAlertsActions
@@ -311,7 +329,11 @@ export default function IncidentAlerts({ incident }: Props) {
               table={table}
               showSkeleton={false}
               theme={theme}
-              onRowClick={() => {}}
+              onRowClick={(alert) => {
+                // Open the AlertSidebar when clicking on a row
+                setSelectedAlert(alert);
+                setIsSidebarOpen(true);
+              }}
               lastViewedAlert={null}
               presetName={"incident-alerts"}
             />
@@ -329,10 +351,23 @@ export default function IncidentAlerts({ incident }: Props) {
         <TablePagination table={table} />
       </div>
 
+      {/* ViewAlertModal - opened by the view button in the action tray */}
       <ViewAlertModal
         alert={viewAlertModal}
         handleClose={() => setViewAlertModal(null)}
-        mutate={mutateAlerts}
+        mutate={() => mutateAlerts()}
+      />
+
+      {/* AlertSidebar - opened by clicking on the alert row */}
+      <AlertSidebar
+        isOpen={isSidebarOpen}
+        toggle={handleSidebarClose}
+        alert={selectedAlert}
+        // These optional props are passed to maintain feature parity with the main alerts table
+        setRunWorkflowModalAlert={undefined}
+        setDismissModalAlert={undefined}
+        setChangeStatusAlert={undefined}
+        setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
       />
     </>
   );
