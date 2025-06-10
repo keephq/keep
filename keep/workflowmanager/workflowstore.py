@@ -10,12 +10,12 @@ import requests
 import validators
 from fastapi import HTTPException
 
-from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
 from keep.workflowmanager.dal.workflowdal import WorkflowDal
 from keep.workflowmanager.workflow import Workflow
 from sqlalchemy.exc import NoResultFound
@@ -192,7 +192,7 @@ class WorkflowStore:
 
     def get_all_workflows(
         self, tenant_id: str, exclude_disabled: bool = False
-    ) -> list[WorkflowModel]:
+    ) -> list[WorkflowDalModel]:
         # list all tenant's workflows
         workflows = self.workflow_dal.workflow_repository.get_all_workflows(
             tenant_id, exclude_disabled
@@ -662,7 +662,7 @@ class WorkflowStore:
     def get_workflow_meta_data(
         self,
         tenant_id: str,
-        workflow: WorkflowModel | None,
+        workflow: WorkflowDalModel | None,
         installed_providers_by_type: dict,
     ):
         providers_dto = []
