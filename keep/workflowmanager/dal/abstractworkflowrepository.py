@@ -32,6 +32,7 @@ from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
 from keep.workflowmanager.workflow import Workflow
 from sqlalchemy.exc import NoResultFound
 
@@ -54,7 +55,7 @@ class WorkflowRepository(ABC):
         force_update: bool = False,
         is_test: bool = False,
         lookup_by_name: bool = False,
-    ) -> Workflow:
+    ) -> WorkflowDalModel:
         pass
 
     @abstractmethod
