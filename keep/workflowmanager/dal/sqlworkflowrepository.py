@@ -25,7 +25,11 @@ from keep.api.core.workflows import (
     WorkflowWithLastExecutions,
     get_workflows_with_last_executions_v2,
 )
-from keep.api.models.db.workflow import Workflow as WorkflowModel
+from keep.api.models.db.workflow import (
+    Workflow as WorkflowModel,
+    WorkflowExecution,
+    WorkflowExecutionLog,
+)
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
@@ -34,6 +38,13 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
 from sqlalchemy.exc import NoResultFound
+
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
+from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
+    WorkflowExecutioLogDalModel,
+)
 
 
 class SqlWorkflowRepository(WorkflowRepository):
@@ -100,7 +111,9 @@ class SqlWorkflowRepository(WorkflowRepository):
     def get_all_workflows_yamls(self, tenant_id: str) -> List[str]:
         return get_all_workflows_yamls(tenant_id=tenant_id)
 
-    def get_workflow_by_id(self, tenant_id: str, workflow_id: str) -> WorkflowDalModel:
+    def get_workflow_by_id(
+        self, tenant_id: str, workflow_id: str
+    ) -> WorkflowDalModel | None:
         db_workflow = get_workflow_by_id(tenant_id=tenant_id, workflow_id=workflow_id)
 
         if db_workflow is not None:
@@ -113,23 +126,41 @@ class SqlWorkflowRepository(WorkflowRepository):
         tenant_id: str,
         workflow_execution_id: str,
         is_test_run: bool | None = None,
-    ):
-        return get_workflow_execution(
+    ) -> WorkflowExecutionDalModel | None:
+        db_workflow_execution = get_workflow_execution(
             tenant_id=tenant_id,
             workflow_execution_id=workflow_execution_id,
             is_test_run=is_test_run,
         )
+
+        if db_workflow_execution is not None:
+            return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
+
+        return None
 
     def get_workflow_execution_with_logs(
         self,
         tenant_id: str,
         workflow_execution_id: str,
         is_test_run: bool | None = None,
-    ):
-        return get_workflow_execution_with_logs(
-            tenant_id=tenant_id,
-            workflow_execution_id=workflow_execution_id,
-            is_test_run=is_test_run,
+    ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
+        db_workflow_execution, db_workflow_execution_logs = (
+            get_workflow_execution_with_logs(
+                tenant_id=tenant_id,
+                workflow_execution_id=workflow_execution_id,
+                is_test_run=is_test_run,
+            )
+        )
+        if db_workflow_execution is None:
+            return None
+        mapped_execution_logs = [
+            self.__workflow_execution_log_from_db_to_dto(item)
+            for item in db_workflow_execution_logs
+        ]
+
+        return (
+            self.__workflow_execution_from_db_to_dto(db_workflow_execution),
+            mapped_execution_logs,
         )
 
     def get_workflows_with_last_executions_v2(
@@ -169,4 +200,35 @@ class SqlWorkflowRepository(WorkflowRepository):
             provisioned=db_workflow.provisioned,
             provisioned_file=db_workflow.provisioned_file,
             is_test=db_workflow.is_test,
+        )
+
+    def __workflow_execution_from_db_to_dto(
+        self, db_workflow_execution: WorkflowExecution
+    ) -> WorkflowExecutionDalModel:
+        return WorkflowExecutionDalModel(
+            id=db_workflow_execution.id,
+            workflow_id=db_workflow_execution.workflow_id,
+            workflow_revision=db_workflow_execution.workflow_revision,
+            tenant_id=WorkflowExecutionDalModel.tenant_id,
+            started=db_workflow_execution.started,
+            triggered_by=db_workflow_execution.triggered_by,
+            status=db_workflow_execution.status,
+            is_running=db_workflow_execution.is_running,
+            timeslot=db_workflow_execution.timeslot,
+            execution_number=db_workflow_execution.execution_number,
+            error=db_workflow_execution.error,
+            execution_time=db_workflow_execution.execution_time,
+            results=db_workflow_execution.results,
+            is_test_run=db_workflow_execution.is_test_run,
+        )
+
+    def __workflow_execution_log_from_db_to_dto(
+        self, db_workflow_execution_log: WorkflowExecutionLog
+    ) -> WorkflowExecutionDalModel:
+        return WorkflowExecutioLogDalModel(
+            id=db_workflow_execution_log.id,
+            workflow_execution_id=db_workflow_execution_log.workflow_execution_id,
+            timestamp=db_workflow_execution_log.timestamp,
+            message=db_workflow_execution_log.message,
+            context=db_workflow_execution_log.context,
         )

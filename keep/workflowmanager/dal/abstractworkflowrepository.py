@@ -33,6 +33,12 @@ from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
+from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
+    WorkflowExecutioLogDalModel,
+)
 from keep.workflowmanager.workflow import Workflow
 from sqlalchemy.exc import NoResultFound
 
@@ -81,7 +87,9 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
-    def get_workflow_by_id(self, tenant_id: str, workflow_id: str) -> WorkflowDalModel:
+    def get_workflow_by_id(
+        self, tenant_id: str, workflow_id: str
+    ) -> WorkflowDalModel | None:
         pass
 
     @abstractmethod
@@ -90,7 +98,7 @@ class WorkflowRepository(ABC):
         tenant_id: str,
         workflow_execution_id: str,
         is_test_run: bool | None = None,
-    ):
+    ) -> WorkflowExecutionDalModel | None:
         pass
 
     @abstractmethod
@@ -99,9 +107,10 @@ class WorkflowRepository(ABC):
         tenant_id: str,
         workflow_execution_id: str,
         is_test_run: bool | None = None,
-    ):
+    ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
         pass
 
+    @abstractmethod
     def get_workflows_with_last_executions_v2(
         self,
         tenant_id: str,
