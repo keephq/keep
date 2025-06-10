@@ -10,6 +10,7 @@ import {
   DEFAULT_COLS_VISIBILITY,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { STATIC_PRESETS_NAMES } from "./constants";
+import { ColumnConfiguration } from "./types";
 
 interface UsePresetColumnStateOptions {
   presetName: string;
@@ -134,65 +135,101 @@ export const usePresetColumnState = ({
     localColumnListFormats,
   ]);
 
-  // Update functions - keep them synchronous for local storage, async only for backend
-  const setColumnVisibility = useCallback(
-    (visibility: VisibilityState) => {
+  // Batched update function to avoid multiple API calls
+  const updateMultipleColumnConfigs = useCallback(
+    async (updates: {
+      columnVisibility?: VisibilityState;
+      columnOrder?: ColumnOrderState;
+      columnRenameMapping?: ColumnRenameMapping;
+      columnTimeFormats?: Record<string, TimeFormatOption>;
+      columnListFormats?: Record<string, ListFormatOption>;
+    }) => {
       if (shouldUseBackend) {
-        return updateColumnConfig({ column_visibility: visibility });
+        // Batch all updates into a single API call
+        const batchedUpdate: Partial<ColumnConfiguration> = {};
+        
+        if (updates.columnVisibility !== undefined) {
+          batchedUpdate.column_visibility = updates.columnVisibility;
+        }
+        if (updates.columnOrder !== undefined) {
+          batchedUpdate.column_order = updates.columnOrder;
+        }
+        if (updates.columnRenameMapping !== undefined) {
+          batchedUpdate.column_rename_mapping = updates.columnRenameMapping;
+        }
+        if (updates.columnTimeFormats !== undefined) {
+          batchedUpdate.column_time_formats = updates.columnTimeFormats;
+        }
+        if (updates.columnListFormats !== undefined) {
+          batchedUpdate.column_list_formats = updates.columnListFormats;
+        }
+
+        return updateColumnConfig(batchedUpdate);
       } else {
-        setLocalColumnVisibility(visibility);
-        return Promise.resolve(); // Return resolved promise for consistency
+        // For local storage, update each one individually (synchronously)
+        if (updates.columnVisibility !== undefined) {
+          setLocalColumnVisibility(updates.columnVisibility);
+        }
+        if (updates.columnOrder !== undefined) {
+          setLocalColumnOrder(updates.columnOrder);
+        }
+        if (updates.columnRenameMapping !== undefined) {
+          setLocalColumnRenameMapping(updates.columnRenameMapping);
+        }
+        if (updates.columnTimeFormats !== undefined) {
+          setLocalColumnTimeFormats(updates.columnTimeFormats);
+        }
+        if (updates.columnListFormats !== undefined) {
+          setLocalColumnListFormats(updates.columnListFormats);
+        }
+        return Promise.resolve();
       }
     },
-    [shouldUseBackend, updateColumnConfig, setLocalColumnVisibility]
+    [
+      shouldUseBackend,
+      updateColumnConfig,
+      setLocalColumnVisibility,
+      setLocalColumnOrder,
+      setLocalColumnRenameMapping,
+      setLocalColumnTimeFormats,
+      setLocalColumnListFormats,
+    ]
+  );
+
+  // Individual update functions for backward compatibility
+  const setColumnVisibility = useCallback(
+    (visibility: VisibilityState) => {
+      return updateMultipleColumnConfigs({ columnVisibility: visibility });
+    },
+    [updateMultipleColumnConfigs]
   );
 
   const setColumnOrder = useCallback(
     (order: ColumnOrderState) => {
-      if (shouldUseBackend) {
-        return updateColumnConfig({ column_order: order });
-      } else {
-        setLocalColumnOrder(order);
-        return Promise.resolve(); // Return resolved promise for consistency
-      }
+      return updateMultipleColumnConfigs({ columnOrder: order });
     },
-    [shouldUseBackend, updateColumnConfig, setLocalColumnOrder]
+    [updateMultipleColumnConfigs]
   );
 
   const setColumnRenameMapping = useCallback(
     (mapping: ColumnRenameMapping) => {
-      if (shouldUseBackend) {
-        return updateColumnConfig({ column_rename_mapping: mapping });
-      } else {
-        setLocalColumnRenameMapping(mapping);
-        return Promise.resolve(); // Return resolved promise for consistency
-      }
+      return updateMultipleColumnConfigs({ columnRenameMapping: mapping });
     },
-    [shouldUseBackend, updateColumnConfig, setLocalColumnRenameMapping]
+    [updateMultipleColumnConfigs]
   );
 
   const setColumnTimeFormats = useCallback(
     (formats: Record<string, TimeFormatOption>) => {
-      if (shouldUseBackend) {
-        return updateColumnConfig({ column_time_formats: formats });
-      } else {
-        setLocalColumnTimeFormats(formats);
-        return Promise.resolve(); // Return resolved promise for consistency
-      }
+      return updateMultipleColumnConfigs({ columnTimeFormats: formats });
     },
-    [shouldUseBackend, updateColumnConfig, setLocalColumnTimeFormats]
+    [updateMultipleColumnConfigs]
   );
 
   const setColumnListFormats = useCallback(
     (formats: Record<string, ListFormatOption>) => {
-      if (shouldUseBackend) {
-        return updateColumnConfig({ column_list_formats: formats });
-      } else {
-        setLocalColumnListFormats(formats);
-        return Promise.resolve(); // Return resolved promise for consistency
-      }
+      return updateMultipleColumnConfigs({ columnListFormats: formats });
     },
-    [shouldUseBackend, updateColumnConfig, setLocalColumnListFormats]
+    [updateMultipleColumnConfigs]
   );
 
   return {
@@ -206,6 +243,7 @@ export const usePresetColumnState = ({
     setColumnRenameMapping,
     setColumnTimeFormats,
     setColumnListFormats,
+    updateMultipleColumnConfigs,
     isLoading,
     useBackend: shouldUseBackend,
   };

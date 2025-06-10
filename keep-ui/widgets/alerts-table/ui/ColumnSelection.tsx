@@ -31,8 +31,7 @@ export default function ColumnSelection({
   const {
     columnVisibility,
     columnOrder,
-    setColumnVisibility,
-    setColumnOrder,
+    updateMultipleColumnConfigs,
     isLoading,
     useBackend,
   } = usePresetColumnState({
@@ -77,11 +76,11 @@ export default function ColumnSelection({
     );
 
     try {
-      // Both setters now return promises for consistency
-      await Promise.all([
-        setColumnVisibility(newColumnVisibility),
-        setColumnOrder(finalOrder)
-      ]);
+      // Use batched update to avoid multiple API calls and toasts
+      await updateMultipleColumnConfigs({
+        columnVisibility: newColumnVisibility,
+        columnOrder: finalOrder,
+      });
       onClose?.();
     } catch (error) {
       console.error("Failed to save column configuration:", error);

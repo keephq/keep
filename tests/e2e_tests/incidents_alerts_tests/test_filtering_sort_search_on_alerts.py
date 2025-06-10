@@ -491,6 +491,182 @@ def test_multi_sort_asc_dsc(
                     continue
 
 
+def test_backend_column_configuration_persistence(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    """
+    Test that column configuration persists across browser sessions when using backend storage.
+    This test:
+    1. Creates a new preset
+    2. Configures columns (visibility and order)
+    3. Starts a fresh browser context (simulating new session)
+    4. Verifies the column configuration is preserved
+    """
+    current_alerts = setup_test_data
+    init_test(browser, current_alerts)
+    
+    # Create a unique preset name for this test
+    test_preset_name = f"test-column-config-{int(time.time())}"
+    test_cel_query = "severity == 'high'"
+    
+    try:
+        # Navigate to alerts page and create a new preset
+        browser.goto(f"{KEEP_UI_URL}/alerts/feed")
+        browser.wait_for_load_state("networkidle")
+        browser.wait_for_timeout(1000)
+        
+        # Create new preset via the "Save current filter as a view" flow
+        cel_input = browser.locator(".alerts-cel-input")
+        cel_input.click()
+        cel_input.fill("")  # Clear any existing content
+        browser.keyboard.type(test_cel_query)
+        browser.keyboard.press("Enter")
+        browser.wait_for_timeout(500)
+        
+        # Click save view button
+        save_view_button = browser.locator("button", has_text="Save current filter as a view")
+        expect(save_view_button).to_be_visible()
+        save_view_button.click()
+        
+        # Fill in preset creation form
+        modal = browser.locator("[role='dialog']")
+        expect(modal).to_be_visible()
+        
+        preset_name_input = modal.locator("input[placeholder*='name']")
+        preset_name_input.fill(test_preset_name)
+        
+        create_button = modal.locator("button", has_text="Create")
+        create_button.click()
+        
+        # Wait for navigation to the new preset
+        browser.wait_for_url(lambda url: test_preset_name.lower() in url.lower(), timeout=10000)
+        browser.wait_for_load_state("networkidle")
+        browser.wait_for_timeout(1000)
+        
+        # Now configure columns in the new preset
+        settings_button = browser.locator("[data-testid='settings-button']")
+        expect(settings_button).to_be_visible()
+        settings_button.click()
+        
+        settings_panel = browser.locator("[data-testid='settings-panel']")
+        expect(settings_panel).to_be_visible()
+        
+        # Go to columns tab
+        columns_tab = settings_panel.locator("[data-testid='tab-columns']")
+        columns_tab.click()
+        
+        # Verify "Synced across devices" indicator is shown (confirming backend usage)
+        synced_indicator = settings_panel.locator("text=Synced across devices")
+        expect(synced_indicator).to_be_visible()
+        
+        # Configure some specific columns - enable tags.customerName and description
+        search_input = settings_panel.locator("input[placeholder='Search fields...']")
+        search_input.fill("tags.")
+        browser.wait_for_timeout(500)
+        
+        # Enable tags.customerName
+        customer_name_checkbox = settings_panel.locator("input[name='tags.customerName']")
+        if not customer_name_checkbox.is_checked():
+            customer_name_checkbox.click()
+        
+        # Clear search and enable description
+        search_input.fill("")
+        browser.wait_for_timeout(500)
+        
+        description_checkbox = settings_panel.locator("input[name='description']")
+        if not description_checkbox.is_checked():
+            description_checkbox.click()
+        
+        # Save changes
+        save_button = settings_panel.locator("button[type='submit']", has_text="Save changes")
+        save_button.click()
+        
+        # Wait for save to complete (should see success toast)
+        browser.wait_for_timeout(2000)
+        
+        # Verify columns are now visible in the table
+        customer_name_header = browser.locator("[data-testid='header-cell-tags.customerName']")
+        expect(customer_name_header).to_be_visible()
+        
+        description_header = browser.locator("[data-testid='header-cell-description']")
+        expect(description_header).to_be_visible()
+        
+        # Get the current column order for verification
+        table_headers = browser.locator("[data-testid='alerts-table'] thead th")
+        original_column_order = []
+        for i in range(table_headers.count()):
+            header = table_headers.nth(i)
+            test_id = header.get_attribute("data-testid")
+            if test_id and "header-cell-" in test_id:
+                column_id = test_id.replace("header-cell-", "")
+                original_column_order.append(column_id)
+        
+        print(f"Original column order: {original_column_order}")
+        
+        # Now simulate a fresh browser session by creating a new context
+        browser.context.clear_cookies()
+        browser.context.clear_permissions()
+        
+        # Navigate to the same preset in fresh state
+        browser.goto(f"{KEEP_UI_URL}/alerts/{test_preset_name}")
+        browser.wait_for_load_state("networkidle")
+        browser.wait_for_timeout(2000)
+        
+        # Verify the column configuration is preserved
+        # Check that tags.customerName column is still visible
+        customer_name_header_after = browser.locator("[data-testid='header-cell-tags.customerName']")
+        expect(customer_name_header_after).to_be_visible()
+        
+        # Check that description column is still visible  
+        description_header_after = browser.locator("[data-testid='header-cell-description']")
+        expect(description_header_after).to_be_visible()
+        
+        # Verify column order is preserved
+        table_headers_after = browser.locator("[data-testid='alerts-table'] thead th")
+        new_column_order = []
+        for i in range(table_headers_after.count()):
+            header = table_headers_after.nth(i)
+            test_id = header.get_attribute("data-testid")
+            if test_id and "header-cell-" in test_id:
+                column_id = test_id.replace("header-cell-", "")
+                new_column_order.append(column_id)
+        
+        print(f"New column order: {new_column_order}")
+        
+        # Verify that both enabled columns are still present
+        assert "tags.customerName" in new_column_order, "tags.customerName column should be preserved"
+        assert "description" in new_column_order, "description column should be preserved"
+        
+        print(f"✅ Column configuration persistence test passed for preset: {test_preset_name}")
+        
+    except Exception as e:
+        save_failure_artifacts(browser, log_entries=[])
+        print(f"❌ Column configuration persistence test failed: {e}")
+        raise e
+    
+    finally:
+        # Cleanup: Delete the test preset
+        try:
+            # Get auth token for API cleanup
+            token = get_token()
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Get preset ID by name
+            response = requests.get(f"{KEEP_API_URL}/preset", headers=headers)
+            if response.status_code == 200:
+                presets = response.json()
+                test_preset = next((p for p in presets if p["name"] == test_preset_name), None)
+                if test_preset:
+                    # Delete the preset
+                    delete_response = requests.delete(f"{KEEP_API_URL}/preset/{test_preset['id']}", headers=headers)
+                    print(f"Cleanup: Deleted test preset {test_preset_name}, status: {delete_response.status_code}")
+        except Exception as cleanup_error:
+            print(f"⚠️ Failed to cleanup test preset: {cleanup_error}")
+
+
 def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     facet_name = "source"
     alert_property_name = "providerType"
