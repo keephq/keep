@@ -72,6 +72,7 @@ import EnhancedDateRangePickerV2, {
 import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -451,6 +452,14 @@ export function AlertTableServerSide({
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
+
+  // Add group expansion state
+  const groupExpansionState = useGroupExpansion(true);
+  const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
+
+  // Check if grouping is active
+  const isGroupingActive = grouping.length > 0;
+
   function renderTable() {
     if (
       !showSkeleton &&
@@ -564,6 +573,7 @@ export function AlertTableServerSide({
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
           presetName={presetName}
+          groupExpansionState={groupExpansionState}
         />
       </Table>
     );
@@ -613,6 +623,9 @@ export function AlertTableServerSide({
             presetName={presetName}
             onCelChanges={setSearchCel}
             table={table}
+            isGroupingActive={isGroupingActive}
+            onToggleAllGroups={toggleAll}
+            areAllGroupsExpanded={areAllGroupsExpanded}
           />
         )}
       </div>

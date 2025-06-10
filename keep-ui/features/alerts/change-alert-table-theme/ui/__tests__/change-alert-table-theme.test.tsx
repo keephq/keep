@@ -1,11 +1,13 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AlertTableThemeSelection } from "../AlertTableThemeSelection";
-import { useAlertTableTheme } from "@/entities/alerts/model/useAlertTableTheme";
+import { useAlertTableTheme } from "@/entities/alerts/model";
 import { predefinedThemes } from "../AlertTableThemeSelection";
 
-// Mock the useAlertTableTheme hook
-jest.mock("@/entities/alerts/model/useAlertTableTheme");
+// Mock the useAlertTableTheme hook - use the exact path that matches the import
+jest.mock("@/entities/alerts/model", () => ({
+  useAlertTableTheme: jest.fn(),
+}));
 
 // Get all theme names and their indices
 const themeEntries = Object.entries(predefinedThemes);
