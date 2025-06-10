@@ -115,7 +115,7 @@ export default function ColumnSelection({
                     className="mr-2"
                     name={column}
                     type="checkbox"
-                    defaultChecked={columnVisibility[column]}
+                    checked={columnVisibility[column] || false}
                   />
                   {column}
                 </label>

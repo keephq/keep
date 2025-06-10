@@ -78,9 +78,9 @@ interface DraggableHeaderCellProps {
   columnRenameMapping: ColumnRenameMapping;
   setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
   columnOrder: ColumnOrderState;
-  setColumnOrder: (order: ColumnOrderState) => void;
+  setColumnOrder: (order: ColumnOrderState) => Promise<void> | void;
   columnVisibility: VisibilityState;
-  setColumnVisibility: (visibility: VisibilityState) => void;
+  setColumnVisibility: (visibility: VisibilityState) => Promise<void> | void;
 }
 
 const DraggableHeaderCell = ({
@@ -128,7 +128,7 @@ const DraggableHeaderCell = ({
     [listeners, handleSortingMenuClick]
   );
 
-  const moveColumn = (direction: "left" | "right") => {
+  const moveColumn = async (direction: "left" | "right") => {
     const currentIndex = columnOrder.indexOf(column.id);
     if (direction === "left" && currentIndex > 0) {
       const newOrder = [...columnOrder];
@@ -136,14 +136,22 @@ const DraggableHeaderCell = ({
         newOrder[currentIndex - 1],
         newOrder[currentIndex],
       ];
-      setColumnOrder(newOrder);
+      try {
+        await setColumnOrder(newOrder);
+      } catch (error) {
+        console.error("Failed to update column order:", error);
+      }
     } else if (direction === "right" && currentIndex < columnOrder.length - 1) {
       const newOrder = [...columnOrder];
       [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
         newOrder[currentIndex + 1],
         newOrder[currentIndex],
       ];
-      setColumnOrder(newOrder);
+      try {
+        await setColumnOrder(newOrder);
+      } catch (error) {
+        console.error("Failed to update column order:", error);
+      }
     }
   };
 
@@ -175,7 +183,7 @@ const DraggableHeaderCell = ({
     column.id !== "severity" &&
     column.id !== "alertMenu";
 
-  const handleColumnVisibilityChange = (
+  const handleColumnVisibilityChange = async (
     columnId: string,
     isVisible: boolean
   ) => {
@@ -183,9 +191,13 @@ const DraggableHeaderCell = ({
       ...columnVisibility,
       [columnId]: isVisible,
     };
-    setColumnVisibility(newVisibility);
-    // Update the table's state as well
-    table.setColumnVisibility(newVisibility);
+    try {
+      await setColumnVisibility(newVisibility);
+      // Update the table's state as well
+      table.setColumnVisibility(newVisibility);
+    } catch (error) {
+      console.error("Failed to update column visibility:", error);
+    }
   };
 
   const getGroupedColumnName = () => {
@@ -417,9 +429,9 @@ interface Props {
   columnListFormats: Record<string, ListFormatOption>;
   setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
   columnOrder: ColumnOrderState;
-  setColumnOrder: (order: ColumnOrderState) => void;
+  setColumnOrder: (order: ColumnOrderState) => Promise<void> | void;
   columnVisibility: VisibilityState;
-  setColumnVisibility: (visibility: VisibilityState) => void;
+  setColumnVisibility: (visibility: VisibilityState) => Promise<void> | void;
   columnRenameMapping: ColumnRenameMapping;
   setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
 }
@@ -455,7 +467,7 @@ export default function AlertsTableHeaders({
     })
   );
 
-  const onDragEnd = (event: DragEndEvent) => {
+  const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over?.id == null) return;
@@ -471,7 +483,11 @@ export default function AlertsTableHeaders({
     const reorderedItem = reorderedCols.splice(fromIndex, 1);
     reorderedCols.splice(toIndex, 0, reorderedItem[0]);
 
-    setColumnOrder(reorderedCols);
+    try {
+      await setColumnOrder(reorderedCols);
+    } catch (error) {
+      console.error("Failed to update column order via drag and drop:", error);
+    }
   };
 
   return (

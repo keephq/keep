@@ -339,6 +339,15 @@ export function AlertTable({
     setIsSidebarOpen(false);
   };
 
+  // Wrapper functions to maintain sync behavior for deprecated component
+  const handleColumnOrderChange = (newOrder: ColumnOrderState) => {
+    setColumnOrder(newOrder);
+  };
+
+  const handleColumnVisibilityChange = (newVisibility: VisibilityState) => {
+    setColumnVisibility(newVisibility);
+  };
+
   return (
     <div className="h-screen flex flex-col gap-4">
       <div className="px-4 flex-none">
@@ -412,9 +421,9 @@ export function AlertTable({
                       columnListFormats={columnListFormats}
                       setColumnListFormats={setColumnListFormats}
                       columnOrder={columnOrder}
-                      setColumnOrder={setColumnOrder}
+                      setColumnOrder={handleColumnOrderChange}
                       columnVisibility={columnVisibility}
-                      setColumnVisibility={setColumnVisibility}
+                      setColumnVisibility={handleColumnVisibilityChange}
                       columnRenameMapping={{}}
                       setColumnRenameMapping={() => {}}
                     />

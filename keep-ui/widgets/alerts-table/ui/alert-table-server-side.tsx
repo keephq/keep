@@ -155,6 +155,7 @@ export function AlertTableServerSide({
     setColumnOrder,
     setColumnVisibility,
     setColumnRenameMapping,
+    updateMultipleColumnConfigs,
   } = usePresetColumnState({
     presetName,
     presetId,
@@ -465,6 +466,27 @@ export function AlertTableServerSide({
   // Check if grouping is active
   const isGroupingActive = grouping.length > 0;
 
+  // Unified functions for column operations that handle both local and backend updates
+  const handleColumnOrderChange = async (newOrder: ColumnOrderState) => {
+    if (!!presetId) {
+      // For backend presets, use the batched update
+      await updateMultipleColumnConfigs({ columnOrder: newOrder });
+    } else {
+      // For local presets, use direct setter
+      setColumnOrder(newOrder);
+    }
+  };
+
+  const handleColumnVisibilityChange = async (newVisibility: VisibilityState) => {
+    if (!!presetId) {
+      // For backend presets, use the batched update
+      await updateMultipleColumnConfigs({ columnVisibility: newVisibility });
+    } else {
+      // For local presets, use direct setter
+      setColumnVisibility(newVisibility);
+    }
+  };
+
   function renderTable() {
     if (
       !showSkeleton &&
@@ -570,9 +592,9 @@ export function AlertTableServerSide({
           columnListFormats={columnListFormats}
           setColumnListFormats={setColumnListFormats}
           columnOrder={columnOrder}
-          setColumnOrder={setColumnOrder}
+          setColumnOrder={handleColumnOrderChange}
           columnVisibility={columnVisibility}
-          setColumnVisibility={setColumnVisibility}
+          setColumnVisibility={handleColumnVisibilityChange}
           columnRenameMapping={columnRenameMapping}
           setColumnRenameMapping={setColumnRenameMapping}
         />
