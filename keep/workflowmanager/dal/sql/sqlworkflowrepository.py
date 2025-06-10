@@ -21,7 +21,7 @@ from keep.api.core.db import (
     get_workflow_execution,
     get_workflow_execution_with_logs,
 )
-from keep.api.core.workflows import (
+from keep.workflowmanager.dal.sql.workflows import (
     WorkflowWithLastExecutions,
     get_workflows_with_last_executions_v2,
 )

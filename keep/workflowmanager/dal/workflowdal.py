@@ -1,5 +1,5 @@
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
-from keep.workflowmanager.dal.sqlworkflowrepository import SqlWorkflowRepository
+from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 
 
 class WorkflowDal:
