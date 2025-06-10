@@ -15,7 +15,7 @@ from tests.e2e_tests.utils import (
 
 # Constants
 KEEP_UI_URL = "http://localhost:3000"
-DEFAULT_SNMP_PORT = 1689  # Using a non-privileged port for testing
+DEFAULT_SNMP_PORT = 1605  # Using a non-privileged port for testing
 DOCKER_NETWORK = "keep_default"  # Default network for Keep services
 SNMP_TOOLS_IMAGE = "debian:bullseye"
 SNMP_CONTAINER_NAME = "snmp-tools-test"
@@ -90,7 +90,7 @@ def send_snmp_trap(host, port):
         print(f"Failed to send SNMP trap: {result.stderr}")
         return False
     
-    print(f"SNMP trap sent successfully")
+    print("SNMP trap sent successfully")
     return True
 
 def open_snmp_card(browser):
@@ -108,7 +108,6 @@ def open_snmp_card(browser):
 
 def test_snmp_provider(browser: Page, setup_page_logging, failure_artifacts):
     """End-to-end test for the SNMP Provider using Docker for SNMP tools."""
-    
     snmp_port = DEFAULT_SNMP_PORT
     # Set up SNMP tools container
     container_setup = setup_snmp_tools_container()
@@ -209,8 +208,27 @@ def test_snmp_provider(browser: Page, setup_page_logging, failure_artifacts):
         # Send test SNMP traps
         print("Sending test SNMP traps...")
 
+        # Get a list of all containers and find the backend container
+        container_list = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            capture_output=True,
+            text=True
+        )
+        containers = container_list.stdout.strip().split('\n')
+        backend_container = None
+
+        for container in containers:
+            if 'keep-backend' in container:
+                backend_container = container
+                break
+                
+        if not backend_container:
+            raise Exception("Could not find keep-backend container")
+            
+        print(f"Found backend container: {backend_container}")
+        
         keep_backend_ip = subprocess.run(
-            ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", "keep-keep-backend-dev-1"],
+            ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", backend_container],
             capture_output=True,
             text=True
             )
@@ -239,7 +257,8 @@ def test_snmp_provider(browser: Page, setup_page_logging, failure_artifacts):
             except Exception:
                 if attempt < max_attempts - 1:
                     print("SNMP alert not loaded yet. Retrying...")
-                    browser.reload()
+                    browser.reload(timeout=10000, wait_until="networkidle")
+                    browser.wait_for_timeout(2000)
                 else:
                     print("Failed to find SNMP alert after maximum attempts.")
                     raise Exception("Failed to find SNMP alert after maximum attempts")

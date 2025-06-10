@@ -9,14 +9,14 @@ import threading
 from datetime import datetime
 from typing import Any, Dict, List, Union
 
-import pysnmp.hlapi.asyncio as pysnmp_async
+
 from pysnmp.carrier.asyncio.dgram import udp
 from pysnmp.entity import config, engine
 from pysnmp.entity.rfc3413 import ntfrcv
 
 import pydantic
 import dataclasses
-from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.alert import AlertSeverity
 import traceback
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -191,7 +191,7 @@ class SnmpProvider(BaseProvider):
                     elif val_type == 'OctetString':
                         try:
                             val_str = str(val)
-                        except:
+                        except Exception:
                             val_str = val.prettyPrint()
                     else:
                         val_str = val.prettyPrint()
@@ -217,7 +217,6 @@ class SnmpProvider(BaseProvider):
             # Convert trap data to readable format
             alert_description = "\n".join([f"{oid}: {val}" for oid, val in trap_data.items()])
             
-            context_name_str = str(context_name) if context_name else "unknown"
             
             alert = {
                 "title": alert_title,
