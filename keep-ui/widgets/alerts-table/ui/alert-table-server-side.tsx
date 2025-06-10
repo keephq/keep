@@ -73,10 +73,11 @@ import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { usePresetColumnState } from "@/entities/presets/model";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
-  return user ? user.name : email;
+  return user?.name || email;
 };
 
 interface PresetTab {
@@ -141,9 +142,25 @@ export function AlertTableServerSide({
 
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
-  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
-    Record<string, TimeFormatOption>
-  >(`column-time-formats-${presetName}`, {});
+  
+  // Use the unified column state hook that handles both local storage and backend
+  const {
+    columnVisibility,
+    columnOrder,
+    columnTimeFormats,
+    columnListFormats,
+    columnRenameMapping,
+    setColumnTimeFormats,
+    setColumnListFormats,
+    setColumnOrder,
+    setColumnVisibility,
+    setColumnRenameMapping,
+  } = usePresetColumnState({
+    presetName,
+    presetId,
+    useBackend: !!presetId, // Use backend if preset ID is available
+  });
+  
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -157,20 +174,6 @@ export function AlertTableServerSide({
   });
 
   const columnsIds = getColumnsIds(columns);
-
-  const [columnOrder] = useLocalStorage<ColumnOrderState>(
-    `column-order-${presetName}`,
-    DEFAULT_COLS
-  );
-
-  const [columnVisibility] = useLocalStorage<VisibilityState>(
-    `column-visibility-${presetName}`,
-    DEFAULT_COLS_VISIBILITY
-  );
-
-  const [columnListFormats, setColumnListFormats] = useLocalStorage<
-    Record<string, ListFormatOption>
-  >(`column-list-formats-${presetName}`, {});
 
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     "table-sizes",
@@ -566,6 +569,12 @@ export function AlertTableServerSide({
           setColumnTimeFormats={setColumnTimeFormats}
           columnListFormats={columnListFormats}
           setColumnListFormats={setColumnListFormats}
+          columnOrder={columnOrder}
+          setColumnOrder={setColumnOrder}
+          columnVisibility={columnVisibility}
+          setColumnVisibility={setColumnVisibility}
+          columnRenameMapping={columnRenameMapping}
+          setColumnRenameMapping={setColumnRenameMapping}
         />
         <AlertsTableBody
           table={table}

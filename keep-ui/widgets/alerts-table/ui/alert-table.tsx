@@ -150,12 +150,12 @@ export function AlertTable({
 
   const columnsIds = getColumnsIds(columns);
 
-  const [columnOrder] = useLocalStorage<ColumnOrderState>(
+  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     DEFAULT_COLS
   );
 
-  const [columnVisibility] = useLocalStorage<VisibilityState>(
+  const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     `column-visibility-${presetName}`,
     DEFAULT_COLS_VISIBILITY
   );
@@ -411,6 +411,12 @@ export function AlertTable({
                       setColumnTimeFormats={setColumnTimeFormats}
                       columnListFormats={columnListFormats}
                       setColumnListFormats={setColumnListFormats}
+                      columnOrder={columnOrder}
+                      setColumnOrder={setColumnOrder}
+                      columnVisibility={columnVisibility}
+                      setColumnVisibility={setColumnVisibility}
+                      columnRenameMapping={{}}
+                      setColumnRenameMapping={() => {}}
                     />
                     <AlertsTableBody
                       table={table}

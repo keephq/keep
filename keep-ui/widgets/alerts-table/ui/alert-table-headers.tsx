@@ -77,6 +77,10 @@ interface DraggableHeaderCellProps {
   setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
   columnRenameMapping: ColumnRenameMapping;
   setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
+  columnOrder: ColumnOrderState;
+  setColumnOrder: (order: ColumnOrderState) => void;
+  columnVisibility: VisibilityState;
+  setColumnVisibility: (visibility: VisibilityState) => void;
 }
 
 const DraggableHeaderCell = ({
@@ -92,19 +96,13 @@ const DraggableHeaderCell = ({
   setColumnListFormats,
   columnRenameMapping,
   setColumnRenameMapping,
+  columnOrder,
+  setColumnOrder,
+  columnVisibility,
+  setColumnVisibility,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
-  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
-    `column-order-${presetName}`,
-    getColumnsIds(table.getAllLeafColumns().map((col) => col.columnDef))
-  );
   const [rowStyle] = useAlertRowStyle();
-
-  const [columnVisibility, setColumnVisibility] =
-    useLocalStorage<VisibilityState>(
-      `column-visibility-${presetName}`,
-      DEFAULT_COLS_VISIBILITY
-    );
 
   const {
     attributes,
@@ -418,6 +416,12 @@ interface Props {
   setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
   columnListFormats: Record<string, ListFormatOption>;
   setColumnListFormats: (formats: Record<string, ListFormatOption>) => void;
+  columnOrder: ColumnOrderState;
+  setColumnOrder: (order: ColumnOrderState) => void;
+  columnVisibility: VisibilityState;
+  setColumnVisibility: (visibility: VisibilityState) => void;
+  columnRenameMapping: ColumnRenameMapping;
+  setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
 }
 
 export default function AlertsTableHeaders({
@@ -429,19 +433,13 @@ export default function AlertsTableHeaders({
   setColumnTimeFormats,
   columnListFormats,
   setColumnListFormats,
+  columnOrder,
+  setColumnOrder,
+  columnVisibility,
+  setColumnVisibility,
+  columnRenameMapping,
+  setColumnRenameMapping,
 }: Props) {
-  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
-    `column-order-${presetName}`,
-    getColumnsIds(columns)
-  );
-
-  // Add column rename mapping state
-  const [columnRenameMapping, setColumnRenameMapping] =
-    useLocalStorage<ColumnRenameMapping>(
-      `column-rename-mapping-${presetName}`,
-      {}
-    );
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -535,6 +533,10 @@ export default function AlertsTableHeaders({
                     setColumnListFormats={setColumnListFormats}
                     columnRenameMapping={columnRenameMapping}
                     setColumnRenameMapping={setColumnRenameMapping}
+                    columnOrder={columnOrder}
+                    setColumnOrder={setColumnOrder}
+                    columnVisibility={columnVisibility}
+                    setColumnVisibility={setColumnVisibility}
                   >
                     {displayHeader}
                   </DraggableHeaderCell>
