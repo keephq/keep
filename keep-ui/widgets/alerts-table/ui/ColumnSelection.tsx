@@ -109,13 +109,13 @@ export default function ColumnSelection({
         <div className="flex-1 overflow-y-auto max-h-[350px]">
           <ul className="space-y-1">
             {filteredColumns.map((column) => (
-              <li key={column}>
+              <li key={`${column}-${columnVisibility[column] || false}`}>
                 <label className="cursor-pointer p-2 flex items-center">
                   <input
                     className="mr-2"
                     name={column}
                     type="checkbox"
-                    checked={columnVisibility[column] || false}
+                    defaultChecked={columnVisibility[column] || false}
                   />
                   {column}
                 </label>
