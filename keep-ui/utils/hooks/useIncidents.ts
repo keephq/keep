@@ -13,7 +13,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { v4 as uuidv4 } from "uuid";
 import {
   DEFAULT_INCIDENTS_PAGE_SIZE,
-  DEFAULT_INCIDENTS_SORTING,
+  DEFAULT_INCIDENTS_SORTING, IncidentTimelineDto,
 } from "@/entities/incidents/model/models";
 
 interface IncidentUpdatePayload {
@@ -153,6 +153,24 @@ export const useIncidentAlerts = (
     options
   );
 };
+
+export const useIncidentTimeline = (
+  incidentId: string,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const api = useApi();
+  return useSWR<IncidentTimelineDto>(
+    () =>
+      api.isReady()
+        ? `/incidents/${incidentId}/timeline`
+        : null,
+    async (url) => api.get(url),
+    options
+  );
+};
+
 
 export const useIncidentFutureIncidents = (
   incidentId: string,

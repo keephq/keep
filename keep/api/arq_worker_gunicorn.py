@@ -140,7 +140,7 @@ class ARQGunicornWorker(Worker):
     def update_heartbeat(self):
         """Update the heartbeat file to indicate the worker is alive"""
         try:
-            self.logger.info(f"Updating heartbeat: {self.heartbeat_file}")
+            self.logger.debug(f"Updating heartbeat: {self.heartbeat_file}")
             self.last_heartbeat = time.time()
             with open(self.heartbeat_file, "w") as f:
                 f.write(str(self.last_heartbeat))

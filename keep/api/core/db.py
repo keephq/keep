@@ -3620,6 +3620,61 @@ def get_alert_audit(
     return result
 
 
+def get_incident_alert_audit(
+    tenant_id: str,
+    incident_id: UUID | str,
+    limit: Optional[int] = None,
+    with_alert_enrichment: bool = False,
+    session: Optional[Session] = None
+) -> List[Tuple[Alert, AlertAudit]]:
+    """
+    Get the alert audit for the given incident_id.
+
+    Args:
+        tenant_id (str): the tenant_id to filter the alert audit by
+        incident_id (uuid | str): the incident_id to filter the alert audit by
+        limit (int, optional): the maximum number of alert audits to return. Defaults to None.
+        with_alert_enrichment (bool, optional): whether to include alert enrichment
+        session (Session, optional): the session to use. Defaults to None.
+    Returns:
+        List[AlertAudit]: the alert audit for the given fingerprint(s)
+    """
+    with existed_or_new_session(session) as session:
+        query = (
+            select(Alert, AlertAudit)
+            .select_from(LastAlertToIncident)
+            .join(AlertAudit, and_(
+                AlertAudit.fingerprint == LastAlertToIncident.fingerprint,
+                AlertAudit.tenant_id == LastAlertToIncident.tenant_id,
+            ))
+            .join(
+                LastAlert, and_(
+                    LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+                    LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                )
+            )
+            .join(
+                Alert, and_(
+                    Alert.id == LastAlert.alert_id,
+                    Alert.tenant_id == LastAlert.tenant_id,
+                )
+            )
+            .where(LastAlertToIncident.tenant_id == tenant_id)
+            .where(LastAlertToIncident.incident_id == incident_id)
+            .order_by(desc(AlertAudit.timestamp))
+        )
+        if limit:
+            query = query.limit(limit)
+
+        if with_alert_enrichment:
+            query = query.options(subqueryload(Alert.alert_enrichment))
+
+        # Execute the query and fetch all results
+        result = session.execute(query).all()
+
+    return result
+
+
 def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
     with Session(engine) as session:
 

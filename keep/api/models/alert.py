@@ -296,6 +296,10 @@ class AlertDto(BaseModel):
         #     values["status"] = AlertStatus.SUPPRESSED
         return values
 
+    @property
+    def lastReceivedDatetime(self):
+        return datetime.datetime.fromisoformat(self.lastReceived).replace(tzinfo=None)
+
     class Config:
         extra = Extra.allow
         schema_extra = {

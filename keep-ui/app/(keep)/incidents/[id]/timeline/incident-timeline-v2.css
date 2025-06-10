@@ -1,0 +1,23 @@
+.timeline-grid {
+  display: flex;
+  width: 100%;
+  height: 40px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ccc;
+  position: relative;
+}
+
+.grid-cell {
+  flex: 1 1 0;
+  border-right: 1px solid #ddd;
+  position: relative;
+}
+
+.grid-label {
+  font-size: 10px;
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}

@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+import pytz
 from pydantic import (
     BaseModel,
     Extra,
@@ -15,6 +16,9 @@ from pydantic import (
 )
 from sqlmodel import col, desc
 
+from keep.api.models.alert import AlertDto
+from keep.api.models.alert_audit import AlertAuditDto
+from keep.api.models.db.alert import AlertAudit
 from keep.api.models.db.incident import Incident, IncidentSeverity, IncidentStatus
 from keep.api.models.db.rule import ResolveOn, Rule
 
@@ -341,3 +345,42 @@ class IncidentCommit(BaseModel):
 class IncidentsClusteringSuggestion(BaseModel):
     incident_suggestion: list[IncidentDto]
     suggestion_id: str
+
+
+class IncidentTimelineDuration(BaseModel):
+    seconds: int
+    minutes: int
+    hours: int
+    days: int
+
+
+class IncidentTimelineAlert(BaseModel):
+    start: str
+    end: str
+
+    duration: IncidentTimelineDuration
+
+    alert: AlertDto
+    events: List[AlertAuditDto] = Field(default_factory=list)
+
+    @validator("start", "end", pre=True, always=True)
+    def validate_start_end(cls, dt):
+        if isinstance(dt, datetime.datetime):
+            return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        return dt
+
+
+
+class IncidentTimeline(BaseModel):
+    start: str | datetime.datetime
+    end: str | datetime.datetime
+
+    duration: IncidentTimelineDuration
+
+    alerts: List[IncidentTimelineAlert] = Field(default_factory=list)
+
+    @validator("start", "end", pre=True, always=True)
+    def validate_start_end(cls, dt):
+        if isinstance(dt, datetime.datetime):
+            return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        return dt

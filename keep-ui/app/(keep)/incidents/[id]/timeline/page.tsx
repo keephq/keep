@@ -1,6 +1,6 @@
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
-import IncidentTimeline from "./incident-timeline";
+import IncidentTimelineV2 from "./incident-timeline-v2";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -12,7 +12,7 @@ export default async function IncidentTimelinePage(props: PageProps) {
   const { id } = params;
 
   const incident = await getIncidentWithErrorHandling(id);
-  return <IncidentTimeline incident={incident} />;
+  return <IncidentTimelineV2 incident={incident} />;
 }
 
 export async function generateMetadata(props: PageProps) {

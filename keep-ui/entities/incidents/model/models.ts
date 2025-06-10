@@ -1,5 +1,5 @@
 // TODO: refactor, move to entities
-import { AlertDto } from "@/entities/alerts/model";
+import {AlertDto, AuditEvent} from "@/entities/alerts/model";
 
 export enum Status {
   Firing = "firing",
@@ -106,4 +106,29 @@ export interface IncidentsMetaDto {
   assignees: string[];
   services: string[];
   sources: string[];
+}
+
+export interface IncidentTimelineDuration {
+  seconds: number;
+  minutes: number;
+  hours: number;
+  days: number;
+}
+
+export interface IncidentTimelineAlertDto {
+  start: string;
+  end: string;
+  duration: IncidentTimelineDuration;
+
+  alert: AlertDto;
+  events: AuditEvent[];
+
+}
+
+export interface IncidentTimelineDto {
+  start: string;
+  end: string;
+  duration: IncidentTimelineDuration;
+
+  alerts: IncidentTimelineAlertDto[];
 }

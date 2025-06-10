@@ -1,4 +1,6 @@
 import logging
+from itertools import groupby
+from math import ceil
 from typing import List, Optional
 
 from arq import ArqRedis
@@ -36,7 +38,7 @@ from keep.api.core.db import (
     get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,
-    merge_incidents_to_id, get_enrichment,
+    merge_incidents_to_id, get_enrichment, get_incident_alert_audit,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.incidents import (
@@ -46,6 +48,7 @@ from keep.api.core.incidents import (
 )
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
+from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import (
     AlertAudit,
     CommentMention,
@@ -65,6 +68,9 @@ from keep.api.models.incident import (
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
+    IncidentTimeline,
+    IncidentTimelineAlert,
+    IncidentTimelineDuration,
 )
 from keep.api.models.workflow import WorkflowExecutionDTO
 from keep.api.tasks.process_incident_task import process_incident
@@ -1154,3 +1160,98 @@ async def unenrich_incident(
             )
 
     return Response(status_code=202)
+
+
+@router.get(
+    "/{incident_id}/timeline",
+    description="Get incident facets",
+)
+def get_incident_timeline(
+    incident_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:incident"])
+    ),
+    session: Session = Depends(get_session),
+) -> IncidentTimeline:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    alerts_and_events = get_incident_alert_audit(
+        tenant_id,
+        incident_id,
+        with_alert_enrichment=True,
+        session=session
+    )
+    timestamps = []
+
+    alerts = [alert for alert, _ in alerts_and_events]
+    alert_dtos = convert_db_alerts_to_dto_alerts(alerts, session=session)
+    events = [event for _, event in alerts_and_events]
+
+    grouped_events = groupby(sorted(events, key=lambda x: x.fingerprint), key=lambda x: x.fingerprint)
+
+    alert_dtos_by_fingerprint = {
+        alert.fingerprint: alert for alert in alert_dtos
+    }
+
+    timeline_alerts = []
+
+    for fingerprint, grouped in grouped_events:
+        events = list(grouped)
+
+        events = [AlertAuditDto.from_orm(event) for event in events]
+        alert = alert_dtos_by_fingerprint[fingerprint]
+        alert_timestamps = []
+
+        for event in events:
+            alert_timestamps.append(event.timestamp)
+        alert_timestamps.append(alert.lastReceivedDatetime)
+
+        alert_timestamps = sorted(alert_timestamps)
+        alert_start, alert_end = alert_timestamps[0], alert_timestamps[-1]
+        alert_duration = (alert_end - alert_start).total_seconds()
+
+        timestamps.extend([alert_start, alert_end])
+
+        timeline_alert = IncidentTimelineAlert(
+            start=alert_start,
+            end=alert_end,
+            duration=IncidentTimelineDuration(
+                seconds=ceil(alert_duration),
+                minutes=ceil(alert_duration / 60),
+                hours=ceil(alert_duration / 3600),
+                days=ceil(alert_duration / 86400),
+            ),
+
+            alert=alert,
+            events=events,
+
+        )
+        timeline_alerts.append(timeline_alert)
+
+    timestamps = sorted(timestamps)
+    timeline_start, timeline_end = timestamps[0], timestamps[-1]
+    timeline_duration = (timeline_end - timeline_start).total_seconds()
+
+    timeline = IncidentTimeline(
+        start=timeline_start,
+        end=timeline_end,
+        duration=IncidentTimelineDuration(
+            seconds=ceil(timeline_duration),
+            minutes=ceil(timeline_duration/ 60),
+            hours=ceil(timeline_duration / 3600),
+            days=ceil(timeline_duration / 86400),
+        ),
+        alerts=timeline_alerts,
+    )
+
+    return timeline
