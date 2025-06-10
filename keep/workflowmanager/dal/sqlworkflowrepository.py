@@ -21,7 +21,10 @@ from keep.api.core.db import (
     get_workflow_execution,
     get_workflow_execution_with_logs,
 )
-from keep.api.core.workflows import get_workflows_with_last_executions_v2
+from keep.api.core.workflows import (
+    WorkflowWithLastExecutions,
+    get_workflows_with_last_executions_v2,
+)
 from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
@@ -113,4 +116,24 @@ class SqlWorkflowRepository(WorkflowRepository):
             tenant_id=tenant_id,
             workflow_execution_id=workflow_execution_id,
             is_test_run=is_test_run,
+        )
+
+    def get_workflows_with_last_executions_v2(
+        self,
+        tenant_id: str,
+        cel: str,
+        limit: int,
+        offset: int,
+        sort_by: str,
+        sort_dir: str,
+        fetch_last_executions: int = 15,
+    ) -> Tuple[list[WorkflowWithLastExecutions], int]:
+        return get_workflows_with_last_executions_v2(
+            tenant_id=tenant_id,
+            cel=cel,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            fetch_last_executions=fetch_last_executions,
         )
