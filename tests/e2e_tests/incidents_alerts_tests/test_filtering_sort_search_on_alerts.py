@@ -802,3 +802,117 @@ def test_adding_new_noisy_preset(
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
+
+
+def test_incident_facet_refreshes_on_new_incident_creation(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    """Test that when alerts are associated with a new incident, the incident facet is refreshed."""
+    try:
+        current_alerts = setup_test_data
+        
+        # Initialize alerts page
+        init_test(browser, current_alerts, max_retries=3)
+        browser.wait_for_timeout(500)
+        
+        # Add incident facet if not visible
+        incident_facet = browser.locator("[data-testid='facet']", has_text="Incident")
+        if not incident_facet.is_visible():
+            browser.locator("button", has_text="Add Facet").click()
+            browser.locator("input[placeholder='Enter facet name']").fill("Incident")
+            browser.locator("input[placeholder*='Search columns']").fill("incident.id")
+            # Look for the incident.id option and click it
+            incident_id_option = browser.locator("button", has_text="incident.id").first()
+            expect(incident_id_option).to_be_visible(timeout=5000)
+            incident_id_option.click()
+            browser.locator("button[data-testid='create-facet-btn']").click()
+            
+            # Wait for facet to appear
+            expect(browser.locator("[data-testid='facet']", has_text="Incident")).to_be_visible()
+        
+        # Note the current "No incident" count in the facet
+        no_incident_option = browser.locator(
+            "[data-testid='facet']", has_text="Incident"
+        ).locator("[data-testid='facet-value']", has_text="No incident")
+        
+        # Get initial count of alerts with no incident
+        initial_no_incident_count = int(
+            no_incident_option.locator("[data-testid='facet-value-count']").text_content()
+        )
+        
+        # Select a few alerts
+        alert_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
+        
+        # Select first two alerts by clicking their checkboxes
+        first_alert_checkbox = alert_rows.nth(0).locator("input[type='checkbox']")
+        second_alert_checkbox = alert_rows.nth(1).locator("input[type='checkbox']")
+        
+        first_alert_checkbox.click()
+        second_alert_checkbox.click()
+        
+        # Click "Associate with incident" button
+        browser.locator("button", has_text="Associate with incident").click()
+        
+        # Wait for modal to appear
+        expect(browser.locator("h3", has_text="Associate alerts to incident")).to_be_visible()
+        
+        # Click "Create a new incident" button
+        browser.locator("button", has_text="Create a new incident").click()
+        
+        # Fill in incident details
+        incident_name = f"Test Alert Incident {datetime.now().isoformat()}"
+        browser.locator("input[placeholder='Incident Name']").fill(incident_name)
+        
+        # Submit the form
+        browser.locator("button", has_text="Create").click()
+        
+        # Wait for the modal to close and alerts to be associated
+        expect(browser.locator("h3", has_text="Associate alerts to incident")).not_to_be_visible()
+        
+        # Give time for the facets to refresh
+        browser.wait_for_timeout(2000)
+        
+        # Check that the "No incident" count decreased by 2
+        updated_no_incident_count = int(
+            no_incident_option.locator("[data-testid='facet-value-count']").text_content()
+        )
+        
+        assert updated_no_incident_count == initial_no_incident_count - 2, (
+            f"Expected 'No incident' count to decrease from {initial_no_incident_count} to "
+            f"{initial_no_incident_count - 2}, but got {updated_no_incident_count}"
+        )
+        
+        # The new incident should now appear in the facet options
+        # Since we just created it, it should be visible in the incident facet
+        # The incident ID will be displayed (shortened form)
+        # We should see a new facet value that wasn't there before
+        facet_values = browser.locator(
+            "[data-testid='facet']", has_text="Incident"
+        ).locator("[data-testid='facet-value']")
+        
+        # Count facet values - should have at least 2 (No incident + the new incident)
+        facet_value_count = facet_values.count()
+        assert facet_value_count >= 2, (
+            f"Expected at least 2 facet values (No incident + new incident), but found {facet_value_count}"
+        )
+        
+        # Find the new incident facet value (it should have count 2)
+        new_incident_facet = None
+        for i in range(facet_value_count):
+            facet_value = facet_values.nth(i)
+            count_element = facet_value.locator("[data-testid='facet-value-count']")
+            if count_element.is_visible() and count_element.text_content() == "2":
+                # Check if this is not the "No incident" option
+                label = facet_value.text_content()
+                if "No incident" not in label:
+                    new_incident_facet = facet_value
+                    break
+        
+        assert new_incident_facet is not None, "Could not find the new incident in the facet with count 2"
+        
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise

@@ -453,3 +453,101 @@ def test_filter_timeframe_combination_with_queryparams(browser, setup_test_data)
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
+
+
+def test_new_incident_appears_in_facet_after_creation(browser, setup_test_data):
+    """Test that when a new incident is created, it appears in the incident facet without page refresh."""
+    try:
+        incidents = setup_test_data["incidents"]
+        
+        # Initialize and navigate to incidents page
+        init_test(browser, incidents)
+        display_all_available_incidents(browser)
+        
+        # Count initial incidents
+        initial_incident_rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
+        initial_count = initial_incident_rows.count()
+        
+        # Create a new incident using the Create Incident button
+        browser.locator("button", has_text="Create Incident").click()
+        
+        # Wait for the modal to appear
+        expect(browser.locator("h3", has_text="Add Incident")).to_be_visible()
+        
+        # Fill in incident details
+        incident_name = f"Test Incident {datetime.now().isoformat()}"
+        browser.locator("input[placeholder='Incident Name']").fill(incident_name)
+        
+        # Submit the form
+        browser.locator("button", has_text="Create").click()
+        
+        # Wait for the modal to close
+        expect(browser.locator("h3", has_text="Add Incident")).not_to_be_visible()
+        
+        # Wait for the new incident to appear in the table
+        browser.wait_for_timeout(1000)  # Give time for the incident to be created
+        
+        # Check that the new incident appears in the table
+        new_incident_row = browser.locator(
+            "table[data-testid='incidents-table'] tbody tr",
+            has_text=incident_name
+        )
+        expect(new_incident_row).to_be_visible()
+        
+        # Verify the incident count increased
+        updated_incident_rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
+        expect(updated_incident_rows).to_have_count(initial_count + 1)
+        
+        # Now test that the incident facet is updated
+        # Check if there's an incident facet - if not, add it
+        incident_facet = browser.locator("[data-testid='facet']", has_text="Incident")
+        if not incident_facet.is_visible():
+            # Add incident facet
+            browser.locator("button", has_text="Add Facet").click()
+            browser.locator("input[placeholder='Enter facet name']").fill("Incident")
+            browser.locator("input[placeholder*='Search columns']").fill("incident")
+            browser.locator("button", has_text="incident").first().click()
+            browser.locator("button[data-testid='create-facet-btn']").click()
+            
+            # Wait for facet to appear
+            expect(browser.locator("[data-testid='facet']", has_text="Incident")).to_be_visible()
+        
+        # The new incident should be visible in the facet options
+        # For incidents page, the facet shows linked incidents, so let's check the status facet
+        # which should be updated for the new incident
+        status_facet = browser.locator("[data-testid='facet']", has_text="Status")
+        expect(status_facet).to_be_visible()
+        
+        # The new incident should have "firing" status by default
+        firing_option = status_facet.locator("[data-testid='facet-value']", has_text="firing")
+        expect(firing_option).to_be_visible()
+        
+        # Get the count from the facet to verify it was updated
+        firing_count_before = int(
+            firing_option.locator("[data-testid='facet-value-count']").text_content()
+        )
+        
+        # Create another incident to verify facet updates
+        browser.locator("button", has_text="Create Incident").click()
+        expect(browser.locator("h3", has_text="Add Incident")).to_be_visible()
+        
+        incident_name_2 = f"Test Incident 2 {datetime.now().isoformat()}"
+        browser.locator("input[placeholder='Incident Name']").fill(incident_name_2)
+        browser.locator("button", has_text="Create").click()
+        
+        expect(browser.locator("h3", has_text="Add Incident")).not_to_be_visible()
+        browser.wait_for_timeout(1000)
+        
+        # Verify the firing count increased
+        firing_count_after = int(
+            firing_option.locator("[data-testid='facet-value-count']").text_content()
+        )
+        
+        assert firing_count_after == firing_count_before + 1, (
+            f"Expected firing count to increase from {firing_count_before} to "
+            f"{firing_count_before + 1}, but got {firing_count_after}"
+        )
+        
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise

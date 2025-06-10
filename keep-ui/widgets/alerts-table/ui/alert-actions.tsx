@@ -19,6 +19,7 @@ interface Props {
   clearRowSelection: () => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
+  refreshFacets?: () => void;
   setIsIncidentSelectorOpen: (open: boolean) => void;
   isIncidentSelectorOpen: boolean;
   setIsCreateIncidentWithAIOpen: (open: boolean) => void;
@@ -31,6 +32,7 @@ export default function AlertActions({
   clearRowSelection,
   setDismissModalAlert,
   mutateAlerts,
+  refreshFacets,
   setIsIncidentSelectorOpen,
   isIncidentSelectorOpen,
   setIsCreateIncidentWithAIOpen,
@@ -110,6 +112,20 @@ export default function AlertActions({
     if (mutateAlerts) {
       mutateAlerts();
     }
+    if (refreshFacets) {
+      refreshFacets();
+    }
+  };
+
+  const handleSuccessfulAIIncidentCreation = () => {
+    hideCreateIncidentWithAI();
+    clearRowSelection();
+    if (mutateAlerts) {
+      mutateAlerts();
+    }
+    if (refreshFacets) {
+      refreshFacets();
+    }
   };
 
   return (
@@ -177,6 +193,7 @@ export default function AlertActions({
         isOpen={isCreateIncidentWithAIOpen}
         alerts={selectedAlerts}
         handleClose={hideCreateIncidentWithAI}
+        onSuccess={handleSuccessfulAIIncidentCreation}
       />
     </div>
   );

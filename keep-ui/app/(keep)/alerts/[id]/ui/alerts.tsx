@@ -94,6 +94,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     totalCount,
     facetsCel,
     facetsPanelRefreshToken,
+    refreshFacets,
   } = useAlertsTableData(alertsTableDataQuery);
 
   useEffect(() => {
@@ -188,6 +189,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
+        refreshFacets={refreshFacets}
         onReload={reloadAlerts}
         onQueryChange={setAlertsTableDataQuery}
       />

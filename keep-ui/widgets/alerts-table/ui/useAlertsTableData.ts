@@ -206,5 +206,6 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     alertsError: alertsError,
     mutateAlerts,
     facetsPanelRefreshToken,
+    refreshFacets: () => setFacetsPanelRefreshToken(uuidv4()),
   };
 };

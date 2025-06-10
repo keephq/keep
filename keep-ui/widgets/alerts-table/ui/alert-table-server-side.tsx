@@ -105,6 +105,7 @@ interface Props {
   facetsPanelRefreshToken: string | undefined;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
+  refreshFacets?: () => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
@@ -124,6 +125,7 @@ export function AlertTableServerSide({
   isRefreshAllowed = true,
   setDismissedModalAlert,
   mutateAlerts,
+  refreshFacets,
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
@@ -617,6 +619,7 @@ export function AlertTableServerSide({
             isIncidentSelectorOpen={isIncidentSelectorOpen}
             setIsCreateIncidentWithAIOpen={setIsCreateIncidentWithAIOpen}
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
+            refreshFacets={refreshFacets}
           />
         ) : (
           <AlertPresetManager

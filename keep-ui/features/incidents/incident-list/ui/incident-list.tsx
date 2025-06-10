@@ -131,6 +131,7 @@ export function IncidentList({
   const handleFinishEdit = () => {
     setIncidentToEdit(null);
     setIsFormOpen(false);
+    setFilterRevalidationToken(uuidV4());
   };
 
   const facetsConfig: FacetsConfig = useMemo(() => {

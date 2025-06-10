@@ -27,6 +27,7 @@ interface CreateIncidentWithAIModalProps {
   isOpen: boolean;
   handleClose: () => void;
   alerts: Array<AlertDto>;
+  onSuccess?: () => void;
 }
 
 interface IncidentChange {
@@ -47,6 +48,7 @@ export const CreateIncidentWithAIModal = ({
   isOpen,
   handleClose,
   alerts,
+  onSuccess,
 }: CreateIncidentWithAIModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -288,6 +290,9 @@ export const CreateIncidentWithAIModal = ({
       await mutateIncidents();
       handleCloseAIModal();
       router.push("/incidents");
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Error creating incidents:", error);
       if (error instanceof KeepApiError) {

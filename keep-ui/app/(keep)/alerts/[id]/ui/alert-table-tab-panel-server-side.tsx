@@ -24,6 +24,7 @@ interface Props {
   setDismissModalAlert: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert: (alert: AlertDto | null) => void;
   mutateAlerts: () => void;
+  refreshFacets?: () => void;
   onReload?: (query: AlertsQuery) => void;
   onQueryChange?: (query: AlertsTableDataQuery) => void;
 }
@@ -42,6 +43,7 @@ export default function AlertTableTabPanelServerSide({
   setDismissModalAlert,
   setChangeStatusAlert,
   mutateAlerts,
+  refreshFacets,
   onReload,
   onQueryChange,
 }: Props) {
@@ -95,6 +97,7 @@ export default function AlertTableTabPanelServerSide({
       presetName={preset.name}
       presetTabs={presetTabs}
       mutateAlerts={mutateAlerts}
+      refreshFacets={refreshFacets}
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}
       setDismissModalAlert={setDismissModalAlert}
       setChangeStatusAlert={setChangeStatusAlert}
