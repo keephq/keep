@@ -469,8 +469,11 @@ export function AlertTableServerSide({
   // Unified functions for column operations that handle both local and backend updates
   const handleColumnOrderChange = async (newOrder: ColumnOrderState) => {
     if (!!presetId) {
-      // For backend presets, use the batched update
-      await updateMultipleColumnConfigs({ columnOrder: newOrder });
+      // For backend presets, always preserve both order and visibility
+      await updateMultipleColumnConfigs({ 
+        columnOrder: newOrder,
+        columnVisibility: columnVisibility // Preserve current visibility state
+      });
     } else {
       // For local presets, use direct setter
       setColumnOrder(newOrder);
@@ -479,8 +482,11 @@ export function AlertTableServerSide({
 
   const handleColumnVisibilityChange = async (newVisibility: VisibilityState) => {
     if (!!presetId) {
-      // For backend presets, use the batched update
-      await updateMultipleColumnConfigs({ columnVisibility: newVisibility });
+      // For backend presets, always preserve both visibility and order
+      await updateMultipleColumnConfigs({ 
+        columnVisibility: newVisibility,
+        columnOrder: columnOrder // Preserve current order state
+      });
     } else {
       // For local presets, use direct setter
       setColumnVisibility(newVisibility);
