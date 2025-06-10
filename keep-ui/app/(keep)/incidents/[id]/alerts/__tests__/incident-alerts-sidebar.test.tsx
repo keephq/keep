@@ -368,6 +368,35 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     expect(alertSidebarState.isOpen).toBe(false);
   });
 
+  it('should close AlertSidebar when clicking outside without errors', async () => {
+    render(<IncidentAlerts incident={mockIncident} />);
+
+    // Open the sidebar first
+    const alertRow = screen.getByTestId('alert-row-alert-1');
+    fireEvent.click(alertRow);
+
+    // Verify sidebar is open
+    await waitFor(() => {
+      expect(screen.getByTestId('alert-sidebar')).toBeInTheDocument();
+    });
+
+    // Close the sidebar (simulating clicking outside by using the close button)
+    const closeButton = screen.getByTestId('close-sidebar');
+    fireEvent.click(closeButton);
+
+    // Verify sidebar closes without errors
+    await waitFor(() => {
+      expect(screen.queryByTestId('alert-sidebar')).not.toBeInTheDocument();
+    });
+
+    // Verify no error was thrown and state is clean
+    expect(alertSidebarState.isOpen).toBe(false);
+    expect(alertSidebarState.alert).toBe(null);
+    
+    // The key verification is that no error was thrown during the close operation
+    // If the bug existed, we would get "Cannot read properties of null (reading 'fingerprint')"
+  });
+
   it('should switch between different alerts in sidebar', async () => {
     render(<IncidentAlerts incident={mockIncident} />);
 

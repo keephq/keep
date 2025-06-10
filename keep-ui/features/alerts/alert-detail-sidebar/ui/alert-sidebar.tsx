@@ -51,7 +51,7 @@ export const AlertSidebar = ({
     data: auditData,
     isLoading,
     mutate,
-  } = useAlertAudit(alert?.fingerprint || "");
+  } = useAlertAudit(alert?.fingerprint ?? "");
 
   const { data: providers } = useProviders();
   const providerName =
@@ -127,16 +127,18 @@ export const AlertSidebar = ({
                   {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
                 <Divider className="mb-0" />
-                <AlertMenu
-                  alert={alert!}
-                  presetName="feed"
-                  isInSidebar={true}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
-                  toggleSidebar={toggle}
-                />
+                {alert && (
+                  <AlertMenu
+                    alert={alert}
+                    presetName="feed"
+                    isInSidebar={true}
+                    setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                    setDismissModalAlert={setDismissModalAlert}
+                    setChangeStatusAlert={setChangeStatusAlert}
+                    setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+                    toggleSidebar={toggle}
+                  />
+                )}
               </div>
               <div>
                 <Button onClick={toggle} variant="light">
