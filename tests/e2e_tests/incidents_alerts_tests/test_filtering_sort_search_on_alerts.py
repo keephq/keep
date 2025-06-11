@@ -1,5 +1,6 @@
 import time
 from datetime import datetime, timedelta, timezone
+from playwright.sync_api import expect
 
 import pytest
 import requests
@@ -424,6 +425,10 @@ def test_multi_sort_asc_dsc(
     init_test(browser, current_alerts)
     cel_to_filter_alerts = "tags.customerName != null"
     browser.goto(f"{KEEP_UI_URL}/alerts/feed?cel={cel_to_filter_alerts}")
+    # Wait for the page to load and alerts table to be visible
+    browser.wait_for_load_state("networkidle")
+    browser.wait_for_selector("[data-testid='alerts-table']", timeout=10000)
+    browser.wait_for_timeout(2000)  # Give UI time to fully render
     filtered_alerts = [
         alert
         for alert in current_alerts
@@ -434,8 +439,16 @@ def test_multi_sort_asc_dsc(
         expect(
             browser.locator("[data-testid='alerts-table'] table tbody tr")
         ).to_have_count(len(filtered_alerts))
-        browser.locator("[data-testid='settings-button']").click()
+        # Wait for the page to fully load and settings button to be visible
+        browser.wait_for_load_state("networkidle")
+        browser.wait_for_timeout(2000)
+        settings_button = browser.locator("[data-testid=\'settings-button\']")
+        expect(settings_button).to_be_visible(timeout=10000)
+        settings_button.click()
+        # Wait for settings panel to appear
+        browser.wait_for_timeout(1000)
         settings_panel_locator = browser.locator("[data-testid='settings-panel']")
+        expect(settings_panel_locator).to_be_visible(timeout=10000)
         settings_panel_locator.locator("input[type='text']").type("tags.")
         settings_panel_locator.locator("input[name='tags.customerName']").click()
         settings_panel_locator.locator("input[name='tags.alertIndex']").click()
@@ -538,8 +551,15 @@ def test_backend_column_configuration_persistence(
         browser.goto(f"{KEEP_UI_URL}/alerts/{test_preset_name}")
         browser.wait_for_load_state("networkidle")
         browser.wait_for_timeout(2000)
+        # Wait for alerts table to be fully loaded
+        browser.wait_for_selector("[data-testid=\'alerts-table\']", timeout=10000)
+        browser.wait_for_selector("[data-testid=\'facets-panel\']", timeout=10000)
         
         # Configure columns in the preset
+        # Wait for table to be fully rendered before accessing settings
+        browser.wait_for_selector("[data-testid='alerts-table']", timeout=10000)
+        browser.wait_for_timeout(1000)
+        
         settings_button = browser.locator("[data-testid='settings-button']")
         expect(settings_button).to_be_visible()
         settings_button.click()
