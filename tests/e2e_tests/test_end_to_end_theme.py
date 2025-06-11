@@ -1,5 +1,4 @@
 from playwright.sync_api import Page
-from playwright.sync_api import expect
 
 from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 
@@ -64,20 +63,23 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
                             }
                             """
                         )
-        
-        # Wait for alerts table to be rendered
-        page.wait_for_selector("[data-testid='alerts-table']", timeout=10000, state="visible")
-        page.wait_for_timeout(1000)  # Give UI time to stabilize
-
 
         # open the settings modal using data-testid
-        # Wait for alerts table to be loaded first
-        page.wait_for_selector("[data-testid='alerts-table']", timeout=10000)
-        
-        # Now wait for and click the settings button
-        settings_button = page.locator('[data-testid="settings-button"]')
-        settings_button.wait_for(state="visible", timeout=10000)
-        settings_button.click()
+        try:
+            page.locator('[data-testid="settings-button"]').click()
+        except Exception:
+            # Fallback strategies if the test ID isn't found yet
+            try:
+                page.get_by_role("button", name="Settings").click()
+            except Exception:
+                try:
+                    # Look for a button with settings icon
+                    page.locator(
+                        'button:has(svg path[d^="M19.4 15a1.65 1.65 0 0 0 .33 1.82"])'
+                    ).click()
+                except Exception:
+                    # Fallback to finding by icon
+                    page.locator("button:has(svg)").nth(0).click()
 
         # Wait for settings panel to appear
         page.wait_for_selector('[data-testid="settings-panel"]', state="visible")
