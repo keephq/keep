@@ -78,14 +78,17 @@ class EventSubscriber:
         """Remove a consumer (on uninstallation)
 
         Args:
-            consumer_provider (_type_): _description_
+            provider_id (_type_): _description_
         """
         self.logger.info("Removing consumer %s", provider_id)
+        self.logger.info("consumers %s", self.consumers)
+
         for cp in self.consumers:
             if cp.provider_id == provider_id:
                 cp.stop_consume()
+                self.consumers.remove(cp)
+                self.logger.info("Removed consumer %s", provider_id)
                 break
-        self.logger.info("Removed consumer %s", provider_id)
 
     def stop(self):
         """Stops the consumers"""
