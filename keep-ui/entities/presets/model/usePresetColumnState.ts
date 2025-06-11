@@ -9,7 +9,7 @@ import {
   DEFAULT_COLS,
   DEFAULT_COLS_VISIBILITY,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
-import { STATIC_PRESETS_NAMES } from "./constants";
+import { STATIC_PRESETS_NAMES, STATIC_PRESET_IDS } from "./constants";
 import { ColumnConfiguration } from "./types";
 
 interface UsePresetColumnStateOptions {
@@ -17,14 +17,6 @@ interface UsePresetColumnStateOptions {
   presetId?: string;
   useBackend?: boolean; // Flag to enable backend usage
 }
-
-// Static preset IDs that should always use local storage
-const STATIC_PRESET_IDS = [
-  "11111111-1111-1111-1111-111111111111", // FEED_PRESET_ID
-  "11111111-1111-1111-1111-111111111113", // DISMISSED_PRESET_ID
-  "11111111-1111-1111-1111-111111111114", // GROUPS_PRESET_ID
-  "11111111-1111-1111-1111-111111111115", // WITHOUT_INCIDENT_PRESET_ID
-];
 
 export const usePresetColumnState = ({
   presetName,
