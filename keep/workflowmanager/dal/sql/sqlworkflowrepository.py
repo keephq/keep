@@ -1,14 +1,4 @@
-import io
-import logging
-import os
-import random
-import uuid
 from typing import List, Tuple
-
-import celpy
-import requests
-import validators
-from fastapi import HTTPException
 
 from keep.api.core.db import (
     add_or_update_workflow,
@@ -30,15 +20,8 @@ from keep.api.models.db.workflow import (
     WorkflowExecution,
     WorkflowExecutionLog,
 )
-from keep.api.models.query import QueryDto
-from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
-from keep.functions import cyaml
-from keep.parser.parser import Parser
-from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
-from sqlalchemy.exc import NoResultFound
-
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
 )
