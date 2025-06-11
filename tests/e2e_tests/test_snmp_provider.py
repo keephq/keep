@@ -13,7 +13,7 @@ from tests.e2e_tests.utils import (
     save_failure_artifacts,
 )
 
-# Constants
+
 KEEP_UI_URL = "http://localhost:3000"
 DEFAULT_SNMP_PORT = 1605  # Using a non-privileged port for testing
 DOCKER_NETWORK = "keep_default"  # Default network for Keep services
@@ -205,10 +205,9 @@ def test_snmp_provider(browser: Page, setup_page_logging, failure_artifacts):
         # Close the provider details
         browser.get_by_role("button", name="Cancel", exact=True).click()
         
-        # Send test SNMP traps
         print("Sending test SNMP traps...")
 
-        # Get a list of all containers and find the backend container
+        # Dynamically find the Keep backend container
         container_list = subprocess.run(
             ["docker", "ps", "--format", "{{.Names}}"],
             capture_output=True,
@@ -217,6 +216,7 @@ def test_snmp_provider(browser: Page, setup_page_logging, failure_artifacts):
         containers = container_list.stdout.strip().split('\n')
         backend_container = None
 
+        # Find any container with 'keep-backend' in its name
         for container in containers:
             if 'keep-backend' in container:
                 backend_container = container
@@ -227,13 +227,14 @@ def test_snmp_provider(browser: Page, setup_page_logging, failure_artifacts):
             
         print(f"Found backend container: {backend_container}")
         
+        # Get the IP address of the backend container within the Docker network
         keep_backend_ip = subprocess.run(
             ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", backend_container],
             capture_output=True,
             text=True
             )
+        # Extract the IP address and use it as the target for SNMP traps
         host = keep_backend_ip.stdout.strip()
-        # Send a trap
         send_snmp_trap(host=host, port=snmp_port)
         
         # Wait for the trap to be processed
