@@ -21,6 +21,7 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
 )
 from keep.api.core.config import config
+from keep.api.redis_settings import get_redis_settings
 from keep.api.tasks.process_event_task import process_event
 
 # Load environment variables
@@ -142,6 +143,9 @@ def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
     return {*list(range(start, end, x))}
 
 
+# Redis settings are now imported from shared module
+
+
 class WorkerSettings:
     """
     Settings for the ARQ worker.
@@ -149,15 +153,7 @@ class WorkerSettings:
 
     on_startup = startup
     on_shutdown = shutdown
-    redis_settings = RedisSettings(
-        host=config("REDIS_HOST", default="localhost"),
-        port=config("REDIS_PORT", cast=int, default=6379),
-        username=config("REDIS_USERNAME", default=None),
-        password=config("REDIS_PASSWORD", default=None),
-        conn_timeout=60,
-        conn_retries=10,
-        conn_retry_delay=10,
-    )
+    redis_settings = get_redis_settings()
     timeout = 30
     functions: list = FUNCTIONS
     queue_name: str
