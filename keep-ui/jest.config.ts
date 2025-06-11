@@ -16,7 +16,14 @@ const config: Config = {
     // Force module uuid to resolve with the CJS entry point, because Jest does not support package.json.exports. See https://github.com/uuidjs/uuid/issues/451
     uuid: require.resolve("uuid"),
     "^yaml$": require.resolve("yaml"),
+    // Mock monaco-editor modules
+    "^monaco-editor$": "<rootDir>/__mocks__/monaco-editor.js",
+    "^@monaco-editor/react$": "<rootDir>/__mocks__/@monaco-editor/react.js",
   },
+  // Transform ESM packages
+  transformIgnorePatterns: [
+    "node_modules/(?!(jose|@segment/analytics-node|@copilotkit)/)"
+  ],
   // Add more setup options before each test is run
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
 };

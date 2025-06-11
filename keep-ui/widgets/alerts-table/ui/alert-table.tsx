@@ -17,6 +17,8 @@ import {
   SortingState,
   useReactTable,
   VisibilityState,
+  GroupingState,
+  getGroupedRowModel,
 } from "@tanstack/react-table";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import {
@@ -44,6 +46,9 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { AlertsTableBody } from "./alerts-table-body";
 // TODO: replace with generic pagination
 import AlertPagination from "./alert-pagination";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { PageTitle } from "@/shared/ui";
+import SettingsSelection from "./SettingsSelection";
 
 interface PresetTab {
   name: string;
@@ -129,6 +134,7 @@ export function AlertTable({
     `viewed-alerts-${presetName}`,
     []
   );
+  const [clearFiltersTriggered, setClearFiltersTriggered] = useState(false);
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
   const handleFacetDelete = (facetKey: string) => {
@@ -187,6 +193,12 @@ export function AlertTable({
     useState<boolean>(false);
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
+
+  // Add grouping state and group expansion state
+  const [grouping, setGrouping] = useState<GroupingState>([]);
+  const groupExpansionState = useGroupExpansion(true);
+  const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
+  const isGroupingActive = grouping.length > 0;
 
   const filteredAlerts = alerts.filter((alert) => {
     // First apply tab filter
@@ -266,6 +278,7 @@ export function AlertTable({
         right: ["alertMenu"],
       },
       sorting: sorting,
+      grouping: grouping,
     },
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -278,12 +291,15 @@ export function AlertTable({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
     columnResizeMode: "onChange",
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,
+    enableGrouping: true,
+    onGroupingChange: setGrouping,
   });
 
   const selectedAlertsFingerprints = Object.keys(
@@ -324,9 +340,7 @@ export function AlertTable({
   };
 
   return (
-    // Add h-screen to make it full height and remove the default flex-col gap
     <div className="h-screen flex flex-col gap-4">
-      {/* Add padding to account for any top nav/header */}
       <div className="px-4 flex-none">
         <TitleAndFilters
           table={table}
@@ -335,7 +349,6 @@ export function AlertTable({
         />
       </div>
 
-      {/* Make actions/presets section fixed height */}
       <div className="h-14 px-4 flex-none">
         {selectedAlertsFingerprints.length ? (
           <AlertActions
@@ -350,14 +363,18 @@ export function AlertTable({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <AlertPresetManager table={table} presetName={presetName} />
+          <AlertPresetManager 
+            table={table} 
+            presetName={presetName}
+            isGroupingActive={isGroupingActive}
+            onToggleAllGroups={toggleAll}
+            areAllGroupsExpanded={areAllGroupsExpanded}
+          />
         )}
       </div>
 
-      {/* Main content area - uses flex-grow to fill remaining space */}
       <div className="flex-grow px-4 pb-4">
         <div className="h-full flex gap-4">
-          {/* Facets sidebar */}
           <div className="w-32 min-w-[12rem] overflow-y-auto">
             <AlertFacets
               className="sticky top-0"
@@ -372,21 +389,16 @@ export function AlertTable({
             />
           </div>
 
-          {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0">
             <Card className="h-full flex flex-col p-0 overflow-x-auto">
               <div className="flex-grow flex flex-col">
                 <div ref={a11yContainerRef} className="sr-only" />
 
-                {/* Make table wrapper scrollable */}
                 <div className="flex-grow">
                   <Table
                     className={clsx(
-                      // Keep table-fixed layout to enforce column widths
                       "[&>table]:table-fixed [&>table]:w-full",
-                      // Control overflow behavior
                       "overflow-x-auto",
-                      // Ensure the table uses the full width of its container
                       "w-full"
                     )}
                   >
@@ -407,6 +419,7 @@ export function AlertTable({
                       onRowClick={handleRowClick}
                       lastViewedAlert={lastViewedAlert}
                       presetName={presetName}
+                      groupExpansionState={groupExpansionState}
                     />
                   </Table>
                 </div>
@@ -416,7 +429,6 @@ export function AlertTable({
         </div>
       </div>
 
-      {/* Pagination footer - fixed height */}
       <div className="h-16 px-4 flex-none pl-[14rem]">
         <AlertPagination
           table={table}
