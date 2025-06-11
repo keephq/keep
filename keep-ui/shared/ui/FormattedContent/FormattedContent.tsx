@@ -1,5 +1,32 @@
 import React, { FC } from "react";
 import { MarkdownHTML } from "../MarkdownHTML/MarkdownHTML";
+
+import { unified } from "unified";
+import rehypeParse from "rehype-parse";
+import rehypeSanitize from "rehype-sanitize";
+import rehypeStringify from "rehype-stringify";
+
+const sanitizeHtml = (html: string) => {
+  return unified()
+    .use(rehypeParse, { fragment: true })
+    .use(rehypeSanitize)
+    .use(rehypeStringify)
+    .processSync(html);
+};
+
+function FormattedHTMLContent({ content }: { content: string }) {
+  return (
+    <div
+      className="prose prose-slate dark:prose-invert max-w-none
+          prose-headings:font-semibold
+          prose-p:text-base prose-p:leading-7
+          prose-ul:list-disc prose-ul:pl-6
+          prose-ol:list-decimal prose-ol:pl-6"
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+    />
+  );
+}
+
 interface FormattedContentProps {
   content: string | null | undefined;
   format?: "markdown" | "html" | null;
@@ -35,17 +62,7 @@ export const FormattedContent: FC<FormattedContentProps> = ({
   }
 
   if (format === "html") {
-    return (
-      <div
-        className="prose prose-slate dark:prose-invert max-w-none
-          prose-headings:font-semibold
-          prose-p:text-base prose-p:leading-7
-          prose-ul:list-disc prose-ul:pl-6
-          prose-ol:list-decimal prose-ol:pl-6"
-      >
-        <MarkdownHTML>{content}</MarkdownHTML>
-      </div>
-    );
+    return <FormattedHTMLContent content={content} />;
   }
 
   // Default to plain text with preserved whitespace

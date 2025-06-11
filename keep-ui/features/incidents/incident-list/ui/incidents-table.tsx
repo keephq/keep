@@ -36,11 +36,11 @@ import {
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
-import { MarkdownHTML } from "@/shared/ui/MarkdownHTML/MarkdownHTML";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
 import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -96,6 +96,8 @@ function SelectedRowActions({
     </div>
   );
 }
+
+const TRUNCATE_SUMMARY_LENGTH = 200;
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -213,9 +215,12 @@ export default function IncidentsTable({
             {getIncidentName(row.original)}
           </Link>
           <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
-            <MarkdownHTML>
-              {row.original.user_summary || row.original.generated_summary}
-            </MarkdownHTML>
+            <FormattedContent
+              content={(
+                row.original.user_summary || row.original.generated_summary
+              ).slice(0, TRUNCATE_SUMMARY_LENGTH)}
+              format="html"
+            />
           </div>
         </div>
       ),
