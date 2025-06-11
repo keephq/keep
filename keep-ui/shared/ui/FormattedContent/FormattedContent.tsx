@@ -11,7 +11,7 @@ const sanitizeHtml = (html: string) => {
     .use(rehypeParse, { fragment: true })
     .use(rehypeSanitize)
     .use(rehypeStringify)
-    .processSync(html);
+    .processSync(html).value;
 };
 
 function FormattedHTMLContent({ content }: { content: string }) {
