@@ -19,7 +19,9 @@ def xss_incident():
     return upload_incident(incident)
 
 
-def test_xss_protection_in_incident_list(browser: Page, xss_incident):
+def test_xss_protection_in_incident_list(
+    browser: Page, xss_incident, setup_page_logging, failure_artifacts
+):
     xss_dialog_appeared = False
 
     def handle_dialog(dialog):
