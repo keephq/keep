@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Table, Card, Button } from "@tremor/react";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
@@ -156,10 +156,11 @@ export function AlertTableServerSide({
     setColumnVisibility,
     setColumnRenameMapping,
     updateMultipleColumnConfigs,
+    useBackend,
   } = usePresetColumnState({
     presetName,
     presetId,
-    useBackend: !!presetId, // Use backend if preset ID is available
+    useBackend: !!presetId,
   });
   
   const a11yContainerRef = useRef<HTMLDivElement>(null);
@@ -467,31 +468,59 @@ export function AlertTableServerSide({
   const isGroupingActive = grouping.length > 0;
 
   // Unified functions for column operations that handle both local and backend updates
-  const handleColumnOrderChange = async (newOrder: ColumnOrderState) => {
-    if (!!presetId) {
-      // For backend presets, always preserve both order and visibility
-      await updateMultipleColumnConfigs({ 
-        columnOrder: newOrder,
-        columnVisibility: columnVisibility // Preserve current visibility state
-      });
-    } else {
-      // For local presets, use direct setter
-      setColumnOrder(newOrder);
-    }
-  };
+  const handleColumnOrderChange = useCallback(
+    (newOrder: ColumnOrderState) => {
+      if (useBackend) {
+        // For backend presets, preserve ALL column configuration
+        updateMultipleColumnConfigs({ 
+          columnOrder: newOrder,
+          columnVisibility: columnVisibility,
+          columnRenameMapping: columnRenameMapping,
+          columnTimeFormats: columnTimeFormats,
+          columnListFormats: columnListFormats,
+        });
+      } else {
+        // For local presets, use direct setter
+        setColumnOrder(newOrder);
+      }
+    },
+    [
+      useBackend,
+      updateMultipleColumnConfigs,
+      setColumnOrder,
+      columnVisibility,
+      columnRenameMapping,
+      columnTimeFormats,
+      columnListFormats,
+    ]
+  );
 
-  const handleColumnVisibilityChange = async (newVisibility: VisibilityState) => {
-    if (!!presetId) {
-      // For backend presets, always preserve both visibility and order
-      await updateMultipleColumnConfigs({ 
-        columnVisibility: newVisibility,
-        columnOrder: columnOrder // Preserve current order state
-      });
-    } else {
-      // For local presets, use direct setter
-      setColumnVisibility(newVisibility);
-    }
-  };
+  const handleColumnVisibilityChange = useCallback(
+    (newVisibility: VisibilityState) => {
+      if (useBackend) {
+        // For backend presets, preserve ALL column configuration
+        updateMultipleColumnConfigs({ 
+          columnVisibility: newVisibility,
+          columnOrder: columnOrder,
+          columnRenameMapping: columnRenameMapping,
+          columnTimeFormats: columnTimeFormats,
+          columnListFormats: columnListFormats,
+        });
+      } else {
+        // For local presets, use direct setter
+        setColumnVisibility(newVisibility);
+      }
+    },
+    [
+      useBackend,
+      updateMultipleColumnConfigs,
+      setColumnVisibility,
+      columnOrder,
+      columnRenameMapping,
+      columnTimeFormats,
+      columnListFormats,
+    ]
+  );
 
   function renderTable() {
     if (

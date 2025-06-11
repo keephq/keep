@@ -75,30 +75,30 @@ export const usePresetColumnState = ({
 
   // Determine which state to use
   const columnVisibility = useMemo(() => {
-    if (
-      shouldUseBackend &&
-      columnConfig.column_visibility &&
-      Object.keys(columnConfig.column_visibility).length > 0
-    ) {
-      return columnConfig.column_visibility;
+    if (shouldUseBackend) {
+      // For backend presets, always use backend state even if empty
+      // If backend has no saved config, use the default visibility merged with any backend config
+      return {
+        ...DEFAULT_COLS_VISIBILITY,
+        ...columnConfig.column_visibility,
+      };
     }
     return localColumnVisibility;
   }, [shouldUseBackend, columnConfig.column_visibility, localColumnVisibility]);
 
   const columnOrder = useMemo(() => {
-    if (
-      shouldUseBackend &&
-      columnConfig.column_order &&
-      columnConfig.column_order.length > 0
-    ) {
-      return columnConfig.column_order;
+    if (shouldUseBackend) {
+      // For backend presets, use backend order if available, otherwise default
+      return columnConfig.column_order && columnConfig.column_order.length > 0
+        ? columnConfig.column_order
+        : DEFAULT_COLS;
     }
     return localColumnOrder;
   }, [shouldUseBackend, columnConfig.column_order, localColumnOrder]);
 
   const columnRenameMapping = useMemo(() => {
-    if (shouldUseBackend && columnConfig.column_rename_mapping) {
-      return columnConfig.column_rename_mapping;
+    if (shouldUseBackend) {
+      return columnConfig.column_rename_mapping || {};
     }
     return localColumnRenameMapping;
   }, [
@@ -108,8 +108,8 @@ export const usePresetColumnState = ({
   ]);
 
   const columnTimeFormats = useMemo(() => {
-    if (shouldUseBackend && columnConfig.column_time_formats) {
-      return columnConfig.column_time_formats as Record<
+    if (shouldUseBackend) {
+      return (columnConfig.column_time_formats || {}) as Record<
         string,
         TimeFormatOption
       >;
@@ -122,8 +122,8 @@ export const usePresetColumnState = ({
   ]);
 
   const columnListFormats = useMemo(() => {
-    if (shouldUseBackend && columnConfig.column_list_formats) {
-      return columnConfig.column_list_formats as Record<
+    if (shouldUseBackend) {
+      return (columnConfig.column_list_formats || {}) as Record<
         string,
         ListFormatOption
       >;

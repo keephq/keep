@@ -41,6 +41,7 @@ export default function ColumnSelection({
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   // Local state to track checkbox changes before submission
   const [localColumnVisibility, setLocalColumnVisibility] = useState<VisibilityState>(
     () => columnVisibility
@@ -55,9 +56,27 @@ export default function ColumnSelection({
     .filter((col) => col.getIsPinned() === false)
     .map((col) => col.id);
 
-  const filteredColumns = columnsOptions.filter((column) =>
-    column.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredColumns = React.useMemo(() => {
+    const filtered = columnsOptions.filter((column) =>
+      column.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setIsSearching(false);
+    return filtered;
+  }, [columnsOptions, searchTerm]);
+
+  // Debug logging for e2e tests
+  React.useEffect(() => {
+    if (searchTerm) {
+      console.log(`ColumnSelection: Searching for "${searchTerm}"`);
+      console.log(`ColumnSelection: Available columns:`, columnsOptions);
+      console.log(`ColumnSelection: Filtered columns:`, filteredColumns);
+    }
+  }, [searchTerm, columnsOptions, filteredColumns]);
+
+  const handleSearchChange = (value: string) => {
+    setIsSearching(true);
+    setSearchTerm(value);
+  };
 
   const handleCheckboxChange = (column: string, checked: boolean) => {
     setLocalColumnVisibility(prev => ({
@@ -112,7 +131,7 @@ export default function ColumnSelection({
           icon={FiSearch}
           placeholder="Search fields..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="mb-3"
         />
         <div className="flex-1 overflow-y-auto max-h-[350px]">
@@ -120,8 +139,12 @@ export default function ColumnSelection({
             <div className="flex items-center justify-center py-8 text-gray-400">
               <span data-testid="columns-loading">Loading column configuration...</span>
             </div>
+          ) : isSearching ? (
+            <div className="flex items-center justify-center py-8 text-gray-400">
+              <span data-testid="columns-searching">Searching...</span>
+            </div>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-1" data-testid="column-list" data-column-count={filteredColumns.length}>
               {filteredColumns.map((column) => (
                 <li key={column}>
                   <label className="cursor-pointer p-2 flex items-center">
@@ -131,11 +154,18 @@ export default function ColumnSelection({
                       type="checkbox"
                       checked={localColumnVisibility[column] || false}
                       onChange={(e) => handleCheckboxChange(column, e.target.checked)}
+                      data-testid={`column-checkbox-${column}`}
+                      data-checked={localColumnVisibility[column] || false}
                     />
                     {column}
                   </label>
                 </li>
               ))}
+              {filteredColumns.length === 0 && (
+                <li className="text-gray-400 p-2" data-testid="no-columns-found">
+                  No columns found matching "{searchTerm}"
+                </li>
+              )}
             </ul>
           )}
         </div>
