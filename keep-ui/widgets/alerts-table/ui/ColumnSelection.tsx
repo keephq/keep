@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
 import { Table } from "@tanstack/table-core";
 import { Button, TextInput } from "@tremor/react";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
@@ -41,6 +41,15 @@ export default function ColumnSelection({
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  // Local state to track checkbox changes before submission
+  const [localColumnVisibility, setLocalColumnVisibility] = useState<VisibilityState>(
+    () => columnVisibility
+  );
+
+  // Update local state when backend state changes
+  React.useEffect(() => {
+    setLocalColumnVisibility(columnVisibility);
+  }, [columnVisibility]);
 
   const columnsOptions = tableColumns
     .filter((col) => col.getIsPinned() === false)
@@ -50,21 +59,21 @@ export default function ColumnSelection({
     column.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleCheckboxChange = (column: string, checked: boolean) => {
+    setLocalColumnVisibility(prev => ({
+      ...prev,
+      [column]: checked
+    }));
+  };
+
   const onMultiSelectChange = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
-    const selectedColumnIds = Object.keys(
-      Object.fromEntries(formData.entries())
-    );
-
-    // Update visibility only for the currently visible (filtered) columns.
-    const newColumnVisibility = { ...columnVisibility };
-    filteredColumns.forEach((column) => {
-      newColumnVisibility[column] = selectedColumnIds.includes(column);
-    });
-
     // Create a new order array with all existing columns and newly selected columns
+    const selectedColumnIds = filteredColumns.filter(
+      column => localColumnVisibility[column]
+    );
+    
     const updatedOrder = [
       ...columnOrder,
       ...selectedColumnIds.filter((id) => !columnOrder.includes(id)),
@@ -72,13 +81,13 @@ export default function ColumnSelection({
 
     // Remove any columns that are no longer selected
     const finalOrder = updatedOrder.filter(
-      (id) => selectedColumnIds.includes(id) || !filteredColumns.includes(id)
+      (id) => localColumnVisibility[id] || !filteredColumns.includes(id)
     );
 
     try {
       // Use batched update to avoid multiple API calls and toasts
       await updateMultipleColumnConfigs({
-        columnVisibility: newColumnVisibility,
+        columnVisibility: localColumnVisibility,
         columnOrder: finalOrder,
       });
       onClose?.();
@@ -109,13 +118,14 @@ export default function ColumnSelection({
         <div className="flex-1 overflow-y-auto max-h-[350px]">
           <ul className="space-y-1">
             {filteredColumns.map((column) => (
-              <li key={`${column}-${columnVisibility[column] || false}`}>
+              <li key={column}>
                 <label className="cursor-pointer p-2 flex items-center">
                   <input
                     className="mr-2"
                     name={column}
                     type="checkbox"
-                    defaultChecked={columnVisibility[column] || false}
+                    checked={localColumnVisibility[column] || false}
+                    onChange={(e) => handleCheckboxChange(column, e.target.checked)}
                   />
                   {column}
                 </label>
