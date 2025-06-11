@@ -116,22 +116,28 @@ export default function ColumnSelection({
           className="mb-3"
         />
         <div className="flex-1 overflow-y-auto max-h-[350px]">
-          <ul className="space-y-1">
-            {filteredColumns.map((column) => (
-              <li key={column}>
-                <label className="cursor-pointer p-2 flex items-center">
-                  <input
-                    className="mr-2"
-                    name={column}
-                    type="checkbox"
-                    checked={localColumnVisibility[column] || false}
-                    onChange={(e) => handleCheckboxChange(column, e.target.checked)}
-                  />
-                  {column}
-                </label>
-              </li>
-            ))}
-          </ul>
+          {isLoading && useBackend ? (
+            <div className="flex items-center justify-center py-8 text-gray-400">
+              <span data-testid="columns-loading">Loading column configuration...</span>
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {filteredColumns.map((column) => (
+                <li key={column}>
+                  <label className="cursor-pointer p-2 flex items-center">
+                    <input
+                      className="mr-2"
+                      name={column}
+                      type="checkbox"
+                      checked={localColumnVisibility[column] || false}
+                      onChange={(e) => handleCheckboxChange(column, e.target.checked)}
+                    />
+                    {column}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
       <Button 
