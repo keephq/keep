@@ -28,7 +28,7 @@ from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
 from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
     WorkflowExecutioLogDalModel,
 )
-
+from sqlalchemy.exc import NoResultFound
 
 class SqlWorkflowRepository(WorkflowRepository):
 
@@ -110,16 +110,14 @@ class SqlWorkflowRepository(WorkflowRepository):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
-        db_workflow_execution = get_workflow_execution(
-            tenant_id=tenant_id,
-            workflow_execution_id=workflow_execution_id,
-            is_test_run=is_test_run,
-        )
-
-        if db_workflow_execution is not None:
-            return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
-
-        return None
+        try:
+            return get_workflow_execution(
+                tenant_id=tenant_id,
+                workflow_execution_id=workflow_execution_id,
+                is_test_run=is_test_run,
+            )
+        except NoResultFound:
+            return None
 
     def get_workflow_execution_with_logs(
         self,
@@ -127,15 +125,17 @@ class SqlWorkflowRepository(WorkflowRepository):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
-        db_workflow_execution, db_workflow_execution_logs = (
-            get_workflow_execution_with_logs(
-                tenant_id=tenant_id,
-                workflow_execution_id=workflow_execution_id,
-                is_test_run=is_test_run,
+        try:
+            db_workflow_execution, db_workflow_execution_logs = (
+                get_workflow_execution_with_logs(
+                    tenant_id=tenant_id,
+                    workflow_execution_id=workflow_execution_id,
+                    is_test_run=is_test_run,
+                )
             )
-        )
-        if db_workflow_execution is None:
+        except NoResultFound:
             return None
+
         mapped_execution_logs = [
             self.__workflow_execution_log_from_db_to_dto(item)
             for item in db_workflow_execution_logs

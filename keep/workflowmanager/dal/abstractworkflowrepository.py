@@ -67,7 +67,19 @@ class WorkflowRepository(ABC):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
-        pass
+        """
+        Retrieve a workflow execution record based on the provided identifiers.
+
+        Args:
+            tenant_id (str): The unique identifier for the tenant.
+            workflow_execution_id (str): The unique identifier for the workflow execution.
+            is_test_run (bool | None, optional): Indicates whether the workflow execution
+                is a test run. Defaults to None.
+
+        Returns:
+            WorkflowExecutionDalModel | None: The workflow execution data model if found,
+                otherwise None.
+        """
 
     @abstractmethod
     def get_workflow_execution_with_logs(
@@ -76,7 +88,20 @@ class WorkflowRepository(ABC):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
-        pass
+        """
+        Retrieve a workflow execution along with its associated logs.
+
+        Args:
+            tenant_id (str): The ID of the tenant to which the workflow execution belongs.
+            workflow_execution_id (str): The unique identifier of the workflow execution.
+            is_test_run (bool | None, optional): Indicates whether the workflow execution is a test run.
+                Defaults to None.
+
+        Returns:
+            tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
+                A tuple containing the workflow execution data model and a list of associated log data models,
+                or None if no matching workflow execution is found.
+        """
 
     @abstractmethod
     def get_workflows_with_last_executions_v2(

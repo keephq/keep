@@ -18,7 +18,6 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
 from keep.workflowmanager.dal.workflowdal import WorkflowDal
 from keep.workflowmanager.workflow import Workflow
-from sqlalchemy.exc import NoResultFound
 
 
 class WorkflowStore:
@@ -34,15 +33,19 @@ class WorkflowStore:
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ):
-        try:
-            return self.workflow_dal.workflow_repository.get_workflow_execution(
+        workflow_execution = (
+            self.workflow_dal.workflow_repository.get_workflow_execution(
                 tenant_id, workflow_execution_id, is_test_run
             )
-        except NoResultFound:
+        )
+
+        if not workflow_execution:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow execution {workflow_execution_id} not found",
             )
+
+        return workflow_execution
 
     def get_workflow_execution_with_logs(
         self,
@@ -50,17 +53,19 @@ class WorkflowStore:
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ):
-        try:
-            return (
-                self.workflow_dal.workflow_repository.get_workflow_execution_with_logs(
-                    tenant_id, workflow_execution_id, is_test_run
-                )
+        execution_with_logs = (
+            self.workflow_dal.workflow_repository.get_workflow_execution_with_logs(
+                tenant_id, workflow_execution_id, is_test_run
             )
-        except NoResultFound:
+        )
+
+        if not execution_with_logs:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow execution {workflow_execution_id} not found",
             )
+
+        return execution_with_logs
 
     def create_workflow(
         self,
