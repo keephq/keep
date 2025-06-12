@@ -500,7 +500,7 @@ def upload_incident(incident: dict):
         url,
         json=incident,
         timeout=5,
-        headers={"Authorization": f"Bearer {get_token('keep')}"},
+        headers={"Authorization": f"Bearer {get_token()}"},
     )
     response.raise_for_status()
     result = response.json()
