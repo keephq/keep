@@ -357,3 +357,80 @@ def test_workflow_execution_large_results_many_logs_performance(db_session):
     assert execution_only.id == execution_with_logs.id
     assert execution_only.results == execution_with_logs.results
     assert execution_only.status == execution_with_logs.status
+
+
+def test_get_all_workflows_with_last_execution_no_dummy_workflow(db_session):
+    """
+    Test that get_all_workflows_with_last_execution does not return dummy workflows.
+    """
+    from keep.api.core.db import get_or_create_dummy_workflow
+    from keep.api.models.db.workflow import get_dummy_workflow_id
+
+    workflowstore = WorkflowStore()
+
+    # Create some regular workflows
+    regular_workflow_1 = Workflow(
+        id="regular-workflow-1",
+        name="Regular Workflow 1",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A regular workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    regular_workflow_2 = Workflow(
+        id="regular-workflow-2",
+        name="Regular Workflow 2",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Another regular workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    # Add regular workflows to database
+    db_session.add(regular_workflow_1)
+    db_session.add(regular_workflow_2)
+    db_session.commit()
+
+    # Create a dummy workflow
+    dummy_workflow = get_or_create_dummy_workflow(SINGLE_TENANT_UUID, db_session)
+    dummy_workflow_id = get_dummy_workflow_id(SINGLE_TENANT_UUID)
+
+    # Debug: Print dummy workflow info
+    print(f"Dummy workflow ID: {dummy_workflow_id}")
+    print(f"Dummy workflow name: {dummy_workflow.name}")
+    print(f"Dummy workflow tenant_id: {dummy_workflow.tenant_id}")
+
+    # Verify dummy workflow was created
+    assert dummy_workflow is not None
+    assert dummy_workflow.id == dummy_workflow_id
+    assert "Dummy Workflow" in dummy_workflow.name
+
+    # Get all workflows with last execution
+    workflows, count = workflowstore.get_all_workflows_with_last_execution(
+        tenant_id=SINGLE_TENANT_UUID,
+        # db_session fixture creates two test workflows, we want to exclude them
+        cel="!(name in ['test-id-1', 'test-id-2'])",
+    )
+
+    # Verify that we get the regular workflows but not the dummy workflow
+    workflow_ids = [w["workflow"].id for w in workflows]
+    workflow_names = [w["workflow"].name for w in workflows]
+
+    # Should contain regular workflows
+    assert "regular-workflow-1" in workflow_ids
+    assert "regular-workflow-2" in workflow_ids
+    assert "Regular Workflow 1" in workflow_names
+    assert "Regular Workflow 2" in workflow_names
+
+    # Should NOT contain dummy workflow
+    assert dummy_workflow_id not in workflow_ids
+    assert not any("Dummy Workflow" in name for name in workflow_names)
+
+    # Count should reflect only regular workflows
+    assert count == 2
+    assert len(workflows) == 2
