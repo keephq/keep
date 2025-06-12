@@ -27,6 +27,7 @@ import {
   getOnlyVisibleCols,
   DEFAULT_COLS_VISIBILITY,
   DEFAULT_COLS,
+  useAlertTableCols,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import AlertActions from "@/widgets/alerts-table/ui/alert-actions";
 import {
@@ -74,6 +75,7 @@ import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { usePresetColumnState } from "@/entities/presets/model";
+import { STATIC_PRESET_IDS, STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -143,13 +145,19 @@ export function AlertTableServerSide({
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
   
+  // Check if this is a static preset that should never use backend
+  const isStaticPreset = 
+    !presetId ||
+    STATIC_PRESET_IDS.includes(presetId) ||
+    STATIC_PRESETS_NAMES.includes(presetName);
+
   // Use the unified column state hook that handles both local storage and backend
   const {
     columnVisibility,
     columnOrder,
+    columnRenameMapping,
     columnTimeFormats,
     columnListFormats,
-    columnRenameMapping,
     setColumnTimeFormats,
     setColumnListFormats,
     setColumnOrder,
@@ -157,10 +165,12 @@ export function AlertTableServerSide({
     setColumnRenameMapping,
     updateMultipleColumnConfigs,
     useBackend,
+    isLoading: isColumnConfigLoading,
   } = usePresetColumnState({
     presetName,
     presetId,
-    useBackend: !!presetId,
+    // Only use backend for non-static presets with valid IDs
+    useBackend: !isStaticPreset && !!presetId,
   });
   
   const a11yContainerRef = useRef<HTMLDivElement>(null);

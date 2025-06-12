@@ -29,10 +29,10 @@ export const usePresetColumnState = ({
     !presetId ||
     STATIC_PRESET_IDS.includes(presetId) ||
     STATIC_PRESETS_NAMES.includes(presetName);
-  const shouldUseBackend = useBackend && !isStaticPreset;
+  const shouldUseBackend = useBackend && !isStaticPreset && !!presetId;
 
-  // Backend-based state
-  const { columnConfig, updateColumnConfig, isLoading } = usePresetColumnConfig(
+  // Backend-based state - only fetch if we should use backend
+  const { columnConfig, updateColumnConfig, isLoading, error } = usePresetColumnConfig(
     {
       presetId: shouldUseBackend ? presetId : undefined,
     }
@@ -65,66 +65,75 @@ export const usePresetColumnState = ({
     Record<string, ListFormatOption>
   >(`column-list-formats-${presetName}`, {});
 
-  // Determine which state to use
+  // Determine which state to use - with fallback to local storage on error
+  // Always return immediately with either backend or local data
   const columnVisibility = useMemo(() => {
-    if (shouldUseBackend) {
-      // For backend presets, always use backend state even if empty
-      // If backend has no saved config, use the default visibility merged with any backend config
-      return {
-        ...DEFAULT_COLS_VISIBILITY,
-        ...columnConfig.column_visibility,
-      };
+    // If we shouldn't use backend or there's an error, use local storage immediately
+    if (!shouldUseBackend || error) {
+      return localColumnVisibility;
     }
-    return localColumnVisibility;
-  }, [shouldUseBackend, columnConfig.column_visibility, localColumnVisibility]);
+    // If backend is loading, return defaults to avoid blocking render
+    // Once loaded, backend config will be used
+    return {
+      ...DEFAULT_COLS_VISIBILITY,
+      ...(columnConfig?.column_visibility || {}),
+    };
+  }, [shouldUseBackend, columnConfig?.column_visibility, localColumnVisibility, error]);
 
   const columnOrder = useMemo(() => {
-    if (shouldUseBackend) {
-      // For backend presets, use backend order if available, otherwise default
-      return columnConfig.column_order && columnConfig.column_order.length > 0
-        ? columnConfig.column_order
-        : DEFAULT_COLS;
+    // If we shouldn't use backend or there's an error, use local storage immediately
+    if (!shouldUseBackend || error) {
+      return localColumnOrder;
     }
-    return localColumnOrder;
-  }, [shouldUseBackend, columnConfig.column_order, localColumnOrder]);
+    // For backend presets, use backend order if available, otherwise default
+    return columnConfig?.column_order && columnConfig.column_order.length > 0
+      ? columnConfig.column_order
+      : DEFAULT_COLS;
+  }, [shouldUseBackend, columnConfig?.column_order, localColumnOrder, error]);
 
   const columnRenameMapping = useMemo(() => {
-    if (shouldUseBackend) {
-      return columnConfig.column_rename_mapping || {};
+    // If we shouldn't use backend or there's an error, use local storage immediately
+    if (!shouldUseBackend || error) {
+      return localColumnRenameMapping;
     }
-    return localColumnRenameMapping;
+    return columnConfig?.column_rename_mapping || {};
   }, [
     shouldUseBackend,
-    columnConfig.column_rename_mapping,
+    columnConfig?.column_rename_mapping,
     localColumnRenameMapping,
+    error,
   ]);
 
   const columnTimeFormats = useMemo(() => {
-    if (shouldUseBackend) {
-      return (columnConfig.column_time_formats || {}) as Record<
-        string,
-        TimeFormatOption
-      >;
+    // If we shouldn't use backend or there's an error, use local storage immediately
+    if (!shouldUseBackend || error) {
+      return localColumnTimeFormats;
     }
-    return localColumnTimeFormats;
+    return (columnConfig?.column_time_formats || {}) as Record<
+      string,
+      TimeFormatOption
+    >;
   }, [
     shouldUseBackend,
-    columnConfig.column_time_formats,
+    columnConfig?.column_time_formats,
     localColumnTimeFormats,
+    error,
   ]);
 
   const columnListFormats = useMemo(() => {
-    if (shouldUseBackend) {
-      return (columnConfig.column_list_formats || {}) as Record<
-        string,
-        ListFormatOption
-      >;
+    // If we shouldn't use backend or there's an error, use local storage immediately
+    if (!shouldUseBackend || error) {
+      return localColumnListFormats;
     }
-    return localColumnListFormats;
+    return (columnConfig?.column_list_formats || {}) as Record<
+      string,
+      ListFormatOption
+    >;
   }, [
     shouldUseBackend,
-    columnConfig.column_list_formats,
+    columnConfig?.column_list_formats,
     localColumnListFormats,
+    error,
   ]);
 
   // Batched update function to avoid multiple API calls
@@ -136,7 +145,7 @@ export const usePresetColumnState = ({
       columnTimeFormats?: Record<string, TimeFormatOption>;
       columnListFormats?: Record<string, ListFormatOption>;
     }) => {
-      if (shouldUseBackend) {
+      if (shouldUseBackend && !error) {
         // Batch all updates into a single API call
         const batchedUpdate: Partial<ColumnConfiguration> = {};
         
@@ -156,26 +165,32 @@ export const usePresetColumnState = ({
           batchedUpdate.column_list_formats = updates.columnListFormats;
         }
 
-        return updateColumnConfig(batchedUpdate);
-      } else {
-        // For local storage, update each one individually (synchronously)
-        if (updates.columnVisibility !== undefined) {
-          setLocalColumnVisibility(updates.columnVisibility);
+        try {
+          return await updateColumnConfig(batchedUpdate);
+        } catch (err) {
+          // If backend update fails, fall back to local storage
+          console.warn("Failed to update backend column config, falling back to local storage", err);
+          // Fall through to local storage update
         }
-        if (updates.columnOrder !== undefined) {
-          setLocalColumnOrder(updates.columnOrder);
-        }
-        if (updates.columnRenameMapping !== undefined) {
-          setLocalColumnRenameMapping(updates.columnRenameMapping);
-        }
-        if (updates.columnTimeFormats !== undefined) {
-          setLocalColumnTimeFormats(updates.columnTimeFormats);
-        }
-        if (updates.columnListFormats !== undefined) {
-          setLocalColumnListFormats(updates.columnListFormats);
-        }
-        return Promise.resolve();
       }
+      
+      // For local storage or on backend failure, update each one individually (synchronously)
+      if (updates.columnVisibility !== undefined) {
+        setLocalColumnVisibility(updates.columnVisibility);
+      }
+      if (updates.columnOrder !== undefined) {
+        setLocalColumnOrder(updates.columnOrder);
+      }
+      if (updates.columnRenameMapping !== undefined) {
+        setLocalColumnRenameMapping(updates.columnRenameMapping);
+      }
+      if (updates.columnTimeFormats !== undefined) {
+        setLocalColumnTimeFormats(updates.columnTimeFormats);
+      }
+      if (updates.columnListFormats !== undefined) {
+        setLocalColumnListFormats(updates.columnListFormats);
+      }
+      return Promise.resolve();
     },
     [
       shouldUseBackend,
@@ -185,6 +200,7 @@ export const usePresetColumnState = ({
       setLocalColumnRenameMapping,
       setLocalColumnTimeFormats,
       setLocalColumnListFormats,
+      error,
     ]
   );
 
@@ -237,7 +253,7 @@ export const usePresetColumnState = ({
     setColumnListFormats,
     updateMultipleColumnConfigs,
     isLoading,
-    useBackend: shouldUseBackend,
+    useBackend: shouldUseBackend && !error,
   };
 };
 
