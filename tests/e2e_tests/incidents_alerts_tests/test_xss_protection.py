@@ -10,7 +10,7 @@ from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 KEEP_UI_URL = "http://localhost:3000"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def xss_incident():
     incident = {
         "user_generated_name": '<script>alert("XSS")</script>',
@@ -58,7 +58,7 @@ def test_xss_protection_in_incident_list(
         browser.remove_listener("dialog", handle_dialog)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def xss_alert():
     alert = create_fake_alert(0, "datadog")
     if not alert:
@@ -89,7 +89,7 @@ def test_xss_protection_in_alert_description(browser: Page, xss_alert):
     assert "<script>" not in html_content, "Unescaped script tag found in HTML"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def legit_html_incident():
     incident = {
         "user_generated_name": "Incident with rich html description",
@@ -118,7 +118,7 @@ def test_legit_html_content(browser: Page, legit_html_incident):
         raise
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def alert_legit_html_content():
     alert = create_fake_alert(0, "datadog")
     if not alert:
