@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import redis
 from arq import Worker
-from arq.connections import RedisSettings
 from arq.worker import create_worker
 from dotenv import find_dotenv, load_dotenv
 from pydantic.utils import import_string
