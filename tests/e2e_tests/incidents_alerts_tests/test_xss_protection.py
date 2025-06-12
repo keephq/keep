@@ -32,11 +32,26 @@ def test_xss_protection_in_incident_list(
 
     try:
         browser.on("dialog", handle_dialog)
-
-        # Initialize the test
         init_e2e_test(browser, next_url="/incidents")
-
         browser.wait_for_timeout(1000)
+
+        # DEBUG: Check if page loaded and table exists
+        print(f"Current URL: {browser.url}")
+        print(f"Page title: {browser.title()}")
+
+        table = browser.locator("table[data-testid='incidents-table']")
+        print(f"Table exists: {table.count() > 0}")
+
+        if table.count() > 0:
+            rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
+            print(f"Number of rows: {rows.count()}")
+
+            # Print all row texts to see what's actually there
+            for i in range(min(rows.count(), 5)):  # Check first 5 rows
+                row_text = rows.nth(i).inner_text()
+                print(f"Row {i}: {row_text}")
+
+        print(f"Looking for incident: {xss_incident['user_generated_name']}")
 
         assert not xss_dialog_appeared, "XSS attack succeeded - alert dialog appeared"
 

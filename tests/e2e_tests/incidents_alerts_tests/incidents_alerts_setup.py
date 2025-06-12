@@ -504,5 +504,6 @@ def upload_incident(incident: dict):
     )
     response.raise_for_status()
     result = response.json()
+    print(f"Created incident: {result}")  # DEBUG
 
     return result
