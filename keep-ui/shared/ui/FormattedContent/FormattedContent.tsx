@@ -22,6 +22,7 @@ function FormattedHTMLContent({ content }: { content: string }) {
           prose-p:text-base prose-p:leading-7
           prose-ul:list-disc prose-ul:pl-6
           prose-ol:list-decimal prose-ol:pl-6"
+      // eslint-disable-next-line react/no-danger -- we sanitized the html
       dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
     />
   );
