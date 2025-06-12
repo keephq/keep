@@ -66,6 +66,21 @@ class WorkflowRepository(ABC):
         """
 
     @abstractmethod
+    def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
+        """
+        Update an existing workflow execution record.
+
+        Args:
+            workflow_execution (WorkflowExecutionDalModel): The workflow execution data model to update.
+
+        Raises:
+            ValueError: If the ID for the workflow execution data model is not specified.
+
+        Returns:
+            None
+        """
+
+    @abstractmethod
     def delete_workflow(self, tenant_id, workflow_id):
         pass
 

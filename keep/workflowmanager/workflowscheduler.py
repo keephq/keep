@@ -1,6 +1,8 @@
+from datetime import datetime
 import enum
 import hashlib
 import logging
+import random
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +14,6 @@ from sqlalchemy.exc import IntegrityError
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 # from keep.api.core.db import create_workflow_execution
-from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import (
     get_enrichment,
     get_previous_execution_id,
@@ -31,6 +32,7 @@ from keep.api.models.alert import AlertDto
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
+
 from keep.workflowmanager.dal.workflowdal import WorkflowDal
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -721,13 +723,37 @@ class WorkflowScheduler:
         status: WorkflowStatus,
         error=None,
     ):
+        workflow_execution = (
+            self.workflow_dal.workflow_repository.get_workflow_execution(
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                workflow_execution_id=workflow_execution_id,
+            )
+        )
+        # some random number to avoid collisions
+        if not workflow_execution:
+            self.logger.warning(
+                f"Failed to finish workflow execution {workflow_execution_id} for workflow {workflow_id}. Execution not found.",
+                extra={
+                    "tenant_id": tenant_id,
+                    "workflow_id": workflow_id,
+                    "workflow_execution_id": workflow_execution_id,
+                },
+            )
+            raise ValueError("Execution not found")
+        workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
+        workflow_execution.status = status
+        # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
+        #   we need to fix it in the future, create a migration that increases the size of the error field
+        #   and then we can remove the [:511] from here
+        workflow_execution.error = error[:511] if error else None
+        execution_time = (
+            datetime.utcnow() - workflow_execution.started
+        ).total_seconds()
+        workflow_execution.execution_time = int(execution_time)
         # mark the workflow execution as finished in the db
-        finish_workflow_execution_db(
-            tenant_id=tenant_id,
-            workflow_id=workflow_id,
-            execution_id=workflow_execution_id,
-            status=status.value,
-            error=error,
+        self.workflow_dal.workflow_repository.update_workflow_execution(
+            workflow_execution
         )
 
         if KEEP_EMAILS_ENABLED:

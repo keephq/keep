@@ -1,6 +1,10 @@
 from typing import List, Tuple
 
+from sqlalchemy import update
+from sqlmodel import Session
+
 from keep.api.core.db import (
+    engine,
     add_or_update_workflow,
     delete_workflow,
     delete_workflow_by_provisioned_file,
@@ -93,6 +97,21 @@ class SqlWorkflowRepository(WorkflowRepository):
             event_type=event_type,
             test_run=test_run,
         )
+
+    def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
+        if workflow_execution.id is None:
+            raise ValueError("Workflow execution ID must not be None")
+
+        with Session(engine) as session:
+            stmt = (
+                update(WorkflowExecution)
+                .where(WorkflowExecution.id == workflow_execution.id)
+                .values(
+                    **workflow_execution.dict(exclude_unset=True)
+                )  # only update fields that are explicitly set in model
+            )
+            session.exec(stmt)
+            session.commit()
 
     def delete_workflow(self, tenant_id, workflow_id):
         delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
