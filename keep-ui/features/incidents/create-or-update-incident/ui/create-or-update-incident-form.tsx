@@ -20,6 +20,7 @@ import "./react-quill-override.css";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
+import { DynamicIncidentForm } from "@/components/ui/DynamicIncidentForm";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -42,8 +43,9 @@ export function CreateOrUpdateIncidentForm({
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
+  const [enrichments, setEnrichments] = useState<Record<string, any>>({});
   const { data: users = [] } = useUsers();
-  const { addIncident, updateIncident } = useIncidentActions();
+  const { addIncident, updateIncident, enrichIncident } = useIncidentActions();
 
   const editMode = incidentToEdit !== null;
 
@@ -66,6 +68,7 @@ export function CreateOrUpdateIncidentForm({
     setIncidentUserSummary("");
     setIncidentAssignee("");
     setResolveOnAlertsResolved("all");
+    setEnrichments({});
   };
 
   // If the Incident is successfully updated or the user cancels the update we exit the editMode and set the editRule in the incident.tsx to null.
@@ -99,6 +102,12 @@ export function CreateOrUpdateIncidentForm({
           resolve_on: resolveOnAlertsResolved,
           severity: incidentSeverity,
         });
+        
+        // Add enrichments if any custom fields were filled
+        if (Object.keys(enrichments).length > 0) {
+          await enrichIncident(newIncident.id, enrichments);
+        }
+        
         createCallback?.(newIncident.id);
         exitEditMode();
       } catch (error) {
@@ -212,6 +221,11 @@ export function CreateOrUpdateIncidentForm({
           <Text>Resolve when all alerts are resolved</Text>
         </div>
       </div>
+
+      <DynamicIncidentForm 
+        enrichments={enrichments} 
+        onChange={setEnrichments} 
+      />
 
       <Divider />
 
