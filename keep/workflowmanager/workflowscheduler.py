@@ -13,13 +13,11 @@ from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-# from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import (
     get_enrichment,
     get_previous_execution_id,
     get_timeouted_workflow_exections,
 )
-from keep.api.core.db import get_workflow_by_id as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.core.metrics import (
     workflow_execution_errors_total,
@@ -765,7 +763,9 @@ class WorkflowScheduler:
                 is None  # this means this is the first execution, for example
                 or previous_execution.status != WorkflowStatus.ERROR.value
             ):
-                workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
+                workflow = self.workflow_repository.get_workflow_by_id(
+                    tenant_id=tenant_id, workflow_id=workflow_id
+                )
                 try:
                     keep_platform_url = config(
                         "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
