@@ -81,6 +81,9 @@ from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-imp
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
 from keep.api.models.time_stamp import TimeStampFilter
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -957,7 +960,7 @@ def get_consumer_providers() -> List[Provider]:
         ).all()
     return providers
 
-
+# TODO: TO REMOVE
 def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     with Session(engine) as session:
         workflow_execution = session.exec(
@@ -995,6 +998,23 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 "execution_time": execution_time,
             },
         )
+
+
+def update_workflow_execution(workflow_execution: WorkflowExecutionDalModel):
+    if workflow_execution.id is None:
+        raise ValueError("Workflow execution ID must not be None")
+
+    with Session(engine) as session:
+        workflow_execution_patch = workflow_execution.dict(exclude_unset=True)
+        stmt = (
+            update(WorkflowExecution)
+            .where(WorkflowExecution.id == workflow_execution.id)
+            .values(
+                **workflow_execution_patch
+            )  # only update fields that are explicitly set in model
+        )
+        session.exec(stmt)
+        session.commit()
 
 
 def get_workflow_executions(

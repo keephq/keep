@@ -18,3 +18,6 @@ class WorkflowExecutionDalModel(BaseModel):
     execution_time: Optional[int]
     results: dict
     is_test_run: bool
+
+    class Config:
+        use_enum_values = True

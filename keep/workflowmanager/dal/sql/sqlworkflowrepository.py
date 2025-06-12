@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlmodel import Session
 
 from keep.api.core.db import (
@@ -15,6 +15,7 @@ from keep.api.core.db import (
     get_workflow_execution,
     get_workflow_execution_with_logs,
     create_workflow_execution,
+    update_workflow_execution,
 )
 from keep.workflowmanager.dal.sql.workflows import (
     WorkflowWithLastExecutions,
@@ -102,16 +103,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         if workflow_execution.id is None:
             raise ValueError("Workflow execution ID must not be None")
 
-        with Session(engine) as session:
-            stmt = (
-                update(WorkflowExecution)
-                .where(WorkflowExecution.id == workflow_execution.id)
-                .values(
-                    **workflow_execution.dict(exclude_unset=True)
-                )  # only update fields that are explicitly set in model
-            )
-            session.exec(stmt)
-            session.commit()
+        update_workflow_execution(workflow_execution=workflow_execution)
 
     def delete_workflow(self, tenant_id, workflow_id):
         delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
@@ -157,11 +149,12 @@ class SqlWorkflowRepository(WorkflowRepository):
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
         try:
-            return get_workflow_execution(
+            db_workflow_execution = get_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_execution_id=workflow_execution_id,
                 is_test_run=is_test_run,
             )
+            return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
         except NoResultFound:
             return None
 
@@ -238,7 +231,7 @@ class SqlWorkflowRepository(WorkflowRepository):
             id=db_workflow_execution.id,
             workflow_id=db_workflow_execution.workflow_id,
             workflow_revision=db_workflow_execution.workflow_revision,
-            tenant_id=WorkflowExecutionDalModel.tenant_id,
+            tenant_id=db_workflow_execution.tenant_id,
             started=db_workflow_execution.started,
             triggered_by=db_workflow_execution.triggered_by,
             status=db_workflow_execution.status,

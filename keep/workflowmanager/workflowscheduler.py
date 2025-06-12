@@ -726,7 +726,6 @@ class WorkflowScheduler:
         workflow_execution = (
             self.workflow_dal.workflow_repository.get_workflow_execution(
                 tenant_id=tenant_id,
-                workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
             )
         )
