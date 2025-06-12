@@ -22,7 +22,7 @@ from keep.workflowmanager.workflow import Workflow
 
 class WorkflowStore:
 
-    def __init__(self, workflow_repository=SqlWorkflowRepository()):
+    def __init__(self, workflow_repository=None):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.celpy_env = celpy.Environment()
