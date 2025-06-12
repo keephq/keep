@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution
+# from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import (
     get_enrichment,
@@ -31,6 +31,7 @@ from keep.api.models.alert import AlertDto
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
+from keep.workflowmanager.dal.workflowdal import WorkflowDal
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -77,6 +78,7 @@ class WorkflowScheduler:
     MAX_WORKERS = config("KEEP_MAX_WORKFLOW_WORKERS", default="20", cast=int)
 
     def __init__(self, workflow_manager):
+        self.workflow_dal = WorkflowDal.create_sql_dal()
         self.logger = logging.getLogger(__name__)
         self.workflow_manager = workflow_manager
         self.workflow_store = WorkflowStore()
@@ -306,16 +308,18 @@ class WorkflowScheduler:
                 event_type = "alert"
                 fingerprint = event.fingerprint
 
-            workflow_execution_id = create_workflow_execution(
-                workflow_id=workflow_id,
-                workflow_revision=workflow_revision,
-                tenant_id=tenant_id,
-                triggered_by=f"manually by {triggered_by_user}",
-                execution_number=unique_execution_number,
-                fingerprint=fingerprint,
-                event_id=event_id,
-                event_type=event_type,
-                test_run=test_run,
+            workflow_execution_id = (
+                self.workflow_dal.workflow_repository.create_workflow_execution(
+                    workflow_id=workflow_id,
+                    workflow_revision=workflow_revision,
+                    tenant_id=tenant_id,
+                    triggered_by=f"manually by {triggered_by_user}",
+                    execution_number=unique_execution_number,
+                    fingerprint=fingerprint,
+                    event_id=event_id,
+                    event_type=event_type,
+                    test_run=test_run,
+                )
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
@@ -509,16 +513,18 @@ class WorkflowScheduler:
                         workflow_execution_number = self._get_unique_execution_number(
                             fingerprint, workflow_id
                         )
-                    workflow_execution_id = create_workflow_execution(
-                        workflow_id=workflow_id,
-                        workflow_revision=workflow.workflow_revision,
-                        tenant_id=tenant_id,
-                        triggered_by=triggered_by,
-                        execution_number=workflow_execution_number,
-                        fingerprint=fingerprint,
-                        event_id=event_id,
-                        execution_id=execution_id,
-                        event_type=event_type,
+                    workflow_execution_id = (
+                        self.workflow_dal.workflow_repository.create_workflow_execution(
+                            workflow_id=workflow_id,
+                            workflow_revision=workflow.workflow_revision,
+                            tenant_id=tenant_id,
+                            triggered_by=triggered_by,
+                            execution_number=workflow_execution_number,
+                            fingerprint=fingerprint,
+                            event_id=event_id,
+                            execution_id=execution_id,
+                            event_type=event_type,
+                        )
                     )
                 # If there is already running workflow from the same event
                 except IntegrityError:

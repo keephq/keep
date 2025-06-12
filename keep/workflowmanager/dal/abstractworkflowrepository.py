@@ -33,6 +33,39 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
+    def create_workflow_execution(
+        self,
+        workflow_id: str,
+        workflow_revision: int,
+        tenant_id: str,
+        triggered_by: str,
+        execution_number: int = 1,
+        event_id: str = None,
+        fingerprint: str = None,
+        execution_id: str = None,
+        event_type: str = "alert",
+        test_run: bool = False,
+    ) -> str:
+        """
+        Create a new workflow execution record.
+
+        Args:
+            workflow_id (str): The unique identifier for the workflow.
+            workflow_revision (int): The revision number of the workflow.
+            tenant_id (str): The unique identifier for the tenant.
+            triggered_by (str): The user or system that triggered the execution.
+            execution_number (int, optional): The execution number. Defaults to 1.
+            event_id (str, optional): The ID of the event associated with this execution. Defaults to None.
+            fingerprint (str, optional): A unique fingerprint for the event. Defaults to None.
+            execution_id (str, optional): A custom execution ID. Defaults to None.
+            event_type (str, optional): The type of event triggering the execution. Defaults to "alert".
+            test_run (bool, optional): Indicates if this is a test run. Defaults to False.
+
+        Returns:
+            str: The unique identifier for the created workflow execution.
+        """
+
+    @abstractmethod
     def delete_workflow(self, tenant_id, workflow_id):
         pass
 

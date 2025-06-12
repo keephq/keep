@@ -10,6 +10,7 @@ from keep.api.core.db import (
     get_workflow_by_id,
     get_workflow_execution,
     get_workflow_execution_with_logs,
+    create_workflow_execution,
 )
 from keep.workflowmanager.dal.sql.workflows import (
     WorkflowWithLastExecutions,
@@ -66,6 +67,32 @@ class SqlWorkflowRepository(WorkflowRepository):
             lookup_by_name=lookup_by_name,
         )
         return self.__workflow_from_db_to_dto(db_workflow)
+
+    def create_workflow_execution(
+        self,
+        workflow_id: str,
+        workflow_revision: int,
+        tenant_id: str,
+        triggered_by: str,
+        execution_number: int = 1,
+        event_id: str = None,
+        fingerprint: str = None,
+        execution_id: str = None,
+        event_type: str = "alert",
+        test_run: bool = False,
+    ) -> str:
+        return create_workflow_execution(
+            workflow_id=workflow_id,
+            workflow_revision=workflow_revision,
+            tenant_id=tenant_id,
+            triggered_by=triggered_by,
+            execution_number=execution_number,
+            event_id=event_id,
+            fingerprint=fingerprint,
+            execution_id=execution_id,
+            event_type=event_type,
+            test_run=test_run,
+        )
 
     def delete_workflow(self, tenant_id, workflow_id):
         delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
