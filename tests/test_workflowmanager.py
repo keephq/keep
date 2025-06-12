@@ -8,6 +8,7 @@ from keep.api.routes.workflows import get_event_from_body
 from keep.parser.parser import Parser
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
+from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler
@@ -97,7 +98,12 @@ def test_handle_manual_event_workflow():
 
     mock_logger = Mock()
 
-    workflow_scheduler = WorkflowScheduler(workflow_manager=mock_workflow_manager)
+    mock_workflow_repository: WorkflowRepository = Mock()
+
+    workflow_scheduler = WorkflowScheduler(
+        workflow_manager=mock_workflow_manager,
+        workflow_repository=mock_workflow_repository,
+    )
     workflow_scheduler.logger = mock_logger
     workflow_scheduler.workflow_manager = mock_workflow_manager
 
@@ -105,34 +111,33 @@ def test_handle_manual_event_workflow():
     workflow_scheduler._finish_workflow_execution = Mock()
 
     # Mock create_workflow_execution
-    with patch(
-        "keep.workflowmanager.workflowscheduler.create_workflow_execution"
-    ) as mock_create_execution:
-        mock_create_execution.return_value = "test_execution_id"
+    mock_workflow_repository.create_workflow_execution.return_value = (
+        "test_execution_id"
+    )
 
-        tenant_id = "test_tenant"
-        triggered_by_user = "test_user"
+    tenant_id = "test_tenant"
+    triggered_by_user = "test_user"
 
-        event, _ = get_event_from_body(
-            body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id
-        )
+    event, _ = get_event_from_body(
+        body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id
+    )
 
-        workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
-            workflow_id=mock_workflow.workflow_id,
-            workflow_revision=mock_workflow.workflow_revision,
-            tenant_id=tenant_id,
-            triggered_by_user=triggered_by_user,
-            event=event,
-        )
+    workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
+        workflow_id=mock_workflow.workflow_id,
+        workflow_revision=mock_workflow.workflow_revision,
+        tenant_id=tenant_id,
+        triggered_by_user=triggered_by_user,
+        event=event,
+    )
 
-        assert workflow_execution_id == "test_execution_id"
-        assert len(workflow_scheduler.workflows_to_run) == 1
-        workflow_run = workflow_scheduler.workflows_to_run[0]
-        assert workflow_run["workflow_execution_id"] == "test_execution_id"
-        assert workflow_run["workflow_id"] == mock_workflow.workflow_id
-        assert workflow_run["tenant_id"] == tenant_id
-        assert workflow_run["triggered_by_user"] == triggered_by_user
-        assert workflow_run["event"] == event
+    assert workflow_execution_id == "test_execution_id"
+    assert len(workflow_scheduler.workflows_to_run) == 1
+    workflow_run = workflow_scheduler.workflows_to_run[0]
+    assert workflow_run["workflow_execution_id"] == "test_execution_id"
+    assert workflow_run["workflow_id"] == mock_workflow.workflow_id
+    assert workflow_run["tenant_id"] == tenant_id
+    assert workflow_run["triggered_by_user"] == triggered_by_user
+    assert workflow_run["event"] == event
 
 
 def test_handle_manual_event_workflow_test_run():
@@ -141,44 +146,44 @@ def test_handle_manual_event_workflow_test_run():
     mock_workflow.workflow_revision = 1
 
     mock_workflow_manager = Mock()
-
+    mock_workflow_repository: WorkflowRepository = Mock()
     mock_logger = Mock()
 
-    workflow_scheduler = WorkflowScheduler(workflow_manager=mock_workflow_manager)
+    workflow_scheduler = WorkflowScheduler(
+        workflow_manager=mock_workflow_manager,
+        workflow_repository=mock_workflow_repository,
+    )
     workflow_scheduler.logger = mock_logger
     workflow_scheduler.workflow_manager = mock_workflow_manager
 
     workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
     workflow_scheduler._finish_workflow_execution = Mock()
-
     # Mock create_workflow_execution
-    with patch(
-        "keep.workflowmanager.workflowscheduler.create_workflow_execution"
-    ) as mock_create_execution:
-        mock_create_execution.return_value = "test_execution_id"
+    mock_workflow_repository.create_workflow_execution.return_value = (
+        "test_execution_id"
+    )
+    tenant_id = "test_tenant"
+    triggered_by_user = "test_user"
 
-        tenant_id = "test_tenant"
-        triggered_by_user = "test_user"
+    event, _ = get_event_from_body(
+        body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id
+    )
 
-        event, _ = get_event_from_body(
-            body={"body": {"fingerprint": "manual-run"}}, tenant_id=tenant_id
-        )
+    workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
+        workflow_id=mock_workflow.workflow_id,
+        workflow_revision=mock_workflow.workflow_revision,
+        workflow=mock_workflow,
+        tenant_id=tenant_id,
+        triggered_by_user=triggered_by_user,
+        event=event,
+        test_run=True,
+    )
 
-        workflow_execution_id = workflow_scheduler.handle_manual_event_workflow(
-            workflow_id=mock_workflow.workflow_id,
-            workflow_revision=mock_workflow.workflow_revision,
-            workflow=mock_workflow,
-            tenant_id=tenant_id,
-            triggered_by_user=triggered_by_user,
-            event=event,
-            test_run=True,
-        )
-
-        assert workflow_execution_id == "test_execution_id"
-        assert len(workflow_scheduler.workflows_to_run) == 1
-        assert (
-            workflow_scheduler.workflows_to_run[0]["workflow_execution_id"]
-            == "test_execution_id"
-        )
-        assert workflow_scheduler.workflows_to_run[0]["test_run"] == True
-        assert workflow_scheduler.workflows_to_run[0]["workflow"] == mock_workflow
+    assert workflow_execution_id == "test_execution_id"
+    assert len(workflow_scheduler.workflows_to_run) == 1
+    assert (
+        workflow_scheduler.workflows_to_run[0]["workflow_execution_id"]
+        == "test_execution_id"
+    )
+    assert workflow_scheduler.workflows_to_run[0]["test_run"] == True
+    assert workflow_scheduler.workflows_to_run[0]["workflow"] == mock_workflow
