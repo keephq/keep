@@ -1,10 +1,7 @@
 from typing import List, Tuple
 
-from sqlalchemy import select, update
-from sqlmodel import Session
-
 from keep.api.core.db import (
-    engine,
+    get_previous_execution_id,
     add_or_update_workflow,
     delete_workflow,
     delete_workflow_by_provisioned_file,
@@ -157,6 +154,20 @@ class SqlWorkflowRepository(WorkflowRepository):
             return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
         except NoResultFound:
             return None
+
+    def get_previous_workflow_execution(
+        self, tenant_id: str, workflow_id: str, workflow_execution_id: str
+    ) -> WorkflowExecutioLogDalModel | None:
+        db_workflow_execution = get_previous_execution_id(
+            tenant_id=tenant_id,
+            workflow_id=workflow_id,
+            workflow_execution_id=workflow_execution_id,
+        )
+
+        if db_workflow_execution is None:
+            return None
+
+        return self.__workflow_execution_log_from_db_to_dto(db_workflow_execution)
 
     def get_workflow_execution_with_logs(
         self,

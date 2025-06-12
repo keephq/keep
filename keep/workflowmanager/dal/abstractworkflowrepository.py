@@ -152,6 +152,23 @@ class WorkflowRepository(ABC):
         """
 
     @abstractmethod
+    def get_previous_workflow_execution(
+        self, tenant_id: str, workflow_id: str, workflow_execution_id: str
+    ) -> WorkflowExecutioLogDalModel | None:
+        """
+        Retrieve the previous workflow execution log based on the provided identifiers.
+
+        Args:
+            tenant_id (str): The unique identifier for the tenant.
+            workflow_id (str): The unique identifier for the workflow.
+            workflow_execution_id (str): The unique identifier for the current workflow execution.
+
+        Returns:
+            WorkflowExecutioLogDalModel | None: The previous workflow execution log data model if found,
+                otherwise None.
+        """
+
+    @abstractmethod
     def get_workflows_with_last_executions_v2(
         self,
         tenant_id: str,

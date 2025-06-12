@@ -15,7 +15,6 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
-    get_previous_execution_id,
     get_timeouted_workflow_exections,
 )
 from keep.api.core.db import get_workflows_that_should_run
@@ -754,8 +753,10 @@ class WorkflowScheduler:
 
         if KEEP_EMAILS_ENABLED:
             # get the previous workflow execution id
-            previous_execution = get_previous_execution_id(
-                tenant_id, workflow_id, workflow_execution_id
+            previous_execution = (
+                self.workflow_repository.get_previous_workflow_execution(
+                    tenant_id, workflow_id, workflow_execution_id
+                )
             )
             # if error, send an email
             if status == WorkflowStatus.ERROR and (
