@@ -33,7 +33,8 @@ from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 
-from keep.workflowmanager.dal.workflowdal import WorkflowDal
+from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
+from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -79,8 +80,12 @@ class WorkflowScheduler:
     MAX_SIZE_SIGNED_INT = 2147483647
     MAX_WORKERS = config("KEEP_MAX_WORKFLOW_WORKERS", default="20", cast=int)
 
-    def __init__(self, workflow_manager):
-        self.workflow_dal = WorkflowDal.create_sql_dal()
+    def __init__(
+        self, workflow_manager, workflow_repository: WorkflowRepository = None
+    ):
+        self.workflow_repository = (
+            workflow_repository if workflow_repository else SqlWorkflowRepository()
+        )
         self.logger = logging.getLogger(__name__)
         self.workflow_manager = workflow_manager
         self.workflow_store = WorkflowStore()
@@ -310,18 +315,16 @@ class WorkflowScheduler:
                 event_type = "alert"
                 fingerprint = event.fingerprint
 
-            workflow_execution_id = (
-                self.workflow_dal.workflow_repository.create_workflow_execution(
-                    workflow_id=workflow_id,
-                    workflow_revision=workflow_revision,
-                    tenant_id=tenant_id,
-                    triggered_by=f"manually by {triggered_by_user}",
-                    execution_number=unique_execution_number,
-                    fingerprint=fingerprint,
-                    event_id=event_id,
-                    event_type=event_type,
-                    test_run=test_run,
-                )
+            workflow_execution_id = self.workflow_repository.create_workflow_execution(
+                workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
+                tenant_id=tenant_id,
+                triggered_by=f"manually by {triggered_by_user}",
+                execution_number=unique_execution_number,
+                fingerprint=fingerprint,
+                event_id=event_id,
+                event_type=event_type,
+                test_run=test_run,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
@@ -516,7 +519,7 @@ class WorkflowScheduler:
                             fingerprint, workflow_id
                         )
                     workflow_execution_id = (
-                        self.workflow_dal.workflow_repository.create_workflow_execution(
+                        self.workflow_repository.create_workflow_execution(
                             workflow_id=workflow_id,
                             workflow_revision=workflow.workflow_revision,
                             tenant_id=tenant_id,
@@ -723,11 +726,9 @@ class WorkflowScheduler:
         status: WorkflowStatus,
         error=None,
     ):
-        workflow_execution = (
-            self.workflow_dal.workflow_repository.get_workflow_execution(
-                tenant_id=tenant_id,
-                workflow_execution_id=workflow_execution_id,
-            )
+        workflow_execution = self.workflow_repository.get_workflow_execution(
+            tenant_id=tenant_id,
+            workflow_execution_id=workflow_execution_id,
         )
         # some random number to avoid collisions
         if not workflow_execution:
@@ -751,9 +752,7 @@ class WorkflowScheduler:
         ).total_seconds()
         workflow_execution.execution_time = int(execution_time)
         # mark the workflow execution as finished in the db
-        self.workflow_dal.workflow_repository.update_workflow_execution(
-            workflow_execution
-        )
+        self.workflow_repository.update_workflow_execution(workflow_execution)
 
         if KEEP_EMAILS_ENABLED:
             # get the previous workflow execution id
