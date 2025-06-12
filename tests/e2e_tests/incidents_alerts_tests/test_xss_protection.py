@@ -33,7 +33,9 @@ def test_xss_protection_in_incident_list(
     try:
         browser.on("dialog", handle_dialog)
         init_e2e_test(browser, next_url="/incidents")
-        browser.wait_for_timeout(1000)
+
+        browser.wait_for_load_state("networkidle")
+        browser.wait_for_url(lambda url: url.startswith(KEEP_UI_URL + "/incidents"))
 
         # DEBUG: Check if page loaded and table exists
         print(f"Current URL: {browser.url}")
