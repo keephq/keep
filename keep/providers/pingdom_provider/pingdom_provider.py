@@ -171,9 +171,22 @@ class PingdomProvider(BaseProvider):
         # https://pingdom.com/resources/webhooks/#Examples-of-webhook-JSON-output-for-uptime-checks
 
         # map severity and status to keep's format
-        status = PingdomProvider.STATUS_MAP.get(
-            event.get("current_state"), AlertStatus.FIRING
-        )
+        state = event.get("current_state")
+        if state is None:
+            provider_instance.logger.warning("'current_state' missing from payload.")
+            state = ""
+        else:
+            state = state.lower()
+
+        # map the pingdom status to keep's, fallback if status somehow is missing
+        status = PingdomProvider.STATUS_MAP.get(state)
+        if status is None:
+            long_desc = (event.get("long_description") or "").strip()
+            if long_desc == "OK":
+                status = AlertStatus.RESOLVED
+            else:
+                status = AlertStatus.FIRING
+
         # its N/A but maybe in the future we will have it
         severity = PingdomProvider.SEVERITIES_MAP.get(
             event.get("importance_level"), AlertSeverity.INFO
