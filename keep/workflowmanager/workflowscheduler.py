@@ -660,7 +660,7 @@ class WorkflowScheduler:
                         )
                     )
                 # If there is already running workflow from the same event
-                except ConflictError as e:
+                except ConflictError:
                     # if the strategy is with RETRY, just put a warning and add it back to the queue
                     if (
                         workflow.workflow_strategy
