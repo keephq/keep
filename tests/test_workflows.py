@@ -666,12 +666,7 @@ def test_workflow_nested_foreach_console(db_session):
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            users = [
-                {"user": "alice", "description": "Alice from IT"},
-                {"user": "bob", "description": "Bob from DevOps"}
-            ]
-            users
+          code: '{"users": [{"user": "alice", "description": "Alice from IT"}, {"user": "bob", "description": "Bob from DevOps"}]}'
   actions:
     - name: first-action
       foreach: "{{ steps.python-step.results.users }}"
@@ -757,12 +752,7 @@ def test_workflow_nested_foreach_keep_provider(db_session):
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            users = [
-                {"user": "alice", "description": "Alice from IT"},
-                {"user": "bob", "description": "Bob from DevOps"}
-            ]
-            users
+          code: '{"users": [{"user": "alice", "description": "Alice from IT"}, {"user": "bob", "description": "Bob from DevOps"}]}'
   actions:
     - name: first-alert
       foreach: "{{ steps.python-step.results.users }}"
@@ -861,18 +851,14 @@ def test_workflow_step_with_foreach(db_session):
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            # Simulate webhook returning list of IDs
-            {"ids": [1, 2, 3]}
+          code: '{"ids": [1, 2, 3]}'
     - name: get-alerts
       foreach: "{{ steps.python-step.results.ids }}"
       provider:
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            # Simulate getting alert by ID
-            {"id": {{ foreach.value }}, "status": "firing", "name": "Alert {{ foreach.value }}"}
+          code: '{"id": {{ foreach.value }}, "status": "firing", "name": "Alert {{ foreach.value }}"}'
   actions:
     - name: echo-alerts
       foreach: "{{ steps.get-alerts.results }}"
@@ -953,13 +939,7 @@ def test_workflow_multiple_foreach_actions(db_session):
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            users = [
-                {"user": "alice", "description": "Alice from IT"},
-                {"user": "bob", "description": "Bob from DevOps"},
-                {"user": "charlie", "description": "Charlie from Security"}
-            ]
-            users
+          code: '{"users": [{"user": "alice", "description": "Alice from IT"}, {"user": "bob", "description": "Bob from DevOps"}, {"user": "charlie", "description": "Charlie from Security"}]}'
   actions:
     - name: first-action
       foreach: "{{ steps.python-step.results.users }}"
@@ -1061,13 +1041,7 @@ def test_workflow_gke_style_foreach(db_session):
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            # Simulate K8s pods response
-            [
-                {"metadata": {"name": "pod1", "namespace": "default"}, "status": {"phase": "Running"}},
-                {"metadata": {"name": "pod2", "namespace": "kube-system"}, "status": {"phase": "Pending"}},
-                {"metadata": {"name": "pod3", "namespace": "default"}, "status": {"phase": "Failed"}}
-            ]
+          code: '[{"metadata": {"name": "pod1", "namespace": "default"}, "status": {"phase": "Running"}}, {"metadata": {"name": "pod2", "namespace": "kube-system"}, "status": {"phase": "Pending"}}, {"metadata": {"name": "pod3", "namespace": "default"}, "status": {"phase": "Failed"}}]'
   actions:
     - name: echo-pod-status
       foreach: "{{ steps.get-pods.results }}"

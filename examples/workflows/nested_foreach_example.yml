@@ -11,13 +11,7 @@ workflow:
         type: python
         config: "{{ providers.default-python }}"
         with:
-          code: |
-            users = [
-                {"user": "alice", "description": "Alice from IT"},
-                {"user": "bob", "description": "Bob from DevOps"},
-                {"user": "charlie", "description": "Charlie from Security"}
-            ]
-            users
+          code: '{"users": [{"user": "alice", "description": "Alice from IT"}, {"user": "bob", "description": "Bob from DevOps"}, {"user": "charlie", "description": "Charlie from Security"}]}'
 
   actions:
     - name: first-action
