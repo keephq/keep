@@ -181,6 +181,46 @@ class WorkflowRepository(ABC):
         """
 
     @abstractmethod
+    def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
+        """
+        Retrieve all workflows that are set to run at regular intervals.
+
+        Returns:
+            List[WorkflowDalModel]: A list of workflow data models that are configured for interval execution.
+        """
+
+    @abstractmethod
+    def get_last_completed_workflow_execution(
+        self,
+        workflow_id: str,
+    ) -> WorkflowExecutionDalModel | None:
+        """
+        Retrieve the last completed workflow execution for a given workflow ID.
+
+        Args:
+            workflow_id (str): The unique identifier for the workflow.
+
+        Returns:
+            WorkflowExecutionDalModel | None: The last completed workflow execution data model if found,
+                otherwise None.
+        """
+
+    @abstractmethod
+    def get_workflow_execution_by_execution_number(
+        self, workflow_id: str, execution_number: int
+    ) -> WorkflowExecutionDalModel | None:
+        """
+        Retrieve a workflow execution by its execution number.
+
+        Args:
+            workflow_id (str): The unique identifier for the workflow.
+            execution_number (int): The execution number of the workflow.
+
+        Returns:
+            WorkflowExecutionDalModel | None: The workflow execution data model if found, otherwise None.
+        """
+
+    @abstractmethod
     def get_workflows_with_last_executions_v2(
         self,
         tenant_id: str,

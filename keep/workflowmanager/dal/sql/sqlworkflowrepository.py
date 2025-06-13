@@ -14,6 +14,9 @@ from keep.api.core.db import (
     get_workflow_execution_with_logs,
     create_workflow_execution,
     update_workflow_execution,
+    get_interval_workflows,
+    get_last_completed_execution_without_session,
+    get_workflow_execution_by_execution_number,
 )
 from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.workflows import (
@@ -98,10 +101,10 @@ class SqlWorkflowRepository(WorkflowRepository):
                 event_type=event_type,
                 test_run=test_run,
             )
-        except IntegrityError:
+        except IntegrityError as e:
             raise ConflictError(
                 f"Workflow execution for workflow {workflow_id} with revision {workflow_revision} already exists."
-            )
+            ) from e
 
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
         if workflow_execution.id is None:
@@ -132,6 +135,25 @@ class SqlWorkflowRepository(WorkflowRepository):
                 tenant_id=tenant_id, exclude_disabled=exclude_disabled
             )
         ]
+
+    def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
+        return [
+            self.__workflow_from_db_to_dto(db_workflow)
+            for db_workflow in get_interval_workflows()
+        ]
+
+    def get_last_completed_workflow_execution(
+        self,
+        workflow_id: str,
+    ) -> WorkflowExecutionDalModel | None:
+        db_workflow_execution = get_last_completed_execution_without_session(
+            workflow_id=workflow_id
+        )
+
+        if db_workflow_execution is None:
+            return None
+
+        return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
 
     def get_all_workflows_yamls(self, tenant_id: str) -> List[str]:
         return get_all_workflows_yamls(tenant_id=tenant_id)
@@ -210,6 +232,18 @@ class SqlWorkflowRepository(WorkflowRepository):
             self.__workflow_execution_from_db_to_dto(db_workflow_execution)
             for db_workflow_execution in db_workflow_executions
         ]
+
+    def get_workflow_execution_by_execution_number(
+        self, workflow_id: str, execution_number: int
+    ) -> WorkflowExecutionDalModel | None:
+        db_workflow_execution = get_workflow_execution_by_execution_number(
+            workflow_id=workflow_id, execution_number=execution_number
+        )
+
+        if db_workflow_execution is None:
+            return None
+
+        return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
 
     def get_workflows_with_last_executions_v2(
         self,

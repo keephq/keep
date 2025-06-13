@@ -281,9 +281,17 @@ def get_extraction_rule_by_id(
         return session.exec(query).first()
 
 
+def get_last_completed_execution_without_session(workflow_id: str) -> WorkflowExecution:
+    with Session(engine) as session:
+        return get_last_completed_execution(session, workflow_id)
+
+
 def get_last_completed_execution(
     session: Session, workflow_id: str
 ) -> WorkflowExecution:
+    if session is None:
+        session = get_session_sync()
+
     return session.exec(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
@@ -316,6 +324,38 @@ def get_timeouted_workflow_exections():
 
         logger.debug(f"Found {len(timeouted_workflows)} timeouted workflows")
         return timeouted_workflows
+
+
+def get_interval_workflows():
+    with Session(engine) as session:
+        logger.debug("Checking for workflows that should run")
+        result = session.exec(
+            select(Workflow)
+            .filter(Workflow.is_deleted == False)
+            .filter(Workflow.is_disabled == False)
+            .filter(Workflow.interval != None)
+            .filter(Workflow.interval > 0)
+        )
+        return result.all() if result else []
+
+
+def get_workflow_execution_by_execution_number(workflow_id, execution_number):
+    """
+    Retrieve a workflow execution by its execution number.
+
+    Args:
+        workflow_id (str): The unique identifier for the workflow.
+        execution_number (int): The execution number of the workflow execution.
+
+    Returns:
+        WorkflowExecution: The workflow execution object if found, otherwise None.
+    """
+    with Session(engine) as session:
+        return session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.execution_number == execution_number)
+        ).first()
 
 
 def get_workflows_that_should_run():

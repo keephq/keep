@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import enum
 import hashlib
 import logging
@@ -13,7 +13,6 @@ from threading import Lock
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.db import get_enrichment
-from keep.api.core.db import get_workflows_that_should_run
 from keep.api.core.metrics import (
     workflow_execution_errors_total,
     workflow_execution_status,
@@ -34,7 +33,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 MAX_WORKERS = config("WORKFLOWS_MAX_WORKERS", default="20")
-
+INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
 
 class WorkflowStatus(enum.Enum):
     SUCCESS = "success"
@@ -124,7 +123,7 @@ class WorkflowScheduler:
 
         try:
             # get all workflows that should run due to interval
-            workflows = get_workflows_that_should_run()
+            workflows = self.get_workflows_that_should_run()
         except Exception as ex:
             self.logger.warning(
                 "Error getting workflows that should run",
@@ -183,6 +182,139 @@ class WorkflowScheduler:
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
+
+    def get_workflows_that_should_run(self):
+        self.logger.debug("Checking for workflows that should run")
+        workflows_with_interval = []
+        try:
+            workflows_with_interval = (
+                self.workflow_repository.get_all_interval_workflows()
+            )
+        except Exception:
+            self.logger.exception("Failed to get workflows with interval")
+
+        self.logger.debug(
+            f"Found {len(workflows_with_interval)} workflows with interval"
+        )
+        workflows_to_run = []
+        # for each workflow:
+        for workflow in workflows_with_interval:
+            current_time = datetime.utcnow()
+            last_execution = (
+                self.workflow_repository.get_last_completed_workflow_execution(
+                    workflow.id
+                )
+            )
+            # if there no last execution, that's the first time we run the workflow
+            if not last_execution:
+                try:
+                    # try to get the lock
+                    workflow_execution_id = (
+                        self.workflow_repository.create_workflow_execution(
+                            workflow.id,
+                            workflow.revision,
+                            workflow.tenant_id,
+                            "scheduler",
+                        )
+                    )
+                    # we succeed to get the lock on this execution number :)
+                    # let's run it
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
+                # some other thread/instance has already started to work on it
+                except ConflictError:
+                    continue
+            # else, if the last execution was more than interval seconds ago, we need to run it
+            elif (
+                last_execution.started + timedelta(seconds=workflow.interval)
+                <= current_time
+            ):
+                try:
+                    # try to get the lock with execution_number + 1
+                    workflow_execution_id = (
+                        self.workflow_repository.create_workflow_execution(
+                            workflow.id,
+                            workflow.revision,
+                            workflow.tenant_id,
+                            "scheduler",
+                            last_execution.execution_number + 1,
+                        )
+                    )
+                    # we succeed to get the lock on this execution number :)
+                    # let's run it
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
+                    # continue to the next one
+                    continue
+                # some other thread/instance has already started to work on it
+                except ConflictError:
+                    # we need to verify the locking is still valid and not timeouted
+                    # session.rollback() TODO: THINK WHAT TO DO HERE  <<<<<<<-----------------------------------------------------------------------------------
+                    pass
+                # get the ongoing execution
+                ongoing_execution = (
+                    self.workflow_repository.get_workflow_execution_by_execution_number(
+                        workflow.id, last_execution.execution_number + 1
+                    )
+                )
+                # this is a WTF exception since if this (workflow_id, execution_number) does not exist,
+                # we would be able to acquire the lock
+                if not ongoing_execution:
+                    self.logger.error(
+                        f"WTF: ongoing execution not found {workflow.id} {last_execution.execution_number + 1}"
+                    )
+                    continue
+                # if this completed, error, than that's ok - the service who locked the execution is done
+                elif ongoing_execution.status != "in_progress":
+                    continue
+                # if the ongoing execution runs more than timeout minutes, relaunch it
+                elif (
+                    ongoing_execution.started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT
+                    <= current_time
+                ):
+                    ongoing_execution.status = "timeout"
+                    # session.commit() TODO: THINK WHAT TO DO HERE  <<<<<<<-----------------------------------------------------------------------------------
+                    # re-create the execution and try to get the lock
+                    try:
+                        workflow_execution_id = (
+                            self.workflow_repository.create_workflow_execution(
+                                workflow.id,
+                                workflow.revision,
+                                workflow.tenant_id,
+                                "scheduler",
+                                ongoing_execution.execution_number + 1,
+                            )
+                        )
+                    # some other thread/instance has already started to work on it and that's ok
+                    except ConflictError:
+                        self.logger.debug(
+                            f"Failed to create a new execution for workflow {workflow.id} [timeout]. Constraint is met."
+                        )
+                        continue
+                    # managed to acquire the (workflow_id, execution_number) lock
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
+            else:
+                self.logger.debug(
+                    f"Workflow {workflow.id} is already running by someone else"
+                )
+
+        return workflows_to_run
 
     def _run_workflow(
         self,
