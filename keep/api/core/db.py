@@ -938,6 +938,7 @@ def get_workflow_versions(tenant_id: str, workflow_id: str):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
             .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
             .order_by(WorkflowVersion.revision.desc())
         ).all()
@@ -953,6 +954,7 @@ def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
             .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
             .where(WorkflowVersion.revision == revision)
         ).first()
@@ -1069,7 +1071,9 @@ def get_workflow_executions(
     is_test_run: bool = False,
 ):
     with Session(engine) as session:
-        query = session.query(WorkflowExecution,).filter(
+        query = session.query(
+            WorkflowExecution,
+        ).filter(
             WorkflowExecution.tenant_id == tenant_id,
             WorkflowExecution.workflow_id == workflow_id,
             WorkflowExecution.is_test_run == False,
@@ -1169,6 +1173,7 @@ def get_workflow_id(tenant_id, workflow_name):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).first()
 
         if workflow:
@@ -2218,6 +2223,7 @@ def get_workflow_by_name(tenant_id, workflow_name):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).first()
 
         return workflow
@@ -3971,7 +3977,9 @@ def get_last_incidents(
         List[Incident]: A list of Incident objects.
     """
     with Session(engine) as session:
-        query = session.query(Incident,).filter(
+        query = session.query(
+            Incident,
+        ).filter(
             Incident.tenant_id == tenant_id,
             Incident.is_candidate == is_candidate,
             Incident.is_visible == True,
