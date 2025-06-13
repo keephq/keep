@@ -33,7 +33,7 @@ from keep.api.core.db import (
     update_workflow_by_id as update_workflow_by_id_db,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.core.workflows import (
+from keep.workflowmanager.dal.sql.workflows import (
     get_workflow_facets,
     get_workflow_facets_data,
     get_workflow_potential_facet_fields,

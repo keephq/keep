@@ -10,33 +10,25 @@ import requests
 import validators
 from fastapi import HTTPException
 
-from keep.api.core.db import (
-    add_or_update_workflow,
-    delete_workflow,
-    delete_workflow_by_provisioned_file,
-    get_all_provisioned_workflows,
-    get_all_workflows,
-    get_all_workflows_yamls,
-    get_workflow_by_id,
-    get_workflow_execution,
-    get_workflow_execution_with_logs,
-)
-from keep.api.core.workflows import get_workflows_with_last_executions_v2
-from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
+from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 from keep.workflowmanager.workflow import Workflow
-from sqlalchemy.exc import NoResultFound
 
 
 class WorkflowStore:
-    def __init__(self):
+
+    def __init__(self, workflow_repository=None):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.celpy_env = celpy.Environment()
+        self.workflow_repository = (
+            workflow_repository if workflow_repository else SqlWorkflowRepository()
+        )
 
     def get_workflow_execution(
         self,
@@ -44,13 +36,17 @@ class WorkflowStore:
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ):
-        try:
-            return get_workflow_execution(tenant_id, workflow_execution_id, is_test_run)
-        except NoResultFound:
+        workflow_execution = self.workflow_repository.get_workflow_execution(
+            tenant_id, workflow_execution_id, is_test_run
+        )
+
+        if not workflow_execution:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow execution {workflow_execution_id} not found",
             )
+
+        return workflow_execution
 
     def get_workflow_execution_with_logs(
         self,
@@ -58,15 +54,17 @@ class WorkflowStore:
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ):
-        try:
-            return get_workflow_execution_with_logs(
-                tenant_id, workflow_execution_id, is_test_run
-            )
-        except NoResultFound:
+        execution_with_logs = self.workflow_repository.get_workflow_execution_with_logs(
+            tenant_id, workflow_execution_id, is_test_run
+        )
+
+        if not execution_with_logs:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow execution {workflow_execution_id} not found",
             )
+
+        return execution_with_logs
 
     def create_workflow(
         self,
@@ -85,7 +83,7 @@ class WorkflowStore:
         else:
             workflow_name = workflow.get("name")
 
-        workflow_db = add_or_update_workflow(
+        workflow_db = self.workflow_repository.add_or_update_workflow(
             id=str(uuid.uuid4()),
             name=workflow_name,
             tenant_id=tenant_id,
@@ -105,7 +103,7 @@ class WorkflowStore:
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
-        workflow = get_workflow_by_id(tenant_id, workflow_id)
+        workflow = self.workflow_repository.get_workflow_by_id(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404, detail=f"Workflow {workflow_id} not found"
@@ -113,7 +111,7 @@ class WorkflowStore:
         if workflow.provisioned:
             raise HTTPException(403, detail="Cannot delete a provisioned workflow")
         try:
-            delete_workflow(tenant_id, workflow_id)
+            self.workflow_repository.delete_workflow(tenant_id, workflow_id)
         except Exception as e:
             self.logger.exception(f"Error deleting workflow {workflow_id}: {str(e)}")
             raise HTTPException(
@@ -141,7 +139,7 @@ class WorkflowStore:
                 return self._read_workflow_from_stream(file)
 
     def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
-        workflow = get_workflow_by_id(tenant_id, workflow_id)
+        workflow = self.workflow_repository.get_workflow_by_id(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404,
@@ -150,7 +148,7 @@ class WorkflowStore:
         return self.format_workflow_yaml(workflow.workflow_raw)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        workflow = get_workflow_by_id(tenant_id, workflow_id)
+        workflow = self.workflow_repository.get_workflow_by_id(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404,
@@ -190,9 +188,11 @@ class WorkflowStore:
 
     def get_all_workflows(
         self, tenant_id: str, exclude_disabled: bool = False
-    ) -> list[WorkflowModel]:
+    ) -> list[WorkflowDalModel]:
         # list all tenant's workflows
-        workflows = get_all_workflows(tenant_id, exclude_disabled)
+        workflows = self.workflow_repository.get_all_workflows(
+            tenant_id, exclude_disabled
+        )
         return workflows
 
     def get_all_workflows_with_last_execution(
@@ -206,7 +206,7 @@ class WorkflowStore:
         session=None,
     ):
         # list all tenant's workflows
-        return get_workflows_with_last_executions_v2(
+        return self.workflow_repository.get_workflows_with_last_executions_v2(
             tenant_id=tenant_id,
             cel=cel,
             limit=limit,
@@ -214,12 +214,11 @@ class WorkflowStore:
             sort_by=sort_by,
             sort_dir=sort_dir,
             fetch_last_executions=15,
-            session=session,
         )
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
-        return list(get_all_workflows_yamls(tenant_id))
+        return list(self.workflow_repository.get_all_workflows_yamls(tenant_id))
 
     def get_workflows_from_path(
         self,
@@ -338,8 +337,8 @@ class WorkflowStore:
             disabled=workflow_disabled,
         )
 
-    @staticmethod
     def provision_workflows(
+        self,
         tenant_id: str,
     ) -> list[Workflow]:
         """
@@ -359,7 +358,9 @@ class WorkflowStore:
 
         # Get all existing provisioned workflows
         logger.info("Getting all already provisioned workflows")
-        provisioned_workflows = get_all_provisioned_workflows(tenant_id)
+        provisioned_workflows = self.workflow_repository.get_all_provisioned_workflows(
+            tenant_id
+        )
         logger.info(f"Found {len(provisioned_workflows)} provisioned workflows")
 
         if not (provisioned_workflows_dir or provisioned_workflow_yaml):
@@ -369,7 +370,7 @@ class WorkflowStore:
                 logger.info("Found existing provisioned workflows, deleting them")
                 for workflow in provisioned_workflows:
                     logger.info(f"Deprovisioning workflow {workflow.id}")
-                    delete_workflow(tenant_id, workflow.id)
+                    self.workflow_repository.delete_workflow(tenant_id, workflow.id)
                     logger.info(f"Workflow {workflow.id} deprovisioned successfully")
             return []
 
@@ -418,7 +419,7 @@ class WorkflowStore:
                             logger.info(
                                 f"Deprovisioning workflow {workflow.id} as its id doesn't match the provisioned workflow provided in the env"
                             )
-                        delete_workflow(tenant_id, workflow.id)
+                        self.workflow_repository.delete_workflow(tenant_id, workflow.id)
                         logger.info(
                             f"Workflow {workflow.id} deprovisioned successfully"
                         )
@@ -431,7 +432,7 @@ class WorkflowStore:
                     f"Provisioning workflow {pre_parsed_workflow.id} from env var"
                 )
 
-                add_or_update_workflow(
+                self.workflow_repository.add_or_update_workflow(
                     id=pre_parsed_workflow.id,
                     name=pre_parsed_workflow.name,
                     tenant_id=tenant_id,
@@ -473,7 +474,7 @@ class WorkflowStore:
                     logger.info(
                         f"Deprovisioning workflow {workflow.id} as its file no longer exists or is outside the workflows directory"
                     )
-                    delete_workflow_by_provisioned_file(
+                    self.workflow_repository.delete_workflow_by_provisioned_file(
                         tenant_id, workflow.provisioned_file
                     )
                     logger.info(f"Workflow {workflow.id} deprovisioned successfully")
@@ -490,7 +491,7 @@ class WorkflowStore:
                             pre_parsed_workflow = WorkflowStore.pre_parse_workflow_yaml(
                                 workflow_yaml
                             )
-                        add_or_update_workflow(
+                        self.workflow_repository.add_or_update_workflow(
                             id=pre_parsed_workflow.id,
                             name=pre_parsed_workflow.name,
                             tenant_id=tenant_id,
@@ -647,7 +648,7 @@ class WorkflowStore:
     def get_workflow_meta_data(
         self,
         tenant_id: str,
-        workflow: WorkflowModel | None,
+        workflow: WorkflowDalModel | None,
         installed_providers_by_type: dict,
     ):
         providers_dto = []
