@@ -8,12 +8,14 @@ from keep.api.core.db import (
     get_all_provisioned_workflows,
     get_all_workflows,
     get_all_workflows_yamls,
+    get_timeouted_workflow_exections,
     get_workflow_by_id,
     get_workflow_execution,
     get_workflow_execution_with_logs,
     create_workflow_execution,
     update_workflow_execution,
 )
+from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.workflows import (
     WorkflowWithLastExecutions,
     get_workflows_with_last_executions_v2,
@@ -31,7 +33,7 @@ from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
 from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
     WorkflowExecutioLogDalModel,
 )
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, IntegrityError
 
 class SqlWorkflowRepository(WorkflowRepository):
 
@@ -83,18 +85,23 @@ class SqlWorkflowRepository(WorkflowRepository):
         event_type: str = "alert",
         test_run: bool = False,
     ) -> str:
-        return create_workflow_execution(
-            workflow_id=workflow_id,
-            workflow_revision=workflow_revision,
-            tenant_id=tenant_id,
-            triggered_by=triggered_by,
-            execution_number=execution_number,
-            event_id=event_id,
-            fingerprint=fingerprint,
-            execution_id=execution_id,
-            event_type=event_type,
-            test_run=test_run,
-        )
+        try:
+            return create_workflow_execution(
+                workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
+                tenant_id=tenant_id,
+                triggered_by=triggered_by,
+                execution_number=execution_number,
+                event_id=event_id,
+                fingerprint=fingerprint,
+                execution_id=execution_id,
+                event_type=event_type,
+                test_run=test_run,
+            )
+        except IntegrityError:
+            raise ConflictError(
+                f"Workflow execution for workflow {workflow_id} with revision {workflow_revision} already exists."
+            )
 
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
         if workflow_execution.id is None:
@@ -195,6 +202,14 @@ class SqlWorkflowRepository(WorkflowRepository):
             self.__workflow_execution_from_db_to_dto(db_workflow_execution),
             mapped_execution_logs,
         )
+
+    def get_timeouted_workflow_exections(self) -> List[WorkflowExecutionDalModel]:
+        db_workflow_executions = get_timeouted_workflow_exections()
+
+        return [
+            self.__workflow_execution_from_db_to_dto(db_workflow_execution)
+            for db_workflow_execution in db_workflow_executions
+        ]
 
     def get_workflows_with_last_executions_v2(
         self,

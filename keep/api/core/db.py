@@ -2146,7 +2146,7 @@ def update_user_role(tenant_id, username, role):
             session.commit()
     return user
 
-
+# TODO: deprecated, must be removed
 def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     with Session(engine) as session:
         workflow_execution = session.exec(

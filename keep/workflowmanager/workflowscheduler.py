@@ -9,14 +9,10 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from threading import Lock
 
-from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.db import (
-    get_enrichment,
-    get_timeouted_workflow_exections,
-)
+from keep.api.core.db import get_enrichment
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.core.metrics import (
     workflow_execution_errors_total,
@@ -31,6 +27,7 @@ from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send
 from keep.providers.providers_factory import ProviderConfigurationException
 
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
+from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -381,7 +378,9 @@ class WorkflowScheduler:
         """
         Record timeout for workflows that are running for too long.
         """
-        workflow_executions = get_timeouted_workflow_exections()
+        workflow_executions = (
+            self.workflow_repository.get_timeouted_workflow_exections()
+        )
         for workflow_execution in workflow_executions:
             self.logger.info(
                 "Timeout workflow execution detected",
@@ -503,7 +502,7 @@ class WorkflowScheduler:
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
             if not workflow_execution_id:
-                # creating the execution id here to be able to trace it in logs even in case of IntegrityError
+                # creating the execution id here to be able to trace it in logs even in case of ConflictError
                 # eventually, workflow_execution_id == execution_id
                 execution_id = str(uuid.uuid4())
                 try:
@@ -529,7 +528,7 @@ class WorkflowScheduler:
                         )
                     )
                 # If there is already running workflow from the same event
-                except IntegrityError:
+                except ConflictError as e:
                     # if the strategy is with RETRY, just put a warning and add it back to the queue
                     if (
                         workflow.workflow_strategy

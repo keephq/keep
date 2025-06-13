@@ -63,6 +63,9 @@ class WorkflowRepository(ABC):
 
         Returns:
             str: The unique identifier for the created workflow execution.
+
+        Raises:
+            ConflictError: If a workflow execution with the same ID already exists.
         """
 
     @abstractmethod
@@ -149,6 +152,15 @@ class WorkflowRepository(ABC):
             tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
                 A tuple containing the workflow execution data model and a list of associated log data models,
                 or None if no matching workflow execution is found.
+        """
+
+    @abstractmethod
+    def get_timeouted_workflow_exections(self) -> List[WorkflowExecutionDalModel]:
+        """
+        Retrieve workflow executions that have timed out.
+
+        Returns:
+            List[WorkflowExecutionDalModel]: A list of workflow execution data models that have timed out.
         """
 
     @abstractmethod
