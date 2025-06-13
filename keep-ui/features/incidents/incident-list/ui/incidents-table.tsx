@@ -97,8 +97,6 @@ function SelectedRowActions({
   );
 }
 
-const TRUNCATE_SUMMARY_LENGTH = 200;
-
 const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
@@ -206,24 +204,27 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Incident",
-      cell: ({ row }) => (
-        <div className="min-w-32 lg:min-w-64">
-          <Link
-            href={`/incidents/${row.original.id}/alerts`}
-            className="text-pretty"
-          >
-            {getIncidentName(row.original)}
-          </Link>
-          <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
-            <FormattedContent
-              content={(
-                row.original.user_summary || row.original.generated_summary
-              ).slice(0, TRUNCATE_SUMMARY_LENGTH)}
-              format="html"
-            />
+      cell: ({ row }) => {
+        const summary =
+          row.original.user_summary || row.original.generated_summary;
+        return (
+          <div className="min-w-32 lg:min-w-64">
+            <Link
+              href={`/incidents/${row.original.id}/alerts`}
+              className="text-pretty"
+            >
+              {getIncidentName(row.original)}
+            </Link>
+            {summary ? (
+              <FormattedContent
+                content={summary}
+                format="html"
+                className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3"
+              />
+            ) : null}
           </div>
-        </div>
-      ),
+        );
+      },
     }),
     columnHelper.accessor("alerts_count", {
       id: "alerts_count",
