@@ -40,6 +40,7 @@ from sqlalchemy.exc import NoResultFound, IntegrityError
 
 class SqlWorkflowRepository(WorkflowRepository):
 
+    # region Workflow
     def add_or_update_workflow(
         self,
         id: str,
@@ -75,6 +76,72 @@ class SqlWorkflowRepository(WorkflowRepository):
         )
         return self.__workflow_from_db_to_dto(db_workflow)
 
+    def delete_workflow(self, tenant_id, workflow_id):
+        delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+
+    def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
+        delete_workflow_by_provisioned_file(
+            tenant_id=tenant_id, provisioned_file=provisioned_file
+        )
+
+    def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
+        return [
+            self.__workflow_from_db_to_dto(db_workflow)
+            for db_workflow in get_all_provisioned_workflows(tenant_id=tenant_id)
+        ]
+
+    def get_all_workflows(
+        self, tenant_id: str, exclude_disabled: bool = False
+    ) -> List[WorkflowDalModel]:
+        return [
+            self.__workflow_from_db_to_dto(db_workflow)
+            for db_workflow in get_all_workflows(
+                tenant_id=tenant_id, exclude_disabled=exclude_disabled
+            )
+        ]
+
+    def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
+        return [
+            self.__workflow_from_db_to_dto(db_workflow)
+            for db_workflow in get_interval_workflows()
+        ]
+
+    def get_all_workflows_yamls(self, tenant_id: str) -> List[str]:
+        return get_all_workflows_yamls(tenant_id=tenant_id)
+
+    def get_workflow_by_id(
+        self, tenant_id: str, workflow_id: str
+    ) -> WorkflowDalModel | None:
+        db_workflow = get_workflow_by_id(tenant_id=tenant_id, workflow_id=workflow_id)
+
+        if db_workflow is not None:
+            return self.__workflow_from_db_to_dto(db_workflow)
+
+        return None
+
+    def get_workflows_with_last_executions_v2(
+        self,
+        tenant_id: str,
+        cel: str,
+        limit: int,
+        offset: int,
+        sort_by: str,
+        sort_dir: str,
+        fetch_last_executions: int = 15,
+    ) -> Tuple[list[WorkflowWithLastExecutions], int]:
+        return get_workflows_with_last_executions_v2(
+            tenant_id=tenant_id,
+            cel=cel,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            fetch_last_executions=fetch_last_executions,
+        )
+
+    # endregion
+
+    # region Workflow Execution
     def create_workflow_execution(
         self,
         workflow_id: str,
@@ -112,36 +179,6 @@ class SqlWorkflowRepository(WorkflowRepository):
 
         update_workflow_execution(workflow_execution=workflow_execution)
 
-    def delete_workflow(self, tenant_id, workflow_id):
-        delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
-
-    def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
-        delete_workflow_by_provisioned_file(
-            tenant_id=tenant_id, provisioned_file=provisioned_file
-        )
-
-    def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
-        return [
-            self.__workflow_from_db_to_dto(db_workflow)
-            for db_workflow in get_all_provisioned_workflows(tenant_id=tenant_id)
-        ]
-
-    def get_all_workflows(
-        self, tenant_id: str, exclude_disabled: bool = False
-    ) -> List[WorkflowDalModel]:
-        return [
-            self.__workflow_from_db_to_dto(db_workflow)
-            for db_workflow in get_all_workflows(
-                tenant_id=tenant_id, exclude_disabled=exclude_disabled
-            )
-        ]
-
-    def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
-        return [
-            self.__workflow_from_db_to_dto(db_workflow)
-            for db_workflow in get_interval_workflows()
-        ]
-
     def get_last_completed_workflow_execution(
         self,
         workflow_id: str,
@@ -154,19 +191,6 @@ class SqlWorkflowRepository(WorkflowRepository):
             return None
 
         return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
-
-    def get_all_workflows_yamls(self, tenant_id: str) -> List[str]:
-        return get_all_workflows_yamls(tenant_id=tenant_id)
-
-    def get_workflow_by_id(
-        self, tenant_id: str, workflow_id: str
-    ) -> WorkflowDalModel | None:
-        db_workflow = get_workflow_by_id(tenant_id=tenant_id, workflow_id=workflow_id)
-
-        if db_workflow is not None:
-            return self.__workflow_from_db_to_dto(db_workflow)
-
-        return None
 
     def get_workflow_execution(
         self,
@@ -244,27 +268,9 @@ class SqlWorkflowRepository(WorkflowRepository):
             return None
 
         return self.__workflow_execution_from_db_to_dto(db_workflow_execution)
+    # endregion
 
-    def get_workflows_with_last_executions_v2(
-        self,
-        tenant_id: str,
-        cel: str,
-        limit: int,
-        offset: int,
-        sort_by: str,
-        sort_dir: str,
-        fetch_last_executions: int = 15,
-    ) -> Tuple[list[WorkflowWithLastExecutions], int]:
-        return get_workflows_with_last_executions_v2(
-            tenant_id=tenant_id,
-            cel=cel,
-            limit=limit,
-            offset=offset,
-            sort_by=sort_by,
-            sort_dir=sort_dir,
-            fetch_last_executions=fetch_last_executions,
-        )
-
+    # region Mappers
     def __workflow_from_db_to_dto(self, db_workflow: WorkflowModel) -> WorkflowDalModel:
         return WorkflowDalModel(
             id=db_workflow.id,
@@ -314,3 +320,4 @@ class SqlWorkflowRepository(WorkflowRepository):
             message=db_workflow_execution_log.message,
             context=db_workflow_execution_log.context,
         )
+    # endregion
