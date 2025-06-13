@@ -348,10 +348,8 @@ class Step:
                             **rendered_providers_parameters
                         )
                     # exiting the loop as step/action execution was successful
-                    # Only steps with foreach should append results, actions should not
-                    is_foreach_step = self.step_type == StepType.STEP and self.foreach
                     self.context_manager.set_step_context(
-                        self.step_id, results=step_output, foreach=is_foreach_step
+                        self.step_id, results=step_output, foreach=self.foreach
                     )
                     break
                 except Exception as e:

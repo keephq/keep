@@ -846,3 +846,284 @@ def test_workflow_nested_foreach_keep_provider(db_session):
         alert = alert_result[0]  # Alert data is nested
         assert "Second alert for " in alert.get("name")
         assert alert.get("fingerprint").startswith("second-")
+
+
+def test_workflow_step_with_foreach(db_session):
+    """Test workflow with foreach in steps (like webhook_example_foreach.yml)"""
+    workflow = """workflow:
+  id: step-foreach-test
+  name: Step Foreach Test
+  triggers:
+    - type: manual
+  steps:
+    - name: python-step
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            # Simulate webhook returning list of IDs
+            {"ids": [1, 2, 3]}
+    - name: get-alerts
+      foreach: "{{ steps.python-step.results.ids }}"
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            # Simulate getting alert by ID
+            {"id": {{ foreach.value }}, "status": "firing", "name": "Alert {{ foreach.value }}"}
+  actions:
+    - name: echo-alerts
+      foreach: "{{ steps.get-alerts.results }}"
+      provider:
+        type: console
+        with:
+          message: "Alert {{ foreach.value.id }} is {{ foreach.value.status }}"
+"""
+    workflow_db = Workflow(
+        id="test-step-foreach",
+        name="test-step-foreach", 
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test step with foreach",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    
+    # Verify step with foreach accumulated results
+    get_alerts_results = wf_execution.results.get("get-alerts")
+    assert get_alerts_results is not None
+    assert len(get_alerts_results) == 3  # Three alerts from foreach
+    
+    # Verify action with foreach ran for each result
+    echo_alerts_results = wf_execution.results.get("echo-alerts")
+    assert echo_alerts_results is not None
+    assert len(echo_alerts_results) == 3  # Three echo messages
+    
+    # Verify content
+    for result in get_alerts_results:
+        assert "id" in result
+        assert "status" in result
+        assert result["status"] == "firing"
+
+
+def test_workflow_multiple_foreach_actions(db_session):
+    """Test the exact pattern from nested_foreach_example.yml - multiple actions with foreach"""
+    workflow = """workflow:
+  id: multiple-foreach-actions
+  name: Multiple Foreach Actions
+  triggers:
+    - type: manual
+  steps:
+    - name: python-step
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            users = [
+                {"user": "alice", "description": "Alice from IT"},
+                {"user": "bob", "description": "Bob from DevOps"},
+                {"user": "charlie", "description": "Charlie from Security"}
+            ]
+            users
+  actions:
+    - name: first-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "First action: {{ foreach.value.user }} - {{ foreach.value.description }}"
+    - name: second-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "Second action: {{ foreach.value.user }} - {{ foreach.value.description }}"
+    - name: third-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "Third action: {{ foreach.value.user }} - {{ foreach.value.description }}"
+"""
+    workflow_db = Workflow(
+        id="test-multiple-foreach-actions",
+        name="test-multiple-foreach-actions",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test multiple foreach actions",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    
+    # Verify all three actions executed properly
+    first_results = wf_execution.results.get("first-action")
+    second_results = wf_execution.results.get("second-action")
+    third_results = wf_execution.results.get("third-action")
+    
+    assert first_results is not None
+    assert second_results is not None  
+    assert third_results is not None
+    
+    # Each action should process all 3 users
+    assert len(first_results) == 3
+    assert len(second_results) == 3
+    assert len(third_results) == 3
+    
+    # Verify content of messages
+    assert "First action: alice" in first_results[0]
+    assert "Second action: alice" in second_results[0]
+    assert "Third action: alice" in third_results[0]
+    
+    # Verify that original step context is preserved
+    python_step_results = wf_execution.results.get("python-step")
+    assert python_step_results is not None
+    assert "users" in python_step_results
+    assert len(python_step_results["users"]) == 3
+
+
+def test_workflow_gke_style_foreach(db_session):
+    """Test GKE-style foreach pattern from examples/workflows/gke.yml"""
+    workflow = """workflow:
+  id: gke-style-foreach
+  name: GKE Style Foreach
+  triggers:
+    - type: manual
+  steps:
+    - name: get-pods
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            # Simulate K8s pods response
+            [
+                {"metadata": {"name": "pod1", "namespace": "default"}, "status": {"phase": "Running"}},
+                {"metadata": {"name": "pod2", "namespace": "kube-system"}, "status": {"phase": "Pending"}},
+                {"metadata": {"name": "pod3", "namespace": "default"}, "status": {"phase": "Failed"}}
+            ]
+  actions:
+    - name: echo-pod-status
+      foreach: "{{ steps.get-pods.results }}"
+      provider:
+        type: console
+        with:
+          message: "Pod name: {{ foreach.value.metadata.name }} || Namespace: {{ foreach.value.metadata.namespace }} || Status: {{ foreach.value.status.phase }}"
+"""
+    workflow_db = Workflow(
+        id="test-gke-style-foreach",
+        name="test-gke-style-foreach",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test GKE style foreach",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    
+    # Verify action executed for each pod
+    pod_status_results = wf_execution.results.get("echo-pod-status")
+    assert pod_status_results is not None
+    assert len(pod_status_results) == 3  # Three pods processed
+    
+    # Verify content includes pod details
+    assert "Pod name: pod1" in pod_status_results[0]
+    assert "Namespace: default" in pod_status_results[0]
+    assert "Status: Running" in pod_status_results[0]
