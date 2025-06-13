@@ -651,3 +651,198 @@ def test_workflow_bash_python(db_session):
 
     wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
     assert wf_execution.results.get("bash-step")[0].get("return_code") == 0
+
+
+def test_workflow_nested_foreach_console(db_session):
+    """Test that reproduces the bug where nested foreach with console provider fails"""
+    workflow = """workflow:
+  id: nested-foreach-console
+  name: nested-foreach-console
+  triggers:
+    - type: manual
+  steps:
+    - name: python-step
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            users = [
+                {"user": "alice", "description": "Alice from IT"},
+                {"user": "bob", "description": "Bob from DevOps"}
+            ]
+            users
+  actions:
+    - name: first-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "First action: {{ foreach.value.user }} - {{ foreach.value.description }}"
+    - name: second-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "Second action: {{ foreach.value.user }} - {{ foreach.value.description }}"
+"""
+    workflow_db = Workflow(
+        id="test-nested-foreach-console",
+        name="test-nested-foreach-console",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test nested foreach with console",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    
+    # Verify both actions executed properly
+    first_action_results = wf_execution.results.get("first-action")
+    second_action_results = wf_execution.results.get("second-action")
+    
+    assert first_action_results is not None
+    assert second_action_results is not None
+    assert len(first_action_results) == 2  # Two users processed
+    assert len(second_action_results) == 2  # Two users processed
+    
+    # Verify the content
+    assert "First action: alice - Alice from IT" in first_action_results
+    assert "First action: bob - Bob from DevOps" in first_action_results
+    assert "Second action: alice - Alice from IT" in second_action_results
+    assert "Second action: bob - Bob from DevOps" in second_action_results
+
+
+def test_workflow_nested_foreach_keep_provider(db_session):
+    """Test that reproduces the bug where nested foreach with keep provider fails"""
+    workflow = """workflow:
+  id: nested-foreach-keep
+  name: nested-foreach-keep
+  triggers:
+    - type: manual
+  steps:
+    - name: python-step
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            users = [
+                {"user": "alice", "description": "Alice from IT"},
+                {"user": "bob", "description": "Bob from DevOps"}
+            ]
+            users
+  actions:
+    - name: first-alert
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: keep
+        with:
+          alert:
+            name: "Alert for {{ foreach.value.user }}"
+            description: "{{ foreach.value.description }}"
+            severity: info
+            fingerprint: "first-{{ foreach.value.user }}"
+    - name: second-alert
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: keep
+        with:
+          alert:
+            name: "Second alert for {{ foreach.value.user }}"
+            description: "{{ foreach.value.description }}"
+            severity: info
+            fingerprint: "second-{{ foreach.value.user }}"
+"""
+    workflow_db = Workflow(
+        id="test-nested-foreach-keep",
+        name="test-nested-foreach-keep",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test nested foreach with keep provider",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+    )
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    
+    # Verify both actions executed properly
+    first_alert_results = wf_execution.results.get("first-alert")
+    second_alert_results = wf_execution.results.get("second-alert")
+    
+    assert first_alert_results is not None
+    assert second_alert_results is not None
+    assert len(first_alert_results) == 2  # Two alerts created
+    assert len(second_alert_results) == 2  # Two alerts created
+    
+    # Verify the alert content
+    for alert_result in first_alert_results:
+        alert = alert_result[0]  # Alert data is nested
+        assert "Alert for " in alert.get("name")
+        assert alert.get("fingerprint").startswith("first-")
+    
+    for alert_result in second_alert_results:
+        alert = alert_result[0]  # Alert data is nested
+        assert "Second alert for " in alert.get("name")
+        assert alert.get("fingerprint").startswith("second-")

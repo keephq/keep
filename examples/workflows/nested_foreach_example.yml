@@ -1,0 +1,35 @@
+workflow:
+  id: nested-foreach-example
+  name: Nested Foreach Example
+  description: Demonstrates multiple foreach actions iterating over the same step results
+  triggers:
+    - type: manual
+
+  steps:
+    - name: python-step
+      provider:
+        type: python
+        config: "{{ providers.default-python }}"
+        with:
+          code: |
+            users = [
+                {"user": "alice", "description": "Alice from IT"},
+                {"user": "bob", "description": "Bob from DevOps"},
+                {"user": "charlie", "description": "Charlie from Security"}
+            ]
+            users
+
+  actions:
+    - name: first-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "First action processing user: {{ foreach.value.user }} - {{ foreach.value.description }}"
+    
+    - name: second-action
+      foreach: "{{ steps.python-step.results.users }}"
+      provider:
+        type: console
+        with:
+          message: "Second action processing user: {{ foreach.value.user }} - {{ foreach.value.description }}"
