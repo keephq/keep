@@ -75,35 +75,35 @@ def test_xss_protection_in_incident_list(
         browser.remove_listener("dialog", handle_dialog)
 
 
-# @pytest.fixture
-# def xss_alert():
-#     alert = create_fake_alert(0, "datadog")
-#     if not alert:
-#         raise Exception("Failed to create fake alert")
-#     alert["name"] = "XSS Alert"
-#     alert["description"] = '<script>alert("XSS")</script>'
-#     alert["description_format"] = "html"
-#     upload_alert("", alert)
-#     return alert
+@pytest.fixture
+def xss_alert():
+    alert = create_fake_alert(0, "datadog")
+    if not alert:
+        raise Exception("Failed to create fake alert")
+    alert["name"] = "XSS Alert"
+    alert["description"] = '<script>alert("XSS")</script>'
+    alert["description_format"] = "html"
+    upload_alert("", alert)
+    return alert
 
 
-# def test_xss_protection_in_alert_description(browser: Page, xss_alert):
-#     init_e2e_test(browser, next_url="/alerts/feed")
-#     browser.wait_for_timeout(1000)
-#     cel_input_locator = browser.locator(".alerts-cel-input")
-#     cel_input_locator.click()
-#     cel_input_locator.type(f'name == "{xss_alert["name"]}"')
-#     browser.keyboard.press("Enter")
-#     browser.wait_for_timeout(1000)
-#     browser.locator(
-#         "table[data-testid='alerts-table'] tbody tr",
-#         has_text=xss_alert["name"],
-#     ).first.click()
-#     description_locator = browser.get_by_role("heading", name="Description").locator(
-#         ".."
-#     )
-#     html_content = description_locator.inner_html()
-#     assert "<script>" not in html_content, "Unescaped script tag found in HTML"
+def test_xss_protection_in_alert_description(browser: Page, xss_alert):
+    init_e2e_test(browser, next_url="/alerts/feed")
+    browser.wait_for_timeout(1000)
+    cel_input_locator = browser.locator(".alerts-cel-input")
+    cel_input_locator.click()
+    cel_input_locator.type(f'name == "{xss_alert["name"]}"')
+    browser.keyboard.press("Enter")
+    browser.wait_for_timeout(1000)
+    browser.locator(
+        "table[data-testid='alerts-table'] tbody tr",
+        has_text=xss_alert["name"],
+    ).first.click()
+    description_locator = browser.get_by_role("heading", name="Description").locator(
+        ".."
+    )
+    html_content = description_locator.inner_html()
+    assert "<script>" not in html_content, "Unescaped script tag found in HTML"
 
 
 # @pytest.fixture
