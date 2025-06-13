@@ -37,24 +37,6 @@ def test_xss_protection_in_incident_list(
         browser.wait_for_load_state("networkidle")
         browser.wait_for_url(lambda url: url.startswith(KEEP_UI_URL + "/incidents"))
 
-        # DEBUG: Check if page loaded and table exists
-        print(f"Current URL: {browser.url}")
-        print(f"Page title: {browser.title()}")
-
-        table = browser.locator("table[data-testid='incidents-table']")
-        print(f"Table exists: {table.count() > 0}")
-
-        if table.count() > 0:
-            rows = browser.locator("table[data-testid='incidents-table'] tbody tr")
-            print(f"Number of rows: {rows.count()}")
-
-            # Print all row texts to see what's actually there
-            for i in range(min(rows.count(), 5)):  # Check first 5 rows
-                row_text = rows.nth(i).inner_text()
-                print(f"Row {i}: {row_text}")
-
-        print(f"Looking for incident: {xss_incident['user_generated_name']}")
-
         assert not xss_dialog_appeared, "XSS attack succeeded - alert dialog appeared"
 
         # Verify that the XSS payload is properly escaped in the table
@@ -87,7 +69,9 @@ def xss_alert():
     return alert
 
 
-def test_xss_protection_in_alert_description(browser: Page, xss_alert):
+def test_xss_protection_in_alert_description(
+    browser: Page, xss_alert, setup_page_logging, failure_artifacts
+):
     init_e2e_test(browser, next_url="/alerts/feed")
     browser.wait_for_timeout(1000)
     cel_input_locator = browser.locator(".alerts-cel-input")
@@ -106,69 +90,71 @@ def test_xss_protection_in_alert_description(browser: Page, xss_alert):
     assert "<script>" not in html_content, "Unescaped script tag found in HTML"
 
 
-# @pytest.fixture
-# def legit_html_incident():
-#     incident = {
-#         "user_generated_name": "Incident with rich html description",
-#         # newlines are important as it changes how markdown is rendered
-#         "user_summary": '\n        <h2>Test Failure: <code>test_csb_upload_send_two_times_same_sequence_number</code></h2>\n        <h3><a href="https://google.com">Google</a></h3>\n        ',
-#     }
-#     return upload_incident(incident)
+@pytest.fixture
+def legit_html_incident():
+    incident = {
+        "user_generated_name": "Incident with rich html description",
+        # newlines are important as it changes how markdown is rendered
+        "user_summary": '\n        <h2>Test Failure: <code>test_csb_upload_send_two_times_same_sequence_number</code></h2>\n        <h3><a href="https://google.com">Google</a></h3>\n        ',
+    }
+    return upload_incident(incident)
 
 
-# def test_legit_html_content(browser: Page, legit_html_incident):
-#     try:
-#         init_e2e_test(browser, next_url="/incidents")
-#         browser.wait_for_timeout(1000)
-#         incident_row = browser.locator(
-#             "table[data-testid='incidents-table'] tbody tr",
-#             has_text=legit_html_incident["user_generated_name"],
-#         ).first
-#         html_content = incident_row.inner_html()
-#         assert "<h2>" in html_content, "H2 tag not found in HTML"
-#         assert "<code>" in html_content, "Code tag not found in HTML"
-#         assert (
-#             '<a href="https://google.com">' in html_content
-#         ), "Link tag not found in HTML"
-#     except Exception:
-#         save_failure_artifacts(browser, log_entries=[])
-#         raise
+def test_legit_html_content(
+    browser: Page, legit_html_incident, setup_page_logging, failure_artifacts
+):
+    try:
+        init_e2e_test(browser, next_url="/incidents")
+        browser.wait_for_timeout(1000)
+        incident_row = browser.locator(
+            "table[data-testid='incidents-table'] tbody tr",
+            has_text=legit_html_incident["user_generated_name"],
+        ).first
+        html_content = incident_row.inner_html()
+        assert "<h2>" in html_content, "H2 tag not found in HTML"
+        assert "<code>" in html_content, "Code tag not found in HTML"
+        assert (
+            '<a href="https://google.com">' in html_content
+        ), "Link tag not found in HTML"
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
 
 
-# @pytest.fixture
-# def alert_legit_html_content():
-#     alert = create_fake_alert(0, "datadog")
-#     if not alert:
-#         raise Exception("Failed to create fake alert")
-#     # newlines are important as it changes how markdown is rendered
-#     alert["name"] = "Alert with legit html content"
-#     alert["description"] = (
-#         '\n        <h2>Test Failure: <code>test_csb_upload_send_two_times_same_sequence_number</code></h2>\n        <h3><a href="https://google.com">Google</a></h3>\n        '
-#     )
-#     alert["description_format"] = "html"
-#     upload_alert("", alert)
-#     return alert
+@pytest.fixture
+def alert_legit_html_content():
+    alert = create_fake_alert(0, "datadog")
+    if not alert:
+        raise Exception("Failed to create fake alert")
+    # newlines are important as it changes how markdown is rendered
+    alert["name"] = "Alert with legit html content"
+    alert["description"] = (
+        '\n        <h2>Test Failure: <code>test_csb_upload_send_two_times_same_sequence_number</code></h2>\n        <h3><a href="https://google.com">Google</a></h3>\n        '
+    )
+    alert["description_format"] = "html"
+    upload_alert("", alert)
+    return alert
 
 
-# def test_legit_html_content_in_alert_description(
-#     browser: Page, alert_legit_html_content
-# ):
-#     init_e2e_test(browser, next_url="/alerts/feed")
-#     browser.wait_for_timeout(1000)
-#     cel_input_locator = browser.locator(".alerts-cel-input")
-#     cel_input_locator.click()
-#     cel_input_locator.type(f'name == "{alert_legit_html_content["name"]}"')
-#     browser.keyboard.press("Enter")
-#     browser.wait_for_timeout(1000)
-#     browser.locator(
-#         "table[data-testid='alerts-table'] tbody tr",
-#         has_text=alert_legit_html_content["name"],
-#     ).first.click()
-#     description_locator = browser.get_by_role("heading", name="Description").locator(
-#         ".."
-#     )
-#     html_content = description_locator.inner_html()
-#     assert "<h2>" in html_content, "H2 tag not found in HTML"
-#     assert "<code>" in html_content, "Code tag not found in HTML"
-#     assert '<a href="https://google.com">' in html_content, "Link tag not found in HTML"
-#     assert "<h3>" in html_content, "H3 tag not found in HTML"
+def test_legit_html_content_in_alert_description(
+    browser: Page, alert_legit_html_content
+):
+    init_e2e_test(browser, next_url="/alerts/feed")
+    browser.wait_for_timeout(1000)
+    cel_input_locator = browser.locator(".alerts-cel-input")
+    cel_input_locator.click()
+    cel_input_locator.type(f'name == "{alert_legit_html_content["name"]}"')
+    browser.keyboard.press("Enter")
+    browser.wait_for_timeout(1000)
+    browser.locator(
+        "table[data-testid='alerts-table'] tbody tr",
+        has_text=alert_legit_html_content["name"],
+    ).first.click()
+    description_locator = browser.get_by_role("heading", name="Description").locator(
+        ".."
+    )
+    html_content = description_locator.inner_html()
+    assert "<h2>" in html_content, "H2 tag not found in HTML"
+    assert "<code>" in html_content, "Code tag not found in HTML"
+    assert '<a href="https://google.com">' in html_content, "Link tag not found in HTML"
+    assert "<h3>" in html_content, "H3 tag not found in HTML"
