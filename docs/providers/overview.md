@@ -37,6 +37,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [Dynatrace](/providers/documentation/dynatrace-provider)
 - [EKS](/providers/documentation/eks-provider)
 - [Elastic](/providers/documentation/elastic-provider)
+- [Falco](/providers/documentation/falco-provider)
 - [Flashduty](/providers/documentation/flashduty-provider)
 - [GCP Monitoring](/providers/documentation/gcpmonitoring-provider)
 - [Gemini](/providers/documentation/gemini-provider)
