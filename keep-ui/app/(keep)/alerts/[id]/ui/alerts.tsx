@@ -26,7 +26,7 @@ import {
 
 const defaultPresets: Preset[] = [
   {
-    id: "feed",
+    id: "11111111-1111-1111-1111-111111111111", // FEED_PRESET_ID
     name: "feed",
     options: [],
     is_private: false,
