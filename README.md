@@ -368,6 +368,11 @@
         </a>
   </td>
   <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/falco-provider" target="_blank">
+          Falco
+        </a>
+  </td>
+  <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/wazuh-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/wazuh-icon.png" alt="Wazuh"/><br/>
           Wazuh
