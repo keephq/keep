@@ -14,15 +14,27 @@ import { AlertErrorEventModal } from "@/features/alerts/alert-error-event-proces
 import { GrTest } from "react-icons/gr";
 import { useAlerts, type AlertDto } from "@/entities/alerts/model";
 import { MdErrorOutline } from "react-icons/md";
+import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   presetName: string;
   // TODO: pass specific functions not the whole table?
   table?: Table<AlertDto>;
   onCelChanges?: (cel: string) => void;
+  // Group expansion controls
+  isGroupingActive?: boolean;
+  onToggleAllGroups?: () => void;
+  areAllGroupsExpanded?: () => boolean;
 }
 
-export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
+export function AlertPresetManager({
+  presetName,
+  table,
+  onCelChanges,
+  isGroupingActive = false,
+  onToggleAllGroups,
+  areAllGroupsExpanded,
+}: Props) {
   const { dynamicPresets } = usePresets({
     revalidateOnFocus: false,
   });
@@ -133,6 +145,24 @@ export function AlertPresetManager({ presetName, table, onCelChanges }: Props) {
           color="orange"
         ></Button>
 
+        {/* Group expansion toggle button */}
+        {isGroupingActive && onToggleAllGroups && areAllGroupsExpanded && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onToggleAllGroups}
+            icon={areAllGroupsExpanded() ? ChevronUpIcon : ChevronDownIcon}
+            tooltip={
+              areAllGroupsExpanded()
+                ? "Collapse all groups"
+                : "Expand all groups"
+            }
+            className="ml-2"
+            color="orange"
+          >
+            {areAllGroupsExpanded() ? "Collapse All" : "Expand All"}
+          </Button>
+        )}
         {/* Error alerts button with notification counter */}
         {errorAlerts && errorAlerts.length > 0 && (
           <div className="relative inline-flex ml-2">

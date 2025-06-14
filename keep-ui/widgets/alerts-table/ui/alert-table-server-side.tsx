@@ -18,7 +18,6 @@ import {
   getFilteredRowModel,
   SortingState,
   getSortedRowModel,
-  PaginationState,
 } from "@tanstack/react-table";
 import { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
@@ -54,8 +53,7 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
-import AlertPaginationServerSide from "@/widgets/alerts-table/ui/alert-pagination-server-side";
-import { FacetDto } from "@/features/filter";
+import { FacetDto, Pagination } from "@/features/filter";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
@@ -73,6 +71,8 @@ import EnhancedDateRangePickerV2, {
 } from "@/components/ui/DateRangePickerV2";
 import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
+import { PaginationState } from "@/features/filter/pagination";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -179,9 +179,11 @@ export function AlertTableServerSide({
     noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
   );
   const [paginationState, setPaginationState] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: rowStyle == "relaxed" ? 20 : 50,
+    limit: rowStyle == "relaxed" ? 20 : 50,
+    offset: 0,
   });
+  const paginationStateRef = useRef(paginationState);
+  paginationStateRef.current = paginationState;
 
   const [, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,
@@ -196,14 +198,12 @@ export function AlertTableServerSide({
       }
 
       if (onQueryChange) {
-        const limit = paginationState.pageSize;
-        const offset = limit * paginationState.pageIndex;
         const query: AlertsTableDataQuery = {
           filterCel: filterCel,
           searchCel: searchCel,
           timeFrame: timeFrame,
-          limit,
-          offset,
+          limit: paginationState.limit,
+          offset: paginationState.offset,
           sortOptions: sorting.map((s) => ({
             sortBy: s.id,
             sortDirection: s.desc ? "DESC" : "ASC",
@@ -240,10 +240,6 @@ export function AlertTableServerSide({
       },
       sorting: sorting,
       grouping: grouping,
-      pagination: {
-        pageIndex: paginationState.pageIndex,
-        pageSize: paginationState.pageSize,
-      },
     },
     meta: {
       columnTimeFormats: columnTimeFormats,
@@ -253,9 +249,6 @@ export function AlertTableServerSide({
     manualSorting: true,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    initialState: {
-      pagination: { pageSize: rowStyle == "relaxed" ? 20 : 50 },
-    },
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
     },
@@ -270,11 +263,19 @@ export function AlertTableServerSide({
     enableGlobalFilter: true,
     enableSorting: true,
     manualPagination: true,
-    pageCount: Math.ceil(alertsTotalCount / paginationState.pageSize),
-    onPaginationChange: setPaginationState,
     onGroupingChange: setGrouping,
     isMultiSortEvent: () => isShiftPressed,
   });
+
+  // When filterCel or searchCel changes, we need to reset pagination state offset to 0
+  useEffect(
+    () =>
+      setPaginationState({
+        ...paginationStateRef.current,
+        offset: 0,
+      }),
+    [filterCel, searchCel, setPaginationState]
+  );
 
   const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
 
@@ -451,6 +452,14 @@ export function AlertTableServerSide({
 
   const handleModalClose = () => setModalOpen(false);
   const handleModalOpen = () => setModalOpen(true);
+
+  // Add group expansion state
+  const groupExpansionState = useGroupExpansion(true);
+  const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
+
+  // Check if grouping is active
+  const isGroupingActive = grouping.length > 0;
+
   function renderTable() {
     if (
       !showSkeleton &&
@@ -559,11 +568,12 @@ export function AlertTableServerSide({
         <AlertsTableBody
           table={table}
           showSkeleton={showSkeleton}
-          pageSize={paginationState.pageSize}
+          pageSize={paginationState.limit}
           theme={theme}
           lastViewedAlert={lastViewedAlert}
           onRowClick={handleRowClick}
           presetName={presetName}
+          groupExpansionState={groupExpansionState}
         />
       </Table>
     );
@@ -613,6 +623,9 @@ export function AlertTableServerSide({
             presetName={presetName}
             onCelChanges={setSearchCel}
             table={table}
+            isGroupingActive={isGroupingActive}
+            onToggleAllGroups={toggleAll}
+            areAllGroupsExpanded={areAllGroupsExpanded}
           />
         )}
       </div>
@@ -622,7 +635,6 @@ export function AlertTableServerSide({
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
             <FacetsPanelServerSide
-              key={searchCel}
               usePropertyPathsSuggestions={true}
               entityName={"alerts"}
               facetOptionsCel={facetsCel}
@@ -649,10 +661,12 @@ export function AlertTableServerSide({
             </Card>
             {/* Pagination footer - fixed height */}
             <div className="h-16 flex-none">
-              <AlertPaginationServerSide
-                table={table}
+              <Pagination
+                totalCount={alertsTotalCount}
                 isRefreshing={isAsyncLoading}
                 isRefreshAllowed={isRefreshAllowed}
+                state={paginationState}
+                onStateChange={setPaginationState}
                 onRefresh={() =>
                   onReload && onReload(alertsQueryRef.current as AlertsQuery)
                 }

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.44.13"
+version = "0.45.4"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -9,7 +9,7 @@ packages = [{include = "keep"}]
 python = ">=3.11,<3.12"
 click = "^8.1.3"
 pyyaml = "^6.0"
-requests = "^2.32.0"
+requests = "^2.32.4"
 paramiko = "^3.4.0"
 elasticsearch = "^8.6.1"
 chevron = "^0.14.0"

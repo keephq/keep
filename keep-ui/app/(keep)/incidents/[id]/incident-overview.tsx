@@ -8,12 +8,8 @@ import React, { useState } from "react";
 import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronDown } from "react-icons/io5";
-import remarkRehype from "remark-rehype";
-import rehypeRaw from "rehype-raw";
-import Markdown from "react-markdown";
-import { Badge, Callout, Icon, TextInput } from "@tremor/react";
+import { Badge, Callout } from "@tremor/react";
 import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
-import Modal from "@/components/ui/Modal";
 import { IncidentChangeStatusSelect } from "features/incidents/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -35,12 +31,12 @@ import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 import { IncidentChangeSeveritySelect } from "features/incidents/change-incident-severity";
-import remarkGfm from "remark-gfm";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { startCase, xor, map, some } from "lodash";
+import { startCase, map } from "lodash";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { EnrichmentEditableField } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
 import { EnrichmentEditableForm } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 const PROVISIONED_ENRICHMENTS = [
   "services",
@@ -113,12 +109,7 @@ function Summary({
 
   const formatedSummary = (
     <div className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1">
-      <Markdown
-        remarkPlugins={[remarkGfm, remarkRehype]}
-        rehypePlugins={[rehypeRaw]}
-      >
-        {summary ?? generatedSummary}
-      </Markdown>
+      <FormattedContent content={summary ?? generatedSummary} format="html" />
     </div>
   );
 

@@ -44,7 +44,7 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
                 f"LOWER({expression_to_cast}) = 'true'": "true",
                 f"LOWER({expression_to_cast}) = 'false'": "false",
                 # regex match ensures safe casting to float
-                f"{expression_to_cast} ~ '^[-+]?[0-9]*\\.?[0-9]+$' AND CAST({expression_to_cast} AS FLOAT) >= 1": "true",
+                f"{expression_to_cast} ~ '^[-+]?[0-9]*\\.?[0-9]+$'": f"CAST({expression_to_cast} AS FLOAT) >= 1",
                 f"LOWER({expression_to_cast}) != ''": "true",
             }
             result = " ".join(

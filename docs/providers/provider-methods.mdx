@@ -1,8 +1,13 @@
-Provider methods are additional capabilities that providers expose beyond the basic `query` and `notify` functionality ([read more here](/providers/adding-a-new-provider#basics)). These methods allow you to interact with the provider's API in more specific ways, enabling richer integrations and automation capabilities.
+---
+title: "Provider methods"
+sidebarTitle: "Provider Methods"
+---
 
-## What are Provider Methods?
+Provider methods are additional capabilities that providers expose beyond the basic `query` and `notify` capabilities ([read more here](/providers/adding-a-new-provider#basics)). These methods allow you to interact with the provider's API in more specific ways, enabling richer integrations and automation capabilities.
 
-Provider methods are defined using the `PROVIDER_METHODS` list in each provider class. They represent specific actions or queries that can be performed through the provider's API.
+## What are provider methods?
+
+Developers define provider methods using the `PROVIDER_METHODS` list in each provider class. They represent specific actions or queries that you can perform through the provider's API. These methods extend the basic capabilities of providers beyond simple notifications and queries.
 
 <Frame>
   <img src="/images/provider-methods-menu.png" />
@@ -15,12 +20,12 @@ For example, a monitoring service provider might expose methods to:
 - Search for specific metrics
 - Modify monitoring configurations
 
-## Using Provider Methods
+## Using provider methods
 
-Provider methods can be accessed through:
+You can access provider methods through:
 
 - Keep's platform interface via the alert action menu
-- Keep's smart AI assistant (e.g., "get traces for this alert")
+- Keep's smart AI assistant (for example, "get traces for this alert")
 - Keep's API
 - Keep's workflows
 
@@ -34,10 +39,10 @@ Methods appear in the alert action menu when available for the alert's source pr
 
 <Note>
   The form is automatically populated with the parameters required by the
-  method, if they are available in the alert.
+  method, if they're available in the alert.
 </Note>
 
-### Via AI Assistant
+### Via AI assistant
 
 Keep's AI assistant can automatically discover and invoke provider methods based on natural language requests by understanding multiple contexts:
 
@@ -54,7 +59,7 @@ Keep's AI assistant can automatically discover and invoke provider methods based
 
 2. **Provider Context**: The AI knows:
 
-   - Which providers are connected to your account
+   - Which providers you have connected to your account
    - Available methods for each provider
    - Required parameters and their types
    - Method descriptions and capabilities
@@ -66,7 +71,7 @@ Keep's AI assistant can automatically discover and invoke provider methods based
 
 For example:
 
-```
+```text
 User: Can you get the traces for this alert?
 Assistant: I see this alert came from Datadog. I'll use the Datadog provider's
 get_traces method to fetch the traces. I'll use the trace_id from the alert's
@@ -99,11 +104,11 @@ response = await api.post(
 )
 ```
 
-## Adding New Provider Methods
+## Adding new provider methods
 
 To add a new method to your provider:
 
-1. Define the method in your provider class:
+1. Define the method in your provider class (must be an instance method):
 
 ```python
 def get_traces(self, trace_id: str) -> dict:
@@ -122,39 +127,127 @@ def get_traces(self, trace_id: str) -> dict:
 2. Add method metadata to `PROVIDER_METHODS`:
 
 ```python
+from keep.providers.models.provider_method import ProviderMethod
+
 PROVIDER_METHODS = [
-    {
-        "name": "Get Traces",
-        "description": "Retrieve trace details",
-        "func_name": "get_traces",
-        "type": "view",  # 'view' or 'action'
-        "scopes": ["traces:read"],  # Required provider scopes
-        "func_params": [
-            {
-                "name": "trace_id",
-                "type": "str",
-                "mandatory": True,
-                "description": "The trace ID to retrieve"
-            }
-        ]
-    }
+    ProviderMethod(
+        name="Get Traces",
+        description="Retrieve trace details",
+        func_name="get_traces",
+        type="view",  # 'view' or 'action'
+        scopes=["traces:read"],  # Required provider scopes
+        category="Observability",  # Optional category for grouping methods
+    )
 ]
 ```
 
-### Method Types
+Note: The `func_params` field is automatically populated by Keep through reflection of the method signature, so you don't need to define it manually.
 
-- **view**: Returns data to be displayed (e.g., getting traces, metrics)
-- **action**: Performs an action (e.g., muting an alert, creating a ticket)
+<Warning>
+Provider methods must be instance methods (not static or class methods) of the provider class. The method signature is automatically inspected to generate UI forms and parameter validation.
+</Warning>
 
-### Parameter Types
+### Complete example
 
-- `str`: String input
+Here's a complete example of a provider with custom methods:
+
+```python
+class MonitoringProvider(BaseProvider):
+    PROVIDER_DISPLAY_NAME = "Monitoring Service"
+    
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Mute Alert",
+            description="Mute an alert for a specified duration",
+            func_name="mute_alert",
+            type="action",
+            scopes=["alerts:write"],
+            category="Alert Management",
+        ),
+        ProviderMethod(
+            name="Get Metrics",
+            description="Retrieve metrics for a service",
+            func_name="get_metrics",
+            type="view",
+            scopes=["metrics:read"],
+            category="Observability",
+        ),
+    ]
+    
+    def mute_alert(self, alert_id: str, duration_minutes: int = 60) -> dict:
+        """
+        Mute an alert for the specified duration.
+        
+        Args:
+            alert_id: The ID of the alert to mute
+            duration_minutes: Duration to mute in minutes (default: 60)
+            
+        Returns:
+            dict: Confirmation of the mute action
+        """
+        # Implementation here
+        response = self._api_call(f"/alerts/{alert_id}/mute", 
+                                 {"duration": duration_minutes})
+        return {"success": True, "muted_until": response["muted_until"]}
+    
+    def get_metrics(self, service_name: str, metric_type: str, 
+                   time_range: str = "1h") -> list:
+        """
+        Get metrics for a specific service.
+        
+        Args:
+            service_name: Name of the service
+            metric_type: Type of metric (cpu, memory, latency, etc.)
+            time_range: Time range for metrics (default: "1h")
+            
+        Returns:
+            list: List of metric data points
+        """
+        # Implementation here
+        return self._query(f"metrics.{metric_type}", 
+                          service=service_name, 
+                          range=time_range)
+```
+
+### Method types
+
+- **view**: Returns data for display (for example, getting traces, metrics)
+- **action**: Performs an action (for example, muting an alert, creating a ticket)
+
+### Parameter types
+
+Supported parameter types for provider methods:
+
+- `str`: String input field
+- `int`: Numeric input field
+- `float`: Decimal number input field
+- `bool`: Boolean checkbox
 - `datetime`: Date/time picker
-- `literal`: Dropdown with predefined values
-- `int`: Numeric input
-- `bool`: Boolean input
+- `dict`: JSON object input
+- `list`: Array/list input
+- `Literal`: Dropdown with predefined values
+- `Optional[type]`: Optional parameter of the specified type
 
-### Auto-Discovery
+Example with different parameter types:
+
+```python
+from typing import Optional, Literal
+from datetime import datetime
+
+def advanced_query(
+    self,
+    metric_name: str,                                    # Required string
+    time_range: Literal["1h", "6h", "24h", "7d"] = "1h", # Dropdown with options
+    include_metadata: bool = False,                       # Boolean checkbox
+    limit: Optional[int] = None,                          # Optional integer
+    start_time: Optional[datetime] = None,                # Optional datetime picker
+) -> dict:
+    """Query metrics with advanced filtering options."""
+    # Implementation
+    pass
+```
+
+### Auto-discovery
 
 Keep automatically inspects provider classes to:
 
@@ -163,7 +256,7 @@ Keep automatically inspects provider classes to:
 3. Generate UI components
 4. Enable AI understanding of method capabilities
 
-## Best Practices
+## Best practices
 
 1. **Clear Documentation**: Provide detailed docstrings for methods
 2. **Type Hints**: Use Python type hints for parameters
@@ -174,5 +267,7 @@ Keep automatically inspects provider classes to:
 ## Limitations
 
 - Currently supports only synchronous methods
-- Parameter types are limited to basic types
+- The supported parameter types are limited to basic types
 - Methods must be instance methods of the provider class
+- Methods are automatically discovered through reflection
+- Keep validates parameter types based on type hints

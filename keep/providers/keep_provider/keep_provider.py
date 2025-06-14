@@ -164,7 +164,12 @@ class KeepProvider(BaseProvider):
             for key, val in alert_data.items():
                 if not hasattr(alert, key):
                     setattr(alert, key, val)
-        # if fingerprint_fields are not provided, use labels
+
+        # if fingerprint was explicitly mentioned in the workflow:
+        if "fingerprint" in alert_data or "fingerprint" in kwargs:
+            return alert
+
+        # else, if fingerprint_fields are not provided, use labels
         if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
 
@@ -416,18 +421,14 @@ class KeepProvider(BaseProvider):
 
         # Handle new alerts not in current state
         for fingerprint, new_alert in state_alerts_map.items():
-            if fingerprint not in curr_alerts_map:
-                # Brand new alert - set to FIRING immediately
-                new_alert.status = AlertStatus.FIRING
-                new_alert.lastReceived = datetime.now(timezone.utc).isoformat()
-                alerts_to_notify.append(new_alert)
-                self.logger.info(
-                    "New alert firing",
-                    extra={
-                        "fingerprint": fingerprint,
-                        "last_received": new_alert.lastReceived,
-                    },
-                )
+            alerts_to_notify.append(new_alert)
+            self.logger.info(
+                "New alert firing",
+                extra={
+                    "fingerprint": fingerprint,
+                    "last_received": new_alert.lastReceived,
+                },
+            )
 
         self.logger.info(
             "Completed stateless alert handling",

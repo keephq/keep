@@ -2,8 +2,11 @@ import { useCallback, useState } from "react";
 import { parseDocument } from "yaml";
 import type { editor, Uri } from "monaco-editor";
 import { MarkerSeverity, getSeverityString } from "./utils";
-import { YamlValidationError } from "../model/types";
-import { validateMustacheVariableNameForYAML } from "@/entities/workflows/lib/validate-yaml";
+import {
+  YamlValidationError,
+  YamlValidationErrorSeverity,
+} from "../model/types";
+import { validateMustacheVariableForYAMLStep } from "@/entities/workflows/lib/validate-mustache-yaml";
 import {
   getCurrentPath,
   parseWorkflowYamlStringToJSON,
@@ -15,6 +18,12 @@ interface UseYamlValidationProps {
     React.SetStateAction<YamlValidationError[]>
   >;
 }
+
+const SEVERITY_MAP = {
+  error: MarkerSeverity.Error,
+  warning: MarkerSeverity.Warning,
+  info: MarkerSeverity.Hint,
+};
 
 export interface UseYamlValidationResult {
   validationErrors: YamlValidationError[] | null;
@@ -138,7 +147,7 @@ export function useYamlValidation({
           const variableContent = match[1].trim();
 
           let errorMessage: string | null = null;
-          let severity: "error" | "warning" = "warning";
+          let severity: YamlValidationErrorSeverity = "warning";
 
           // If we have both the workflow definition and step info, we can do proper validation
           if (
@@ -154,7 +163,7 @@ export function useYamlValidation({
                 : null;
 
             if (currentStep) {
-              const result = validateMustacheVariableNameForYAML(
+              const result = validateMustacheVariableForYAMLStep(
                 variableContent,
                 currentStep,
                 currentStepType,
@@ -166,7 +175,7 @@ export function useYamlValidation({
 
               if (result) {
                 errorMessage = result[0];
-                severity = result[1] as "error" | "warning";
+                severity = result[1] as YamlValidationErrorSeverity;
               }
             }
           } else {
@@ -196,10 +205,7 @@ export function useYamlValidation({
           // Add marker for validation issues
           if (errorMessage) {
             markers.push({
-              severity:
-                severity === "error"
-                  ? MarkerSeverity.Error
-                  : MarkerSeverity.Warning,
+              severity: SEVERITY_MAP[severity],
               message: errorMessage,
               startLineNumber: startPos.lineNumber,
               startColumn: startPos.column,
@@ -233,9 +239,6 @@ export function useYamlValidation({
 
       const errors: YamlValidationError[] = [];
       for (const marker of markers) {
-        if (marker.severity === MarkerSeverity.Hint) {
-          continue;
-        }
         errors.push({
           message: marker.message,
           severity: getSeverityString(marker.severity as MarkerSeverity),

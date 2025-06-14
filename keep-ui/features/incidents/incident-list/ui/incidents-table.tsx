@@ -21,9 +21,6 @@ import React, {
   useState,
 } from "react";
 import IncidentTableComponent from "./incident-table-component";
-import Markdown from "react-markdown";
-import remarkRehype from "remark-rehype";
-import rehypeRaw from "rehype-raw";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import { Button, Link } from "@/components/ui";
 import { MergeIncidentsModal } from "@/features/incidents/merge-incidents";
@@ -43,6 +40,7 @@ import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
 import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -206,24 +204,27 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Incident",
-      cell: ({ row }) => (
-        <div className="min-w-32 lg:min-w-64">
-          <Link
-            href={`/incidents/${row.original.id}/alerts`}
-            className="text-pretty"
-          >
-            {getIncidentName(row.original)}
-          </Link>
-          <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
-            <Markdown
-              remarkPlugins={[remarkRehype]}
-              rehypePlugins={[rehypeRaw]}
+      cell: ({ row }) => {
+        const summary =
+          row.original.user_summary || row.original.generated_summary;
+        return (
+          <div className="min-w-32 lg:min-w-64">
+            <Link
+              href={`/incidents/${row.original.id}/alerts`}
+              className="text-pretty"
             >
-              {row.original.user_summary || row.original.generated_summary}
-            </Markdown>
+              {getIncidentName(row.original)}
+            </Link>
+            {summary ? (
+              <FormattedContent
+                content={summary}
+                format="html"
+                className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3"
+              />
+            ) : null}
           </div>
-        </div>
-      ),
+        );
+      },
     }),
     columnHelper.accessor("alerts_count", {
       id: "alerts_count",

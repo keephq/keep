@@ -492,3 +492,18 @@ def setup_incidents_alerts():
         "incidents": query_incidents(limit=1000, offset=0)["results"],
         "incidents_alert": incidents_alert,
     }
+
+
+def upload_incident(incident: dict):
+    url = f"{KEEP_API_URL}/incidents"
+    response = requests.post(
+        url,
+        json=incident,
+        timeout=5,
+        headers={"Authorization": f"Bearer {get_token()}"},
+    )
+    response.raise_for_status()
+    result = response.json()
+    print(f"Created incident: {result}")  # DEBUG
+
+    return result
