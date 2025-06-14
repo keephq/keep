@@ -157,7 +157,7 @@ class ProvidersService:
         logger.info(
             "Installing provider",
             extra={
-                "provider_id": provider_id,
+                "provider_id": provider_unique_id,
                 "provider_type": provider_type,
                 "tenant_id": tenant_id,
             },
@@ -171,7 +171,7 @@ class ProvidersService:
         context_manager = ContextManager(tenant_id=tenant_id)
         try:
             provider = ProvidersFactory.get_provider(
-                context_manager, provider_id, provider_type, config
+                context_manager, provider_unique_id, provider_type, config
             )
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -256,7 +256,7 @@ class ProvidersService:
         allow_provisioned=False,
     ) -> Dict[str, Any]:
         with existed_or_new_session(session) as session:
-            provider = session.exec(
+            provider: Provider = session.exec(
                 select(Provider).where(
                     (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
                 )
@@ -298,6 +298,18 @@ class ProvidersService:
             provider.installed_by = updated_by
             provider.validatedScopes = validated_scopes
             provider.pulling_enabled = pulling_enabled
+
+            if provider.consumer:
+                try:
+                    event_subscriber = EventSubscriber.get_instance()
+                    event_subscriber.remove_consumer(provider_id)
+                    event_subscriber.add_consumer(provider_instance)
+                    logger.info(f"Update consumer provider with id: {provider_id}, type: {provider.type}")
+                except Exception:
+                    err_msg = f"Failed to update consumer provider with id: {provider_id}, type: {provider.type}"
+                    logger.exception(err_msg)
+                    raise HTTPException(status_code=400, detail=err_msg)
+
             session.commit()
 
             logger.info(
@@ -348,9 +360,11 @@ class ProvidersService:
             if provider_model.consumer:
                 try:
                     event_subscriber = EventSubscriber.get_instance()
-                    event_subscriber.remove_consumer(provider_model)
-                except Exception:
+                    event_subscriber.remove_consumer(provider_model.id)
+                    logger.info(f"Remove consumer provider with id: {provider_id}, type: {provider_model.type}")
+                except Exception as e:
                     logger.exception("Failed to unregister provider as a consumer")
+                    raise HTTPException(400, detail=f"Fail to remove consumer: {e}")
 
             try:
                 provider = ProvidersFactory.get_provider(
