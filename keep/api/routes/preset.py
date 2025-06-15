@@ -585,3 +585,121 @@ def delete_tab(
     )
     logger.info("Deleted tab", extra={"tab_id": tab_id})
     return PresetDto(**preset.to_dict())
+
+
+class ColumnConfigurationDto(BaseModel):
+    column_visibility: dict[str, bool] = {}
+    column_order: list[str] = []
+    column_rename_mapping: dict[str, str] = {}
+    column_time_formats: dict[str, str] = {}
+    column_list_formats: dict[str, str] = {}
+
+
+@router.put(
+    "/{preset_id}/column-config",
+    description="Update column configuration for a preset",
+)
+def update_preset_column_config(
+    preset_id: uuid.UUID,
+    body: ColumnConfigurationDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
+    session: Session = Depends(get_session),
+) -> PresetDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Updating preset column configuration", extra={"preset_id": preset_id})
+    
+    statement = (
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
+    )
+    preset = session.exec(statement).first()
+    if not preset:
+        raise HTTPException(404, "Preset not found")
+
+    # Get current options and remove any existing column config options
+    current_options = [
+        option for option in preset.options 
+        if option.get("label", "").lower() not in [
+            "column_visibility", 
+            "column_order", 
+            "column_rename_mapping", 
+            "column_time_formats", 
+            "column_list_formats"
+        ]
+    ]
+
+    # Add new column configuration options
+    if body.column_visibility:
+        current_options.append({
+            "label": "column_visibility",
+            "value": body.column_visibility
+        })
+    
+    if body.column_order:
+        current_options.append({
+            "label": "column_order", 
+            "value": body.column_order
+        })
+    
+    if body.column_rename_mapping:
+        current_options.append({
+            "label": "column_rename_mapping",
+            "value": body.column_rename_mapping
+        })
+    
+    if body.column_time_formats:
+        current_options.append({
+            "label": "column_time_formats",
+            "value": body.column_time_formats
+        })
+    
+    if body.column_list_formats:
+        current_options.append({
+            "label": "column_list_formats",
+            "value": body.column_list_formats
+        })
+
+    # Update the preset options
+    preset.options = current_options
+    session.commit()
+    session.refresh(preset)
+    
+    logger.info("Updated preset column configuration", extra={"preset_id": preset_id})
+    return PresetDto(**preset.to_dict())
+
+
+@router.get(
+    "/{preset_id}/column-config",
+    description="Get column configuration for a preset",
+)
+def get_preset_column_config(
+    preset_id: uuid.UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:preset"])
+    ),
+    session: Session = Depends(get_session),
+) -> ColumnConfigurationDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting preset column configuration", extra={"preset_id": preset_id})
+    
+    statement = (
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
+    )
+    preset = session.exec(statement).first()
+    if not preset:
+        raise HTTPException(404, "Preset not found")
+
+    preset_dto = PresetDto(**preset.to_dict())
+    
+    return ColumnConfigurationDto(
+        column_visibility=preset_dto.column_visibility,
+        column_order=preset_dto.column_order,
+        column_rename_mapping=preset_dto.column_rename_mapping,
+        column_time_formats=preset_dto.column_time_formats,
+        column_list_formats=preset_dto.column_list_formats,
+    )

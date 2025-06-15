@@ -41,6 +41,11 @@ export const useFetchProviders = () => {
   );
 
   useEffect(() => {
+    // Check if we're in a browser environment before accessing localStorage
+    if (typeof window === "undefined" || typeof localStorage === "undefined") {
+      return;
+    }
+    
     const toastShown = localStorage.getItem(toastShownKey);
 
     if (isLocalhost && !toastShown) {
