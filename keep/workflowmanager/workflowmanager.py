@@ -706,8 +706,6 @@ class WorkflowManager:
             self.workflow_repository.update_workflow_execution(
                 WorkflowExecutionDalModel(
                     id=workflow_execution_id,
-                    workflow_id=workflow.workflow_id,
-                    tenant_id=workflow.context_manager.tenant_id,
                     results=serialized_workflow_results,
                 )
             )

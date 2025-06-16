@@ -1042,15 +1042,14 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         )
 
 
-def update_workflow_execution(workflow_execution: WorkflowExecutionDalModel):
-    if workflow_execution.id is None:
+def update_workflow_execution(workflow_execution_patch: dict):
+    if workflow_execution_patch.get("id") is None:
         raise ValueError("Workflow execution ID must not be None")
 
     with Session(engine) as session:
-        workflow_execution_patch = workflow_execution.dict(exclude_unset=True)
         stmt = (
             update(WorkflowExecution)
-            .where(WorkflowExecution.id == workflow_execution.id)
+            .where(WorkflowExecution.id == workflow_execution_patch.get("id"))
             .values(
                 **workflow_execution_patch
             )  # only update fields that are explicitly set in model
