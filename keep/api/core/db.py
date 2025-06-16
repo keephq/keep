@@ -81,9 +81,7 @@ from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-imp
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
 from keep.api.models.time_stamp import TimeStampFilter
-from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
-    WorkflowExecutionDalModel,
-)
+
 
 logger = logging.getLogger(__name__)
 
