@@ -883,7 +883,7 @@ class WorkflowScheduler:
             workflow_execution=WorkflowExecutionDalModel(
                 id=workflow_execution.id,
                 is_running=random.randint(1, 2147483647 - 1),
-                status=status,
+                status=status.value,
                 error=workflow_execution_error,
                 execution_time=int(
                     (datetime.utcnow() - workflow_execution.started).total_seconds()
