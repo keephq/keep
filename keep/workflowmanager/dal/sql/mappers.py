@@ -40,7 +40,7 @@ def workflow_execution_from_db_to_dto(
 
     if db_workflow_execution.workflow_to_incident_execution:
         event_type = "incident"
-        event_id = db_workflow_execution.workflow_to_incident_execution.event_id
+        event_id = db_workflow_execution.workflow_to_incident_execution.incident_id
 
     return WorkflowExecutionDalModel(
         id=db_workflow_execution.id,
