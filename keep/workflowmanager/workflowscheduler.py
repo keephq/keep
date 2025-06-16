@@ -42,6 +42,7 @@ class WorkflowStatus(enum.Enum):
     SUCCESS = "success"
     ERROR = "error"
     PROVIDERS_NOT_CONFIGURED = "providers_not_configured"
+    TIMEOUT = "timeout"
 
 
 def timing_histogram(histogram):
@@ -286,6 +287,12 @@ class WorkflowScheduler:
                     <= current_time
                 ):
                     ongoing_execution.status = "timeout"
+                    self.workflow_repository.update_workflow_execution(
+                        workflow_execution=WorkflowExecutionDalModel(
+                            id=ongoing_execution.id,
+                            status=WorkflowStatus.TIMEOUT.value,
+                        )
+                    )
                     # session.commit() TODO: THINK WHAT TO DO HERE  <<<<<<<-----------------------------------------------------------------------------------
                     # re-create the execution and try to get the lock
                     try:
