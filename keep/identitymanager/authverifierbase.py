@@ -9,9 +9,11 @@ from fastapi.security import (
     HTTPBasic,
     OAuth2PasswordBearer,
 )
+from starlette.datastructures import FormData
 
 from keep.api.core.config import config
 from keep.api.core.db import get_api_key, update_key_last_used
+from keep.api.core.dependencies import extract_generic_body
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.rbac import Admin as AdminRole
 from keep.identitymanager.rbac import get_role_by_role_name
@@ -97,6 +99,7 @@ class AuthVerifierBase:
         api_key: Optional[str] = Security(auth_header),
         authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
         token: Optional[str] = Depends(oauth2_scheme),
+        body: dict | bytes | FormData = Depends(extract_generic_body),
     ) -> AuthenticatedEntity:
         """
         Main entry point for authentication and authorization.
@@ -123,7 +126,7 @@ class AuthVerifierBase:
                     detail="Read only instance, but non-read scopes requested",
                 )
 
-        authenticated_entity = self.authenticate(request, api_key, authorization, token)
+        authenticated_entity = self.authenticate(request, api_key, authorization, token, body)
         self.logger.debug(
             f"Authentication successful for entity: {authenticated_entity}"
         )
@@ -140,6 +143,7 @@ class AuthVerifierBase:
         api_key: Optional[str],
         authorization: Optional[HTTPAuthorizationCredentials],
         token: Optional[str],
+        body: Optional[dict | bytes | FormData] = None,
     ) -> AuthenticatedEntity:
         """
         Authenticate the request using either token, API key, or HTTP basic auth.
@@ -149,6 +153,7 @@ class AuthVerifierBase:
             api_key (Optional[str]): The API key from the header.
             authorization (Optional[HTTPAuthorizationCredentials]): The HTTP basic auth credentials.
             token (Optional[str]): The OAuth2 token.
+            body (Optional[dict | bytes | FormData]): incoming request body got logs
 
         Returns:
             AuthenticatedEntity: The authenticated entity.
@@ -189,6 +194,7 @@ class AuthVerifierBase:
             "No valid authentication method found",
             extra={
                 "headers": request.headers,
+                "body": request.body,
             }
         )
         raise HTTPException(
