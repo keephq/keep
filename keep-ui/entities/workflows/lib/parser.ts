@@ -305,6 +305,11 @@ export function getWithParams(
   if (withParams) {
     Object.keys(withParams).forEach((key) => {
       try {
+        // Don't parse code, it's a string. E.g. python-step with code='{"a": "b"}' should stay a string
+        if (key === "code") {
+          withParams[key] = withParams[key] as string;
+          return;
+        }
         const withParamValue = withParams[key] as string;
         const withParamJson = JSON.parse(withParamValue);
         withParams[key] = withParamJson;
@@ -474,18 +479,13 @@ export function getYamlWorkflowDefinition(
   const owners = (alert.properties.owners as string[]) ?? [];
   const services = (alert.properties.services as string[]) ?? [];
   const consts = (alert.properties.consts as Record<string, string>) ?? {};
-  // Steps (move to func?)
-  let steps = alert.sequence
-    .filter((s): s is V2StepStep => s.type.startsWith("step-"))
-    .map((s: V2StepStep) => getYamlStepFromStep(s));
-  // Actions
-  let actions = alert.sequence
-    .filter((s): s is V2ActionStep => s.type.startsWith("action-"))
-    .map((s: V2ActionStep) => getYamlActionFromAction(s));
-  // Actions > Foreach
-  alert.sequence
-    .filter((step): step is V2StepForeach => step.type === "foreach")
-    .forEach((forEach: V2StepForeach) => {
+
+  let steps: YamlStepOrAction[] = [];
+  let actions: YamlStepOrAction[] = [];
+
+  for (const step of alert.sequence) {
+    if (step.type === "foreach" && step.componentType === "container") {
+      const forEach = step as V2StepForeach;
       const forEachValue = forEach.properties.value as string;
       const condition = forEach.sequence.find(
         (step): step is V2StepConditionThreshold | V2StepConditionAssert =>
@@ -501,7 +501,7 @@ export function getYamlWorkflowDefinition(
         const forEachSequence = forEach?.sequence || [];
         const stepOrAction = forEachSequence[0] as V2StepStep | V2ActionStep;
         if (!stepOrAction) {
-          return;
+          continue;
         }
         if (stepOrAction.type.startsWith("action-")) {
           actions.push(
@@ -517,18 +517,22 @@ export function getYamlWorkflowDefinition(
           );
         }
       }
-    });
-  // Actions > Condition
-  alert.sequence
-    .filter((step): step is V2StepConditionThreshold | V2StepConditionAssert =>
-      step.type.startsWith("condition-")
-    )
-    .forEach((condition) => {
+    } else if (
+      step.type === "condition-assert" ||
+      step.type === "condition-threshold"
+    ) {
       const { actions: conditionActions, steps: conditionSteps } =
-        getActionsFromCondition(condition);
+        getActionsFromCondition(
+          step as V2StepConditionThreshold | V2StepConditionAssert
+        );
       actions = [...actions, ...conditionActions];
       steps = [...steps, ...conditionSteps];
-    });
+    } else if (step.type.startsWith("step-")) {
+      steps.push(getYamlStepFromStep(step as V2StepStep));
+    } else if (step.type.startsWith("action-")) {
+      actions.push(getYamlActionFromAction(step as V2ActionStep));
+    }
+  }
 
   const triggers = [];
   if (alert.properties.manual === "true") triggers.push({ type: "manual" });
