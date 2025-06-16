@@ -1108,17 +1108,8 @@ def get_workflow_execution_status(
         tenant_id=tenant_id,
         workflow_id=workflow_execution.workflow_id,
     )
-
-    event_id = None
-    event_type = None
-
-    if workflow_execution.workflow_to_alert_execution:
-        event_id = workflow_execution.workflow_to_alert_execution.event_id
-        event_type = "alert"
-    # TODO: sub triggers? on create? on update?
-    elif workflow_execution.workflow_to_incident_execution:
-        event_id = workflow_execution.workflow_to_incident_execution.incident_id
-        event_type = "incident"
+    event_id = workflow_execution.event_id
+    event_type = workflow_execution.event_type
 
     return WorkflowExecutionDTO(
         id=workflow_execution.id,

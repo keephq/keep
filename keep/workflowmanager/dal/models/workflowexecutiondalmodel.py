@@ -5,8 +5,8 @@ from pydantic import BaseModel
 
 class WorkflowExecutionDalModel(BaseModel):
     id: str
-    workflow_id: str
-    tenant_id: str
+    workflow_id: Optional[str]
+    tenant_id: Optional[str]
     workflow_revision: Optional[int] = None
     started: Optional[datetime] = None
     triggered_by: Optional[str] = None
@@ -18,6 +18,8 @@ class WorkflowExecutionDalModel(BaseModel):
     execution_time: Optional[int] = None
     results: Optional[dict] = None
     is_test_run: Optional[bool] = None
+    event_type: Optional[str]
+    event_id: Optional[str]
 
     class Config:
         use_enum_values = True
