@@ -185,7 +185,12 @@ class AuthVerifierBase:
                 raise HTTPException(
                     status_code=401, detail="Invalid authentication credentials"
                 )
-        self.logger.error("No valid authentication method found")
+        self.logger.error(
+            "No valid authentication method found",
+            extra={
+                "headers": request.headers,
+            }
+        )
         raise HTTPException(
             status_code=401, detail="Missing authentication credentials"
         )
