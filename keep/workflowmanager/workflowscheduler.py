@@ -27,6 +27,9 @@ from keep.providers.providers_factory import ProviderConfigurationException
 
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.exceptions import ConflictError
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
 from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -869,18 +872,24 @@ class WorkflowScheduler:
                 },
             )
             raise ValueError("Execution not found")
-        workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
-        workflow_execution.status = status
+
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
         #   and then we can remove the [:511] from here
-        workflow_execution.error = error[:511] if error else None
-        execution_time = (
-            datetime.utcnow() - workflow_execution.started
-        ).total_seconds()
-        workflow_execution.execution_time = int(execution_time)
+        workflow_execution_error = error[:511] if error else None
+
         # mark the workflow execution as finished in the db
-        self.workflow_repository.update_workflow_execution(workflow_execution)
+        self.workflow_repository.update_workflow_execution(
+            workflow_execution=WorkflowExecutionDalModel(
+                id=workflow_execution.id,
+                is_running=random.randint(1, 2147483647 - 1),
+                status=status,
+                error=workflow_execution_error,
+                execution_time=int(
+                    (datetime.utcnow() - workflow_execution.started).total_seconds()
+                ),
+            )
+        )
 
         if KEEP_EMAILS_ENABLED:
             # get the previous workflow execution id
