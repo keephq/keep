@@ -194,7 +194,7 @@ class AuthVerifierBase:
             "No valid authentication method found",
             extra={
                 "headers": request.headers,
-                "body": request.body,
+                "body": body,
             }
         )
         raise HTTPException(
