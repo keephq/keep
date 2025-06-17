@@ -95,6 +95,7 @@ Keep is highly configurable through environment variables. This allows you to cu
 |                Env var                |                              Purpose                              | Required | Default Value |                   Valid options                    |
 | :-----------------------------------: | :---------------------------------------------------------------: | :------: | :-----------: | :------------------------------------------------: |
 |             **AUTH_TYPE**             |                 Specifies the authentication type                 |    No    |   "NOAUTH"    | "AUTH0", "KEYCLOAK", "DB", "NOAUTH", "OAUTH2PROXY" |
+|       **AUTH_SESSION_TIMEOUT**        |     Specifies user session timeout. Default is 30 days(2592000)   |    No    |    2592000    | "AUTH0", "KEYCLOAK", "DB", "NOAUTH", "OAUTH2PROXY" |
 |          **KEEP_JWT_SECRET**          | Secret key for JWT token generation and validation (DB auth only) |   Yes    |     None      |              Any strong secret string              |
 |       **KEEP_DEFAULT_USERNAME**       |        Default username for the admin user (DB auth only)         |    No    |    "keep"     |             Any valid username string              |
 |       **KEEP_DEFAULT_PASSWORD**       |        Default password for the admin user (DB auth only)         |    No    |    "keep"     |             Any strong password string             |
