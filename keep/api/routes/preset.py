@@ -11,7 +11,6 @@ from fastapi import (
     Request,
     Response,
 )
-from fastapi.responses import Response as FastAPIResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
 

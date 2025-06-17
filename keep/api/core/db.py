@@ -5933,7 +5933,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
             current_time = datetime.now(timezone.utc)
             
             logger.debug(
-                f"Checking for expired dismissals",
+                "Checking for expired dismissals",
                 extra={
                     "tenant_id": tenant_id,
                     "current_time": current_time.isoformat()
@@ -5975,7 +5975,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                         continue
                     
                     logger.debug(
-                        f"Checking dismissal expiration for alert",
+                        "Checking dismissal expiration for alert",
                         extra={
                             "tenant_id": tenant_id,
                             "fingerprint": enrichment.alert_fingerprint,
@@ -5993,7 +5993,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                     if current_time >= dismissed_until_datetime:
                         # Log before making the change
                         logger.info(
-                            f"Updating expired dismissal for alert",
+                            "Updating expired dismissal for alert",
                             extra={
                                 "tenant_id": tenant_id,
                                 "fingerprint": enrichment.alert_fingerprint,
