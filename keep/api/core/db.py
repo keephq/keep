@@ -5911,3 +5911,99 @@ def create_single_tenant_for_e2e(tenant_id: str) -> None:
         except Exception:
             logger.exception("Failed to create single tenant")
             pass
+
+
+def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
+    """
+    Clean up expired alert dismissals by setting dismissed=false for alerts
+    where dismissedUntil time has passed.
+    
+    This ensures that SQL-based CEL filtering works correctly for expired dismissals.
+    """
+    logger = logging.getLogger(__name__)
+    
+    with existed_or_new_session(session) as session:
+        try:
+            # Get current time in UTC
+            current_time = datetime.now(timezone.utc)
+            
+            # Get JSON extract function for the database dialect
+            dismissed_field = get_json_extract_field(session, AlertEnrichment.enrichments, "dismissed")
+            dismissed_until_field = get_json_extract_field(session, AlertEnrichment.enrichments, "dismissedUntil")
+            
+            # Find enrichments where:
+            # 1. dismissed is true/True/"true"
+            # 2. dismissedUntil is not null/forever and is in the past
+            query = session.query(AlertEnrichment).filter(
+                and_(
+                    AlertEnrichment.tenant_id == tenant_id,
+                    dismissed_field.in_(['true', 'True', True, '1']),
+                    dismissed_until_field.is_not(null()),
+                    dismissed_until_field != 'forever'
+                )
+            )
+            
+            expired_enrichments = query.all()
+            updated_count = 0
+            
+            for enrichment in expired_enrichments:
+                try:
+                    dismissed_until_str = enrichment.enrichments.get("dismissedUntil")
+                    if not dismissed_until_str or dismissed_until_str == "forever":
+                        continue
+                    
+                    # Parse the dismissedUntil datetime
+                    dismissed_until_datetime = datetime.strptime(
+                        dismissed_until_str, "%Y-%m-%dT%H:%M:%S.%fZ"
+                    ).replace(tzinfo=timezone.utc)
+                    
+                    # Check if dismissal has expired
+                    if current_time >= dismissed_until_datetime:
+                        # Update the enrichment to set dismissed=false
+                        new_enrichments = enrichment.enrichments.copy()
+                        new_enrichments["dismissed"] = False
+                        
+                        # Update in database
+                        stmt = (
+                            update(AlertEnrichment)
+                            .where(AlertEnrichment.id == enrichment.id)
+                            .values(enrichments=new_enrichments)
+                        )
+                        session.execute(stmt)
+                        updated_count += 1
+                        
+                        logger.debug(
+                            f"Updated expired dismissal for alert {enrichment.alert_fingerprint}",
+                            extra={
+                                "tenant_id": tenant_id,
+                                "fingerprint": enrichment.alert_fingerprint,
+                                "dismissed_until": dismissed_until_str,
+                                "current_time": current_time.isoformat()
+                            }
+                        )
+                        
+                except (ValueError, KeyError) as e:
+                    logger.warning(
+                        f"Failed to parse dismissedUntil for alert {enrichment.alert_fingerprint}: {e}",
+                        extra={
+                            "tenant_id": tenant_id,
+                            "fingerprint": enrichment.alert_fingerprint,
+                            "dismissed_until": enrichment.enrichments.get("dismissedUntil")
+                        }
+                    )
+                    continue
+            
+            if updated_count > 0:
+                session.commit()
+                logger.info(
+                    f"Cleaned up {updated_count} expired dismissals",
+                    extra={"tenant_id": tenant_id, "updated_count": updated_count}
+                )
+            
+        except Exception as e:
+            logger.exception(
+                f"Failed to cleanup expired dismissals for tenant {tenant_id}: {e}",
+                extra={"tenant_id": tenant_id}
+            )
+            session.rollback()
+            raise

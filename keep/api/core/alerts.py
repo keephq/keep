@@ -17,7 +17,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
-from keep.api.core.db import engine
+from keep.api.core.db import cleanup_expired_dismissals, engine
 
 # This import is required to create the tables
 from keep.api.core.facets import get_facet_options, get_facets
@@ -371,6 +371,16 @@ def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
         ]
 
     with Session(engine) as session:
+        # Clean up expired dismissals if CEL query involves dismissed field
+        if query_with_defaults.cel and "dismissed" in query_with_defaults.cel:
+            try:
+                cleanup_expired_dismissals(tenant_id, session)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to cleanup expired dismissals: {e}",
+                    extra={"tenant_id": tenant_id}
+                )
+        
         try:
             total_count_query = build_total_alerts_query(
                 tenant_id=tenant_id, query=query_with_defaults
