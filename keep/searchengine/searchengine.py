@@ -2,7 +2,7 @@ import enum
 import logging
 
 from keep.api.core.alerts import query_last_alerts
-from keep.api.core.db import cleanup_expired_dismissals, get_last_alerts
+from keep.api.core.db import get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.tenant_configuration import TenantConfiguration
@@ -98,16 +98,6 @@ class SearchEngine:
             list[AlertDto]: The list of alerts that match the query
         """
         self.logger.info("Searching alerts by CEL")
-        
-        # Clean up expired dismissals if CEL query involves dismissed field
-        if cel_query and "dismissed" in cel_query:
-            try:
-                cleanup_expired_dismissals(self.tenant_id)
-            except Exception as e:
-                self.logger.warning(
-                    f"Failed to cleanup expired dismissals: {e}",
-                    extra={"tenant_id": self.tenant_id}
-                )
         
         db_alerts, _ = query_last_alerts(
             tenant_id=self.tenant_id,
