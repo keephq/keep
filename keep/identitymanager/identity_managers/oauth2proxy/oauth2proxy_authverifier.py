@@ -43,6 +43,8 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         api_key: str,
         authorization: Optional[HTTPAuthorizationCredentials],
         token: Optional[str],
+        *args,
+        **kwargs,
     ) -> AuthenticatedEntity:
         # If we have an api key or an authorization header, we need to authenticate using that
         if api_key or request.headers.get("Authorization"):
