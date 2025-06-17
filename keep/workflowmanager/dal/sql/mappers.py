@@ -1,4 +1,8 @@
-from keep.api.models.db.workflow import WorkflowExecution, WorkflowExecutionLog
+from keep.api.models.db.workflow import (
+    WorkflowExecution,
+    WorkflowExecutionLog,
+    Workflow,
+)
 from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
@@ -8,7 +12,7 @@ from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
 )
 
 
-def workflow_from_db_to_dto(db_workflow: WorkflowDalModel) -> WorkflowDalModel:
+def workflow_from_db_to_dto(db_workflow: Workflow) -> WorkflowDalModel:
     return WorkflowDalModel(
         id=db_workflow.id,
         tenant_id=db_workflow.tenant_id,
