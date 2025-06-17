@@ -19,6 +19,7 @@ export default function Modal({
   className = "",
   beta = false,
   description,
+  "data-testid": dataTestId,
   ...props
 }: {
   children: React.ReactNode;
@@ -29,11 +30,13 @@ export default function Modal({
   className?: string;
   beta?: boolean;
   description?: string;
+  "data-testid"?: string;
 } & Omit<DialogProps, "open" | "onClose" | "static" | "children">) {
   return (
     <Dialog open={isOpen} onClose={onClose} {...props}>
       <DialogPanel
         className={`flex flex-col border-2 border-orange-300 rounded-lg ring-0 ${className}`}
+        data-testid={dataTestId}
       >
         {title && (
           <header className="flex flex-col mb-4">
