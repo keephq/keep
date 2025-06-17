@@ -120,6 +120,16 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             type="action",
         ),
     ]
+
+    """
+        Graylog does not behave like Prometheus; it does not resend identical alerts. Once an alert is triggered, it is sent only once. 
+        The event_definition_id refers to the notification configuration, not the individual event. 
+        Using this as the deduplication key causes all alerts from the same definition to be suppressed—even if triggered on different days. 
+        Switching to the id field is preferable, as it uniquely identifies each alert instance.
+
+        About alerts: https://go2docs.graylog.org/current/interacting_with_your_log_data/alerts.html
+        About event definitions: https://go2docs.graylog.org/current/interacting_with_your_log_data/event_definitions.html
+    """
     FINGERPRINT_FIELDS = ["id"]
 
     def __init__(
