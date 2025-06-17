@@ -6018,7 +6018,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                         updated_count += 1
                         
                         logger.info(
-                            f"Successfully updated expired dismissal",
+                            "Successfully updated expired dismissal",
                             extra={
                                 "tenant_id": tenant_id,
                                 "fingerprint": enrichment.alert_fingerprint,
@@ -6031,7 +6031,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                         # Log that dismissal is still active
                         time_remaining = (dismissed_until_datetime - current_time).total_seconds()
                         logger.debug(
-                            f"Dismissal still active for alert",
+                            "Dismissal still active for alert",
                             extra={
                                 "tenant_id": tenant_id,
                                 "fingerprint": enrichment.alert_fingerprint,
@@ -6055,7 +6055,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
             if updated_count > 0:
                 session.commit()
                 logger.info(
-                    f"Cleanup completed successfully",
+                    "Cleanup completed successfully",
                     extra={
                         "tenant_id": tenant_id, 
                         "updated_count": updated_count,
@@ -6064,7 +6064,7 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                 )
             else:
                 logger.debug(
-                    f"No expired dismissals found to clean up",
+                    "No expired dismissals found to clean up",
                     extra={
                         "tenant_id": tenant_id,
                         "total_checked": len(expired_enrichments)
