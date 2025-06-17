@@ -325,8 +325,9 @@ def test_api_endpoint_with_expired_dismissal_cel(
 ):
     """Test that API endpoints correctly handle expired dismissal CEL queries."""
     # Create alerts
-    alert1 = create_alert(
-        "api-test-alert-1",
+    fingerprint1 = "api-test-alert-1"
+    create_alert(
+        fingerprint1,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -335,8 +336,9 @@ def test_api_endpoint_with_expired_dismissal_cel(
         },
     )
     
-    alert2 = create_alert(
-        "api-test-alert-2",
+    fingerprint2 = "api-test-alert-2"
+    create_alert(
+        fingerprint2,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -356,7 +358,7 @@ def test_api_endpoint_with_expired_dismissal_cel(
         "/alerts/batch_enrich",
         headers={"x-api-key": "some-key"},
         json={
-            "fingerprints": [alert1.fingerprint],
+            "fingerprints": [fingerprint1],
             "enrichments": {
                 "dismissed": "true",
                 "dismissedUntil": past_time,
@@ -370,7 +372,7 @@ def test_api_endpoint_with_expired_dismissal_cel(
         "/alerts/batch_enrich", 
         headers={"x-api-key": "some-key"},
         json={
-            "fingerprints": [alert2.fingerprint],
+            "fingerprints": [fingerprint2],
             "enrichments": {
                 "dismissed": "true",
                 "dismissedUntil": future_time,
@@ -398,7 +400,7 @@ def test_api_endpoint_with_expired_dismissal_cel(
     # Should find alert1 (expired dismissal) but not alert2 (active dismissal)
     assert result["count"] == 1
     found_alert = result["results"][0]
-    assert found_alert["fingerprint"] == alert1.fingerprint
+    assert found_alert["fingerprint"] == fingerprint1
     assert found_alert["dismissed"] is False
     
     # Query for dismissed alerts using CEL
@@ -417,5 +419,5 @@ def test_api_endpoint_with_expired_dismissal_cel(
     # Should find alert2 (active dismissal) but not alert1 (expired dismissal)
     assert result["count"] == 1
     found_alert = result["results"][0]
-    assert found_alert["fingerprint"] == alert2.fingerprint
+    assert found_alert["fingerprint"] == fingerprint2
     assert found_alert["dismissed"] is True

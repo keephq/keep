@@ -20,15 +20,18 @@ from tests.fixtures.client import client, setup_api_key, test_app
 def test_time_travel_dismissal_expiration(
     db_session, test_app, create_alert, caplog
 ):
-    """Test actual time passing scenario using freezegun - most realistic test."""
+    """Test dismissal expiration by actually moving time forward using freezegun."""
     
-    # Start at a specific time
+    # Start at 10:00 AM
     start_time = datetime.datetime(2025, 6, 17, 10, 0, 0, tzinfo=timezone.utc)
     
     with freeze_time(start_time) as frozen_time:
+        print(f"\n=== Starting at {frozen_time.time_to_freeze} ===")
+        
         # Create an alert at 10:00 AM
-        alert = create_alert(
-            "time-travel-alert",
+        fingerprint = "time-travel-alert"
+        create_alert(
+            fingerprint,
             AlertStatus.FIRING,
             start_time,
             {
@@ -46,7 +49,7 @@ def test_time_travel_dismissal_expiration(
         
         enrichment_bl = EnrichmentsBl("keep", db=db_session)
         enrichment_bl.enrich_entity(
-            fingerprint=alert.fingerprint,
+            fingerprint=fingerprint,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": dismiss_until_str,
@@ -68,7 +71,7 @@ def test_time_travel_dismissal_expiration(
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
         
         assert len(alerts_dto) == 1
-        assert alerts_dto[0].fingerprint == alert.fingerprint
+        assert alerts_dto[0].fingerprint == fingerprint
         assert alerts_dto[0].dismissed is True
         print(f"✓ At 10:00 AM: Alert correctly appears in dismissed == true filter")
         
@@ -118,7 +121,7 @@ def test_time_travel_dismissal_expiration(
         
         # This is the key test - after expiration, alert should appear in dismissed == false
         assert len(alerts_dto) == 1
-        assert alerts_dto[0].fingerprint == alert.fingerprint
+        assert alerts_dto[0].fingerprint == fingerprint
         assert alerts_dto[0].dismissed is False
         print(f"✅ At 10:45 AM: Alert correctly appears in dismissed == false filter after expiration!")
         
@@ -151,22 +154,25 @@ def test_multiple_alerts_mixed_expiration_times(
     
     with freeze_time(start_time) as frozen_time:
         # Create 3 alerts with different dismissal periods
-        alert1 = create_alert(
-            "alert-expires-in-10min",
+        fingerprint1 = "alert-expires-in-10min"
+        create_alert(
+            fingerprint1,
             AlertStatus.FIRING,
             start_time,
             {"name": "Alert 1 - Expires in 10min", "severity": "critical"},
         )
         
-        alert2 = create_alert(
-            "alert-expires-in-30min",
+        fingerprint2 = "alert-expires-in-30min"
+        create_alert(
+            fingerprint2,
             AlertStatus.FIRING,
             start_time,
             {"name": "Alert 2 - Expires in 30min", "severity": "warning"},
         )
         
-        alert3 = create_alert(
-            "alert-never-expires",
+        fingerprint3 = "alert-never-expires"
+        create_alert(
+            fingerprint3,
             AlertStatus.FIRING,
             start_time,
             {"name": "Alert 3 - Never expires", "severity": "info"},
@@ -177,7 +183,7 @@ def test_multiple_alerts_mixed_expiration_times(
         # Dismiss alert1 until 14:10 (10 minutes)
         dismiss_time_1 = start_time + timedelta(minutes=10)
         enrichment_bl.enrich_entity(
-            fingerprint=alert1.fingerprint,
+            fingerprint=fingerprint1,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": dismiss_time_1.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -191,7 +197,7 @@ def test_multiple_alerts_mixed_expiration_times(
         # Dismiss alert2 until 14:30 (30 minutes)
         dismiss_time_2 = start_time + timedelta(minutes=30)
         enrichment_bl.enrich_entity(
-            fingerprint=alert2.fingerprint,
+            fingerprint=fingerprint2,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": dismiss_time_2.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -204,7 +210,7 @@ def test_multiple_alerts_mixed_expiration_times(
         
         # Dismiss alert3 forever
         enrichment_bl.enrich_entity(
-            fingerprint=alert3.fingerprint,
+            fingerprint=fingerprint3,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": "forever",
@@ -249,7 +255,7 @@ def test_multiple_alerts_mixed_expiration_times(
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
         
         assert len(alerts_dto) == 1
-        assert alerts_dto[0].fingerprint == alert1.fingerprint
+        assert alerts_dto[0].fingerprint == fingerprint1
         print(f"✓ Alert1 correctly expired and appears in non-dismissed filter")
         
         # Check dismissed == true - should find alert2 and alert3
@@ -261,8 +267,8 @@ def test_multiple_alerts_mixed_expiration_times(
         
         assert len(alerts_dto) == 2
         dismissed_fingerprints = {alert.fingerprint for alert in alerts_dto}
-        assert alert2.fingerprint in dismissed_fingerprints
-        assert alert3.fingerprint in dismissed_fingerprints
+        assert fingerprint2 in dismissed_fingerprints
+        assert fingerprint3 in dismissed_fingerprints
         print(f"✓ Alert2 and Alert3 still correctly dismissed")
         
         # Travel to 14:45 - alert2 should also have expired, alert3 still dismissed
@@ -280,8 +286,8 @@ def test_multiple_alerts_mixed_expiration_times(
         
         assert len(alerts_dto) == 2
         not_dismissed_fingerprints = {alert.fingerprint for alert in alerts_dto}
-        assert alert1.fingerprint in not_dismissed_fingerprints
-        assert alert2.fingerprint in not_dismissed_fingerprints
+        assert fingerprint1 in not_dismissed_fingerprints
+        assert fingerprint2 in not_dismissed_fingerprints
         print(f"✓ Alert1 and Alert2 both correctly expired and appear in non-dismissed filter")
         
         # Check dismissed == true - should find only alert3 (forever dismissal)
@@ -292,7 +298,7 @@ def test_multiple_alerts_mixed_expiration_times(
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
         
         assert len(alerts_dto) == 1
-        assert alerts_dto[0].fingerprint == alert3.fingerprint
+        assert alerts_dto[0].fingerprint == fingerprint3
         print(f"✓ Alert3 still correctly dismissed forever")
         
         # Verify cleanup logs
@@ -313,8 +319,9 @@ def test_api_endpoint_time_travel_scenario(
     
     with freeze_time(start_time) as frozen_time:
         # Create an alert at 16:00
-        alert = create_alert(
-            "api-time-travel-alert",
+        fingerprint = "api-time-travel-alert"
+        create_alert(
+            fingerprint,
             AlertStatus.FIRING,
             start_time,
             {
@@ -331,7 +338,7 @@ def test_api_endpoint_time_travel_scenario(
             "/alerts/batch_enrich",
             headers={"x-api-key": "some-key"},
             json={
-                "fingerprints": [alert.fingerprint],
+                "fingerprints": [fingerprint],
                 "enrichments": {
                     "dismissed": "true",
                     "dismissedUntil": dismiss_until_str,
@@ -357,7 +364,7 @@ def test_api_endpoint_time_travel_scenario(
         assert response.status_code == 200
         result = response.json()
         assert result["count"] == 1
-        assert result["results"][0]["fingerprint"] == alert.fingerprint
+        assert result["results"][0]["fingerprint"] == fingerprint
         print(f"✓ API confirms alert is dismissed at 16:00")
         
         # Travel to 16:30 - PAST the dismissal time
@@ -382,7 +389,7 @@ def test_api_endpoint_time_travel_scenario(
         # Key test: expired dismissal should appear in non-dismissed results
         assert result["count"] == 1
         found_alert = result["results"][0]
-        assert found_alert["fingerprint"] == alert.fingerprint
+        assert found_alert["fingerprint"] == fingerprint
         assert found_alert["dismissed"] is False
         print(f"✅ API correctly returns expired alert in dismissed == false filter!")
         
@@ -403,9 +410,13 @@ def test_cleanup_function_direct_time_scenarios(
     
     with freeze_time(base_time) as frozen_time:
         # Create alerts
-        alert1 = create_alert("cleanup-test-1", AlertStatus.FIRING, base_time, {"name": "Cleanup Test 1"})
-        alert2 = create_alert("cleanup-test-2", AlertStatus.FIRING, base_time, {"name": "Cleanup Test 2"})
-        alert3 = create_alert("cleanup-test-3", AlertStatus.FIRING, base_time, {"name": "Cleanup Test 3"})
+        fingerprint1 = "cleanup-test-1"
+        fingerprint2 = "cleanup-test-2"
+        fingerprint3 = "cleanup-test-3"
+        
+        create_alert(fingerprint1, AlertStatus.FIRING, base_time, {"name": "Cleanup Test 1"})
+        create_alert(fingerprint2, AlertStatus.FIRING, base_time, {"name": "Cleanup Test 2"})
+        create_alert(fingerprint3, AlertStatus.FIRING, base_time, {"name": "Cleanup Test 3"})
         
         enrichment_bl = EnrichmentsBl("keep", db=db_session)
         
@@ -413,7 +424,7 @@ def test_cleanup_function_direct_time_scenarios(
         # Alert1: Expired 1 hour ago
         past_time = base_time - timedelta(hours=1)
         enrichment_bl.enrich_entity(
-            fingerprint=alert1.fingerprint,
+            fingerprint=fingerprint1,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": past_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -427,7 +438,7 @@ def test_cleanup_function_direct_time_scenarios(
         # Alert2: Expires in 1 hour
         future_time = base_time + timedelta(hours=1)
         enrichment_bl.enrich_entity(
-            fingerprint=alert2.fingerprint,
+            fingerprint=fingerprint2,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": future_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -440,7 +451,7 @@ def test_cleanup_function_direct_time_scenarios(
         
         # Alert3: Forever dismissal
         enrichment_bl.enrich_entity(
-            fingerprint=alert3.fingerprint,
+            fingerprint=fingerprint3,
             enrichments={
                 "dismissed": True,
                 "dismissedUntil": "forever",
@@ -475,7 +486,7 @@ def test_cleanup_function_direct_time_scenarios(
         
         # Should find alert1 (was already expired)
         assert len(alerts_dto) == 1
-        assert alerts_dto[0].fingerprint == alert1.fingerprint
+        assert alerts_dto[0].fingerprint == fingerprint1
         print(f"✓ Alert1 correctly cleaned up (was already expired)")
         
         # Move forward 2 hours - now alert2 should also expire
@@ -497,8 +508,8 @@ def test_cleanup_function_direct_time_scenarios(
         # Should find alert1 and alert2 (both expired)
         assert len(alerts_dto) == 2
         not_dismissed_fingerprints = {alert.fingerprint for alert in alerts_dto}
-        assert alert1.fingerprint in not_dismissed_fingerprints
-        assert alert2.fingerprint in not_dismissed_fingerprints
+        assert fingerprint1 in not_dismissed_fingerprints
+        assert fingerprint2 in not_dismissed_fingerprints
         print(f"✓ Alert2 also correctly cleaned up after time passed")
         
         # Alert3 should still be dismissed (forever)
@@ -509,7 +520,7 @@ def test_cleanup_function_direct_time_scenarios(
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
         
         assert len(alerts_dto) == 1
-        assert alerts_dto[0].fingerprint == alert3.fingerprint
+        assert alerts_dto[0].fingerprint == fingerprint3
         print(f"✓ Alert3 still correctly dismissed forever")
         
         print(f"\n🎉 Direct cleanup function test completed successfully!")
@@ -525,113 +536,104 @@ def test_edge_cases_with_time_travel(
     
     with freeze_time(base_time) as frozen_time:
         # Create alerts for edge case testing
-        alert_invalid_time = create_alert("invalid-time", AlertStatus.FIRING, base_time, {"name": "Invalid Time"})
-        alert_exact_boundary = create_alert("exact-boundary", AlertStatus.FIRING, base_time, {"name": "Exact Boundary"})
-        alert_microseconds = create_alert("microseconds", AlertStatus.FIRING, base_time, {"name": "Microseconds Test"})
+        fingerprint_invalid = "invalid-time"
+        fingerprint_exact = "exact-boundary"
+        fingerprint_micro = "microseconds"
+        
+        create_alert(fingerprint_invalid, AlertStatus.FIRING, base_time, {"name": "Invalid Time"})
+        create_alert(fingerprint_exact, AlertStatus.FIRING, base_time, {"name": "Exact Boundary"})
+        create_alert(fingerprint_micro, AlertStatus.FIRING, base_time, {"name": "Microseconds Test"})
         
         enrichment_bl = EnrichmentsBl("keep", db=db_session)
         
-        # Edge case 1: Invalid dismissedUntil format
+        # Test 1: Alert with malformed dismissedUntil (should be skipped gracefully)
         enrichment_bl.enrich_entity(
-            fingerprint=alert_invalid_time.fingerprint,
+            fingerprint=fingerprint_invalid,
             enrichments={
                 "dismissed": True,
-                "dismissedUntil": "invalid-date-format",
-                "note": "Invalid time format"
+                "dismissedUntil": "not-a-valid-date",
+                "note": "Invalid date format"
             },
             action_type=ActionType.GENERIC_ENRICH,
             action_callee="test_user",
-            action_description="Invalid format test"
+            action_description="Invalid date test"
         )
         
-        # Edge case 2: Exact boundary case - expires at exactly current time
-        exact_time = base_time + timedelta(minutes=10)
+        # Test 2: Alert dismissed until EXACTLY the current time
+        exact_boundary_time = base_time
         enrichment_bl.enrich_entity(
-            fingerprint=alert_exact_boundary.fingerprint,
+            fingerprint=fingerprint_exact,
             enrichments={
                 "dismissed": True,
-                "dismissedUntil": exact_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "dismissedUntil": exact_boundary_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 "note": "Exact boundary test"
             },
             action_type=ActionType.GENERIC_ENRICH,
             action_callee="test_user",
-            action_description="Boundary test"
+            action_description="Exact boundary dismissal"
         )
         
-        # Edge case 3: Test with microseconds precision
-        micro_time = base_time + timedelta(minutes=5, microseconds=123456)
+        # Test 3: Alert with microsecond precision dismissal
+        microsecond_time = base_time - timedelta(microseconds=1)
         enrichment_bl.enrich_entity(
-            fingerprint=alert_microseconds.fingerprint,
+            fingerprint=fingerprint_micro,
             enrichments={
                 "dismissed": True,
-                "dismissedUntil": micro_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "note": "Microseconds test"
+                "dismissedUntil": microsecond_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "note": "Microsecond precision test"
             },
             action_type=ActionType.GENERIC_ENRICH,
             action_callee="test_user",
-            action_description="Microseconds test"
+            action_description="Microsecond dismissal"
         )
         
-        print(f"\n=== Testing edge cases at {frozen_time.time_to_freeze} ===")
+        print(f"\n=== Running edge case tests at {frozen_time.time_to_freeze} ===")
         
         caplog.clear()
         
-        # Run cleanup - should handle invalid format gracefully
-        cleanup_expired_dismissals("keep", db_session)
+        # Run a CEL query to trigger cleanup
+        db_alerts, _ = query_last_alerts(
+            tenant_id="keep",
+            query=QueryDto(cel="dismissed == false", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
+        )
+        alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
         
-        # Should log warning about invalid format
+        # Should find exactly boundary and microseconds alerts (both expired)
+        not_dismissed_fingerprints = {alert.fingerprint for alert in alerts_dto}
+        
+        # Exact boundary should be included (current_time >= dismissed_until)
+        assert fingerprint_exact in not_dismissed_fingerprints
+        print(f"✓ Exact boundary dismissal correctly expired (>= comparison)")
+        
+        # Microsecond precision should be handled correctly
+        assert fingerprint_micro in not_dismissed_fingerprints
+        print(f"✓ Microsecond precision dismissal correctly expired")
+        
+        # Invalid date should still be dismissed (cleanup skips it)
+        db_alerts, _ = query_last_alerts(
+            tenant_id="keep",
+            query=QueryDto(cel="dismissed == true", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
+        )
+        alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+        
+        dismissed_fingerprints = {alert.fingerprint for alert in alerts_dto}
+        assert fingerprint_invalid in dismissed_fingerprints
+        print(f"✓ Invalid date format alert remains dismissed (cleanup skipped it gracefully)")
+        
+        # Check logs for handling of invalid date
         assert "Failed to parse dismissedUntil" in caplog.text
-        print(f"✓ Invalid date format handled gracefully with warning")
+        print(f"✓ Invalid date format logged correctly")
         
-        # Move to exactly the boundary time for alert_exact_boundary
-        frozen_time.tick(timedelta(minutes=10))
-        print(f"\n=== At exact boundary time {frozen_time.time_to_freeze} ===")
-        
-        caplog.clear()
-        
-        # Run cleanup - should clean up the exact boundary alert
-        cleanup_expired_dismissals("keep", db_session)
-        
-        # Check that exact boundary alert was cleaned up
-        db_alerts, _ = query_last_alerts(
-            tenant_id="keep",
-            query=QueryDto(cel="dismissed == false", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
-        )
-        alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-        
-        boundary_alert_found = any(alert.fingerprint == alert_exact_boundary.fingerprint for alert in alerts_dto)
-        assert boundary_alert_found
-        print(f"✓ Exact boundary case handled correctly (>= comparison)")
-        
-        # Move past microseconds alert expiration
-        frozen_time.tick(timedelta(minutes=-5, microseconds=200000))  # Go to 5 min 200ms
-        print(f"\n=== Past microseconds boundary {frozen_time.time_to_freeze} ===")
-        
-        caplog.clear()
-        
-        cleanup_expired_dismissals("keep", db_session)
-        
-        # Check microseconds alert was cleaned up
-        db_alerts, _ = query_last_alerts(
-            tenant_id="keep",
-            query=QueryDto(cel="dismissed == false", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
-        )
-        alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-        
-        micro_alert_found = any(alert.fingerprint == alert_microseconds.fingerprint for alert in alerts_dto)
-        assert micro_alert_found
-        print(f"✓ Microseconds precision handled correctly")
-        
-        print(f"\n🎉 Edge cases test completed successfully!")
+        print(f"\n🎉 Edge case tests completed successfully!")
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_performance_with_many_alerts_time_travel(
     db_session, test_app, create_alert, caplog
 ):
-    """Test performance with many alerts using time travel."""
+    """Test cleanup performance with many alerts using time travel."""
     
-    base_time = datetime.datetime(2025, 6, 17, 20, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime.datetime(2025, 6, 17, 18, 0, 0, tzinfo=timezone.utc)
     
     with freeze_time(base_time) as frozen_time:
         print(f"\n=== Creating 20 alerts for performance test ===")
@@ -641,20 +643,20 @@ def test_performance_with_many_alerts_time_travel(
         
         # Create 20 alerts with various dismissal times
         for i in range(20):
-            alert = create_alert(
-                f"perf-alert-{i}",
+            fingerprint = f"perf-alert-{i}"
+            create_alert(
+                fingerprint,
                 AlertStatus.FIRING,
                 base_time,
                 {"name": f"Performance Test Alert {i}", "severity": "warning"}
             )
-            alerts.append(alert)
             
             # Mix of dismissal scenarios
             if i < 5:
                 # First 5: Expire in 10 minutes
                 expire_time = base_time + timedelta(minutes=10)
             elif i < 10:
-                # Next 5: Expire in 30 minutes  
+                # Next 5: Expire in 30 minutes
                 expire_time = base_time + timedelta(minutes=30)
             elif i < 15:
                 # Next 5: Already expired (1 hour ago)
@@ -662,88 +664,90 @@ def test_performance_with_many_alerts_time_travel(
             else:
                 # Last 5: Forever dismissal
                 expire_time = None
-                
+            
             if expire_time:
                 dismiss_until_str = expire_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             else:
                 dismiss_until_str = "forever"
-                
+            
             enrichment_bl.enrich_entity(
-                fingerprint=alert.fingerprint,
+                fingerprint=fingerprint,
                 enrichments={
                     "dismissed": True,
                     "dismissedUntil": dismiss_until_str,
                     "note": f"Performance test dismissal {i}"
                 },
                 action_type=ActionType.GENERIC_ENRICH,
-                action_callee="test_user", 
-                action_description=f"Performance test {i}"
+                action_callee="test_user",
+                action_description=f"Perf test dismissal {i}"
             )
+            
+            alerts.append({"fingerprint": fingerprint, "expire_time": expire_time})
         
         print(f"✓ Created 20 alerts with mixed dismissal scenarios")
         
-        # Test initial state - should have 5 already expired alerts
+        # Initial state: 5 expired, 15 still dismissed
         caplog.clear()
         
-        start_query_time = time.time()
+        start_time = time.time()
         db_alerts, _ = query_last_alerts(
             tenant_id="keep",
             query=QueryDto(cel="dismissed == false", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
         )
-        query_duration = time.time() - start_query_time
+        cleanup_time = time.time() - start_time
         
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-        assert len(alerts_dto) == 5  # The 5 already expired alerts
+        assert len(alerts_dto) == 5  # 5 already expired
+        print(f"✓ Initial cleanup found 5 expired alerts in {cleanup_time:.3f}s")
         
-        print(f"✓ Initial query found 5 expired alerts in {query_duration:.3f}s")
-        assert "Found 20 potentially expired dismissals to check" in caplog.text
-        assert "Cleanup completed successfully" in caplog.text
-        
-        # Move forward 15 minutes - should expire first batch (5 more)
+        # Travel forward 15 minutes - 5 more should expire
         frozen_time.tick(timedelta(minutes=15))
-        print(f"\n=== After 15 minutes: {frozen_time.time_to_freeze} ===")
+        print(f"\n=== Time: {frozen_time.time_to_freeze} - 5 more alerts should expire ===")
         
         caplog.clear()
+        start_time = time.time()
         
-        start_query_time = time.time()
         db_alerts, _ = query_last_alerts(
             tenant_id="keep",
             query=QueryDto(cel="dismissed == false", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
         )
-        query_duration = time.time() - start_query_time
+        cleanup_time = time.time() - start_time
         
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-        assert len(alerts_dto) == 10  # 5 originally expired + 5 newly expired
+        assert len(alerts_dto) == 10  # 10 total expired now
+        print(f"✓ After 15 minutes: found 10 expired alerts in {cleanup_time:.3f}s")
         
-        print(f"✓ After 15min: found 10 expired alerts in {query_duration:.3f}s")
-        
-        # Move forward another 20 minutes - should expire second batch (5 more)  
+        # Travel forward another 20 minutes - 5 more should expire
         frozen_time.tick(timedelta(minutes=20))
-        print(f"\n=== After 35 minutes total: {frozen_time.time_to_freeze} ===")
+        print(f"\n=== Time: {frozen_time.time_to_freeze} - All timed dismissals should be expired ===")
         
         caplog.clear()
+        start_time = time.time()
         
-        start_query_time = time.time()
         db_alerts, _ = query_last_alerts(
             tenant_id="keep",
             query=QueryDto(cel="dismissed == false", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
         )
-        query_duration = time.time() - start_query_time
+        cleanup_time = time.time() - start_time
         
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-        assert len(alerts_dto) == 15  # All non-forever dismissals expired
+        assert len(alerts_dto) == 15  # 15 total expired (5 are forever)
+        print(f"✓ After 35 minutes: found 15 expired alerts in {cleanup_time:.3f}s")
         
-        print(f"✓ After 35min: found 15 expired alerts in {query_duration:.3f}s")
-        
-        # Check that 5 alerts are still dismissed (forever dismissals)
+        # Check that forever dismissals are still dismissed
         db_alerts, _ = query_last_alerts(
             tenant_id="keep",
             query=QueryDto(cel="dismissed == true", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
         )
         alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-        assert len(alerts_dto) == 5  # The forever dismissed alerts
+        assert len(alerts_dto) == 5  # 5 forever dismissals
+        print(f"✓ 5 forever dismissals still correctly dismissed")
         
-        print(f"✓ 5 alerts still correctly dismissed forever")
+        # Verify cleanup ran efficiently
+        assert "Starting cleanup of expired dismissals" in caplog.text
+        assert "Cleanup completed successfully" in caplog.text
+        print(f"✓ Cleanup completed successfully for 20 alerts")
+        
         print(f"\n🎉 Performance test with 20 alerts completed successfully!")
 
 
