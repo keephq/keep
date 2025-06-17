@@ -2,7 +2,6 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from xml.sax.saxutils import escape
 
 from fastapi import (
     APIRouter,
