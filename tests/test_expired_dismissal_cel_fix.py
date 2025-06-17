@@ -21,8 +21,9 @@ def test_cleanup_expired_dismissals_function(
 ):
     """Test that the cleanup_expired_dismissals function correctly updates expired dismissals."""
     # Create an alert
-    alert = create_alert(
-        "test-expired-dismissal",
+    fingerprint = "test-expired-dismissal"
+    create_alert(
+        fingerprint,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -37,7 +38,7 @@ def test_cleanup_expired_dismissals_function(
     
     enrichment_bl = EnrichmentsBl("keep", db=db_session)
     enrichment_bl.enrich_entity(
-        fingerprint=alert.fingerprint,
+        fingerprint=fingerprint,
         enrichments={
             "dismissed": True,
             "dismissedUntil": past_time,
@@ -50,7 +51,7 @@ def test_cleanup_expired_dismissals_function(
     
     # Verify the alert is initially dismissed in the database
     from keep.api.core.db import get_enrichment
-    enrichment = get_enrichment("keep", alert.fingerprint)
+    enrichment = get_enrichment("keep", fingerprint)
     assert enrichment.enrichments["dismissed"] is True
     assert enrichment.enrichments["dismissedUntil"] == past_time
     
@@ -58,7 +59,7 @@ def test_cleanup_expired_dismissals_function(
     cleanup_expired_dismissals("keep", db_session)
     
     # Verify the dismissal was cleaned up
-    enrichment = get_enrichment("keep", alert.fingerprint)
+    enrichment = get_enrichment("keep", fingerprint)
     assert enrichment.enrichments["dismissed"] is False
     assert enrichment.enrichments["dismissedUntil"] == past_time  # dismissedUntil should remain unchanged
 
@@ -69,8 +70,9 @@ def test_cel_filtering_with_expired_dismissal(
 ):
     """Test that CEL filtering correctly handles expired dismissals."""
     # Create two alerts
-    alert1 = create_alert(
-        "test-alert-1",
+    fingerprint1 = "test-alert-1"
+    create_alert(
+        fingerprint1,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -80,8 +82,9 @@ def test_cel_filtering_with_expired_dismissal(
         },
     )
     
-    alert2 = create_alert(
-        "test-alert-2", 
+    fingerprint2 = "test-alert-2"
+    create_alert(
+        fingerprint2, 
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -101,7 +104,7 @@ def test_cel_filtering_with_expired_dismissal(
     
     # Dismiss alert1 with expired time
     enrichment_bl.enrich_entity(
-        fingerprint=alert1.fingerprint,
+        fingerprint=fingerprint1,
         enrichments={
             "dismissed": True,
             "dismissedUntil": past_time,
@@ -114,7 +117,7 @@ def test_cel_filtering_with_expired_dismissal(
     
     # Dismiss alert2 with future time
     enrichment_bl.enrich_entity(
-        fingerprint=alert2.fingerprint,
+        fingerprint=fingerprint2,
         enrichments={
             "dismissed": True,
             "dismissedUntil": future_time,
@@ -137,7 +140,7 @@ def test_cel_filtering_with_expired_dismissal(
     # Should find alert1 (expired dismissal should be treated as not dismissed)
     # Should NOT find alert2 (still actively dismissed)
     assert len(alerts_dto) == 1
-    assert alerts_dto[0].fingerprint == alert1.fingerprint
+    assert alerts_dto[0].fingerprint == fingerprint1
     assert alerts_dto[0].dismissed is False  # Should be False due to expiration
     
     # Test CEL filter for dismissed == true
@@ -152,7 +155,7 @@ def test_cel_filtering_with_expired_dismissal(
     # Should find alert2 (active dismissal)
     # Should NOT find alert1 (expired dismissal)
     assert len(alerts_dto) == 1
-    assert alerts_dto[0].fingerprint == alert2.fingerprint
+    assert alerts_dto[0].fingerprint == fingerprint2
     assert alerts_dto[0].dismissed is True  # Should still be True as not expired
 
 
