@@ -77,7 +77,7 @@ def test_get_workflow_results():
     mock_workflow.workflow_actions = [mock_action1, mock_action2]
     mock_workflow.workflow_steps = [mock_step1, mock_step2]
 
-    workflow_manager = WorkflowManager()
+    workflow_manager = WorkflowManager.get_instance()
     result = workflow_manager._get_workflow_results(mock_workflow)
 
     expected_result = {
