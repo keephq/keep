@@ -5922,10 +5922,23 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
     """
     logger = logging.getLogger(__name__)
     
+    logger.info(
+        "Starting cleanup of expired dismissals",
+        extra={"tenant_id": tenant_id}
+    )
+    
     with existed_or_new_session(session) as session:
         try:
             # Get current time in UTC
             current_time = datetime.now(timezone.utc)
+            
+            logger.debug(
+                f"Checking for expired dismissals",
+                extra={
+                    "tenant_id": tenant_id,
+                    "current_time": current_time.isoformat()
+                }
+            )
             
             # Get JSON extract function for the database dialect
             dismissed_field = get_json_extract_field(session, AlertEnrichment.enrichments, "dismissed")
@@ -5944,6 +5957,15 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
             )
             
             expired_enrichments = query.all()
+            
+            logger.debug(
+                f"Found {len(expired_enrichments)} potentially expired dismissals to check",
+                extra={
+                    "tenant_id": tenant_id,
+                    "total_dismissed_alerts": len(expired_enrichments)
+                }
+            )
+            
             updated_count = 0
             
             for enrichment in expired_enrichments:
@@ -5952,6 +5974,16 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                     if not dismissed_until_str or dismissed_until_str == "forever":
                         continue
                     
+                    logger.debug(
+                        f"Checking dismissal expiration for alert",
+                        extra={
+                            "tenant_id": tenant_id,
+                            "fingerprint": enrichment.alert_fingerprint,
+                            "dismissed_until": dismissed_until_str,
+                            "current_time": current_time.isoformat()
+                        }
+                    )
+                    
                     # Parse the dismissedUntil datetime
                     dismissed_until_datetime = datetime.strptime(
                         dismissed_until_str, "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -5959,8 +5991,21 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                     
                     # Check if dismissal has expired
                     if current_time >= dismissed_until_datetime:
+                        # Log before making the change
+                        logger.info(
+                            f"Updating expired dismissal for alert",
+                            extra={
+                                "tenant_id": tenant_id,
+                                "fingerprint": enrichment.alert_fingerprint,
+                                "dismissed_until": dismissed_until_str,
+                                "expired_by_seconds": (current_time - dismissed_until_datetime).total_seconds(),
+                                "current_time": current_time.isoformat()
+                            }
+                        )
+                        
                         # Update the enrichment to set dismissed=false
                         new_enrichments = enrichment.enrichments.copy()
+                        old_dismissed = new_enrichments.get("dismissed")
                         new_enrichments["dismissed"] = False
                         
                         # Update in database
@@ -5972,13 +6017,26 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                         session.execute(stmt)
                         updated_count += 1
                         
+                        logger.info(
+                            f"Successfully updated expired dismissal",
+                            extra={
+                                "tenant_id": tenant_id,
+                                "fingerprint": enrichment.alert_fingerprint,
+                                "old_dismissed": old_dismissed,
+                                "new_dismissed": False,
+                                "dismissed_until": dismissed_until_str
+                            }
+                        )
+                    else:
+                        # Log that dismissal is still active
+                        time_remaining = (dismissed_until_datetime - current_time).total_seconds()
                         logger.debug(
-                            f"Updated expired dismissal for alert {enrichment.alert_fingerprint}",
+                            f"Dismissal still active for alert",
                             extra={
                                 "tenant_id": tenant_id,
                                 "fingerprint": enrichment.alert_fingerprint,
                                 "dismissed_until": dismissed_until_str,
-                                "current_time": current_time.isoformat()
+                                "time_remaining_seconds": time_remaining
                             }
                         )
                         
@@ -5988,7 +6046,8 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
                         extra={
                             "tenant_id": tenant_id,
                             "fingerprint": enrichment.alert_fingerprint,
-                            "dismissed_until": enrichment.enrichments.get("dismissedUntil")
+                            "dismissed_until": enrichment.enrichments.get("dismissedUntil"),
+                            "error": str(e)
                         }
                     )
                     continue
@@ -5996,14 +6055,26 @@ def cleanup_expired_dismissals(tenant_id: str, session: Session = None):
             if updated_count > 0:
                 session.commit()
                 logger.info(
-                    f"Cleaned up {updated_count} expired dismissals",
-                    extra={"tenant_id": tenant_id, "updated_count": updated_count}
+                    f"Cleanup completed successfully",
+                    extra={
+                        "tenant_id": tenant_id, 
+                        "updated_count": updated_count,
+                        "total_checked": len(expired_enrichments)
+                    }
+                )
+            else:
+                logger.debug(
+                    f"No expired dismissals found to clean up",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "total_checked": len(expired_enrichments)
+                    }
                 )
             
         except Exception as e:
             logger.exception(
                 f"Failed to cleanup expired dismissals for tenant {tenant_id}: {e}",
-                extra={"tenant_id": tenant_id}
+                extra={"tenant_id": tenant_id, "error": str(e)}
             )
             session.rollback()
             raise
