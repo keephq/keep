@@ -480,7 +480,7 @@ def test_cleanup_function_direct_time_scenarios(
         
         # Verify logs
         assert "Starting cleanup of expired dismissals" in caplog.text
-        assert "Found 3 potentially expired dismissals to check" in caplog.text
+        assert "Found 2 potentially expired dismissals to check" in caplog.text  # Only 2, not 3 - "forever" is filtered out
         assert "Updating expired dismissal for alert" in caplog.text
         assert "Successfully updated expired dismissal" in caplog.text
         assert "Cleanup completed successfully" in caplog.text

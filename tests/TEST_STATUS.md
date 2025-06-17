@@ -21,6 +21,12 @@ All tests have been fixed and updated to resolve the failing test issues. The te
 - **Fix**: Changed all `caplog.set_level(logging.INFO)` to `caplog.set_level(logging.DEBUG)` in `test_expired_dismissal_cel_fix_enhanced.py`
 - **Details**: Messages like "Found X potentially expired dismissals to check" and "No expired dismissals found to clean up" are logged at DEBUG level
 
+### 4. Fixed Expected Count Issue
+- **Issue**: `test_cleanup_function_direct_time_scenarios` was expecting wrong count
+- **Root Cause**: Cleanup query filters out "forever" dismissals, so it finds 2 alerts not 3
+- **Fix**: Updated test to expect "Found 2 potentially expired dismissals to check"
+- **Details**: The cleanup function's SQL query excludes `dismissedUntil='forever'` since those never expire
+
 ## Test Files Status
 
 ### `tests/test_expired_dismissal_cel_fix.py`
@@ -34,6 +40,7 @@ All tests have been fixed and updated to resolve the failing test issues. The te
 - ✅ **Fixed all fingerprint references**
 - ✅ **Uses freezegun for time-travel testing**
 - ✅ **Fixed caplog level to capture DEBUG logs**
+- ✅ **Fixed expected dismissal count (2 not 3)**
 
 ## Running the Tests
 
@@ -59,6 +66,7 @@ All tests should pass, demonstrating that:
 5. RulesEngine filters work correctly with cleaned-up dismissals
 6. Time-travel scenarios work as expected (enhanced tests)
 7. Cleanup logs are properly captured and verified at DEBUG level
+8. Cleanup correctly excludes "forever" dismissals from processing
 
 ## CI/CD Note
 These tests require:
