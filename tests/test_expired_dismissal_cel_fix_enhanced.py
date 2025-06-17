@@ -1,6 +1,7 @@
 import datetime
 import json
 import time
+import logging
 from datetime import timezone, timedelta
 
 import pytest
@@ -21,6 +22,8 @@ def test_time_travel_dismissal_expiration(
     db_session, test_app, create_alert, caplog
 ):
     """Test dismissal expiration by actually moving time forward using freezegun."""
+    # Set caplog to capture INFO level logs
+    caplog.set_level(logging.INFO)
     
     # Start at 10:00 AM
     start_time = datetime.datetime(2025, 6, 17, 10, 0, 0, tzinfo=timezone.utc)
@@ -149,6 +152,8 @@ def test_multiple_alerts_mixed_expiration_times(
     db_session, test_app, create_alert, caplog
 ):
     """Test multiple alerts with different expiration times using freezegun."""
+    # Set caplog to capture INFO level logs
+    caplog.set_level(logging.INFO)
     
     start_time = datetime.datetime(2025, 6, 17, 14, 0, 0, tzinfo=timezone.utc)
     
@@ -314,6 +319,8 @@ def test_api_endpoint_time_travel_scenario(
     db_session, client, test_app, create_alert, caplog
 ):
     """Test API endpoints with actual time travel using freezegun."""
+    # Set caplog to capture INFO level logs
+    caplog.set_level(logging.INFO)
     
     start_time = datetime.datetime(2025, 6, 17, 16, 0, 0, tzinfo=timezone.utc)
     
@@ -405,6 +412,8 @@ def test_cleanup_function_direct_time_scenarios(
     db_session, test_app, create_alert, caplog
 ):
     """Test the cleanup function directly with various time scenarios."""
+    # Set caplog to capture INFO level logs
+    caplog.set_level(logging.INFO)
     
     base_time = datetime.datetime(2025, 6, 17, 12, 0, 0, tzinfo=timezone.utc)
     
@@ -531,6 +540,8 @@ def test_edge_cases_with_time_travel(
     db_session, test_app, create_alert, caplog
 ):
     """Test edge cases using time travel."""
+    # Set caplog to capture INFO level logs
+    caplog.set_level(logging.INFO)
     
     base_time = datetime.datetime(2025, 6, 17, 9, 0, 0, tzinfo=timezone.utc)
     
@@ -632,6 +643,8 @@ def test_performance_with_many_alerts_time_travel(
     db_session, test_app, create_alert, caplog
 ):
     """Test cleanup performance with many alerts using time travel."""
+    # Set caplog to capture INFO level logs
+    caplog.set_level(logging.INFO)
     
     base_time = datetime.datetime(2025, 6, 17, 18, 0, 0, tzinfo=timezone.utc)
     

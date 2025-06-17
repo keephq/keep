@@ -15,17 +15,24 @@ All tests have been fixed and updated to resolve the failing test issue. The tes
 - **Root Cause**: Empty CEL query (`cel=""`) doesn't trigger automatic cleanup
 - **Fix**: Added explicit `cleanup_expired_dismissals()` call before fetching alerts for RulesEngine testing
 
+### 3. Fixed Caplog Level Issue
+- **Issue**: `test_api_endpoint_time_travel_scenario` was failing on CI/CD
+- **Root Cause**: `caplog` by default only captures WARNING level logs, but cleanup logs at INFO level
+- **Fix**: Added `caplog.set_level(logging.INFO)` to all tests that check logs in `test_expired_dismissal_cel_fix_enhanced.py`
+
 ## Test Files Status
 
 ### `tests/test_expired_dismissal_cel_fix.py`
 - ✅ **6 test functions** - All syntax valid
 - ✅ **Fixed all fingerprint references**
 - ✅ **Fixed RulesEngine test with explicit cleanup**
+- ✅ **No caplog issues** (tests don't check logs)
 
 ### `tests/test_expired_dismissal_cel_fix_enhanced.py`
 - ✅ **6 test functions** - All syntax valid
 - ✅ **Fixed all fingerprint references**
 - ✅ **Uses freezegun for time-travel testing**
+- ✅ **Fixed caplog level to capture INFO logs**
 
 ## Running the Tests
 
@@ -50,6 +57,7 @@ All tests should pass, demonstrating that:
 4. API endpoints handle expired dismissals correctly
 5. RulesEngine filters work correctly with cleaned-up dismissals
 6. Time-travel scenarios work as expected (enhanced tests)
+7. Cleanup logs are properly captured and verified
 
 ## CI/CD Note
 These tests require:
