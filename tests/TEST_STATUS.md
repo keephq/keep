@@ -1,7 +1,7 @@
 # Test Status Summary
 
 ## Overview
-All tests have been fixed and updated to resolve the failing test issue. The tests are syntactically correct and should pass when run in the proper environment.
+All tests have been fixed and updated to resolve the failing test issues. The tests are syntactically correct and should pass when run in the proper environment.
 
 ## Key Fixes Applied
 
@@ -16,9 +16,10 @@ All tests have been fixed and updated to resolve the failing test issue. The tes
 - **Fix**: Added explicit `cleanup_expired_dismissals()` call before fetching alerts for RulesEngine testing
 
 ### 3. Fixed Caplog Level Issue
-- **Issue**: `test_api_endpoint_time_travel_scenario` was failing on CI/CD
-- **Root Cause**: `caplog` by default only captures WARNING level logs, but cleanup logs at INFO level
-- **Fix**: Added `caplog.set_level(logging.INFO)` to all tests that check logs in `test_expired_dismissal_cel_fix_enhanced.py`
+- **Issue**: Multiple tests were failing on CI/CD
+- **Root Cause**: Tests were checking for DEBUG-level log messages but caplog was set to INFO level
+- **Fix**: Changed all `caplog.set_level(logging.INFO)` to `caplog.set_level(logging.DEBUG)` in `test_expired_dismissal_cel_fix_enhanced.py`
+- **Details**: Messages like "Found X potentially expired dismissals to check" and "No expired dismissals found to clean up" are logged at DEBUG level
 
 ## Test Files Status
 
@@ -32,7 +33,7 @@ All tests have been fixed and updated to resolve the failing test issue. The tes
 - ✅ **6 test functions** - All syntax valid
 - ✅ **Fixed all fingerprint references**
 - ✅ **Uses freezegun for time-travel testing**
-- ✅ **Fixed caplog level to capture INFO logs**
+- ✅ **Fixed caplog level to capture DEBUG logs**
 
 ## Running the Tests
 
@@ -57,7 +58,7 @@ All tests should pass, demonstrating that:
 4. API endpoints handle expired dismissals correctly
 5. RulesEngine filters work correctly with cleaned-up dismissals
 6. Time-travel scenarios work as expected (enhanced tests)
-7. Cleanup logs are properly captured and verified
+7. Cleanup logs are properly captured and verified at DEBUG level
 
 ## CI/CD Note
 These tests require:
