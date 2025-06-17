@@ -34,11 +34,15 @@ class WorkflowManager:
     PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
 
     @staticmethod
+    def create_instance() -> "WorkflowManager":
+        return WorkflowManager(
+            workflow_repository=create_workflow_repository(),
+        )
+
+    @staticmethod
     def get_instance() -> "WorkflowManager":
         if not hasattr(WorkflowManager, "_instance"):
-            WorkflowManager._instance = WorkflowManager(
-                workflow_repository=create_workflow_repository(),
-            )
+            WorkflowManager._instance = WorkflowManager.create_instance()
         return WorkflowManager._instance
 
     def __init__(self, workflow_repository: WorkflowRepository):

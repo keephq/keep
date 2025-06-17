@@ -6,7 +6,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 def test_regex_service_filter(db_session):
     """Test regex pattern matching for service name"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: service-check
 triggers:
@@ -77,7 +77,7 @@ triggers:
 
 def test_multiple_source_regex(db_session):
     """Test regex pattern matching for multiple sources"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: source-check
 triggers:
@@ -148,7 +148,7 @@ triggers:
 
 def test_combined_filters_with_regex(db_session):
     """Test combination of regex and exact match filters"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: combined-check
 triggers:
@@ -210,7 +210,7 @@ triggers:
 
 def test_wildcard_source_filter(db_session):
     """Test wildcard regex pattern for source"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: wildcard-check
 triggers:
@@ -263,7 +263,7 @@ triggers:
 
 def test_multiple_filters_with_exclusion(db_session):
     """Test multiple filters including exclusion"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: complex-check
 triggers:
@@ -327,7 +327,7 @@ triggers:
 
 def test_nested_regex_patterns(db_session):
     """Test nested regex patterns with special characters"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: nested-regex
 triggers:
@@ -411,7 +411,7 @@ triggers:
 
 def test_time_based_filters(db_session):
     """Test filtering alerts based on lastReceived timestamp patterns"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: time-check
 triggers:
@@ -480,7 +480,7 @@ triggers:
 
 def test_empty_string_filters(db_session):
     """Test handling of empty string values in filters"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: empty-check
 triggers:
@@ -540,7 +540,7 @@ triggers:
 
 def test_nested_regex_patterns(db_session, caplog):
     """Test nested regex patterns with special characters"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: nested-regex
 triggers:
@@ -612,7 +612,7 @@ triggers:
 
 def test_time_based_filters(db_session):
     """Test filtering alerts based on lastReceived timestamp patterns"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: time-check
 triggers:
@@ -681,7 +681,7 @@ triggers:
 
 def test_empty_string_filters(db_session):
     """Test handling of empty string values in filters"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: empty-check
 triggers:
@@ -741,7 +741,7 @@ triggers:
 
 def test_multiple_exclusion_filters(db_session):
     """Test multiple exclusion filters in combination"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: multi-exclude
 triggers:
@@ -818,7 +818,7 @@ triggers:
 
 def test_regex_exclusion_patterns(db_session, caplog):
     """Test regex patterns with exclusion"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: regex-exclude
 triggers:
@@ -896,7 +896,7 @@ triggers:
 
 def test_exclusion_with_source_list(db_session):
     """Test exclusion filters with source list values"""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: source-exclude
 triggers:
@@ -980,7 +980,7 @@ triggers:
 
 def test_regex_dotstar_substring_match(db_session):
     """Test that r".*abc.*" matches any alert name containing 'abc' anywhere in the string."""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: dotstar-substring-check
 triggers:
@@ -1078,7 +1078,7 @@ triggers:
 
 def test_cel_expression_filter(db_session):
     """Test CEL expression filter for alert name and severity."""
-    workflow_manager = WorkflowManager.get_instance()
+    workflow_manager = WorkflowManager.create_instance()
     workflow_definition = """workflow:
 id: cel-expression-check
 triggers:
