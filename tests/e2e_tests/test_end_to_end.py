@@ -820,8 +820,13 @@ def test_run_workflow_from_alert_and_incident(
             "button", name="Run workflow"
         ).click()
         modal = page.get_by_test_id("manual-run-workflow-modal")
+        page.wait_for_timeout(200)
+        expect(modal).to_be_visible()
+        page.wait_for_timeout(200)
         modal.get_by_test_id("manual-run-workflow-select-control").click()
-        modal.get_by_role("option", name=re.compile(r"Log every incident")).click()
+        modal.get_by_role(
+            "option", name=re.compile(r"Log every incident")
+        ).first.click()
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
         # Run workflow from alert
