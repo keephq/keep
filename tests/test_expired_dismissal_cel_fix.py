@@ -165,8 +165,9 @@ def test_cel_filtering_with_non_expired_dismissal(
 ):
     """Test that non-expired dismissals still work correctly."""
     # Create an alert
-    alert = create_alert(
-        "test-non-expired",
+    fingerprint = "test-non-expired"
+    create_alert(
+        fingerprint,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -180,7 +181,7 @@ def test_cel_filtering_with_non_expired_dismissal(
     
     enrichment_bl = EnrichmentsBl("keep", db=db_session)
     enrichment_bl.enrich_entity(
-        fingerprint=alert.fingerprint,
+        fingerprint=fingerprint,
         enrichments={
             "dismissed": True,
             "dismissedUntil": future_time,
@@ -199,7 +200,7 @@ def test_cel_filtering_with_non_expired_dismissal(
     
     alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     assert len(alerts_dto) == 1
-    assert alerts_dto[0].fingerprint == alert.fingerprint
+    assert alerts_dto[0].fingerprint == fingerprint
     assert alerts_dto[0].dismissed is True
     
     # CEL filter for dismissed == false should NOT find this alert
@@ -218,8 +219,9 @@ def test_cel_filtering_with_forever_dismissal(
 ):
     """Test that 'forever' dismissals work correctly."""
     # Create an alert
-    alert = create_alert(
-        "test-forever-dismissal",
+    fingerprint = "test-forever-dismissal"
+    create_alert(
+        fingerprint,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -231,7 +233,7 @@ def test_cel_filtering_with_forever_dismissal(
     # Dismiss forever
     enrichment_bl = EnrichmentsBl("keep", db=db_session)
     enrichment_bl.enrich_entity(
-        fingerprint=alert.fingerprint,
+        fingerprint=fingerprint,
         enrichments={
             "dismissed": True,
             "dismissedUntil": "forever",
@@ -250,7 +252,7 @@ def test_cel_filtering_with_forever_dismissal(
     
     alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     assert len(alerts_dto) == 1
-    assert alerts_dto[0].fingerprint == alert.fingerprint
+    assert alerts_dto[0].fingerprint == fingerprint
     assert alerts_dto[0].dismissed is True
     
     # CEL filter for dismissed == false should NOT find this alert
@@ -269,8 +271,9 @@ def test_rules_engine_cel_filtering_with_expired_dismissal(
 ):
     """Test that RulesEngine CEL filtering works correctly with expired dismissals."""
     # Create an alert
-    alert = create_alert(
-        "test-rules-engine",
+    fingerprint = "test-rules-engine"
+    create_alert(
+        fingerprint,
         AlertStatus.FIRING,
         datetime.datetime.utcnow(),
         {
@@ -284,7 +287,7 @@ def test_rules_engine_cel_filtering_with_expired_dismissal(
     
     enrichment_bl = EnrichmentsBl("keep", db=db_session)
     enrichment_bl.enrich_entity(
-        fingerprint=alert.fingerprint,
+        fingerprint=fingerprint,
         enrichments={
             "dismissed": True,
             "dismissedUntil": past_time,
@@ -308,7 +311,7 @@ def test_rules_engine_cel_filtering_with_expired_dismissal(
     # Filter for dismissed == false (should find the alert with expired dismissal)
     filtered_not_dismissed = rules_engine.filter_alerts(alerts_dto, "dismissed == false")
     assert len(filtered_not_dismissed) == 1
-    assert filtered_not_dismissed[0].fingerprint == alert.fingerprint
+    assert filtered_not_dismissed[0].fingerprint == fingerprint
     assert filtered_not_dismissed[0].dismissed is False
     
     # Filter for dismissed == true (should NOT find the alert with expired dismissal)
