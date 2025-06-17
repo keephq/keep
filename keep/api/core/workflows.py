@@ -190,6 +190,7 @@ def __build_base_query(
         )
         .where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
+        .where(Workflow.is_test == False)
     )
 
     return workflows_with_last_executions_query

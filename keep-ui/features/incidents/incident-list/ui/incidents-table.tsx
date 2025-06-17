@@ -36,11 +36,11 @@ import {
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
-import { MarkdownHTML } from "@/shared/ui/MarkdownHTML/MarkdownHTML";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
 import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -204,21 +204,27 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Incident",
-      cell: ({ row }) => (
-        <div className="min-w-32 lg:min-w-64">
-          <Link
-            href={`/incidents/${row.original.id}/alerts`}
-            className="text-pretty"
-          >
-            {getIncidentName(row.original)}
-          </Link>
-          <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
-            <MarkdownHTML>
-              {row.original.user_summary || row.original.generated_summary}
-            </MarkdownHTML>
+      cell: ({ row }) => {
+        const summary =
+          row.original.user_summary || row.original.generated_summary;
+        return (
+          <div className="min-w-32 lg:min-w-64">
+            <Link
+              href={`/incidents/${row.original.id}/alerts`}
+              className="text-pretty"
+            >
+              {getIncidentName(row.original)}
+            </Link>
+            {summary ? (
+              <FormattedContent
+                content={summary}
+                format="html"
+                className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3"
+              />
+            ) : null}
           </div>
-        </div>
-      ),
+        );
+      },
     }),
     columnHelper.accessor("alerts_count", {
       id: "alerts_count",
