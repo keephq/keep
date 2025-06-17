@@ -15,8 +15,8 @@ from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.dal.factories import create_workflow_repository
 from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
-from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 from keep.workflowmanager.workflow import Workflow
 
 
@@ -26,9 +26,7 @@ class WorkflowStore:
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.celpy_env = celpy.Environment()
-        self.workflow_repository = (
-            workflow_repository if workflow_repository else SqlWorkflowRepository()
-        )
+        self.workflow_repository = workflow_repository or create_workflow_repository()
 
     def get_workflow_execution(
         self,

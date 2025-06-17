@@ -85,7 +85,9 @@ class WorkflowScheduler:
         )
         self.logger = logging.getLogger(__name__)
         self.workflow_manager = workflow_manager
-        self.workflow_store = WorkflowStore()
+        self.workflow_store = WorkflowStore(
+            workflow_repository=self.workflow_repository
+        )
         # all workflows that needs to be run due to alert event
         self.workflows_to_run = []
         self._stop = False

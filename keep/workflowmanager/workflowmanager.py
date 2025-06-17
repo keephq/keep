@@ -20,13 +20,13 @@ from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
+from keep.workflowmanager.dal.factories import create_workflow_repository
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
 )
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
-from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 
 
 class WorkflowManager:
@@ -36,22 +36,24 @@ class WorkflowManager:
     @staticmethod
     def get_instance() -> "WorkflowManager":
         if not hasattr(WorkflowManager, "_instance"):
-            WorkflowManager._instance = WorkflowManager()
+            WorkflowManager._instance = WorkflowManager(
+                workflow_repository=create_workflow_repository(),
+            )
         return WorkflowManager._instance
 
-    def __init__(self, workflow_repository: WorkflowRepository = None):
+    def __init__(self, workflow_repository: WorkflowRepository):
         self.logger = logging.getLogger(__name__)
         self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
 
-        self.scheduler = WorkflowScheduler(self)
-        self.workflow_store = WorkflowStore()
+        self.scheduler = WorkflowScheduler(
+            workflow_manager=self, workflow_repository=workflow_repository
+        )
+        self.workflow_store = WorkflowStore(workflow_repository=workflow_repository)
         self.started = False
         self.cel_environment = celpy.Environment()
-        self.workflow_repository = (
-            workflow_repository if workflow_repository else SqlWorkflowRepository()
-        )
+        self.workflow_repository = workflow_repository
         # this is to enqueue the workflows in the REDIS queue
         # SHAHAR: todo - finish the REDIS implementation
         # self.loop = None
