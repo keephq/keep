@@ -298,7 +298,11 @@ def test_rules_engine_cel_filtering_with_expired_dismissal(
         action_description="Test rules engine dismissal"
     )
     
-    # Get alerts as DTOs (this should apply the validation logic)
+    # Clean up expired dismissals before fetching alerts
+    # This is needed because RulesEngine tests Python-based filtering on already-fetched DTOs
+    cleanup_expired_dismissals("keep", db_session)
+    
+    # Get alerts as DTOs (now with cleaned up dismissals)
     db_alerts, _ = query_last_alerts(
         tenant_id="keep",
         query=QueryDto(cel="", limit=100, sort_by="timestamp", sort_dir="desc", sort_options=[])
