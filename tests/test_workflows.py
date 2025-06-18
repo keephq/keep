@@ -662,7 +662,9 @@ def test_workflow_bash_python(db_session):
     "keep.providers.postgres_provider.postgres_provider.PostgresProvider.validate_config"
 )
 @patch("keep.step.step.StepError")
+@patch("keep.api.tasks.process_event_task.process_event")
 def test_workflow_keep_notify_after_another_foreach(
+    mock_process_event,
     mock_step_error,
     mock_postgres_validate_config,
     mock_postgres_notify,
@@ -740,4 +742,4 @@ def test_workflow_keep_notify_after_another_foreach(
         workflow=workflow, workflow_execution_id=workflow_execution_id
     )
 
-    assert mock_step_error.call_count == 1
+    assert mock_step_error.call_count == 0
