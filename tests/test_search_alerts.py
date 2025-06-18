@@ -1447,15 +1447,38 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
 
 @freezegun.freeze_time("2025-06-18 17:51:23")
 @patch("keep.searchengine.searchengine.query_last_alerts", return_value=([], 0))
-def test_timeframe_usage_in_search_alerts_by_cel(mock_query_last_alerts):
-    SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts_by_cel(
-        cel_query="providerType != 'gcp'", timeframe=0.1667, limit=223
+@pytest.mark.parametrize(
+    "cel_query, timeframe, limit, expected_cel",
+    [
+        (None, 0.1667, 223, "(lastReceived >= '2025-06-18T11:51:20.120000+00:00')"),
+        (
+            "providerType != 'gcp'",
+            0.1667,
+            500,
+            "(lastReceived >= '2025-06-18T11:51:20.120000+00:00') && (providerType != 'gcp')",
+        ),
+        ("providerType != 'gcp'", None, 2, "providerType != 'gcp'"),
+        ("    providerType != 'gcp'    ", None, 2, "providerType != 'gcp'"),
+        (
+            "name.contains('CPU')",
+            0.5,
+            2,
+            "(lastReceived >= '2025-06-18T03:51:23+00:00') && (name.contains('CPU'))",
+        ),
+    ],
+)
+def test_search_alerts_by_cel(
+    mock_query_last_alerts, cel_query, timeframe, limit, expected_cel
+):
+    actual_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts_by_cel(
+        cel_query=cel_query, timeframe=timeframe, limit=limit
     )
+    assert actual_alerts == []
     mock_query_last_alerts.assert_called_once_with(
         tenant_id=SINGLE_TENANT_UUID,
         query=QueryDto(
-            cel="(lastReceived >= '2025-06-18T11:51:20.120000+00:00') && (providerType != 'gcp')",
-            limit=223,
+            cel=expected_cel,
+            limit=limit,
         ),
     )
 
