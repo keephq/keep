@@ -651,3 +651,91 @@ def test_workflow_bash_python(db_session):
 
     wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
     assert wf_execution.results.get("bash-step")[0].get("return_code") == 0
+
+
+@patch(
+    "keep.providers.postgres_provider.postgres_provider.PostgresProvider._notify",
+    return_value=None,
+)
+@patch(
+    "keep.providers.postgres_provider.postgres_provider.PostgresProvider.validate_config"
+)
+def test_workflow_keep_notify_after_another_foreach(
+    mock_postgres_validate_config,
+    mock_postgres_notify,
+    db_session,
+):
+    workflow = """workflow:
+  id: keep-notify-after-foreach
+  name: Keep Notify After Foreach
+  triggers:
+    - type: manual
+  steps:
+    - name: python-step
+      provider:
+        type: python
+        with:
+          code: '["item1", "item2", "item3"]'
+  actions:
+    - name: add-to-db
+      foreach: "{{ steps.python-step.results }}"
+      provider:
+        type: postgres
+        with:
+          query: "INSERT INTO test_table (name) VALUES ('{{ foreach.value }}')"
+    - name: create-alerts
+      foreach: "{{ steps.python-step.results }}"
+      provider:
+        type: keep
+        with:
+          alert:
+            name: "{{ foreach.value }}"
+            description: "This alert was created from the foreach step."
+            severity: critical
+            fingerprint: "{{ foreach.value }}"
+"""
+
+    workflow_db = Workflow(
+        id="keep-notify-after-foreach",
+        name="Keep Notify After Foreach",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Keep Notify After Foreach",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow,
+        last_updated=datetime.now(),
+    )
+
+    db_session.add(workflow_db)
+    db_session.commit()
+
+    parser = Parser()
+    workflow_yaml = cyaml.safe_load(workflow_db.workflow_raw)
+
+    with patch(
+        "keep.secretmanager.secretmanagerfactory.SecretManagerFactory.get_secret_manager"
+    ) as mock_secret_manager:
+        mock_secret_manager.return_value.read_secret.return_value = {}
+        workflow = parser.parse(
+            SINGLE_TENANT_UUID,
+            workflow_yaml,
+            workflow_db_id=workflow_db.id,
+            workflow_revision=workflow_db.revision,
+            is_test=workflow_db.is_test,
+        )[0]
+
+    manager = WorkflowManager.get_instance()
+    workflow_execution_id = create_workflow_execution(
+        workflow_id=workflow_db.id,
+        workflow_revision=workflow_db.revision,
+        tenant_id=SINGLE_TENANT_UUID,
+        triggered_by="test executor",
+        execution_number=11234,
+        event_type="manual",
+    )
+    manager._run_workflow(
+        workflow=workflow, workflow_execution_id=workflow_execution_id
+    )
+
+    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
+    assert wf_execution.status == "success"
