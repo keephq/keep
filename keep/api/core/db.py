@@ -44,6 +44,8 @@ from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
+from sqlalchemy.orm import selectinload
+
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
@@ -81,6 +83,7 @@ from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-imp
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
 from keep.api.models.time_stamp import TimeStampFilter
+
 
 logger = logging.getLogger(__name__)
 
@@ -278,11 +281,23 @@ def get_extraction_rule_by_id(
         return session.exec(query).first()
 
 
+def get_last_completed_execution_without_session(workflow_id: str) -> WorkflowExecution:
+    with Session(engine) as session:
+        return get_last_completed_execution(session, workflow_id)
+
+
 def get_last_completed_execution(
     session: Session, workflow_id: str
 ) -> WorkflowExecution:
-    return session.exec(
+    if session is None:
+        session = get_session_sync()
+
+    workflow_execution = session.exec(
         select(WorkflowExecution)
+        .options(
+            selectinload(WorkflowExecution.workflow_to_alert_execution),
+            selectinload(WorkflowExecution.workflow_to_incident_execution),
+        )
         .where(WorkflowExecution.workflow_id == workflow_id)
         .where(WorkflowExecution.is_test_run == False)
         .where(
@@ -293,6 +308,8 @@ def get_last_completed_execution(
         .order_by(WorkflowExecution.execution_number.desc())
         .limit(1)
     ).first()
+
+    return workflow_execution
 
 
 def get_timeouted_workflow_exections():
@@ -313,6 +330,38 @@ def get_timeouted_workflow_exections():
 
         logger.debug(f"Found {len(timeouted_workflows)} timeouted workflows")
         return timeouted_workflows
+
+
+def get_interval_workflows():
+    with Session(engine) as session:
+        logger.debug("Checking for workflows that should run")
+        result = session.exec(
+            select(Workflow)
+            .filter(Workflow.is_deleted == False)
+            .filter(Workflow.is_disabled == False)
+            .filter(Workflow.interval != None)
+            .filter(Workflow.interval > 0)
+        )
+        return result.all() if result else []
+
+
+def get_workflow_execution_by_execution_number(workflow_id, execution_number):
+    """
+    Retrieve a workflow execution by its execution number.
+
+    Args:
+        workflow_id (str): The unique identifier for the workflow.
+        execution_number (int): The execution number of the workflow execution.
+
+    Returns:
+        WorkflowExecution: The workflow execution object if found, otherwise None.
+    """
+    with Session(engine) as session:
+        return session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.execution_number == execution_number)
+        ).first()
 
 
 def get_workflows_that_should_run():
@@ -959,7 +1008,7 @@ def get_consumer_providers() -> List[Provider]:
         ).all()
     return providers
 
-
+# TODO: TO REMOVE
 def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     with Session(engine) as session:
         workflow_execution = session.exec(
@@ -997,6 +1046,22 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 "execution_time": execution_time,
             },
         )
+
+
+def update_workflow_execution(workflow_execution_patch: dict):
+    if workflow_execution_patch.get("id") is None:
+        raise ValueError("Workflow execution ID must not be None")
+
+    with Session(engine) as session:
+        stmt = (
+            update(WorkflowExecution)
+            .where(WorkflowExecution.id == workflow_execution_patch.get("id"))
+            .values(
+                **workflow_execution_patch
+            )  # only update fields that are explicitly set in model
+        )
+        session.exec(stmt)
+        session.commit()
 
 
 def get_workflow_executions(
@@ -2131,7 +2196,7 @@ def update_user_role(tenant_id, username, role):
             session.commit()
     return user
 
-
+# TODO: deprecated, must be removed
 def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     with Session(engine) as session:
         workflow_execution = session.exec(

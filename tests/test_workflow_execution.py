@@ -1583,7 +1583,7 @@ def test_workflow_executions_after_reprovisioning(
 ):
     """Test that workflow executions remain attached to workflows after reprovisioning."""
     # First provision the workflows
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -1614,7 +1614,7 @@ def test_workflow_executions_after_reprovisioning(
     first_execution_id = workflow_execution.id
 
     # Reprovision the workflows
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)

@@ -29,7 +29,7 @@ def provision_resources():
         logger.info("Provisioning providers and workflows")
         ProvidersService.provision_providers(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
-        WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+        WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
         logger.info("Workflows provisioned successfully")
         provision_dashboards(SINGLE_TENANT_UUID)
         logger.info("Dashboards provisioned successfully")
