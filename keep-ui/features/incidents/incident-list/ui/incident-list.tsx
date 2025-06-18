@@ -1,13 +1,12 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
 import { CreateOrUpdateIncidentForm } from "features/incidents/create-or-update-incident";
 import IncidentsTable from "./incidents-table";
-import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
@@ -52,16 +51,12 @@ import EnhancedDateRangePickerV2, {
   AllTimeFrame,
 } from "@/components/ui/DateRangePickerV2";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
+import { PaginationState } from "@/features/filter/pagination";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
 };
-
-interface Pagination {
-  limit: number;
-  offset: number;
-}
 
 export function IncidentList({
   initialFacetsData,
@@ -69,10 +64,11 @@ export function IncidentList({
   initialData?: PaginatedIncidentsDto;
   initialFacetsData?: InitialFacetsData;
 }) {
-  const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
-    limit: DEFAULT_INCIDENTS_PAGE_SIZE,
-    offset: 0,
-  });
+  const [incidentsPagination, setIncidentsPagination] =
+    useState<PaginationState>({
+      limit: DEFAULT_INCIDENTS_PAGE_SIZE,
+      offset: 0,
+    });
 
   const [incidentsSorting, setIncidentsSorting] = useState<SortingState>([
     DEFAULT_INCIDENTS_SORTING,
@@ -244,6 +240,7 @@ export function IncidentList({
         <IncidentsTable
           filterCel={facetsCel}
           incidents={incidents}
+          pagination={incidentsPagination}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
           setSorting={setIncidentsSorting}
