@@ -44,6 +44,8 @@ from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
+from sqlalchemy.orm import selectinload
+
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
@@ -290,8 +292,12 @@ def get_last_completed_execution(
     if session is None:
         session = get_session_sync()
 
-    return session.exec(
+    workflow_execution = session.exec(
         select(WorkflowExecution)
+        .options(
+            selectinload(WorkflowExecution.workflow_to_alert_execution),
+            selectinload(WorkflowExecution.workflow_to_incident_execution),
+        )
         .where(WorkflowExecution.workflow_id == workflow_id)
         .where(WorkflowExecution.is_test_run == False)
         .where(
@@ -302,6 +308,8 @@ def get_last_completed_execution(
         .order_by(WorkflowExecution.execution_number.desc())
         .limit(1)
     ).first()
+
+    return workflow_execution
 
 
 def get_timeouted_workflow_exections():
