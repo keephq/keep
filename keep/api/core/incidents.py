@@ -520,8 +520,9 @@ def get_last_incidents_by_cel(
         incidents = []
 
         for row in all_records:
-            incident = row._asdict().get("Incident")
-            enrichment = row._asdict().get("AlertEnrichment")
+            dict_row = row._asdict()
+            incident = dict_row.get("Incident")
+            enrichment = dict_row.get("AlertEnrichment")
 
             if enrichment:
                 incident.set_enrichments(enrichment.enrichments)
