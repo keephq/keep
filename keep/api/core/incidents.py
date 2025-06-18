@@ -2,8 +2,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import String, and_, case, cast, func, select
 from sqlmodel import Session, col, text
+from sqlalchemy.orm import foreign
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import (
@@ -60,7 +61,9 @@ incident_field_configurations = [
         data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="status", map_to="incident.status", data_type=DataType.STRING
+        map_from_pattern="status",
+        map_to=["JSON(alertenrichment.enrichments).*", "incident.status"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="creation_time",
@@ -250,6 +253,15 @@ def __build_base_incident_query(
             )
         )
 
+    sql_query = sql_query.outerjoin(
+        AlertEnrichment,
+        and_(
+            Incident.tenant_id == AlertEnrichment.tenant_id,
+            cast(col(Incident.id), String)
+            == foreign(AlertEnrichment.alert_fingerprint),
+        ),
+    )
+
     if fetch_has_linked_incident or force_fetch_has_linked_incident:
         additional_incident_fields = (
             select(
@@ -400,7 +412,7 @@ def __build_last_incidents_query(
     built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
-        select_args=[Incident],
+        select_args=[Incident, AlertEnrichment],
     )
     sql_query = built_query_result["query"]
     fetch_alerts = built_query_result["fetch_alerts"]
@@ -505,7 +517,15 @@ def get_last_incidents_by_cel(
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
 
-        incidents = [row._asdict().get("Incident") for row in all_records]
+        incidents = []
+
+        for row in all_records:
+            incident = row._asdict().get("Incident")
+            enrichment = row._asdict().get("AlertEnrichment")
+
+            if enrichment:
+                incident.set_enrichments(enrichment.enrichments)
+            incidents.append(incident)
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
