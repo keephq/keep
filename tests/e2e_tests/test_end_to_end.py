@@ -848,3 +848,33 @@ def test_run_workflow_from_alert_and_incident(
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise
+
+
+def test_run_interval_workflow(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files(
+            [
+                "./tests/e2e_tests/workflow-interval.yaml",
+            ]
+        )
+        page.get_by_role("button", name="Upload")
+        expect(page.get_by_text("1 workflow uploaded successfully")).to_be_visible()
+        page.wait_for_timeout(
+            10000
+        )  # wait 10 seconds to let interval workflow run few times
+        page.reload()
+        rows = page.locator("table tr", has_text="Interval workflow")
+        expect(rows).not_to_have_count(0)
+        executions_count = rows.count()
+        assert executions_count >= 4 and executions_count <= 6
+
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
