@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from keep.api.models.db.secret import Secret
@@ -30,12 +29,15 @@ class DbSecretManager(BaseSecretManager):
                         return json.loads(secret_model.value)
                     return secret_model.value
             except Exception as e:    
-                self.logger.error(f"Fail to read secret {secret_name}: {e}")
+                self.logger.error(
+                    "Failed to read secret",
+                    extra={"error": str(e)},
+                )
                 raise
 
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
-        self.logger.info("Getting secret", extra={"secret_name": secret_name})        
+        self.logger.info("Writing secret", extra={"secret_name": secret_name})        
         with Session(engine) as session:
             secret_model = session.exec(
                 select(Secret).where(
@@ -49,17 +51,19 @@ class DbSecretManager(BaseSecretManager):
                     secret_model.last_updated = time.time()
                     session.commit()
                     return
-    
-                if not secret_model:
-                    secret_model = Secret(
-                        key=secret_name,
-                        value=secret_value,
-                    )
+                
+                secret_model = Secret(
+                    key=secret_name,
+                    value=secret_value,
+                )
                     
                 session.add(secret_model)
                 session.commit()
             except Exception as e:
-                self.logger.error(f"Exception")
+                self.logger.error(
+                    "Failed to write secret",
+                    extra={"error": str(e)},
+                )
                 raise
 
     def delete_secret(self, secret_name: str) -> None:
@@ -70,7 +74,13 @@ class DbSecretManager(BaseSecretManager):
                     Secret.key == secret_name
                 )
             ).one_or_none()
-
-            if secret_model:
-                session.delete(secret_model)
-                session.commit()
+            try:
+                if secret_model:
+                    session.delete(secret_model)
+                    session.commit()
+            except Exception as e:
+                self.logger.error(
+                    "Failed to delete secret",
+                    extra={"error": str(e)},
+                )
+                raise        
