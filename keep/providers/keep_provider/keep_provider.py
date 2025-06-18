@@ -125,7 +125,7 @@ class KeepProvider(BaseProvider):
                 raise ValueError("Filter is required for version 2")
             try:
                 alerts = search_engine.search_alerts_by_cel(
-                    cel_query=filter, limit=limit or 100, timeframe=int(time_delta)
+                    cel_query=filter, limit=limit or 100, timeframe=float(time_delta)
                 )
             except Exception as e:
                 self.logger.exception(
