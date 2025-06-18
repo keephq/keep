@@ -1,6 +1,7 @@
 import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
 import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "../models";
+import { toFacetState, valueToString } from "./utils";
 
 export type FacetsPanelState = {
   facetsConfig: FacetsConfig | null;
@@ -27,8 +28,9 @@ export type FacetsPanelState = {
   facetsState: FacetState;
 
   patchFacetsState: (facetsStatePatch: FacetState) => void;
-  setFacetState: (facetId: string, state: any) => void;
-
+  toggleFacetOption: (facetId: string, optionValue: string) => void;
+  selectOneFacetOption: (facetId: string, optionValue: string) => void;
+  selectAllFacetOptions: (facetId: string) => void;
   dirtyFacetIds: string[];
 
   facetsStateRefreshToken: string | null;
@@ -94,14 +96,73 @@ export const createFacetsPanelStore = () =>
         },
       });
     },
-    setFacetState(facetId, facetState) {
+    toggleFacetOption(facetId, optionValue) {
+      const currentState = state();
+      const facetsState = currentState.facetsState || {};
+      const strValue = valueToString(optionValue);
+      let newFacetState = {};
+
+      if (!facetsState[facetId]) {
+        newFacetState = toFacetState(
+          currentState.facetOptions?.[facetId]
+            .map((option) => valueToString(option.value))
+            .filter((optionStrValue) => optionStrValue !== strValue) || []
+        );
+      } else {
+        let selectedValues = Object.keys(facetsState[facetId]);
+
+        if (strValue in facetsState[facetId]) {
+          selectedValues = selectedValues.filter(
+            (selectedValue) => selectedValue !== strValue
+          );
+        } else {
+          selectedValues.push(strValue);
+        }
+        newFacetState = toFacetState(selectedValues);
+      }
+
       set({
         // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
         facetsStateRefreshToken: uuidV4(),
+        changedFacetId: facetId,
         dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
         facetsState: {
-          ...(state().facetsState || {}),
-          [facetId]: facetState,
+          ...facetsState,
+          [facetId]: newFacetState,
+        },
+      });
+    },
+    selectOneFacetOption(facetId, optionValue) {
+      const currentState = state();
+      const facetsState = currentState.facetsState || {};
+
+      set({
+        // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
+        facetsStateRefreshToken: uuidV4(),
+        changedFacetId: facetId,
+        dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
+        facetsState: {
+          ...facetsState,
+          [facetId]: toFacetState([valueToString(optionValue)]),
+        },
+      });
+    },
+    selectAllFacetOptions(facetId) {
+      const currentState = state();
+      const facetsState = currentState.facetsState || {};
+
+      set({
+        // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
+        facetsStateRefreshToken: uuidV4(),
+        changedFacetId: facetId,
+        dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
+        facetsState: {
+          ...facetsState,
+          [facetId]: toFacetState(
+            currentState.facetOptions?.[facetId].map((option) =>
+              valueToString(option.value)
+            ) || []
+          ),
         },
       });
     },
