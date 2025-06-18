@@ -550,6 +550,7 @@ def test_get_workflow_run_logs_sorted_by_timestamp(db_session):
     db_session.commit()
     db_session.flush()
 
+    # Create logs with timestamps in random order
     timestamps = [
         datetime.now(tz=timezone.utc) - timedelta(seconds=10),
         datetime.now(tz=timezone.utc) + timedelta(seconds=5),
@@ -580,6 +581,7 @@ def test_get_workflow_run_logs_sorted_by_timestamp(db_session):
 
     assert len(logs) == len(timestamps)
 
+    # Verify logs are sorted by timestamp ascending
     for i, log in enumerate(logs):
         if i < len(logs) - 1:
             assert log.timestamp < logs[i + 1].timestamp
