@@ -1,5 +1,8 @@
+import datetime
 import os
 import time
+from unittest.mock import patch
+import freezegun
 
 import pytest
 
@@ -9,6 +12,7 @@ from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
+from keep.api.models.query import QueryDto
 from keep.searchengine.searchengine import SearchEngine
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
@@ -1439,6 +1443,21 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
     assert db_filtered_alert["note"] == "test note"
     assert "enriched_fields" in db_filtered_alert
     assert sorted(db_filtered_alert["enriched_fields"]) == ["note", "service"]
+
+
+@freezegun.freeze_time("2025-06-18 17:51:23")
+@patch("keep.searchengine.searchengine.query_last_alerts", return_value=([], 0))
+def test_timeframe_usage_in_search_alerts_by_cel(mock_query_last_alerts):
+    SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts_by_cel(
+        cel_query="providerType != 'gcp'", timeframe=0.1667, limit=223
+    )
+    mock_query_last_alerts.assert_called_once_with(
+        tenant_id=SINGLE_TENANT_UUID,
+        query=QueryDto(
+            cel="(lastReceived >= '2025-06-18T11:51:20.120000+00:00') && (providerType != 'gcp')",
+            limit=223,
+        ),
+    )
 
 
 """
