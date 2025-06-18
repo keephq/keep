@@ -130,9 +130,9 @@ class Step:
         items = self._get_foreach_items()
         any_action_run = False
         # apply ALL conditions (the decision whether to run or not is made in the end)
-        self.context_manager.set_foreach_context(items=items)
+        self.context_manager.set_foreach_items(items=items)
         for item in items:
-            self.context_manager.set_foreach_context(value=item)
+            self.context_manager.set_foreach_value(value=item)
             try:
                 did_action_run = self._run_single()
             except Exception as e:
@@ -151,7 +151,7 @@ class Step:
             if did_action_run:
                 any_action_run = True
         # reset the foreach context
-        self.context_manager.set_foreach_context(value=None, items=None)
+        self.context_manager.reset_foreach_context()
         return any_action_run
 
     def _run_single(self, dont_render=False):

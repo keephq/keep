@@ -186,13 +186,17 @@ class ContextManager:
         full_context.update(self.aliases)
         return full_context
 
-    def set_foreach_context(
-        self, value: Any | None = None, items: list[Any] | None = None
-    ):
-        if value:
-            self.foreach_context["value"] = value
-        if items:
-            self.foreach_context["items"] = items
+    def set_foreach_items(self, items: list[Any] | None = None):
+        self.foreach_context["items"] = items
+
+    def set_foreach_value(self, value: Any | None = None):
+        self.foreach_context["value"] = value
+
+    def reset_foreach_context(self):
+        self.foreach_context = {
+            "value": None,
+            "items": None,
+        }
 
     def set_condition_results(
         self,

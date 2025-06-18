@@ -117,15 +117,20 @@ def test_context_manager_set_foreach_context(context_manager: ContextManager):
     """
     Test the set_foreach_context function
     """
-    context_manager.set_foreach_context(items=["item1", "item2"])
+    context_manager.set_foreach_items(items=["item1", "item2"])
     assert context_manager.foreach_context == {
         "value": None,
         "items": ["item1", "item2"],
     }
-    context_manager.set_foreach_context(value="mock")
+    context_manager.set_foreach_value(value="mock")
     assert context_manager.foreach_context == {
         "value": "mock",
         "items": ["item1", "item2"],
+    }
+    context_manager.reset_foreach_context()
+    assert context_manager.foreach_context == {
+        "value": None,
+        "items": None,
     }
 
 
