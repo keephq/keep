@@ -8,7 +8,7 @@ import { FacetValue } from "./facet-value";
 import { FacetDto, FacetOptionDto } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useExistingFacetsPanelStore } from "./store";
-import { stringToValue, toFacetState, valueToString } from "./store/utils";
+import { stringToValue, valueToString } from "./store/utils";
 
 export interface FacetProps {
   facet: FacetDto;
@@ -40,14 +40,17 @@ export const Facet: React.FC<FacetProps> = ({
   const facetRef = useRef(facet);
   facetRef.current = facet;
 
-  const setChangedFacetId = useExistingFacetsPanelStore(
-    (state) => state.setChangedFacetId
-  );
   const facetOptionsLoadingState = useExistingFacetsPanelStore(
     (state) => state.facetOptionsLoadingState
   );
-  const setFacetState = useExistingFacetsPanelStore(
-    (state) => state.setFacetState
+  const toggleFacetOption = useExistingFacetsPanelStore(
+    (state) => state.toggleFacetOption
+  );
+  const selectOneFacetOption = useExistingFacetsPanelStore(
+    (state) => state.selectOneFacetOption
+  );
+  const selectAllFacetOptions = useExistingFacetsPanelStore(
+    (state) => state.selectAllFacetOptions
   );
   const facetsState = useExistingFacetsPanelStore((state) => state.facetsState);
   const facetState: Record<string, boolean> = useMemo(
@@ -64,7 +67,7 @@ export const Facet: React.FC<FacetProps> = ({
   facetStateRef.current = facetState;
 
   function getSelectedValues(): string[] {
-    return Object.keys(facetStateRef.current);
+    return Object.keys(facetStateRef.current || {});
   }
 
   /** This variable stores placeholders for facet options that are selected, but don't exist.
@@ -136,36 +139,6 @@ export const Facet: React.FC<FacetProps> = ({
     return facetOption.matches_count > 0 || !!facetConfig?.canHitEmptyState;
   };
 
-  function toggleFacetOption(value: FacetOptionDto["value"]) {
-    const strValue = valueToString(value);
-    let selectedValues = getSelectedValues();
-
-    if (isOptionSelected(value)) {
-      selectedValues = selectedValues.filter(
-        (selectedValue) => selectedValue !== strValue
-      );
-    } else {
-      selectedValues.push(strValue);
-    }
-
-    setFacetState(facet.id, toFacetState(selectedValues));
-    setChangedFacetId(facet.id);
-  }
-
-  function selectOneFacetOption(optionValue: string): void {
-    setFacetState(facet.id, toFacetState([valueToString(optionValue)]));
-    setChangedFacetId(facet.id);
-  }
-
-  function selectAllFacetOptions() {
-    const selectedValues = Object.values(options ?? []).map((option) =>
-      valueToString(option.value)
-    );
-
-    setFacetState(facet.id, toFacetState(selectedValues));
-    setChangedFacetId(facet.id);
-  }
-
   const handleExpandCollapse = (isOpen: boolean) => {
     setIsOpen(!isOpen);
 
@@ -222,9 +195,11 @@ export const Facet: React.FC<FacetProps> = ({
             ? () => facetConfig.renderOptionIcon!(facetOption)
             : undefined
         }
-        onToggleOption={() => toggleFacetOption(facetOption.value)}
-        onSelectOneOption={() => selectOneFacetOption(facetOption.value)}
-        onSelectAllOptions={() => selectAllFacetOptions()}
+        onToggleOption={() => toggleFacetOption(facet.id, facetOption.value)}
+        onSelectOneOption={() =>
+          selectOneFacetOption(facet.id, facetOption.value)
+        }
+        onSelectAllOptions={() => selectAllFacetOptions(facet.id)}
       />
     );
   }
