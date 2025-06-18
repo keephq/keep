@@ -38,7 +38,7 @@ interface Props {
   isRefreshing: boolean;
   state: PaginationState;
   onStateChange: (paginationState: PaginationState) => void;
-  onRefresh: () => void;
+  onRefresh?: () => void;
 }
 
 export function Pagination({
@@ -141,7 +141,7 @@ export function Pagination({
             size="xs"
             disabled={isRefreshing}
             loading={isRefreshing}
-            onClick={async () => onRefresh()}
+            onClick={async () => onRefresh?.()}
             title="Refresh"
           />
         )}
