@@ -62,7 +62,7 @@ incident_field_configurations = [
     ),
     FieldMappingConfiguration(
         map_from_pattern="status",
-        map_to=["JSON(alertenrichment.enrichments).*", "incident.status"],
+        map_to=["JSON(incidentenrichment.enrichments).*", "incident.status"],
         data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
@@ -253,12 +253,15 @@ def __build_base_incident_query(
             )
         )
 
+    from sqlalchemy.orm import aliased
+
+    incident_enrichment = aliased(AlertEnrichment, name="incidentenrichment")
     sql_query = sql_query.outerjoin(
-        AlertEnrichment,
+        incident_enrichment,
         and_(
-            Incident.tenant_id == AlertEnrichment.tenant_id,
+            Incident.tenant_id == incident_enrichment.tenant_id,
             cast(col(Incident.id), String)
-            == foreign(AlertEnrichment.alert_fingerprint),
+            == foreign(incident_enrichment.alert_fingerprint),
         ),
     )
 
