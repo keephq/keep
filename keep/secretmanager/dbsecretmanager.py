@@ -46,7 +46,7 @@ class DbSecretManager(BaseSecretManager):
             try:
                 if secret_model:
                     secret_model.value = secret_value
-                    secret_model.lastmodification_time = time.time()
+                    secret_model.last_updated = time.time()
                     session.commit()
                     return
     

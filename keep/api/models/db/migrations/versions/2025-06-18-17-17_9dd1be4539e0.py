@@ -23,7 +23,7 @@ def upgrade() -> None:
         "secret",
         sa.Column("key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("value", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("lastmodification_time", sa.DateTime(), nullable=False),
+        sa.Column("last_updated", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("key"),
     )
     # ### end Alembic commands ###

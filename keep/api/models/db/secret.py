@@ -6,7 +6,7 @@ class Secret(SQLModel, table=True):
     key: str = Field(primary_key=True)
     value: str
     
-    lastmodification_time: datetime = Field(
+    last_updated: datetime = Field(
         default_factory=datetime.utcnow, 
     )
 
