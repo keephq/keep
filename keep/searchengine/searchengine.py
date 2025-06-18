@@ -101,7 +101,7 @@ class SearchEngine:
         if timeframe:
             timeframe_in_seconds = timeframe * 24 * 60 * 60
             time_ago = datetime.fromtimestamp(
-                datetime.now().timestamp() - timeframe_in_seconds
+                datetime.now(timezone.utc).timestamp() - timeframe_in_seconds
             )
             iso_utc_date = time_ago.astimezone(timezone.utc).isoformat()
             cel_list = [
