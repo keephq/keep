@@ -211,7 +211,7 @@ class WorkflowStore:
             offset=offset,
             sort_by=sort_by,
             sort_dir=sort_dir,
-            fetch_last_executions=15,
+            fetch_last_executions=25,
         )
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:

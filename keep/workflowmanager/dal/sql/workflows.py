@@ -123,7 +123,7 @@ def __build_workflow_executions_query(tenant_id: str):
         .where(WorkflowExecution.tenant_id == tenant_id)
         .where(
             WorkflowExecution.started
-            >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            >= datetime.now(tz=timezone.utc) - timedelta(days=30)
         )
     )
 
