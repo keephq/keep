@@ -123,7 +123,7 @@ def __build_workflow_executions_query(tenant_id: str):
         .where(WorkflowExecution.tenant_id == tenant_id)
         .where(
             WorkflowExecution.started
-            >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            >= datetime.now(tz=timezone.utc) - timedelta(days=30)
         )
     )
 
@@ -190,6 +190,7 @@ def __build_base_query(
         )
         .where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
+        .where(Workflow.is_test == False)
     )
 
     return workflows_with_last_executions_query

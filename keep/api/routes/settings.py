@@ -172,11 +172,40 @@ def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
             logger.info("Configuring user and pass")
             server.login(settings.username, settings.password.get_secret_value())
 
-        # Send a test email to the user's email to ensure it works
-        message = MIMEText("This is a test message from the SMTP settings test.")
+        # Create an HTML test email
+        html_content = """
+        <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h1 style="color: #333;">SMTP Settings Test</h1>
+                    <p style="color: #666;">This is a test email from Keep to verify your SMTP settings.</p>
+                    <div style="margin: 20px 0; padding: 15px; background-color: #e8f5e9; border-left: 4px solid #4caf50;">
+                        <p style="margin: 0; color: #2e7d32;"><strong>✓ Success!</strong> Your SMTP settings are configured correctly.</p>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;"><strong>SMTP Server</strong></td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">{}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;"><strong>Port</strong></td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">{}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;"><strong>Security</strong></td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">{}</td>
+                        </tr>
+                    </table>
+                </div>
+            </body>
+        </html>
+        """.format(settings.host, settings.port, "TLS/STARTTLS" if settings.secure else "None")
+        
+        # Create MIMEText with HTML content
+        message = MIMEText(html_content, "html")
         message["From"] = settings.from_email
         message["To"] = settings.to_email
-        message["Subject"] = "Test SMTP Settings"
+        message["Subject"] = "Test SMTP Settings - Keep"
 
         logger.info("Sending test email")
         server.sendmail(settings.from_email, [settings.to_email], message.as_string())
