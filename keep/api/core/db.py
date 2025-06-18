@@ -1213,9 +1213,9 @@ def get_workflow_execution_with_logs(
             tenant_id, workflow_execution_id, is_test_run
         )
         logs = session.exec(
-            select(WorkflowExecutionLog).where(
-                WorkflowExecutionLog.workflow_execution_id == workflow_execution_id
-            )
+            select(WorkflowExecutionLog)
+            .where(WorkflowExecutionLog.workflow_execution_id == workflow_execution_id)
+            .order_by(WorkflowExecutionLog.timestamp.desc())
         ).all()
         return execution, logs
 

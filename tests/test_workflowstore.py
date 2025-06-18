@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.workflow import (
     Workflow,
@@ -435,6 +435,7 @@ def test_get_all_workflows_with_last_execution_no_dummy_workflow(db_session):
     assert count == 2
     assert len(workflows) == 2
 
+
 def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
     """
     Test that get_all_workflows_with_last_execution does not return test_run executions
@@ -452,7 +453,6 @@ def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
         workflow_raw=VALID_WORKFLOW,
         last_updated=datetime.now(tz=timezone.utc),
     )
-
 
     db_session.add(workflow)
     db_session.commit()
@@ -503,4 +503,83 @@ def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
     workflow_with_executions = workflows[0]
     assert workflow_with_executions["workflow"].id == "workflow-1"
     assert len(workflow_with_executions["workflow_last_executions"]) == 1
-    assert workflow_with_executions["workflow_last_executions"][0]["id"] == normal_execution_id
+    assert (
+        workflow_with_executions["workflow_last_executions"][0]["id"]
+        == normal_execution_id
+    )
+
+
+def test_get_workflow_run_logs_sorted_by_timestamp(db_session):
+    """
+    Test that get_workflow_run_logs_sorted_by_timestamp returns logs sorted by timestamp
+    """
+
+    workflowstore = WorkflowStore()
+
+    workflow = Workflow(
+        id="workflow-1",
+        name="Workflow 1",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.flush()
+
+    # Create a workflow execution with large results
+    workflow_execution_id = str(uuid4())
+    workflow_execution = WorkflowExecution(
+        id=workflow_execution_id,
+        workflow_id=workflow.id,
+        workflow_revision=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        started=datetime.now(tz=timezone.utc),
+        triggered_by="test",
+        execution_number=1,
+        status="success",
+        error=None,
+        execution_time=10,
+        is_test_run=False,
+    )
+    db_session.add(workflow_execution)
+    db_session.commit()
+    db_session.flush()
+
+    timestamps = [
+        datetime.now(tz=timezone.utc) - timedelta(seconds=10),
+        datetime.now(tz=timezone.utc) + timedelta(seconds=5),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=3),
+        datetime.now(tz=timezone.utc) + timedelta(seconds=2),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=1),
+        datetime.now(tz=timezone.utc),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=1),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=2),
+        datetime.now(tz=timezone.utc) + timedelta(seconds=3),
+    ]
+
+    for i, ts in enumerate(timestamps):
+        workflow_execution_log = WorkflowExecutionLog(
+            workflow_execution_id=workflow_execution_id,
+            timestamp=ts,
+            message=f"Log message {i}",
+            context={},
+        )
+        db_session.add(workflow_execution_log)
+    db_session.commit()
+    db_session.flush()
+
+    _, logs = workflowstore.get_workflow_execution_with_logs(
+        tenant_id=SINGLE_TENANT_UUID,
+        workflow_execution_id=workflow_execution_id,
+    )
+
+    assert len(logs) == len(timestamps)
+
+    for i, log in enumerate(logs):
+        if i < len(logs) - 1:
+            assert log.timestamp < logs[i + 1].timestamp
