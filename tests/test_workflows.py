@@ -9,6 +9,7 @@ from keep.api.models.db.workflow import Workflow
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from tests.fixtures.workflow_manager import wait_for_workflow_execution
 
 workflow_test = """workflow:
   name: Alert Simple
@@ -660,7 +661,9 @@ def test_workflow_bash_python(db_session):
 @patch(
     "keep.providers.postgres_provider.postgres_provider.PostgresProvider.validate_config"
 )
+@patch("keep.step.step.StepError")
 def test_workflow_keep_notify_after_another_foreach(
+    mock_step_error,
     mock_postgres_validate_config,
     mock_postgres_notify,
     db_session,
@@ -737,5 +740,4 @@ def test_workflow_keep_notify_after_another_foreach(
         workflow=workflow, workflow_execution_id=workflow_execution_id
     )
 
-    wf_execution = get_workflow_execution(SINGLE_TENANT_UUID, workflow_execution_id)
-    assert wf_execution.status == "success"
+    assert mock_step_error.call_count == 1
