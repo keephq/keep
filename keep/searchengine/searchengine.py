@@ -84,11 +84,9 @@ class SearchEngine:
     def search_alerts_by_cel(
         self,
         cel_query: str,
-        alerts: list[AlertDto] = None,
         limit: int = 1000,
         timeframe: float = 0,
     ) -> list[AlertDto]:
-        cel_query = cel_query if (cel_query or "").strip() else ""
         """Search for alerts based on a CEL query
 
         Args:
@@ -98,6 +96,8 @@ class SearchEngine:
         Returns:
             list[AlertDto]: The list of alerts that match the query
         """
+        cel_query = (cel_query or "").strip()
+
         if timeframe:
             timeframe_in_seconds = timeframe * 24 * 60 * 60
             time_ago = datetime.fromtimestamp(
