@@ -103,7 +103,9 @@ class SearchEngine:
             time_ago = datetime.fromtimestamp(
                 datetime.now(timezone.utc).timestamp() - timeframe_in_seconds
             )
-            iso_utc_date = time_ago.astimezone(timezone.utc).isoformat()
+            iso_utc_date = (
+                time_ago.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+            )
             cel_list = [
                 f"lastReceived >= '{iso_utc_date}'",
                 cel_query,
