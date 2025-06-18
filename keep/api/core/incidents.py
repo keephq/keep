@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 
 from sqlalchemy import String, and_, case, cast, func, select
 from sqlmodel import Session, col, text
-from sqlalchemy.orm import foreign
+from sqlalchemy.orm import foreign, aliased
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import (
@@ -141,6 +141,7 @@ incident_field_configurations = [
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
 
+incident_enrichment = aliased(AlertEnrichment, name="incidentenrichment")
 static_facets = [
     FacetDto(
         id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
@@ -253,9 +254,6 @@ def __build_base_incident_query(
             )
         )
 
-    from sqlalchemy.orm import aliased
-
-    incident_enrichment = aliased(AlertEnrichment, name="incidentenrichment")
     sql_query = sql_query.outerjoin(
         incident_enrichment,
         and_(
@@ -415,7 +413,7 @@ def __build_last_incidents_query(
     built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
-        select_args=[Incident, AlertEnrichment],
+        select_args=[Incident, incident_enrichment],
     )
     sql_query = built_query_result["query"]
     fetch_alerts = built_query_result["fetch_alerts"]
