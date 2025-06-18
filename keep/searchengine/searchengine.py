@@ -88,7 +88,7 @@ class SearchEngine:
         limit: int = 1000,
         timeframe: float = 0,
     ) -> list[AlertDto]:
-        cel_query = cel_query if cel_query.strip() else ""
+        cel_query = cel_query if (cel_query or "").strip() else ""
         """Search for alerts based on a CEL query
 
         Args:
