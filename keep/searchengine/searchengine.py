@@ -12,7 +12,7 @@ from keep.api.models.query import QueryDto
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 class SearchMode(enum.Enum):
     """The search mode for the search engine"""
@@ -100,9 +100,8 @@ class SearchEngine:
 
         if timeframe:
             timeframe_in_seconds = timeframe * 24 * 60 * 60
-            time_ago = datetime.fromtimestamp(
-                datetime.now(timezone.utc).timestamp() - timeframe_in_seconds
-            )
+            current_utc_date = datetime.now(timezone.utc)
+            time_ago = current_utc_date - timedelta(seconds=timeframe_in_seconds)
             iso_utc_date = (
                 time_ago.astimezone(timezone.utc).replace(microsecond=0).isoformat()
             )
