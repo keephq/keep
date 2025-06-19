@@ -20,11 +20,13 @@ import { ActionTraySelection } from "@/widgets/alerts-table/ui/ActionTraySelecti
 interface SettingsSelectionProps {
   table: Table<AlertDto>;
   presetName: string;
+  presetId?: string;
 }
 
 export default function SettingsSelection({
   table,
   presetName,
+  presetId,
 }: SettingsSelectionProps) {
   const arrowRef = useRef(null);
   const { refs, floatingStyles, context } = useFloating({
@@ -53,6 +55,7 @@ export default function SettingsSelection({
           />
           <Popover.Overlay className="fixed inset-0 bg-black opacity-30 z-20" />
           <Popover.Panel
+            static
             className="bg-white z-30 p-4 rounded-sm w-[400px]"
             ref={refs.setFloating}
             data-testid="settings-panel"
@@ -83,6 +86,7 @@ export default function SettingsSelection({
                     <ColumnSelection
                       table={table}
                       presetName={presetName}
+                      presetId={presetId}
                       onClose={close}
                     />
                   </TabPanel>

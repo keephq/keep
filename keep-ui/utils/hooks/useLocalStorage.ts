@@ -6,6 +6,11 @@ import { useSyncExternalStore } from "react";
 const STORAGE_EVENT = "keephq";
 
 function getSnapshot(key: string): string | null {
+  // Check if we're in a browser environment
+  if (typeof window === "undefined" || typeof localStorage === "undefined") {
+    return null;
+  }
+  
   try {
     return localStorage.getItem(`keephq-${key}`);
   } catch {
@@ -39,18 +44,32 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
    * @param value
    */
   const setLocalStorageValue = (value: T | ((val: T) => T)) => {
+    // Check if we're in a browser environment
+    if (typeof window === "undefined" || typeof localStorage === "undefined") {
+      return;
+    }
+    
     // Allow value to be a function so we have same API as useState
     const valueToStore =
       value instanceof Function ? value(parsedLocalStorageValue) : value;
 
-    localStorage.setItem(`keephq-${key}`, JSON.stringify(valueToStore));
-    window.dispatchEvent(new StorageEvent(STORAGE_EVENT));
+    try {
+      localStorage.setItem(`keephq-${key}`, JSON.stringify(valueToStore));
+      window.dispatchEvent(new StorageEvent(STORAGE_EVENT));
+    } catch (error) {
+      console.warn("Failed to save to localStorage:", error);
+    }
   };
 
   return [parsedLocalStorageValue, setLocalStorageValue] as const;
 };
 
 function subscribe(callback: () => void) {
+  // Check if we're in a browser environment
+  if (typeof window === "undefined") {
+    return () => {}; // Return empty cleanup function
+  }
+  
   window.addEventListener(STORAGE_EVENT, callback);
 
   return () => {

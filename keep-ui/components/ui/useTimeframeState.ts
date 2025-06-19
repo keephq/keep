@@ -99,6 +99,11 @@ export function useTimeframeState({
 
   useEffect(() => {
     return () => {
+      // Check if we're in a browser environment before accessing window
+      if (typeof window === "undefined") {
+        return;
+      }
+      
       const newParams = new URLSearchParams(window.location.search);
       deleteTimeframeParams(newParams);
       const queryString = newParams.toString();

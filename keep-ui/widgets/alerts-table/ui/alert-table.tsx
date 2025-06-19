@@ -150,12 +150,12 @@ export function AlertTable({
 
   const columnsIds = getColumnsIds(columns);
 
-  const [columnOrder] = useLocalStorage<ColumnOrderState>(
+  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     DEFAULT_COLS
   );
 
-  const [columnVisibility] = useLocalStorage<VisibilityState>(
+  const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     `column-visibility-${presetName}`,
     DEFAULT_COLS_VISIBILITY
   );
@@ -339,6 +339,15 @@ export function AlertTable({
     setIsSidebarOpen(false);
   };
 
+  // Wrapper functions to maintain sync behavior for deprecated component
+  const handleColumnOrderChange = (newOrder: ColumnOrderState) => {
+    setColumnOrder(newOrder);
+  };
+
+  const handleColumnVisibilityChange = (newVisibility: VisibilityState) => {
+    setColumnVisibility(newVisibility);
+  };
+
   return (
     <div className="h-screen flex flex-col gap-4">
       <div className="px-4 flex-none">
@@ -411,6 +420,12 @@ export function AlertTable({
                       setColumnTimeFormats={setColumnTimeFormats}
                       columnListFormats={columnListFormats}
                       setColumnListFormats={setColumnListFormats}
+                      columnOrder={columnOrder}
+                      setColumnOrder={handleColumnOrderChange}
+                      columnVisibility={columnVisibility}
+                      setColumnVisibility={handleColumnVisibilityChange}
+                      columnRenameMapping={{}}
+                      setColumnRenameMapping={() => {}}
                     />
                     <AlertsTableBody
                       table={table}
