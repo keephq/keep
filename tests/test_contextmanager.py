@@ -113,12 +113,25 @@ def test_context_manager_get_full_context(context_manager_with_state: ContextMan
     assert "steps" in full_context
 
 
-def test_context_manager_set_for_each_context(context_manager: ContextManager):
+def test_context_manager_set_foreach_context(context_manager: ContextManager):
     """
-    Test the set_for_each_context function
+    Test the set_foreach_context function
     """
-    context_manager.set_for_each_context("mock")
-    assert context_manager.foreach_context == {"value": "mock"}
+    context_manager.set_foreach_items(items=["item1", "item2"])
+    assert context_manager.foreach_context == {
+        "value": None,
+        "items": ["item1", "item2"],
+    }
+    context_manager.set_foreach_value(value="mock")
+    assert context_manager.foreach_context == {
+        "value": "mock",
+        "items": ["item1", "item2"],
+    }
+    context_manager.reset_foreach_context()
+    assert context_manager.foreach_context == {
+        "value": None,
+        "items": None,
+    }
 
 
 def test_context_manager_set_condition_results(context_manager: ContextManager):
