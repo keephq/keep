@@ -173,6 +173,7 @@
             "providers/documentation/dynatrace-provider",
             "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
+            "providers/documentation/falco-provider",
             "providers/documentation/flashduty-provider",
             "providers/documentation/fluxcd-provider",
             "providers/documentation/gcpmonitoring-provider",
