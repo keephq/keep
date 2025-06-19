@@ -327,7 +327,7 @@ export function WorkflowExecutionLogs({
           <div className="flex flex-col gap-1">
             {groupedLogs.map((group, index) => (
               <LogGroupAccordion
-                key={group.id ?? "" + index}
+                key={`${group.id ?? ""}-${index}`}
                 defaultOpen={
                   group.status === "pending" ||
                   group.status === "failed" ||

@@ -106,7 +106,7 @@ export function WorkflowExecutionResults({
     }
   }, [standalone, executionData]);
 
-  const stopRefreshInterval = () => {
+  const stopRefreshIntervalWithDelay = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -117,15 +117,32 @@ export function WorkflowExecutionResults({
     }, WAIT_AFTER_STATUS_CHANGED);
   };
 
+  const previousExecutionData = useRef<
+    WorkflowExecutionDetail | WorkflowExecutionFailure | null
+  >(null);
+
   useEffect(() => {
-    if (!executionData) return;
+    if (!executionData) {
+      return;
+    }
+
+    // If the execution data is the same as the previous one, don't refresh
+    // e.g. api return the same data, but object reference is different
+    if (
+      JSON.stringify(previousExecutionData.current) ===
+        JSON.stringify(executionData) &&
+      executionData
+    ) {
+      return;
+    }
+    previousExecutionData.current = executionData;
 
     if (isWorkflowExecution(executionData)) {
       if (executionData.status !== "in_progress") {
-        stopRefreshInterval();
+        stopRefreshIntervalWithDelay();
       }
     } else if (isWorkflowFailure(executionData)) {
-      stopRefreshInterval();
+      stopRefreshIntervalWithDelay();
     }
   }, [executionData]);
 
