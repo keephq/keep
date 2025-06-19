@@ -24,6 +24,7 @@ services:
       - REDIS_PORT=6379
     volumes:
       - ./state:/state
+      - ./tmp/keep/migrations:/tmp/keep/migrations
     depends_on:
       - keep-arq-redis
 
