@@ -12,6 +12,40 @@ from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 
 
+def create_elastic_client(
+    api_key=None, hosts: list[str] = None, basic_auth=None, **kwargs
+) -> Elasticsearch:
+    logger = logging.getLogger("create_elastic_client")
+
+    api_key = api_key or os.environ.get("ELASTIC_API_KEY")
+    hosts = hosts or os.environ.get("ELASTIC_HOSTS", "").split(",")
+    verify_certs = os.environ.get("ELASTIC_VERIFY_CERTS", "true").lower() == "true"
+    basic_auth = basic_auth or (
+        os.environ.get("ELASTIC_USER"),
+        os.environ.get("ELASTIC_PASSWORD"),
+    )
+
+    if not (api_key or basic_auth) or not hosts:
+        raise ValueError("No Elastic configuration found although Elastic is enabled")
+
+    if any(basic_auth):
+        logger.debug("Using basic auth for Elastic")
+        return Elasticsearch(
+            basic_auth=basic_auth,
+            hosts=hosts,
+            verify_certs=verify_certs,
+            **kwargs,
+        )
+    else:
+        logger.debug("Using API key for Elastic")
+        return Elasticsearch(
+            api_key=api_key,
+            hosts=hosts,
+            verify_certs=verify_certs,
+            **kwargs,
+        )
+
+
 class ElasticClient:
 
     def __init__(
