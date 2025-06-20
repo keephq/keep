@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
+from keep.workflowmanager.dal.models.workflowdalmodel import (
+    WorkflowDalModel,
+    WorkflowWithLastExecutionsDalModel,
+)
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
 )
 from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
     WorkflowExecutioLogDalModel,
 )
-from keep.workflowmanager.dal.sql.workflows import WorkflowWithLastExecutions
 
 
 class WorkflowRepository(ABC):
@@ -80,7 +82,7 @@ class WorkflowRepository(ABC):
         sort_by: str,
         sort_dir: str,
         fetch_last_executions: int = 15,
-    ) -> Tuple[list[WorkflowWithLastExecutions], int]:
+    ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         pass
 
     # endregion
@@ -97,7 +99,7 @@ class WorkflowRepository(ABC):
         event_id: str = None,
         fingerprint: str = None,
         execution_id: str = None,
-        event_type: str = "alert",
+        event_type: str = None,
         test_run: bool = False,
     ) -> str:
         pass

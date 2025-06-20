@@ -11,7 +11,6 @@ from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
     WorkflowExecutioLogDalModel,
 )
 
-
 def workflow_from_db_to_dto(db_workflow: Workflow) -> WorkflowDalModel:
     return WorkflowDalModel(
         id=db_workflow.id,

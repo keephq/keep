@@ -235,12 +235,11 @@ def query_workflows(
         ) from e
 
     # iterate workflows
-    for _workflow in workflows:
-        workflow = _workflow["workflow"]
-        workflow_last_run_time = _workflow["workflow_last_run_time"]
-        workflow_last_run_status = _workflow["workflow_last_run_status"]
-        last_executions = _workflow["workflow_last_executions"]
-        last_execution_started = _workflow["workflow_last_run_started"]
+    for workflow in workflows:
+        workflow_last_run_time = workflow.workflow_last_run_time
+        workflow_last_run_status = workflow.workflow_last_run_status
+        last_executions = workflow.workflow_last_executions
+        last_execution_started = workflow.workflow_last_run_started
 
         try:
             providers_dto, triggers = workflowstore.get_workflow_meta_data(
