@@ -233,7 +233,13 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             ) from conflict_error
 
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
-        pass
+        self.elastic_search_client.index(
+            index=self.workflow_executions_index,
+            body=workflow_execution.dict(),
+            id=workflow_execution.id,
+            refresh=True,
+            op_type="index",
+        )
 
     def get_last_completed_workflow_execution(
         self,
@@ -247,7 +253,16 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
-        pass
+        doc = self.__fetch_doc_by_id_from_tenant(
+            index_name=self.workflow_executions_index,
+            tenant_id=tenant_id,
+            doc_id=workflow_execution_id,
+            additional_matches=[{"term": {"is_test_run": is_test_run}}],
+        )
+        if not doc:
+            return None
+
+        return WorkflowExecutionDalModel(**doc)
 
     def get_previous_workflow_execution(
         self, tenant_id: str, workflow_id: str, workflow_execution_id: str
@@ -271,8 +286,9 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         pass
 
     def __fetch_doc_by_id_from_tenant(
-        self, index_name: str, tenant_id: str, doc_id: str
+        self, index_name: str, tenant_id: str, doc_id: str, additional_matches: dict
     ) -> dict:
+        additional_matches = additional_matches if additional_matches else []
         response = self.elastic_search_client.search(
             index=index_name,
             body={
@@ -281,6 +297,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
                         "must": [
                             {"term": {"_id": doc_id}},
                             {"term": {"tenant_id": tenant_id}},
+                            *additional_matches,
                         ]
                     }
                 },
