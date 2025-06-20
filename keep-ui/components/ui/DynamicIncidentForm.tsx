@@ -2,7 +2,7 @@
  * Dynamic incident form component that renders custom fields based on tenant form schema
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Subtitle, Text } from "@tremor/react";
 import { DynamicFormField } from "./DynamicFormField";
 import { 
@@ -16,13 +16,21 @@ interface DynamicIncidentFormProps {
   errors?: Record<string, string>;
 }
 
-export function DynamicIncidentForm({ 
-  enrichments, 
-  onChange, 
-  errors = {} 
-}: DynamicIncidentFormProps) {
+export interface DynamicIncidentFormRef {
+  getFieldErrors: () => Record<string, string>;
+}
+
+export const DynamicIncidentForm = forwardRef<DynamicIncidentFormRef, DynamicIncidentFormProps>((
+  { enrichments, onChange, errors = {} },
+  ref
+) => {
   const { formSchema, isLoading, isError } = useIncidentFormSchema();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
+  // Expose validation errors for parent component through ref
+  useImperativeHandle(ref, () => ({
+    getFieldErrors: () => fieldErrors
+  }), [fieldErrors]);
 
   // Validate fields on change
   useEffect(() => {
@@ -140,4 +148,6 @@ export function DynamicIncidentForm({
       ))}
     </div>
   );
-}
+});
+
+DynamicIncidentForm.displayName = "DynamicIncidentForm";

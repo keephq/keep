@@ -1,5 +1,9 @@
 /**
  * Dynamic form field component that renders different input types based on schema
+ * 
+ * TODO: Add comprehensive input validation and XSS prevention
+ * This will be addressed in a future security enhancement ticket
+ * that will provide app-wide security utilities and patterns
  */
 
 import { 
