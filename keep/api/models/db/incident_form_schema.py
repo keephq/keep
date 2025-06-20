@@ -2,23 +2,32 @@
 Database model for incident form schemas.
 """
 
+import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, func
+from sqlalchemy import TEXT, func, UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from keep.api.models.incident_form_schema import FormFieldSchema
 
 
 class IncidentFormSchema(SQLModel, table=True):
-    """Database model for incident form schema - one per tenant"""
+    """Database model for incident form schemas - multiple per tenant allowed"""
     
     __tablename__ = "incident_form_schema"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_tenant_schema_name"),
+    )
     
-    tenant_id: str = Field(
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
+        description="Unique identifier for the schema"
+    )
+    tenant_id: str = Field(
         foreign_key="tenant.id",
+        index=True,
         description="Tenant this schema belongs to"
     )
     name: str = Field(
@@ -39,11 +48,14 @@ class IncidentFormSchema(SQLModel, table=True):
         description="User who created the schema"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        sa_column=Column(
+            "created_at",
+            default=func.now(),
+            server_default=func.now()
+        ),
         description="When schema was created"
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
         sa_column=Column(
             "updated_at",
             default=func.now(),

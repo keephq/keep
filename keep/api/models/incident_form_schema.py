@@ -151,6 +151,10 @@ class FormFieldSchema(BaseModel):
 class IncidentFormSchemaDto(BaseModel):
     """DTO for incident form schema operations"""
     
+    schema_id: Optional[str] = Field(
+        None,
+        description="Optional schema ID for updates. If provided, updates existing schema. If not, creates new."
+    )
     name: str = Field(
         description="Human-readable schema name",
         min_length=1,
@@ -214,6 +218,7 @@ class IncidentFormSchemaDto(BaseModel):
 class IncidentFormSchemaResponse(IncidentFormSchemaDto):
     """Response model including metadata"""
     
+    id: str = Field(description="Unique identifier for the schema")
     tenant_id: str = Field(description="Tenant this schema belongs to")
     created_by: str = Field(description="User who created the schema")
     created_at: datetime = Field(description="When schema was created")
