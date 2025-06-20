@@ -36,6 +36,8 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
     content_type = request.headers.get("Content-Type")
     if content_type == "application/x-www-form-urlencoded":
         return await request.form()
+    elif isinstance(content_type, str) and content_type.startswith("multipart/form-data"):
+        return await request.form()
     else:
         try:
             logger.debug("Parsing body as json")
