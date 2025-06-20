@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import Any, List
 from uuid import UUID
+
+from sqlalchemy import Dialect, String
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ComparisonNodeOperator,
@@ -13,11 +15,16 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 )
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
+    PropertiesMetadata,
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 class CelToMySqlProvider(BaseCelToSqlProvider):
+
+    def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
+        super().__init__(properties_metadata)
+        self.__literal_proc = String("").literal_processor(dialect=dialect)
 
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         return f"JSON_UNQUOTE({self._json_extract(column, path)})"
@@ -57,6 +64,12 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
     def _json_extract(self, column: str, path: list[str]) -> str:
         property_path_str = ".".join([f'"{item}"' for item in path])
         return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
+
+    def literal_proc(self, value: Any) -> str:
+        if isinstance(value, str):
+            return self.__literal_proc(value)
+
+        return f"'{str(value)}'"
 
     def get_order_by_expression(self, sort_options: list[tuple[str, str]]) -> str:
         sort_expressions: list[str] = []

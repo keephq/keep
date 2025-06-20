@@ -1,8 +1,6 @@
 from datetime import datetime
-from typing import Any, List
+from typing import List
 from uuid import UUID
-
-from sqlalchemy import Dialect, String
 
 from keep.api.core.cel_to_sql.ast_nodes import (
     ConstantNode,
@@ -10,70 +8,23 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     Node,
     PropertyAccessNode,
 )
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 
-class CelToSqliteProvider(BaseCelToSqlProvider):
-
-    def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
-        super().__init__(properties_metadata)
-        self.__literal_proc = String("").literal_processor(dialect=dialect)
+class CelToElasticSearchSqlProvider(BaseCelToSqlProvider):
 
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f'"{item}"' for item in path])
-        return f"json_extract({column}, '$.{property_path_str}')"
-
-    def _json_contains_path(self, column: str, path: list[str]) -> str:
-        """
-        Generates a SQL expression to check if a JSON column contains a specific path.
-
-        This method constructs a SQL query using SQLite's JSON functions to determine
-        whether a JSON object in a specified column contains a given path. The path is
-        represented as a list of keys, and the method supports both single-level and
-        nested paths.
-
-        Args:
-            column (str): The name of the JSON column in the database table.
-            path (list[str]): A list of keys representing the JSON path to check.
-
-        Returns:
-            str: A SQL expression that evaluates to true if the specified path exists
-                 in the JSON column.
-
-        Example:
-            For a JSON column `json_column` and a path `['a', 'b', 'c']`, the method
-            generates a SQL query similar to:
-            ```
-            EXISTS (
-                SELECT 1
-                FROM json_each(json_extract(json_column, '$.a.b'))
-                WHERE json_each.key = 'c'
-            )
-            ```
-        """
-        json_each_exp = None
-        key_name = None
-        if len(path) == 1:
-            json_each_exp = f"json_each({column})"
-            key_name = path[0]
-        else:
-            last_key = path[-1]
-            other_keys = path[:-1]
-            json_each_exp = (
-                f"json_each({self.json_extract_as_text(column, other_keys)})"
-            )
-            key_name = last_key
-
-        return (
-            f"EXISTS (SELECT 1 FROM {json_each_exp} WHERE json_each.key = '{key_name}')"
+        raise NotImplementedError(
+            "json_extract_as_text is not supported in ElasticSearch SQL provider."
         )
 
-    def literal_proc(self, value: Any) -> str:
-        if isinstance(value, str):
-            return self.__literal_proc(value)
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        raise NotImplementedError(
+            "_json_contains_path is not supported in ElasticSearch SQL provider."
+        )
 
-        return f"'{str(value)}'"
+    def literal_proc(self, value: str) -> str:
+        return f"'{str(value)}'"  # TODO: TO ADD THE REAL LITERAL PROCESSOR
 
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:
@@ -130,7 +81,9 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.contains accepts 1 argument but got {len(method_args)}"
+            )
 
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
@@ -140,7 +93,9 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.startsWith accepts 1 argument but got {len(method_args)}"
+            )
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
         return f"{property_path} IS NOT NULL AND {property_path} LIKE '{unquoted_literal}%'"
@@ -149,7 +104,9 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
         self, property_path: str, method_args: List[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.endsWith accepts 1 argument but got {len(method_args)}"
+            )
 
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]

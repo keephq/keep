@@ -96,9 +96,8 @@ class BaseCelToSqlProvider:
             Converts a NOT operation to an SQL string.
     """
 
-    def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
+    def __init__(self, properties_metadata: PropertiesMetadata):
         super().__init__()
-        self.__literal_proc = String("").literal_processor(dialect=dialect)
         self.properties_metadata = properties_metadata
         self.properties_mapper = PropertiesMapper(properties_metadata)
 
@@ -178,10 +177,9 @@ class BaseCelToSqlProvider:
             return field_expressions[0]
 
     def literal_proc(self, value: Any) -> str:
-        if isinstance(value, str):
-            return self.__literal_proc(value)
-
-        return f"'{str(value)}'"
+        raise NotImplementedError(
+            "Literal processing is not implemented. Must be implemented in the child class."
+        )
 
     def _get_order_by_field(self, cel_sort_by: str) -> str:
         return self.get_field_expression(cel_sort_by)
