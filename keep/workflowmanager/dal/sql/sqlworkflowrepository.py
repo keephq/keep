@@ -20,7 +20,6 @@ from keep.api.core.db import (
 )
 from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.workflows import (
-    WorkflowWithLastExecutions,
     get_workflows_with_last_executions_v2,
 )
 
@@ -31,7 +30,10 @@ from keep.workflowmanager.dal.sql.mappers import (
     workflow_execution_from_dto_to_db_partial,
 )
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
-from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
+from keep.workflowmanager.dal.models.workflowdalmodel import (
+    WorkflowDalModel,
+    WorkflowWithLastExecutionsDalModel,
+)
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
 )
@@ -130,7 +132,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         sort_by: str,
         sort_dir: str,
         fetch_last_executions: int = 15,
-    ) -> Tuple[list[WorkflowWithLastExecutions], int]:
+    ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         return get_workflows_with_last_executions_v2(
             tenant_id=tenant_id,
             cel=cel,
@@ -154,7 +156,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         event_id: str = None,
         fingerprint: str = None,
         execution_id: str = None,
-        event_type: str = "alert",
+        event_type: str = None,
         test_run: bool = False,
     ) -> str:
         try:
