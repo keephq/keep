@@ -215,13 +215,11 @@ class WorkflowScheduler:
             if not last_execution:
                 try:
                     # try to get the lock
-                    workflow_execution_id = (
-                        self.workflow_repository.create_workflow_execution(
-                            workflow.id,
-                            workflow.revision,
-                            workflow.tenant_id,
-                            "scheduler",
-                        )
+                    workflow_execution_id = self._create_workflow_execution(
+                        workflow.id,
+                        workflow.revision,
+                        workflow.tenant_id,
+                        "scheduler",
                     )
                     # we succeed to get the lock on this execution number :)
                     # let's run it
@@ -242,14 +240,12 @@ class WorkflowScheduler:
             ):
                 try:
                     # try to get the lock with execution_number + 1
-                    workflow_execution_id = (
-                        self.workflow_repository.create_workflow_execution(
-                            workflow.id,
-                            workflow.revision,
-                            workflow.tenant_id,
-                            "scheduler",
-                            last_execution.execution_number + 1,
-                        )
+                    workflow_execution_id = self._create_workflow_execution(
+                        workflow.id,
+                        workflow.revision,
+                        workflow.tenant_id,
+                        "scheduler",
+                        last_execution.execution_number + 1,
                     )
                     # we succeed to get the lock on this execution number :)
                     # let's run it
@@ -298,14 +294,12 @@ class WorkflowScheduler:
                     # session.commit() TODO: THINK WHAT TO DO HERE  <<<<<<<-----------------------------------------------------------------------------------
                     # re-create the execution and try to get the lock
                     try:
-                        workflow_execution_id = (
-                            self.workflow_repository.create_workflow_execution(
-                                workflow.id,
-                                workflow.revision,
-                                workflow.tenant_id,
-                                "scheduler",
-                                ongoing_execution.execution_number + 1,
-                            )
+                        workflow_execution_id = self._create_workflow_execution(
+                            workflow.id,
+                            workflow.revision,
+                            workflow.tenant_id,
+                            "scheduler",
+                            ongoing_execution.execution_number + 1,
                         )
                     # some other thread/instance has already started to work on it and that's ok
                     except ConflictError:
@@ -327,6 +321,36 @@ class WorkflowScheduler:
                 )
 
         return workflows_to_run
+
+    def _create_workflow_execution(
+        self,
+        workflow_id: str,
+        workflow_revision: int,
+        tenant_id: str,
+        triggered_by: str,
+        execution_number: int = 1,
+        event_id: str = None,
+        fingerprint: str = None,
+        event_type: str = "alert",
+        test_run: bool = False,
+    ) -> str:
+        workflow_execution_id = (
+            str(uuid.uuid4()) if not test_run else "test_" + str(uuid.uuid4())
+        )
+        if len(triggered_by) > 255:
+            triggered_by = triggered_by[:255]
+        return self.workflow_repository.create_workflow_execution(
+            workflow_id=workflow_id,
+            workflow_revision=workflow_revision,
+            tenant_id=tenant_id,
+            triggered_by=triggered_by,
+            execution_number=execution_number,
+            event_id=event_id,
+            fingerprint=fingerprint,
+            execution_id=workflow_execution_id,
+            event_type=event_type,
+            test_run=test_run,
+        )
 
     def _run_workflow(
         self,
@@ -453,7 +477,7 @@ class WorkflowScheduler:
                 event_type = "alert"
                 fingerprint = event.fingerprint
 
-            workflow_execution_id = self.workflow_repository.create_workflow_execution(
+            workflow_execution_id = self._create_workflow_execution(
                 workflow_id=workflow_id,
                 workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
@@ -648,7 +672,6 @@ class WorkflowScheduler:
             if not workflow_execution_id:
                 # creating the execution id here to be able to trace it in logs even in case of ConflictError
                 # eventually, workflow_execution_id == execution_id
-                execution_id = str(uuid.uuid4())
                 try:
                     # if the workflow can run in parallel, we just to create a some random execution number
                     if workflow.workflow_strategy == WorkflowStrategy.PARALLEL.value:
@@ -658,18 +681,15 @@ class WorkflowScheduler:
                         workflow_execution_number = self._get_unique_execution_number(
                             fingerprint, workflow_id
                         )
-                    workflow_execution_id = (
-                        self.workflow_repository.create_workflow_execution(
-                            workflow_id=workflow_id,
-                            workflow_revision=workflow.workflow_revision,
-                            tenant_id=tenant_id,
-                            triggered_by=triggered_by,
-                            execution_number=workflow_execution_number,
-                            fingerprint=fingerprint,
-                            event_id=event_id,
-                            execution_id=execution_id,
-                            event_type=event_type,
-                        )
+                    workflow_execution_id = self._create_workflow_execution(
+                        workflow_id=workflow_id,
+                        workflow_revision=workflow.workflow_revision,
+                        tenant_id=tenant_id,
+                        triggered_by=triggered_by,
+                        execution_number=workflow_execution_number,
+                        fingerprint=fingerprint,
+                        event_id=event_id,
+                        event_type=event_type,
                     )
                 # If there is already running workflow from the same event
                 except ConflictError:
