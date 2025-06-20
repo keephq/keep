@@ -26,6 +26,7 @@ export interface FormFieldSchema {
 }
 
 export interface IncidentFormSchema {
+  id: string;
   tenant_id: string;
   name: string;
   description?: string;
@@ -37,6 +38,7 @@ export interface IncidentFormSchema {
 }
 
 export interface IncidentFormSchemaDto {
+  schema_id?: string;
   name: string;
   description?: string;
   fields: FormFieldSchema[];
@@ -51,9 +53,15 @@ export function useIncidentFormSchema() {
   
   const cacheKey = api.isReady() ? "/incidents/form-schema" : null;
   
-  const { data, error, mutate } = useSWR<IncidentFormSchema>(
+  const { data, error, mutate } = useSWR<IncidentFormSchema | IncidentFormSchema[]>(
     cacheKey,
-    () => api.get("/incidents/form-schema").catch((err) => {
+    () => api.get("/incidents/form-schema").then((response) => {
+      // If response is an array, return the first active schema
+      if (Array.isArray(response)) {
+        return response.find(schema => schema.is_active) || null;
+      }
+      return response;
+    }).catch((err) => {
       if (err.status === 404) {
         return null; // No schema configured
       }
@@ -62,7 +70,7 @@ export function useIncidentFormSchema() {
   );
 
   return {
-    formSchema: data,
+    formSchema: Array.isArray(data) ? null : data,
     isLoading: !error && !data,
     isError: error,
     mutate,
@@ -79,8 +87,8 @@ export function useIncidentFormSchemaActions() {
     return api.post("/incidents/form-schema", schema);
   };
   
-  const deleteSchema = async (): Promise<void> => {
-    return api.delete("/incidents/form-schema");
+  const deleteSchema = async (schemaId: string): Promise<void> => {
+    return api.delete(`/incidents/form-schema?schema_id=${schemaId}`);
   };
   
   return {

@@ -140,7 +140,4 @@ export function DynamicIncidentForm({
       ))}
     </div>
   );
-
-  // Expose validation errors for parent component
-  DynamicIncidentForm.getFieldErrors = () => fieldErrors;
 }
