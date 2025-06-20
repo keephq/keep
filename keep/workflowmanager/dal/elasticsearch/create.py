@@ -4,7 +4,7 @@ from keep.workflowmanager.dal.elasticsearch.elasticsearchworkflowrepository impo
     ElasticSearchWorkflowRepository,
 )
 
-elastic_index_suffix = os.environ.get("ELASTIC_INDEX_SUFFIX")
+elastic_index_suffix = os.environ.get("ELASTIC_INDEX_SUFFIX", "workflow-engine")
 
 
 def create_elasticsearch_workflow_repository():
