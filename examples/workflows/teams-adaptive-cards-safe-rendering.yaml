@@ -1,0 +1,85 @@
+workflow:
+  id: teams-adaptive-cards-safe-rendering
+  name: Teams Adaptive Cards Safe Rendering Example
+  description: Demonstrates safe template rendering techniques for Teams Adaptive Cards when dealing with potentially missing alert fields like namespace.
+  disabled: false
+  triggers:
+    - type: manual
+    - filters:
+        - key: source
+          value: r".*"
+      type: alert
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: teams-safe-rendering-dictget
+      provider:
+        config: "{{ providers.teams }}"
+        type: teams
+        with:
+          typeCard: message
+          sections: '[
+            {
+              "type": "TextBlock",
+              "text": "🔔 **Alert: {{ alert.name }}**",
+              "weight": "Bolder",
+              "size": "Large"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**💥 Severity**: {{ alert.severity }}"
+            },
+            {
+              "type": "TextBlock", 
+              "text": "**📦 Namespace**: keep.dictget({{ alert.labels }}, \"namespace\", \"N/A\")"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**🌍 Environment**: keep.dictget({{ alert.labels }}, \"environment\", {{ alert.environment }})"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**🏷️ Service**: keep.dictget({{ alert }}, \"service\", \"Unknown\")"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**🔗 Source**: {{ alert.source }}"
+            }
+          ]'
+
+    - name: teams-safe-rendering-mustache-conditionals
+      provider:
+        config: "{{ providers.teams }}"
+        type: teams
+        with:
+          typeCard: message
+          sections: '[
+            {
+              "type": "TextBlock",
+              "text": "🔔 **Alert: {{ alert.name }}**",
+              "weight": "Bolder",
+              "size": "Large"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**💥 Severity**: {{ alert.severity }}"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**📦 Namespace**: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}"
+            },
+            {
+              "type": "TextBlock", 
+              "text": "**🌍 Environment**: {{#alert.labels.environment}}{{ alert.labels.environment }}{{/alert.labels.environment}}{{^alert.labels.environment}}{{ alert.environment }}{{/alert.labels.environment}}"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**🏷️ Service**: {{#alert.service}}{{ alert.service }}{{/alert.service}}{{^alert.service}}Unknown{{/alert.service}}"
+            },
+            {
+              "type": "TextBlock",
+              "text": "**🔗 Source**: {{ alert.source }}"
+            }
+          ]'
