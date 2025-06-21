@@ -5,6 +5,7 @@ import pytest
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.teams_provider.teams_provider import TeamsProvider
+from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 
 
 @pytest.fixture
@@ -28,6 +29,141 @@ def mock_response():
     response.ok = True
     response.text = "Success"
     return response
+
+
+@pytest.fixture
+def alert_with_namespace():
+    """Create an alert with namespace for testing"""
+    return AlertDto(
+        id="test-alert-1",
+        name="Test Alert with Namespace",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived="2024-01-01T00:00:00Z",
+        source=["prometheusSvam"],
+        labels={"namespace": "production"},
+        description="Test alert with namespace field"
+    )
+
+
+@pytest.fixture  
+def alert_without_namespace():
+    """Create an alert without namespace for testing"""
+    return AlertDto(
+        id="test-alert-2", 
+        name="Test Alert without Namespace",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived="2024-01-01T00:00:00Z",
+        source=["prometheusSvam"],
+        labels={},
+        description="Test alert without namespace field"
+    )
+
+
+@patch("requests.post")
+def test_adaptive_card_with_missing_namespace_using_dictget(mock_post, teams_provider, mock_response, alert_without_namespace):
+    """Test Teams Adaptive Card handling missing namespace field using dictget function"""
+    # Setup mock response
+    mock_post.return_value = mock_response
+    
+    # Set the alert in context manager
+    teams_provider.context_manager.set_event_context(alert_without_namespace)
+    
+    # Test with dictget function to handle missing namespace
+    result = teams_provider.notify(
+        typeCard="message",
+        sections=[
+            {
+                "type": "TextBlock",
+                "text": "🔔 **Test Alert**",
+                "weight": "Bolder",
+                "size": "Large"
+            },
+            {
+                "type": "TextBlock", 
+                "text": "**📦 Namespace**: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')"
+            },
+            {
+                "type": "TextBlock",
+                "text": "**💥 Severity**: {{ alert.severity }}"
+            }
+        ]
+    )
+    
+    # Verify the response
+    assert result == {"response_text": "Success"}
+    mock_post.assert_called_once()
+
+
+@patch("requests.post") 
+def test_adaptive_card_with_existing_namespace_using_dictget(mock_post, teams_provider, mock_response, alert_with_namespace):
+    """Test Teams Adaptive Card handling existing namespace field using dictget function"""
+    # Setup mock response
+    mock_post.return_value = mock_response
+    
+    # Set the alert in context manager
+    teams_provider.context_manager.set_event_context(alert_with_namespace)
+    
+    # Test with dictget function to handle existing namespace
+    result = teams_provider.notify(
+        typeCard="message",
+        sections=[
+            {
+                "type": "TextBlock",
+                "text": "🔔 **Test Alert**",
+                "weight": "Bolder", 
+                "size": "Large"
+            },
+            {
+                "type": "TextBlock",
+                "text": "**📦 Namespace**: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')"
+            },
+            {
+                "type": "TextBlock",
+                "text": "**💥 Severity**: {{ alert.severity }}"
+            }
+        ]
+    )
+    
+    # Verify the response
+    assert result == {"response_text": "Success"}
+    mock_post.assert_called_once()
+
+
+@patch("requests.post")
+def test_adaptive_card_with_mustache_conditionals(mock_post, teams_provider, mock_response, alert_without_namespace):
+    """Test Teams Adaptive Card using mustache conditionals for missing fields"""
+    # Setup mock response
+    mock_post.return_value = mock_response
+    
+    # Set the alert in context manager  
+    teams_provider.context_manager.set_event_context(alert_without_namespace)
+    
+    # Test with mustache conditionals for missing namespace
+    result = teams_provider.notify(
+        typeCard="message",
+        sections=[
+            {
+                "type": "TextBlock",
+                "text": "🔔 **{{ alert.name }}**",
+                "weight": "Bolder",
+                "size": "Large"
+            },
+            {
+                "type": "TextBlock",
+                "text": "**📦 Namespace**: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}"
+            },
+            {
+                "type": "TextBlock", 
+                "text": "**💥 Severity**: {{ alert.severity }}"
+            }
+        ]
+    )
+    
+    # Verify the response
+    assert result == {"response_text": "Success"}
+    mock_post.assert_called_once()
 
 
 @patch("requests.post")
