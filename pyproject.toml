@@ -6,7 +6,7 @@ authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<3.14"
 click = "^8.1.3"
 pyyaml = "^6.0"
 requests = "^2.32.4"
