@@ -9,6 +9,10 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+# Import requests for REST API validation
+import requests
+import warnings
+
 
 @pydantic.dataclasses.dataclass
 class OpenshiftProviderAuthConfig:
@@ -87,31 +91,78 @@ class OpenshiftProvider(BaseProvider):
         oc_context.insecure = self.authentication_config.insecure
         return oc_context
 
+    def __test_connection_via_rest_api(self):
+        """
+        Test connection to OpenShift using REST API instead of CLI.
+        This is more reliable as it doesn't depend on oc CLI being installed.
+        """
+        try:
+            # Suppress SSL warnings if insecure is True
+            if self.authentication_config.insecure:
+                # Suppress SSL verification warnings
+                warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+            
+            # Test API connectivity by hitting the /version endpoint
+            headers = {
+                'Authorization': f'Bearer {self.authentication_config.token}',
+                'Accept': 'application/json'
+            }
+            
+            verify_ssl = not self.authentication_config.insecure
+            
+            # Try to get cluster version info
+            response = requests.get(
+                f"{self.authentication_config.api_server}/version",
+                headers=headers,
+                verify=verify_ssl,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                self.logger.info("Successfully connected to OpenShift cluster via REST API")
+                return True, None
+            else:
+                error_msg = f"API returned status code {response.status_code}: {response.text}"
+                self.logger.error(f"Failed to connect to OpenShift cluster: {error_msg}")
+                return False, error_msg
+                
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Connection error: {str(e)}"
+            self.logger.error(f"Failed to connect to OpenShift cluster: {error_msg}")
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            self.logger.error(f"Failed to connect to OpenShift cluster: {error_msg}")
+            return False, error_msg
+
     def validate_scopes(self):
         """
         Validates that the provided token has the required scopes to use the provider.
+        Uses REST API validation instead of CLI commands for better reliability.
         """
+        self.logger.info("Validating scopes for OpenShift provider")
+        
         try:
-            client = self.__get_ocp_client()
-            with oc.timeout(60 * 30), oc.tracking() as t, client:
-                if oc.get_config_context() is None:
-                    try:
-                        oc.invoke("login")
-                    except OpenShiftPythonException:
-                        traceback.print_exc()
-                        self.logger.error(
-                            f"Tracking:\n{t.get_result().as_json(redact_streams=False)}\n\n"
-                        )
-                        self.logger.error("Error logging into the API server")
-                        raise Exception("Error logging into the API server")
-            scopes = {
-                "connect_to_openshift": True,
-            }
+            # Try REST API approach first
+            success, error_msg = self.__test_connection_via_rest_api()
+            
+            if success:
+                self.logger.info("Successfully validated OpenShift connection")
+                scopes = {
+                    "connect_to_openshift": True,
+                }
+            else:
+                self.logger.error(f"OpenShift validation failed: {error_msg}")
+                scopes = {
+                    "connect_to_openshift": error_msg,
+                }
+                
         except Exception as e:
-            self.logger.exception("Error validating scopes")
+            self.logger.exception("Error validating scopes for OpenShift provider")
             scopes = {
                 "connect_to_openshift": str(e),
             }
+            
         return scopes
 
     def _notify(self, kind: str, name: str, project_name: str):
