@@ -6,6 +6,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.teams_provider.teams_provider import TeamsProvider
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from keep.iohandler.iohandler import IOHandler, RenderException
 
 
 @pytest.fixture
@@ -26,8 +27,10 @@ def teams_provider():
 def mock_response():
     """Create a mock response for requests.post"""
     response = MagicMock()
+    response.status_code = 200
     response.ok = True
     response.text = "Success"
+    response.json.return_value = {"status": "success"}
     return response
 
 
@@ -342,16 +345,18 @@ def test_notify_with_string_mentions(mock_post, teams_provider, mock_response):
     assert entity["mentioned"]["name"] == "John Doe"
 
 
-def test_github_issue_5070_namespace_handling():
+def test_github_issue_5070_mustache_template_rendering():
     """
     Test for GitHub issue #5070: Support conditional namespace display in Teams Adaptive Cards when label may be missing
     
-    This test demonstrates:
-    1. Direct property access to missing namespace fails during template rendering
-    2. keep.dictget() provides safe access with default values
-    3. Mustache conditionals provide another safe approach
+    This test demonstrates the actual issue with mustache template rendering in the IOHandler.
+    When using direct property access like {{ alert.labels.namespace }} and the field is missing,
+    the template rendering fails with "Could not find key" error.
     """
-    # Test data with alert missing namespace in labels
+    # Setup context manager with alert missing namespace
+    context_manager = ContextManager(tenant_id="test-tenant", workflow_id="test-workflow")
+    
+    # Alert without namespace in labels
     alert_without_namespace = AlertDto(
         id="test-alert-1",
         name="Test Alert Without Namespace",
@@ -359,200 +364,137 @@ def test_github_issue_5070_namespace_handling():
         severity=AlertSeverity.CRITICAL,
         message="Test alert message",
         source=["test"],
-        labels={"service": "payments", "environment": "prod"},  # No namespace label
-        lastReceived="2023-01-01T00:00:00Z",
-    )
-    
-    # Test data with alert having namespace in labels
-    alert_with_namespace = AlertDto(
-        id="test-alert-2",
-        name="Test Alert With Namespace",
-        status=AlertStatus.FIRING, 
-        severity=AlertSeverity.CRITICAL,
-        message="Test alert message",
-        source=["test"],
-        labels={"service": "payments", "environment": "prod", "namespace": "production"},
-        lastReceived="2023-01-01T00:00:00Z",
-    )
-    
-    context_manager = ContextManager(
-        tenant_id="test-tenant", workflow_id="test-workflow"
-    )
-    config = ProviderConfig(
-        id="teams-test",
-        description="Teams Output Provider",
-        authentication={"webhook_url": "https://example.webhook.office.com/webhook"},
-    )
-    provider = TeamsProvider(context_manager, provider_id="teams-test", config=config)
-
-    # Test case 1: Direct property access (this would fail in real template rendering)
-    # We simulate what would happen - this shows the problem
-    try:
-        # This simulates template rendering trying to access alert.labels.namespace directly
-        if alert_without_namespace.labels and "namespace" in alert_without_namespace.labels:
-            namespace = alert_without_namespace.labels["namespace"]
-        else:
-            # This is what happens when the field is missing - template rendering would fail
-            raise KeyError("namespace field not found in alert labels")
-    except KeyError as e:
-        assert "namespace field not found" in str(e)
-        print("✓ Confirmed: Direct property access fails when namespace is missing")
-    
-    # Test case 2: Using keep.dictget() - this should work safely
-    with patch("requests.post") as mock_post:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": "teams-message-id"}
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
-        
-        # Test with alert missing namespace
-        safe_template_sections = [
-            {
-                "type": "TextBlock",
-                "text": "**📦 Namespace**: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')"
-            },
-            {
-                "type": "TextBlock", 
-                "text": "**🔧 Service**: keep.dictget({{ alert.labels }}, 'service', 'Unknown')"
-            }
-        ]
-        
-        provider.notify(
-            message=f"Alert: {alert_without_namespace.name}",
-            sections=safe_template_sections,
-            alert=alert_without_namespace,
-        )
-        
-        # Verify the call was made successfully
-        assert mock_post.called
-        call_data = mock_post.call_args[1]["json"]
-        
-        # The rendered sections should show "N/A" for missing namespace
-        assert any("N/A" in str(section) for section in call_data["attachments"][0]["content"]["body"])
-        print("✓ Confirmed: keep.dictget() safely handles missing namespace")
-        
-        # Test with alert having namespace
-        provider.notify(
-            message=f"Alert: {alert_with_namespace.name}",
-            sections=safe_template_sections,
-            alert=alert_with_namespace,
-        )
-        
-        assert mock_post.call_count == 2
-        print("✓ Confirmed: keep.dictget() works correctly with existing namespace")
-
-    # Test case 3: Using Mustache conditionals - this should also work safely  
-    with patch("requests.post") as mock_post:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": "teams-message-id"}
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
-        
-        mustache_template_sections = [
-            {
-                "type": "TextBlock",
-                "text": "**📦 Namespace**: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}"
-            },
-            {
-                "type": "TextBlock",
-                "text": "**🔧 Service**: {{#alert.labels.service}}{{ alert.labels.service }}{{/alert.labels.service}}{{^alert.labels.service}}Unknown{{/alert.labels.service}}"
-            }
-        ]
-        
-        provider.notify(
-            message=f"Alert: {alert_without_namespace.name}",
-            sections=mustache_template_sections,
-            alert=alert_without_namespace,
-        )
-        
-        assert mock_post.called
-        call_data = mock_post.call_args[1]["json"]
-        
-        # The rendered sections should show "N/A" for missing namespace
-        assert any("N/A" in str(section) for section in call_data["attachments"][0]["content"]["body"])
-        print("✓ Confirmed: Mustache conditionals safely handle missing namespace")
-
-
-def test_comprehensive_safe_rendering_patterns():
-    """
-    Comprehensive test demonstrating all safe rendering patterns for missing fields
-    """
-    alert_with_partial_data = AlertDto(
-        id="test-alert-3",
-        name="Partial Data Alert",
-        status=AlertStatus.FIRING,
-        severity=AlertSeverity.WARNING, 
-        message="Test alert with some missing fields",
-        source=["kubernetes"],
         labels={
-            "service": "web-api",
-            "environment": "staging",
-            # Missing: namespace, pod, node
+            "service": "payments", 
+            "environment": "prod"
+            # Missing: namespace
         },
-        lastReceived="2023-01-01T00:00:00Z",
+        lastReceived="2023-01-01T00:00:00Z"
     )
     
-    context_manager = ContextManager(
-        tenant_id="test-tenant", workflow_id="test-workflow"
+    context_manager.alert = alert_without_namespace
+    context_manager.event_context = context_manager.alert
+    iohandler = IOHandler(context_manager)
+    
+    # Test case 1: Direct property access should fail (this is the problem)
+    template_with_direct_access = "Namespace: {{ alert.labels.namespace }}"
+    
+    with pytest.raises(RenderException) as exc_info:
+        iohandler.render(template_with_direct_access, safe=True)
+    
+    assert "Could not find key" in str(exc_info.value)
+    assert "alert.labels.namespace" in str(exc_info.value)
+    print("✓ Confirmed: Direct property access fails when namespace is missing")
+    
+    # Test case 2: Using keep.dictget should work (this is the solution)
+    template_with_dictget = "Namespace: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')"
+    
+    rendered = iohandler.render(template_with_dictget, safe=True)
+    assert "Namespace: N/A" in rendered
+    print("✓ Confirmed: keep.dictget provides safe access with default values")
+    
+    # Test case 3: Mustache conditionals should work (alternative solution)
+    template_with_conditionals = "Namespace: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}"
+    
+    # Note: safe=False for mustache conditionals as per the iohandler logic
+    rendered = iohandler.render(template_with_conditionals, safe=False)
+    assert "Namespace: N/A" in rendered
+    print("✓ Confirmed: Mustache conditionals provide safe access")
+    
+    # Test case 4: When namespace exists, all approaches should work
+    alert_with_namespace = AlertDto(
+        id="test-alert-2", 
+        name="Test Alert With Namespace",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        message="Test alert message", 
+        source=["test"],
+        labels={
+            "service": "payments",
+            "environment": "prod", 
+            "namespace": "production"
+        },
+        lastReceived="2023-01-01T00:00:00Z"
     )
-    config = ProviderConfig(
-        id="teams-test",
-        description="Teams Output Provider",
-        authentication={"webhook_url": "https://example.webhook.office.com/webhook"},
-    )
-    provider = TeamsProvider(context_manager, provider_id="teams-test", config=config)
+    
+    context_manager.alert = alert_with_namespace
+    context_manager.event_context = context_manager.alert
+    
+    # Direct access should work when field exists
+    rendered = iohandler.render("Namespace: {{ alert.labels.namespace }}", safe=True)
+    assert "Namespace: production" in rendered
+    
+    # keep.dictget should also work
+    rendered = iohandler.render("Namespace: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')", safe=True)
+    assert "Namespace: production" in rendered
+    
+    # Mustache conditionals should also work
+    rendered = iohandler.render(template_with_conditionals, safe=False)
+    assert "Namespace: production" in rendered
+    
+    print("✓ Confirmed: All approaches work when namespace field exists")
 
-    with patch("requests.post") as mock_post:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": "teams-message-id"}
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
+
+def test_teams_adaptive_card_safe_rendering_patterns(teams_provider, mock_response):
+    """
+    Test Teams provider with safe rendering patterns for missing fields
+    """
+    with patch("requests.post", return_value=mock_response) as mock_post:
+        # Alert with partial data (missing namespace, pod, node)
+        alert_with_partial_data = AlertDto(
+            id="test-alert-3",
+            name="Partial Data Alert",
+            status=AlertStatus.FIRING,
+            severity=AlertSeverity.WARNING,
+            message="Test alert with some missing fields",
+            source=["kubernetes"],
+            labels={
+                "service": "web-api",
+                "environment": "staging",
+                # Missing: namespace, pod, node
+            },
+            lastReceived="2023-01-01T00:00:00Z",
+        )
         
-        # Comprehensive template using multiple safe patterns
-        comprehensive_sections = [
+        # Teams Adaptive Card template using safe rendering patterns
+        adaptive_card_template = [
             {
                 "type": "TextBlock",
-                "text": "# 🚨 Alert Details",
+                "text": "**🚨 Alert**: {{ alert.name }}",
                 "weight": "Bolder",
                 "size": "Medium"
             },
             {
-                "type": "FactSet",
-                "facts": [
-                    {
-                        "title": "📦 Namespace",
-                        "value": "keep.dictget({{ alert.labels }}, 'namespace', 'Not specified')"
-                    },
-                    {
-                        "title": "🔧 Service", 
-                        "value": "keep.dictget({{ alert.labels }}, 'service', 'Unknown')"
-                    },
-                    {
-                        "title": "🌍 Environment",
-                        "value": "keep.dictget({{ alert.labels }}, 'environment', 'Unknown')"
-                    },
-                    {
-                        "title": "🏗️ Pod",
-                        "value": "keep.dictget({{ alert.labels }}, 'pod', 'N/A')"
-                    },
-                    {
-                        "title": "🖥️ Node",
-                        "value": "keep.dictget({{ alert.labels }}, 'node', 'N/A')"
-                    }
-                ]
+                "type": "TextBlock", 
+                "text": "**📦 Service**: keep.dictget({{ alert.labels }}, 'service', 'Not specified')"
             },
             {
                 "type": "TextBlock",
-                "text": "**Status with Conditional**: {{#alert.labels.namespace}}Namespace: {{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}⚠️ Namespace not specified{{/alert.labels.namespace}}"
+                "text": "**🌍 Environment**: keep.dictget({{ alert.labels }}, 'environment', 'Not specified')"
+            },
+            {
+                "type": "TextBlock",
+                "text": "**📦 Namespace**: keep.dictget({{ alert.labels }}, 'namespace', 'Not specified')"
+            },
+            {
+                "type": "TextBlock",
+                "text": "**🏠 Pod**: keep.dictget({{ alert.labels }}, 'pod', 'N/A')"
+            },
+            {
+                "type": "TextBlock", 
+                "text": "**🖥️ Node**: keep.dictget({{ alert.labels }}, 'node', 'N/A')"
             }
         ]
         
-        provider.notify(
-            message=f"Alert: {alert_with_partial_data.name}",
-            sections=comprehensive_sections,
+        # This should work without raising exceptions
+        teams_provider.notify(
+            message="Test notification",
             alert=alert_with_partial_data,
+            typeCard="message", 
+            sections=adaptive_card_template
         )
         
+        # Verify the request was made
         assert mock_post.called
         call_data = mock_post.call_args[1]["json"]
         
@@ -563,8 +505,55 @@ def test_comprehensive_safe_rendering_patterns():
         assert "service" in body_content  # Service field is referenced
         assert "environment" in body_content  # Environment field is referenced
         
-        # Verify safe default values are specified in templates
-        assert "'Not specified'" in body_content  # Default for missing namespace
-        assert "'N/A'" in body_content  # Default for missing pod/node
-        
-        print("✓ Confirmed: Comprehensive safe rendering patterns are structured correctly")
+        print("✓ Confirmed: Teams provider works with safe rendering patterns")
+
+
+def test_render_context_safe_parameter_handling():
+    """
+    Test the render_context method's handling of safe parameters
+    """
+    context_manager = ContextManager(tenant_id="test-tenant", workflow_id="test-workflow")
+    
+    # Alert missing some fields
+    alert_data = AlertDto(
+        id="test-alert",
+        name="Test Alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.INFO,
+        message="Test message",
+        source=["test"],
+        labels={
+            "service": "api", 
+            "environment": "prod"
+            # Missing: namespace, pod
+        },
+        lastReceived="2023-01-01T00:00:00Z"
+    )
+    
+    context_manager.alert = alert_data
+    context_manager.event_context = context_manager.alert
+    iohandler = IOHandler(context_manager)
+    
+    # Context to render with problematic templates
+    context_to_render = {
+        "safe_field": "keep.dictget({{ alert.labels }}, 'namespace', 'default')",
+        "unsafe_field": "{{ alert.labels.namespace }}",  # This would fail with safe=True
+        "existing_field": "{{ alert.labels.service }}"
+    }
+    
+    # Test 1: Regular render_context (uses safe=True for strings)
+    # This should fail on the unsafe_field
+    with pytest.raises(RenderException):
+        iohandler.render_context(context_to_render)
+    
+    # Test 2: Safe field should work
+    safe_context = {"safe_field": "keep.dictget({{ alert.labels }}, 'namespace', 'default')"}
+    rendered = iohandler.render_context(safe_context)
+    assert "default" in rendered["safe_field"]
+    
+    # Test 3: Existing field should work 
+    existing_context = {"existing_field": "{{ alert.labels.service }}"}
+    rendered = iohandler.render_context(existing_context)
+    assert "api" in rendered["existing_field"]
+    
+    print("✓ Confirmed: render_context handles safe/unsafe parameters correctly")

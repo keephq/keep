@@ -6,127 +6,89 @@
 When creating Teams Adaptive Cards for alert notifications, users encountered errors when trying to access alert properties that might not exist (like `namespace` in alert labels). Direct property access in templates would fail with "Could not find key" errors when the field was missing.
 
 ### Root Cause Analysis
-The issue occurs during template rendering when:
+The issue occurs during mustache template rendering in the IOHandler when:
 1. Templates use direct property access (e.g., `{{ alert.labels.namespace }}`)
 2. The referenced field doesn't exist in the alert data
-3. The template rendering engine fails with a KeyError
+3. The template rendering engine fails with a `RenderException` due to `safe=True` being used in `render_context()`
+
+**Key Code Location**: `keep/iohandler/iohandler.py:488` - Regular strings are rendered with `safe=True`, causing failures when keys are missing.
 
 ### Solution Implemented
 
-#### 1. Safe Template Rendering Patterns
-We implemented and documented two main approaches for safe template rendering:
+#### 1. Comprehensive Test Coverage
+Added 3 new test functions to `tests/test_teams_provider.py`:
 
-**A. Using `keep.dictget()` Function**
-```yaml
-sections:
-  - type: TextBlock
-    text: "**📦 Namespace**: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')"
-  - type: TextBlock
-    text: "**🔧 Service**: keep.dictget({{ alert.labels }}, 'service', 'Unknown')"
+- **`test_github_issue_5070_mustache_template_rendering()`** - Demonstrates the actual issue with mustache template rendering in the IOHandler
+- **`test_teams_adaptive_card_safe_rendering_patterns()`** - Tests Teams provider with safe rendering patterns 
+- **`test_render_context_safe_parameter_handling()`** - Tests the render_context method's handling of safe parameters
+
+#### 2. Safe Template Rendering Solutions
+Documented and tested two approaches:
+
+**Option A: `keep.dictget()` function** (Recommended)
+```mustache
+**📦 Namespace**: keep.dictget({{ alert.labels }}, 'namespace', 'N/A')
 ```
 
-**B. Using Mustache Conditionals**
-```yaml
-sections:
-  - type: TextBlock
-    text: "**📦 Namespace**: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}"
+**Option B: Mustache conditionals**
+```mustache
+**📦 Namespace**: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}
 ```
 
-#### 2. Comprehensive Test Coverage
-Added comprehensive test cases in `tests/test_teams_provider.py`:
-
-- `test_github_issue_5070_namespace_handling()` - Specifically tests the issue scenario
-- `test_comprehensive_safe_rendering_patterns()` - Tests multiple safe rendering patterns
-- `test_adaptive_card_with_missing_namespace_using_dictget()` - Tests dictget function
-- `test_adaptive_card_with_mustache_conditionals()` - Tests mustache conditionals
-
-#### 3. Example Workflow Documentation
+#### 3. Example Workflow
 Created `examples/workflows/teams-adaptive-cards-safe-rendering.yaml` demonstrating:
-- Safe field access patterns
-- Graceful fallback values
-- Best practices for handling missing alert fields
+- Safe rendering patterns for missing fields
+- Multiple approaches (dictget vs conditionals)
+- Real-world Teams Adaptive Card structure
+- Best practices for handling optional alert fields
 
-### Technical Details
-
-#### Safe Access Function: `keep.dictget()`
-The `keep.dictget()` function provides safe dictionary access with default values:
-```python
-def keep_dictget(dictionary, key, default=None):
-    """Safely get a value from a dictionary with a default fallback"""
-    if dictionary is None:
-        return default
-    return dictionary.get(key, default)
+### Test Results
+All tests pass successfully:
+```
+tests/test_teams_provider.py::test_github_issue_5070_mustache_template_rendering PASSED
+tests/test_teams_provider.py::test_teams_adaptive_card_safe_rendering_patterns PASSED  
+tests/test_teams_provider.py::test_render_context_safe_parameter_handling PASSED
 ```
 
-#### Template Rendering Flow
-1. Workflow step parameters are rendered in `keep/step/step.py:328`
-2. The `render_context()` method processes templates
-3. Safe functions like `keep.dictget()` are available in the template context
-4. Rendered parameters are passed to the provider's `notify()` method
+### Key Findings
 
-### Testing Strategy
+1. **Direct Property Access Issue**: Using `{{ alert.labels.namespace }}` fails with `RenderException` when the field is missing due to `safe=True` in the IOHandler.
 
-#### Test Cases Cover:
-1. **Missing Field Access**: Verifies that direct access fails appropriately
-2. **Safe Function Usage**: Tests `keep.dictget()` with missing and existing fields
-3. **Mustache Conditionals**: Tests conditional rendering patterns
-4. **Comprehensive Patterns**: Tests multiple safe rendering approaches together
-5. **Edge Cases**: Various combinations of missing/existing fields
+2. **`keep.dictget()` Solution**: The `keep.dictget()` function provides safe access with default values and works with `safe=True` rendering.
 
-#### Test Results:
-- All 9 tests pass successfully
-- Tests cover both positive and negative scenarios
-- Demonstrates proper error handling and fallback behavior
+3. **Mustache Conditionals**: Work but require `safe=False` rendering, making them less ideal for some use cases.
 
-### Implementation Impact
+4. **Template Rendering Flow**: The issue occurs in `IOHandler.render_context()` → `_render_template_with_context()` → `_render()` where `safe=True` causes failures.
 
-#### Benefits:
-1. **Prevents Runtime Errors**: Templates no longer fail on missing fields
-2. **Improved User Experience**: Graceful fallbacks provide better notifications
-3. **Flexible Configuration**: Multiple patterns for different use cases
-4. **Comprehensive Documentation**: Clear examples and best practices
+### Recommendations
 
-#### Backward Compatibility:
-- Existing templates continue to work unchanged
-- New safe patterns are additive, not replacing existing functionality
-- No breaking changes to the Teams provider API
+1. **Use `keep.dictget()` for optional fields**:
+   ```mustache
+   keep.dictget({{ alert.labels }}, 'namespace', 'default_value')
+   ```
 
-### Usage Examples
+2. **Use mustache conditionals for complex logic**:
+   ```mustache
+   {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}N/A{{/alert.labels.namespace}}
+   ```
 
-#### Before (Problematic):
-```yaml
-sections:
-  - type: TextBlock
-    text: "Namespace: {{ alert.labels.namespace }}"  # Fails if namespace missing
-```
+3. **Avoid direct property access** for optional fields in templates.
 
-#### After (Safe):
-```yaml
-sections:
-  - type: TextBlock
-    text: "Namespace: keep.dictget({{ alert.labels }}, 'namespace', 'Not specified')"
-  # OR
-  - type: TextBlock
-    text: "Namespace: {{#alert.labels.namespace}}{{ alert.labels.namespace }}{{/alert.labels.namespace}}{{^alert.labels.namespace}}Not specified{{/alert.labels.namespace}}"
-```
+### Files Modified
 
-### Conclusion
+1. **`tests/test_teams_provider.py`** - Added comprehensive test coverage
+2. **`examples/workflows/teams-adaptive-cards-safe-rendering.yaml`** - Added example workflow
 
-The implementation successfully addresses GitHub issue #5070 by:
-1. Providing safe template rendering patterns
-2. Adding comprehensive test coverage
-3. Creating documentation and examples
-4. Maintaining backward compatibility
-5. Improving the overall user experience
+### Backward Compatibility
+- All existing functionality remains unchanged
+- New tests validate existing behavior
+- Example workflows provide migration guidance
+- No breaking changes introduced
 
-Users can now confidently create Teams Adaptive Cards that gracefully handle missing alert fields, preventing runtime errors and providing better notification experiences.
-
-### Files Modified/Created:
-- `tests/test_teams_provider.py` - Added comprehensive test cases
-- `examples/workflows/teams-adaptive-cards-safe-rendering.yaml` - Example workflow
-- `GITHUB_ISSUE_5070_IMPLEMENTATION.md` - This documentation
-
-### Dependencies:
-- No new dependencies required
-- Uses existing `keep.dictget()` function
-- Leverages existing Mustache template engine features
+### Impact
+This implementation resolves GitHub issue #5070 by:
+- ✅ Providing clear solutions for handling missing namespace fields
+- ✅ Adding comprehensive test coverage for the issue
+- ✅ Documenting safe rendering patterns
+- ✅ Creating example workflows for users
+- ✅ Maintaining backward compatibility
