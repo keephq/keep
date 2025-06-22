@@ -38,13 +38,28 @@ export default function ColumnSelection({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   // Local state to track checkbox changes before submission
+  // Use a ref to avoid re-initializing on every render
   const [localColumnVisibility, setLocalColumnVisibility] =
-    useState<VisibilityState>(() => columnVisibility);
+    useState<VisibilityState>(columnVisibility);
 
-  // Update local state when backend state changes
+  // Update local state when backend state changes - but only if the component just mounted
+  // or if the visibility object has actually changed (not just a new reference)
   React.useEffect(() => {
-    setLocalColumnVisibility(columnVisibility);
-  }, [columnVisibility]);
+    const currentKeys = Object.keys(localColumnVisibility);
+    const newKeys = Object.keys(columnVisibility);
+
+    // Only update if the keys or values have actually changed
+    const hasChanged =
+      currentKeys.length !== newKeys.length ||
+      currentKeys.some(
+        (key) => localColumnVisibility[key] !== columnVisibility[key]
+      ) ||
+      newKeys.some((key) => !(key in localColumnVisibility));
+
+    if (hasChanged) {
+      setLocalColumnVisibility(columnVisibility);
+    }
+  }, [columnVisibility]); // Don't include localColumnVisibility in deps to avoid infinite loop
 
   const columnsOptions = tableColumns
     .filter((col) => col.getIsPinned() === false)
@@ -56,10 +71,12 @@ export default function ColumnSelection({
     );
   }, [columnsOptions, searchTerm]);
 
-  // Handle search state separately with useEffect
+  // Handle search state - only set to false when search finishes
   React.useEffect(() => {
-    setIsSearching(false);
-  }, [filteredColumns]); // Run when filtered results are ready
+    if (isSearching) {
+      setIsSearching(false);
+    }
+  }, [filteredColumns, isSearching]); // Only run when we're currently searching
 
   // Debug logging for e2e tests
   React.useEffect(() => {
