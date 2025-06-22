@@ -213,7 +213,7 @@ class WorkflowStore:
             offset=offset,
             sort_by=sort_by,
             sort_dir=sort_dir,
-            fetch_last_executions=15,
+            fetch_last_executions=25,
             session=session,
         )
 

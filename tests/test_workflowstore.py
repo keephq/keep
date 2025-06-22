@@ -434,3 +434,73 @@ def test_get_all_workflows_with_last_execution_no_dummy_workflow(db_session):
     # Count should reflect only regular workflows
     assert count == 2
     assert len(workflows) == 2
+
+def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
+    """
+    Test that get_all_workflows_with_last_execution does not return test_run executions
+    """
+
+    workflowstore = WorkflowStore()
+
+    workflow = Workflow(
+        id="workflow-1",
+        name="Workflow 1",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.flush()
+
+    # Create a workflow execution with large results
+    test_execution_id = str(uuid4())
+    normal_execution_id = str(uuid4())
+    workflow_execution_test = WorkflowExecution(
+        id=test_execution_id,
+        workflow_id=workflow.id,
+        workflow_revision=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        started=datetime.now(tz=timezone.utc),
+        triggered_by="test",
+        execution_number=1,
+        status="success",
+        error=None,
+        execution_time=10,
+        is_test_run=True,
+    )
+    workflow_execution_normal = WorkflowExecution(
+        id=normal_execution_id,
+        workflow_id=workflow.id,
+        workflow_revision=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        started=datetime.now(tz=timezone.utc),
+        triggered_by="test",
+        execution_number=2,
+        status="success",
+        error=None,
+        execution_time=10,
+        is_test_run=False,
+    )
+    db_session.add(workflow_execution_test)
+    db_session.add(workflow_execution_normal)
+    db_session.commit()
+    db_session.flush()
+
+    # Get all workflows with last execution
+    workflows, count = workflowstore.get_all_workflows_with_last_execution(
+        tenant_id=SINGLE_TENANT_UUID,
+        # db_session fixture creates two test workflows, we want to exclude them
+        cel="!(name in ['test-id-1', 'test-id-2'])",
+    )
+
+    assert len(workflows) == 1
+    workflow_with_executions = workflows[0]
+    assert workflow_with_executions["workflow"].id == "workflow-1"
+    assert len(workflow_with_executions["workflow_last_executions"]) == 1
+    assert workflow_with_executions["workflow_last_executions"][0]["id"] == normal_execution_id
