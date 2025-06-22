@@ -55,7 +55,6 @@ export default function SettingsSelection({
           />
           <Popover.Overlay className="fixed inset-0 bg-black opacity-30 z-20" />
           <Popover.Panel
-            static
             className="bg-white z-30 p-4 rounded-sm w-[400px]"
             ref={refs.setFloating}
             data-testid="settings-panel"

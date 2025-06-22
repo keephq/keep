@@ -7,6 +7,7 @@ import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 type UsePresetColumnConfigOptions = {
   presetId?: string;
+  enabled?: boolean; // Flag to control whether to fetch
 } & SWRConfiguration;
 
 const DEFAULT_COLUMN_CONFIG: ColumnConfiguration = {
@@ -17,9 +18,10 @@ const DEFAULT_COLUMN_CONFIG: ColumnConfiguration = {
   column_list_formats: {},
 };
 
-export const usePresetColumnConfig = ({ 
-  presetId, 
-  ...options 
+export const usePresetColumnConfig = ({
+  presetId,
+  enabled = true,
+  ...options
 }: UsePresetColumnConfigOptions = {}) => {
   const api = useApi();
   const revalidateMultiple = useRevalidateMultiple();
@@ -30,8 +32,10 @@ export const usePresetColumnConfig = ({
     error,
     mutate,
   } = useSWR<ColumnConfiguration>(
-    // Only make API call if API is ready AND presetId is provided
-    api?.isReady?.() && presetId ? `/preset/${presetId}/column-config` : null,
+    // Only make API call if enabled, API is ready AND presetId is provided
+    enabled && api?.isReady?.() && presetId
+      ? `/preset/${presetId}/column-config`
+      : null,
     async (url) => {
       try {
         const result = await api.get(url);
@@ -39,7 +43,10 @@ export const usePresetColumnConfig = ({
       } catch (error: any) {
         // If the column config endpoint fails (e.g., 404), return default config
         // This prevents the page from failing to load
-        console.warn(`Failed to fetch column config for preset ${presetId}:`, error);
+        console.warn(
+          `Failed to fetch column config for preset ${presetId}:`,
+          error
+        );
         // Don't throw the error, just return default config
         return DEFAULT_COLUMN_CONFIG;
       }
@@ -70,7 +77,10 @@ export const usePresetColumnConfig = ({
       }
 
       try {
-        const response = await api.put(`/preset/${presetId}/column-config`, config);
+        const response = await api.put(
+          `/preset/${presetId}/column-config`,
+          config
+        );
         showSuccessToast("Column configuration saved!");
         mutate();
         // Also revalidate preset list to update any cached data
@@ -93,4 +103,6 @@ export const usePresetColumnConfig = ({
   };
 };
 
-export type UsePresetColumnConfigValue = ReturnType<typeof usePresetColumnConfig>;
+export type UsePresetColumnConfigValue = ReturnType<
+  typeof usePresetColumnConfig
+>;

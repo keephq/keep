@@ -31,12 +31,12 @@ export const usePresetColumnState = ({
     STATIC_PRESETS_NAMES.includes(presetName);
   const shouldUseBackend = useBackend && !isStaticPreset && !!presetId;
 
-  // Backend-based state - only fetch if we should use backend
-  const { columnConfig, updateColumnConfig, isLoading, error } = usePresetColumnConfig(
-    {
-      presetId: shouldUseBackend ? presetId : undefined,
-    }
-  );
+  // Backend-based state - always call hook but conditionally enable fetching
+  const { columnConfig, updateColumnConfig, isLoading, error } =
+    usePresetColumnConfig({
+      presetId, // Always pass presetId, let the hook decide internally
+      enabled: shouldUseBackend, // Use enabled flag to control fetching
+    });
 
   // Local storage fallbacks (existing implementation)
   const [localColumnVisibility, setLocalColumnVisibility] =
@@ -78,7 +78,12 @@ export const usePresetColumnState = ({
       ...DEFAULT_COLS_VISIBILITY,
       ...(columnConfig?.column_visibility || {}),
     };
-  }, [shouldUseBackend, columnConfig?.column_visibility, localColumnVisibility, error]);
+  }, [
+    shouldUseBackend,
+    columnConfig?.column_visibility,
+    localColumnVisibility,
+    error,
+  ]);
 
   const columnOrder = useMemo(() => {
     // If we shouldn't use backend or there's an error, use local storage immediately
@@ -148,7 +153,7 @@ export const usePresetColumnState = ({
       if (shouldUseBackend && !error) {
         // Batch all updates into a single API call
         const batchedUpdate: Partial<ColumnConfiguration> = {};
-        
+
         if (updates.columnVisibility !== undefined) {
           batchedUpdate.column_visibility = updates.columnVisibility;
         }
@@ -169,11 +174,14 @@ export const usePresetColumnState = ({
           return await updateColumnConfig(batchedUpdate);
         } catch (err) {
           // If backend update fails, fall back to local storage
-          console.warn("Failed to update backend column config, falling back to local storage", err);
+          console.warn(
+            "Failed to update backend column config, falling back to local storage",
+            err
+          );
           // Fall through to local storage update
         }
       }
-      
+
       // For local storage or on backend failure, update each one individually (synchronously)
       if (updates.columnVisibility !== undefined) {
         setLocalColumnVisibility(updates.columnVisibility);

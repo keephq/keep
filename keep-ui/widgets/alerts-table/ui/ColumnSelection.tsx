@@ -1,13 +1,8 @@
 import React, { FormEvent, useState } from "react";
 import { Table } from "@tanstack/table-core";
 import { Button, TextInput } from "@tremor/react";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { VisibilityState, ColumnOrderState } from "@tanstack/react-table";
+import { VisibilityState } from "@tanstack/react-table";
 import { FiSearch } from "react-icons/fi";
-import {
-  DEFAULT_COLS,
-  DEFAULT_COLS_VISIBILITY,
-} from "@/widgets/alerts-table/lib/alert-table-utils";
 import { AlertDto } from "@/entities/alerts/model";
 import { usePresetColumnState } from "@/entities/presets/model";
 
@@ -43,9 +38,8 @@ export default function ColumnSelection({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   // Local state to track checkbox changes before submission
-  const [localColumnVisibility, setLocalColumnVisibility] = useState<VisibilityState>(
-    () => columnVisibility
-  );
+  const [localColumnVisibility, setLocalColumnVisibility] =
+    useState<VisibilityState>(() => columnVisibility);
 
   // Update local state when backend state changes
   React.useEffect(() => {
@@ -57,12 +51,15 @@ export default function ColumnSelection({
     .map((col) => col.id);
 
   const filteredColumns = React.useMemo(() => {
-    const filtered = columnsOptions.filter((column) =>
+    return columnsOptions.filter((column) =>
       column.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setIsSearching(false);
-    return filtered;
   }, [columnsOptions, searchTerm]);
+
+  // Handle search state separately with useEffect
+  React.useEffect(() => {
+    setIsSearching(false);
+  }, [filteredColumns]); // Run when filtered results are ready
 
   // Debug logging for e2e tests
   React.useEffect(() => {
@@ -74,14 +71,16 @@ export default function ColumnSelection({
   }, [searchTerm, columnsOptions, filteredColumns]);
 
   const handleSearchChange = (value: string) => {
-    setIsSearching(true);
+    if (value) {
+      setIsSearching(true);
+    }
     setSearchTerm(value);
   };
 
   const handleCheckboxChange = (column: string, checked: boolean) => {
-    setLocalColumnVisibility(prev => ({
+    setLocalColumnVisibility((prev) => ({
       ...prev,
-      [column]: checked
+      [column]: checked,
     }));
   };
 
@@ -90,9 +89,9 @@ export default function ColumnSelection({
 
     // Create a new order array with all existing columns and newly selected columns
     const selectedColumnIds = filteredColumns.filter(
-      column => localColumnVisibility[column]
+      (column) => localColumnVisibility[column]
     );
-    
+
     const updatedOrder = [
       ...columnOrder,
       ...selectedColumnIds.filter((id) => !columnOrder.includes(id)),
@@ -137,14 +136,20 @@ export default function ColumnSelection({
         <div className="flex-1 overflow-y-auto max-h-[350px]">
           {isLoading && useBackend ? (
             <div className="flex items-center justify-center py-8 text-gray-400">
-              <span data-testid="columns-loading">Loading column configuration...</span>
+              <span data-testid="columns-loading">
+                Loading column configuration...
+              </span>
             </div>
           ) : isSearching ? (
             <div className="flex items-center justify-center py-8 text-gray-400">
               <span data-testid="columns-searching">Searching...</span>
             </div>
           ) : (
-            <ul className="space-y-1" data-testid="column-list" data-column-count={filteredColumns.length}>
+            <ul
+              className="space-y-1"
+              data-testid="column-list"
+              data-column-count={filteredColumns.length}
+            >
               {filteredColumns.map((column) => (
                 <li key={column}>
                   <label className="cursor-pointer p-2 flex items-center">
@@ -153,7 +158,9 @@ export default function ColumnSelection({
                       name={column}
                       type="checkbox"
                       checked={localColumnVisibility[column] || false}
-                      onChange={(e) => handleCheckboxChange(column, e.target.checked)}
+                      onChange={(e) =>
+                        handleCheckboxChange(column, e.target.checked)
+                      }
                       data-testid={`column-checkbox-${column}`}
                       data-checked={localColumnVisibility[column] || false}
                     />
@@ -162,17 +169,20 @@ export default function ColumnSelection({
                 </li>
               ))}
               {filteredColumns.length === 0 && (
-                <li className="text-gray-400 p-2" data-testid="no-columns-found">
-                  No columns found matching "{searchTerm}"
+                <li
+                  className="text-gray-400 p-2"
+                  data-testid="no-columns-found"
+                >
+                  No columns found matching &ldquo;{searchTerm}&rdquo;
                 </li>
               )}
             </ul>
           )}
         </div>
       </div>
-      <Button 
-        className="mt-4" 
-        color="orange" 
+      <Button
+        className="mt-4"
+        color="orange"
         type="submit"
         loading={useBackend && isLoading}
         disabled={useBackend && isLoading}
