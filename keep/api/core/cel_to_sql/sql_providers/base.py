@@ -1,6 +1,5 @@
 from typing import Any, List
 
-from sqlalchemy import Dialect, String
 
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNodeOperator,

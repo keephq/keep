@@ -28,7 +28,6 @@ from keep.api.core.db import (
     get_or_create_dummy_workflow,
     get_session,
     get_workflow_by_id as get_workflow_by_id_db,
-    get_workflow_version,
     get_workflow_versions,
     update_workflow_by_id as update_workflow_by_id_db,
 )

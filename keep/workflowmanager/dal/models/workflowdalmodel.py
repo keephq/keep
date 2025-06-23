@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, TypedDict
+from typing import Optional
 from pydantic import BaseModel
 
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
