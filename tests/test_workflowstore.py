@@ -453,7 +453,6 @@ def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
         last_updated=datetime.now(tz=timezone.utc),
     )
 
-
     db_session.add(workflow)
     db_session.commit()
     db_session.flush()
@@ -501,6 +500,8 @@ def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
 
     assert len(workflows) == 1
     workflow_with_executions = workflows[0]
-    assert workflow_with_executions["workflow"].id == "workflow-1"
-    assert len(workflow_with_executions["workflow_last_executions"]) == 1
-    assert workflow_with_executions["workflow_last_executions"][0]["id"] == normal_execution_id
+    assert workflow_with_executions.id == "workflow-1"
+    assert len(workflow_with_executions.workflow_last_executions) == 1
+    assert (
+        workflow_with_executions.workflow_last_executions[0].id == normal_execution_id
+    )
