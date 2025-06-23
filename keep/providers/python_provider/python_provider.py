@@ -33,7 +33,13 @@ class PythonProvider(BaseProvider):
         if modules:
             for module in modules.split(","):
                 try:
-                    loaded_modules[module] = __import__(module)
+                    imported_module = __import__(module, fromlist=[""])
+                    # Add all public attributes from the module to loaded_modules
+                    for attr_name in dir(imported_module):
+                        if not attr_name.startswith("_"):
+                            loaded_modules[attr_name] = getattr(
+                                imported_module, attr_name
+                            )
                 except Exception:
                     raise ProviderConfigException(
                         f"{self.__class__.__name__} failed to import library: {module}",
@@ -51,3 +57,27 @@ class PythonProvider(BaseProvider):
         No need to dispose of anything, so just do nothing.
         """
         pass
+
+
+if __name__ == "__main__":
+    # Example usage
+    # Output debug messages
+    import logging
+
+    from keep.providers.providers_factory import ProvidersFactory
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    python_provider = ProvidersFactory.get_provider(
+        context_manager=context_manager,
+        provider_id="python-keephq",
+        provider_type="python",
+        provider_config={"authentication": {}},
+    )
+
+    # Example query
+    result = python_provider._query(code="1 + 1", imports="keep.api.models.alert")
+    print(result)  # Output: 2

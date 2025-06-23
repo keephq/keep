@@ -9,6 +9,11 @@ export function WatchUpdateTheme() {
   const [isLocalStorageReady, setIsLocalStorageReady] = useState(false);
 
   const setThemeClassName = (isDark: boolean) => {
+    // Check if we're in a browser environment before accessing document
+    if (typeof document === "undefined") {
+      return;
+    }
+    
     document.documentElement.classList[isDark ? "add" : "remove"](
       "workaround-dark"
     );
@@ -25,6 +30,11 @@ export function WatchUpdateTheme() {
   );
 
   useEffect(() => {
+    // Check if we're in a browser environment before accessing window
+    if (typeof window === "undefined") {
+      return;
+    }
+    
     // Set up a listener for changes to the system theme
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     mediaQuery.addEventListener("change", updateThemeIfSystem);
@@ -34,6 +44,11 @@ export function WatchUpdateTheme() {
   }, [updateThemeIfSystem]);
 
   useEffect(() => {
+    // Check if we're in a browser environment before accessing window
+    if (typeof window === "undefined") {
+      return;
+    }
+    
     // watch for theme preference changes and update if system selected and localstorage is ready
     setIsLocalStorageReady(true);
     if (theme !== null || !isLocalStorageReady) {
