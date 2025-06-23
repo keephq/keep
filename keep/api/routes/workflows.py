@@ -33,6 +33,7 @@ from keep.api.core.db import (
     update_workflow_by_id as update_workflow_by_id_db,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.workflowmanager.dal.factories import create_workflow_repository
 from keep.workflowmanager.dal.sql.workflows import (
     get_workflow_facets,
     get_workflow_facets_data,
@@ -881,9 +882,15 @@ def get_workflow_by_id(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
 ):
+    workflowstore = WorkflowStore()
+
+    workflows_repository = create_workflow_repository()
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
-    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = workflows_repository.get_workflow_by_id(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
+
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
@@ -896,7 +903,7 @@ def get_workflow_by_id(
     workflow_raw = workflow.workflow_raw
 
     if revision:
-        workflow_version = get_workflow_version(
+        workflow_version = workflows_repository.get_workflow_version(
             tenant_id=tenant_id, workflow_id=workflow_id, revision=revision
         )
         if not workflow_version:
@@ -917,7 +924,6 @@ def get_workflow_by_id(
                 installed_provider.name
             ] = installed_provider
 
-    workflowstore = WorkflowStore()
     try:
         providers_dto, triggers = workflowstore.get_workflow_meta_data(
             tenant_id=tenant_id,
