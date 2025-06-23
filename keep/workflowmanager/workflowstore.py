@@ -752,6 +752,11 @@ class WorkflowStore:
     ):
         workflow.name = workflow.name or workflow.id
         workflow.id = str(workflow.id) if workflow.id else str(uuid.uuid4())
+        workflow.provisioned = (
+            False if workflow.provisioned is None else workflow.provisioned
+        )
+        workflow.is_test = False if workflow.is_test is None else workflow.is_test
+
         cel = f"id == '{workflow.id}'"
 
         if lookup_by_name:
@@ -801,6 +806,7 @@ class WorkflowStore:
                     workflow_id=new_workflow.id,
                     revision=new_workflow.revision,
                     workflow_raw=new_workflow.workflow_raw,
+                    comment=f"Created by {new_workflow.created_by}",
                     updated_by=new_workflow.created_by,
                     is_valid=True,
                     is_current=True,
