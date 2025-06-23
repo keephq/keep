@@ -2,7 +2,7 @@
 
 # Shahar: since js2py is not secured, I've commented out this tests
 # TODO: fix js2py and uncomment the tests
-"""
+
 from datetime import timedelta
 
 import pytest
@@ -128,7 +128,7 @@ def test_stateless_alerts_firing(db_session, context, severity, if_condition, va
     assert len(result) == 1
 
     alert = result[0]
-    assert alert.status == AlertStatus.FIRING
+    assert alert.status == AlertStatus.FIRING.value
     assert alert.name == "High CPU Usage"
     assert (
         alert.description
@@ -223,7 +223,7 @@ def test_stateless_alerts_resolved(
 
     assert len(result) == 1
     firing_alert = result[0]
-    assert firing_alert.status == AlertStatus.FIRING
+    assert firing_alert.status == AlertStatus.FIRING.value
     assert firing_alert.severity == severity
 
     # Now update with resolved value
@@ -273,21 +273,21 @@ def test_statless_alerts_multiple_alerts(db_session, context):
 
     # Check victoriametrics alert
     vm_alert = next(a for a in result if a.labels["job"] == "victoriametrics")
-    assert vm_alert.status == AlertStatus.FIRING
+    assert vm_alert.status == AlertStatus.FIRING.value
     assert vm_alert.name == "High CPU Usage - victoriametrics"
     assert vm_alert.description == "CPU usage is high on victoriametrics"
     assert vm_alert.severity == "critical"
 
     # Check vmagent alert
     vmagent_alert = next(a for a in result if a.labels["job"] == "vmagent")
-    assert vmagent_alert.status == AlertStatus.FIRING
+    assert vmagent_alert.status == AlertStatus.FIRING.value
     assert vmagent_alert.name == "High CPU Usage - vmagent"
     assert vmagent_alert.description == "CPU usage is high on vmagent"
     assert vmagent_alert.severity == "info"
 
     # Check vmalert alert
     vmalert_alert = next(a for a in result if a.labels["job"] == "vmalert")
-    assert vmalert_alert.status == AlertStatus.FIRING
+    assert vmalert_alert.status == AlertStatus.FIRING.value
     assert vmalert_alert.name == "High CPU Usage - vmalert"
     assert vmalert_alert.description == "CPU usage is high on vmalert"
     assert vmalert_alert.severity == "info"
@@ -931,4 +931,3 @@ def test_state_alerts_flapping(db_session):
                 assert alert.status == AlertStatus.PENDING
             else:
                 assert alert.status == AlertStatus.FIRING
-"""

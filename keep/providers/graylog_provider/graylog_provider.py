@@ -56,6 +56,14 @@ class GraylogProviderAuthConfig:
             "validation": "any_http_url",
         },
     )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+        },
+        default=True,
+    )
 
 
 class GraylogProvider(BaseProvider):
@@ -112,7 +120,17 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             type="action",
         ),
     ]
-    FINGERPRINT_FIELDS = ["event_definition_id"]
+
+    """
+        Graylog does not behave like Prometheus; it does not resend identical alerts. Once an alert is triggered, it is sent only once. 
+        The event_definition_id refers to the notification configuration, not the individual event. 
+        Using this as the deduplication key causes all alerts from the same definition to be suppressed—even if triggered on different days. 
+        Switching to the id field is preferable, as it uniquely identifies each alert instance.
+
+        About alerts: https://go2docs.graylog.org/current/interacting_with_your_log_data/alerts.html
+        About event definitions: https://go2docs.graylog.org/current/interacting_with_your_log_data/event_definitions.html
+    """
+    FINGERPRINT_FIELDS = ["id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -139,9 +157,11 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     def search(
         self,
         query: str,
-        query_type: str = "elastic",
-        timerange_seconds: int = 300,
-        timerange_type: str = "relative",
+        query_type: str,
+        timerange_seconds: int,
+        timerange_type: str,
+        page: int,
+        per_page: int,
     ):
         """
         Search for logs in Graylog using the specified query.
@@ -150,8 +170,16 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             query_type (str): The type of query to use. Default is "elastic".
             timerange_seconds (int): The time range in seconds. Default is 300 seconds.
             timerange_type (str): The type of time range. Default is "relative".
+            page (int): Page number, starting from 0.
+            per_page (int): Number of results per page.
         """
         self.logger.info(f"Searching in Graylog with query: {query}")
+
+        # Calculate offset based on page and per_page
+        offset = page * per_page
+        if offset < 0:
+            offset = 0  # Extra protection against negative offsets
+
         query_id = str(uuid.uuid4())
         search_type_id = str(uuid.uuid4())
         search_body = {
@@ -169,8 +197,8 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                             "type": "messages",
                             "id": search_type_id,
                             "name": None,
-                            "limit": 150,
-                            "offset": 0,
+                            "limit": per_page,
+                            "offset": offset,
                             "sort": [{"field": "timestamp", "order": "DESC"}],
                             "fields": [],
                             "decorators": [],
@@ -181,26 +209,30 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 }
             ],
         }
-        search_request = requests.post(
-            url=self.__get_url(paths=["views", "search"]),
+
+        search_response = requests.post(
+            url=self.__get_url(paths=["views", "search","sync"]),
             headers=self._headers,
             auth=self._auth,
             json=search_body,
+            verify=self.authentication_config.verify,
         )
-        search_request.raise_for_status()
-        search_id = search_request.json().get("id")
-        execute_request = requests.post(
-            url=self.__get_url(paths=["views", "search", search_id, "execute"]),
-            headers=self._headers,
-            auth=self._auth,
-        )
-        execute_request.raise_for_status()
-        response = execute_request.json()
-        self.logger.info(f"Searched in Graylog with query: {query}")
-        results = next(iter(response["results"].values()))  # we only have 1 search type
+        search_response.raise_for_status()
+
+        result = search_response.json()
+        self.logger.info(f"Graylog sync search result: {result}")
+
+        # Get results from Graylog
+        results = next(iter(result["results"].values()))
         search_types = results.get("search_types", {})
         search = search_types.get(search_type_id)
-        return search.get("messages", [])
+        messages = search.get("messages", [])
+
+        for i, msg in enumerate(messages):
+            self.logger.info(f"message[{i}] type: {type(msg)}, content: {msg}")
+
+        return messages
+
 
     @property
     def graylog_host(self):
@@ -224,7 +256,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             )
             requests.get(
                 f"https://{self.authentication_config.deployment_url}",
-                verify=False,
+                verify=self.authentication_config.verify,
             )
             self.logger.info("HTTPS protocol confirmed")
             self._host = f"https://{self.authentication_config.deployment_url}"
@@ -279,6 +311,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 ),
                 headers=self._headers,
                 auth=self._auth,
+                verify=self.authentication_config.verify,
             )
             self.logger.debug("User information request sent")
             if user_response.status_code != 200:
@@ -308,7 +341,11 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     def __get_graylog_version(self) -> str:
         self.logger.info("Getting graylog version info")
         try:
-            version_response = requests.get(url=self.__get_url(), headers=self._headers)
+            version_response = requests.get(
+                url=self.__get_url(),
+                headers=self._headers,
+                verify=self.authentication_config.verify,
+            )
             if version_response.status_code != 200:
                 raise Exception(version_response.text)
             version = version_response.json()["version"].strip()
@@ -327,6 +364,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 headers=self._headers,
                 auth=self._auth,
                 timeout=10,
+                verify=self.authentication_config.verify,
             )
             if whitelist_response.status_code != 200:
                 raise Exception(whitelist_response.text)
@@ -346,6 +384,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 headers=self._headers,
                 auth=self._auth,
                 json=whitelist,
+                verify=self.authentication_config.verify,
             )
             if whitelist_response.status_code != 204:
                 raise Exception(whitelist_response.text)
@@ -366,6 +405,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 headers=self._headers,
                 auth=self._auth,
                 params={"page": page, "per_page": per_page},
+                verify=self.authentication_config.verify,
             )
 
             if events_response.status_code != 200:
@@ -390,6 +430,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 json=event,
                 auth=self._auth,
                 headers=self._headers,
+                verify=self.authentication_config.verify,
             )
 
             if event_update_response.status_code != 200:
@@ -417,6 +458,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 headers=self._headers,
                 timeout=10,
+                verify=self.authentication_config.verify,
             )
             if notifications_response.status_code != 200:
                 raise Exception(notifications_response.text)
@@ -438,6 +480,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 url=self.__get_url(paths=["events", "notifications", notification_id]),
                 auth=self._auth,
                 headers=self._headers,
+                verify=self.authentication_config.verify,
             )
             if notification_delete_response.status_code != 204:
                 raise Exception(notification_delete_response.text)
@@ -462,6 +505,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 timeout=10,
                 json=notification_body,
+                verify=self.authentication_config.verify,
             )
             if notification_creation_response.status_code != 200:
                 raise Exception(notification_creation_response.text)
@@ -486,6 +530,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 timeout=10,
                 json=notification_body,
+                verify=self.authentication_config.verify,
             )
             if notification_update_response.status_code != 200:
                 raise Exception(notification_update_response.text)
@@ -717,6 +762,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 auth=self._auth,
                 timeout=10,
                 json=json_data,
+                verify=self.authentication_config.verify,
             )
 
             if alert_response.status_code != 200:
@@ -763,9 +809,22 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 
     def _query(self, events_search_parameters: dict, **kwargs: dict):
         self.logger.info("Querying Graylog with specified parameters")
+
         # If there's a query, use the search method
-        if kwargs.get("query"):
-            return self.search(**kwargs)
+        # Handle events_search_parameters to maintain compatibility
+        query = kwargs.get("query") or events_search_parameters.get("query")
+
+        if query:
+            return self.search(
+                query=query,
+                query_type=kwargs.get("query_type", events_search_parameters.get("query_type", "elastic")),
+                timerange_seconds=kwargs.get("timerange_seconds", events_search_parameters.get("timerange_seconds", 300)),
+                timerange_type=kwargs.get("timerange_type", events_search_parameters.get("timerange_type", "relative")),
+                page=kwargs.get("page", events_search_parameters.get("page", 0)),
+                per_page=kwargs.get("per_page", events_search_parameters.get("per_page", 150)),
+            )
+
+        # If no query specified, then run the get_alerts method
         alerts = self.__get_alerts(json_data=events_search_parameters)["events"]
         return [GraylogProvider.__map_event_to_alert(event=event) for event in alerts]
 

@@ -22,14 +22,28 @@ NON_DOCUMENTED_PROVIDERS = []
 
 def validate_overview_is_complete(documented_providers):
     """
-    This function validates the providers to be added to the overview.md file.
+    This function validates the providers to be added to the overview.md and overview.mdx files.
     """
-    overview_file = "./../docs/providers/overview.mdx"
-    with open(overview_file, "r") as file:
-        overview_content = file.read()
+    # Check overview.mdx file
+    overview_mdx_file = "./../docs/providers/overview.mdx"
+    with open(overview_mdx_file, "r", encoding="utf-8", errors="ignore") as file:
+        overview_mdx_content = file.read()
 
         for provider in documented_providers:
-            if provider not in overview_content:
+            if provider not in overview_mdx_content:
+                print(
+                    f"""Provider {provider} is not in the docs/providers/overview.mdx file,
+use scripts/docs_get_providers_list.py to generate recent providers list and update the file."""
+                )
+                exit(1)
+
+    # Check overview.md file
+    overview_md_file = "./../docs/providers/overview.md"
+    with open(overview_md_file, "r", encoding="utf-8", errors="ignore") as file:
+        overview_md_content = file.read()
+
+        for provider in documented_providers:
+            if provider not in overview_md_content:
                 print(
                     f"""Provider {provider} is not in the docs/providers/overview.md file,
 use scripts/docs_get_providers_list.py to generate recent providers list and update the file."""
@@ -77,7 +91,7 @@ def main():
 
     for file_path in files:
         if os.path.isfile(file_path):
-            with open(file_path, "r") as file:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
                 for line in file.readlines():
                     match = re.search(r"title:\s*[\"|\']([^\"]+)[\"|\']", line)
                     if match:

@@ -14,7 +14,7 @@ import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import { FiExternalLink, FiSave } from "react-icons/fi";
 import { AlertDto } from "@/entities/alerts/model";
-import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import { components, GroupBase, MenuListProps } from "react-select";
 import { Select } from "@/shared/ui";
@@ -26,6 +26,9 @@ import { CornerDownLeft } from "lucide-react";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
+import CelInput from "@/features/cel-input/cel-input";
+import { useFacetPotentialFields } from "@/features/filter";
+import { useCelState } from "@/features/cel-input/use-cel-state";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -148,6 +151,32 @@ const SQL_QUERY_PLACEHOLDER = `SELECT *
 FROM alerts
 WHERE severity = 'critical' and status = 'firing'`;
 
+const constructCELRules = (preset?: Preset) => {
+  // Check if selectedPreset is defined and has options
+  if (preset && preset.options) {
+    // New version: single "CEL" key
+    const celOption = preset.options.find((option) => option.label === "CEL");
+    if (celOption) {
+      return celOption.value;
+    }
+    // Older version: Concatenate multiple fields
+    else {
+      return preset.options
+        .map((option) => {
+          // Assuming the older format is exactly "x='y'" (x equals y)
+          // We split the string by '=', then trim and quote the value part
+          let [key, value] = option.value.split("=");
+          // Trim spaces and single quotes (if any) from the value
+          value = value.trim().replace(/^'(.*)'$/, "$1");
+          // Return the correctly formatted CEL expression
+          return `${key.trim()}=="${value}"`;
+        })
+        .join(" && ");
+    }
+  }
+  return ""; // Default to empty string if no preset or options are found
+};
+
 export const AlertsRulesBuilder = ({
   table,
   selectedPreset,
@@ -170,34 +199,24 @@ export const AlertsRulesBuilder = ({
 
   const { deletePreset } = usePresetActions();
 
+  const { data: alertFields } = useFacetPotentialFields("alerts");
+
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(
-    searchParams?.get("cel") || defaultQuery
-  );
+
+  const [appliedCel, setAppliedCel] = useCelState({
+    enableQueryParams: shouldSetQueryParam,
+    defaultCel: constructCELRules(selectedPreset),
+  });
+  const [celRules, setCELRules] = useState(appliedCel);
+
   const parsedCELRulesToQuery = parseCEL(celRules);
 
   const isDynamic =
     selectedPreset && !STATIC_PRESETS_NAMES.includes(selectedPreset.name);
 
   const action = isDynamic ? "update" : "create";
-
-  const setQueryParam = (key: string, value: string) => {
-    const current = new URLSearchParams(
-      Array.from(searchParams ? searchParams.entries() : [])
-    );
-
-    if (value) {
-      current.set(key, value);
-    }
-
-    // cast to string
-    const search = current.toString();
-    // or const query = `${'?'.repeat(search.length && 1)}${search}`;
-    const query = search ? `?${search}` : "";
-    router.push(`${pathname}${query}`);
-  };
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
@@ -212,7 +231,8 @@ export const AlertsRulesBuilder = ({
 
   const handleClearInput = useCallback(() => {
     setCELRules("");
-    onCelChanges && onCelChanges(celRules);
+    setAppliedCel("");
+    onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
     setIsValidCEL(true);
   }, [table]);
@@ -224,33 +244,6 @@ export const AlertsRulesBuilder = ({
   const handleSelectChange = (selectedOption: any) => {
     setCELRules(selectedOption.value);
     toggleSuggestions();
-    onApplyFilter();
-  };
-
-  const constructCELRules = (preset?: Preset) => {
-    // Check if selectedPreset is defined and has options
-    if (preset && preset.options) {
-      // New version: single "CEL" key
-      const celOption = preset.options.find((option) => option.label === "CEL");
-      if (celOption) {
-        return celOption.value;
-      }
-      // Older version: Concatenate multiple fields
-      else {
-        return preset.options
-          .map((option) => {
-            // Assuming the older format is exactly "x='y'" (x equals y)
-            // We split the string by '=', then trim and quote the value part
-            let [key, value] = option.value.split("=");
-            // Trim spaces and single quotes (if any) from the value
-            value = value.trim().replace(/^'(.*)'$/, "$1");
-            // Return the correctly formatted CEL expression
-            return `${key.trim()}=="${value}"`;
-          })
-          .join(" && ");
-      }
-    }
-    return ""; // Default to empty string if no preset or options are found
   };
 
   useEffect(() => {
@@ -266,39 +259,6 @@ export const AlertsRulesBuilder = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (defaultQuery === "") {
-      handleClearInput();
-    } else {
-      setCELRules(defaultQuery);
-    }
-  }, [defaultQuery, handleClearInput]);
-
-  useEffect(() => {
-    // Use the constructCELRules function to set the initial value of celRules
-    const initialCELRules = constructCELRules(selectedPreset);
-    if (
-      searchParams?.get("cel") // Check if the cel query is present in the URL and set it as the initial value
-    ) {
-      setCELRules(searchParams.get("cel") || "");
-    } else {
-      setCELRules(initialCELRules);
-    }
-  }, [selectedPreset, searchParams]);
-
-  // FIX: this is not working as expected on cold load, e.g. ?cel=id=="123"
-  // the filter is not applied until the user hits enter
-  useEffect(() => {
-    // This effect waits for celRules to update and applies the filter only on the initial render
-    if (isFirstRender.current && celRules.length > 0) {
-      onApplyFilter();
-      isFirstRender.current = false;
-    } else if (!selectedPreset) {
-      isFirstRender.current = false;
-    }
-    // This effect should only run when celRules updates and on initial render
-  }, [celRules]);
-
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
     const textArea = textAreaRef.current;
@@ -312,52 +272,23 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
-      // You can now use `target` which is asserted to be an HTMLTextAreaElement
-
-      // check if the CEL is valid by comparing the parsed query with the original CEL
-      // remove spaces so that "a && b" is the same as "a&&b"
-      const celQuery = formatQuery(parsedCELRulesToQuery, "cel");
-      /*
-      SHAHAR: this is the old way of checking if the CEL is valid
-              I think its over complicated so let's just check if the query is "1 == 1" (which is parse error)
-              I'll leave the old code here for reference
-
-      const isValidCEL =
-        celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
-        celRules === "";
-      */
-
-      // SHAHAR: new way of checking if the CEL is valid
-      const isValidCEL = celRules == "" || celQuery !== "1 == 1";
-      setIsValidCEL(isValidCEL);
-
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
-        if (shouldSetQueryParam) setQueryParam("cel", celRules);
-        onApplyFilter();
-        updateOutputCEL?.(celRules);
+        setAppliedCel(celRules);
         if (showToast)
           toast.success("Condition applied", { position: "top-right" });
       }
     }
   };
 
-  const onApplyFilter = () => {
-    if (onCelChanges) {
-      onCelChanges(celRules);
-      return;
-    }
-
-    if (celRules.length === 0) {
-      return table?.resetGlobalFilter();
-    }
-
-    table?.setGlobalFilter(celRules);
-  };
+  useEffect(() => {
+    updateOutputCEL?.(appliedCel);
+    onCelChanges?.(appliedCel);
+  }, [appliedCel, updateOutputCEL]);
 
   const onGenerateQuery = () => {
     setCELRules(formatQuery(query, "cel"));
@@ -410,69 +341,41 @@ export const AlertsRulesBuilder = ({
     }
   };
 
-  const onValueChange = (value: string) => {
-    setCELRules(value);
-    if (value.length === 0) {
-      setIsValidCEL(true);
-    }
+  const openSaveModal = (celExpression: string) => {
+    setPresetCEL?.(celExpression);
+    setIsModalOpen?.(true);
   };
 
-  const validateAndOpenSaveModal = (celExpression: string) => {
-    const celQuery = formatQuery(parseCEL(celExpression), "cel");
-
-    // Normalize both strings by:
-    // 1. Removing all whitespace
-    // 2. Creating versions with both single and double quotes
-    const normalizedCelQuery = celQuery.replace(/\s+/g, "");
-    const normalizedExpression = celExpression.replace(/\s+/g, "");
-
-    // Create variants with different quote styles
-    const celQuerySingleQuotes = normalizedCelQuery.replace(/"/g, "'");
-    const celQueryDoubleQuotes = normalizedCelQuery.replace(/'/g, '"');
-
-    const isValidCEL =
-      normalizedExpression === celQuerySingleQuotes ||
-      normalizedExpression === celQueryDoubleQuotes ||
-      celExpression === "";
-
-    if (isValidCEL && celExpression.length) {
-      setPresetCEL?.(celExpression);
-      setIsModalOpen?.(true);
-    } else {
-      alert("You can only save a valid CEL expression.");
-      setIsValidCEL(isValidCEL);
+  function getSaveFilterTooltipText(): string {
+    if (!isValidCEL) {
+      return "You can only save a valid CEL expression.";
     }
-  };
+
+    return action === "update"
+      ? "Edit preset"
+      : "Save current filter as a preset";
+  }
 
   return (
     <>
       <div className="flex flex-col gap-y-2 w-full justify-end">
         {/* Docs */}
         <div className="flex flex-wrap items-start gap-x-2">
-          <div className="flex flex-wrap gap-2 items-center relative flex-grow">
+          <div className="flex flex-1 min-w-0 gap-2 items-center relative">
             {/* Textarea and error message container */}
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
-                <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Textarea
-                  ref={textAreaRef}
-                  rows={1}
-                  className="resize-none overflow-hidden w-full pr-9 pl-9 min-h-10" // Added pl-9 for left padding to accommodate icon
-                  value={celRules}
-                  onValueChange={onValueChange}
-                  onKeyDown={handleKeyDown}
+                <CelInput
+                  id="alerts-cel-input"
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
-                  error={!isValidCEL}
+                  value={celRules}
+                  fieldsForSuggestions={alertFields}
+                  onValueChange={setCELRules}
+                  onIsValidChange={setIsValidCEL}
+                  onClearValue={handleClearInput}
+                  onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                 />
-                {celRules && (
-                  <button
-                    onClick={handleClearInput}
-                    className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
-                  >
-                    <XMarkIcon className="h-4 w-4" />
-                  </button>
-                )}
               </div>
               {showSuggestions && (
                 <div className="absolute z-10 w-full">
@@ -501,7 +404,7 @@ export const AlertsRulesBuilder = ({
                 </div>
               )}
               {!isValidCEL && (
-                <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
+                <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
               )}
@@ -517,17 +420,14 @@ export const AlertsRulesBuilder = ({
           {/* Buttons next to the Textarea */}
           {showSave && (
             <Button
+              data-testid="save-preset-button"
               icon={FiSave}
               color="orange"
               variant="secondary"
               size="sm"
-              disabled={!celRules.length}
-              onClick={() => validateAndOpenSaveModal(celRules)}
-              tooltip={
-                action === "update"
-                  ? "Edit preset"
-                  : "Save current filter as a preset"
-              }
+              disabled={!celRules.length || !isValidCEL}
+              onClick={() => openSaveModal(celRules)}
+              tooltip={getSaveFilterTooltipText()}
             ></Button>
           )}
           {showSqlImport && (

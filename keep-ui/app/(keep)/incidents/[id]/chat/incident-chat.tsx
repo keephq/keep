@@ -1,4 +1,4 @@
-import { CopilotChat, ResponseButtonProps } from "@copilotkit/react-ui";
+import { CopilotChat, MessagesProps } from "@copilotkit/react-ui";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import {
@@ -51,36 +51,6 @@ export function IncidentChat({
   const [loadingStates, setLoadingStates] = useState<{
     [key: string]: boolean;
   }>({});
-
-  function CustomResponseButton({ onClick, inProgress }: ResponseButtonProps) {
-    return (
-      <div className="flex mt-3 gap-2">
-        {!inProgress ? (
-          <Button
-            color="orange"
-            onClick={runChatCompletion}
-            loading={inProgress}
-          >
-            Regenerate response
-          </Button>
-        ) : (
-          <Button color="orange" onClick={stopGeneration} icon={StopIcon}>
-            Stop generating
-          </Button>
-        )}
-        <Button
-          color="orange"
-          variant="secondary"
-          tooltip="Clear chat"
-          onClick={() => {
-            localStorage.removeItem(`copilotkit-messages-${incident.id}`);
-            setMessages([]);
-          }}
-          icon={TrashIcon}
-        />
-      </div>
-    );
-  }
 
   //https://docs.copilotkit.ai/guides/messages-localstorage
   // save to local storage when messages change
@@ -135,8 +105,9 @@ export function IncidentChat({
   const providersWithGetTrace = useMemo(
     () =>
       providers?.installed_providers
-        .filter((provider) =>
-          provider.methods?.some((method) => method.func_name === "get_trace")
+        .filter(
+          (provider) =>
+            provider.methods?.some((method) => method.func_name === "get_trace")
         )
         .map((provider) => provider.id),
     [providers]
@@ -586,7 +557,8 @@ export function IncidentChat({
                 "Hi! Lets work together to resolve this incident! Ask me anything",
               placeholder: "For example: Find the root cause of this incident",
             }}
-            ResponseButton={CustomResponseButton}
+            // ResponseButton={CustomResponseButton} // Deprecated in favor of Thumbs Up/Down, Copy and Regenerate.
+            // https://docs.copilotkit.ai/troubleshooting/migrate-to-1.8.2#responsebutton-prop-removed
             onSubmitMessage={handleSubmitMessage}
           />
         </div>

@@ -7,8 +7,16 @@ import { AlertTimeline } from "./alert-timeline";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { TopologyMap } from "@/app/(keep)/topology/ui/map";
 import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchContext";
-import { FieldHeader, SeverityLabel, UISeverity, Tooltip } from "@/shared/ui";
+import {
+  FieldHeader,
+  SeverityLabel,
+  UISeverity,
+  Tooltip,
+  showErrorToast,
+  showSuccessToast,
+} from "@/shared/ui";
 import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
+import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { Link } from "@/components/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
@@ -16,6 +24,8 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { IncidentDto } from "@/entities/incidents/model";
+import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -41,7 +51,7 @@ export const AlertSidebar = ({
     data: auditData,
     isLoading,
     mutate,
-  } = useAlertAudit(alert?.fingerprint || "");
+  } = useAlertAudit(alert?.fingerprint ?? "");
 
   const { data: providers } = useProviders();
   const providerName =
@@ -53,6 +63,30 @@ export const AlertSidebar = ({
   const handleRefresh = async () => {
     console.log("Refresh button clicked");
     await mutate();
+  };
+
+  const handleCopyFingerprint = async (alertFingerprint: string) => {
+    if (!alertFingerprint) {
+      showErrorToast(new Error("Alert has no fingerprint"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(alertFingerprint);
+      showSuccessToast("Fingerprint copied to clipboard");
+    } catch (err) {
+      showErrorToast(
+        err,
+        <p>
+          Failed to copy fingerprint. Please check your browser permissions.{" "}
+          <Link
+            target="_blank"
+            href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
+          >
+            Learn more
+          </Link>
+        </p>
+      );
+    }
   };
 
   return (
@@ -93,16 +127,18 @@ export const AlertSidebar = ({
                   {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
                 <Divider className="mb-0" />
-                <AlertMenu
-                  alert={alert!}
-                  presetName="feed"
-                  isInSidebar={true}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
-                  toggleSidebar={toggle}
-                />
+                {alert && (
+                  <AlertMenu
+                    alert={alert}
+                    presetName="feed"
+                    isInSidebar={true}
+                    setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                    setDismissModalAlert={setDismissModalAlert}
+                    setChangeStatusAlert={setChangeStatusAlert}
+                    setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+                    toggleSidebar={toggle}
+                  />
+                )}
               </div>
               <div>
                 <Button onClick={toggle} variant="light">
@@ -160,14 +196,49 @@ export const AlertSidebar = ({
                             </Link>
                           </>
                         }
-                        className="z-50"
+                        className="z-[100]"
                       >
                         <QuestionMarkCircleIcon className="w-4 h-4" />
                       </Tooltip>
                     </FieldHeader>
-                    {alert.fingerprint}
+                    <div className="flex items-center gap-2">
+                      <span className="truncate max-w-[calc(100%-40px)] inline-block">
+                        {alert.fingerprint}
+                      </span>
+                      <Button
+                        icon={ClipboardDocumentIcon}
+                        size="xs"
+                        color="orange"
+                        variant="light"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCopyFingerprint(alert.fingerprint);
+                        }}
+                        tooltip="Copy fingerprint"
+                      />
+                    </div>
                   </p>
                 </div>
+                {alert.incident_dto && (
+                  <div>
+                    <FieldHeader>Incidents</FieldHeader>
+                    {alert.incident_dto.map((incident: IncidentDto) => {
+                      const title =
+                        incident.user_generated_name ||
+                        incident.ai_generated_name;
+                      return (
+                        <Link
+                          key={incident.id}
+                          href={`/incidents/${incident.id}`}
+                          title={title}
+                        >
+                          {title}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
                 <AlertTimeline
                   key={auditData ? auditData.length : 1}
                   alert={alert}

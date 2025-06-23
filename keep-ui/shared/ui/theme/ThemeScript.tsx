@@ -5,6 +5,7 @@ import { LOCALSTORAGE_THEME_KEY } from "../../constants";
 export const ThemeScript = () => {
   return (
     <script
+      // eslint-disable-next-line react/no-danger -- the script is trusted and LOCALSTORAGE_THEME_KEY is constant and not user-controlled
       dangerouslySetInnerHTML={{
         __html: `
           try {

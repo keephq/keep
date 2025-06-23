@@ -10,16 +10,19 @@ import {
   getCellClassName,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 
 interface Props {
   table: Table<AlertDto>;
   showSkeleton: boolean;
+  pageSize?: number;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
   lastViewedAlert: string | null;
   presetName: string;
+  groupExpansionState?: ReturnType<typeof useGroupExpansion>;
 }
 
 export function AlertsTableBody({
@@ -29,9 +32,15 @@ export function AlertsTableBody({
   onRowClick,
   lastViewedAlert,
   presetName,
+  pageSize,
+  groupExpansionState,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
   const { isRowExpanded } = useExpandedRows(presetName);
+  
+  // Use provided groupExpansionState or create a local one
+  const localGroupExpansion = useGroupExpansion(true);
+  const { isGroupExpanded, toggleGroup, initializeGroup } = groupExpansionState || localGroupExpansion;
 
   const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
     // Only prevent clicks on specific interactive elements
@@ -51,7 +60,7 @@ export function AlertsTableBody({
   if (showSkeleton) {
     return (
       <TableBody>
-        {Array.from({ length: 20 }).map((_, index) => (
+        {Array.from({ length: pageSize || 20 }).map((_, index) => (
           <TableRow
             key={index}
             className={getRowClassName(
@@ -111,6 +120,9 @@ export function AlertsTableBody({
               onRowClick={handleRowClick}
               lastViewedAlert={lastViewedAlert}
               rowStyle={rowStyle}
+              isExpanded={isGroupExpanded(row.id)}
+              onToggleExpanded={toggleGroup}
+              onGroupInitialized={initializeGroup}
             />
           );
         }

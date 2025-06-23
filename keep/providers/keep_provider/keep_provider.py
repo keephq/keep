@@ -125,7 +125,7 @@ class KeepProvider(BaseProvider):
                 raise ValueError("Filter is required for version 2")
             try:
                 alerts = search_engine.search_alerts_by_cel(
-                    cel_query=filter, limit=limit or 100, timeframe=int(time_delta)
+                    cel_query=filter, limit=limit or 100, timeframe=float(time_delta)
                 )
             except Exception as e:
                 self.logger.exception(
@@ -160,10 +160,16 @@ class KeepProvider(BaseProvider):
             workflowId=self.context_manager.workflow_id,
         )
         # to avoid multiple key word argument, add and key,val on alert data only if it doesn't exists:
-        for key, val in alert_data.items():
-            if not hasattr(alert, key):
-                setattr(alert, key, val)
-        # if fingerprint_fields are not provided, use labels
+        if isinstance(alert_data, dict):
+            for key, val in alert_data.items():
+                if not hasattr(alert, key):
+                    setattr(alert, key, val)
+
+        # if fingerprint was explicitly mentioned in the workflow:
+        if "fingerprint" in alert_data or "fingerprint" in kwargs:
+            return alert
+
+        # else, if fingerprint_fields are not provided, use labels
         if not fingerprint_fields:
             fingerprint_fields = ["labels." + label for label in list(labels.keys())]
 
@@ -415,18 +421,14 @@ class KeepProvider(BaseProvider):
 
         # Handle new alerts not in current state
         for fingerprint, new_alert in state_alerts_map.items():
-            if fingerprint not in curr_alerts_map:
-                # Brand new alert - set to FIRING immediately
-                new_alert.status = AlertStatus.FIRING
-                new_alert.lastReceived = datetime.now(timezone.utc).isoformat()
-                alerts_to_notify.append(new_alert)
-                self.logger.info(
-                    "New alert firing",
-                    extra={
-                        "fingerprint": fingerprint,
-                        "last_received": new_alert.lastReceived,
-                    },
-                )
+            alerts_to_notify.append(new_alert)
+            self.logger.info(
+                "New alert firing",
+                extra={
+                    "fingerprint": fingerprint,
+                    "last_received": new_alert.lastReceived,
+                },
+            )
 
         self.logger.info(
             "Completed stateless alert handling",
@@ -460,26 +462,30 @@ class KeepProvider(BaseProvider):
         """
         self.logger.debug("Starting _notify_alert")
         context = self.context_manager.get_full_context()
-        alert_step = context.get("alert_step", None)
-        self.logger.debug("Got alert step", extra={"alert_step": alert_step})
 
-        # if alert_step is provided, get alert results
-        if alert_step:
-            alert_results = (
-                context.get("steps", {}).get(alert_step, {}).get("results", {})
-            )
+        alert_results = context.get("foreach", {}).get("items", None)
+
+        # if foreach_context is provided, get alert results
+        if alert_results:
             self.logger.debug(
-                "Got alert results from alert_step",
+                "Got alert results from foreach context",
                 extra={"alert_results": alert_results},
             )
         # else, the last step results are the alert results
         else:
             # TODO: this is a temporary solution until we have a better way to get the alert results
             alert_results = context.get("steps", {}).get("this", {}).get("results", {})
-            self.logger.debug(
+            self.logger.info(
                 "Got alert results from 'this' step",
                 extra={"alert_results": alert_results},
             )
+            # alert_results must be a list
+            if not isinstance(alert_results, list):
+                self.logger.warning(
+                    "Alert results must be a list, but got a non-list type",
+                    extra={"alert_results": alert_results},
+                )
+                alert_results = None
 
         # create_alert_in_keep.yml for example
         if not alert_results:
@@ -543,16 +549,22 @@ class KeepProvider(BaseProvider):
         for alert_result in trigger_alerts:
             alert_data = copy.copy(alert or {})
             # render alert data
-            rendered_alert_data = self.io_handler.render_context(
-                alert_data, additional_context=alert_result
-            )
+            if isinstance(alert_result, dict):
+                rendered_alert_data = self.io_handler.render_context(
+                    alert_data, additional_context=alert_result
+                )
+            else:
+                self.logger.warning(
+                    "Alert data is not a dict, skipping rendering",
+                    extra={"alert_data": alert_data},
+                )
+                rendered_alert_data = alert_data
             self.logger.debug(
                 "Rendered alert data",
                 extra={"original": alert_data, "rendered": rendered_alert_data},
             )
             # render tenrary expressions
-            # TODO: find another solution since js2py is not secure
-            # rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
+            rendered_alert_data = self._handle_ternary_expressions(rendered_alert_data)
             alert_dto = self._build_alert(
                 alert_result, fingerprint_fields or [], **rendered_alert_data
             )
@@ -661,9 +673,11 @@ class KeepProvider(BaseProvider):
             read_only: if True, don't modify existing alerts
             fingerprint: alert fingerprint
         """
-        # for backward compatibility
-        if_condition = if_ or kwargs.get("if", None)
-        for_duration = for_ or kwargs.get("for", None)
+        # TODO: refactor this to be two separate ProviderMethods, when wf engine will support calling provider methods
+        is_workflow_action = (
+            workflow_full_sync or delete_all_other_workflows or workflow_to_update_yaml
+        )
+
         if workflow_full_sync or delete_all_other_workflows:
             # We need DB id, not user id for the workflow, so getting it from the wf execution.
             workflow_store = WorkflowStore()
@@ -672,8 +686,13 @@ class KeepProvider(BaseProvider):
                 self.context_manager.workflow_execution_id,
             )
             workflow_db_id = workflow_execution.workflow_id
-            self._delete_workflows(except_workflow_id=workflow_db_id)
-        elif workflow_to_update_yaml:
+            if not workflow_execution.workflow_id == "test":
+                self._delete_workflows(except_workflow_id=workflow_db_id)
+            else:
+                self.logger.info(
+                    "Not deleting workflow as it's a test run",
+                )
+        if workflow_to_update_yaml:
             self.logger.info(
                 "Updating workflow YAML",
                 extra={"workflow_to_update_yaml": workflow_to_update_yaml},
@@ -692,6 +711,8 @@ class KeepProvider(BaseProvider):
                     tenant_id=self.context_manager.tenant_id,
                     created_by=f"workflow id: {self.context_manager.workflow_id}",
                     workflow=workflow_to_update_yaml,
+                    force_update=False,
+                    lookup_by_name=True,
                 )
                 self.logger.info(
                     "Workflow created successfully",
@@ -709,8 +730,11 @@ class KeepProvider(BaseProvider):
                     },
                 )
                 raise ProviderException(f"Failed to create workflow: {e}")
-        else:
+        elif not is_workflow_action:
             self.logger.info("Notifying Alerts")
+            # for backward compatibility
+            if_condition = if_ or kwargs.get("if", None)
+            for_duration = for_ or kwargs.get("for", None)
             alerts = self._notify_alert(
                 alert=alert,
                 if_condition=if_condition,
@@ -759,25 +783,116 @@ class KeepProvider(BaseProvider):
             return False
         return evaluated_if_met
 
-    """
-    TODO: find alternative to js2py
     def _handle_ternary_expressions(self, rendered_providers_parameters):
-        # SG: a hack to allow ternary expressions
-        #     e.g.'0.012899999999999995 > 0.9 ? "critical" : 0.012899999999999995 > 0.7 ? "warning" : "info"''
-        #
-        #     this is a hack and should be improved
-        for key, value in rendered_providers_parameters.items():
-            try:
-                split_value = value.split(" ")
-                if split_value[1] == ">" and split_value[3] == "?":
-                    # import js2py
+        """
+        Handle ternary expressions in rendered parameters without using js2py.
 
-                    rendered_providers_parameters[key] = js2py.eval_js(value)
-            # we don't care, it's not a ternary expression
-            except Exception:
-                pass
+        Parses and evaluates expressions like:
+        "x > 0.9 ? 'critical' : x > 0.7 ? 'warning' : 'info'"
+
+        Args:
+            rendered_providers_parameters (dict): Dictionary of rendered parameters
+
+        Returns:
+            dict: Updated parameters with evaluated ternary expressions
+        """
+        from asteval import Interpreter
+
+        def evaluate_ternary(expression, aeval):
+            """Recursively evaluate a ternary expression using Python."""
+            # Find the position of the first question mark that's not inside quotes
+            in_quotes = False
+            quote_type = None
+            question_pos = -1
+
+            for i, char in enumerate(expression):
+                if char in ['"', "'"]:
+                    if not in_quotes:
+                        in_quotes = True
+                        quote_type = char
+                    elif char == quote_type:
+                        in_quotes = False
+
+                if char == "?" and not in_quotes:
+                    question_pos = i
+                    break
+
+            if question_pos == -1:
+                # No ternary operator found, evaluate as regular expression
+                return aeval(expression)
+
+            # Find the matching colon
+            colon_pos = -1
+            nested_level = 0
+
+            for i in range(question_pos + 1, len(expression)):
+                char = expression[i]
+
+                if char in ['"', "'"]:
+                    if not in_quotes:
+                        in_quotes = True
+                        quote_type = char
+                    elif char == quote_type:
+                        in_quotes = False
+
+                if not in_quotes:
+                    if char == "?":
+                        nested_level += 1
+                    elif char == ":":
+                        if nested_level == 0:
+                            colon_pos = i
+                            break
+                        else:
+                            nested_level -= 1
+
+            if colon_pos == -1:
+                # Malformed ternary expression
+                self.logger.warning(
+                    f"Malformed ternary expression: {expression}",
+                    extra={"expression": expression},
+                )
+                return expression
+
+            # Split into condition, true_expr, and false_expr
+            condition = expression[:question_pos].strip()
+            true_expr = expression[question_pos + 1 : colon_pos].strip()
+            false_expr = expression[colon_pos + 1 :].strip()
+
+            # Evaluate the condition
+            condition_result = aeval(condition)
+
+            # Evaluate the appropriate branch (true or false)
+            if condition_result:
+                return evaluate_ternary(true_expr, aeval)
+            else:
+                return evaluate_ternary(false_expr, aeval)
+
+        # Process each parameter value
+        for key, value in rendered_providers_parameters.items():
+            if not isinstance(value, str):
+                continue
+
+            # Check if the value might contain a ternary expression
+            if "?" in value and ":" in value:
+                try:
+                    aeval = Interpreter()
+                    result = evaluate_ternary(value, aeval)
+
+                    # If there were errors during evaluation, log them but keep the original value
+                    if aeval.error_msg:
+                        self.logger.warning(
+                            f"Error evaluating ternary expression: {value}. Error: {aeval.error_msg}",
+                            extra={"value": value, "error": aeval.error_msg},
+                        )
+                    else:
+                        rendered_providers_parameters[key] = result
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to evaluate potential ternary expression: {value}. Error: {str(e)}",
+                        extra={"value": value, "error": str(e)},
+                    )
+
         return rendered_providers_parameters
-    """
 
 
 if __name__ == "__main__":

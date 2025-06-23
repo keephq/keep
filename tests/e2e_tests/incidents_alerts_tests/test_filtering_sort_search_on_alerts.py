@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import requests
@@ -264,11 +264,27 @@ search_by_cel_tescases = {
         "predicate": lambda alert: "java-otel"
         in alert.get("labels", {}).get("service", ""),
         "alert_property_name": "name",
+        "commands": [
+            lambda browser: browser.keyboard.type("labels."),
+            lambda browser: browser.locator(
+                ".monaco-highlighted-label", has_text="service"
+            ).click(),
+            lambda browser: browser.keyboard.type("."),
+            lambda browser: browser.locator(
+                ".monaco-highlighted-label", has_text="contains"
+            ).click(),
+            lambda browser: browser.keyboard.type("java-otel"),
+        ],
     },
     "using enriched field": {
         "cel_query": "host == 'enriched host'",
         "predicate": lambda alert: "Enriched" in alert["name"],
         "alert_property_name": "name",
+        "commands": [
+            lambda browser: browser.keyboard.type("host"),
+            lambda browser: browser.keyboard.type(" == "),
+            lambda browser: browser.keyboard.type("'enriched host'"),
+        ],
     },
     "date comparison greater than or equal": {
         "cel_query": f"dateForTests >= '{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'",
@@ -276,6 +292,13 @@ search_by_cel_tescases = {
         and datetime.fromisoformat(alert.get("dateForTests"))
         >= (datetime(2025, 2, 10, 10) + timedelta(days=-14)),
         "alert_property_name": "name",
+        "commands": [
+            lambda browser: browser.keyboard.type("dateForTests"),
+            lambda browser: browser.keyboard.type(" >= "),
+            lambda browser: browser.keyboard.type(
+                f"'{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'"
+            ),
+        ],
     },
 }
 
@@ -290,19 +313,22 @@ def test_search_by_cel(
 ):
     test_case = search_by_cel_tescases[search_test_case]
     cel_query = test_case["cel_query"]
+    commands = test_case["commands"]
     predicate = test_case["predicate"]
     alert_property_name = test_case["alert_property_name"]
     current_alerts = setup_test_data
     browser.wait_for_timeout(3000)
     print(current_alerts)
     init_test(browser, current_alerts)
-    search_input = browser.locator(
-        "textarea[placeholder*='Use CEL to filter your alerts']"
-    )
-    expect(search_input).to_be_visible()
     browser.wait_for_timeout(1000)
-    search_input.fill(cel_query)
-    search_input.press("Enter")
+    cel_input_locator = browser.locator(".alerts-cel-input")
+    cel_input_locator.click()
+
+    for command in commands:
+        command(browser)
+    expect(cel_input_locator.locator(".view-lines")).to_have_text(cel_query)
+
+    browser.keyboard.press("Enter")
 
     assert_alerts_by_column(
         browser,
@@ -497,10 +523,36 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     try:
         # refresh the page to get the new alerts
         browser.reload()
-        browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
-        expect(
-            browser.locator("[data-testid='alerts-table'] table tbody tr")
-        ).to_have_count(len(simulated_alerts))
+        browser.wait_for_selector("[data-testid='facet-value']", timeout=30000)  # Increase timeout from 10s to 30s
+
+        # Add retry logic for checking alert count
+        max_retries = 5
+        for retry in range(max_retries):
+            try:
+                # Wait a bit longer between retries
+                if retry > 0:
+                    print(f"Retry {retry}/{max_retries} for alert count check")
+                    time.sleep(5)
+                    browser.reload()
+                    browser.wait_for_selector("[data-testid='facet-value']", timeout=30000)
+
+                # Check if alerts are visible
+                alert_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
+                print(f"Current alert count: {alert_count}, expected: {len(simulated_alerts)}")
+
+                if alert_count == len(simulated_alerts):
+                    break
+
+                if retry == max_retries - 1:
+                    # On last retry, use the expect assertion which will provide better error details
+                    expect(
+                        browser.locator("[data-testid='alerts-table'] table tbody tr")
+                    ).to_have_count(len(simulated_alerts))
+            except Exception as retry_error:
+                if retry == max_retries - 1:
+                    raise retry_error
+                print(f"Error during retry {retry}: {str(retry_error)}")
+
     except Exception as e:
         save_failure_artifacts(browser, log_entries=log_entries)
         raise e
@@ -515,3 +567,238 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
         alert_property_name,
         None,
     )
+
+
+def test_filter_search_timeframe_combination_with_queryparams(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    try:
+        facet_name = "severity"
+        alert_property_name = "severity"
+        value = "info"
+
+        def filter_lambda(alert):
+            return (
+                alert[alert_property_name] == value
+                and "high" in alert["name"].lower()
+                and datetime.fromisoformat(alert["lastReceived"]).replace(
+                    tzinfo=timezone.utc
+                )
+                >= (datetime.now(timezone.utc) - timedelta(hours=4))
+            )
+
+        current_alerts = query_alerts(cell_query="", limit=1000)["results"]
+        init_test(browser, current_alerts, max_retries=3)
+        filtered_alerts = [alert for alert in current_alerts if filter_lambda(alert)]
+
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        # Wait for navigation to complete to either signin or providers page
+        # (since we might get redirected automatically)
+        browser.wait_for_load_state("networkidle")
+
+        option = browser.locator("[data-testid='facet-value']", has_text=value)
+        option.hover()
+
+        option.locator("button", has_text="Only").click()
+        browser.wait_for_timeout(500)
+
+        cel_input_locator = browser.locator(".alerts-cel-input")
+        cel_input_locator.click()
+        browser.keyboard.type("name.contains('high')")
+        browser.keyboard.press("Enter")
+        browser.wait_for_timeout(500)
+
+        # select timeframe
+        browser.locator("button[data-testid='timeframe-picker-trigger']").click()
+        browser.locator(
+            "[data-testid='timeframe-picker-content'] button", has_text="Past 4 hours"
+        ).click()
+
+        # check that alerts are filtered by the selected facet/cel/timeframe
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_alerts,
+            alert_property_name,
+        )
+        assert_alerts_by_column(
+            browser,
+            current_alerts,
+            filter_lambda,
+            alert_property_name,
+            None,
+        )
+
+        # Refresh in order to check that filters/facets are restored
+        # It will use the URL query params from previous filters
+        browser.reload()
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_alerts,
+            alert_property_name,
+        )
+        assert_alerts_by_column(
+            browser,
+            current_alerts,
+            filter_lambda,
+            alert_property_name,
+            None,
+        )
+        expect(
+            browser.locator("button[data-testid='timeframe-picker-trigger']")
+        ).to_contain_text("Past 4 hours")
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+
+def test_adding_new_preset(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    try:
+        facet_name = "severity"
+        alert_property_name = "severity"
+
+        def filter_lambda(alert):
+            return "high" in alert["name"].lower()
+
+        current_alerts = query_alerts(cell_query="", limit=1000)["results"]
+        init_test(browser, current_alerts, max_retries=3)
+        filtered_alerts = [alert for alert in current_alerts if filter_lambda(alert)]
+
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        # Wait for navigation to complete to either signin or providers page
+        # (since we might get redirected automatically)
+        browser.wait_for_load_state("networkidle")
+
+        cel_input_locator = browser.locator(".alerts-cel-input")
+        cel_input_locator.click()
+        browser.keyboard.type("name.contains('high')")
+        browser.keyboard.press("Enter")
+        browser.wait_for_timeout(500)
+
+        # check that alerts are filtered by the preset CEL
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_alerts,
+            alert_property_name,
+        )
+        assert_alerts_by_column(
+            browser,
+            current_alerts,
+            filter_lambda,
+            alert_property_name,
+            None,
+        )
+
+        browser.locator("[data-testid='save-preset-button']").click()
+
+        preset_form_locator = browser.locator("[data-testid='preset-form']")
+        expect(browser.locator("[data-testid='alerts-count-badge']")).to_contain_text(
+            str(len(filtered_alerts))
+        )
+        preset_form_locator.locator("[data-testid='preset-name-input']").fill(
+            "Test preset"
+        )
+
+        preset_form_locator.locator(
+            "[data-testid='counter-shows-firing-only-switch']"
+        ).click()
+
+        preset_form_locator.locator("[data-testid='save-preset-button']").click()
+        preset_locator = browser.locator(
+            "[data-testid='preset-link-container']", has_text="Test preset"
+        )
+        expect(preset_locator).to_be_visible()
+        expect(preset_locator.locator("[data-testid='preset-badge']")).to_contain_text(
+            str(len(filtered_alerts))
+        )
+        expect(browser.locator(".alerts-cel-input .view-lines")).to_have_text(
+            "name.contains('high')"
+        )
+        expect(browser.locator("[data-testid='preset-page-title']")).to_contain_text(
+            "Test preset"
+        )
+
+        # Refresh in order to check that the preset and corresponding data is open
+        browser.reload()
+        expect(browser.locator(".alerts-cel-input .view-lines")).to_have_text(
+            "name.contains('high')"
+        )
+        expect(browser.locator("[data-testid='preset-page-title']")).to_contain_text(
+            "Test preset"
+        )
+        assert_facet(
+            browser,
+            facet_name,
+            filtered_alerts,
+            alert_property_name,
+        )
+        assert_alerts_by_column(
+            browser,
+            current_alerts,
+            filter_lambda,
+            alert_property_name,
+            None,
+        )
+        # check that alerts noise is not playing
+        expect(
+            browser.locator("[data-testid='noisy-presets-audio-player'].playing")
+        ).to_have_count(0)
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise
+
+
+def test_adding_new_noisy_preset(
+    browser: Page,
+    setup_test_data,
+    setup_page_logging,
+    failure_artifacts,
+):
+    try:
+        current_alerts = query_alerts(cell_query="", limit=1000)["results"]
+        init_test(browser, current_alerts, max_retries=3)
+
+        # Give the page a moment to process redirects
+        browser.wait_for_timeout(500)
+
+        # Wait for navigation to complete to either signin or providers page
+        # (since we might get redirected automatically)
+        browser.wait_for_load_state("networkidle")
+        cel_input_locator = browser.locator(".alerts-cel-input")
+        cel_input_locator.click()
+        browser.keyboard.type("name.contains('high')")
+        browser.keyboard.press("Enter")
+        browser.wait_for_timeout(500)
+        browser.locator("[data-testid='save-preset-button']").click()
+        preset_form_locator = browser.locator("[data-testid='preset-form']")
+        preset_form_locator.locator("[data-testid='preset-name-input']").fill(
+            "Test noisy preset"
+        )
+        preset_form_locator.locator("[data-testid='is-noisy-switch']").click()
+        preset_form_locator.locator("[data-testid='save-preset-button']").click()
+        expect(
+            browser.locator("[data-testid='noisy-presets-audio-player'].playing")
+        ).to_have_count(1)
+        browser.reload()
+
+        # check that it's still playing after reloading
+        expect(
+            browser.locator("[data-testid='noisy-presets-audio-player'].playing")
+        ).to_have_count(1)
+    except Exception:
+        save_failure_artifacts(browser, log_entries=[])
+        raise

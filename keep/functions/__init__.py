@@ -6,6 +6,7 @@ import re
 import urllib.parse
 from datetime import timedelta
 from itertools import groupby
+from typing import Literal
 
 import json5
 import pytz
@@ -19,6 +20,63 @@ from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 logger = logging.getLogger(__name__)
 
 _len = len
+
+
+def add(*args) -> [int, float]:
+    args = list(map(int, args))
+    return sum(args)
+
+
+def sub(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result -= arg
+    return result
+
+
+def mul(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result *= arg
+    return result
+
+
+def div(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result /= arg
+    return int(result) if result.is_integer() else result
+
+
+def mod(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result %= arg
+    return result
+
+
+def exp(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result **= arg
+    return result
+
+
+def fdiv(*args) -> [int, float]:
+    args = list(map(int, args))
+    result = args[0]
+    for arg in args[1:]:
+        result //= arg
+    return result
+
+
+def eq(a, b) -> bool:
+    return a == b
 
 
 def all(iterable) -> bool:
@@ -42,6 +100,32 @@ def uppercase(string) -> str:
 
 def lowercase(string) -> str:
     return string.lower()
+
+
+def capitalize(string) -> str:
+    """
+    Capitalize the first character of a string.
+
+    Args:
+        string (str): The string to capitalize.
+
+    Returns:
+        str: The capitalized string.
+    """
+    return string.capitalize()
+
+
+def title(string) -> str:
+    """
+    Convert a string to title case (capitalize each word).
+
+    Args:
+        string (str): The string to convert to title case.
+
+    Returns:
+        str: The title-cased string.
+    """
+    return string.title()
 
 
 def split(string, delimeter) -> list:
@@ -97,6 +181,37 @@ def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
     return dt - datetime.timedelta(minutes=minutes)
 
 
+def timestamp_delta(
+    dt: datetime.datetime,
+    amount: float,
+    timestamp_unit: Literal["seconds", "minutes", "hours", "days", "weeks"],
+) -> datetime.datetime:
+    """
+    Add or subtract a time delta to/from a given datetime. Use a negative amount to subtract time.
+
+    Args:
+        dt (datetime.datetime): The original datetime.
+        amount (float): How much to add (use negative to subtract).
+        timestamp_unit (str): The unit for the amount ('seconds', 'minutes', 'hours', 'days', 'weeks').
+
+    Returns:
+        datetime.datetime: The resulting datetime after adding/subtracting the delta.
+    """
+    valid_units = {
+        "seconds": "seconds",
+        "minutes": "minutes",
+        "hours": "hours",
+        "days": "days",
+        "weeks": "weeks",
+    }
+
+    if timestamp_unit not in valid_units:
+        raise ValueError(f"Unsupported timestamp_unit: {timestamp_unit}")
+
+    delta = datetime.timedelta(**{valid_units[timestamp_unit]: amount})
+    return dt + delta
+
+
 def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
     if isinstance(dt, str):
         try:
@@ -106,6 +221,17 @@ def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
             return ""
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
+
+
+def from_timestamp(
+    timestamp: int | float | str, timezone: str = "UTC"
+) -> datetime.datetime | str:
+    try:
+        if isinstance(timestamp, str):
+            timestamp = float(timestamp)
+        return datetime.datetime.fromtimestamp(timestamp, tz=pytz.timezone(timezone))
+    except Exception:
+        return ""
 
 
 def to_timestamp(dt: datetime.datetime | str = "") -> int:

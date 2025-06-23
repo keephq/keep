@@ -29,6 +29,7 @@ from keep.api.core.db import (
     get_enrichment_with_session,
     get_last_alert_hashes_by_fingerprints,
     get_session_sync,
+    get_started_at_for_alerts,
     set_last_alert,
 )
 from keep.api.core.dependencies import get_pusher_client
@@ -46,6 +47,7 @@ from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
+    calculate_firing_time_since_last_resolved,
     calculated_firing_counter,
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
@@ -175,8 +177,19 @@ def __save_to_db(
         enriched_formatted_events = []
         saved_alerts = []
 
+        fingerprints = [event.fingerprint for event in formatted_events]
+        started_at_for_fingerprints = get_started_at_for_alerts(
+            tenant_id, fingerprints, session=session
+        )
+
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+
+            started_at = started_at_for_fingerprints.get(
+                formatted_event.fingerprint, None
+            )
+            if started_at:
+                formatted_event.startedAt = str(started_at)
 
             if KEEP_CALCULATE_START_FIRING_TIME_ENABLED:
                 # calculate startFiring time
@@ -188,6 +201,11 @@ def __save_to_db(
                 previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
                 formatted_event.firingStartTime = calculated_start_firing_time(
                     formatted_event, previous_alert
+                )
+                formatted_event.firingStartTimeSinceLastResolved = (
+                    calculate_firing_time_since_last_resolved(
+                        formatted_event, previous_alert
+                    )
                 )
 
                 # we now need to update the firing counter

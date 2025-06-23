@@ -3,10 +3,13 @@ import { AlertDto } from "@/entities/alerts/model";
 import { Table, flexRender, Row } from "@tanstack/react-table";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect } from "react";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import { RowStyle } from "@/entities/alerts/model/useAlertRowStyle";
-import { getRowClassName, getCellClassName } from "@/widgets/alerts-table/lib/alert-table-utils";
+import {
+  getRowClassName,
+  getCellClassName,
+} from "@/widgets/alerts-table/lib/alert-table-utils";
 
 interface GroupedRowProps {
   row: Row<AlertDto>;
@@ -15,6 +18,9 @@ interface GroupedRowProps {
   onRowClick?: (e: React.MouseEvent, alert: AlertDto) => void;
   lastViewedAlert: string | null;
   rowStyle: RowStyle;
+  isExpanded?: boolean;
+  onToggleExpanded?: (groupKey: string) => void;
+  onGroupInitialized?: (groupKey: string) => void;
 }
 
 export const GroupedRow = ({
@@ -24,14 +30,39 @@ export const GroupedRow = ({
   onRowClick,
   lastViewedAlert,
   rowStyle,
+  isExpanded = true,
+  onToggleExpanded,
+  onGroupInitialized,
 }: GroupedRowProps) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const groupKey = row.id;
+
+  // Initialize the group when component mounts
+  useEffect(() => {
+    if (onGroupInitialized && row.getIsGrouped()) {
+      onGroupInitialized(groupKey);
+    }
+  }, [groupKey, onGroupInitialized, row]);
 
   if (row.getIsGrouped()) {
     const groupingColumnId = row.groupingColumnId;
-    const groupValue = groupingColumnId
+
+    let groupValue = groupingColumnId
       ? row.getValue(groupingColumnId)
       : "Unknown Group";
+
+    if (groupingColumnId === "incident") {
+      const incidentsDto = row.original.incident_dto;
+      const incidentIds = row.getValue(groupingColumnId);
+      if (!incidentIds || incidentIds === "undefined") {
+        groupValue = "No Incidents";
+      } else {
+        groupValue = incidentsDto
+          ?.map((incident) => {
+            return incident.user_generated_name || incident.ai_generated_name;
+          })
+          .join(", ");
+      }
+    }
 
     return (
       <>
@@ -40,7 +71,7 @@ export const GroupedRow = ({
           {/* Render a single cell that spans the entire width */}
           <TableCell
             colSpan={row.getVisibleCells().length}
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => onToggleExpanded?.(groupKey)}
             className="group-header-cell bg-orange-100 group-hover:bg-orange-200"
           >
             <div className="flex items-center gap-2">

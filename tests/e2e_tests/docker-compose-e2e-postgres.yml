@@ -23,9 +23,9 @@ services:
     environment:
       - AUTH_TYPE=NO_AUTH
       - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
-      - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
 
   # Backend Services
@@ -38,7 +38,6 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
-      - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
       - REDIS=${REDIS:-false}
@@ -74,7 +73,6 @@ services:
       - AUTH_TYPE=DB
       - API_URL=http://keep-backend-db-auth:8080
       - POSTHOG_DISABLED=true
-      - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
       - AUTH_DEBUG=true
 
@@ -98,7 +96,6 @@ services:
       - AUTH_TYPE=DB
       - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database-db-auth:5432/keepdb
       - POSTHOG_DISABLED=true
-      - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
       - KEEP_JWT_SECRET=verysecretkey

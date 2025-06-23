@@ -47,6 +47,14 @@ class ZabbixProviderAuthConfig:
             "sensitive": True,
         }
     )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+        },
+        default=True,
+    )
 
 
 class ZabbixProvider(BaseProvider):
@@ -61,37 +69,88 @@ class ZabbixProvider(BaseProvider):
     )
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="problem.get",
-            description="The method allows to retrieve problems.",
+            name="action.create",
+            description="This method allows to create new actions.",
             mandatory=True,
-            mandatory_for_webhook=False,
-            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get",
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/action/create",
         ),
         ProviderScope(
-            name="script.get",
-            description="The method allows to retrieve media types.",
-            mandatory=False,
+            name="action.get",
+            description="This method allows to retrieve actions.",
+            mandatory=True,
             mandatory_for_webhook=True,
-            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/get",
-        ),
-        ProviderScope(
-            name="script.update",
-            description="This method allows to update existing media types.",
-            mandatory=False,
-            mandatory_for_webhook=True,
-            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/update",
-        ),
-        ProviderScope(
-            name="script.create",
-            description="This method allows to create new media types.",
-            mandatory=False,
-            mandatory_for_webhook=True,
-            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/create",
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/action/get",
         ),
         ProviderScope(
             name="event.acknowledge",
             description="This method allows to update events.",
+            mandatory=True,
+            mandatory_for_webhook=True,
             documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge",
+        ),
+        ProviderScope(
+            name="mediatype.create",
+            description="This method allows to create new media types.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/create",
+        ),
+        ProviderScope(
+            name="mediatype.get",
+            description="This method allows to retrieve media types.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/get",
+        ),
+        ProviderScope(
+            name="mediatype.update",
+            description="This method allows to update media types.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/update",
+        ),
+        ProviderScope(
+            name="problem.get",
+            description="The method allows to retrieve problems.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get",
+        ),
+        ProviderScope(
+            name="script.create",
+            description="This method allows to create new scripts.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/script/create",
+        ),
+        ProviderScope(
+            name="script.get",
+            description="The method allows to retrieve scripts.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/script/get",
+        ),
+        ProviderScope(
+            name="script.update",
+            description="This method allows to update scripts.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/script/update",
+        ),
+        ProviderScope(
+            name="user.get",
+            description="This method allows to retrieve users.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/get",
+        ),
+        ProviderScope(
+            name="user.update",
+            description="This method allows to update users.",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/update",
         ),
     ]
     PROVIDER_METHODS = [
@@ -368,7 +427,9 @@ class ZabbixProvider(BaseProvider):
             # zabbix < 6.4 compatibility
             data["auth"] = f"{self.authentication_config.auth_token}"
 
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(
+            url, json=data, headers=headers, verify=self.authentication_config.verify
+        )
 
         try:
             response.raise_for_status()
@@ -548,39 +609,47 @@ class ZabbixProvider(BaseProvider):
         )
         if not action_exists:
             self.logger.info("Creating action")
-            action_response = self.__send_request(
-                "action.create",
-                {
-                    "eventsource": "0",
-                    "name": action_name,
-                    "status": "0",
-                    "esc_period": "1h",
-                    "operations": {
-                        "0": {
-                            "operationtype": "1",
-                            "opcommand_hst": {"0": {"hostid": "0"}},
-                            "opcommand": {"scriptid": script_id},
-                        }
-                    },
-                    "recovery_operations": {
-                        "0": {
-                            "operationtype": "1",
-                            "opcommand_hst": {"0": {"hostid": "0"}},
-                            "opcommand": {"scriptid": script_id},
-                        }
-                    },
-                    "update_operations": {
-                        "0": {
-                            "operationtype": "1",
-                            "opcommand_hst": {"0": {"hostid": "0"}},
-                            "opcommand": {"scriptid": script_id},
-                        }
-                    },
-                    "pause_symptoms": "1",
-                    "pause_suppressed": "1",
-                    "notify_if_canceled": "1",
+            payload = {
+                "eventsource": "0",
+                "name": action_name,
+                "status": "0",
+                "esc_period": "1h",
+                "operations": {
+                    "0": {
+                        "operationtype": "1",
+                        "opcommand_hst": {"0": {"hostid": "0"}},
+                        "opcommand": {"scriptid": script_id},
+                    }
                 },
-            )
+                "recovery_operations": {
+                    "0": {
+                        "operationtype": "1",
+                        "opcommand_hst": {"0": {"hostid": "0"}},
+                        "opcommand": {"scriptid": script_id},
+                    }
+                },
+                "update_operations": {
+                    "0": {
+                        "operationtype": "1",
+                        "opcommand_hst": {"0": {"hostid": "0"}},
+                        "opcommand": {"scriptid": script_id},
+                    }
+                },
+                "pause_symptoms": "1",
+                "pause_suppressed": "1",
+                "notify_if_canceled": "1",
+            }
+            try:
+                action_response = self.__send_request(
+                    "action.create",
+                    payload,
+                )
+            except Exception:
+                payload.pop("pause_symptoms", None)
+                action_response = self.__send_request(
+                    "action.create",
+                    payload,
+                )
             self.logger.info(
                 "Created action", extra={"action_response": action_response}
             )

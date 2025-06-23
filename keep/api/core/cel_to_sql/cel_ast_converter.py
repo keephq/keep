@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 import celpy.celparser
@@ -8,14 +9,15 @@ from dateutil.parser import parse
 
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
+    ComparisonNodeOperator,
     ConstantNode,
-    IndexAccessNode,
     LogicalNode,
-    MethodAccessNode,
+    LogicalNodeOperator,
     Node,
     ParenthesisNode,
     PropertyAccessNode,
     UnaryNode,
+    UnaryNodeOperator,
 )
 
 # Matches such strings:
@@ -41,6 +43,7 @@ datetime_regex = re.compile(
     r"(?:\s(\d{2}):(\d{2}):(\d{2}))?$"  # Optional time: HH:MM:SS
 )
 
+logger = logging.getLogger(__name__)
 
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
@@ -48,9 +51,13 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     @classmethod
     def convert_to_ast(cls_, cel: str) -> Node:
         d = cls_()
-        celpy_ast = d.celpy_env.compile(cel)
-        d.visit(celpy_ast)
-        return d.stack[0]
+        try:
+            celpy_ast = d.celpy_env.compile(cel)
+            d.visit(celpy_ast)
+            return d.stack[0]
+        except Exception as e:
+            logger.warning('Error converting "%s" CEL to AST. Error: %s', cel, e)
+            raise e
 
     def __init__(self) -> None:
         self.celpy_env = celpy.Environment()
@@ -74,11 +81,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             right = self.stack.pop()
             left = self.stack.pop()
-            self.stack.append(LogicalNode(
-                left = left,
-                operator = LogicalNode.OR,
-                right = right
-            ))
+            self.stack.append(
+                LogicalNode(left=left, operator=LogicalNodeOperator.OR, right=right)
+            )
 
     def conditionaland(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
@@ -86,11 +91,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             right = self.stack.pop()
             left = self.stack.pop()
-            self.stack.append(LogicalNode(
-                left = left,
-                operator = LogicalNode.AND,
-                right = right
-            ))
+            self.stack.append(
+                LogicalNode(left=left, operator=LogicalNodeOperator.AND, right=right)
+            )
 
     def relation(self, tree: lark.Tree) -> None:
         # self.member_access_stack.clear()
@@ -106,63 +109,63 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
     def relation_lt(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.LT,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.LT,
+                second_operand=None,
             )
         )
 
     def relation_le(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.LE,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.LE,
+                second_operand=None,
             )
         )
 
     def relation_gt(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.GT,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.GT,
+                second_operand=None,
             )
         )
 
     def relation_ge(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.GE,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.GE,
+                second_operand=None,
             )
         )
 
     def relation_eq(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.EQ,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=None,
             )
         )
 
     def relation_ne(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.NE,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.NE,
+                second_operand=None,
             )
         )
 
     def relation_in(self, tree: lark.Tree) -> None:
         self.stack.append(
             ComparisonNode(
-                first_operand = self.stack.pop(),
-                operator = ComparisonNode.IN,
-                second_operand=None
+                first_operand=self.stack.pop(),
+                operator=ComparisonNodeOperator.IN,
+                second_operand=None,
             )
         )
 
@@ -229,23 +232,22 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             self.stack.append(unaryNode)
 
     def unary_not(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            UnaryNode(operator=UnaryNode.NOT, operand=None)
-        )
+        self.stack.append(UnaryNode(operator=UnaryNodeOperator.NOT, operand=None))
 
     def unary_neg(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            UnaryNode(operator=UnaryNode.NEG, operand=None)
-        )
+        self.stack.append(UnaryNode(operator=UnaryNodeOperator.NEG, operand=None))
 
     def member_dot(self, tree: lark.Tree) -> None:
         right = cast(lark.Token, tree.children[1]).value
 
         if self.member_access_stack:
             property_member: PropertyAccessNode = self.member_access_stack.pop()
-            property_value = PropertyAccessNode(member_name=right, value=None)
-            property_member.value = property_value
-            self.member_access_stack.append(property_value)
+            new_property_access_node = PropertyAccessNode(
+                path=property_member.path + [right]
+            )
+            self.stack.pop()
+            self.stack.append(new_property_access_node)
+            self.member_access_stack.append(new_property_access_node)
 
     def member_dot_arg(self, tree: lark.Tree) -> None:
         if len(tree.children) == 3:
@@ -254,12 +256,22 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             exprlist = []
         right = cast(lark.Token, tree.children[1]).value
         if self.member_access_stack:
-            left: PropertyAccessNode = self.member_access_stack.pop()
+            if right.lower() in [
+                ComparisonNodeOperator.CONTAINS.value.lower(),
+                ComparisonNodeOperator.STARTS_WITH.value.lower(),
+                ComparisonNodeOperator.ENDS_WITH.value.lower(),
+            ]:
+                self.stack.append(
+                    ComparisonNode(
+                        first_operand=self.stack.pop(),
+                        operator=right,
+                        second_operand=exprlist[0],
+                    )
+                )
+                return
 
-            method = MethodAccessNode(member_name=right, args=[item for item in reversed(exprlist)])
-            left.value = method
+            raise NotImplementedError(f"Method '{right}' not implemented")
 
-            self.member_access_stack.append(method)
         else:
             raise ValueError("No member access stack")
 
@@ -270,15 +282,12 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         if isinstance(right, ConstantNode):
             right = right.value
 
-        prop_access_node = left
-
-        while prop_access_node.value is not None:
-            prop_access_node = prop_access_node.value
-
-        prop_access_node.value = IndexAccessNode(str(right), None)
-
-        self.stack.append(left)
-        self.member_access_stack.append(prop_access_node.value)
+        prop_access_node: PropertyAccessNode = left
+        new_property_access_node = PropertyAccessNode(
+            path=prop_access_node.path + [str(right)]
+        )
+        self.stack.append(new_property_access_node)
+        self.member_access_stack.append(new_property_access_node)
 
     def member_object(self, tree: lark.Tree) -> None:
         raise NotImplementedError("Member object not implemented")
@@ -290,10 +299,22 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         raise NotImplementedError("Dot ident not implemented")
 
     def ident_arg(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Ident arg not implemented")
+        token_value = tree.children[0].value
+
+        if token_value == UnaryNodeOperator.HAS.value:
+            self.stack.append(
+                UnaryNode(operator=UnaryNodeOperator.HAS, operand=self.stack.pop()[0])
+            )
+            return
+
+        raise NotImplementedError(
+            "Ident arg not implemented for token_value:" + token_value
+        )
 
     def ident(self, tree: lark.Tree) -> None:
-        property_member = PropertyAccessNode(member_name=cast(lark.Token, tree.children[0]).value, value=None)
+        property_member = PropertyAccessNode(
+            path=[cast(lark.Token, tree.children[0]).value]
+        )
         self.member_access_stack.clear()
         self.stack.append(property_member)
         self.member_access_stack.append(property_member)
@@ -338,7 +359,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
                 value = parse(value)
             else:
                 # this code is to handle the case when string literal contains escaped single/double quotes
-                value = value.encode("utf-8").decode("unicode_escape")
+                value = re.sub(r'\\(["\'])', r"\1", value)
         elif value == 'true' or value == 'false':
             value = value == 'true'
         elif '.' in value and self.is_float(value):

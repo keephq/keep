@@ -15,6 +15,8 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
 import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
+import { useUsers } from "@/entities/users/model/useUsers";
+import { Input } from "@/shared/ui";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];
@@ -33,6 +35,7 @@ export const CorrelationForm = ({
   } = useFormContext<CorrelationFormType>();
 
   const { data: tenantConfiguration } = useTenantConfiguration();
+  const { data: users = [] } = useUsers();
 
   const getNestedKeys = (obj: any, prefix = ""): string[] => {
     return Object.entries(obj).reduce<string[]>((acc, [key, value]) => {
@@ -76,7 +79,10 @@ export const CorrelationForm = ({
         </label>
 
         <span className="grid grid-cols-2 gap-x-2">
-          <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center col-span-2">
+          <legend
+            className="text-tremor-default font-medium text-tremor-content-strong flex items-center col-span-2 truncate"
+            title="Append to the same Incident if delay between alerts is below"
+          >
             Append to the same Incident if delay between alerts is below{" "}
             <Button
               className="cursor-default ml-2"
@@ -181,8 +187,9 @@ export const CorrelationForm = ({
       <fieldset className="grid grid-cols-3">
         <div className="mr-10">
           <label
-            className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong truncate"
             htmlFor="groupedAttributes"
+            title="Select attribute(s) to group by"
           >
             Select attribute(s) to group by{" "}
             {keys.length < 1 && (
@@ -260,6 +267,67 @@ export const CorrelationForm = ({
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="any">Any condition met</SelectItem>
                 <SelectItem value="all">All conditions met</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
+
+        <div>
+          <label
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong mt-1"
+            htmlFor="threshold"
+          >
+            Alerts threshold{" "}
+          </label>
+
+          <Controller
+            control={control}
+            name="threshold"
+            render={({ field: { value, onChange } }) => (
+              <Input
+                type="number"
+                placeholder="1"
+                className="mt-2"
+                {...register("threshold", {
+                  required: {
+                    message: "Threshold is required",
+                    value: false,
+                  },
+                  validate: (value) => {
+                    if (value <= 0) {
+                      return "Threshold should be positive";
+                    }
+                    return true;
+                  },
+                })}
+              />
+            )}
+          />
+        </div>
+
+        <div className="ml-2.5">
+          <label
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong mt-1"
+            htmlFor="assignee"
+          >
+            Auto-assign to user{" "}
+          </label>
+
+          <Controller
+            control={control}
+            name="assignee"
+            render={({ field: { value, onChange } }) => (
+              <Select
+                value={value || ""}
+                onValueChange={onChange}
+                className="mt-2"
+              >
+                <SelectItem value="">No assignment</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.email} value={user.email}>
+                    {user.name || user.email}
+                  </SelectItem>
+                ))}
               </Select>
             )}
           />

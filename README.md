@@ -224,13 +224,20 @@
         </a>
     </td>
     <td align="center" width="150">
+    <a href="https://docs.keephq.dev/providers/documentation/icinga2-provider" target="_blank">
+        <img width="40" src="keep-ui/public/icons/icinga2-icon.png" alt="Icinga2"/>
+        <br/>
+        Icinga2
+    </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/kibana-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/kibana-icon.png" alt="Kibana"/><br/>
             Kibana
         </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/libre_nms-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/libre_nms-icon.png" alt="LibreNMS"/><br/>
@@ -261,15 +268,15 @@
             OpenSearch Serverless
         </a>
     </td>
+
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
             Parseable
         </a>
     </td>
-
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/pingdom-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/pingdom-icon.png" alt="Pingdom"/><br/>
@@ -300,15 +307,15 @@
             SignalFX
         </a>
     </td>
-  <td align="center" width="150">
+
+</tr>
+<tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/openobserve-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/openobserve-icon.png" alt="OpenObserve"/><br/>
             OpenObserve
         </a>
     </td>
-
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
@@ -339,15 +346,15 @@
           ThousandEyes
         </a>
   </td>
-  <td align="center" width="150">
+
+</tr>
+<tr>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
           UptimeKuma
         </a>
   </td>
-
-</tr>
-<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/victorialogs-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/victorialogs-icon.png" alt="VictoriaLogs"/><br/>
@@ -440,12 +447,6 @@
         <a href="https://docs.keephq.dev/providers/documentation/google_chat-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/google_chat-icon.png" alt="Google Chat"/><br/>
             Google Chat
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/mailchimp-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/mailchimp-icon.png" alt="Mailchimp"/><br/>
-            Mailchimp
         </a>
     </td>
     <td align="center" width="150">
@@ -703,6 +704,12 @@
         <a href="https://docs.keephq.dev/providers/documentation/argocd-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/argocd-icon.png" alt="ArgoCD"/><br/>
             ArgoCD
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/fluxcd-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/fluxcd-icon.png" alt="Flux CD"/><br/>
+            Flux CD
         </a>
     </td>
     <td align="center" width="150">

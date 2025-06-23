@@ -2,8 +2,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import String, and_, case, cast, func, select
 from sqlmodel import Session, col, text
+from sqlalchemy.orm import foreign, aliased
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import (
@@ -12,13 +13,14 @@ from keep.api.core.cel_to_sql.properties_mapper import (
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
+    PropertyMetadataInfo,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
 from keep.api.core.db import engine, enrich_incidents_with_alerts
-from keep.api.core.facets import get_facet_options, get_facets, build_facet_selects
+from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.alert import (
     Alert,
     AlertEnrichment,
@@ -30,55 +32,106 @@ from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.models.incident import IncidentSorting
 from keep.api.models.query import SortOptionsDto
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 
 logger = logging.getLogger(__name__)
 
 incident_field_configurations = [
     FieldMappingConfiguration(
+        map_from_pattern="id", map_to=["incident.id"], data_type=DataType.UUID
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="name",
         map_to=["incident.user_generated_name", "incident.ai_generated_name"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="summary",
         map_to=["incident.user_summary", "incident.generated_summary"],
-    ),
-    FieldMappingConfiguration(map_from_pattern="assignee", map_to="incident.assignee"),
-    FieldMappingConfiguration(map_from_pattern="severity", map_to="incident.severity"),
-    FieldMappingConfiguration(map_from_pattern="status", map_to="incident.status"),
-    FieldMappingConfiguration(
-        map_from_pattern="creation_time", map_to="incident.creation_time"
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="start_time", map_to="incident.start_time"
-    ),
-    FieldMappingConfiguration(map_from_pattern="end_time", map_to="incident.end_time"),
-    FieldMappingConfiguration(
-        map_from_pattern="last_seen_time", map_to="incident.last_seen_time"
+        map_from_pattern="assignee",
+        map_to="incident.assignee",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_predicted", map_to="incident.is_predicted"
+        map_from_pattern="severity",
+        map_to="incident.severity",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_candidate", map_to="incident.is_candidate"
+        map_from_pattern="status",
+        map_to=["JSON(incidentenrichment.enrichments).*", "incident.status"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="is_visible", map_to="incident.is_visible"
+        map_from_pattern="creation_time",
+        map_to="incident.creation_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alerts_count", map_to="incident.alerts_count"
+        map_from_pattern="start_time",
+        map_to="incident.start_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="merged_at", map_to="incident.merged_at"
+        map_from_pattern="end_time",
+        map_to="incident.end_time",
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="merged_by", map_to="incident.merged_by"
+        map_from_pattern="last_seen_time",
+        map_to="incident.last_seen_time",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_predicted",
+        map_to="incident.is_predicted",
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_candidate",
+        map_to="incident.is_candidate",
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="is_visible",
+        map_to="incident.is_visible",
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="alerts_count",
+        map_to="incident.alerts_count",
+        data_type=DataType.INTEGER,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="merged_at",
+        map_to="incident.merged_at",
+        data_type=DataType.DATETIME,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="merged_by",
+        map_to="incident.merged_by",
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="hasLinkedIncident",
         map_to="addional_incident_fields.incident_has_linked_incident",
+        data_type=DataType.BOOLEAN,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="alert.providerType", map_to="alert.provider_type"
+        map_from_pattern="alert.providerType",
+        map_to="alert.provider_type",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="sources", map_to="incident.sources", data_type=DataType.ARRAY
+    ),
+    FieldMappingConfiguration(
+        map_from_pattern="affectedServices",
+        map_to="incident.affected_services",
+        data_type=DataType.ARRAY,
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
@@ -88,6 +141,7 @@ incident_field_configurations = [
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
 
+incident_enrichment = aliased(AlertEnrichment, name="incidentenrichment")
 static_facets = [
     FacetDto(
         id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
@@ -112,14 +166,14 @@ static_facets = [
     ),
     FacetDto(
         id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="alert.providerType",
+        property_path="sources",
         name="Source",
         is_static=True,
         type=FacetType.str,
     ),
     FacetDto(
         id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="alert.service",
+        property_path="affectedServices",
         name="Service",
         is_static=True,
         type=FacetType.str,
@@ -136,7 +190,11 @@ static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
 def __build_base_incident_query(
-    tenant_id: str, select_args: list, cel=None, force_fetch=False
+    tenant_id: str,
+    select_args: list,
+    cel=None,
+    force_fetch_alerts=False,
+    force_fetch_has_linked_incident=False,
 ):
     fetch_alerts = False
     fetch_has_linked_incident = False
@@ -167,7 +225,7 @@ def __build_base_incident_query(
 
     sql_query = select(*select_args).select_from(Incident)
 
-    if fetch_alerts or force_fetch:
+    if fetch_alerts or force_fetch_alerts:
         sql_query = (
             sql_query.outerjoin(
                 LastAlertToIncident,
@@ -196,7 +254,16 @@ def __build_base_incident_query(
             )
         )
 
-    if fetch_has_linked_incident or force_fetch:
+    sql_query = sql_query.outerjoin(
+        incident_enrichment,
+        and_(
+            Incident.tenant_id == incident_enrichment.tenant_id,
+            cast(col(Incident.id), String)
+            == foreign(incident_enrichment.alert_fingerprint),
+        ),
+    )
+
+    if fetch_has_linked_incident or force_fetch_has_linked_incident:
         additional_incident_fields = (
             select(
                 Incident.id,
@@ -346,7 +413,7 @@ def __build_last_incidents_query(
     built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
-        select_args=[Incident],
+        select_args=[Incident, incident_enrichment],
     )
     sql_query = built_query_result["query"]
     fetch_alerts = built_query_result["fetch_alerts"]
@@ -451,7 +518,16 @@ def get_last_incidents_by_cel(
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
 
-        incidents = [row._asdict().get("Incident") for row in all_records]
+        incidents = []
+
+        for row in all_records:
+            dict_row = row._asdict()
+            incident = dict_row.get("Incident")
+            enrichment = dict_row.get("incidentenrichment")
+
+            if enrichment:
+                incident.set_enrichments(enrichment.enrichments)
+            incidents.append(incident)
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
@@ -481,22 +557,38 @@ def get_incident_facets_data(
     else:
         facets = static_facets
 
-    facet_selects_metadata = build_facet_selects(properties_metadata, facets)
-    select_expressions = facet_selects_metadata["select_expressions"]
-
-    select_expressions.append(Incident.id.label("entity_id"))
-
-    base_query = __build_base_incident_query(
-        tenant_id,
-        select_expressions,
-        force_fetch=True,
-    )["query"]
-
-    if allowed_incident_ids:
-        base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
+    def base_query_factory(
+        facet_property_path: str,
+        involved_fields: PropertyMetadataInfo,
+        select_statement,
+    ):
+        force_fetch_alerts = "alert" in facet_property_path or next(
+            (True for item in involved_fields if "alert" in item.field_name), False
+        )
+        force_fetch_has_linked_incident = (
+            "hasLinkedIncident" in facet_property_path
+            or next(
+                (
+                    True
+                    for item in involved_fields
+                    if "hasLinkedIncident" in item.field_name
+                ),
+                False,
+            )
+        )
+        base_query = __build_base_incident_query(
+            tenant_id,
+            select_statement,
+            force_fetch_alerts=force_fetch_alerts,
+            force_fetch_has_linked_incident=force_fetch_has_linked_incident,
+        )["query"]
+        if allowed_incident_ids:
+            base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
+        return base_query
 
     return get_facet_options(
-        base_query=base_query,
+        base_query_factory=base_query_factory,
+        entity_id_column=Incident.id,
         facets=facets,
         facet_options_query=facet_options_query,
         properties_metadata=properties_metadata,

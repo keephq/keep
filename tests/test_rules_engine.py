@@ -726,9 +726,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     # No incident yet
     assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # But hidden group is there
-    assert (
-        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
-    )
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
     incident = db_session.query(Incident).first()
     alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
@@ -753,9 +751,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     # Still no incident yet
     assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # And still one candidate is there
-    assert (
-        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
-    )
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
 
     enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
 
@@ -825,9 +821,7 @@ def test_rule_event_groups_expires(db_session, create_alert):
     # Still no incident yet
     assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # And still one candidate is there
-    assert (
-        db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
-    )
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
 
     sleep(1)
 
@@ -843,9 +837,7 @@ def test_rule_event_groups_expires(db_session, create_alert):
     # Still no incident yet
     assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # And now two candidates is there
-    assert (
-        db_session.query(Incident).filter(Incident.is_visible == False).count() == 2
-    )
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 2
 
 
 def test_at_sign(db_session):
@@ -1973,3 +1965,286 @@ def test_incident_prefix_multiple_incidents(db_session):
     assert (
         results[0].user_generated_name == "PROD-1 - test-rule"
     )  # Same prefix-number as first incident
+
+
+def test_rule_alerts_threshold(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ANY.value,
+        threshold=2,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    incident = db_session.query(Incident).first()
+    alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 1
+    assert len(incident.alerts) == 1
+    assert incident.alerts[0].id == alert_1.id
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    db_session.refresh(incident)
+    alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # And incident was official started
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+
+    db_session.refresh(incident)
+    assert incident.alerts_count == 1
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        session=db_session,
+    )
+    assert alert_count == 1
+    assert len(alerts) == 1
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    assert alert_1.fingerprint in fingerprints
+    assert alert_2.fingerprint in fingerprints
+
+
+def test_rule_multiple_alerts_with_threshold(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel='(severity == "critical") || (severity == "high")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ALL.value,
+        threshold=4,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    incident = db_session.query(Incident).first()
+    alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 1
+    assert len(incident.alerts) == 1
+    assert incident.alerts[0].id == alert_1.id
+
+    create_alert(
+        "Critical Alert 2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    db_session.refresh(incident)
+    alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # Still no incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # And still one candidate is there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 2
+    assert len(incident.alerts) == 2
+    assert incident.alerts[0].id == alert_1.id
+    assert incident.alerts[1].id == alert_2.id
+
+    create_alert(
+        "High Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+        },
+    )
+
+    alert_3 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    # Still no incident yet because of threshold
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # And still one candidate is there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+
+    create_alert(
+        "High Alert 2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+        },
+    )
+
+    alert_4 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    # And incident was official started
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+
+    db_session.refresh(incident)
+    assert incident.alerts_count == 4
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        session=db_session,
+    )
+    assert alert_count == 4
+    assert len(alerts) == 4
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    assert alert_1.fingerprint in fingerprints
+    assert alert_2.fingerprint in fingerprints
+    assert alert_3.fingerprint in fingerprints
+    assert alert_4.fingerprint in fingerprints
+
+
+def test_incident_created_with_assignee(db_session):
+    """Test that incidents are created with the correct assignee when specified in the rule"""
+    # Create an alert
+    alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="Test alert",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-1"},
+    )
+
+    # Create rule with assignee
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule-with-assignee",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana" && severity == "critical"',
+        created_by="test@keephq.dev",
+        assignee="test-user@example.com",
+    )
+
+    # Add alert to db
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert.dict(),
+        fingerprint=alert.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert.event_id = db_alert.id
+    results = rules_engine.run_rules([alert], session=db_session)
+
+    # Verify results
+    assert len(results) == 1
+    incident = results[0]
+    assert incident.assignee == "test-user@example.com"
+    assert incident.user_generated_name == "test-rule-with-assignee"
+
+
+def test_incident_created_without_assignee(db_session):
+    """Test that incidents are created without assignee when not specified in the rule"""
+    # Create an alert
+    alert = AlertDto(
+        id="grafana-2",
+        source=["grafana"],
+        name="Test alert without assignee",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.datetime.now().isoformat(),
+        labels={"host": "web-2"},
+    )
+
+    # Create rule without assignee
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule-without-assignee",
+        definition={"sql": "N/A", "params": {}},
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='source == "grafana" && severity == "critical"',
+        created_by="test@keephq.dev",
+        # assignee not specified
+    )
+
+    # Add alert to db
+    db_alert = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event=alert.dict(),
+        fingerprint=alert.fingerprint,
+    )
+    db_session.add(db_alert)
+    db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, db_alert, db_session)
+
+    alert.event_id = db_alert.id
+    results = rules_engine.run_rules([alert], session=db_session)
+
+    # Verify results
+    assert len(results) == 1
+    incident = results[0]
+    assert incident.assignee is None
+    assert incident.user_generated_name == "test-rule-without-assignee"

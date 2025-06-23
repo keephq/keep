@@ -43,7 +43,7 @@ class PythonProvider(BaseProvider):
         try:
             output = eval(parsed_code, loaded_modules)
         except Exception as e:
-            return ProviderException(e)
+            raise ProviderException(e)
         return output
 
     def dispose(self):

@@ -13,17 +13,8 @@ import type {
   IncidentDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
-import React, {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import React, { Dispatch, SetStateAction, useCallback, useState } from "react";
 import IncidentTableComponent from "./incident-table-component";
-import Markdown from "react-markdown";
-import remarkRehype from "remark-rehype";
-import rehypeRaw from "rehype-raw";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import { Button, Link } from "@/components/ui";
 import { MergeIncidentsModal } from "@/features/incidents/merge-incidents";
@@ -35,7 +26,6 @@ import { getIncidentName } from "@/entities/incidents/lib/utils";
 import {
   DateTimeField,
   TableIndeterminateCheckbox,
-  TablePagination,
   TableSeverityCell,
   UISeverity,
 } from "@/shared/ui";
@@ -43,6 +33,8 @@ import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
 import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { Pagination, PaginationState } from "@/features/filter/pagination";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -106,6 +98,7 @@ interface Props {
   incidents: PaginatedIncidentsDto;
   sorting: SortingState;
   setSorting: Dispatch<SetStateAction<any>>;
+  pagination: PaginationState;
   setPagination: Dispatch<SetStateAction<any>>;
   editCallback: (rule: IncidentDto) => void;
 }
@@ -113,6 +106,7 @@ interface Props {
 export default function IncidentsTable({
   incidents: incidents,
   filterCel,
+  pagination,
   setPagination,
   sorting,
   setSorting,
@@ -120,30 +114,11 @@ export default function IncidentsTable({
 }: Props) {
   const { bulkDeleteIncidents } = useIncidentActions();
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [pagination, setTablePagination] = useState({
-    pageIndex: Math.ceil(incidents.offset / incidents.limit),
-    pageSize: incidents.limit,
-  });
+
   const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] =
     useState(false);
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
-
-  useEffect(() => {
-    if (incidents.limit != pagination.pageSize) {
-      setPagination({
-        limit: pagination.pageSize,
-        offset: 0,
-      });
-    }
-    const currentOffset = pagination.pageSize * pagination.pageIndex;
-    if (incidents.offset != currentOffset) {
-      setPagination({
-        limit: pagination.pageSize,
-        offset: currentOffset,
-      });
-    }
-  }, [incidents.limit, incidents.offset, pagination, setPagination]);
 
   const columns = [
     columnHelper.display({
@@ -206,24 +181,27 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Incident",
-      cell: ({ row }) => (
-        <div className="min-w-32 lg:min-w-64">
-          <Link
-            href={`/incidents/${row.original.id}/alerts`}
-            className="text-pretty"
-          >
-            {getIncidentName(row.original)}
-          </Link>
-          <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
-            <Markdown
-              remarkPlugins={[remarkRehype]}
-              rehypePlugins={[rehypeRaw]}
+      cell: ({ row }) => {
+        const summary =
+          row.original.user_summary || row.original.generated_summary;
+        return (
+          <div className="min-w-32 lg:min-w-64">
+            <Link
+              href={`/incidents/${row.original.id}/alerts`}
+              className="text-pretty"
             >
-              {row.original.user_summary || row.original.generated_summary}
-            </Markdown>
+              {getIncidentName(row.original)}
+            </Link>
+            {summary ? (
+              <FormattedContent
+                content={summary}
+                format="html"
+                className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3"
+              />
+            ) : null}
           </div>
-        </div>
-      ),
+        );
+      },
     }),
     columnHelper.accessor("alerts_count", {
       id: "alerts_count",
@@ -307,7 +285,6 @@ export default function IncidentsTable({
     data: incidents.items,
     state: {
       expanded,
-      pagination,
       sorting,
       columnPinning: {
         left: ["severity", "selected"],
@@ -318,7 +295,6 @@ export default function IncidentsTable({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     rowCount: incidents.count,
-    onPaginationChange: setTablePagination,
     onExpandedChange: setExpanded,
     onSortingChange: (value) => {
       if (typeof value === "function") {
@@ -399,11 +375,17 @@ export default function IncidentsTable({
         </Card>
       )}
       <div className="mt-4 mb-8">
-        <TablePagination table={table} />
+        <Pagination
+          totalCount={incidents.count}
+          isRefreshing={false}
+          isRefreshAllowed={false}
+          state={pagination}
+          onStateChange={setPagination}
+        />
       </div>
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
-        handleClose={() => setRunWorkflowModalIncident(null)}
+        onClose={() => setRunWorkflowModalIncident(null)}
       />
       {mergeOptions && (
         <MergeIncidentsModal

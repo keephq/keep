@@ -13,10 +13,9 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union
 from uuid import UUID, uuid4
 
-import validators
 from dateutil.parser import parse
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
@@ -40,14 +39,20 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, subqueryload, foreign
+from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
+from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
-from keep.api.core.db_utils import create_db_engine, get_json_extract_field
+from keep.api.core.db_utils import (
+    create_db_engine,
+    custom_serialize,
+    get_json_extract_field,
+    get_or_create,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
@@ -112,7 +117,7 @@ def dispose_session():
 
 
 @contextmanager
-def existed_or_new_session(session: Optional[Session] = None) -> Session:
+def existed_or_new_session(session: Optional[Session] = None) -> Iterator[Session]:
     try:
         if session:
             yield session
@@ -158,9 +163,9 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         return None
 
 
-def retry_on_deadlock(f):
+def retry_on_db_error(f):
     @retry(
-        exceptions=(OperationalError,),
+        exceptions=(OperationalError, IntegrityError, StaleDataError),
         tries=3,
         delay=0.1,
         backoff=2,
@@ -171,7 +176,7 @@ def retry_on_deadlock(f):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except OperationalError as e:
+        except (OperationalError, IntegrityError, StaleDataError) as e:
 
             if hasattr(e, "session") and not e.session.is_active:
                 e.session.rollback()
@@ -181,6 +186,10 @@ def retry_on_deadlock(f):
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}
                 )
                 raise  # retry will catch this
+            else:
+                logger.exception(
+                    f"Error while executing transaction during {f.__name__}",
+                )
             raise  # if it's not a deadlock, let it propagate
 
     return wrapper
@@ -207,7 +216,7 @@ def create_workflow_execution(
                 triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
                 id=workflow_execution_id,
-                workflow_id=workflow_id if not test_run else "test",
+                workflow_id=workflow_id,
                 workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
@@ -217,7 +226,7 @@ def create_workflow_execution(
                 error=None,
                 execution_time=None,
                 results={},
-                # is_test_run=test_run,
+                is_test_run=test_run,
             )
             session.add(workflow_execution)
             # Ensure the object has an id
@@ -275,6 +284,7 @@ def get_last_completed_execution(
     return session.exec(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
+        .where(WorkflowExecution.is_test_run == False)
         .where(
             (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
@@ -447,7 +457,12 @@ def update_workflow_by_id(
     provisioned_file: str | None = None,
 ):
     with Session(engine, expire_on_commit=False) as session:
-        existing_workflow = get_workflow(tenant_id, id)
+        if provisioned:
+            # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
+            existing_workflow = get_workflow_by_name(tenant_id, name)
+        else:
+            # otherwise, we want certainty, so just lookup by id
+            existing_workflow = get_workflow_by_id(tenant_id, id)
         if not existing_workflow:
             raise ValueError("Workflow not found")
         return update_workflow_with_values(
@@ -468,7 +483,7 @@ def update_workflow_with_values(
     existing_workflow: Workflow,
     name: str,
     description: str | None,
-    interval: int,
+    interval: int | None,
     workflow_raw: str,
     is_disabled: bool,
     updated_by: str,
@@ -482,8 +497,8 @@ def update_workflow_with_values(
         # Get the latest revision number for this workflow
         latest_version = session.exec(
             select(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
-            .order_by(WorkflowVersion.revision.desc())
+            .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
+            .order_by(col(WorkflowVersion.revision).desc())
             .limit(1)
         ).first()
 
@@ -492,7 +507,7 @@ def update_workflow_with_values(
         # Update all existing versions to not be current
         session.exec(
             update(WorkflowVersion)
-            .where(WorkflowVersion.workflow_id == existing_workflow.id)
+            .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
             .values(is_current=False)  # type: ignore[attr-defined]
         )
 
@@ -506,6 +521,7 @@ def update_workflow_with_values(
             # TODO: check if valid
             is_valid=True,
             is_current=True,
+            updated_at=datetime.now(),
         )
         session.add(version)
 
@@ -525,24 +541,67 @@ def update_workflow_with_values(
         return existing_workflow
 
 
+def is_equal_workflow_dicts(a: dict, b: dict):
+    return (
+        a.get("workflow_raw") == b.get("workflow_raw")
+        and a.get("tenant_id") == b.get("tenant_id")
+        and a.get("is_test") == b.get("is_test")
+        and a.get("is_deleted") == b.get("is_deleted")
+        and a.get("is_disabled") == b.get("is_disabled")
+        and a.get("name") == b.get("name")
+        and a.get("description") == b.get("description")
+        and a.get("interval") == b.get("interval")
+        and a.get("provisioned") == b.get("provisioned")
+        and a.get("provisioned_file") == b.get("provisioned_file")
+    )
+
+
 def add_or_update_workflow(
     id: str,
     name: str,
     tenant_id: str,
     description: str | None,
     created_by: str,
-    interval: int,
+    interval: int | None,
     workflow_raw: str,
     is_disabled: bool,
     updated_by: str,
     provisioned: bool = False,
     provisioned_file: str | None = None,
+    force_update: bool = False,
+    is_test: bool = False,
+    lookup_by_name: bool = False,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
-        # TODO: we need to better understanad if that's the right behavior we want
-        existing_workflow = get_workflow(tenant_id, id)
+        if provisioned or lookup_by_name:
+            # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
+            existing_workflow = get_workflow_by_name(tenant_id, name)
+        else:
+            # otherwise, we want certainty, so just lookup by id
+            existing_workflow = get_workflow_by_id(tenant_id, id)
 
         if existing_workflow:
+            existing_workflow_dict = existing_workflow.model_dump()
+            workflow_dict = dict(
+                tenant_id=tenant_id,
+                name=name,
+                description=description,
+                interval=interval,
+                workflow_raw=workflow_raw,
+                is_disabled=is_disabled,
+                is_test=is_test,
+                is_deleted=False,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
+            )
+            if (
+                is_equal_workflow_dicts(existing_workflow_dict, workflow_dict)
+                and not force_update
+            ):
+                logger.info(
+                    f"Workflow {id} already exists with the same workflow properties, skipping update"
+                )
+                return existing_workflow
             return update_workflow_with_values(
                 existing_workflow,
                 name=name,
@@ -557,6 +616,7 @@ def add_or_update_workflow(
             )
 
         else:
+            now = datetime.now(tz=timezone.utc)
             # Create a new workflow
             workflow = Workflow(
                 id=id,
@@ -566,11 +626,13 @@ def add_or_update_workflow(
                 description=description,
                 created_by=created_by,
                 updated_by=updated_by,
+                last_updated=now,
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
                 provisioned=provisioned,
                 provisioned_file=provisioned_file,
+                is_test=is_test,
             )
             version = WorkflowVersion(
                 workflow_id=workflow.id,
@@ -578,11 +640,38 @@ def add_or_update_workflow(
                 workflow_raw=workflow_raw,
                 updated_by=updated_by,
                 comment=f"Created by {created_by}",
+                is_valid=True,
+                is_current=True,
+                updated_at=now,
             )
             session.add(workflow)
             session.add(version)
             session.commit()
             return workflow
+
+
+def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None):
+    with existed_or_new_session(session) as session:
+        workflow, created = get_or_create(
+            session,
+            Workflow,
+            tenant_id=tenant_id,
+            id=get_dummy_workflow_id(tenant_id),
+            name="Dummy Workflow for test runs",
+            description="Auto-generated dummy workflow for test runs",
+            created_by="system",
+            workflow_raw="{}",
+            is_disabled=False,
+            is_test=True,
+        )
+        if created:
+            # For new instances, make sure they're committed and refreshed from the database
+            session.commit()
+            session.refresh(workflow)
+        elif workflow:
+            # For existing instances, refresh to get the current state
+            session.refresh(workflow)
+        return workflow
 
 
 def get_workflow_to_alert_execution_by_workflow_execution_id(
@@ -656,21 +745,27 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    tenant_id: str, workflow_id: str, status: str = None
+    tenant_id: str,
+    workflow_id: str,
+    status: str | None = None,
+    exclude_ids: list[str] | None = None,
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         query = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.workflow_id == workflow_id)
-            .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
-            .order_by(WorkflowExecution.started.desc())
+            select(WorkflowExecution)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
+            .order_by(col(WorkflowExecution.started).desc())
         )
 
         if status:
-            query = query.filter(WorkflowExecution.status == status)
+            query = query.where(WorkflowExecution.status == status)
 
-        workflow_execution = query.first()
+        if exclude_ids:
+            query = query.where(col(WorkflowExecution.id).notin_(exclude_ids))
+
+        workflow_execution = session.exec(query).first()
     return workflow_execution
 
 
@@ -711,19 +806,26 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
     return result
 
 
-def get_all_workflows(tenant_id: str):
+def get_all_workflows(tenant_id: str, exclude_disabled: bool = False) -> List[Workflow]:
     with Session(engine) as session:
-        workflows = session.exec(
+        query = (
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
-        ).all()
+            .where(Workflow.is_test == False)
+        )
+
+        if exclude_disabled:
+            query = query.where(Workflow.is_disabled == False)
+
+        workflows = session.exec(query).all()
     return workflows
 
 
@@ -734,6 +836,7 @@ def get_all_provisioned_workflows(tenant_id: str):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.provisioned == True)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).all()
     return list(workflows)
 
@@ -754,22 +857,32 @@ def get_all_workflows_yamls(tenant_id: str):
             select(Workflow.workflow_raw)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).all()
     return list(workflows)
 
 
-def get_workflow(tenant_id: str, workflow_id: str):
+def get_workflow_by_name(tenant_id: str, workflow_name: str):
     with Session(engine) as session:
-        query = (
+        workflow = session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
-        )
-        if validators.uuid(workflow_id):
-            query = query.where(Workflow.id == workflow_id)
-        else:
-            query = query.where(Workflow.name == workflow_id)
-        workflow = session.exec(query).first()
+            .where(Workflow.is_test == False)
+        ).first()
+    return workflow
+
+
+def get_workflow_by_id(tenant_id: str, workflow_id: str):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
+        ).first()
     return workflow
 
 
@@ -782,6 +895,7 @@ def get_workflow_versions(tenant_id: str, workflow_id: str):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
             .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
             .order_by(WorkflowVersion.revision.desc())
         ).all()
@@ -797,6 +911,7 @@ def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
             .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
             .where(WorkflowVersion.revision == revision)
         ).first()
@@ -893,6 +1008,7 @@ def get_workflow_executions(
     status: Optional[Union[str, List[str]]] = None,
     trigger: Optional[Union[str, List[str]]] = None,
     execution_id: Optional[str] = None,
+    is_test_run: bool = False,
 ):
     with Session(engine) as session:
         query = session.query(
@@ -900,6 +1016,7 @@ def get_workflow_executions(
         ).filter(
             WorkflowExecution.tenant_id == tenant_id,
             WorkflowExecution.workflow_id == workflow_id,
+            WorkflowExecution.is_test_run == False,
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -996,6 +1113,7 @@ def get_workflow_id(tenant_id, workflow_name):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).first()
 
         if workflow:
@@ -1063,22 +1181,43 @@ def push_logs_to_db(log_entries):
         session.commit()
 
 
-def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
+def get_workflow_execution(
+    tenant_id: str,
+    workflow_execution_id: str,
+    is_test_run: bool | None = None,
+):
     with Session(engine) as session:
-        execution_with_logs = (
-            session.query(WorkflowExecution)
-            .filter(
-                WorkflowExecution.id == workflow_execution_id,
-                WorkflowExecution.tenant_id == tenant_id,
+        base_query = select(WorkflowExecution)
+        if is_test_run is not None:
+            base_query = base_query.where(
+                WorkflowExecution.is_test_run == is_test_run,
             )
-            .options(
-                joinedload(WorkflowExecution.logs),
-                joinedload(WorkflowExecution.workflow_to_alert_execution),
-                joinedload(WorkflowExecution.workflow_to_incident_execution),
-            )
-            .one()
+        base_query = base_query.where(
+            WorkflowExecution.id == workflow_execution_id,
+            WorkflowExecution.tenant_id == tenant_id,
         )
-    return execution_with_logs
+        execution_with_relations = base_query.options(
+            joinedload(WorkflowExecution.workflow_to_alert_execution),
+            joinedload(WorkflowExecution.workflow_to_incident_execution),
+        )
+        return session.exec(execution_with_relations).one()
+
+
+def get_workflow_execution_with_logs(
+    tenant_id: str,
+    workflow_execution_id: str,
+    is_test_run: bool | None = None,
+):
+    with Session(engine) as session:
+        execution = get_workflow_execution(
+            tenant_id, workflow_execution_id, is_test_run
+        )
+        logs = session.exec(
+            select(WorkflowExecutionLog).where(
+                WorkflowExecutionLog.workflow_execution_id == workflow_execution_id
+            )
+        ).all()
+        return execution, logs
 
 
 def get_last_workflow_executions(tenant_id: str, limit=20):
@@ -1599,6 +1738,20 @@ def query_alerts(
     return alerts
 
 
+def get_started_at_for_alerts(
+    tenant_id,
+    fingerprints: list[str],
+    session: Optional[Session] = None,
+) -> dict[str, datetime]:
+    with existed_or_new_session(session) as session:
+        statement = select(LastAlert.fingerprint, LastAlert.first_timestamp).where(
+            LastAlert.tenant_id == tenant_id,
+            LastAlert.fingerprint.in_(fingerprints),
+        )
+        result = session.exec(statement).all()
+        return {row[0]: row[1] for row in result}
+
+
 def get_last_alerts(
     tenant_id,
     provider_id=None,
@@ -1987,7 +2140,19 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
 
-        workflow_execution.results = workflow_results
+        try:
+            # backward comptability - try to serialize the workflow results
+            json.dumps(workflow_results)
+            # if that's ok, use the original way
+            workflow_execution.results = workflow_results
+        except Exception:
+            # if that's not ok, use the Keep way (e.g. alerdto is not json serializable)
+            logger.warning(
+                "Failed to serialize workflow results, using fastapi encoder",
+            )
+            # use some other way to serialize the workflow results
+            workflow_execution.results = custom_serialize(workflow_results)
+        # commit the changes
         session.commit()
 
 
@@ -1998,6 +2163,7 @@ def get_workflow_by_name(tenant_id, workflow_name):
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
+            .where(Workflow.is_test == False)
         ).first()
 
         return workflow
@@ -2010,6 +2176,7 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id != workflow_execution_id)
+            .where(WorkflowExecution.is_test_run == False)
             .where(
                 WorkflowExecution.started >= datetime.now() - timedelta(days=1)
             )  # no need to check more than 1 day ago
@@ -2039,6 +2206,8 @@ def create_rule(
     incident_prefix=None,
     multi_level=False,
     multi_level_property_name=None,
+    threshold=1,
+    assignee=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -2060,6 +2229,8 @@ def create_rule(
             incident_prefix=incident_prefix,
             multi_level=multi_level,
             multi_level_property_name=multi_level_property_name,
+            threshold=threshold,
+            assignee=assignee,
         )
         session.add(rule)
         session.commit()
@@ -2084,6 +2255,8 @@ def update_rule(
     incident_prefix,
     multi_level,
     multi_level_property_name,
+    threshold,
+    assignee=None,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -2110,6 +2283,8 @@ def update_rule(
             rule.incident_prefix = incident_prefix
             rule.multi_level = multi_level
             rule.multi_level_property_name = multi_level_property_name
+            rule.threshold = threshold
+            rule.assignee = assignee
             session.commit()
             session.refresh(rule)
             return rule
@@ -2202,12 +2377,14 @@ def get_incident_for_grouping_rule(
     return incident, is_incident_expired
 
 
+@retry_on_db_error
 def create_incident_for_grouping_rule(
     tenant_id,
     rule: Rule,
     rule_fingerprint,
     incident_name: str = None,
     past_incident: Optional[Incident] = None,
+    assignee: str | None = None,
     session: Optional[Session] = None,
 ):
 
@@ -2220,10 +2397,11 @@ def create_incident_for_grouping_rule(
             rule_fingerprint=rule_fingerprint,
             is_predicted=True,
             is_candidate=rule.require_approve,
-            is_visible=rule.create_on == CreateIncidentOn.ANY.value,
+            is_visible=False,  # rule.create_on == CreateIncidentOn.ANY.value,
             incident_type=IncidentType.RULE.value,
             same_incident_in_the_past_id=past_incident.id if past_incident else None,
             resolve_on=rule.resolve_on,
+            assignee=assignee,
         )
         session.add(incident)
         session.flush()
@@ -2234,6 +2412,7 @@ def create_incident_for_grouping_rule(
     return incident
 
 
+@retry_on_db_error
 def create_incident_for_topology(
     tenant_id: str, alert_group: list[Alert], session: Session
 ) -> Incident:
@@ -3332,6 +3511,12 @@ def update_action(
     return found_action
 
 
+def get_tenants():
+    with Session(engine) as session:
+        tenants = session.exec(select(Tenant)).all()
+        return tenants
+
+
 def get_tenants_configurations(only_with_config=False) -> dict:
     with Session(engine) as session:
         try:
@@ -3879,6 +4064,7 @@ def create_incident_from_dto(
     return create_incident_from_dict(tenant_id, incident_dict, session)
 
 
+@retry_on_db_error
 def create_incident_from_dict(
     tenant_id: str, incident_data: dict, session: Optional[Session] = None
 ) -> Optional[Incident]:
@@ -3893,6 +4079,7 @@ def create_incident_from_dict(
     return new_incident
 
 
+@retry_on_db_error
 def update_incident_from_dto_by_id(
     tenant_id: str,
     incident_id: str | UUID,
@@ -4137,11 +4324,10 @@ def get_alerts_data_for_incident(
             "sources": set(sources),
             "services": set(services),
             "max_severity": max(severities) if severities else IncidentSeverity.LOW,
-            "count": len(alerts_data),
         }
 
 
-@retry_on_deadlock
+@retry_on_db_error
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,
@@ -4211,10 +4397,6 @@ def add_alerts_to_incident(
             if not new_fingerprints:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(
-                tenant_id, new_fingerprints, session
-            )
-
             alert_to_incident_entries = [
                 LastAlertToIncident(
                     fingerprint=str(fingerprint),  # it may sometime be UUID...
@@ -4237,18 +4419,22 @@ def add_alerts_to_incident(
                     session.flush()
             session.commit()
 
-            incident.sources = list(
+            alerts_data_for_incident = get_alerts_data_for_incident(
+                tenant_id, new_fingerprints, session
+            )
+
+            new_sources = list(
                 set(incident.sources if incident.sources else [])
                 | set(alerts_data_for_incident["sources"])
             )
-            incident.affected_services = list(
+            new_affected_services = list(
                 set(incident.affected_services if incident.affected_services else [])
                 | set(alerts_data_for_incident["services"])
             )
             if not incident.forced_severity:
                 # If incident has alerts already, use the max severity between existing and new alerts,
                 # otherwise use the new alerts max severity
-                incident.severity = (
+                new_severity = (
                     max(
                         incident.severity,
                         alerts_data_for_incident["max_severity"].order,
@@ -4256,11 +4442,19 @@ def add_alerts_to_incident(
                     if incident.alerts_count
                     else alerts_data_for_incident["max_severity"].order
                 )
+            else:
+                new_severity = incident.severity
 
             if not override_count:
-                incident.alerts_count += alerts_data_for_incident["count"]
+                alerts_count = (
+                    select(count(LastAlertToIncident.fingerprint)).where(
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                        LastAlertToIncident.tenant_id == tenant_id,
+                        LastAlertToIncident.incident_id == incident.id,
+                    )
+                ).subquery()
             else:
-                incident.alerts_count = alerts_data_for_incident["count"]
+                alerts_count = alerts_data_for_incident["count"]
 
             last_received_field = get_json_extract_field(
                 session, Alert.event, "lastReceived"
@@ -4288,12 +4482,25 @@ def add_alerts_to_incident(
             if isinstance(last_seen_at, str):
                 last_seen_at = parse(last_seen_at)
 
-            incident.start_time = started_at
-            incident.last_seen_time = last_seen_at
             incident_id = incident.id
+
             for attempt in range(max_retries):
                 try:
-                    session.add(incident)
+                    session.exec(
+                        update(Incident)
+                        .where(
+                            Incident.id == incident_id,
+                            Incident.tenant_id == tenant_id,
+                        )
+                        .values(
+                            alerts_count=alerts_count,
+                            last_seen_time=last_seen_at,
+                            start_time=started_at,
+                            affected_services=new_affected_services,
+                            severity=new_severity,
+                            sources=new_sources,
+                        )
+                    )
                     session.commit()
                     break
                 except StaleDataError as ex:
@@ -4305,6 +4512,7 @@ def add_alerts_to_incident(
                         continue
                     else:
                         raise
+            session.add(incident)
             session.refresh(incident)
 
             return incident
@@ -4500,22 +4708,23 @@ def remove_alerts_to_incident_by_incident_id(
         ).one()
 
         # filtering removed entities from affected services and sources in the incident
-        incident.affected_services = [
+        new_affected_services = [
             service
             for service in incident.affected_services
             if service not in services_to_remove
         ]
-        incident.sources = [
+        new_sources = [
             source for source in incident.sources if source not in sources_to_remove
         ]
 
-        incident.alerts_count -= alerts_data_for_incident["count"]
         if not incident.forced_severity:
-            incident.severity = (
+            new_severity = (
                 max(updated_severities)
                 if updated_severities
                 else IncidentSeverity.LOW.order
             )
+        else:
+            new_severity = incident.severity
 
         if isinstance(started_at, str):
             started_at = parse(started_at)
@@ -4523,11 +4732,32 @@ def remove_alerts_to_incident_by_incident_id(
         if isinstance(last_seen_at, str):
             last_seen_at = parse(last_seen_at)
 
-        incident.start_time = started_at
-        incident.last_seen_time = last_seen_at
+        alerts_count = (
+            select(count(LastAlertToIncident.fingerprint)).where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                LastAlertToIncident.tenant_id == tenant_id,
+                LastAlertToIncident.incident_id == incident.id,
+            )
+        ).subquery()
 
-        session.add(incident)
+        session.exec(
+            update(Incident)
+            .where(
+                Incident.id == incident_id,
+                Incident.tenant_id == tenant_id,
+            )
+            .values(
+                alerts_count=alerts_count,
+                last_seen_time=last_seen_at,
+                start_time=started_at,
+                affected_services=new_affected_services,
+                severity=new_severity,
+                sources=new_sources,
+            )
+        )
         session.commit()
+        session.add(incident)
+        session.refresh(incident)
 
         return deleted
 
@@ -5618,6 +5848,41 @@ def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> No
                 stmt = stmt.where(AlertRaw.id == alert_id)
         session.exec(stmt)
         session.commit()
+
+
+def create_tenant(tenant_name: str) -> str:
+    with Session(engine) as session:
+        try:
+            # check if the tenant exist:
+            logger.info("Checking if tenant exists")
+            tenant = session.exec(
+                select(Tenant).where(Tenant.name == tenant_name)
+            ).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                tenant_id = str(uuid4())
+                logger.info(
+                    "Creating tenant",
+                    extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
+                )
+                session.add(Tenant(id=tenant_id, name=tenant_name))
+            else:
+                logger.warning("Tenant already exists")
+
+            # commit the changes
+            session.commit()
+            logger.info(
+                "Tenant created",
+                extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
+            )
+            return tenant_id
+        except IntegrityError:
+            # Tenant already exists
+            logger.exception("Failed to create tenant")
+            raise
+        except Exception:
+            logger.exception("Failed to create tenant")
+            pass
 
 
 def create_single_tenant_for_e2e(tenant_id: str) -> None:

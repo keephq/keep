@@ -1,13 +1,12 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
 import { CreateOrUpdateIncidentForm } from "features/incidents/create-or-update-incident";
 import IncidentsTable from "./incidents-table";
-import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
 import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
@@ -17,6 +16,7 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { Icon } from "@tremor/react";
 import {
+  KeepLoader,
   PageSubtitle,
   PageTitle,
   SeverityBorderIcon,
@@ -43,53 +43,56 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import {
   DEFAULT_INCIDENTS_PAGE_SIZE,
   DEFAULT_INCIDENTS_SORTING,
-  DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+  DEFAULT_INCIDENTS_CHECKED_OPTIONS,
 } from "@/entities/incidents/model/models";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useIncidentsTableData } from "./useIncidentsTableData";
+import EnhancedDateRangePickerV2, {
+  AllTimeFrame,
+} from "@/components/ui/DateRangePickerV2";
+import { useTimeframeState } from "@/components/ui/useTimeframeState";
+import { PaginationState } from "@/features/filter/pagination";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
   return user ? user.name : email;
 };
 
-interface Pagination {
-  limit: number;
-  offset: number;
-}
-
 export function IncidentList({
-  initialData,
   initialFacetsData,
 }: {
   initialData?: PaginatedIncidentsDto;
   initialFacetsData?: InitialFacetsData;
 }) {
-  const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
-    limit: DEFAULT_INCIDENTS_PAGE_SIZE,
-    offset: 0,
-  });
+  const [incidentsPagination, setIncidentsPagination] =
+    useState<PaginationState>({
+      limit: DEFAULT_INCIDENTS_PAGE_SIZE,
+      offset: 0,
+    });
 
   const [incidentsSorting, setIncidentsSorting] = useState<SortingState>([
     DEFAULT_INCIDENTS_SORTING,
   ]);
 
-  const [filterCel, setFilterCel] = useState<string>("");
+  const [filterCel, setFilterCel] = useState<string | null>(null);
 
-  const [dateRange, setDateRange] = useState<TimeFrame>({
-    start: null,
-    end: null,
-    paused: false,
+  const [dateRange, setDateRange] = useTimeframeState({
+    enableQueryParams: true,
+    defaultTimeframe: {
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame,
   });
 
   const {
     isEmptyState,
     incidents,
+    incidentsLoading,
     incidentsError,
     predictedIncidents,
     isPredictedLoading,
     facetsCel,
-  } = useIncidentsTableData(initialData, {
+  } = useIncidentsTableData({
     candidate: null,
     predicted: null,
     limit: incidentsPagination.limit,
@@ -148,7 +151,7 @@ export function IncidentList({
           reverseSeverityMapping[facetOption.value] || 100, // if status is not in the mapping, it should be at the end
       },
       ["Status"]: {
-        uncheckedByDefaultOptionValues: DEFAULT_INCIDENTS_UNCHECKED_OPTIONS,
+        checkedByDefaultOptionValues: DEFAULT_INCIDENTS_CHECKED_OPTIONS,
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -217,10 +220,9 @@ export function IncidentList({
 
   const handleClearFilters = () => {
     setDateRange({
-      start: null,
-      end: null,
-      paused: false,
-    });
+      type: "all-time",
+      isPaused: false,
+    } as AllTimeFrame);
     setIncidentsPagination({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
       offset: 0,
@@ -229,11 +231,16 @@ export function IncidentList({
   };
 
   function renderIncidents() {
+    if (incidentsLoading) {
+      return <KeepLoader></KeepLoader>;
+    }
+
     if (incidents && incidents.items.length > 0) {
       return (
         <IncidentsTable
           filterCel={facetsCel}
           incidents={incidents}
+          pagination={incidentsPagination}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
           setSorting={setIncidentsSorting}
@@ -265,19 +272,19 @@ export function IncidentList({
   const renderDateTimePicker = () => {
     return (
       <div className="flex justify-end">
-        <EnhancedDateRangePicker
-          timeFrame={dateRange}
-          setTimeFrame={(timeFrame) => {
-            setDateRange(timeFrame);
-          }}
-          timeframeRefreshInterval={20000}
-          hasPlay={true}
-          pausedByDefault={false}
-          hasRewind={false}
-          hasForward={false}
-          hasZoomOut={false}
-          enableYearNavigation
-        />
+        {dateRange && (
+          <EnhancedDateRangePickerV2
+            timeFrame={dateRange}
+            setTimeFrame={setDateRange}
+            timeframeRefreshInterval={20000}
+            hasPlay={true}
+            pausedByDefault={false}
+            hasRewind={false}
+            hasForward={false}
+            hasZoomOut={false}
+            enableYearNavigation
+          />
+        )}
       </div>
     );
   };

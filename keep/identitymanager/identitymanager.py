@@ -3,7 +3,7 @@ import importlib
 import inspect
 import logging
 
-from keep.api.models.user import ResourcePermission, Role
+from keep.api.models.user import ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import ALL_RESOURCES, AuthVerifierBase
@@ -59,7 +59,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         )
 
     @abc.abstractmethod
-    def get_users(self) -> str | dict:
+    def get_users(self) -> list[User]:
         """
         Get users
 
@@ -92,6 +92,15 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             password (str): The password of the user to create.
             role (str): The role of the user to create.
         """
+
+    def update_user(self, user_email: str, update_data: dict):
+        """
+        Update a user in the identity manager.
+        :param user_email:
+        :param update_data:
+        :return:
+        """
+        raise NotImplementedError("update_user() method not implemented")
 
     @abc.abstractmethod
     def delete_user(self, username: str) -> None:

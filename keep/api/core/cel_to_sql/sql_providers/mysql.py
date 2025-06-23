@@ -1,6 +1,16 @@
 from datetime import datetime
 from typing import List
-from keep.api.core.cel_to_sql.ast_nodes import ConstantNode
+from uuid import UUID
+from keep.api.core.cel_to_sql.ast_nodes import (
+    ComparisonNode,
+    ComparisonNodeOperator,
+    ConstantNode,
+    DataType,
+    LogicalNode,
+    LogicalNodeOperator,
+    Node,
+    PropertyAccessNode,
+)
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     SimpleFieldMapping,
@@ -12,20 +22,24 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         return f"JSON_UNQUOTE({self._json_extract(column, path)})"
 
+    def _json_contains_path(self, column: str, path: list[str]) -> str:
+        property_path_str = ".".join([f'"{item}"' for item in path])
+        return f"JSON_CONTAINS_PATH({column}, 'one', '$.{property_path_str}')"
+
     def cast(self, expression_to_cast: str, to_type, force=False):
-        if to_type is bool:
+        if to_type == DataType.BOOLEAN:
             cast_conditions = {
                 # f"{expression_to_cast} is NULL": "FALSE",
-                f"{expression_to_cast} = 'true'": "TRUE",
-                f"{expression_to_cast} = 'false'": "FALSE",
-                f"{expression_to_cast} = ''": "FALSE",
+                f"LOWER({expression_to_cast}) = 'true'": "TRUE",
+                f"LOWER({expression_to_cast}) = 'false'": "FALSE",
                 f"CAST({expression_to_cast} AS SIGNED) >= 1": "TRUE",
-                f"CAST({expression_to_cast} AS SIGNED) <= 0": "FALSE",
+                f"CAST({expression_to_cast} AS SIGNED) <= 1": "FALSE",
+                f"{expression_to_cast} != ''": "TRUE",
             }
             result = " ".join(
                 [f"WHEN {key} THEN {value}" for key, value in cast_conditions.items()]
             )
-            result = f"CASE {result} ELSE NULL END"
+            result = f"CASE {result} ELSE FALSE END"
             return result
 
         if not force:
@@ -33,9 +47,9 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             # so if not forced, we return the expression as is
             return expression_to_cast
 
-        if to_type is int:
+        if to_type == DataType.INTEGER:
             return f"CAST({expression_to_cast} AS SIGNED)"
-        elif to_type is float:
+        elif to_type == DataType.FLOAT:
             return f"CAST({expression_to_cast} AS DOUBLE)"
         else:
             return expression_to_cast
@@ -82,7 +96,19 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         else:
             return field_expressions[0]
 
-    def _visit_constant_node(self, value: str) -> str:
+    def _visit_constant_node(
+        self, value: str, expected_data_type: DataType = None
+    ) -> str:
+        if expected_data_type is DataType.UUID:
+            str_value = str(value)
+            try:
+                # Because MySQL works with UUID without dashes, we need to convert it to a hex string
+                # Example: 123e4567-e89b-12d3-a456-426614174000 -> 123e4567e89b12d3a456426614174000
+                # Example2: 123e4567e89b12d3a456426614174000 -> 123e4567e89b12d3a456426614174000 (hex in CEL is also supported)
+                value = UUID(str_value).hex
+            except ValueError:
+                pass
+
         if isinstance(value, datetime):
             date_str = self.literal_proc(value.strftime("%Y-%m-%d %H:%M:%S"))
             date_exp = f"CAST({date_str} as DATETIME)"
@@ -90,7 +116,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         elif isinstance(value, bool):
             return "TRUE" if value else "FALSE"
 
-        return super()._visit_constant_node(value)
+        return super()._visit_constant_node(value, expected_data_type)
 
     def _visit_contains_method_calling(
         self, property_path: str, method_args: List[ConstantNode]
@@ -133,3 +159,48 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         processed_literal = self.literal_proc(value)
         unquoted_literal = processed_literal[1:-1]
         return f"{property_path} IS NOT NULL AND LOWER({property_path}) LIKE '%{unquoted_literal}'"
+
+    def _visit_equal_for_array_datatype(
+        self, first_operand: Node, second_operand: Node
+    ) -> str:
+        if not isinstance(first_operand, PropertyAccessNode):
+            raise NotImplementedError(
+                f"Array datatype comparison is not supported for {type(first_operand).__name__} node"
+            )
+
+        if not isinstance(second_operand, ConstantNode):
+            raise NotImplementedError(
+                f"Array datatype comparison is not supported for {type(second_operand).__name__} node"
+            )
+
+        prop = self._visit_property_access_node(first_operand, [])
+        constant_node_value = self._visit_constant_node(second_operand.value)
+
+        if constant_node_value == "NULL":
+            return f"(JSON_CONTAINS({prop}, '[null]') OR {prop} IS NULL OR JSON_LENGTH({prop}) = 0)"
+        elif constant_node_value.startswith("'") and constant_node_value.endswith("'"):
+            constant_node_value = constant_node_value[1:-1]
+        return f"JSON_CONTAINS({prop}, '[\"{constant_node_value}\"]')"
+
+    def _visit_in_for_array_datatype(
+        self, first_operand: Node, array: list[ConstantNode], stack: list[Node]
+    ) -> str:
+        node = None
+        for item in array:
+            current_node = ComparisonNode(
+                first_operand=first_operand,
+                operator=ComparisonNodeOperator.EQ,
+                second_operand=item,
+            )
+
+            if not node:
+                node = current_node
+                continue
+
+            node = LogicalNode(
+                left=node,
+                operator=LogicalNodeOperator.OR,
+                right=current_node,
+            )
+
+        return self._build_sql_filter(node, stack)

@@ -11,7 +11,6 @@ import { toast } from "react-toastify";
 import { FlowNode } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import clsx from "clsx";
-import { WF_DEBUG_INFO } from "./debug-settings";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
@@ -20,10 +19,12 @@ import { Tooltip } from "@/shared/ui/Tooltip";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { normalizeStepType, triggerTypes } from "../lib/utils";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
-import { ValidationError } from "@/entities/workflows/lib/validation";
+import { ValidationError } from "@/entities/workflows/lib/validate-definition";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
-  if (!WF_DEBUG_INFO) {
+  const { data: config } = useConfig();
+  if (!config?.KEEP_WORKFLOW_DEBUG) {
     return null;
   }
   return (
@@ -172,6 +173,7 @@ function WorkflowNode({ id, data }: FlowNode) {
             opacity: data.isLayouted ? 1 : 0,
             borderStyle: isEmptyNode ? "dashed" : "",
           }}
+          data-testid="workflow-node"
         >
           <DebugNodeInfo id={id} data={data} />
           {isEmptyNode && (
@@ -190,7 +192,7 @@ function WorkflowNode({ id, data }: FlowNode) {
                 <NodeTriggerIcon
                   key={
                     data?.type === "alert"
-                      ? data?.properties?.alert?.source
+                      ? data?.properties?.filters?.source
                       : data?.id
                   }
                   nodeData={data}

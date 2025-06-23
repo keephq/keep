@@ -407,17 +407,19 @@ def assign_alert(
     )
 
     assignees_last_receievd = {}  # the last received(s) that are assigned to someone
-    status = "acknowledged"
+    status = None
     enrichment = get_enrichment(tenant_id, fingerprint)
     if enrichment:
         assignees_last_receievd = enrichment.enrichments.get("assignees", {})
-        status = enrichment.enrichments.get("status", "acknowledged")
+        status = enrichment.enrichments.get("status")
     if unassign:
         assignees_last_receievd.pop(last_received, None)
     else:
         assignees_last_receievd[last_received] = user_email
 
-    enrichments = {"assignees": assignees_last_receievd, "status": status}
+    enrichments = {"assignees": assignees_last_receievd}
+    if not status:
+        enrichments["status"] = "acknowledged"
 
     enrichment_bl = EnrichmentsBl(tenant_id)
     enrichment_bl.enrich_entity(
@@ -426,6 +428,7 @@ def assign_alert(
         action_type=ActionType.ACKNOWLEDGE,
         action_description=f"Alert assigned to {user_email}, status: {status}",
         action_callee=user_email,
+        dispose_on_new_alert=True,
     )
 
     try:
@@ -679,7 +682,14 @@ async def receive_event(
     # Parse the raw body
     t = time.time()
     logger.debug("Parsing event raw body")
-    event = provider_class.parse_event_raw_body(event)
+    try:
+        event = provider_class.parse_event_raw_body(event)
+    except Exception:
+        logger.exception(
+            "Failed to parse event raw body",
+            extra={"tenant_id": authenticated_entity.tenant_id, "event": event},
+        )
+        raise HTTPException(status_code=400, detail="Malformed event")
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
 
     # If provider_name is provided, try to get provider_id from it

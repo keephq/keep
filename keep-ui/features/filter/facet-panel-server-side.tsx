@@ -1,5 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { FacetOptionsQueries, FacetOptionsQuery, FacetsConfig } from "./models";
+import { useMemo, useState } from "react";
+import {
+  FacetDto,
+  FacetOptionDto,
+  FacetOptionsQueries,
+  FacetOptionsQuery,
+  FacetsConfig,
+} from "./models";
 import { useFacetActions, useFacetOptions, useFacets } from "./hooks";
 import { InitialFacetsData } from "./api";
 import { FacetsPanel } from "./facets-panel";
@@ -16,7 +22,7 @@ export interface FacetsPanelProps {
   /**
    * CEL to be used for fetching facet options.
    */
-  facetOptionsCel?: string;
+  facetOptionsCel?: string | null;
   /**
    * Revalidation token to force recalculation of the facets.
    * Will call API to recalculate facet options every revalidationToken value change
@@ -45,8 +51,16 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   facetsConfig,
   isSilentReloading,
 }) => {
-  function buildFacetOptionsQuery() {
-    if (!facetQueriesState) {
+  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
+    `addFacetModalOpen-${entityName}`,
+    false
+  );
+  const facetActions = useFacetActions(entityName, initialFacetsData);
+  const [facetQueriesState, setFacetQueriesState] =
+    useState<FacetOptionsQueries | null>(null);
+
+  const facetOptionsQuery = useMemo(() => {
+    if (facetQueriesState === null || facetOptionsCel === null) {
       return null;
     }
 
@@ -67,15 +81,7 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     }
 
     return result;
-  }
-
-  const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
-    `addFacetModalOpen-${entityName}`,
-    false
-  );
-  const facetActions = useFacetActions(entityName, initialFacetsData);
-  const [facetQueriesState, setFacetQueriesState] =
-    useState<FacetOptionsQueries | null>(null);
+  }, [facetQueriesState, facetOptionsCel]);
 
   const { data: facetsData } = useFacets(entityName, {
     revalidateOnFocus: false,
@@ -83,73 +89,28 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
     fallbackData: initialFacetsData?.facets,
   });
 
-  const {
-    facetOptions,
-    mutate: mutateFacetOptions,
-    isLoading: facetOptionsLoading,
-  } = useFacetOptions(
+  const { facetOptions, isLoading: facetOptionsLoading } = useFacetOptions(
     entityName,
-    initialFacetsData?.facetOptions as any,
-    buildFacetOptionsQuery(),
+    initialFacetsData?.facetOptions as Record<string, FacetOptionDto[]>,
+    facetOptionsQuery,
     revalidationToken
   );
-
-  useEffect(
-    function reloadOptions() {
-      if (
-        facetsData === initialFacetsData?.facets &&
-        initialFacetsData?.facetOptions
-      ) {
-        return;
-      }
-
-      const newFacetQueriesState = buildFacetsQueriesState();
-
-      if (newFacetQueriesState) {
-        setFacetQueriesState(newFacetQueriesState);
-      }
-    },
-    // disabled because this effect uses currentFacetQueriesState that's also change in that effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [facetsData]
-  );
-
-  function buildFacetsQueriesState() {
-    let newFacetQueriesState: { [key: string]: string } | undefined = undefined;
-
-    facetsData?.forEach((facet) => {
-      if (!newFacetQueriesState) {
-        newFacetQueriesState = {};
-      }
-      if (facetQueriesState && facet.id in facetQueriesState) {
-        newFacetQueriesState[facet.id] = facetQueriesState[facet.id];
-      } else {
-        newFacetQueriesState[facet.id] = "";
-      }
-    });
-
-    if (newFacetQueriesState) {
-      return newFacetQueriesState;
-    }
-
-    return null;
-  }
 
   return (
     <>
       <FacetsPanel
         panelId={entityName}
         className={className || ""}
-        facets={facetsData as any}
-        facetOptions={facetOptions as any}
+        facets={facetsData as FacetDto[]}
+        facetOptions={facetOptions as Record<string, FacetOptionDto[]>}
         areFacetOptionsLoading={!isSilentReloading && facetOptionsLoading}
         clearFiltersToken={clearFiltersToken}
         facetsConfig={facetsConfig}
         onCelChange={onCelChange}
         onAddFacet={() => setIsModalOpen(true)}
-        onLoadFacetOptions={(facetId) => {
-          setFacetQueriesState({ ...facetQueriesState, [facetId]: "" });
-        }}
+        onLoadFacetOptions={(facetId) =>
+          setFacetQueriesState({ ...facetQueriesState, [facetId]: "" })
+        }
         onDeleteFacet={(facetId) => facetActions.deleteFacet(facetId)}
         onReloadFacetOptions={(facetQueries) =>
           setFacetQueriesState({ ...facetQueries })

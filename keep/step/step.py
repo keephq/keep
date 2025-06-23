@@ -33,7 +33,9 @@ class Step:
         self.provider_parameters: dict[str, str | StepProviderParameter] = (
             provider_parameters
         )
-        self.on_failure = self.config.get("provider", {}).get("on-failure", {})
+        # backward compatibility
+        legacy_on_failure = self.config.get("provider", {}).get("on-failure", {})
+        self.on_failure = self.config.get("on-failure", {}) or legacy_on_failure
         self.context_manager: ContextManager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
@@ -128,8 +130,9 @@ class Step:
         items = self._get_foreach_items()
         any_action_run = False
         # apply ALL conditions (the decision whether to run or not is made in the end)
+        self.context_manager.set_foreach_items(items=items)
         for item in items:
-            self.context_manager.set_for_each_context(item)
+            self.context_manager.set_foreach_value(value=item)
             try:
                 did_action_run = self._run_single()
             except Exception as e:
@@ -147,6 +150,8 @@ class Step:
             # TODO - do it per item
             if did_action_run:
                 any_action_run = True
+        # reset the foreach context
+        self.context_manager.reset_foreach_context()
         return any_action_run
 
     def _run_single(self, dont_render=False):

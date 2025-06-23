@@ -1,46 +1,25 @@
-interface YamlProvider {
-  type: string;
-  config: string;
-  with: { [key: string]: string | number | boolean | object };
-}
+import { z } from "zod";
+import {
+  WorkflowStrategySchema,
+  YamlAssertConditionSchema,
+  YamlStepOrActionSchema,
+  YamlThresholdConditionSchema,
+  YamlWorkflowDefinitionSchema,
+} from "./yaml.schema";
+import { WorkflowInputSchema } from "./schema";
 
-export interface YamlStepOrAction {
-  name: string;
-  provider: YamlProvider;
-  id?: string;
-  if?: string;
-  vars?: Record<string, string>;
-  condition?: (YamlThresholdCondition | YamlAssertCondition)[];
-  foreach?: string;
-}
+export type YamlStepOrAction = z.infer<typeof YamlStepOrActionSchema>;
+export type YamlThresholdCondition = z.infer<
+  typeof YamlThresholdConditionSchema
+>;
 
-interface YamlCondition {
-  id?: string;
-  name: string;
-  alias?: string;
-}
+export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
+export type WorkflowInputType = WorkflowInput["type"];
 
-export interface YamlThresholdCondition extends YamlCondition {
-  type: "threshold";
-  value: string;
-  compare_to: string;
-  level?: string;
-}
+export type WorkflowStrategy = z.infer<typeof WorkflowStrategySchema>;
 
-export interface YamlAssertCondition extends YamlCondition {
-  type: "assert";
-  assert: string;
-}
+export type YamlAssertCondition = z.infer<typeof YamlAssertConditionSchema>;
 
-export interface YamlWorkflowDefinition {
-  id: string;
-  disabled?: boolean;
-  description?: string;
-  owners?: string[];
-  services?: string[];
-  steps: YamlStepOrAction[];
-  actions?: YamlStepOrAction[];
-  triggers?: any;
-  name?: string;
-  consts?: Record<string, string>;
-}
+export type YamlWorkflowDefinition = z.infer<
+  typeof YamlWorkflowDefinitionSchema
+>;

@@ -1,6 +1,8 @@
 import fnmatch
 import re
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
+
 
 class SimpleFieldMapping:
     def __init__(self, map_to: str):
@@ -21,7 +23,7 @@ class PropertyMetadataInfo:
         field_name: str,
         field_mappings: list[SimpleFieldMapping | JsonFieldMapping],
         enum_values: list[str],
-        data_type: type = None,
+        data_type: DataType = None,
     ):
         self.field_name = field_name
         self.field_mappings = field_mappings
@@ -35,7 +37,7 @@ class FieldMappingConfiguration:
         self,
         map_from_pattern: str,
         map_to: list[str] | str,
-        data_type: type = None,
+        data_type: DataType = None,
         enum_values: list[str] = None,
     ):
         self.map_from_pattern = map_from_pattern
@@ -90,9 +92,7 @@ class PropertiesMetadata:
             If the property path matches a known field or a wildcard pattern, it returns the corresponding mappings.
             Supports JSON type mappings and simple field mappings.
     """
-    def __init__(
-        self, fields_mapping_configurations: list[FieldMappingConfiguration], foo=False
-    ):
+    def __init__(self, fields_mapping_configurations: list[FieldMappingConfiguration]):
         self.wildcard_configurations: dict[FieldMappingConfiguration] = {}
         self.known_configurations: dict[FieldMappingConfiguration] = {}
         for field_mapping in fields_mapping_configurations:

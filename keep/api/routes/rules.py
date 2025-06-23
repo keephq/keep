@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
@@ -33,6 +34,8 @@ class RuleCreateDto(BaseModel):
     incidentPrefix: str = None
     multiLevel: bool = False
     multiLevelPropertyName: str = None
+    threshold: int = 1
+    assignee: str = None
 
 
 @router.get(
@@ -56,6 +59,9 @@ def get_rules(
     for rule in rules:
         rule["distribution"] = rules_dist.get(rule["id"], [])
         rule["incidents"] = rules_incidents.get(rule["id"], 0)
+        rule["definition_cel_ast"] = CelToAstConverter().convert_to_ast(
+            rule["definition_cel"]
+        )
 
     return rules
 
@@ -88,6 +94,8 @@ async def create_rule(
     incident_prefix = rule_create_request.incidentPrefix
     multi_level = rule_create_request.multiLevel
     multi_level_property_name = rule_create_request.multiLevelPropertyName
+    threshold = rule_create_request.threshold
+    assignee = rule_create_request.assignee
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -114,6 +122,9 @@ async def create_rule(
     if not create_on:
         raise HTTPException(status_code=400, detail="createOn is required")
 
+    if not threshold:
+        raise HTTPException(status_code=400, detail="threshold is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -134,6 +145,8 @@ async def create_rule(
         incident_prefix=incident_prefix,
         multi_level=multi_level,
         multi_level_property_name=multi_level_property_name,
+        threshold=threshold,
+        assignee=assignee,
     )
     logger.info("Rule created")
     return rule
@@ -189,6 +202,8 @@ async def update_rule(
         incident_prefix = body.get("incidentPrefix", None)
         multi_level = body.get("multiLevel", False)
         multi_level_property_name = body.get("multiLevelPropertyName", None)
+        threshold = body.get("threshold", 1)
+        assignee = body.get("assignee", None)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -221,6 +236,9 @@ async def update_rule(
     if not create_on:
         raise HTTPException(status_code=400, detail="createOn is required")
 
+    if not threshold:
+        raise HTTPException(status_code=400, detail="threshold is required")
+
     rule = update_rule_db(
         tenant_id=tenant_id,
         rule_id=rule_id,
@@ -241,6 +259,8 @@ async def update_rule(
         incident_prefix=incident_prefix,
         multi_level=multi_level,
         multi_level_property_name=multi_level_property_name,
+        threshold=threshold,
+        assignee=assignee,
     )
 
     if rule:

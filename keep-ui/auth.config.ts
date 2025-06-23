@@ -21,16 +21,19 @@ export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
 }
 
+const authSessionTimeout = process.env.AUTH_SESSION_TIMEOUT
+  ? Number.parseInt(process.env.AUTH_SESSION_TIMEOUT)
+  : 30 * 24 * 60 * 60; // Default to 30 days if not set
 // Determine auth type with backward compatibility
 const authTypeEnv = process.env.AUTH_TYPE;
 export const authType =
   authTypeEnv === MULTI_TENANT
     ? AuthType.AUTH0
     : authTypeEnv === SINGLE_TENANT
-    ? AuthType.DB
-    : authTypeEnv === NO_AUTH
-    ? AuthType.NOAUTH
-    : (authTypeEnv as AuthType);
+      ? AuthType.DB
+      : authTypeEnv === NO_AUTH
+        ? AuthType.NOAUTH
+        : (authTypeEnv as AuthType);
 
 export const proxyUrl =
   process.env.HTTP_PROXY ||
@@ -193,7 +196,12 @@ const baseProviderConfigs = {
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER,
-      authorization: { params: { scope: "openid email profile roles" } },
+      authorization: {
+        params: {
+          scope: "openid email profile",
+        },
+      },
+      checks: ["pkce"],
     }),
   ],
   [AuthType.AZUREAD]: [
@@ -233,7 +241,7 @@ export const config = {
   },
   session: {
     strategy: "jwt" as const,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: authSessionTimeout, // 30 days
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -301,6 +309,81 @@ export const config = {
         token.role = role;
 
         if (authType === AuthType.KEYCLOAK) {
+          accessToken = account.access_token;
+
+          // If user object has tenantIds from profile parsing, include them
+          if (user.tenantIds) {
+            token.tenantIds = user.tenantIds;
+          }
+
+          // Set default tenant and role
+          token.tenantId = user.tenantId || "keep";
+          token.role = user.role || "user";
+
+          // New code: Check if multi-org mode is enabled
+          if (process.env.KEYCLOAK_ROLES_FROM_GROUPS === "true") {
+            try {
+              // Fetch organizations from backend API
+              const response = await fetch(`${getApiURL()}/auth/user/orgs`, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              });
+
+              if (response.ok) {
+                const orgDict = await response.json();
+
+                // Create a properly typed array (not undefined)
+                const tenantArr: {
+                  tenant_id: string;
+                  tenant_name: string;
+                  tenant_logo_url?: string;
+                }[] = [];
+
+                // Populate the array with tenant data, handling null/undefined values
+                Object.entries(orgDict).forEach(([org_name, orgData]) => {
+                  const tenantObject: {
+                    tenant_id: string;
+                    tenant_name: string;
+                    tenant_logo_url?: string;
+                  } = {
+                    tenant_id: String((orgData as any).tenant_id),
+                    tenant_name: `${org_name}`,
+                  };
+
+                  // Only add tenant_logo_url if it exists and is not null
+                  const logoUrl = (orgData as any).tenant_logo_url;
+                  if (logoUrl !== null && logoUrl !== undefined) {
+                    tenantObject.tenant_logo_url = logoUrl;
+                  }
+
+                  tenantArr.push(tenantObject);
+                });
+
+                // Only assign if we have entries (avoids undefined)
+                if (tenantArr.length > 0) {
+                  token.tenantIds = tenantArr;
+
+                  // Set default tenant to the first one if available
+                  token.tenantId = tenantArr[0].tenant_id || token.tenantId;
+
+                  console.log("Successfully processed user orgs:", tenantArr);
+                } else {
+                  console.warn("No orgs returned from /auth/user/orgs");
+                }
+              } else {
+                console.error(
+                  "Failed to fetch user orgs:",
+                  response.statusText
+                );
+              }
+            } catch (error) {
+              console.error("Error fetching user orgs:", error);
+            }
+          }
+          // Refresh token logic
           token.refreshToken = account.refresh_token;
           token.accessTokenExpires =
             Date.now() + (account.expires_in as number) * 1000;
@@ -330,6 +413,7 @@ export const config = {
           accessToken: token.accessToken as string,
           tenantId: token.tenantId as string,
           role: token.role as string,
+          tenantIds: token.tenantIds || [],
         },
       };
     },

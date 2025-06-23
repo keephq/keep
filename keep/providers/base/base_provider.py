@@ -73,7 +73,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         "Others"
     ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+        Literal[
+            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
+        ]
     ] = []
     WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
 
@@ -167,6 +169,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         return {}
 
+    def get_provider_metadata(self) -> dict:
+        """
+        Get provider metadata. E.g. Provider Version.
+
+        Should be implemented by the provider.
+
+        Returns:
+            dict: The provider metadata.
+        """
+        return {}
+
     def notify(self, **kwargs):
         """
         Output alert message.
@@ -255,6 +268,31 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     for part in parts:
                         r = r[part]
                     value = r
+                # support smth like results[0][0].message.source
+                # 1. first convert to results[0][0]["message"]["source"]
+                # 2. use eval
+                elif value.startswith("results["):
+                    self.logger.info("Trying to convert")
+
+                    # try convert
+                    def convert_dot_to_bracket(match):
+                        return f'["{match.group(1)}"]'
+
+                    converted_value = value
+                    bracket_pattern = r"\.([a-zA-Z_][a-zA-Z0-9_]*)"
+                    converted_value = re.sub(
+                        bracket_pattern, convert_dot_to_bracket, converted_value
+                    )
+                    try:
+                        # this is secured since if we are here it means converted_value starts with results[
+                        value = eval(
+                            converted_value, {"__builtins__": {}}, {"results": results}
+                        )
+                    except Exception:
+                        self.logger.exception(
+                            "Could not parse results", extra={"value": value}
+                        )
+
                 if disposable:
                     disposable_enrichments[enrichment["key"]] = value
                 else:
@@ -287,19 +325,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 "audit_enabled": audit_enabled,
             }
 
-            # enrich the alert with _enrichments
-            enrichments_bl.enrich_entity(
-                enrichments=_enrichments,
-                action_description=f"Workflow enriched the alert with {enrichment_string}",
-                **common_kwargs,
-            )
+            if _enrichments:
+                # enrich the alert with _enrichments
+                enrichments_bl.enrich_entity(
+                    enrichments=_enrichments,
+                    action_description=f"Workflow enriched the alert with {enrichment_string}",
+                    **common_kwargs,
+                )
 
-            # enrich with disposable enrichments
-            enrichments_bl.disposable_enrich_entity(
-                enrichments=disposable_enrichments,
-                action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
-                **common_kwargs,
-            )
+            if disposable_enrichments:
+                # enrich with disposable enrichments
+                enrichments_bl.disposable_enrich_entity(
+                    enrichments=disposable_enrichments,
+                    action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
+                    **common_kwargs,
+                )
 
             should_check_incidents_resolution = (
                 _enrichments.get("status", None) == "resolved"

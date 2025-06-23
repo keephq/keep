@@ -63,6 +63,7 @@ export interface AlertDto {
   isNoisy?: boolean;
   enriched_fields: string[];
   incident?: string;
+  incident_dto?: any[];
   alert_query?: string;
 
   // From AlertWithIncidentLinkMetadataDto
@@ -120,7 +121,12 @@ export type AuditEvent = {
   description: string;
   timestamp: string;
   fingerprint: string;
+  mentions?: CommentMentionDto[];
 };
+
+export interface CommentMentionDto {
+  mentioned_user_id: string;
+}
 
 export interface AlertsQuery {
   cel?: string;

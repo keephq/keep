@@ -1,4 +1,4 @@
-import { WorkflowsQuery } from "./useWorkflowsV2";
+import { WorkflowsQuery, WorkflowTemplatesQuery } from "./useWorkflowsV2";
 
 export const workflowKeys = {
   all: "workflows",
@@ -12,6 +12,10 @@ export const workflowKeys = {
       query.sortBy,
       query.sortDir,
     ]
+      .filter((p) => p !== undefined && p !== null)
+      .join("::"),
+  templates: (query: WorkflowTemplatesQuery) =>
+    [workflowKeys.all, "templates", query.cel, query.limit, query.offset]
       .filter((p) => p !== undefined && p !== null)
       .join("::"),
   detail: (id: string, revision: number | null) =>

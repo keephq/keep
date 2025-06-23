@@ -1,4 +1,9 @@
-import { getOrderedWorkflowYamlString } from "../yaml-utils";
+import { getYamlWorkflowDefinitionSchema } from "../../model/yaml.schema";
+import {
+  getOrderedWorkflowYamlString,
+  parseWorkflowYamlToJSON,
+} from "../yaml-utils";
+import { mockProviders } from "@/entities/providers/model/__mocks__/provider-mocks";
 
 const unorderedClickhouseExampleYaml = `
 workflow:
@@ -95,6 +100,9 @@ workflow:
           query: |
             SELECT Url, Status FROM "observability"."Urls"
             WHERE ( Url LIKE '%te_tests%' ) AND Timestamp >= toStartOfMinute(date_add(toDateTime(NOW()), INTERVAL -1 MINUTE)) AND Status = 0;
+        on-failure:
+          retry:
+            count: 1
 `;
 
 describe("YAML Utils", () => {
@@ -117,5 +125,18 @@ describe("YAML Utils", () => {
     expect(orderedWorkflow.trim()).toEqual(
       multilineClickhouseExampleYaml.trim()
     );
+  });
+
+  it("parseWorkflowYamlToJSON should return json with workflow section if the input is not wrapped in workflow section", () => {
+    const parsed = parseWorkflowYamlToJSON(clickhouseExampleYaml);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveProperty("workflow");
+  });
+
+  it("parseWorkflowYamlToJSON should parse the workflow with mock providers", () => {
+    const zodSchema = getYamlWorkflowDefinitionSchema(mockProviders);
+    const parsed = parseWorkflowYamlToJSON(clickhouseExampleYaml, zodSchema);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toHaveProperty("workflow");
   });
 });

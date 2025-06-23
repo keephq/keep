@@ -6,7 +6,6 @@ import sys
 import typing
 import uuid
 from collections import OrderedDict
-from dataclasses import _MISSING_TYPE
 from importlib import metadata
 
 import click
@@ -16,8 +15,7 @@ from prettytable import PrettyTable
 
 from keep.api.core.posthog import posthog_client
 from keep.functions import cyaml
-from keep.providers.models.provider_config import ProviderScope
-from keep.providers.providers_factory import ProvidersFactory
+from keep.providers.providers_factory import ProviderEncoder, ProvidersFactory
 
 load_dotenv(find_dotenv())
 
@@ -122,8 +120,15 @@ class Info:
         if not self.random_user_id:
             self.random_user_id = str(uuid.uuid4())
             self.config["random_user_id"] = self.random_user_id
-            with open(file=keep_config, mode="w") as f:
-                cyaml.dump(self.config, f)
+            try:
+                with open(file=keep_config, mode="w") as f:
+                    cyaml.dump(self.config, f)
+            # e.g. in case of openshift you don't have write access to the file
+            except Exception as e:
+                logger.debug(
+                    f"Error writing random user id to config file: {e}. Please set it manually."
+                )
+                pass
 
         arguments = sys.argv
 
@@ -424,8 +429,8 @@ def delete_workflow(workflow_id: str, info: Info):
     return resp
 
 
-def apply_workflow(file: str, info: Info):
-    """Helper function to apply a single workflow."""
+def apply_workflow(file: str, info: Info, lookup_by_name: bool = True):
+    """Helper function to apply a single workflow. By default, workflow created or updated by name, since it's the most common use case for CLI."""
     with open(file, "rb") as f:
         files = {"file": (os.path.basename(file), f)}
         workflow_endpoint = info.keep_api_url + "/workflows"
@@ -434,6 +439,7 @@ def apply_workflow(file: str, info: Info):
             workflow_endpoint,
             headers={"x-api-key": info.api_key, "accept": "application/json"},
             files=files,
+            params={"lookup_by_name": lookup_by_name},
         )
         return response
 
@@ -452,8 +458,14 @@ def apply_workflow(file: str, info: Info):
     help="Delete all existing workflows and apply the new ones",
     default=False,
 )
+@click.option(
+    "--lookup-by-name",
+    is_flag=True,
+    help="Lookup workflows by name instead of ID",
+    default=True,
+)
 @pass_info
-def apply(info: Info, file: str, full_sync: bool):
+def apply(info: Info, file: str, full_sync: bool, lookup_by_name: bool):
     """Apply a workflow or multiple workflows from a directory."""
     if os.path.isdir(file):
         if full_sync:
@@ -480,7 +492,9 @@ def apply(info: Info, file: str, full_sync: bool):
             if filename.endswith(".yml") or filename.endswith(".yaml"):
                 click.echo(click.style(f"Applying workflow {filename}", bold=True))
                 full_path = os.path.join(file, filename)
-                response = apply_workflow(full_path, info)
+                response = apply_workflow(
+                    full_path, info, lookup_by_name=lookup_by_name
+                )
                 # Handle response for each file
                 if response.ok:
                     click.echo(
@@ -496,7 +510,7 @@ def apply(info: Info, file: str, full_sync: bool):
                         )
                     )
     else:
-        response = apply_workflow(file, info)
+        response = apply_workflow(file, info, lookup_by_name=lookup_by_name)
         if response.ok:
             click.echo(click.style(f"Workflow {file} applied successfully", bold=True))
         else:
@@ -1033,16 +1047,6 @@ def provider(info: Info):
 
 @provider.command(name="build_cache", help="Output providers cache for future use")
 def build_cache():
-    class ProviderEncoder(json.JSONEncoder):
-        def default(self, o):
-            if isinstance(o, ProviderScope):
-                dct = o.__dict__
-                dct.pop("__pydantic_initialised__", None)
-                return dct
-            elif isinstance(o, _MISSING_TYPE):
-                return None
-            return o.dict()
-
     logger.info("Building providers cache")
     providers_cache = ProvidersFactory.get_all_providers(ignore_cache_file=True)
     with open("providers_cache.json", "w") as f:

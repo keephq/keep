@@ -4,7 +4,6 @@ import { Mulish } from "next/font/google";
 import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
 import { TopologyPollingContextProvider } from "@/app/(keep)/topology/model/TopologyPollingContext";
-import { FrigadeProvider } from "../frigade-provider";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
 import { PHProvider } from "../posthog-provider";
@@ -14,6 +13,7 @@ import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { PostHogPageView } from "@/shared/ui/PostHogPageView";
+import { WorkflowModalProvider } from "@/features/workflows/manual-run-workflow";
 
 // If loading a variable font, you don't need to specify the font weight
 const mulish = Mulish({
@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           <PHProvider>
             <NextAuthProvider session={session}>
               <TopologyPollingContextProvider>
-                <FrigadeProvider>
+                <WorkflowModalProvider>
                   {/* @ts-ignore-error Server Component */}
                   <PostHogPageView />
                   <Navbar />
@@ -59,7 +59,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                       )}
                     <ToastContainer />
                   </main>
-                </FrigadeProvider>
+                </WorkflowModalProvider>
               </TopologyPollingContextProvider>
             </NextAuthProvider>
           </PHProvider>

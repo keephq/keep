@@ -105,7 +105,7 @@ class MysqlProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _notify(self, **kwargs):
+    def _notify(self, query="", as_dict=False, single_row=False, **kwargs: dict):
         """
         For MySQL there is no difference if we're querying data or we want to make an impact.
         This will allow using the provider in actions as well as steps.
@@ -115,7 +115,7 @@ class MysqlProvider(BaseProvider):
             single_row (bool): If True, returns only the first row of the results
             **kwargs: Arguments will me passed to the query.format(**kwargs)
         """
-        return self._query(**kwargs)
+        return self._query(query, as_dict, single_row, **kwargs)
 
     def _query(
         self, query="", as_dict=False, single_row=False, **kwargs: dict
@@ -138,6 +138,11 @@ class MysqlProvider(BaseProvider):
             query = query.format(**kwargs)
 
         cursor.execute(query)
+
+        # Commit if this is a write operation (INSERT, UPDATE, DELETE)
+        if query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE")):
+            client.commit()
+
         results = cursor.fetchall()
 
         cursor.close()
