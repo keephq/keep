@@ -10,6 +10,7 @@ from keep.workflowmanager.dal.sql.mappers import workflow_from_db_to_dto
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.models.workflowdalmodel import (
     WorkflowDalModel,
+    WorkflowVersionDalModel,
     WorkflowWithLastExecutionsDalModel,
 )
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
@@ -42,7 +43,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         )
 
     # region Workflow
-    def add_or_update_workflow(
+    def add_workflow(
         self,
         id: str,
         name: str,
@@ -55,9 +56,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         updated_by: str,
         provisioned: bool = False,
         provisioned_file: str | None = None,
-        force_update: bool = False,
         is_test: bool = False,
-        lookup_by_name: bool = False,
     ) -> WorkflowDalModel:
         workflow = WorkflowDalModel(
             id=id,
@@ -71,7 +70,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             updated_by=updated_by,
             provisioned=provisioned,
             provisioned_file=provisioned_file,
-            force_update=force_update,
             is_test=is_test,
             creation_time=datetime.now(timezone.utc),
             last_updated=datetime.now(timezone.utc),
@@ -191,6 +189,11 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
 
         return workflows, count
 
+    def get_workflow_version(
+        self, tenant_id: str, workflow_id: str, revision: int
+    ) -> WorkflowVersionDalModel | None:
+        pass
+
     # endregion
 
     # region Workflow Execution
@@ -286,7 +289,11 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         pass
 
     def __fetch_doc_by_id_from_tenant(
-        self, index_name: str, tenant_id: str, doc_id: str, additional_matches: dict
+        self,
+        index_name: str,
+        tenant_id: str,
+        doc_id: str,
+        additional_matches: dict = None,
     ) -> dict:
         additional_matches = additional_matches if additional_matches else []
         response = self.elastic_search_client.search(
