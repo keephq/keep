@@ -1,15 +1,12 @@
 import dataclasses
 import datetime
-import json
-import traceback
 
-import openshift_client as oc
 import pydantic
 import requests
 import warnings
 from kubernetes import client
 from kubernetes.client.rest import ApiException
-from openshift_client import Context, OpenShiftPythonException
+from openshift_client import Context
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
