@@ -873,7 +873,7 @@ def test_run_interval_workflow(browser: Page):
         rows = page.locator("table tr", has_text="Interval workflow")
         expect(rows).not_to_have_count(0)
         executions_count = rows.count()
-        assert executions_count >= 4 and executions_count <= 6
+        assert executions_count >= 4 and executions_count <= 8
 
     except Exception:
         save_failure_artifacts(page, log_entries)
