@@ -448,7 +448,8 @@ class WorkflowStore:
                         workflow_raw=cyaml.dump(workflow_yaml, width=99999),
                         provisioned=True,
                         provisioned_file=None,  # No file for env var provisioned workflows
-                    )
+                    ),
+                    lookup_by_name=True,
                 )
 
                 provisioned_workflows.append(workflow_yaml)
@@ -510,7 +511,8 @@ class WorkflowStore:
                                 workflow_raw=cyaml.dump(workflow_yaml, width=99999),
                                 provisioned=True,
                                 provisioned_file=workflow_path,
-                            )
+                            ),
+                            lookup_by_name=True,
                         )
                         provisioned_workflows.append(workflow_yaml)
                         logger.info(f"Workflow from {file} provisioned successfully")

@@ -418,8 +418,8 @@ def test_get_all_workflows_with_last_execution_no_dummy_workflow(db_session):
     )
 
     # Verify that we get the regular workflows but not the dummy workflow
-    workflow_ids = [w["workflow"].id for w in workflows]
-    workflow_names = [w["workflow"].name for w in workflows]
+    workflow_ids = [w.id for w in workflows]
+    workflow_names = [w.name for w in workflows]
 
     # Should contain regular workflows
     assert "regular-workflow-1" in workflow_ids
