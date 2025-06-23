@@ -699,6 +699,63 @@ def add_or_update_workflow(
             return workflow
 
 
+def add_workflow(
+    id: str,
+    name: str,
+    tenant_id: str,
+    description: str | None,
+    created_by: str,
+    interval: int | None,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
+    is_test: bool = False,
+):
+    with Session(engine, expire_on_commit=False) as session:
+        workflow = Workflow(
+            id=id,
+            revision=1,
+            name=name,
+            tenant_id=tenant_id,
+            description=description,
+            created_by=created_by,
+            updated_by=updated_by,
+            last_updated=datetime.now(tz=timezone.utc),
+            interval=interval,
+            is_disabled=is_disabled,
+            workflow_raw=workflow_raw,
+            provisioned=provisioned,
+            provisioned_file=provisioned_file,
+            is_test=is_test,
+        )
+        session.add(workflow)
+        session.commit()
+        return workflow
+
+
+def add_workflow_version(
+    id: str,
+    created_by: str,
+    workflow_raw: str,
+    updated_by: str,
+) -> Workflow:
+    with Session(engine, expire_on_commit=False) as session:
+        version = WorkflowVersion(
+            workflow_id=id,
+            revision=1,
+            workflow_raw=workflow_raw,
+            updated_by=updated_by,
+            comment=f"Created by {created_by}",
+            is_valid=True,
+            is_current=True,
+            updated_at=datetime.now(tz=timezone.utc),
+        )
+        session.add(version)
+        session.commit()
+
+
 def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None):
     with existed_or_new_session(session) as session:
         workflow, created = get_or_create(

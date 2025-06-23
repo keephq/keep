@@ -1,3 +1,4 @@
+import datetime
 import io
 import logging
 import os
@@ -10,13 +11,17 @@ import requests
 import validators
 from fastapi import HTTPException
 
+from keep.api.core.db import is_equal_workflow_dicts
 from keep.api.models.query import QueryDto
 from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.dal.factories import create_workflow_repository
-from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
+from keep.workflowmanager.dal.models.workflowdalmodel import (
+    WorkflowDalModel,
+    WorkflowVersionDalModel,
+)
 from keep.workflowmanager.workflow import Workflow
 
 
@@ -81,23 +86,23 @@ class WorkflowStore:
         else:
             workflow_name = workflow.get("name")
 
-        workflow_db = self.workflow_repository.add_or_update_workflow(
-            id=str(uuid.uuid4()),
-            name=workflow_name,
-            tenant_id=tenant_id,
-            description=workflow.get("description"),
-            created_by=created_by,
-            updated_by=created_by,
-            interval=interval,
-            is_disabled=Parser.parse_disabled(workflow),
-            workflow_raw=cyaml.dump(workflow, width=99999),
+        workflow_id = str(workflow_id) if workflow_id else str(uuid.uuid4())
+
+        return self._add_or_update_workflow(
+            workflow=WorkflowDalModel(
+                id=str(uuid.uuid4()),
+                name=workflow.get("name"),
+                tenant_id=tenant_id,
+                description=workflow.get("description"),
+                created_by=created_by,
+                updated_by=created_by,
+                interval=interval,
+                is_disabled=Parser.parse_disabled(workflow),
+                workflow_raw=cyaml.dump(workflow, width=99999),
+            ),
             force_update=force_update,
             lookup_by_name=lookup_by_name,
         )
-        self.logger.info(
-            f"Workflow {workflow_db.id}, {workflow_db.revision} created successfully"
-        )
-        return workflow_db
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
@@ -430,19 +435,22 @@ class WorkflowStore:
                     f"Provisioning workflow {pre_parsed_workflow.id} from env var"
                 )
 
-                self.workflow_repository.add_or_update_workflow(
-                    id=pre_parsed_workflow.id,
-                    name=pre_parsed_workflow.name,
-                    tenant_id=tenant_id,
-                    description=pre_parsed_workflow.description,
-                    created_by="system",
-                    updated_by="system",
-                    interval=pre_parsed_workflow.interval,
-                    is_disabled=pre_parsed_workflow.disabled,
-                    workflow_raw=cyaml.dump(workflow_yaml, width=99999),
-                    provisioned=True,
-                    provisioned_file=None,
+                self._add_or_update_workflow(
+                    WorkflowDalModel(
+                        id=pre_parsed_workflow.id,
+                        name=pre_parsed_workflow.name,
+                        tenant_id=tenant_id,
+                        description=pre_parsed_workflow.description,
+                        created_by="system",
+                        updated_by="system",
+                        interval=pre_parsed_workflow.interval,
+                        is_disabled=pre_parsed_workflow.disabled,
+                        workflow_raw=cyaml.dump(workflow_yaml, width=99999),
+                        provisioned=True,
+                        provisioned_file=None,  # No file for env var provisioned workflows
+                    )
                 )
+
                 provisioned_workflows.append(workflow_yaml)
                 logger.info("Workflow provisioned successfully")
             except Exception as e:
@@ -489,18 +497,20 @@ class WorkflowStore:
                             pre_parsed_workflow = WorkflowStore.pre_parse_workflow_yaml(
                                 workflow_yaml
                             )
-                        self.workflow_repository.add_or_update_workflow(
-                            id=pre_parsed_workflow.id,
-                            name=pre_parsed_workflow.name,
-                            tenant_id=tenant_id,
-                            description=pre_parsed_workflow.description,
-                            created_by="system",
-                            updated_by="system",
-                            interval=pre_parsed_workflow.interval,
-                            is_disabled=pre_parsed_workflow.disabled,
-                            workflow_raw=cyaml.dump(workflow_yaml, width=99999),
-                            provisioned=True,
-                            provisioned_file=workflow_path,
+                        self._add_or_update_workflow(
+                            WorkflowDalModel(
+                                id=pre_parsed_workflow.id,
+                                name=pre_parsed_workflow.name,
+                                tenant_id=tenant_id,
+                                description=pre_parsed_workflow.description,
+                                created_by="system",
+                                updated_by="system",
+                                interval=pre_parsed_workflow.interval,
+                                is_disabled=pre_parsed_workflow.disabled,
+                                workflow_raw=cyaml.dump(workflow_yaml, width=99999),
+                                provisioned=True,
+                                provisioned_file=workflow_path,
+                            )
                         )
                         provisioned_workflows.append(workflow_yaml)
                         logger.info(f"Workflow from {file} provisioned successfully")
@@ -733,6 +743,71 @@ class WorkflowStore:
         triggers = self.parser.get_triggers_from_workflow_dict(workflow_yaml_dict)
 
         return providers_dto, triggers
+
+    def _add_or_update_workflow(
+        self,
+        workflow: WorkflowDalModel,
+        force_update: bool = True,
+        lookup_by_name: bool = False,
+    ):
+        workflow.name = workflow.name or workflow.id
+        workflow.id = str(workflow.id) if workflow.id else str(uuid.uuid4())
+        cel = f"id == '{workflow.id}'"
+
+        if lookup_by_name:
+            cel = f"name == '{workflow.name}'"
+
+        workflows, _ = self.workflow_repository.get_workflows_with_last_executions_v2(
+            tenant_id=workflow.tenant_id,
+            cel=cel,
+            limit=1,
+            offset=0,
+            sort_by=None,
+            sort_dir=None,
+            fetch_last_executions=0,
+        )
+        existing_workflow = workflows[0] if workflows else None
+        new_workflow = workflow
+
+        is_created_or_updated = False
+
+        if not existing_workflow:
+            is_created_or_updated = True
+            new_workflow.revision = 1
+            new_workflow.creation_time = datetime.datetime.now(tz=datetime.UTC)
+            new_workflow.last_updated = new_workflow.creation_time
+            self.logger.info(f"Adding new workflow {workflow.id}")
+            self.workflow_repository.add_workflow(new_workflow)
+        elif not is_equal_workflow_dicts(
+            existing_workflow.dict(), new_workflow.dict() or force_update
+        ):
+            is_created_or_updated = True
+            new_workflow.id = existing_workflow.id
+            new_workflow.revision = existing_workflow.revision + 1
+            new_workflow.creation_time = existing_workflow.creation_time
+            new_workflow.last_updated = datetime.datetime.now(tz=datetime.UTC)
+            self.logger.info(
+                f"Workflow {workflow.id} already exists, updating it. Workflow revision is {new_workflow.revision}"
+            )
+            self.workflow_repository.update_workflow(new_workflow)
+        else:
+            self.logger.info(
+                f"Workflow {workflow.id} already exists and is the same, skipping update."
+            )
+
+        if is_created_or_updated:
+            self.workflow_repository.add_workflow_version(
+                workflow_version=WorkflowVersionDalModel(
+                    workflow_id=new_workflow.id,
+                    revision=new_workflow.revision,
+                    workflow_raw=new_workflow.workflow_raw,
+                    updated_by=new_workflow.created_by,
+                    is_valid=True,
+                    is_current=True,
+                )
+            )
+
+        return new_workflow or existing_workflow
 
     @staticmethod
     def is_alert_rule_workflow(workflow_raw: dict):

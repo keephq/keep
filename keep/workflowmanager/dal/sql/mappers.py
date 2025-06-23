@@ -2,8 +2,12 @@ from keep.api.models.db.workflow import (
     WorkflowExecution,
     WorkflowExecutionLog,
     Workflow,
+    WorkflowVersion,
 )
-from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowDalModel
+from keep.workflowmanager.dal.models.workflowdalmodel import (
+    WorkflowDalModel,
+    WorkflowVersionDalModel,
+)
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
 )
@@ -86,4 +90,19 @@ def workflow_execution_log_from_db_to_dto(
         timestamp=db_workflow_execution_log.timestamp,
         message=db_workflow_execution_log.message,
         context=db_workflow_execution_log.context,
+    )
+
+
+def workflow_version_from_db_to_dto(
+    db_workflow_version: WorkflowVersion,
+) -> WorkflowVersionDalModel:
+    return WorkflowVersionDalModel(
+        workflow_id=db_workflow_version.workflow_id,
+        revision=db_workflow_version.revision,
+        workflow_raw=db_workflow_version.workflow_raw,
+        updated_by=db_workflow_version.updated_by,
+        updated_at=db_workflow_version.updated_at,
+        is_valid=db_workflow_version.is_valid,
+        is_current=db_workflow_version.is_current,
+        comment=db_workflow_version.comment,
     )

@@ -36,6 +36,11 @@ from keep.workflowmanager.dal.sql.mappers import (
 
 workflow_field_configurations = [
     FieldMappingConfiguration(
+        map_from_pattern="id",
+        map_to="workflow.id",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="name",
         map_to="workflow.name",
         data_type=DataType.STRING,

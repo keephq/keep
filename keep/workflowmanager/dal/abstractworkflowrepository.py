@@ -3,6 +3,7 @@ from typing import List, Tuple
 
 from keep.workflowmanager.dal.models.workflowdalmodel import (
     WorkflowDalModel,
+    WorkflowVersionDalModel,
     WorkflowWithLastExecutionsDalModel,
 )
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
@@ -16,24 +17,17 @@ from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
 class WorkflowRepository(ABC):
     # region Workflow
     @abstractmethod
-    def add_or_update_workflow(
-        self,
-        id: str,
-        name: str,
-        tenant_id: str,
-        description: str | None,
-        created_by: str,
-        interval: int | None,
-        workflow_raw: str,
-        is_disabled: bool,
-        updated_by: str,
-        provisioned: bool = False,
-        provisioned_file: str | None = None,
-        force_update: bool = False,
-        is_test: bool = False,
-        lookup_by_name: bool = False,
-    ) -> WorkflowDalModel:
+    def add_workflow(self, workflow: WorkflowDalModel) -> WorkflowDalModel:
         pass
+
+    @abstractmethod
+    def update_workflow(self, workflow: WorkflowDalModel):
+        """
+        Update an existing workflow.
+
+        Args:
+            workflow (WorkflowDalModel): The workflow model to update.
+        """
 
     @abstractmethod
     def delete_workflow(self, tenant_id, workflow_id):
@@ -84,6 +78,34 @@ class WorkflowRepository(ABC):
         fetch_last_executions: int = 15,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         pass
+
+    # endregion
+
+    # region Workflow Version
+    @abstractmethod
+    def add_workflow_version(self, workflow_version: WorkflowVersionDalModel):
+        """
+        Add a new version of a workflow.
+
+        Args:
+            workflow_version (WorkflowVersionDalModel): The workflow version model to add.
+        """
+
+    @abstractmethod
+    def get_workflow_version(
+        self, tenant_id: str, workflow_id: str, revision: int
+    ) -> WorkflowVersionDalModel | None:
+        """ "
+        Retrieve a specific version of a workflow by its ID and revision number.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_id (str): The ID of the workflow.
+            revision (int): The revision number of the workflow.
+
+        Returns:
+            WorkflowVersionDalModel | None: The workflow version model if found, otherwise None.
+        """
 
     # endregion
 

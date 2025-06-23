@@ -17,6 +17,9 @@ from keep.api.core.db import (
     get_interval_workflows,
     get_last_completed_execution_without_session,
     get_workflow_execution_by_execution_number,
+    get_workflow_version,
+    add_workflow_version,
+    add_workflow,
 )
 from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.workflows import (
@@ -28,10 +31,12 @@ from keep.workflowmanager.dal.sql.mappers import (
     workflow_execution_from_db_to_dto,
     workflow_execution_log_from_db_to_dto,
     workflow_execution_from_dto_to_db_partial,
+    workflow_version_from_db_to_dto,
 )
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.models.workflowdalmodel import (
     WorkflowDalModel,
+    WorkflowVersionDalModel,
     WorkflowWithLastExecutionsDalModel,
 )
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
@@ -45,40 +50,28 @@ from sqlalchemy.exc import NoResultFound, IntegrityError
 class SqlWorkflowRepository(WorkflowRepository):
 
     # region Workflow
-    def add_or_update_workflow(
+    def add_workflow(
         self,
-        id: str,
-        name: str,
-        tenant_id: str,
-        description: str | None,
-        created_by: str,
-        interval: int | None,
-        workflow_raw: str,
-        is_disabled: bool,
-        updated_by: str,
-        provisioned: bool = False,
-        provisioned_file: str | None = None,
-        force_update: bool = False,
-        is_test: bool = False,
-        lookup_by_name: bool = False,
+        workflow: WorkflowDalModel,
     ) -> WorkflowDalModel:
-        db_workflow = add_or_update_workflow(
-            id=id,
-            name=name,
-            tenant_id=tenant_id,
-            description=description,
-            created_by=created_by,
-            interval=interval,
-            workflow_raw=workflow_raw,
-            is_disabled=is_disabled,
-            updated_by=updated_by,
-            provisioned=provisioned,
-            provisioned_file=provisioned_file,
-            force_update=force_update,
-            is_test=is_test,
-            lookup_by_name=lookup_by_name,
+        db_workflow = add_workflow(
+            id=workflow.id,
+            name=workflow.name,
+            tenant_id=workflow.tenant_id,
+            description=workflow.description,
+            created_by=workflow.created_by,
+            interval=workflow.interval,
+            workflow_raw=workflow.workflow_raw,
+            is_disabled=workflow.is_disabled,
+            updated_by=workflow.updated_by,
+            provisioned=workflow.provisioned,
+            provisioned_file=workflow.provisioned_file,
+            is_test=workflow.is_test,
         )
         return workflow_from_db_to_dto(db_workflow)
+
+    def update_workflow(self, workflow: WorkflowDalModel):
+        pass
 
     def delete_workflow(self, tenant_id, workflow_id):
         delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
@@ -142,6 +135,23 @@ class SqlWorkflowRepository(WorkflowRepository):
             sort_dir=sort_dir,
             fetch_last_executions=fetch_last_executions,
         )
+
+    # endregion
+
+    # region Workflow Version
+    def add_workflow_version(self, workflow_version: WorkflowVersionDalModel):
+        pass
+
+    def get_workflow_version(
+        self, tenant_id: str, workflow_id: str, revision: int
+    ) -> WorkflowVersionDalModel | None:
+        workflow_version_db = get_workflow_version(
+            tenant_id=tenant_id, workflow_id=workflow_id, revision=revision
+        )
+        if workflow_version_db is None:
+            return None
+
+        return workflow_version_from_db_to_dto(workflow_version_db)
 
     # endregion
 
