@@ -18,7 +18,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
-from keep.api.core.db import existed_or_new_session
+from keep.api.core.db import engine
 from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.workflow import Workflow, WorkflowExecution
@@ -273,7 +273,7 @@ def get_workflows_with_last_executions_v2(
     fetch_last_executions: int = 15,
     session: Session = None,
 ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
-    with existed_or_new_session(session) as session:
+    with Session(engine) as session:
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id, cel=cel
         )

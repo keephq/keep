@@ -1,8 +1,12 @@
+from datetime import datetime, timezone
 from typing import List, Tuple
 
+from sqlalchemy import update
+from sqlmodel import Session
+
 from keep.api.core.db import (
+    engine,
     get_previous_execution_id,
-    add_or_update_workflow,
     delete_workflow,
     delete_workflow_by_provisioned_file,
     get_all_provisioned_workflows,
@@ -18,9 +22,9 @@ from keep.api.core.db import (
     get_last_completed_execution_without_session,
     get_workflow_execution_by_execution_number,
     get_workflow_version,
-    add_workflow_version,
     add_workflow,
 )
+from keep.api.models.db.workflow import Workflow, WorkflowVersion
 from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.workflows import (
     get_workflows_with_last_executions_v2,
@@ -71,7 +75,22 @@ class SqlWorkflowRepository(WorkflowRepository):
         return workflow_from_db_to_dto(db_workflow)
 
     def update_workflow(self, workflow: WorkflowDalModel):
-        pass
+        workflow_patch = {}
+
+        for key, value in workflow.dict(exclude_unset=True).items():
+            if hasattr(Workflow, key):
+                workflow_patch[key] = value
+
+        with Session(engine) as session:
+            stmt = (
+                update(Workflow)
+                .where(Workflow.id == workflow.id)
+                .values(
+                    **workflow_patch,
+                )  # only update fields that are explicitly set in model
+            )
+            session.exec(stmt)
+            session.commit()
 
     def delete_workflow(self, tenant_id, workflow_id):
         delete_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
@@ -140,7 +159,19 @@ class SqlWorkflowRepository(WorkflowRepository):
 
     # region Workflow Version
     def add_workflow_version(self, workflow_version: WorkflowVersionDalModel):
-        pass
+        with Session(engine) as session:
+            version = WorkflowVersion(
+                workflow_id=workflow_version.workflow_id,
+                revision=workflow_version.revision,
+                workflow_raw=workflow_version.workflow_raw,
+                updated_by=workflow_version.updated_by,
+                comment=workflow_version.comment,
+                is_valid=workflow_version.is_valid,
+                is_current=workflow_version.is_current,
+                updated_at=datetime.now(tz=timezone.utc),
+            )
+            session.add(version)
+            session.commit()
 
     def get_workflow_version(
         self, tenant_id: str, workflow_id: str, revision: int
