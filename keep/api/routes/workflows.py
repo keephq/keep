@@ -27,11 +27,7 @@ from keep.api.core.db import (
     get_last_workflow_workflow_to_alert_executions,
     get_or_create_dummy_workflow,
     get_session,
-    get_workflow_by_id as get_workflow_by_id_db,
-    get_workflow_versions,
-    update_workflow_by_id as update_workflow_by_id_db,
 )
-from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.workflowmanager.dal.factories import create_workflow_repository
 from keep.workflowmanager.dal.sql.workflows import (
     get_workflow_facets,
@@ -821,8 +817,10 @@ async def update_workflow_by_id(
         Workflow: The updated workflow
     """
     tenant_id = authenticated_entity.tenant_id
+    workflow_store = WorkflowStore()
+    workflow_repository = create_workflow_repository()
     logger.info(f"Updating workflow {workflow_id}", extra={"tenant_id": tenant_id})
-    workflow_from_db = get_workflow_by_id_db(
+    workflow_from_db = workflow_repository.get_workflow_by_id(
         tenant_id=tenant_id, workflow_id=workflow_id
     )
     if not workflow_from_db:
@@ -836,18 +834,10 @@ async def update_workflow_by_id(
         raise HTTPException(403, detail="Cannot update a provisioned workflow")
 
     workflow_raw_data = await __get_workflow_raw_data(request, None)
-    parser = Parser()
-    workflow_interval = parser.parse_interval(workflow_raw_data)
-    updated_workflow = update_workflow_by_id_db(
-        id=workflow_id,
-        tenant_id=tenant_id,
-        name=workflow_raw_data.get("name", ""),
-        description=workflow_raw_data.get("description"),
-        interval=workflow_interval,
-        workflow_raw=cyaml.dump(workflow_raw_data, width=99999),
-        updated_by=authenticated_entity.email,
-        is_disabled=workflow_raw_data.get("disabled", False),
+    updated_workflow = workflow_store.update_workflow(
+        tenant_id=tenant_id, workflow=workflow_raw_data
     )
+
     logger.info(f"Updated workflow {workflow_id}", extra={"tenant_id": tenant_id})
     return WorkflowCreateOrUpdateDTO(
         workflow_id=workflow_id, revision=updated_workflow.revision, status="updated"
@@ -963,8 +953,11 @@ def list_workflow_versions(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
 ):
+    workflow_repository = create_workflow_repository()
     tenant_id = authenticated_entity.tenant_id
-    versions = get_workflow_versions(tenant_id=tenant_id, workflow_id=workflow_id)
+    versions = workflow_repository.get_workflow_versions(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
 
     return WorkflowVersionListDTO(
         versions=[
@@ -981,7 +974,6 @@ def list_workflow_versions(
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
 def get_workflow_runs_by_id(
     workflow_id: str,
-    tab: int = 1,
     limit: int = 25,
     offset: int = 0,
     status: Optional[List[str]] = Query(None),
@@ -1018,19 +1010,26 @@ def get_workflow_runs_by_id(
                 installed_provider.name
             ] = installed_provider
 
-    with tracer.start_as_current_span("get_workflow_executions"):
-        total_count, workflow_executions, pass_count, fail_count, avgDuration = (
-            get_workflow_executions_db(
-                tenant_id,
-                workflow_id,
-                limit,
-                offset,
-                tab,
-                status,
-                trigger,
-                execution_id,
-            )
+    with tracer.start_as_current_span("get_workflow_stats"):
+        workflow_stats = workflow_repository.get_workflow_stats(
+            tenant_id=tenant_id,
+            workflow_id=workflow_id,
+            time_delta=datetime.timedelta(days=30),
+            triggers=trigger,
+            statuses=status,
         )
+
+    with tracer.start_as_current_span("get_workflow_executions"):
+        workflow_executions, total_count = workflow_repository.get_workflow_executions(
+            tenant_id=tenant_id,
+            workflow_id=workflow_id,
+            time_delta=datetime.timedelta(days=30),
+            triggers=trigger,
+            statuses=status,
+            limit=limit,
+            offset=offset,
+        )
+
     workflow_executions_dtos = []
     with tracer.start_as_current_span("create_workflow_dtos"):
         for workflow_execution in workflow_executions:
@@ -1075,9 +1074,9 @@ def get_workflow_runs_by_id(
         offset=offset,
         count=total_count,
         items=workflow_executions_dtos,
-        passCount=pass_count,
-        failCount=fail_count,
-        avgDuration=avgDuration,
+        passCount=workflow_stats.pass_count,
+        failCount=workflow_stats.fail_count,
+        avgDuration=workflow_stats.avg_duration,
         workflow=final_workflow,
     )
 
@@ -1108,12 +1107,13 @@ def get_workflow_execution_status(
 ) -> WorkflowExecutionDTO:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
+    workflow_repository = create_workflow_repository()
     workflow_execution, logs = workflowstore.get_workflow_execution_with_logs(
         workflow_execution_id=workflow_execution_id,
         tenant_id=tenant_id,
     )
 
-    workflow = get_workflow_by_id_db(
+    workflow = workflow_repository.get_workflow_by_id(
         tenant_id=tenant_id,
         workflow_id=workflow_execution.workflow_id,
     )
@@ -1172,8 +1172,10 @@ def toggle_workflow_state(
     """
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Toggling workflow {workflow_id}", extra={"tenant_id": tenant_id})
-
-    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_repository = create_workflow_repository()
+    workflow = workflow_repository.get_workflow_by_id(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
     if not workflow:
         logger.warning(
             f"Tenant tried to toggle workflow {workflow_id} that does not exist",
@@ -1220,8 +1222,10 @@ def write_workflow_secret(
     If a secret already exists, it updates only the changed keys.
     """
     tenant_id = authenticated_entity.tenant_id
-
-    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_repository = create_workflow_repository()
+    workflow = workflow_repository.get_workflow_by_id(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
     if not workflow:
         raise HTTPException(404, "Workflow not found")
 
@@ -1262,8 +1266,10 @@ def read_workflow_secret(
     Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
     """
     tenant_id = authenticated_entity.tenant_id
-
-    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_repository = create_workflow_repository()
+    workflow = workflow_repository.get_workflow_by_id(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
     if not workflow:
         raise HTTPException(404, "Workflow not found")
 
@@ -1292,8 +1298,10 @@ def delete_workflow_secret(
     If the key exists, it is removed, but other secrets remain.
     """
     tenant_id = authenticated_entity.tenant_id
-
-    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_repository = create_workflow_repository()
+    workflow = workflow_repository.get_workflow_by_id(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
     if not workflow:
         raise HTTPException(404, "Workflow not found")
 
