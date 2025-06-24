@@ -1,6 +1,5 @@
+from datetime import datetime
 import json
-import logging
-import time
 from sqlmodel import Session, select
 
 from keep.api.models.db.secret import Secret
@@ -8,7 +7,6 @@ from keep.secretmanager.secretmanager import BaseSecretManager
 
 from keep.api.core.db import engine
 
-logger = logging.getLogger(__name__)
 
 class DbSecretManager(BaseSecretManager):
     def __init__(self, context_manager, **kwargs):
@@ -48,7 +46,7 @@ class DbSecretManager(BaseSecretManager):
             try:
                 if secret_model:
                     secret_model.value = secret_value
-                    secret_model.last_updated = time.time()
+                    secret_model.last_updated = datetime.utcnow()
                     session.commit()
                     return
                 
