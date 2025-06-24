@@ -8,6 +8,7 @@ on:
       - "pyproject.toml"
       - "keep/providers/**"
       - "keep-ui/entities/workflows/model/yaml.schema.ts"
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: 3.11
