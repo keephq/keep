@@ -121,6 +121,7 @@ def __build_workflow_executions_query(tenant_id: str):
             .label("row_num"),
         )
         .where(WorkflowExecution.tenant_id == tenant_id)
+        .where(WorkflowExecution.is_test_run == False)
         .where(
             WorkflowExecution.started
             >= datetime.now(tz=timezone.utc) - timedelta(days=30)
