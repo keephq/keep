@@ -67,7 +67,7 @@ class WorkflowRepository(ABC):
         """
 
     @abstractmethod
-    def get_workflows_with_last_executions_v2(
+    def get_workflows_with_last_executions(
         self,
         tenant_id: str,
         cel: str,

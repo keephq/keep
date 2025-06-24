@@ -209,7 +209,7 @@ class WorkflowStore:
         session=None,
     ):
         # list all tenant's workflows
-        return self.workflow_repository.get_workflows_with_last_executions_v2(
+        return self.workflow_repository.get_workflows_with_last_executions(
             tenant_id=tenant_id,
             cel=cel,
             limit=limit,
@@ -764,7 +764,7 @@ class WorkflowStore:
         if lookup_by_name:
             cel = f"name == '{workflow.name}'"
 
-        workflows, _ = self.workflow_repository.get_workflows_with_last_executions_v2(
+        workflows, _ = self.workflow_repository.get_workflows_with_last_executions(
             tenant_id=workflow.tenant_id,
             cel=cel,
             limit=1,
