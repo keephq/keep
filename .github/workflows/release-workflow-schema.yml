@@ -1,0 +1,114 @@
+name: Release JSON Schema
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "pyproject.toml"
+      - "keep/providers/**"
+      - "keep-ui/entities/workflows/model/yaml.schema.ts"
+
+env:
+  PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+
+jobs:
+  release-schema:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Save providers list
+        run: |
+          PYTHONPATH="${{ github.workspace }}" poetry run python ./scripts/save_providers_list.py
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: keep-ui/package-lock.json
+
+      - name: Install Node dependencies
+        working-directory: keep-ui
+        run: npm ci
+
+      - name: Generate JSON Schema
+        working-directory: keep-ui
+        run: npm run build:workflow-yaml-json-schema
+
+      - name: Checkout schema repository
+        uses: actions/checkout@v4
+        with:
+          repository: keephq/keep-workflow-schema
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: schema-repo
+
+      - name: Copy schema to target repository
+        run: |
+          # Assuming the schema is generated in keep-ui/dist/ or similar
+          cp keep-ui/workflow-schema.json schema-repo/schema.json
+
+          # Update schema with version info
+          jq --arg version "${{ steps.get_version.outputs.version }}" \
+             --arg id "https://raw.githubusercontent.com/keephq/keep-workflow-schema/v${{ steps.get_version.outputs.version }}/schema.json" \
+             '. + {version: $version, "$id": $id}' \
+             schema-repo/schema.json > schema-repo/schema.tmp.json
+
+          mv schema-repo/schema.tmp.json schema-repo/schema.json
+
+      - name: Check if schema changed
+        id: check_changes
+        working-directory: schema-repo
+        run: |
+          if git diff --quiet schema.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push schema
+        if: steps.check_changes.outputs.changed == 'true'
+        working-directory: schema-repo
+        run: |
+          git config user.name "Keep Schema Bot"
+          git config user.email "no-reply@keephq.dev"
+          git add schema.json
+          git commit -m "Release schema v${{ steps.get_version.outputs.version }}"
+          git tag "v${{ steps.get_version.outputs.version }}"
+          git push origin main
+          git push origin "v${{ steps.get_version.outputs.version }}"
