@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 
-from sqlalchemy import select, update
+from sqlalchemy import func, or_, select, update
 from sqlmodel import Session
 
 from keep.api.core.db import (
@@ -21,11 +21,11 @@ from keep.api.core.db import (
     get_interval_workflows,
     get_last_completed_execution_without_session,
     get_workflow_execution_by_execution_number,
-    get_workflow_version,
     add_workflow,
 )
 from keep.api.models.db.workflow import Workflow, WorkflowExecution, WorkflowVersion
 from keep.workflowmanager.dal.exceptions import ConflictError
+from keep.workflowmanager.dal.models.workflowstatsdalmodel import WorkflowStatsDalModel
 from keep.workflowmanager.dal.sql.workflows import (
     get_workflows_with_last_executions_v2,
 )
@@ -135,6 +135,47 @@ class SqlWorkflowRepository(WorkflowRepository):
 
         return None
 
+    def get_workflow_stats(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        time_delta: timedelta = None,
+        triggers: List[str] | None = None,
+        statuses: List[str] | None = None,
+    ) -> WorkflowStatsDalModel | None:
+        with Session(engine) as session:
+            status_count_query = self._compose_base_workflow_executions_query(
+                selects=[WorkflowExecution.status, func.count().label("count")],
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                is_test_run=False,
+                time_delta=time_delta,
+                triggers=triggers,
+                statuses=statuses,
+            ).group_by(WorkflowExecution.status)
+            status_counts = session.exec(status_count_query).all()
+            statusGroupbyMap = {status: count for status, count in status_counts}
+            pass_count = statusGroupbyMap.get("success", 0)
+            fail_count = statusGroupbyMap.get("error", 0) + statusGroupbyMap.get(
+                "timeout", 0
+            )
+            avg_duration_query = self._compose_base_workflow_executions_query(
+                selects=[func.avg(WorkflowExecution.execution_time)],
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                is_test_run=False,
+                time_delta=time_delta,
+                triggers=triggers,
+                statuses=statuses,
+            )
+            avg_duration = session.exec(avg_duration_query).one()[0]
+
+            return WorkflowStatsDalModel(
+                pass_count=pass_count,
+                fail_count=fail_count,
+                avg_duration=avg_duration,
+            )
+
     def get_workflows_with_last_executions(
         self,
         tenant_id: str,
@@ -176,13 +217,44 @@ class SqlWorkflowRepository(WorkflowRepository):
     def get_workflow_version(
         self, tenant_id: str, workflow_id: str, revision: int
     ) -> WorkflowVersionDalModel | None:
-        workflow_version_db = get_workflow_version(
-            tenant_id=tenant_id, workflow_id=workflow_id, revision=revision
-        )
+        with Session(engine) as session:
+            workflow_version_db = session.exec(
+                select(WorkflowVersion)
+                # starting from the 'workflow' table since it's smaller
+                .select_from(Workflow)
+                .where(Workflow.tenant_id == tenant_id)
+                .where(Workflow.id == workflow_id)
+                .where(Workflow.is_deleted == False)
+                .where(Workflow.is_test == False)
+                .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
+                .where(WorkflowVersion.revision == revision)
+            ).first()
+
         if workflow_version_db is None:
             return None
 
         return workflow_version_from_db_to_dto(workflow_version_db)
+
+    def get_workflow_versions(
+        self, tenant_id: str, workflow_id: str
+    ) -> List[WorkflowVersionDalModel]:
+        with Session(engine) as session:
+            versions = session.exec(
+                select(WorkflowVersion)
+                # starting from the 'workflow' table since it's smaller
+                .select_from(Workflow)
+                .where(Workflow.tenant_id == tenant_id)
+                .where(Workflow.id == workflow_id)
+                .where(Workflow.is_deleted == False)
+                .where(Workflow.is_test == False)
+                .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
+                .order_by(WorkflowVersion.revision.desc())
+            ).all()
+
+            return [
+                workflow_version_from_db_to_dto(db_workflow_version)
+                for db_workflow_version in versions
+            ]
 
     # endregion
 
@@ -262,55 +334,46 @@ class SqlWorkflowRepository(WorkflowRepository):
         tenant_id: str,
         workflow_id: str,
         time_delta: timedelta = None,
+        triggers: List[str] | None = None,
         statuses: List[str] | None = None,
         limit: int = None,
         offset: int = None,
         is_test_run: bool | None = None,
-    ) -> list[WorkflowExecutionDalModel] | None:
-        """
-        Get workflow executions for a specific workflow.
-        Args:
-            tenant_id (str): The tenant ID.
-            workflow_id (str): The workflow ID.
-            time_delta (timedelta, optional): Filter executions started within this time delta. Defaults to None, so no time filter is applied.
-            statuses (List[str], optional): Filter executions by these statuses. Defaults to None, so all statuses are included.
-            limit (int, optional): Limit the number of results. Defaults to 100.
-            offset (int, optional): Offset for pagination. Defaults to 0.
-            is_test_run (bool, optional): Filter by test runs. Defaults to False, so only non-test runs are included.
-        Returns:
-            list[WorkflowExecutionDalModel] | None: List of workflow executions or None if not found.
-        """
+    ) -> Tuple[list[WorkflowExecutioLogDalModel], int]:
         with Session(engine) as session:
             is_test_run = is_test_run if is_test_run is not None else False
             limit = limit if limit is not None else 100
             offset = offset if offset is not None else 0
 
-            def compose_base_query(selects):
-                query = select(*selects).filter(
-                    WorkflowExecution.tenant_id == tenant_id,
-                    WorkflowExecution.workflow_id == workflow_id,
-                    WorkflowExecution.is_test_run == is_test_run,
+            total_count = session.exec(
+                self._compose_base_workflow_executions_query(
+                    selects=[func.count()],
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    is_test_run=is_test_run,
+                    time_delta=time_delta,
+                    triggers=triggers,
+                    statuses=statuses,
                 )
-
-                if time_delta is not None:
-                    query = query.filter(
-                        WorkflowExecution.started
-                        >= datetime.now(timezone.utc) - time_delta
-                    )
-
-                if statuses is not None:
-                    query = query.filter(WorkflowExecution.status.in_(statuses))
-
-            total_count = session.exec(compose_base_query([WorkflowExecution.id]))
+            ).one()[0]
             data_query = (
-                compose_base_query(WorkflowExecution)
+                self._compose_base_workflow_executions_query(
+                    selects=[WorkflowExecution],
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    is_test_run=is_test_run,
+                    time_delta=time_delta,
+                    triggers=triggers,
+                    statuses=statuses,
+                )
                 .order_by(WorkflowExecution.started.desc())
                 .limit(limit)
                 .offset(offset)
             )
             db_workflow_executions = session.exec(data_query).all()
+            print()
             return [
-                workflow_execution_from_db_to_dto(item)
+                workflow_execution_from_db_to_dto(item[0])
                 for item in db_workflow_executions
             ], total_count
 
@@ -375,3 +438,38 @@ class SqlWorkflowRepository(WorkflowRepository):
 
         return workflow_execution_from_db_to_dto(db_workflow_execution)
     # endregion
+
+    def _compose_base_workflow_executions_query(
+        self,
+        selects,
+        tenant_id: str,
+        workflow_id: str,
+        is_test_run: bool | None = False,
+        time_delta: timedelta = None,
+        triggers: List[str] | None = None,
+        statuses: List[str] | None = None,
+    ):
+        query = (
+            select(*selects)
+            .filter(
+                WorkflowExecution.tenant_id == tenant_id,
+                WorkflowExecution.workflow_id == workflow_id,
+                WorkflowExecution.is_test_run == is_test_run,
+            )
+            .select_from(WorkflowExecution)
+        )
+
+        if time_delta is not None:
+            query = query.filter(
+                WorkflowExecution.started >= datetime.now(timezone.utc) - time_delta
+            )
+
+        if triggers is not None:
+            conditions = [
+                WorkflowExecution.triggered_by.like(f"{trig}%") for trig in triggers
+            ]
+            query = query.filter(or_(*conditions))
+
+        if statuses is not None:
+            query = query.filter(WorkflowExecution.status.in_(statuses))
+        return query

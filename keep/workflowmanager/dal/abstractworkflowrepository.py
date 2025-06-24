@@ -13,6 +13,7 @@ from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
 from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
     WorkflowExecutioLogDalModel,
 )
+from keep.workflowmanager.dal.models.workflowstatsdalmodel import WorkflowStatsDalModel
 
 
 class WorkflowRepository(ABC):
@@ -57,6 +58,27 @@ class WorkflowRepository(ABC):
         self, tenant_id: str, workflow_id: str
     ) -> WorkflowDalModel | None:
         pass
+
+    @abstractmethod
+    def get_workflow_stats(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        time_delta: timedelta = None,
+        triggers: List[str] | None = None,
+        statuses: List[str] | None = None,
+    ) -> WorkflowStatsDalModel | None:
+        """
+        Retrieve statistics for a specific workflow.
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_id (str): The ID of the workflow.
+            time_delta (timedelta, optional): Filter statistics for executions started within this time delta. Defaults to None, so no time filter is applied.
+            triggers (List[str], optional): Filter statistics by these triggers. Defaults to None, so all triggers are included.
+            statuses (List[str], optional): Filter statistics by these statuses. Defaults to None, so all statuses are included.
+        Returns:
+            WorkflowStatsDalModel | None: The statistics model for the workflow, or None if not found.
+        """
 
     @abstractmethod
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
@@ -108,6 +130,19 @@ class WorkflowRepository(ABC):
             WorkflowVersionDalModel | None: The workflow version model if found, otherwise None.
         """
 
+    @abstractmethod
+    def get_workflow_versions(
+        self, tenant_id: str, workflow_id: str
+    ) -> List[WorkflowVersionDalModel]:
+        """
+        Retrieve all versions of active workflow.
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_id (str): The ID of the workflow.
+        Returns:
+            List[WorkflowVersionDalModel]: A list of workflow version models.
+        """
+
     # endregion
 
     # region Workflow Execution
@@ -146,23 +181,25 @@ class WorkflowRepository(ABC):
         tenant_id: str,
         workflow_id: str,
         time_delta: timedelta = None,
+        triggers: List[str] | None = None,
         statuses: List[str] | None = None,
         limit: int = 100,
         offset: int = 0,
         is_test_run: bool | None = False,
-    ) -> list[WorkflowExecutionDalModel] | None:
+    ) -> Tuple[list[WorkflowExecutioLogDalModel], int]:
         """
         Get workflow executions for a specific workflow.
         Args:
             tenant_id (str): The tenant ID.
             workflow_id (str): The workflow ID.
             time_delta (timedelta, optional): Filter executions started within this time delta. Defaults to None, so no time filter is applied.
+            triggers (List[str], optional): Filter executions by these triggers. Defaults to None, so all triggers are included.
             statuses (List[str], optional): Filter executions by these statuses. Defaults to None, so all statuses are included.
             limit (int, optional): Limit the number of results. Defaults to 100.
             offset (int, optional): Offset for pagination. Defaults to 0.
             is_test_run (bool, optional): Filter by test runs. Defaults to False, so only non-test runs are included.
         Returns:
-            list[WorkflowExecutionDalModel] | None: List of workflow executions or None if not found.
+            Tuple[list[WorkflowExecutioLogDalModel], int]: A tuple containing a list of workflow execution logs and the total count of executions.
         """
 
     @abstractmethod
