@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: keephq/keep-workflow-schema
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_SCHEMA_REPO_PAT }}
           path: schema-repo
 
       - name: Set target branch variable
@@ -105,8 +105,7 @@ jobs:
 
       - name: Copy schema to target repository
         run: |
-          # Assuming the schema is generated in keep-ui/dist/ or similar
-          cp keep-ui/workflow-schema.json schema-repo/schema.json
+          cp workflow-yaml-json-schema.json schema-repo/schema.json
 
           # Update schema with version info
           jq --arg version "${{ steps.get_version.outputs.version }}" \
@@ -137,3 +136,14 @@ jobs:
           git tag "v${{ steps.get_version.outputs.version }}"
           git push origin ${{ steps.set_branch.outputs.branch }}
           git push origin "v${{ steps.get_version.outputs.version }}"
+
+      - name: Create GitHub Release
+        if: steps.check_changes.outputs.changed == 'true' && steps.set_branch.outputs.branch == 'main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: Release v${{ steps.get_version.outputs.version }}
+          body: |
+            Automated release of schema version v${{ steps.get_version.outputs.version }}.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_SCHEMA_REPO_PAT }}
