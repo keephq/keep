@@ -834,7 +834,10 @@ async def update_workflow_by_id(
 
     workflow_raw_data = await __get_workflow_raw_data(request, None)
     updated_workflow = workflow_store.update_workflow(
-        tenant_id=tenant_id, workflow=workflow_raw_data
+        tenant_id=tenant_id,
+        workflow_id=workflow_id,
+        workflow_raw_data=workflow_raw_data,
+        updated_by=authenticated_entity.email,
     )
 
     logger.info(f"Updated workflow {workflow_id}", extra={"tenant_id": tenant_id})

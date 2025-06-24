@@ -107,25 +107,22 @@ class WorkflowStore:
     def update_workflow(
         self,
         tenant_id: str,
-        workflow: dict,
+        workflow_id: str,
+        workflow_raw_data: dict,
+        updated_by,
     ):
-        workflow_id = workflow.get("id")
-        self.logger.info(f"Creating workflow {workflow_id}")
-
-        if not workflow.get("name"):  # workflow name is None or empty string
-            workflow["name"] = workflow_id
-
-        workflow_id = str(workflow_id) if workflow_id else str(uuid.uuid4())
-
+        self.logger.info(f"Updating workflow {workflow_id}")
+        workflow_interval = self.parser.parse_interval(workflow_raw_data)
         return self._add_or_update_workflow(
             workflow=WorkflowDalModel(
-                id=str(uuid.uuid4()),
-                name=workflow.get("name"),
+                id=workflow_id,
                 tenant_id=tenant_id,
-                description=workflow.get("description"),
-                interval=self.parser.parse_interval(workflow),
-                is_disabled=Parser.parse_disabled(workflow),
-                workflow_raw=cyaml.dump(workflow, width=99999),
+                name=workflow_raw_data.get("name", ""),
+                description=workflow_raw_data.get("description"),
+                interval=workflow_interval,
+                workflow_raw=cyaml.dump(workflow_raw_data, width=99999),
+                updated_by=updated_by,
+                is_disabled=workflow_raw_data.get("disabled", False),
             ),
             operation="update",
         )
@@ -807,12 +804,14 @@ class WorkflowStore:
 
         if operation == "update" and not existing_workflow:
             raise NotFoundError(f"Workflow {workflow.id} not found for update")
+        workflow_version_comment = None
 
         if not existing_workflow:
             is_created_or_updated = True
             new_workflow.revision = 1
             new_workflow.creation_time = datetime.datetime.now(tz=datetime.UTC)
             new_workflow.last_updated = new_workflow.creation_time
+            workflow_version_comment = f"Created by {new_workflow.created_by}"
             self.logger.info(f"Adding new workflow {workflow.id}")
             self.workflow_repository.add_workflow(new_workflow)
         elif not is_equal_workflow_dicts(
@@ -823,6 +822,7 @@ class WorkflowStore:
             new_workflow.revision = existing_workflow.revision + 1
             new_workflow.creation_time = existing_workflow.creation_time
             new_workflow.last_updated = datetime.datetime.now(tz=datetime.UTC)
+            workflow_version_comment = f"Updated by {new_workflow.created_by}"
             self.logger.info(
                 f"Workflow {workflow.id} already exists, updating it. Workflow revision is {new_workflow.revision}"
             )
@@ -838,8 +838,8 @@ class WorkflowStore:
                     workflow_id=new_workflow.id,
                     revision=new_workflow.revision,
                     workflow_raw=new_workflow.workflow_raw,
-                    comment=f"Created by {new_workflow.created_by}",
-                    updated_by=new_workflow.created_by,
+                    comment=workflow_version_comment,
+                    updated_by=new_workflow.updated_by,
                     is_valid=True,
                     is_current=True,
                 )

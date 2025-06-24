@@ -233,7 +233,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         if workflow_version_db is None:
             return None
 
-        return workflow_version_from_db_to_dto(workflow_version_db)
+        return workflow_version_from_db_to_dto(workflow_version_db[0])
 
     def get_workflow_versions(
         self, tenant_id: str, workflow_id: str
@@ -252,7 +252,7 @@ class SqlWorkflowRepository(WorkflowRepository):
             ).all()
 
             return [
-                workflow_version_from_db_to_dto(db_workflow_version)
+                workflow_version_from_db_to_dto(db_workflow_version[0])
                 for db_workflow_version in versions
             ]
 
