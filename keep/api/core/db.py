@@ -992,38 +992,6 @@ def get_workflow_by_id(tenant_id: str, workflow_id: str):
     return workflow
 
 
-def get_workflow_versions(tenant_id: str, workflow_id: str):
-    with Session(engine) as session:
-        versions = session.exec(
-            select(WorkflowVersion)
-            # starting from the 'workflow' table since it's smaller
-            .select_from(Workflow)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.id == workflow_id)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
-            .order_by(WorkflowVersion.revision.desc())
-        ).all()
-    return versions
-
-
-def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
-    with Session(engine) as session:
-        version = session.exec(
-            select(WorkflowVersion)
-            # starting from the 'workflow' table since it's smaller
-            .select_from(Workflow)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.id == workflow_id)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
-            .where(WorkflowVersion.revision == revision)
-        ).first()
-    return version
-
-
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
     logger.info("Updating provider last pull time", extra=extra)
