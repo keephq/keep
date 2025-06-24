@@ -17,6 +17,7 @@ from keep.api.models.workflow import PreparsedWorkflowDTO, ProviderDTO
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.dal.exceptions import NotFoundError
 from keep.workflowmanager.dal.factories import create_workflow_repository
 from keep.workflowmanager.dal.models.workflowdalmodel import (
     WorkflowDalModel,
@@ -79,12 +80,40 @@ class WorkflowStore:
     ):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
-        interval = self.parser.parse_interval(workflow)
+
         if not workflow.get("name"):  # workflow name is None or empty string
-            workflow_name = workflow_id
-            workflow["name"] = workflow_name
+            workflow["name"] = workflow_id
         else:
             workflow_name = workflow.get("name")
+
+        workflow_id = str(workflow_id) if workflow_id else str(uuid.uuid4())
+
+        return self._add_or_update_workflow(
+            workflow=WorkflowDalModel(
+                id=str(uuid.uuid4()),
+                name=workflow_name,
+                tenant_id=tenant_id,
+                description=workflow.get("description"),
+                created_by=created_by,
+                updated_by=created_by,
+                interval=self.parser.parse_interval(workflow),
+                is_disabled=Parser.parse_disabled(workflow),
+                workflow_raw=cyaml.dump(workflow, width=99999),
+            ),
+            force_update=force_update,
+            lookup_by_name=lookup_by_name,
+        )
+
+    def update_workflow(
+        self,
+        tenant_id: str,
+        workflow: dict,
+    ):
+        workflow_id = workflow.get("id")
+        self.logger.info(f"Creating workflow {workflow_id}")
+
+        if not workflow.get("name"):  # workflow name is None or empty string
+            workflow["name"] = workflow_id
 
         workflow_id = str(workflow_id) if workflow_id else str(uuid.uuid4())
 
@@ -94,14 +123,11 @@ class WorkflowStore:
                 name=workflow.get("name"),
                 tenant_id=tenant_id,
                 description=workflow.get("description"),
-                created_by=created_by,
-                updated_by=created_by,
-                interval=interval,
+                interval=self.parser.parse_interval(workflow),
                 is_disabled=Parser.parse_disabled(workflow),
                 workflow_raw=cyaml.dump(workflow, width=99999),
             ),
-            force_update=force_update,
-            lookup_by_name=lookup_by_name,
+            operation="update",
         )
 
     def delete_workflow(self, tenant_id, workflow_id):
@@ -751,7 +777,8 @@ class WorkflowStore:
         workflow: WorkflowDalModel,
         force_update: bool = True,
         lookup_by_name: bool = False,
-    ):
+        operation=None,
+    ) -> WorkflowDalModel:
         workflow.name = workflow.name or workflow.id
         workflow.id = str(workflow.id) if workflow.id else str(uuid.uuid4())
         workflow.provisioned = (
@@ -777,6 +804,9 @@ class WorkflowStore:
         new_workflow = workflow
 
         is_created_or_updated = False
+
+        if operation == "update" and not existing_workflow:
+            raise NotFoundError(f"Workflow {workflow.id} not found for update")
 
         if not existing_workflow:
             is_created_or_updated = True
