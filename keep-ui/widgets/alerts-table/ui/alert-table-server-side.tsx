@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Table, Card, Button } from "@tremor/react";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
@@ -27,6 +27,7 @@ import {
   getOnlyVisibleCols,
   DEFAULT_COLS_VISIBILITY,
   DEFAULT_COLS,
+  useAlertTableCols,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import AlertActions from "@/widgets/alerts-table/ui/alert-actions";
 import {
@@ -73,10 +74,12 @@ import { AlertsTableDataQuery } from "./useAlertsTableData";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { usePresetColumnState } from "@/entities/presets/model";
+import { STATIC_PRESET_IDS, STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
-  return user ? user.name : email;
+  return user?.name || email;
 };
 
 interface PresetTab {
@@ -98,6 +101,7 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
+  presetId?: string;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -119,6 +123,7 @@ export function AlertTableServerSide({
   initialFacets,
   isAsyncLoading = false,
   presetName,
+  presetId,
   facetsCel,
   facetsPanelRefreshToken,
   isRefreshAllowed = true,
@@ -139,9 +144,35 @@ export function AlertTableServerSide({
 
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
   const [rowStyle] = useAlertRowStyle();
-  const [columnTimeFormats, setColumnTimeFormats] = useLocalStorage<
-    Record<string, TimeFormatOption>
-  >(`column-time-formats-${presetName}`, {});
+  
+  // Check if this is a static preset that should never use backend
+  const isStaticPreset = 
+    !presetId ||
+    STATIC_PRESET_IDS.includes(presetId) ||
+    STATIC_PRESETS_NAMES.includes(presetName);
+
+  // Use the unified column state hook that handles both local storage and backend
+  const {
+    columnVisibility,
+    columnOrder,
+    columnRenameMapping,
+    columnTimeFormats,
+    columnListFormats,
+    setColumnTimeFormats,
+    setColumnListFormats,
+    setColumnOrder,
+    setColumnVisibility,
+    setColumnRenameMapping,
+    updateMultipleColumnConfigs,
+    useBackend,
+    isLoading: isColumnConfigLoading,
+  } = usePresetColumnState({
+    presetName,
+    presetId,
+    // Only use backend for non-static presets with valid IDs
+    useBackend: !isStaticPreset && !!presetId,
+  });
+  
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -155,20 +186,6 @@ export function AlertTableServerSide({
   });
 
   const columnsIds = getColumnsIds(columns);
-
-  const [columnOrder] = useLocalStorage<ColumnOrderState>(
-    `column-order-${presetName}`,
-    DEFAULT_COLS
-  );
-
-  const [columnVisibility] = useLocalStorage<VisibilityState>(
-    `column-visibility-${presetName}`,
-    DEFAULT_COLS_VISIBILITY
-  );
-
-  const [columnListFormats, setColumnListFormats] = useLocalStorage<
-    Record<string, ListFormatOption>
-  >(`column-list-formats-${presetName}`, {});
 
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     "table-sizes",
@@ -460,6 +477,61 @@ export function AlertTableServerSide({
   // Check if grouping is active
   const isGroupingActive = grouping.length > 0;
 
+  // Unified functions for column operations that handle both local and backend updates
+  const handleColumnOrderChange = useCallback(
+    (newOrder: ColumnOrderState) => {
+      if (useBackend) {
+        // For backend presets, preserve ALL column configuration
+        updateMultipleColumnConfigs({ 
+          columnOrder: newOrder,
+          columnVisibility: columnVisibility,
+          columnRenameMapping: columnRenameMapping,
+          columnTimeFormats: columnTimeFormats,
+          columnListFormats: columnListFormats,
+        });
+      } else {
+        // For local presets, use direct setter
+        setColumnOrder(newOrder);
+      }
+    },
+    [
+      useBackend,
+      updateMultipleColumnConfigs,
+      setColumnOrder,
+      columnVisibility,
+      columnRenameMapping,
+      columnTimeFormats,
+      columnListFormats,
+    ]
+  );
+
+  const handleColumnVisibilityChange = useCallback(
+    (newVisibility: VisibilityState) => {
+      if (useBackend) {
+        // For backend presets, preserve ALL column configuration
+        updateMultipleColumnConfigs({ 
+          columnVisibility: newVisibility,
+          columnOrder: columnOrder,
+          columnRenameMapping: columnRenameMapping,
+          columnTimeFormats: columnTimeFormats,
+          columnListFormats: columnListFormats,
+        });
+      } else {
+        // For local presets, use direct setter
+        setColumnVisibility(newVisibility);
+      }
+    },
+    [
+      useBackend,
+      updateMultipleColumnConfigs,
+      setColumnVisibility,
+      columnOrder,
+      columnRenameMapping,
+      columnTimeFormats,
+      columnListFormats,
+    ]
+  );
+
   function renderTable() {
     if (
       !showSkeleton &&
@@ -564,6 +636,12 @@ export function AlertTableServerSide({
           setColumnTimeFormats={setColumnTimeFormats}
           columnListFormats={columnListFormats}
           setColumnListFormats={setColumnListFormats}
+          columnOrder={columnOrder}
+          setColumnOrder={handleColumnOrderChange}
+          columnVisibility={columnVisibility}
+          setColumnVisibility={handleColumnVisibilityChange}
+          columnRenameMapping={columnRenameMapping}
+          setColumnRenameMapping={setColumnRenameMapping}
         />
         <AlertsTableBody
           table={table}
@@ -599,7 +677,7 @@ export function AlertTableServerSide({
               />
             )}
 
-            <SettingsSelection table={table} presetName={presetName} />
+            <SettingsSelection table={table} presetName={presetName} presetId={presetId} />
           </div>
         </div>
       </div>
