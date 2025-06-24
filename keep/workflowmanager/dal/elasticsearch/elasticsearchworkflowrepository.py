@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from typing import List, Tuple
 
 from keep.api.core.cel_to_sql.sql_providers.elastic_search import (

@@ -56,7 +56,6 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 from keep.workflowmanager.workflow import Workflow
