@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: keephq/keep-workflow-schema
-          token: ${{ secrets.GITHUB_SCHEMA_REPO_PAT }}
+          token: ${{ secrets.SCHEMA_REPO_PAT }}
           path: schema-repo
 
       - name: Set target branch variable
@@ -146,4 +146,4 @@ jobs:
           body: |
             Automated release of schema version v${{ steps.get_version.outputs.version }}.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_SCHEMA_REPO_PAT }}
+          GITHUB_TOKEN: ${{ secrets.SCHEMA_REPO_PAT }}
