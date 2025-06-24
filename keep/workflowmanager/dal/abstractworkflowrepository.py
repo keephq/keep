@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import List, Tuple
 
 from keep.workflowmanager.dal.models.workflowdalmodel import (
@@ -138,6 +139,31 @@ class WorkflowRepository(ABC):
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
         pass
+
+    @abstractmethod
+    def get_workflow_executions(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        time_delta: timedelta = None,
+        statuses: List[str] | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        is_test_run: bool | None = False,
+    ) -> list[WorkflowExecutionDalModel] | None:
+        """
+        Get workflow executions for a specific workflow.
+        Args:
+            tenant_id (str): The tenant ID.
+            workflow_id (str): The workflow ID.
+            time_delta (timedelta, optional): Filter executions started within this time delta. Defaults to None, so no time filter is applied.
+            statuses (List[str], optional): Filter executions by these statuses. Defaults to None, so all statuses are included.
+            limit (int, optional): Limit the number of results. Defaults to 100.
+            offset (int, optional): Offset for pagination. Defaults to 0.
+            is_test_run (bool, optional): Filter by test runs. Defaults to False, so only non-test runs are included.
+        Returns:
+            list[WorkflowExecutionDalModel] | None: List of workflow executions or None if not found.
+        """
 
     @abstractmethod
     def get_workflow_execution_with_logs(

@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlmodel import Session
 
 from keep.api.core.db import (
@@ -24,7 +24,7 @@ from keep.api.core.db import (
     get_workflow_version,
     add_workflow,
 )
-from keep.api.models.db.workflow import Workflow, WorkflowVersion
+from keep.api.models.db.workflow import Workflow, WorkflowExecution, WorkflowVersion
 from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.sql.workflows import (
     get_workflows_with_last_executions_v2,
@@ -256,6 +256,63 @@ class SqlWorkflowRepository(WorkflowRepository):
             return workflow_execution_from_db_to_dto(db_workflow_execution)
         except NoResultFound:
             return None
+
+    def get_workflow_executions(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        time_delta: timedelta = None,
+        statuses: List[str] | None = None,
+        limit: int = None,
+        offset: int = None,
+        is_test_run: bool | None = None,
+    ) -> list[WorkflowExecutionDalModel] | None:
+        """
+        Get workflow executions for a specific workflow.
+        Args:
+            tenant_id (str): The tenant ID.
+            workflow_id (str): The workflow ID.
+            time_delta (timedelta, optional): Filter executions started within this time delta. Defaults to None, so no time filter is applied.
+            statuses (List[str], optional): Filter executions by these statuses. Defaults to None, so all statuses are included.
+            limit (int, optional): Limit the number of results. Defaults to 100.
+            offset (int, optional): Offset for pagination. Defaults to 0.
+            is_test_run (bool, optional): Filter by test runs. Defaults to False, so only non-test runs are included.
+        Returns:
+            list[WorkflowExecutionDalModel] | None: List of workflow executions or None if not found.
+        """
+        with Session(engine) as session:
+            is_test_run = is_test_run if is_test_run is not None else False
+            limit = limit if limit is not None else 100
+            offset = offset if offset is not None else 0
+
+            def compose_base_query(selects):
+                query = select(*selects).filter(
+                    WorkflowExecution.tenant_id == tenant_id,
+                    WorkflowExecution.workflow_id == workflow_id,
+                    WorkflowExecution.is_test_run == is_test_run,
+                )
+
+                if time_delta is not None:
+                    query = query.filter(
+                        WorkflowExecution.started
+                        >= datetime.now(timezone.utc) - time_delta
+                    )
+
+                if statuses is not None:
+                    query = query.filter(WorkflowExecution.status.in_(statuses))
+
+            total_count = session.exec(compose_base_query([WorkflowExecution.id]))
+            data_query = (
+                compose_base_query(WorkflowExecution)
+                .order_by(WorkflowExecution.started.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+            db_workflow_executions = session.exec(data_query).all()
+            return [
+                workflow_execution_from_db_to_dto(item)
+                for item in db_workflow_executions
+            ], total_count
 
     def get_previous_workflow_execution(
         self, tenant_id: str, workflow_id: str, workflow_execution_id: str
