@@ -34,6 +34,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         super().__init__()
         self.elastic_search_client = elastic_search_client
         self.workflows_index = f"workflows-{index_suffix}".lower()
+        self.workflows_versions_index = f"workflows-versions-{index_suffix}".lower()
         self.workflow_executions_index = f"workflow-executions-{index_suffix}".lower()
         self.workflow_execution_logs_index = (
             f"workflow-execution-logs-{index_suffix}".lower()
@@ -45,35 +46,8 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     # region Workflow
     def add_workflow(
         self,
-        id: str,
-        name: str,
-        tenant_id: str,
-        description: str | None,
-        created_by: str,
-        interval: int | None,
-        workflow_raw: str,
-        is_disabled: bool,
-        updated_by: str,
-        provisioned: bool = False,
-        provisioned_file: str | None = None,
-        is_test: bool = False,
+        workflow: WorkflowDalModel,
     ) -> WorkflowDalModel:
-        workflow = WorkflowDalModel(
-            id=id,
-            name=name,
-            tenant_id=tenant_id,
-            description=description,
-            created_by=created_by,
-            interval=interval,
-            workflow_raw=workflow_raw,
-            is_disabled=is_disabled,
-            updated_by=updated_by,
-            provisioned=provisioned,
-            provisioned_file=provisioned_file,
-            is_test=is_test,
-            creation_time=datetime.now(timezone.utc),
-            last_updated=datetime.now(timezone.utc),
-        )
         self.elastic_search_client.index(
             index=self.workflows_index,
             body=workflow.dict(),
@@ -81,6 +55,15 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             refresh=True,
         )
         return workflow
+
+    def update_workflow(self, workflow: WorkflowDalModel):
+        self.elastic_search_client.index(
+            index=self.workflows_index,
+            body=workflow.dict(),
+            id=workflow.id,
+            refresh=True,
+            op_type="index",
+        )
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.elastic_search_client.delete(
@@ -130,7 +113,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
 
         return WorkflowDalModel(**doc)
 
-    def get_workflows_with_last_executions_v2(
+    def get_workflows_with_last_executions(
         self,
         tenant_id: str,
         cel: str,
@@ -189,10 +172,33 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
 
         return workflows, count
 
+    # endregion
+
+    # region Workflow Version
+    def add_workflow_version(self, workflow_version: WorkflowVersionDalModel):
+        try:
+            version_id = f"{workflow_version.workflow_id}-{workflow_version.revision}"
+            self.elastic_search_client.index(
+                index=self.workflows_versions_index,
+                body=workflow_version.dict(),
+                id=version_id,
+                refresh=True,
+                op_type="create",
+            )
+        except ElasticsearchConflictError as conflict_error:
+            raise ConflictError(
+                "Workflow version with the same ID already exists."
+            ) from conflict_error
+
     def get_workflow_version(
         self, tenant_id: str, workflow_id: str, revision: int
     ) -> WorkflowVersionDalModel | None:
-        pass
+        doc = self.__fetch_doc_by_id_from_tenant(
+            index_name=self.workflows_versions_index,
+            tenant_id=tenant_id,
+            doc_id=f"{workflow_id}-{revision}",
+        )
+        return WorkflowVersionDalModel(**doc) if doc else None
 
     # endregion
 
