@@ -776,6 +776,7 @@ class WorkflowStore:
         lookup_by_name: bool = False,
         operation=None,
     ) -> WorkflowDalModel:
+        now = datetime.datetime.now(tz=datetime.UTC)
         workflow.name = workflow.name or workflow.id
         workflow.id = str(workflow.id) if workflow.id else str(uuid.uuid4())
         workflow.provisioned = (
@@ -809,7 +810,7 @@ class WorkflowStore:
         if not existing_workflow:
             is_created_or_updated = True
             new_workflow.revision = 1
-            new_workflow.creation_time = datetime.datetime.now(tz=datetime.UTC)
+            new_workflow.creation_time = now
             new_workflow.last_updated = new_workflow.creation_time
             workflow_version_comment = f"Created by {new_workflow.created_by}"
             self.logger.info(f"Adding new workflow {workflow.id}")
@@ -821,7 +822,11 @@ class WorkflowStore:
             new_workflow.id = existing_workflow.id
             new_workflow.revision = existing_workflow.revision + 1
             new_workflow.creation_time = existing_workflow.creation_time
-            new_workflow.last_updated = datetime.datetime.now(tz=datetime.UTC)
+            new_workflow.last_updated = now
+            new_workflow.created_by = existing_workflow.created_by
+            new_workflow.updated_by = (
+                new_workflow.updated_by or existing_workflow.updated_by
+            )
             workflow_version_comment = f"Updated by {new_workflow.created_by}"
             self.logger.info(
                 f"Workflow {workflow.id} already exists, updating it. Workflow revision is {new_workflow.revision}"
@@ -836,9 +841,11 @@ class WorkflowStore:
             self.workflow_repository.add_workflow_version(
                 workflow_version=WorkflowVersionDalModel(
                     workflow_id=new_workflow.id,
+                    tenant_id=new_workflow.tenant_id,
                     revision=new_workflow.revision,
                     workflow_raw=new_workflow.workflow_raw,
                     comment=workflow_version_comment,
+                    updated_at=now,
                     updated_by=new_workflow.updated_by,
                     is_valid=True,
                     is_current=True,

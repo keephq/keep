@@ -35,6 +35,7 @@ class WorkflowWithLastExecutionsDalModel(WorkflowDalModel):
 
 class WorkflowVersionDalModel(BaseModel):
     workflow_id: Optional[str]
+    tenant_id: Optional[str]
     revision: Optional[int]
     workflow_raw: Optional[str]
     updated_by: Optional[str]

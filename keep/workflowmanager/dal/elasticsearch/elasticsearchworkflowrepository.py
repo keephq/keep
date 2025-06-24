@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import List, Tuple
 
 from keep.api.core.cel_to_sql.sql_providers.elastic_search import (
@@ -5,6 +6,7 @@ from keep.api.core.cel_to_sql.sql_providers.elastic_search import (
 )
 from keep.workflowmanager.dal.exceptions import ConflictError
 
+from keep.workflowmanager.dal.models.workflowstatsdalmodel import WorkflowStatsDalModel
 from keep.workflowmanager.dal.sql.mappers import workflow_from_db_to_dto
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.models.workflowdalmodel import (
@@ -66,7 +68,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.elastic_search_client.delete(
-            self.workflows_index, id=workflow_id, refresh=True
+            index=self.workflows_index, id=workflow_id, refresh=True
         )
 
     def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
@@ -111,6 +113,20 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             return None
 
         return WorkflowDalModel(**doc)
+
+    def get_workflow_stats(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        time_delta: timedelta = None,
+        triggers: List[str] | None = None,
+        statuses: List[str] | None = None,
+    ) -> WorkflowStatsDalModel | None:
+        return WorkflowStatsDalModel(
+            pass_count=0,
+            fail_count=0,
+            avg_duration=0,
+        )
 
     def get_workflows_with_last_executions(
         self,
@@ -192,12 +208,46 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def get_workflow_version(
         self, tenant_id: str, workflow_id: str, revision: int
     ) -> WorkflowVersionDalModel | None:
+        version_id = f"{workflow_id}-{revision}"
         doc = self.__fetch_doc_by_id_from_tenant(
             index_name=self.workflows_versions_index,
             tenant_id=tenant_id,
-            doc_id=f"{workflow_id}-{revision}",
+            doc_id=version_id,
         )
         return WorkflowVersionDalModel(**doc) if doc else None
+
+    def get_workflow_versions(
+        self, tenant_id: str, workflow_id: str
+    ) -> List[WorkflowVersionDalModel]:
+        response = self.elastic_search_client.search(
+            index=self.workflows_versions_index,
+            body={
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"term": {"tenant_id.keyword": tenant_id}},
+                            {"term": {"workflow_id.keyword": workflow_id}},
+                        ]
+                    }
+                },
+                "sort": [{"revision": {"order": "desc"}}],
+            },
+        )
+        hits = response["hits"]["hits"]
+        return [WorkflowVersionDalModel(**hit["_source"]) for hit in hits]
+
+    def get_workflow_executions(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        time_delta: timedelta = None,
+        triggers: List[str] | None = None,
+        statuses: List[str] | None = None,
+        limit: int = None,
+        offset: int = None,
+        is_test_run: bool | None = None,
+    ) -> Tuple[list[WorkflowExecutioLogDalModel], int]:
+        return [], 0
 
     # endregion
 

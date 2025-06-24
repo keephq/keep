@@ -371,7 +371,7 @@ class SqlWorkflowRepository(WorkflowRepository):
                 .offset(offset)
             )
             db_workflow_executions = session.exec(data_query).all()
-            print()
+
             return [
                 workflow_execution_from_db_to_dto(item[0])
                 for item in db_workflow_executions

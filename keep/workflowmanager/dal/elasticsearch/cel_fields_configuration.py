@@ -7,6 +7,11 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 
 workflow_field_configurations = [
     FieldMappingConfiguration(
+        map_from_pattern="id",
+        map_to="id",
+        data_type=DataType.STRING,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="name",
         map_to="name",
         data_type=DataType.STRING,
