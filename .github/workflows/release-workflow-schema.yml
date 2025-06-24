@@ -8,6 +8,11 @@ on:
       - "pyproject.toml"
       - "keep/providers/**"
       - "keep-ui/entities/workflows/model/yaml.schema.ts"
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "keep/providers/**"
+      - "keep-ui/entities/workflows/model/yaml.schema.ts"
   workflow_dispatch:
 
 env:
@@ -79,6 +84,25 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: schema-repo
 
+      - name: Set target branch variable
+        id: set_branch
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or switch to target branch in schema repo
+        working-directory: schema-repo
+        run: |
+          git fetch origin
+          if git show-ref --verify --quiet refs/heads/${{ steps.set_branch.outputs.branch }}; then
+            git checkout ${{ steps.set_branch.outputs.branch }}
+          else
+            git checkout -b ${{ steps.set_branch.outputs.branch }}
+          fi
+
       - name: Copy schema to target repository
         run: |
           # Assuming the schema is generated in keep-ui/dist/ or similar
@@ -111,5 +135,5 @@ jobs:
           git add schema.json
           git commit -m "Release schema v${{ steps.get_version.outputs.version }}"
           git tag "v${{ steps.get_version.outputs.version }}"
-          git push origin main
+          git push origin ${{ steps.set_branch.outputs.branch }}
           git push origin "v${{ steps.get_version.outputs.version }}"
