@@ -992,7 +992,13 @@ def get_workflow_runs_by_id(
     ),
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
-    workflow = get_workflow_by_id_db(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_repository = create_workflow_repository()
+
+    workflow = workflow_repository.get_workflow_by_id(
+        tenant_id=tenant_id, workflow_id=workflow_id
+    )
+    workflowstore = WorkflowStore()
+
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
@@ -1040,7 +1046,6 @@ def get_workflow_runs_by_id(
             }
             workflow_executions_dtos.append(workflow_execution_dto)
 
-    workflowstore = WorkflowStore()
     try:
         providers_dto, triggers = workflowstore.get_workflow_meta_data(
             tenant_id=tenant_id,
