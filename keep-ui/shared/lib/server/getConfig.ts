@@ -81,5 +81,8 @@ export function getConfig(): InternalConfig {
       process.env.HIDE_NAVBAR_MAINTENANCE_WINDOW?.toLowerCase() === "true",
     HIDE_NAVBAR_AI_PLUGINS:
       process.env.HIDE_NAVBAR_AI_PLUGINS?.toLowerCase() === "true",
+    // ServiceNow integration
+    KEEP_SERVICENOW_INCIDENT_TICKET_ENABLED:
+      process.env.KEEP_SERVICENOW_INCIDENT_TICKET_ENABLED?.toLowerCase() === "true",
   };
 }
