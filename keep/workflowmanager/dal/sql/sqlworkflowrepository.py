@@ -305,7 +305,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         workflow_id: str,
     ) -> WorkflowExecutionDalModel | None:
         with Session(engine) as session:
-            db_workflow_execution = session.exec(
+            query_result = session.exec(
                 select(WorkflowExecution)
                 .options(
                     selectinload(WorkflowExecution.workflow_to_alert_execution),
@@ -324,6 +324,7 @@ class SqlWorkflowRepository(WorkflowRepository):
                 .order_by(WorkflowExecution.execution_number.desc())
                 .limit(1)
             ).first()
+            db_workflow_execution = query_result[0] if query_result else None
 
             if db_workflow_execution is None:
                 return None
