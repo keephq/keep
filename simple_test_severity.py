@@ -14,29 +14,25 @@ def create_mock_alert_severity():
             self.value = value
             self.order = order
     
-    class AlertSeverity:
-        LOW = MockAlertSeverity("low", 1)
-        INFO = MockAlertSeverity("info", 2)
-        WARNING = MockAlertSeverity("warning", 3)
-        HIGH = MockAlertSeverity("high", 4)
-        CRITICAL = MockAlertSeverity("critical", 5)
-        
-        @classmethod
-        def __iter__(cls):
-            return iter([cls.LOW, cls.INFO, cls.WARNING, cls.HIGH, cls.CRITICAL])
-    
-    return AlertSeverity
+    # Return instances, not a class
+    return [
+        MockAlertSeverity("low", 1),
+        MockAlertSeverity("info", 2), 
+        MockAlertSeverity("warning", 3),
+        MockAlertSeverity("high", 4),
+        MockAlertSeverity("critical", 5)
+    ]
 
 def preprocess_cel_expression(cel_expression: str) -> str:
     """Preprocess CEL expressions to replace string-based comparisons with numeric values where applicable."""
     
     # Create mock AlertSeverity for testing
-    AlertSeverity = create_mock_alert_severity()
+    alert_severities = create_mock_alert_severity()
     
     # Construct a regex pattern that matches any severity level or other comparisons
     # and accounts for both single and double quotes as well as optional spaces around the operator
     severities = "|".join(
-        [f"\"{severity.value}\"|'{severity.value}'" for severity in AlertSeverity]
+        [f"\"{severity.value}\"|'{severity.value}'" for severity in alert_severities]
     )
     pattern = rf"(\w+)\s*([=><!]=?)\s*({severities})"
 
@@ -52,7 +48,7 @@ def preprocess_cel_expression(cel_expression: str) -> str:
             severity_order = next(
                 (
                     severity.order
-                    for severity in AlertSeverity
+                    for severity in alert_severities
                     if severity.value == matched_value.lower()
                 ),
                 None,
@@ -114,20 +110,19 @@ def test_severity_ordering():
     print("\nTesting severity ordering...")
     
     # Test the AlertSeverity enum ordering
-    AlertSeverity = create_mock_alert_severity()
-    severities = [AlertSeverity.LOW, AlertSeverity.INFO, AlertSeverity.WARNING, AlertSeverity.HIGH, AlertSeverity.CRITICAL]
+    alert_severities = create_mock_alert_severity()
     
     print("Severity ordering:")
-    for severity in severities:
+    for severity in alert_severities:
         print(f"  {severity.value}: {severity.order}")
     
-    # Test comparisons
+    # Test comparisons using the order field
     comparisons = [
-        (AlertSeverity.HIGH.order > AlertSeverity.INFO.order, "HIGH > INFO"),
-        (AlertSeverity.CRITICAL.order > AlertSeverity.INFO.order, "CRITICAL > INFO"),
-        (AlertSeverity.WARNING.order > AlertSeverity.INFO.order, "WARNING > INFO"),
-        (AlertSeverity.INFO.order > AlertSeverity.LOW.order, "INFO > LOW"),
-        (AlertSeverity.LOW.order < AlertSeverity.INFO.order, "LOW < INFO"),
+        (alert_severities[3].order > alert_severities[1].order, "HIGH > INFO"),  # high > info
+        (alert_severities[4].order > alert_severities[1].order, "CRITICAL > INFO"),  # critical > info
+        (alert_severities[2].order > alert_severities[1].order, "WARNING > INFO"),  # warning > info
+        (alert_severities[1].order > alert_severities[0].order, "INFO > LOW"),  # info > low
+        (alert_severities[0].order < alert_severities[1].order, "LOW < INFO"),  # low < info
     ]
     
     all_passed = True
