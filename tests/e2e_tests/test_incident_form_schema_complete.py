@@ -418,7 +418,11 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         business_impact_text = browser.locator("text=Critical system down affecting all users")
         expect(business_impact_text).to_be_visible()
         print("✓ Business Impact field visible")
-        
+       
+
+        # Wait for modal to appear
+        browser.wait_for_timeout(100000)
+ 
         # Affected Users: 1500
         affected_users_text = browser.locator("text=1500")
         expect(affected_users_text).to_be_visible()

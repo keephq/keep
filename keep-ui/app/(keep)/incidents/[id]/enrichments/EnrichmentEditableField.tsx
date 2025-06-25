@@ -8,8 +8,8 @@ import { MdModeEdit } from "react-icons/md";
 
 interface EnrichmentEditableFieldProps {
   name?: string;
-  value: string | string[];
-  onUpdate: (fieldName: string, newValue: string | string[]) => void;
+  value: string | string[] | number | boolean | null;
+  onUpdate: (fieldName: string, newValue: string | string[] | number | boolean) => void;
   onDelete?: (fieldName: string) => void;
   children?: React.ReactNode;
 }
@@ -25,7 +25,7 @@ export const EnrichmentEditableField = ({
 
   const [editMode, setEditMode] = useState(false);
   const [stringedValue, setStringedValue] = useState(
-    Array.isArray(value) ? value.join(", ") : value.toString()
+    Array.isArray(value) ? value.join(", ") : String(value ?? "")
   );
   const [fieldName, setFieldName] = useState<string>(name || "");
   const [fieldNameError, setFieldNameError] = useState<boolean>(false);
@@ -63,7 +63,7 @@ export const EnrichmentEditableField = ({
   };
 
   const resetForm = () => {
-    setStringedValue(Array.isArray(value) ? value.join(", ") : value);
+    setStringedValue(Array.isArray(value) ? value.join(", ") : String(value ?? ""));
     setFieldName(name || "");
   };
 
@@ -127,9 +127,27 @@ export const EnrichmentEditableField = ({
         <div className="flex flex-wrap gap-1 group items-center">
           {children
             ? children
-            : value != null && value.length > 0
+            : value != null && value !== ""
               ? !Array.isArray(value)
-                ? value
+                ? typeof value === "boolean"
+                  ? (
+                      <Badge
+                        color={value ? "green" : "gray"}
+                        size="sm"
+                      >
+                        {value ? "Yes" : "No"}
+                      </Badge>
+                    )
+                  : typeof value === "number"
+                    ? (
+                        <Badge
+                          color="orange"
+                          size="sm"
+                        >
+                          {value.toLocaleString()}
+                        </Badge>
+                      )
+                    : String(value)
                 : value.map((item: string) => (
                     <Badge
                       key={item}

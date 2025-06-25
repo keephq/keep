@@ -277,7 +277,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   const handleEnrichmentChange = async (
     fieldName: string,
-    fieldValue: string | string[]
+    fieldValue: string | string[] | number | boolean
   ) => {
     await handleBulkEnrichmentChange({ [fieldName]: fieldValue });
   };

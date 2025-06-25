@@ -1,0 +1,313 @@
+2025-06-25 17:10:11.234753: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js', 'lineNumber': 16383, 'columnNumber': 53}
+2025-06-25 17:10:11.934027: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <OuterLayoutRouter parallelRouterKey="children" template={<RenderFromTemplateContext>} notFound={[...]}>
+      <RenderFromTemplateContext>
+        <ScrollAndFocusHandler segmentPath={[...]}>
+          <InnerScrollAndFocusHandler segmentPath={[...]} focusAndScrollRef={{apply:false, ...}}>
+            <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+              <LoadingBoundary loading={null}>
+                <HTTPAccessFallbackBoundary notFound={[...]} forbidden={undefined} unauthorized={undefined}>
+                  <HTTPAccessFallbackErrorBoundary pathname="/incidents" notFound={[...]} forbidden={undefined} ...>
+                    <RedirectBoundary>
+                      <RedirectErrorBoundary router={{...}}>
+                        <InnerLayoutRouter url="/incidents" tree={[...]} cacheNode={{lazyData:null, ...}} ...>
+                          <link>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <RootLayout>
+                            <html
+                              lang="en"
++                             className="bg-gray-50 mulish_a3fa324e-module__OJ0oCG__className"
+-                             className="bg-gray-50 mulish_a3fa324e-module__OJ0oCG__className workaround-dark"
+                            >
+, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:11.950445: Search component session: {user: Object, expires: 2025-07-25T22:10:11.040Z, accessToken: {"tenant_id":"keep76726","user_id":"keep-user-for-no-auth-purposes"}, tenantId: keep76726, userRole: user}, location: {'url': 'http://localhost:3000/_next/static/chunks/components_4ac52dab._.js', 'lineNumber': 138, 'columnNumber': 20}
+2025-06-25 17:10:11.950866: useWebsocket: Binding to event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:11.951702: usePresetPolling: Setting up event listener for 'poll-presets', location: {'url': 'http://localhost:3000/_next/static/chunks/entities_7172f7fc._.js', 'lineNumber': 2669, 'columnNumber': 20}
+2025-06-25 17:10:11.952787: useWebsocket: Binding to event poll-presets on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:11.953222: useWebsocket: Binding to event topology-update on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.056193: [Fast Refresh] done in NaNms, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 14847, 'columnNumber': 12}
+2025-06-25 17:10:12.112112: useWebsocket: Creating new Pusher instance, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 522, 'columnNumber': 16}
+2025-06-25 17:10:12.112504: useWebsocket: isRelativeHostAndNotLocal: false, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 537, 'columnNumber': 20}
+2025-06-25 17:10:12.114786: useWebsocket: Pusher instance created successfully. Options: {wsHost: localhost, wsPath: , wsPort: 6001, forceTLS: false, disableStats: true}, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 559, 'columnNumber': 20}
+2025-06-25 17:10:12.157633: useWebsocket: Binding to event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.263676: useWebsocket: Unbinding from event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.263996: usePresetPolling: Cleaning up event listener for 'poll-presets', location: {'url': 'http://localhost:3000/_next/static/chunks/entities_7172f7fc._.js', 'lineNumber': 2673, 'columnNumber': 28}
+2025-06-25 17:10:12.264331: useWebsocket: Unbinding from event poll-presets on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.265200: useWebsocket: Unbinding from event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.265525: useWebsocket: Unbinding from event topology-update on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.265688: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.266321: usePresetPolling: Setting up event listener for 'poll-presets', location: {'url': 'http://localhost:3000/_next/static/chunks/entities_7172f7fc._.js', 'lineNumber': 2669, 'columnNumber': 20}
+2025-06-25 17:10:12.266689: useWebsocket: Binding to event poll-presets on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.268356: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.268592: useWebsocket: Binding to event topology-update on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.336890: WebSocket connection to 'ws://localhost:6001/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:10:12.382879: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.384761: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.411165: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.418366: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.418625: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.486755: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.486934: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.502677: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.502859: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.522837: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.523669: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.531209: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.531375: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.550309: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.550481: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.643880: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:12.647404: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:12.648805: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.649304: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.649635: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.649910: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.650151: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.650424: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.673947: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.674177: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.713912: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.714237: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.812048: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.812694: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.815817: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.816013: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:12.914396: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:12.914583: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:13.015953: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:13.016303: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:13.115232: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:13.115618: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:13.222997: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:13.223211: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:13.313942: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:13.314187: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:13.414454: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:13.414919: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:14.120603: WebSocket connection to 'wss://localhost/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:10:15.178010: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:15.178352: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:15.613260: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:15.613829: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:15.714206: quill Cannot register "bullet" specified in "formats" config. Are you sure it was registered?, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:21.585647: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.585800: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:21.669723: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.670026: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:21.695236: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.695574: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:21.726005: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.726819: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:21.776957: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.777319: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:21.842617: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.843235: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:21.932420: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:21.932763: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:22.116061: useWebsocket: Connection state changed from connecting to unavailable, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 568, 'columnNumber': 24}
+2025-06-25 17:10:26.797260: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_2ce9398a._.js', 'lineNumber': 16383, 'columnNumber': 53}
+2025-06-25 17:10:27.478836: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <OuterLayoutRouter parallelRouterKey="children" template={<RenderFromTemplateContext>} notFound={[...]}>
+      <RenderFromTemplateContext>
+        <ScrollAndFocusHandler segmentPath={[...]}>
+          <InnerScrollAndFocusHandler segmentPath={[...]} focusAndScrollRef={{apply:false, ...}}>
+            <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+              <LoadingBoundary loading={null}>
+                <HTTPAccessFallbackBoundary notFound={[...]} forbidden={undefined} unauthorized={undefined}>
+                  <HTTPAccessFallbackErrorBoundary pathname="/incidents" notFound={[...]} forbidden={undefined} ...>
+                    <RedirectBoundary>
+                      <RedirectErrorBoundary router={{...}}>
+                        <InnerLayoutRouter url="/incidents..." tree={[...]} cacheNode={{lazyData:null, ...}} ...>
+                          <link>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <script>
+                          <RootLayout>
+                            <html
+                              lang="en"
++                             className="bg-gray-50 mulish_a3fa324e-module__OJ0oCG__className"
+-                             className="bg-gray-50 mulish_a3fa324e-module__OJ0oCG__className workaround-dark"
+                            >
+, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:27.487609: Search component session: {user: Object, expires: 2025-07-25T22:10:26.604Z, accessToken: {"tenant_id":"keep76726","user_id":"keep-user-for-no-auth-purposes"}, tenantId: keep76726, userRole: user}, location: {'url': 'http://localhost:3000/_next/static/chunks/components_4ac52dab._.js', 'lineNumber': 138, 'columnNumber': 20}
+2025-06-25 17:10:27.489243: useWebsocket: Binding to event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.489904: usePresetPolling: Setting up event listener for 'poll-presets', location: {'url': 'http://localhost:3000/_next/static/chunks/entities_7172f7fc._.js', 'lineNumber': 2669, 'columnNumber': 20}
+2025-06-25 17:10:27.490296: useWebsocket: Binding to event poll-presets on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.490558: useWebsocket: Binding to event topology-update on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.602176: [Fast Refresh] done in NaNms, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 14847, 'columnNumber': 12}
+2025-06-25 17:10:27.668640: useWebsocket: Creating new Pusher instance, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 522, 'columnNumber': 16}
+2025-06-25 17:10:27.669498: useWebsocket: isRelativeHostAndNotLocal: false, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 537, 'columnNumber': 20}
+2025-06-25 17:10:27.670166: useWebsocket: Pusher instance created successfully. Options: {wsHost: localhost, wsPath: , wsPort: 6001, forceTLS: false, disableStats: true}, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 559, 'columnNumber': 20}
+2025-06-25 17:10:27.710541: useWebsocket: Binding to event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.825875: useWebsocket: Unbinding from event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:27.826229: usePresetPolling: Cleaning up event listener for 'poll-presets', location: {'url': 'http://localhost:3000/_next/static/chunks/entities_7172f7fc._.js', 'lineNumber': 2673, 'columnNumber': 28}
+2025-06-25 17:10:27.826588: useWebsocket: Unbinding from event poll-presets on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:27.826910: useWebsocket: Unbinding from event incident-change on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:27.827189: useWebsocket: Unbinding from event topology-update on private-undefined, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:27.827375: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.827528: usePresetPolling: Setting up event listener for 'poll-presets', location: {'url': 'http://localhost:3000/_next/static/chunks/entities_7172f7fc._.js', 'lineNumber': 2669, 'columnNumber': 20}
+2025-06-25 17:10:27.827638: useWebsocket: Binding to event poll-presets on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.827846: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.827995: useWebsocket: Binding to event topology-update on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.905194: WebSocket connection to 'ws://localhost:6001/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:10:27.962180: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:27.968452: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:27.968693: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.021996: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.022426: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.044229: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.044396: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.102157: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.102390: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.125590: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.125844: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.164464: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.165248: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.165479: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.165713: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.170682: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.172374: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.172986: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.173221: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.173462: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.173654: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.173783: You provided a `checked` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultChecked`. Otherwise, set either `onChange` or `readOnly`., location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_8f19e6fb._.js', 'lineNumber': 1225, 'columnNumber': 31}
+2025-06-25 17:10:28.217191: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.217759: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.218107: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.218707: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.237764: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.238666: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.266210: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.266499: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.276394: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.277012: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.363964: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.364274: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.466423: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.466752: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.565112: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.565309: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.665555: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.666393: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.765126: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.765384: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.874718: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.876725: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:28.965632: useWebsocket: Unbinding from event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:28.966105: useWebsocket: Binding to event ai-logs-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:29.672978: WebSocket connection to 'wss://localhost/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:10:30.763100: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:30.763573: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:32.506987: useWebsocket: Unbinding from event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 605, 'columnNumber': 20}
+2025-06-25 17:10:32.507309: useWebsocket: Binding to event incident-change on private-keep76726, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 597, 'columnNumber': 20}
+2025-06-25 17:10:32.845309: Failed to load resource: the server responded with a status of 500 (Internal Server Error), location: {'url': 'http://localhost:3000/api/copilotkit', 'lineNumber': 0, 'columnNumber': 0}
+2025-06-25 17:10:37.673571: useWebsocket: Connection state changed from connecting to unavailable, location: {'url': 'http://localhost:3000/_next/static/chunks/_195bb10c._.js', 'lineNumber': 568, 'columnNumber': 24}
+2025-06-25 17:10:42.774532: WebSocket connection to 'ws://localhost:6001/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:10:44.678091: WebSocket connection to 'wss://localhost/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:11:12.712803: WebSocket connection to 'ws://localhost:6001/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:11:14.678866: WebSocket connection to 'wss://localhost/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:12:12.719240: WebSocket connection to 'ws://localhost:6001/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
+2025-06-25 17:12:14.678794: WebSocket connection to 'wss://localhost/app/keepappkey?protocol=7&client=js&version=8.4.0&flash=false' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED, location: {'url': 'http://localhost:3000/_next/static/chunks/node_modules_pusher-js_dist_web_pusher_8a7af2f9.js', 'lineNumber': 3542, 'columnNumber': 0}
