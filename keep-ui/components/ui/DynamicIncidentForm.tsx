@@ -14,6 +14,7 @@ interface DynamicIncidentFormProps {
   enrichments: Record<string, any>;
   onChange: (enrichments: Record<string, any>) => void;
   errors?: Record<string, string>;
+  onValidationChange?: (hasErrors: boolean) => void;
 }
 
 export interface DynamicIncidentFormRef {
@@ -21,7 +22,7 @@ export interface DynamicIncidentFormRef {
 }
 
 export const DynamicIncidentForm = forwardRef<DynamicIncidentFormRef, DynamicIncidentFormProps>((
-  { enrichments, onChange, errors = {} },
+  { enrichments, onChange, errors = {}, onValidationChange },
   ref
 ) => {
   const { formSchema, isLoading, isError } = useIncidentFormSchema();
@@ -32,7 +33,7 @@ export const DynamicIncidentForm = forwardRef<DynamicIncidentFormRef, DynamicInc
     getFieldErrors: () => fieldErrors
   }), [fieldErrors]);
 
-  // Validate fields on change
+  // Validate fields on change and initial load
   useEffect(() => {
     if (!formSchema?.fields) return;
 
@@ -90,7 +91,12 @@ export const DynamicIncidentForm = forwardRef<DynamicIncidentFormRef, DynamicInc
     });
 
     setFieldErrors(newErrors);
-  }, [enrichments, formSchema?.fields]);
+    
+    // Notify parent about validation state
+    if (onValidationChange) {
+      onValidationChange(Object.keys(newErrors).length > 0);
+    }
+  }, [enrichments, formSchema?.fields, onValidationChange]);
 
   const handleFieldChange = (fieldName: string, value: any) => {
     onChange({
@@ -98,6 +104,16 @@ export const DynamicIncidentForm = forwardRef<DynamicIncidentFormRef, DynamicInc
       [fieldName]: value,
     });
   };
+
+  // Notify parent when no schema exists or is inactive
+  useEffect(() => {
+    if (onValidationChange) {
+      const shouldRender = !isLoading && !isError && formSchema && formSchema.fields && formSchema.fields.length > 0 && formSchema.is_active;
+      if (!shouldRender) {
+        onValidationChange(false); // No validation errors when no schema
+      }
+    }
+  }, [isLoading, isError, formSchema, onValidationChange]);
 
   // Don't render anything while loading
   if (isLoading) {

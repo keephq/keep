@@ -10,7 +10,7 @@ import {
   SelectItem,
   Switch,
 } from "@tremor/react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
 import { useUsers } from "@/entities/users/model/useUsers";
 import { useIncidentActions } from "@/entities/incidents/model";
 import type { IncidentDto } from "@/entities/incidents/model";
@@ -20,7 +20,7 @@ import "./react-quill-override.css";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
-import { DynamicIncidentForm } from "@/components/ui/DynamicIncidentForm";
+import { DynamicIncidentForm, DynamicIncidentFormRef } from "@/components/ui/DynamicIncidentForm";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -44,8 +44,10 @@ export function CreateOrUpdateIncidentForm({
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
   const [enrichments, setEnrichments] = useState<Record<string, any>>({});
+  const [dynamicFormHasErrors, setDynamicFormHasErrors] = useState(false); // Will be updated by DynamicIncidentForm
   const { data: users = [] } = useUsers();
   const { addIncident, updateIncident, enrichIncident } = useIncidentActions();
+  const dynamicFormRef = useRef<DynamicIncidentFormRef>(null);
 
   const editMode = incidentToEdit !== null;
 
@@ -117,7 +119,11 @@ export function CreateOrUpdateIncidentForm({
   };
 
   const submitEnabled = (): boolean => {
-    return !!incidentName;
+    // Check if incident name is filled
+    if (!incidentName) return false;
+    
+    // Check if there are validation errors in the dynamic form
+    return !dynamicFormHasErrors;
   };
 
   const formats = [
@@ -223,8 +229,10 @@ export function CreateOrUpdateIncidentForm({
       </div>
 
       <DynamicIncidentForm 
+        ref={dynamicFormRef}
         enrichments={enrichments} 
-        onChange={setEnrichments} 
+        onChange={setEnrichments}
+        onValidationChange={setDynamicFormHasErrors}
       />
 
       <Divider />
