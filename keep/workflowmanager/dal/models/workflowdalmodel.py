@@ -1,4 +1,5 @@
 from datetime import datetime
+import enum
 from typing import Optional
 from pydantic import BaseModel
 
@@ -43,3 +44,11 @@ class WorkflowVersionDalModel(BaseModel):
     is_valid: Optional[bool]
     is_current: Optional[bool]
     comment: Optional[str] = None
+
+
+class WorkflowStatus(enum.Enum):
+    IN_PROGRESS = "in_progress"
+    SUCCESS = "success"
+    ERROR = "error"
+    PROVIDERS_NOT_CONFIGURED = "providers_not_configured"
+    TIMEOUT = "timeout"

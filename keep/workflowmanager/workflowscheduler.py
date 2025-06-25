@@ -27,6 +27,7 @@ from keep.providers.providers_factory import ProviderConfigurationException
 
 from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
 from keep.workflowmanager.dal.exceptions import ConflictError
+from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowStatus
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
 )
@@ -37,12 +38,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 MAX_WORKERS = config("WORKFLOWS_MAX_WORKERS", default="20")
 INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
-
-class WorkflowStatus(enum.Enum):
-    SUCCESS = "success"
-    ERROR = "error"
-    PROVIDERS_NOT_CONFIGURED = "providers_not_configured"
-    TIMEOUT = "timeout"
+WORKFLOWS_TIMEOUT = timedelta(minutes=120)
 
 
 def timing_histogram(histogram):
@@ -546,10 +542,15 @@ class WorkflowScheduler:
         """
         Record timeout for workflows that are running for too long.
         """
-        workflow_executions = (
-            self.workflow_repository.get_timeouted_workflow_exections()
+        timeouted_workflow_executions = self.workflow_repository.get_workflow_executions(
+            workflow_id=None,
+            tenant_id=None,
+            statuses=[WorkflowStatus.IN_PROGRESS.value],
+            time_delta=WORKFLOWS_TIMEOUT,
+            limit=10000,  # temporary, we should iterate through all executions using limit/offset instead of fetching all in one go
+            offset=0,
         )
-        for workflow_execution in workflow_executions:
+        for workflow_execution in timeouted_workflow_executions:
             self.logger.info(
                 "Timeout workflow execution detected",
                 extra={

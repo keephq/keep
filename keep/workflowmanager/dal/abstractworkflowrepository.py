@@ -178,20 +178,20 @@ class WorkflowRepository(ABC):
     @abstractmethod
     def get_workflow_executions(
         self,
-        tenant_id: str,
-        workflow_id: str,
+        tenant_id: str | None,
+        workflow_id: str | None,
         time_delta: timedelta = None,
         triggers: List[str] | None = None,
         statuses: List[str] | None = None,
+        is_test_run: bool = False,
         limit: int = 100,
         offset: int = 0,
-        is_test_run: bool | None = False,
     ) -> Tuple[list[WorkflowExecutioLogDalModel], int]:
         """
         Get workflow executions for a specific workflow.
         Args:
-            tenant_id (str): The tenant ID.
-            workflow_id (str): The workflow ID.
+            tenant_id (str): The tenant ID. If not specified, workflow executions for all tenants will be returned.
+            workflow_id (str): The workflow ID. If not specified, workflow executions for all workflows will be returned.
             time_delta (timedelta, optional): Filter executions started within this time delta. Defaults to None, so no time filter is applied.
             triggers (List[str], optional): Filter executions by these triggers. Defaults to None, so all triggers are included.
             statuses (List[str], optional): Filter executions by these statuses. Defaults to None, so all statuses are included.
@@ -209,10 +209,6 @@ class WorkflowRepository(ABC):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
-        pass
-
-    @abstractmethod
-    def get_timeouted_workflow_exections(self) -> List[WorkflowExecutionDalModel]:
         pass
 
     @abstractmethod

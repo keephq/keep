@@ -13,6 +13,7 @@ from keep.workflowmanager.dal.models.workflowdalmodel import (
     WorkflowDalModel,
     WorkflowVersionDalModel,
     WorkflowWithLastExecutionsDalModel,
+    WorkflowStatus,
 )
 from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
     WorkflowExecutionDalModel,
@@ -238,14 +239,14 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
 
     def get_workflow_executions(
         self,
-        tenant_id: str,
-        workflow_id: str,
+        tenant_id: str | None,
+        workflow_id: str | None,
         time_delta: timedelta = None,
         triggers: List[str] | None = None,
         statuses: List[str] | None = None,
-        limit: int = None,
-        offset: int = None,
-        is_test_run: bool | None = None,
+        is_test_run: bool = False,
+        limit: int = 100,
+        offset: int = 0,
     ) -> Tuple[list[WorkflowExecutioLogDalModel], int]:
         return [], 0
 
@@ -303,7 +304,36 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         self,
         workflow_id: str,
     ) -> WorkflowExecutionDalModel | None:
-        pass
+        response = self.elastic_search_client.search(
+            index=self.workflow_executions_index,
+            body={
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"term": {"workflow_id": workflow_id}},
+                            {"term": {"is_test_run": False}},
+                            {
+                                "terms": {
+                                    "status": [
+                                        WorkflowStatus.SUCCESS.value,
+                                        WorkflowStatus.ERROR.value,
+                                        WorkflowStatus.PROVIDERS_NOT_CONFIGURED.value,
+                                    ]
+                                }
+                            },
+                        ]
+                    }
+                },
+                "sort": [{"execution_number": {"order": "desc"}}],
+                "size": 1,
+            },
+        )
+        hits = response["hits"]["hits"]
+
+        if not hits:
+            return None
+
+        return WorkflowExecutionDalModel(**hits[0]["_source"])
 
     def get_workflow_execution(
         self,
@@ -333,9 +363,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
-        pass
-
-    def get_timeouted_workflow_exections(self) -> List[WorkflowExecutionDalModel]:
         pass
 
     def get_workflow_execution_by_execution_number(
