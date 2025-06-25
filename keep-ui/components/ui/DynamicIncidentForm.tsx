@@ -99,25 +99,14 @@ export const DynamicIncidentForm = forwardRef<DynamicIncidentFormRef, DynamicInc
     });
   };
 
-  // Don't render anything if loading or no schema
+  // Don't render anything while loading
   if (isLoading) {
-    return (
-      <div className="mt-4">
-        <Subtitle>Additional Information</Subtitle>
-        <Text className="text-gray-500 mt-2">Loading form fields...</Text>
-      </div>
-    );
+    return null;
   }
 
+  // Don't render anything if there was an error (including 404)
   if (isError) {
-    return (
-      <div className="mt-4">
-        <Subtitle>Additional Information</Subtitle>
-        <Text className="text-red-500 mt-2">
-          Failed to load custom form fields. Please try again.
-        </Text>
-      </div>
-    );
+    return null;
   }
 
   // Don't render if no schema or no fields
