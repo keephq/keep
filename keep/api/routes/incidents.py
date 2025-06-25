@@ -52,7 +52,6 @@ from keep.api.models.incident_form_schema import (
     IncidentFormSchemaResponse,
 )
 from sqlalchemy import and_
-from sqlalchemy.exc import IntegrityError
 from keep.api.models.db.incident_form_schema import IncidentFormSchema
 from keep.api.models.db.alert import (
     AlertAudit,

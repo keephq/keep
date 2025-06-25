@@ -8,7 +8,7 @@ become incident enrichments and can be used by workflows.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, validator
 

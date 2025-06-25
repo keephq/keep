@@ -9,8 +9,6 @@ from typing import List, Optional
 from sqlalchemy import TEXT, func, UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
-from keep.api.models.incident_form_schema import FormFieldSchema
-
 
 class IncidentFormSchema(SQLModel, table=True):
     """Database model for incident form schemas - multiple per tenant allowed"""

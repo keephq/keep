@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import String, and_, case, cast, func, select
-from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, col, text
 from sqlalchemy.orm import foreign, aliased
 
@@ -414,7 +413,6 @@ def __build_last_incidents_query(
     ]
 
     # Include enrichment data in select to populate incident enrichments
-    from sqlalchemy import literal_column
     built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
