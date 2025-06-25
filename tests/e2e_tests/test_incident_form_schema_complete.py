@@ -419,14 +419,12 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         expect(business_impact_text).to_be_visible()
         print("✓ Business Impact field visible")
        
-
-        # Wait for modal to appear
-        browser.wait_for_timeout(100000)
- 
         # Affected Users: 1500
-        affected_users_text = browser.locator("text=1500")
-        expect(affected_users_text).to_be_visible()
-        print("✓ Affected Users field visible with value: 1500")
+        # Look for the badge containing the number within the Affected Users section
+        affected_users_section = browser.locator("text=Affected Users").locator("../..")
+        affected_users_badge = affected_users_section.locator("span.tremor-Badge-text:has-text('1,500')")
+        expect(affected_users_badge).to_be_visible()
+        print("✓ Affected Users field visible with value: 1,500")
         
         # Urgent status - this might be shown as a badge or indicator
         # Check for any indication of urgency
