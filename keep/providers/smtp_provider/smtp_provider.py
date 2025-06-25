@@ -137,7 +137,8 @@ class SmtpProvider(BaseProvider):
         from_name: str,
         to_email: str | list,
         subject: str,
-        body: str,
+        body: str = None,
+        html: str = None,
     ):
         """
         Send an email using SMTP protocol.
@@ -145,26 +146,42 @@ class SmtpProvider(BaseProvider):
         msg = MIMEMultipart()
         if from_name == "":
             msg["From"] = from_email
-        msg["From"] = f"{from_name} <{from_email}>"
-        if to_email is str:
+        else:
+            msg["From"] = f"{from_name} <{from_email}>"
+        
+        if isinstance(to_email, str):
             msg["To"] = to_email
         else:
             msg["To"] = ", ".join(to_email)
         msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
+        
+        # Prefer HTML content if provided, otherwise use plain text
+        if html:
+            msg.attach(MIMEText(html, "html"))
+        elif body:
+            msg.attach(MIMEText(body, "plain"))
+        else:
+            raise ValueError("Either 'body' or 'html' must be provided")
 
         smtp = self.generate_smtp_client()
         smtp.sendmail(from_email, to_email, msg.as_string())
         smtp.quit()
 
     def _notify(
-        self, from_email: str, from_name: str, to_email: str, subject: str, body: str
+        self, from_email: str, from_name: str, to_email: str, subject: str, body: str = None, html: str = None, **kwargs
     ):
         """
         Send an email using SMTP protocol.
         """
-        self.send_email(from_email, from_name, to_email, subject, body)
-        return {"from": from_email, "to": to_email, "subject": subject, "body": body}
+        self.send_email(from_email, from_name, to_email, subject, body, html)
+        
+        # Return the notification details
+        result = {"from": from_email, "to": to_email, "subject": subject}
+        if html:
+            result["html"] = html
+        if body:
+            result["body"] = body
+        return result
 
 
 if __name__ == "__main__":

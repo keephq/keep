@@ -1,5 +1,6 @@
 # TODO - refactor context manager to support multitenancy in a more robust way
 import logging
+from typing import Any, TypedDict
 
 import click
 import json5
@@ -8,6 +9,11 @@ from pympler.asizeof import asizeof
 from keep.api.core.config import config
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.models.alert import AlertDto
+
+
+class ForeachContext(TypedDict):
+    value: Any | None
+    items: list[Any] | None
 
 
 class ContextManager:
@@ -28,8 +34,9 @@ class ContextManager:
         self.actions_context = {}
         self.event_context: AlertDto = {}
         self.incident_context = {}
-        self.foreach_context = {
+        self.foreach_context: ForeachContext = {
             "value": None,
+            "items": None,
         }
         self.consts_context = {}
         self.current_step_vars = {}
@@ -179,8 +186,17 @@ class ContextManager:
         full_context.update(self.aliases)
         return full_context
 
-    def set_for_each_context(self, value):
+    def set_foreach_items(self, items: list[Any] | None = None):
+        self.foreach_context["items"] = items
+
+    def set_foreach_value(self, value: Any | None = None):
         self.foreach_context["value"] = value
+
+    def reset_foreach_context(self):
+        self.foreach_context = {
+            "value": None,
+            "items": None,
+        }
 
     def set_condition_results(
         self,

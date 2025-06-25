@@ -13,7 +13,6 @@ import { Button, DynamicImageProviderIcon, Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "features/incidents/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
-import { MarkdownHTML } from "@/shared/ui/MarkdownHTML/MarkdownHTML";
 import {
   SameIncidentField,
   FollowingIncidents,
@@ -37,6 +36,7 @@ import { startCase, map } from "lodash";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { EnrichmentEditableField } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField";
 import { EnrichmentEditableForm } from "@/app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm";
+import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 
 const PROVISIONED_ENRICHMENTS = [
   "services",
@@ -109,7 +109,7 @@ function Summary({
 
   const formatedSummary = (
     <div className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1">
-      <MarkdownHTML>{summary ?? generatedSummary}</MarkdownHTML>
+      <FormattedContent content={summary ?? generatedSummary} format="html" />
     </div>
   );
 

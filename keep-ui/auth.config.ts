@@ -21,16 +21,19 @@ export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
 }
 
+const authSessionTimeout = process.env.AUTH_SESSION_TIMEOUT
+  ? Number.parseInt(process.env.AUTH_SESSION_TIMEOUT)
+  : 30 * 24 * 60 * 60; // Default to 30 days if not set
 // Determine auth type with backward compatibility
 const authTypeEnv = process.env.AUTH_TYPE;
 export const authType =
   authTypeEnv === MULTI_TENANT
     ? AuthType.AUTH0
     : authTypeEnv === SINGLE_TENANT
-    ? AuthType.DB
-    : authTypeEnv === NO_AUTH
-    ? AuthType.NOAUTH
-    : (authTypeEnv as AuthType);
+      ? AuthType.DB
+      : authTypeEnv === NO_AUTH
+        ? AuthType.NOAUTH
+        : (authTypeEnv as AuthType);
 
 export const proxyUrl =
   process.env.HTTP_PROXY ||
@@ -238,7 +241,7 @@ export const config = {
   },
   session: {
     strategy: "jwt" as const,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: authSessionTimeout, // 30 days
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {

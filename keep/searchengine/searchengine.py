@@ -12,7 +12,7 @@ from keep.api.models.query import QueryDto
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
-
+from datetime import datetime, timedelta, timezone
 
 class SearchMode(enum.Enum):
     """The search mode for the search engine"""
@@ -84,9 +84,8 @@ class SearchEngine:
     def search_alerts_by_cel(
         self,
         cel_query: str,
-        alerts: list[AlertDto] = None,
         limit: int = 1000,
-        timeframe: int = 0,
+        timeframe: float = 0,
     ) -> list[AlertDto]:
         """Search for alerts based on a CEL query
 
@@ -97,6 +96,21 @@ class SearchEngine:
         Returns:
             list[AlertDto]: The list of alerts that match the query
         """
+        cel_query = (cel_query or "").strip()
+
+        if timeframe:
+            timeframe_in_seconds = timeframe * 24 * 60 * 60
+            current_utc_date = datetime.now(timezone.utc)
+            time_ago = current_utc_date - timedelta(seconds=timeframe_in_seconds)
+            iso_utc_date = (
+                time_ago.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+            )
+            cel_list = [
+                f"lastReceived >= '{iso_utc_date}'",
+                cel_query,
+            ]
+            cel_query = " && ".join(f"({cel})" for cel in cel_list if cel)
+
         self.logger.info("Searching alerts by CEL")
         db_alerts, _ = query_last_alerts(
             tenant_id=self.tenant_id,

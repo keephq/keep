@@ -820,8 +820,13 @@ def test_run_workflow_from_alert_and_incident(
             "button", name="Run workflow"
         ).click()
         modal = page.get_by_test_id("manual-run-workflow-modal")
+        page.wait_for_timeout(200)
+        expect(modal).to_be_visible()
+        page.wait_for_timeout(200)
         modal.get_by_test_id("manual-run-workflow-select-control").click()
-        modal.get_by_role("option", name=re.compile(r"Log every incident")).click()
+        modal.get_by_role(
+            "option", name=re.compile(r"Log every incident")
+        ).first.click()
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
         # Run workflow from alert
@@ -840,6 +845,36 @@ def test_run_workflow_from_alert_and_incident(
         modal.get_by_role("option", name=re.compile(r"Log every alert")).click()
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
+    except Exception:
+        save_failure_artifacts(page, log_entries)
+        raise
+
+
+def test_run_interval_workflow(browser: Page):
+    page = browser
+    log_entries = []
+    setup_console_listener(browser, log_entries)
+    try:
+        init_e2e_test(browser, next_url="/signin")
+        page.goto("http://localhost:3000/workflows")
+        page.get_by_role("button", name="Upload Workflows").click()
+        file_input = page.locator("#workflowFile")
+        file_input.set_input_files(
+            [
+                "./tests/e2e_tests/workflow-interval.yaml",
+            ]
+        )
+        page.get_by_role("button", name="Upload")
+        expect(page.get_by_text("1 workflow uploaded successfully")).to_be_visible()
+        page.wait_for_timeout(
+            10000
+        )  # wait 10 seconds to let interval workflow run few times
+        page.reload()
+        rows = page.locator("table tr", has_text="Interval workflow")
+        expect(rows).not_to_have_count(0)
+        executions_count = rows.count()
+        assert executions_count >= 4 and executions_count <= 8
+
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise

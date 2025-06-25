@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.workflow import (
     Workflow,
@@ -357,3 +357,231 @@ def test_workflow_execution_large_results_many_logs_performance(db_session):
     assert execution_only.id == execution_with_logs.id
     assert execution_only.results == execution_with_logs.results
     assert execution_only.status == execution_with_logs.status
+
+
+def test_get_all_workflows_with_last_execution_no_dummy_workflow(db_session):
+    """
+    Test that get_all_workflows_with_last_execution does not return dummy workflows.
+    """
+    from keep.api.core.db import get_or_create_dummy_workflow
+    from keep.api.models.db.workflow import get_dummy_workflow_id
+
+    workflowstore = WorkflowStore()
+
+    # Create some regular workflows
+    regular_workflow_1 = Workflow(
+        id="regular-workflow-1",
+        name="Regular Workflow 1",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A regular workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    regular_workflow_2 = Workflow(
+        id="regular-workflow-2",
+        name="Regular Workflow 2",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Another regular workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    # Add regular workflows to database
+    db_session.add(regular_workflow_1)
+    db_session.add(regular_workflow_2)
+    db_session.commit()
+
+    # Create a dummy workflow
+    dummy_workflow = get_or_create_dummy_workflow(SINGLE_TENANT_UUID, db_session)
+    dummy_workflow_id = get_dummy_workflow_id(SINGLE_TENANT_UUID)
+
+    # Debug: Print dummy workflow info
+    print(f"Dummy workflow ID: {dummy_workflow_id}")
+    print(f"Dummy workflow name: {dummy_workflow.name}")
+    print(f"Dummy workflow tenant_id: {dummy_workflow.tenant_id}")
+
+    # Verify dummy workflow was created
+    assert dummy_workflow is not None
+    assert dummy_workflow.id == dummy_workflow_id
+    assert "Dummy Workflow" in dummy_workflow.name
+
+    # Get all workflows with last execution
+    workflows, count = workflowstore.get_all_workflows_with_last_execution(
+        tenant_id=SINGLE_TENANT_UUID,
+        # db_session fixture creates two test workflows, we want to exclude them
+        cel="!(name in ['test-id-1', 'test-id-2'])",
+    )
+
+    # Verify that we get the regular workflows but not the dummy workflow
+    workflow_ids = [w["workflow"].id for w in workflows]
+    workflow_names = [w["workflow"].name for w in workflows]
+
+    # Should contain regular workflows
+    assert "regular-workflow-1" in workflow_ids
+    assert "regular-workflow-2" in workflow_ids
+    assert "Regular Workflow 1" in workflow_names
+    assert "Regular Workflow 2" in workflow_names
+
+    # Should NOT contain dummy workflow
+    assert dummy_workflow_id not in workflow_ids
+    assert not any("Dummy Workflow" in name for name in workflow_names)
+
+    # Count should reflect only regular workflows
+    assert count == 2
+    assert len(workflows) == 2
+
+
+def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
+    """
+    Test that get_all_workflows_with_last_execution does not return test_run executions
+    """
+
+    workflowstore = WorkflowStore()
+
+    workflow = Workflow(
+        id="workflow-1",
+        name="Workflow 1",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.flush()
+
+    # Create a workflow execution with large results
+    test_execution_id = str(uuid4())
+    normal_execution_id = str(uuid4())
+    workflow_execution_test = WorkflowExecution(
+        id=test_execution_id,
+        workflow_id=workflow.id,
+        workflow_revision=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        started=datetime.now(tz=timezone.utc),
+        triggered_by="test",
+        execution_number=1,
+        status="success",
+        error=None,
+        execution_time=10,
+        is_test_run=True,
+    )
+    workflow_execution_normal = WorkflowExecution(
+        id=normal_execution_id,
+        workflow_id=workflow.id,
+        workflow_revision=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        started=datetime.now(tz=timezone.utc),
+        triggered_by="test",
+        execution_number=2,
+        status="success",
+        error=None,
+        execution_time=10,
+        is_test_run=False,
+    )
+    db_session.add(workflow_execution_test)
+    db_session.add(workflow_execution_normal)
+    db_session.commit()
+    db_session.flush()
+
+    # Get all workflows with last execution
+    workflows, count = workflowstore.get_all_workflows_with_last_execution(
+        tenant_id=SINGLE_TENANT_UUID,
+        # db_session fixture creates two test workflows, we want to exclude them
+        cel="!(name in ['test-id-1', 'test-id-2'])",
+    )
+
+    assert len(workflows) == 1
+    workflow_with_executions = workflows[0]
+    assert workflow_with_executions["workflow"].id == "workflow-1"
+    assert len(workflow_with_executions["workflow_last_executions"]) == 1
+    assert (
+        workflow_with_executions["workflow_last_executions"][0]["id"]
+        == normal_execution_id
+    )
+
+
+def test_get_workflow_run_logs_sorted_by_timestamp(db_session):
+    """
+    Test that get_workflow_run_logs_sorted_by_timestamp returns logs sorted by timestamp
+    """
+
+    workflowstore = WorkflowStore()
+
+    workflow = Workflow(
+        id="workflow-1",
+        name="Workflow 1",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="A workflow for testing",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=VALID_WORKFLOW,
+        last_updated=datetime.now(tz=timezone.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+    db_session.flush()
+
+    # Create a workflow execution with large results
+    workflow_execution_id = str(uuid4())
+    workflow_execution = WorkflowExecution(
+        id=workflow_execution_id,
+        workflow_id=workflow.id,
+        workflow_revision=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        started=datetime.now(tz=timezone.utc),
+        triggered_by="test",
+        execution_number=1,
+        status="success",
+        error=None,
+        execution_time=10,
+        is_test_run=False,
+    )
+    db_session.add(workflow_execution)
+    db_session.commit()
+    db_session.flush()
+
+    # Create logs with timestamps in random order
+    timestamps = [
+        datetime.now(tz=timezone.utc) - timedelta(seconds=10),
+        datetime.now(tz=timezone.utc) + timedelta(seconds=5),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=3),
+        datetime.now(tz=timezone.utc) + timedelta(seconds=2),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=1),
+        datetime.now(tz=timezone.utc),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=1),
+        datetime.now(tz=timezone.utc) - timedelta(seconds=2),
+        datetime.now(tz=timezone.utc) + timedelta(seconds=3),
+    ]
+
+    for i, ts in enumerate(timestamps):
+        workflow_execution_log = WorkflowExecutionLog(
+            workflow_execution_id=workflow_execution_id,
+            timestamp=ts,
+            message=f"Log message {i}",
+            context={},
+        )
+        db_session.add(workflow_execution_log)
+    db_session.commit()
+    db_session.flush()
+
+    _, logs = workflowstore.get_workflow_execution_with_logs(
+        tenant_id=SINGLE_TENANT_UUID,
+        workflow_execution_id=workflow_execution_id,
+    )
+
+    assert len(logs) == len(timestamps)
+
+    # Verify logs are sorted by timestamp ascending
+    for i, log in enumerate(logs):
+        if i < len(logs) - 1:
+            assert log.timestamp < logs[i + 1].timestamp

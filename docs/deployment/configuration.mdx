@@ -111,7 +111,7 @@ Keep is highly configurable through environment variables. This allows you to cu
 
 |           Env var            |                                Purpose                                | Required | Default Value |         Valid options         |
 | :--------------------------: | :-------------------------------------------------------------------: | :------: | :-----------: | :---------------------------: |
-|   **SECRET_MANAGER_TYPE**    |               Defines the type of secret manager to use               |   Yes    |    "FILE"     | "FILE", "GCP", "K8S", "VAULT" |
+|   **SECRET_MANAGER_TYPE**    |               Defines the type of secret manager to use               |   Yes    |    "FILE"     | "FILE", "GCP", "K8S", "VAULT", "DB" |
 | **SECRET_MANAGER_DIRECTORY** | Directory for storing secrets when using file-based secret management |    No    |   "/state"    |   Any valid directory path    |
 
 ### OpenTelemetry
@@ -295,6 +295,7 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 | Env var                            | Purpose                                                             | Required | Default Value | Valid options   |
 | ---------------------------------- | ------------------------------------------------------------------- | -------- | ------------- | --------------- |
 | **API_URL**                        | Specifies the URL of the Keep backend API                           | Yes      | None          | Valid URL       |
+| **AUTH_SESSION_TIMEOUT**           | Specifies user session timeout in seconds. Default is 30 days.      | No       | 2592000       | Value in seconds|
 | **KEEP_HIDE_SENSITIVE_FIELDS**     | Hides sensitive fields                                              | No       | None          | "true", "false" |
 | **HIDE_NAVBAR_CORRELATION**        | Hides the correlation page from the navigation bar in the UI        | No       | None          | "true"          |
 | **HIDE_NAVBAR_WORKFLOWS**          | Hides the workflows page from the navigation bar in the UI          | No       | None          | "true"          |

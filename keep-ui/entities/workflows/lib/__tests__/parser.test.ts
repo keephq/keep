@@ -618,6 +618,59 @@ workflow:
       expect(condition).toBeDefined();
       expect(condition[0].type).toBe("threshold");
     });
+
+    it("should preserve the step position in a workflow with foreach", () => {
+      const consoleStep = {
+        id: "step-2",
+        name: "console-step",
+        type: "step-console",
+        componentType: "task" as const,
+        properties: {
+          with: {
+            message: "{{ item }}",
+          },
+          stepParams: ["message"],
+        },
+      };
+      const foreach: V2StepForeach = {
+        id: "foreach-1",
+        name: "Foreach",
+        type: "foreach",
+        componentType: "container" as const,
+        properties: {
+          value: "{{ steps.python-step.results.items }}",
+        },
+        sequence: [consoleStep],
+      };
+      const pythonStep = {
+        id: "step-1",
+        name: "python-step",
+        type: "step-python",
+        componentType: "task" as const,
+        properties: {
+          code: '[{"a": "b"}]',
+          stepParams: ["code"],
+        },
+      };
+      const workflowDefinition: Definition = {
+        sequence: [foreach, pythonStep],
+        properties: {
+          id: "test-workflow",
+          name: "Test Workflow",
+          description: "Test Description",
+          disabled: false,
+          isLocked: true,
+        },
+      };
+
+      const result = getYamlWorkflowDefinition(workflowDefinition);
+      expect(result.steps).toHaveLength(2);
+      expect(result.steps?.[0].name).toBe("console-step");
+      expect(result.steps?.[0].foreach).toBe(
+        "{{ steps.python-step.results.items }}"
+      );
+      expect(result.steps?.[1].name).toBe("python-step");
+    });
   });
 
   describe("round trip should not change the workflow", () => {

@@ -2,9 +2,10 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import String, and_, case, cast, func, select
 from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, col, text
+from sqlalchemy.orm import foreign, aliased
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
 from keep.api.core.cel_to_sql.properties_mapper import (
@@ -61,7 +62,9 @@ incident_field_configurations = [
         data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
-        map_from_pattern="status", map_to="incident.status", data_type=DataType.STRING
+        map_from_pattern="status",
+        map_to=["JSON(incidentenrichment.enrichments).*", "incident.status"],
+        data_type=DataType.STRING,
     ),
     FieldMappingConfiguration(
         map_from_pattern="creation_time",
@@ -139,6 +142,7 @@ incident_field_configurations = [
 
 properties_metadata = PropertiesMetadata(incident_field_configurations)
 
+incident_enrichment = aliased(AlertEnrichment, name="incidentenrichment")
 static_facets = [
     FacetDto(
         id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
@@ -222,16 +226,6 @@ def __build_base_incident_query(
 
     sql_query = select(*select_args).select_from(Incident)
 
-    # Always join AlertEnrichment for incident enrichments (incident ID already stored without dashes)
-    incident_enrichment = AlertEnrichment.__table__.alias("incident_enrichment")
-    sql_query = sql_query.outerjoin(
-        incident_enrichment,
-        and_(
-            incident_enrichment.c.alert_fingerprint == Incident.id,
-            incident_enrichment.c.tenant_id == tenant_id,
-        ),
-    )
-
     if fetch_alerts or force_fetch_alerts:
         alert_enrichment = AlertEnrichment.__table__.alias("alert_enrichment")
         sql_query = (
@@ -261,6 +255,16 @@ def __build_base_incident_query(
                 ),
             )
         )
+
+    # Join incident enrichment using the module-level alias
+    sql_query = sql_query.outerjoin(
+        incident_enrichment,
+        and_(
+            Incident.tenant_id == incident_enrichment.tenant_id,
+            cast(col(Incident.id), String)
+            == foreign(incident_enrichment.alert_fingerprint),
+        ),
+    )
 
     if fetch_has_linked_incident or force_fetch_has_linked_incident:
         additional_incident_fields = (
@@ -414,7 +418,7 @@ def __build_last_incidents_query(
     built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,
-        select_args=[Incident, literal_column("incident_enrichment.enrichments").label("incident_enrichments")],
+        select_args=[Incident, incident_enrichment],
     )
     sql_query = built_query_result["query"]
     fetch_alerts = built_query_result["fetch_alerts"]
@@ -518,28 +522,17 @@ def get_last_incidents_by_cel(
 
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
-       
-        # Extract incidents and populate enrichments from the join
+
         incidents = []
+
         for row in all_records:
-            row_dict = row._asdict()
-            incident = row_dict.get("Incident")
-            if incident:
-                # Get enrichment data from the join
-                enrichment_data = row_dict.get("incident_enrichments")
-                if enrichment_data:
-                    # Parse JSON string to dict if needed
-                    if isinstance(enrichment_data, str):
-                        import json
-                        try:
-                            enrichment_dict = json.loads(enrichment_data)
-                        except json.JSONDecodeError:
-                            enrichment_dict = {}
-                    else:
-                        enrichment_dict = enrichment_data if enrichment_data else {}
-                    # Set the enrichments on the incident
-                    incident._enrichments = enrichment_dict
-                incidents.append(incident)
+            dict_row = row._asdict()
+            incident = dict_row.get("Incident")
+            enrichment = dict_row.get("incidentenrichment")
+
+            if enrichment:
+                incident.set_enrichments(enrichment.enrichments)
+            incidents.append(incident)
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
