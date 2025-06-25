@@ -1,7 +1,7 @@
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { xor } from "lodash";
-import { Badge, Icon, TextInput } from "@tremor/react";
+import { Badge, Icon, TextInput, NumberInput, Switch } from "@tremor/react";
 import { Button } from "@/components/ui";
 import { FiSave, FiTrash2, FiX } from "react-icons/fi";
 import { MdModeEdit } from "react-icons/md";
@@ -27,36 +27,46 @@ export const EnrichmentEditableField = ({
   const [stringedValue, setStringedValue] = useState(
     Array.isArray(value) ? value.join(", ") : String(value ?? "")
   );
+  const [booleanValue, setBooleanValue] = useState<boolean>(
+    typeof value === "boolean" ? value : false
+  );
+  const [numberValue, setNumberValue] = useState<number>(
+    typeof value === "number" ? value : 0
+  );
   const [fieldName, setFieldName] = useState<string>(name || "");
   const [fieldNameError, setFieldNameError] = useState<boolean>(false);
   const [valueError, setValueError] = useState<boolean>(false);
+  const [valueType, setValueType] = useState<"string" | "number" | "boolean">(
+    typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "string"
+  );
 
   const handleSave = async () => {
-    const newValue = Array.isArray(value)
-      ? stringedValue.split(",").map((s) => s.trim())
-      : stringedValue.toString().trim();
+    let newValue: string | string[] | number | boolean;
+    
+    if (Array.isArray(value)) {
+      newValue = stringedValue.split(",").map((s) => s.trim());
+    } else if (valueType === "boolean") {
+      newValue = booleanValue;
+    } else if (valueType === "number") {
+      newValue = numberValue;
+    } else {
+      newValue = stringedValue.toString().trim();
+    }
 
-    if (Array.isArray(newValue) && xor(value, newValue).length === 0) {
+    if (Array.isArray(newValue) && Array.isArray(value) && xor(value, newValue).length === 0) {
       return;
     } else if (value == newValue) {
       return;
     }
 
-    onUpdate(fieldName, newValue);
+    await onUpdate(name || fieldName, newValue);
     setEditMode(false);
-
-    // reset if this is add form
-    resetForm();
   };
 
   const handleUnenrich = async () => {
     if (onDelete) {
-      onDelete(fieldName);
+      await onDelete(name || fieldName);
     }
-    setEditMode(false);
-  };
-
-  const handleCancel = () => {
     // Reset value
     setEditMode(false);
     resetForm();
@@ -64,7 +74,15 @@ export const EnrichmentEditableField = ({
 
   const resetForm = () => {
     setStringedValue(Array.isArray(value) ? value.join(", ") : String(value ?? ""));
+    setBooleanValue(typeof value === "boolean" ? value : false);
+    setNumberValue(typeof value === "number" ? value : 0);
+    setValueType(typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "string");
     setFieldName(name || "");
+  };
+
+  const handleCancel = () => {
+    setEditMode(false);
+    resetForm();
   };
 
   const filterBy = (key: string, value: string) => {
@@ -87,23 +105,64 @@ export const EnrichmentEditableField = ({
     return (
       <div className="flex items-center flex-wrap gap-2.5 z-50">
         {!name && (
+          <>
+            <TextInput
+              value={fieldName}
+              error={fieldNameError}
+              onChange={handleNameChange}
+              placeholder="Add name"
+            />
+            <select
+              className="text-sm px-2 py-1 border rounded"
+              value={valueType}
+              onChange={(e) => setValueType(e.target.value as "string" | "number" | "boolean")}
+            >
+              <option value="string">Text</option>
+              <option value="number">Number</option>
+              <option value="boolean">Yes/No</option>
+            </select>
+          </>
+        )}
+        {Array.isArray(value) ? (
           <TextInput
-            value={fieldName}
-            error={fieldNameError}
-            onChange={handleNameChange}
-            placeholder="Add name"
+            value={stringedValue}
+            error={valueError}
+            onChange={handleValueChange}
+            placeholder="Add values (comma-separated)"
+          />
+        ) : valueType === "boolean" ? (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="boolean-value"
+              checked={booleanValue}
+              onChange={setBooleanValue}
+            />
+            <label htmlFor="boolean-value" className="text-sm">
+              {booleanValue ? "Yes" : "No"}
+            </label>
+          </div>
+        ) : valueType === "number" ? (
+          <NumberInput
+            value={numberValue}
+            onValueChange={(val) => {
+              setNumberValue(val ?? 0);
+              setValueError(false);
+            }}
+            placeholder="Add number"
+            error={valueError}
+          />
+        ) : (
+          <TextInput
+            value={stringedValue}
+            error={valueError}
+            onChange={handleValueChange}
+            placeholder="Add value"
           />
         )}
-        <TextInput
-          value={stringedValue}
-          error={valueError}
-          onChange={handleValueChange}
-          placeholder="Add value"
-        />
         <Button
           className="leading-none p-2 rounded-md"
           variant="secondary"
-          disabled={!(fieldName && stringedValue)}
+          disabled={!fieldName || (valueType === "string" && !stringedValue && !Array.isArray(value))}
           tooltip="Save"
           icon={() => (
             <Icon icon={FiSave} className={`w-4 h-4 text-orange-500`} />

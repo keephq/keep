@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {Button} from "@/components/ui";
-import {Icon, TextInput} from "@tremor/react";
+import {Icon, TextInput, NumberInput, Switch} from "@tremor/react";
 import {MdModeEdit} from "react-icons/md";
 import {map, some, startCase} from "lodash";
 import {FiSave, FiTrash2, FiX} from "react-icons/fi";
@@ -8,9 +8,9 @@ import Modal from "@/components/ui/Modal";
 import {FieldHeader} from "@/shared/ui";
 
 interface EnrichmentEditableFormProps {
-  fields: Record<string, string>;
+  fields: Record<string, string | number | boolean>;
   title: string,
-  onUpdate: (fields: Record<string, string>) => void;
+  onUpdate: (fields: Record<string, string | number | boolean>) => void;
   onDelete?: (fields: string[]) => void;
   children: React.ReactNode;
 }
@@ -18,7 +18,7 @@ interface EnrichmentEditableFormProps {
 export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, children}: EnrichmentEditableFormProps) => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [newFields, setNewFields] = useState<Record<string, string>>(fields);
+  const [newFields, setNewFields] = useState<Record<string, string | number | boolean>>(fields);
 
   const handleOpenForm = () => {
     setIsFormOpen(true);
@@ -28,7 +28,7 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
     setIsFormOpen(false);
   }
 
-  const handleValueChange = (key: string, value: string) => {
+  const handleValueChange = (key: string, value: string | number | boolean) => {
     setNewFields({
         ...newFields,
         [key]: value
@@ -44,6 +44,39 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
     setIsFormOpen(false);
     setNewFields(fields);
   }
+
+  const renderFieldInput = (key: string, value: string | number | boolean) => {
+    if (typeof value === "boolean") {
+      return (
+        <div className="flex items-center gap-2">
+          <Switch
+            id={`switch-${key}`}
+            checked={value}
+            onChange={(checked) => handleValueChange(key, checked)}
+          />
+          <label htmlFor={`switch-${key}`} className="text-sm">
+            {value ? "Yes" : "No"}
+          </label>
+        </div>
+      );
+    } else if (typeof value === "number") {
+      return (
+        <NumberInput
+          value={value}
+          onValueChange={(val) => handleValueChange(key, val ?? 0)}
+          placeholder={`Add ${key}`}
+        />
+      );
+    } else {
+      return (
+        <TextInput
+          value={value}
+          onChange={(e) => handleValueChange(key, e.target.value)}
+          placeholder={`Add ${key}`}
+        />
+      );
+    }
+  };
 
   return <>
 
@@ -84,14 +117,10 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
       className="w-[600px]"
       title={title}
     >
-      {map(fields, (value: string, key: string) => {
+      {map(fields, (value: string | number | boolean, key: string) => {
         return <div key={key}>
           <FieldHeader>{startCase(key)}</FieldHeader>
-          <TextInput
-            value={value}
-            onChange={(e) => handleValueChange(key, e.target.value)}
-            placeholder={`Add ${key}`}
-          />
+          {renderFieldInput(key, value)}
         </div>
       })}
 
@@ -99,7 +128,7 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
         <Button
           className="leading-none p-2 rounded-md"
           variant="secondary"
-          disabled={!some(Object.values(newFields))}
+          disabled={!some(Object.values(newFields), (val) => val !== "" && val !== null && val !== undefined)}
           tooltip="Save"
           icon={() => <Icon
             icon={FiSave}
