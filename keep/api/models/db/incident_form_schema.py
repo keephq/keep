@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, func, UniqueConstraint
+from sqlalchemy import TEXT, UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -46,20 +46,11 @@ class IncidentFormSchema(SQLModel, table=True):
         description="User who created the schema"
     )
     created_at: datetime = Field(
-        sa_column=Column(
-            "created_at",
-            default=func.now(),
-            server_default=func.now()
-        ),
+        default_factory=datetime.utcnow,
         description="When schema was created"
     )
     updated_at: datetime = Field(
-        sa_column=Column(
-            "updated_at",
-            default=func.now(),
-            onupdate=func.now(),
-            server_default=func.now()
-        ),
+        default_factory=datetime.utcnow,
         description="When schema was last updated"
     )
     is_active: bool = Field(
