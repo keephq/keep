@@ -21,6 +21,7 @@ from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.api.utils.cel_utils import preprocess_cel_expression
 
 
 class WorkflowManager:
@@ -379,6 +380,30 @@ class WorkflowManager:
                                     },
                                 )
                                 continue
+
+                        # Preprocess the CEL expression to handle severity comparisons properly
+                        try:
+                            cel = preprocess_cel_expression(cel)
+                            self.logger.debug(
+                                "Preprocessed CEL expression",
+                                extra={
+                                    "original_cel": trigger.get("cel", ""),
+                                    "preprocessed_cel": cel,
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                        except Exception:
+                            self.logger.exception(
+                                "Error preprocessing CEL expression",
+                                extra={
+                                    "cel": cel,
+                                    "trigger": trigger,
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                            continue
 
                         compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
