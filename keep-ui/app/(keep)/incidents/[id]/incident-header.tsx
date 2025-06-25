@@ -7,7 +7,7 @@ import {
 import { Badge, Button, Icon, Subtitle } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
-import { MdBlock, MdCollectionsBookmark, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
+import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
@@ -86,7 +86,6 @@ export function IncidentHeader({
               {config?.KEEP_SERVICENOW_INCIDENT_TICKET_ENABLED && (
                 <ServiceNowIncidentOptions
                   incident={incident}
-                  handleRunWorkflow={handleRunWorkflow}
                 />
               )}
               <Button
