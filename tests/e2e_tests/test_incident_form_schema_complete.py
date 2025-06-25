@@ -268,24 +268,45 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         print("Filled summary")
 
         # Now fill in dynamic fields
-        # Select Jira Project - find the select after the Jira Project label
-        jira_select = browser.locator("text=Jira Project").locator("..").locator("select")
-        if jira_select.count() == 0:
-            # Try parent's parent
-            jira_select = browser.locator("text=Jira Project").locator("../..").locator("select")
-        jira_select.select_option("ENGINEERING")
+        # Select Jira Project - this uses a custom select component
+        # Find the visible button/div that shows the current selection
+        jira_field = browser.locator("text=Jira Project").locator("../..")
+        jira_button = jira_field.locator("button").first
+        
+        # Click the button to open the dropdown
+        jira_button.click()
+        browser.wait_for_timeout(500)
+        
+        # Click on the ENGINEERING option in the dropdown - use role=option
+        browser.locator("[role='option']:has-text('ENGINEERING')").click()
+        browser.wait_for_timeout(100)
         print("Selected Jira Project: ENGINEERING")
 
-        # Select Favorite Animal - find select that contains the animal options
-        # Get all visible selects and find the one with our options
-        all_selects = browser.locator("select:visible")
-        for i in range(all_selects.count()):
-            select = all_selects.nth(i)
-            options_text = select.locator("option").all_text_contents()
-            if "Dog" in options_text and "Cat" in options_text and "Bird" in options_text:
-                select.select_option("Cat")
-                print("Selected Favorite Animal: Cat")
-                break
+        # Select Favorite Animal - also uses custom select component
+        # Find all buttons and look for the one that comes after Favorite Animal label
+        # First, wait a bit after selecting Jira to ensure dropdown is closed
+        browser.wait_for_timeout(500)
+        
+        # Find the button that's specifically for Favorite Animal
+        # Look for the second select button in the Additional Information section
+        additional_info_section = browser.locator("text=Additional Information").locator("..")
+        select_buttons = additional_info_section.locator("button[type='button']").filter(has=browser.locator("span"))
+        
+        # The Favorite Animal should be the second select button (after Jira Project)
+        if select_buttons.count() >= 2:
+            animal_button = select_buttons.nth(1)
+        else:
+            # Fallback to finding by proximity to label
+            animal_button = browser.locator("text=Favorite Animal").locator("../..").locator("button[type='button']").first
+        
+        # Click the button to open the dropdown
+        animal_button.click()
+        browser.wait_for_timeout(500)
+        
+        # Click on Cat option
+        browser.locator("[role='option']:has-text('Cat')").click()
+        browser.wait_for_timeout(100)
+        print("Selected Favorite Animal: Cat")
 
         # Check Urgent checkbox - click the switch button instead of the checkbox
         urgent_switch = browser.locator("button[role='switch']#urgent")
@@ -301,12 +322,22 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         users_input = browser.locator("text=Number of Affected Users").locator("../..").locator("input[type='number']")
         users_input.fill("1500")
         print("Filled Affected Users: 1500")
+        
+        # Wait a bit for all fields to update state
+        browser.wait_for_timeout(1000)
 
         # Submit the form - find Create button in the modal
         submit_button = browser.locator("button").filter(has_text="Create").last
         
-        # Force click to bypass any client-side validation issues
-        submit_button.click(force=True)
+        # The button should be enabled now after properly triggering change events
+        browser.wait_for_timeout(500)  # Small wait to ensure all state updates
+        
+        if submit_button.is_enabled():
+            print("Submit button is enabled, clicking normally")
+            submit_button.click()
+        else:
+            print("WARNING: Submit button is still disabled, trying to click anyway")
+            submit_button.click(force=True)
         print("Clicked Create button")
 
         # Wait longer for API calls to complete
@@ -322,24 +353,84 @@ def test_create_incident_with_dynamic_fields(browser: Page):
             for error in error_elements:
                 print(f"  Error found: {error.text_content()}")
 
-        # Navigate back to incidents list if we were redirected to incident details
+        # Check if we got redirected to incident details
         if "/alerts" in browser.url or "/incident/" in browser.url:
-            browser.goto("http://localhost:3000/incidents")
+            # We were redirected, which means the incident was created
+            print(f"✓ Incident created successfully (redirected to details): {incident_name}")
+        else:
+            # We're still on the incidents list
+            # Refresh the page to ensure we see the latest data
+            browser.reload()
+            browser.wait_for_load_state("networkidle")
+            browser.wait_for_timeout(3000)
+            
+            # Look for the incident in the table - use link text inside the table
+            incident_link = browser.locator(f"a:has-text('{incident_name}')")
+            
+            # Check if the incident link is visible
+            if not incident_link.is_visible():
+                # If not visible in UI, check via API to ensure it was created
+                api_response = requests.get(
+                    "http://localhost:8080/incidents",
+                    headers={
+                        "Authorization": f"Bearer {get_token(tenant_id)}",
+                    },
+                )
+                api_response.raise_for_status()
+                incidents = api_response.json().get("items", [])
+                
+                # Find our incident
+                our_incident = None
+                for inc in incidents:
+                    if inc.get("user_generated_name") == incident_name:
+                        our_incident = inc
+                        break
+                
+                if not our_incident:
+                    print(f"✗ Incident NOT found via API. Available incidents: {[inc.get('user_generated_name', 'unnamed') for inc in incidents]}")
+                    raise AssertionError(f"Incident {incident_name} was not created")
+                
+                print(f"✓ Incident created successfully (verified via API): {incident_name}")
+                print(f"  Incident ID: {our_incident['id']}")
+                raise AssertionError("Incident created but not visible in UI")
+            
+            print(f"✓ Incident created successfully: {incident_name}")
+            # Click on the incident to view details
+            incident_link.click()
             browser.wait_for_load_state("networkidle")
             browser.wait_for_timeout(2000)
-
-        # Verify incident was created - look for it in the list
-        incident_row = browser.locator("tr").filter(has_text=incident_name)
-        expect(incident_row).to_be_visible(timeout=10000)
-        print(f"✓ Incident created successfully: {incident_name}")
-
-        # Click on the incident to view details
-        incident_row.click()
-        browser.wait_for_timeout(2000)
-
-        # TODO: Verify enrichments are displayed in incident details
-        # This would require checking the incident detail view
-        # For now, we've confirmed the incident was created with our form data
+        
+        # Now verify enriched fields are visible in the incident details page
+        print("Verifying enriched fields in incident details...")
+        
+        # Check for our custom field values
+        # Jira Project: ENGINEERING
+        jira_project_text = browser.locator("text=ENGINEERING")
+        expect(jira_project_text).to_be_visible()
+        print("✓ Jira Project field visible with value: ENGINEERING")
+        
+        # Favorite Animal: Cat
+        favorite_animal_text = browser.locator("text=Cat").first
+        expect(favorite_animal_text).to_be_visible()
+        print("✓ Favorite Animal field visible with value: Cat")
+        
+        # Business Impact
+        business_impact_text = browser.locator("text=Critical system down affecting all users")
+        expect(business_impact_text).to_be_visible()
+        print("✓ Business Impact field visible")
+        
+        # Affected Users: 1500
+        affected_users_text = browser.locator("text=1500")
+        expect(affected_users_text).to_be_visible()
+        print("✓ Affected Users field visible with value: 1500")
+        
+        # Urgent status - this might be shown as a badge or indicator
+        # Check for any indication of urgency
+        urgent_indicator = browser.locator("text=Urgent").or_(browser.locator("text=urgent"))
+        if urgent_indicator.count() > 0:
+            print("✓ Urgent status is indicated")
+        
+        print("✓ All enriched fields are visible in the incident details page")
 
     except Exception as e:
         save_failure_artifacts(browser, log_entries, "test_create_incident_with_dynamic_fields")
@@ -401,8 +492,14 @@ def test_required_field_validation(browser: Page):
         impact_textarea.fill("Test impact")
         
         # Fill Jira Project (required dynamic field)
-        jira_select = browser.locator("text=Jira Project").locator("../..").locator("select")
-        jira_select.select_option("OPS")
+        # Find the select that has our specific options
+        all_selects = browser.locator("select")
+        for i in range(all_selects.count()):
+            select = all_selects.nth(i)
+            options = select.locator("option").all_text_contents()
+            if "OPS" in options and "SUPPORT" in options and "ENGINEERING" in options:
+                select.select_option("OPS")
+                break
         
         # Check if button is now enabled (all required fields filled)
         browser.wait_for_timeout(500)
