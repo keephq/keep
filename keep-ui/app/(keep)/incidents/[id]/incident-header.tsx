@@ -7,7 +7,7 @@ import {
 import { Badge, Button, Icon, Subtitle } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
-import { MdBlock, MdCollectionsBookmark, MdDone, MdLink, MdModeEdit, MdOutlineBookmarkAdd, MdPlayArrow } from "react-icons/md";
+import { MdBlock, MdCollectionsBookmark, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
@@ -19,6 +19,7 @@ import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
 import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { ServiceNowIncidentOptions } from "./service-now-incident-options";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -83,51 +84,10 @@ export function IncidentHeader({
           {!incident.is_candidate && (
             <div className="flex">
               {config?.KEEP_SERVICENOW_INCIDENT_TICKET_ENABLED && (
-                incident.enrichments?.servicenow_ticket_id ? (
-                  <Button
-                    color="orange"
-                    size="xs"
-                    variant="secondary"
-                    className="!py-0.5 mr-2"
-                    icon={MdLink}
-                    onClick={() => {
-                      window.open(`https://localhost:3000/incidents/${incident.id}/servicenow`);
-                    }}
-                  >
-                    Open incident in ServiceNow
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      color="orange"
-                      size="xs"
-                      variant="secondary"
-                      className="!py-0.5 mr-2"
-                      icon={MdOutlineBookmarkAdd}
-                      onClick={(e: React.MouseEvent) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleRunWorkflow();
-                      }}
-                    >
-                      Create New ServiceNow Ticket
-                    </Button>
-                    <Button
-                      color="orange"
-                      size="xs"
-                      variant="secondary"
-                      className="!py-0.5 mr-2"
-                      icon={MdLink}
-                      onClick={(e: React.MouseEvent) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleRunWorkflow();
-                      }}
-                    >
-                      Link to a ServiceNow Ticket
-                    </Button>
-                  </>
-                )
+                <ServiceNowIncidentOptions
+                  incident={incident}
+                  handleRunWorkflow={handleRunWorkflow}
+                />
               )}
               <Button
                 color="orange"
