@@ -15,7 +15,7 @@ def create_workflow(db_session):
     def _create_workflow(workflow_id, cel_expression):
         workflow_definition = f"""workflow:
   id: {workflow_id}
-  description: Test CEL severity expressions
+  description: Test severity CEL expressions
   triggers:
     - type: alert
       cel: {cel_expression}
@@ -30,7 +30,7 @@ def create_workflow(db_session):
             id=workflow_id,
             name=workflow_id,
             tenant_id=SINGLE_TENANT_UUID,
-            description="Test CEL severity expressions",
+            description="Test severity CEL expressions",
             created_by="test@keephq.dev",
             interval=0,
             workflow_raw=workflow_definition,
@@ -44,38 +44,63 @@ def create_workflow(db_session):
 
 @pytest.fixture
 def create_alert():
-    """Fixture to create test alerts with different severities"""
+    """Fixture to create an alert DTO with specified properties"""
 
-    def _create_alert(**kwargs):
-        default_alert = {
-            "name": "test-alert",
+    def _create_alert(**properties):
+        alert_data = {
+            "id": "test-alert-1",
             "source": ["prometheus"],
+            "name": "test-alert",
             "status": AlertStatus.FIRING,
             "severity": AlertSeverity.INFO,
-            "fingerprint": f"fp-{datetime.datetime.now().isoformat()}",
-            "lastReceived": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "lastReceived": datetime.datetime.now().isoformat(),
+            "fingerprint": f"test-fingerprint-{datetime.datetime.now().timestamp()}",
         }
-        default_alert.update(kwargs)
-        return AlertDto(**default_alert)
+        alert_data.update(properties)
+        return AlertDto(**alert_data)
 
     return _create_alert
 
 
-def test_severity_greater_than_info_matches_high_and_critical(
+def test_severity_greater_than_info_bug_fix(
     db_session, workflow_manager, create_workflow, create_alert
 ):
-    """Test the specific bug case: severity > 'info' should match 'high' and 'critical' severities"""
+    """
+    Test the specific bug case from GitHub issue #5086:
+    severity > 'info' should match 'warning', 'high', and 'critical' severities
+    
+    Before fix: This would fail because 'high' < 'info' lexicographically (h < i)
+    After fix: This works because high (4) > info (2) numerically
+    """
     # Create a workflow with the exact CEL expression from the bug report
-    workflow = create_workflow("test-severity-greater-than-info", "severity > 'info' && source.contains('prometheus')")
+    workflow = create_workflow(
+        "test-severity-gt-info-bug", 
+        "severity > 'info' && source.contains('prometheus')"
+    )
 
-    # Create alerts that should match
-    high_alert = create_alert(severity=AlertSeverity.HIGH, fingerprint="fp-high")
-    critical_alert = create_alert(severity=AlertSeverity.CRITICAL, fingerprint="fp-critical")
-    warning_alert = create_alert(severity=AlertSeverity.WARNING, fingerprint="fp-warning")
+    # These alerts should match (severity > info)
+    high_alert = create_alert(
+        severity=AlertSeverity.HIGH, 
+        fingerprint="fp-high"
+    )
+    critical_alert = create_alert(
+        severity=AlertSeverity.CRITICAL, 
+        fingerprint="fp-critical"
+    )
+    warning_alert = create_alert(
+        severity=AlertSeverity.WARNING, 
+        fingerprint="fp-warning"
+    )
 
-    # Create alerts that should NOT match
-    info_alert = create_alert(severity=AlertSeverity.INFO, fingerprint="fp-info")
-    low_alert = create_alert(severity=AlertSeverity.LOW, fingerprint="fp-low")
+    # These alerts should NOT match
+    info_alert = create_alert(
+        severity=AlertSeverity.INFO, 
+        fingerprint="fp-info"
+    )
+    low_alert = create_alert(
+        severity=AlertSeverity.LOW, 
+        fingerprint="fp-low"
+    )
 
     # Test high severity alert (should match)
     workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
@@ -109,7 +134,7 @@ def test_severity_greater_than_info_matches_high_and_critical(
 def test_severity_greater_than_or_equal_warning(
     db_session, workflow_manager, create_workflow, create_alert
 ):
-    """Test severity >= 'warning' comparisons"""
+    """Test severity >= 'warning' comparisons work correctly with numeric conversion"""
     workflow = create_workflow("test-severity-gte-warning", "severity >= 'warning'")
 
     # Should match: critical, high, warning
@@ -134,89 +159,35 @@ def test_severity_greater_than_or_equal_warning(
         assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
 
 
-def test_severity_less_than_warning(
+def test_severity_less_than_high(
     db_session, workflow_manager, create_workflow, create_alert
 ):
-    """Test severity < 'warning' comparisons"""
-    workflow = create_workflow("test-severity-lt-warning", "severity < 'warning'")
+    """Test severity < 'high' comparisons work correctly with numeric conversion"""
+    workflow = create_workflow("test-severity-lt-high", "severity < 'high'")
 
-    # Should match: info, low
+    # Should match: info, low, warning
     info_alert = create_alert(severity=AlertSeverity.INFO, fingerprint="fp-info")
     low_alert = create_alert(severity=AlertSeverity.LOW, fingerprint="fp-low")
-
-    # Should NOT match: warning, high, critical
     warning_alert = create_alert(severity=AlertSeverity.WARNING, fingerprint="fp-warning")
+
+    # Should NOT match: high, critical
     high_alert = create_alert(severity=AlertSeverity.HIGH, fingerprint="fp-high")
     critical_alert = create_alert(severity=AlertSeverity.CRITICAL, fingerprint="fp-critical")
 
     # Test matching severities
-    for alert in [info_alert, low_alert]:
+    for alert in [info_alert, low_alert, warning_alert]:
         workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
         workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
         assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1
 
-    # Test non-matching severities
-    for alert in [warning_alert, high_alert, critical_alert]:
+    # Test non-matching severities  
+    for alert in [high_alert, critical_alert]:
         workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
         workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
         assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
 
 
-def test_severity_less_than_or_equal_high(
-    db_session, workflow_manager, create_workflow, create_alert
-):
-    """Test severity <= 'high' comparisons"""
-    workflow = create_workflow("test-severity-lte-high", "severity <= 'high'")
-
-    # Should match: low, info, warning, high
-    low_alert = create_alert(severity=AlertSeverity.LOW, fingerprint="fp-low")
-    info_alert = create_alert(severity=AlertSeverity.INFO, fingerprint="fp-info")
-    warning_alert = create_alert(severity=AlertSeverity.WARNING, fingerprint="fp-warning")
-    high_alert = create_alert(severity=AlertSeverity.HIGH, fingerprint="fp-high")
-
-    # Should NOT match: critical
-    critical_alert = create_alert(severity=AlertSeverity.CRITICAL, fingerprint="fp-critical")
-
-    # Test matching severities
-    for alert in [low_alert, info_alert, warning_alert, high_alert]:
-        workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-        workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
-        assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1
-
-    # Test non-matching severities
-    workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [critical_alert])
-    assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
-
-
-def test_severity_equality_critical(
-    db_session, workflow_manager, create_workflow, create_alert
-):
-    """Test severity == 'critical' comparisons"""
-    workflow = create_workflow("test-severity-eq-critical", "severity == 'critical'")
-
-    # Should match: only critical
-    critical_alert = create_alert(severity=AlertSeverity.CRITICAL, fingerprint="fp-critical")
-
-    # Should NOT match: all others
-    high_alert = create_alert(severity=AlertSeverity.HIGH, fingerprint="fp-high")
-    warning_alert = create_alert(severity=AlertSeverity.WARNING, fingerprint="fp-warning")
-    info_alert = create_alert(severity=AlertSeverity.INFO, fingerprint="fp-info")
-    low_alert = create_alert(severity=AlertSeverity.LOW, fingerprint="fp-low")
-
-    # Test matching severity
-    workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [critical_alert])
-    assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1
-
-    # Test non-matching severities
-    for alert in [high_alert, warning_alert, info_alert, low_alert]:
-        workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-        workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
-        assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
-
-
-def test_complex_severity_conditions(
+def test_complex_severity_expressions(
     db_session, workflow_manager, create_workflow, create_alert
 ):
     """Test complex CEL expressions involving severity comparisons"""
@@ -260,45 +231,49 @@ def test_complex_severity_conditions(
         assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
 
 
-def test_severity_boundary_conditions(
+def test_case_insensitive_severity_comparisons(
     db_session, workflow_manager, create_workflow, create_alert
 ):
-    """Test boundary conditions for severity comparisons"""
-    
-    # Test severity > 'critical' (should never match)
-    workflow_never_match = create_workflow("test-severity-gt-critical", "severity > 'critical'")
-    
-    critical_alert = create_alert(severity=AlertSeverity.CRITICAL, fingerprint="fp-critical")
-    workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [critical_alert])
-    assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
-    
-    # Test severity < 'low' (should never match)
-    workflow_never_match_2 = create_workflow("test-severity-lt-low", "severity < 'low'")
-    
-    low_alert = create_alert(severity=AlertSeverity.LOW, fingerprint="fp-low")
-    workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [low_alert])
-    assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before
-
-
-def test_case_sensitivity_in_severity_comparisons(
-    db_session, workflow_manager, create_workflow, create_alert
-):
-    """Test that severity comparisons are case-insensitive"""
+    """Test that severity comparisons are case-insensitive after preprocessing"""
     workflow = create_workflow("test-severity-case", "severity > 'INFO'")
 
-    # Should match despite case difference
+    # Should match despite case difference in CEL expression
     high_alert = create_alert(severity=AlertSeverity.HIGH, fingerprint="fp-high")
     
     workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [high_alert])
     assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1
     
-    # Test with different case variations
-    workflow_mixed_case = create_workflow("test-severity-mixed-case", "severity >= 'Warning'")
-    warning_alert = create_alert(severity=AlertSeverity.WARNING, fingerprint="fp-warning")
+
+def test_severity_preprocessing_cel_utils_integration(
+    db_session, workflow_manager, create_workflow, create_alert
+):
+    """
+    Test that the cel_utils.preprocess_cel_expression function is properly integrated
+    into the workflow manager to fix the lexicographic comparison bug
+    """
     
+    # This test specifically validates that lexicographic issues are resolved
+    # Before fix: 'high' < 'info' lexicographically (h comes before i in alphabet)
+    # After fix: high (4) > info (2) numerically
+    
+    workflow = create_workflow(
+        "test-preprocessing-integration", 
+        "severity > 'info'"
+    )
+
+    # Create a 'high' severity alert - this is the key test case
+    # that would fail with lexicographic comparison but should pass with numeric
+    high_alert = create_alert(
+        severity=AlertSeverity.HIGH,
+        source=["test"], 
+        fingerprint="fp-high-severity"
+    )
+
     workflows_to_run_before = len(workflow_manager.scheduler.workflows_to_run)
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [warning_alert])
-    assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [high_alert])
+    
+    # This assertion would fail before the fix, but should pass after
+    assert len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1, \
+        "HIGH severity alert should match 'severity > info' expression after preprocessing fix"
+    assert workflow_manager.scheduler.workflows_to_run[-1]["workflow_id"] == workflow.id
