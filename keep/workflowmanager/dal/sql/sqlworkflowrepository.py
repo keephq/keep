@@ -287,7 +287,7 @@ class SqlWorkflowRepository(WorkflowRepository):
                 execution_id=execution_id,
                 event_type=event_type,
                 test_run=test_run,
-                status=status,
+                status=status.value if status else None,
             )
         except IntegrityError as e:
             raise ConflictError(
