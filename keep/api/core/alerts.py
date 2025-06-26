@@ -393,10 +393,9 @@ def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
 
             data_query = build_alerts_query(tenant_id, query_with_defaults)
             alerts_with_start = session.execute(data_query).all()
-            raise Exception("Shit, shit shit")
         except OperationalError as e:
             logger.warning(
-                f"Failed to query alerts for query object '{json.dumps(query_with_defaults.dict())}': {e}"
+                f"Failed to query alerts for query object '{json.dumps(query_with_defaults.dict(exclude_unset=True))}': {e}"
             )
             return [], 0
 
