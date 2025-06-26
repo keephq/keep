@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, UniqueConstraint
+from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -29,12 +29,10 @@ class IncidentFormSchema(SQLModel, table=True):
         description="Tenant this schema belongs to"
     )
     name: str = Field(
-        sa_column=Column(TEXT),
         description="Human-readable schema name"
     )
     description: Optional[str] = Field(
         default=None,
-        sa_column=Column(TEXT),
         description="Schema description"
     )
     fields: List[dict] = Field(
@@ -42,7 +40,6 @@ class IncidentFormSchema(SQLModel, table=True):
         description="JSON array of form field definitions"
     )
     created_by: str = Field(
-        sa_column=Column(TEXT),
         description="User who created the schema"
     )
     created_at: datetime = Field(

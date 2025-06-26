@@ -23,10 +23,10 @@ def upgrade() -> None:
         "incident_form_schema",
         sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("name", sa.TEXT(), nullable=False),
-        sa.Column("description", sa.TEXT(), nullable=True),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("fields", sa.JSON(), nullable=False),
-        sa.Column("created_by", sa.TEXT(), nullable=False),
+        sa.Column("created_by", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(),
