@@ -44,7 +44,6 @@ from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
-from sqlalchemy.orm import selectinload
 
 
 from keep.api.consts import STATIC_PRESETS

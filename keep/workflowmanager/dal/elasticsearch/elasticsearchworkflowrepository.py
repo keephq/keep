@@ -299,7 +299,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             return [], 0
 
         search_result = query.execute()
-        print()
         return [WorkflowExecutionDalModel(**item) for item in search_result], count
 
     # endregion
@@ -346,23 +345,11 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             ) from conflict_error
 
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
-        doccc = WorkflowExecutionDoc.get(
-            id=workflow_execution.id, using=self.elastic_search_client
-        )
-
         patch_body = workflow_execution.dict(exclude_unset=True)
-
-        if doccc.status == WorkflowStatus.SUCCESS.value:
-            print()
-
-        if workflow_execution.status == WorkflowStatus.SUCCESS.value:
-            print()
 
         WorkflowExecutionDoc(meta={"id": workflow_execution.id}).update(
             using=self.elastic_search_client, refresh=True, **patch_body
         )
-        if workflow_execution.status == WorkflowStatus.SUCCESS.value:
-            print()
 
     def get_last_completed_workflow_execution(
         self,

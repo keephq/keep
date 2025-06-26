@@ -203,10 +203,7 @@ class WorkflowDBHandler(logging.Handler):
                     db_log_entries.append(log_entry)
                 except Exception:
                     print("Failed to parse log entry - ", log_entry)
-        try:
-            self.workflow_repository.add_workflow_execution_logs(db_log_entries)
-        except Exception as e:
-            print()
+        self.workflow_repository.add_workflow_execution_logs(db_log_entries)
 
     def flush(self):
         if not self.records:
