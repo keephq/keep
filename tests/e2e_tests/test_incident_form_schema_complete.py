@@ -116,6 +116,19 @@ def delete_form_schema(tenant_id: str, schema_id: str) -> None:
         response.raise_for_status()
 
 
+def delete_incident(tenant_id: str, incident_id: str) -> None:
+    """Delete an incident via API"""
+    response = requests.delete(
+        f"http://localhost:8080/incidents/{incident_id}",
+        headers={
+            "Authorization": f"Bearer {get_token(tenant_id)}",
+        },
+    )
+    # It's OK if it's already deleted or doesn't exist
+    if response.status_code not in [200, 204, 404]:
+        response.raise_for_status()
+
+
 def test_no_additional_information_without_schema(browser: Page):
     """Test that Additional Information section is NOT shown when no schema exists"""
     log_entries = []
@@ -241,6 +254,7 @@ def test_create_incident_with_dynamic_fields(browser: Page):
     log_entries = []
     tenant_id = get_tenant_id()
     schema = None
+    incident_id = None
     incident_name = f"E2E Test Incident {generate_random_string()}"
 
     try:
@@ -388,6 +402,11 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         if "/alerts" in browser.url or "/incident/" in browser.url:
             # We were redirected, which means the incident was created
             print(f"✓ Incident created successfully (redirected to details): {incident_name}")
+            # Extract incident ID from URL if it's in the format /incidents/{id}
+            url_match = re.search(r'/incidents/([a-f0-9-]+)', browser.url)
+            if url_match:
+                incident_id = url_match.group(1)
+                print(f"  Incident ID: {incident_id}")
         else:
             # We're still on the incidents list
             # Refresh the page to ensure we see the latest data
@@ -423,9 +442,28 @@ def test_create_incident_with_dynamic_fields(browser: Page):
                 
                 print(f"✓ Incident created successfully (verified via API): {incident_name}")
                 print(f"  Incident ID: {our_incident['id']}")
+                incident_id = our_incident['id']
                 raise AssertionError("Incident created but not visible in UI")
             
             print(f"✓ Incident created successfully: {incident_name}")
+            
+            # Get the incident ID from the API before clicking
+            api_response = requests.get(
+                "http://localhost:8080/incidents",
+                headers={
+                    "Authorization": f"Bearer {get_token(tenant_id)}",
+                },
+            )
+            api_response.raise_for_status()
+            incidents = api_response.json().get("items", [])
+            
+            # Find our incident
+            for inc in incidents:
+                if inc.get("user_generated_name") == incident_name:
+                    incident_id = inc['id']
+                    print(f"  Incident ID: {incident_id}")
+                    break
+            
             # Click on the incident to view details
             incident_link.click()
             browser.wait_for_load_state("networkidle")
@@ -483,8 +521,12 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         save_failure_artifacts(browser, log_entries, "test_create_incident_with_dynamic_fields")
         raise e
     finally:
-        # Cleanup: delete the schema
+        # Cleanup: delete the incident and schema
+        if incident_id:
+            print(f"Cleaning up: Deleting incident {incident_id}")
+            delete_incident(tenant_id, incident_id)
         if schema:
+            print(f"Cleaning up: Deleting schema {schema['id']}")
             delete_form_schema(tenant_id, schema["id"])
 
 
@@ -494,6 +536,8 @@ def test_required_field_validation(browser: Page):
     log_entries = []
     tenant_id = get_tenant_id()
     schema = None
+    incident_id = None
+    incident_name = f"Test Validation Incident {generate_random_string()}"
 
     try:
         # Create form schema
@@ -523,7 +567,7 @@ def test_required_field_validation(browser: Page):
 
         # Fill only the incident name (required)
         name_input = browser.locator("input[placeholder='Incident Name']")
-        name_input.fill("Test Validation Incident")
+        name_input.fill(incident_name)
         
         # Check if button is still disabled (missing other required fields)
         browser.wait_for_timeout(500)
@@ -563,15 +607,44 @@ def test_required_field_validation(browser: Page):
         submit_button.click(force=True)
         print("✓ Able to submit when all required fields are filled")
 
-        # Close modal
+        # Wait for submission to complete
+        browser.wait_for_timeout(3000)
+        
+        # Try to get the incident ID from the URL if redirected
+        if "/incidents/" in browser.url:
+            url_match = re.search(r'/incidents/([a-f0-9-]+)', browser.url)
+            if url_match:
+                incident_id = url_match.group(1)
+                print(f"  Created incident ID: {incident_id}")
+        else:
+            # If not redirected, try to find via API
+            api_response = requests.get(
+                "http://localhost:8080/incidents",
+                headers={
+                    "Authorization": f"Bearer {get_token(tenant_id)}",
+                },
+            )
+            if api_response.status_code == 200:
+                incidents = api_response.json().get("items", [])
+                for inc in incidents:
+                    if inc.get("user_generated_name") == incident_name:
+                        incident_id = inc['id']
+                        print(f"  Created incident ID: {incident_id}")
+                        break
+
+        # Close modal if still open
         browser.keyboard.press("Escape")
 
     except Exception as e:
         save_failure_artifacts(browser, log_entries, "test_required_field_validation")
         raise e
     finally:
-        # Cleanup: delete the schema
+        # Cleanup: delete the incident and schema
+        if incident_id:
+            print(f"Cleaning up: Deleting incident {incident_id}")
+            delete_incident(tenant_id, incident_id)
         if schema:
+            print(f"Cleaning up: Deleting schema {schema['id']}")
             delete_form_schema(tenant_id, schema["id"])
 
 
