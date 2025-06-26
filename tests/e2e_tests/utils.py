@@ -240,7 +240,7 @@ def save_failure_artifacts(page, log_entries=[], prefix=""):
     # print current active element
     print(
         "current active element: ",
-        page.locator("body").evaluate("() => document.activeElement.outerHTML"),
+        page.locator("body").evaluate("() => document.activeElement.outerHTML")[:200],
     )
 
     # Save screenshot
