@@ -9,7 +9,6 @@ from keep.api.models.db.workflow import Workflow
 from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from tests.fixtures.workflow_manager import wait_for_workflow_execution
 
 workflow_test = """workflow:
   name: Alert Simple
@@ -475,7 +474,7 @@ def test_workflow_python(db_session):
         with:
           imports: random
           code: |-
-            random.randint(1, 100)
+            randint(1, 100)
   actions:
     - name: random-print
       provider:
