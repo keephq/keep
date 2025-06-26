@@ -842,6 +842,7 @@ def test_run_workflow_from_alert_and_incident(
         page.get_by_test_id("dropdown-menu-list").get_by_role(
             "button", name="Run workflow"
         ).click()
+        modal = page.get_by_test_id("manual-run-workflow-modal")
         input = modal.get_by_test_id("manual-run-workflow-select-control").get_by_role(
             "combobox"
         )
