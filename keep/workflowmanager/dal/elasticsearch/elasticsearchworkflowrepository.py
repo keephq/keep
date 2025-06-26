@@ -36,9 +36,11 @@ from elasticsearch import (
     Elasticsearch,
     ConflictError as ElasticsearchConflictError,
 )
+from elasticsearch.helpers import bulk
 from keep.workflowmanager.dal.elasticsearch.cel_fields_configuration import (
     properties_metadata,
 )
+from elasticsearch.dsl import Q
 
 class ElasticSearchWorkflowRepository(WorkflowRepository):
     def __init__(self, elastic_search_client: Elasticsearch, index_suffix: str):
@@ -66,7 +68,9 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         return workflow
 
     def update_workflow(self, workflow: WorkflowDalModel):
-        WorkflowDoc(**workflow.dict()).save(using=self.elastic_search_client)
+        doc = WorkflowDoc(**workflow.dict())
+        doc.meta.id = workflow.id
+        doc.save(using=self.elastic_search_client)
 
     def delete_workflow(self, tenant_id, workflow_id):
         WorkflowDoc.get(id=workflow_id, using=self.elastic_search_client).delete(
@@ -249,7 +253,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             .sort("-revision")
             .execute()
         )
-        print()
+
         return [WorkflowVersionDalModel(**item) for item in result]
 
     def get_workflow_executions(
@@ -295,7 +299,8 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             return [], 0
 
         search_result = query.execute()
-        return [WorkflowExecutioLogDalModel(**item) for item in search_result], count
+        print()
+        return [WorkflowExecutionDalModel(**item) for item in search_result], count
 
     # endregion
 
@@ -309,6 +314,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         execution_number: int = 1,
         event_id: str = None,
         fingerprint: str = None,
+        status: WorkflowStatus = None,
         execution_id: str = None,
         event_type: str = None,
         test_run: bool = False,
@@ -323,8 +329,10 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
                 execution_number=execution_number,
                 event_id=event_id,
                 fingerprint=fingerprint,
+                status=status.value if status else None,
                 event_type=event_type,
-                test_run=test_run,
+                is_test_run=test_run,
+                started=datetime.now(tz=timezone.utc),
             )
             doc = WorkflowExecutionDoc(**workflow_execution.dict())
             doc.meta.id = workflow_execution.id
@@ -338,13 +346,23 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             ) from conflict_error
 
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
-        self.elastic_search_client.index(
-            index=self.workflow_executions_index,
-            body=workflow_execution.dict(),
-            id=workflow_execution.id,
-            refresh=True,
-            op_type="index",
+        doccc = WorkflowExecutionDoc.get(
+            id=workflow_execution.id, using=self.elastic_search_client
         )
+
+        patch_body = workflow_execution.dict(exclude_unset=True)
+
+        if doccc.status == WorkflowStatus.SUCCESS.value:
+            print()
+
+        if workflow_execution.status == WorkflowStatus.SUCCESS.value:
+            print()
+
+        WorkflowExecutionDoc(meta={"id": workflow_execution.id}).update(
+            using=self.elastic_search_client, refresh=True, **patch_body
+        )
+        if workflow_execution.status == WorkflowStatus.SUCCESS.value:
+            print()
 
     def get_last_completed_workflow_execution(
         self,
@@ -379,21 +397,41 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
-        doc = self.__fetch_doc_by_id_from_tenant(
-            index_name=self.workflow_executions_index,
-            tenant_id=tenant_id,
-            doc_id=workflow_execution_id,
-            additional_matches=[{"term": {"is_test_run": is_test_run}}],
-        )
-        if not doc:
+        search_response = (
+            WorkflowExecutionDoc.search(using=self.elastic_search_client)
+            .filter("term", id=workflow_execution_id)
+            .filter("term", tenant_id=tenant_id)
+            # .filter(
+            #     "term", is_test_run=is_test_run if is_test_run is not None else False
+            # )
+        ).execute()
+
+        if not search_response:
             return None
 
-        return WorkflowExecutionDalModel(**doc)
+        return WorkflowExecutionDalModel(**search_response[0])
 
     def get_previous_workflow_execution(
         self, tenant_id: str, workflow_id: str, workflow_execution_id: str
     ) -> WorkflowExecutioLogDalModel | None:
-        pass
+        search_result = (
+            WorkflowExecutionDoc.search(using=self.elastic_search_client)
+            .query(
+                "bool",
+                must=[
+                    Q("term", tenant_id=tenant_id),
+                    Q("term", workflow_id=workflow_id),
+                    Q("term", is_test_run=False),
+                ],
+                must_not=[{"term": {"id": workflow_execution_id}}],
+            )
+            .sort("-started")
+            .extra(size=1)
+        )
+        search_result = search_result.execute()
+        if not search_result:
+            return None
+        return WorkflowExecutioLogDalModel(**search_result[0])
 
     def get_workflow_execution_with_logs(
         self,
@@ -413,9 +451,16 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         logs_search_result = WorkflowExecutionLogDoc.search(
             using=self.elastic_search_client
         ).filter("term", workflow_execution_id=workflow_execution_id)
-        return workflow_execution, [
-            WorkflowExecutioLogDalModel(**item) for item in logs_search_result
-        ]
+
+        logs = []
+        index = 0
+        for item in logs_search_result:
+            log = WorkflowExecutioLogDalModel(**item)
+            log.id = index
+            logs.append(log)
+            index += 1
+
+        return workflow_execution, logs
 
     def get_workflow_execution_by_execution_number(
         self, workflow_id: str, execution_number: int
@@ -430,35 +475,19 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             return None
 
         return WorkflowExecutionDalModel(**search_result[0])
+    # endregion
 
-    def __fetch_doc_by_id_from_tenant(
-        self,
-        index_name: str,
-        tenant_id: str,
-        doc_id: str,
-        additional_matches: dict = None,
-    ) -> dict:
-        additional_matches = additional_matches if additional_matches else []
-        response = self.elastic_search_client.search(
-            index=index_name,
-            body={
-                "query": {
-                    "bool": {
-                        "must": [
-                            {"term": {"_id": doc_id}},
-                            {"term": {"tenant_id": tenant_id}},
-                            *additional_matches,
-                        ]
-                    }
-                },
-                "size": 1,
-            },
+    # region Workflow Execution Log
+    def add_workflow_execution_logs(
+        self, workflow_execution_log: list[WorkflowExecutioLogDalModel]
+    ):
+        # Convert each to a dict with action metadata
+        actions = (
+            WorkflowExecutionLogDoc(**log.dict()).to_dict(include_meta=True)
+            for log in workflow_execution_log
         )
-        hits = response["hits"]["hits"]
 
-        if not hits:
-            return None
-
-        return hits[0]["_source"]
+        # Bulk index
+        bulk(self.elastic_search_client, actions)
 
     # endregion

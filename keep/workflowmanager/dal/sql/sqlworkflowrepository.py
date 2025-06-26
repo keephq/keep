@@ -19,10 +19,14 @@ from keep.api.core.db import (
     create_workflow_execution,
     update_workflow_execution,
     get_interval_workflows,
-    get_workflow_execution_by_execution_number,
     add_workflow,
 )
-from keep.api.models.db.workflow import Workflow, WorkflowExecution, WorkflowVersion
+from keep.api.models.db.workflow import (
+    Workflow,
+    WorkflowExecution,
+    WorkflowExecutionLog,
+    WorkflowVersion,
+)
 from keep.workflowmanager.dal.exceptions import ConflictError
 from keep.workflowmanager.dal.models.workflowstatsdalmodel import WorkflowStatsDalModel
 from keep.workflowmanager.dal.sql.workflows import (
@@ -171,9 +175,9 @@ class SqlWorkflowRepository(WorkflowRepository):
             avg_duration = session.exec(avg_duration_query).one()[0]
 
             return WorkflowStatsDalModel(
-                pass_count=pass_count,
-                fail_count=fail_count,
-                avg_duration=avg_duration,
+                pass_count=pass_count or 0,
+                fail_count=fail_count or 0,
+                avg_duration=avg_duration or 0,
             )
 
     def get_workflows_with_last_executions(
@@ -268,6 +272,7 @@ class SqlWorkflowRepository(WorkflowRepository):
         execution_number: int = 1,
         event_id: str = None,
         fingerprint: str = None,
+        status: WorkflowStatus = None,
         execution_id: str = None,
         event_type: str = None,
         test_run: bool = False,
@@ -280,10 +285,10 @@ class SqlWorkflowRepository(WorkflowRepository):
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 event_id=event_id,
-                fingerprint=fingerprint,
                 execution_id=execution_id,
                 event_type=event_type,
                 test_run=test_run,
+                status=status,
             )
         except IntegrityError as e:
             raise ConflictError(
@@ -293,12 +298,19 @@ class SqlWorkflowRepository(WorkflowRepository):
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
         if workflow_execution.id is None:
             raise ValueError("Workflow execution ID must not be None")
-
-        update_workflow_execution(
-            workflow_execution_patch=workflow_execution_from_dto_to_db_partial(
-                workflow_execution_dto=workflow_execution
-            )
+        workflow_execution_patch = workflow_execution_from_dto_to_db_partial(
+            workflow_execution_dto=workflow_execution
         )
+        with Session(engine) as session:
+            stmt = (
+                update(WorkflowExecution)
+                .where(WorkflowExecution.id == workflow_execution_patch.get("id"))
+                .values(
+                    **workflow_execution_patch
+                )  # only update fields that are explicitly set in model
+            )
+            session.exec(stmt)
+            session.commit()
 
     def get_last_completed_workflow_execution(
         self,
@@ -439,14 +451,18 @@ class SqlWorkflowRepository(WorkflowRepository):
     def get_workflow_execution_by_execution_number(
         self, workflow_id: str, execution_number: int
     ) -> WorkflowExecutionDalModel | None:
-        db_workflow_execution = get_workflow_execution_by_execution_number(
-            workflow_id=workflow_id, execution_number=execution_number
-        )
+        with Session(engine) as session:
+            query_result = session.exec(
+                select(WorkflowExecution)
+                .where(WorkflowExecution.workflow_id == workflow_id)
+                .where(WorkflowExecution.execution_number == execution_number)
+            ).first()
+            db_workflow_execution = query_result[0] if query_result else None
 
-        if db_workflow_execution is None:
-            return None
+            if db_workflow_execution is None:
+                return None
 
-        return workflow_execution_from_db_to_dto(db_workflow_execution)
+            return workflow_execution_from_db_to_dto(db_workflow_execution)
     # endregion
 
     def _compose_base_workflow_executions_query(
@@ -487,3 +503,16 @@ class SqlWorkflowRepository(WorkflowRepository):
         if statuses is not None:
             query = query.filter(WorkflowExecution.status.in_(statuses))
         return query
+
+    # region Workflow Execution Log
+    def add_workflow_execution_logs(
+        self, workflow_execution_log: list[WorkflowExecutioLogDalModel]
+    ):
+        db_log_entries = [
+            WorkflowExecutionLog(**item.dict()) for item in workflow_execution_log
+        ]
+        with Session(engine) as session:
+            session.add_all(db_log_entries)
+            session.commit()
+
+    # endregion

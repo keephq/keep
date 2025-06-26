@@ -206,6 +206,7 @@ def create_workflow_execution(
     execution_number: int = 1,
     event_id: str = None,
     fingerprint: str = None,
+    status: str = None,
     execution_id: str = None,
     event_type: str = "alert",
     test_run: bool = False,
@@ -225,7 +226,7 @@ def create_workflow_execution(
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
-                status="in_progress",
+                status=status,
                 error=None,
                 execution_time=None,
                 results={},
@@ -292,25 +293,6 @@ def get_interval_workflows():
             .filter(Workflow.interval > 0)
         )
         return result.all() if result else []
-
-
-def get_workflow_execution_by_execution_number(workflow_id, execution_number):
-    """
-    Retrieve a workflow execution by its execution number.
-
-    Args:
-        workflow_id (str): The unique identifier for the workflow.
-        execution_number (int): The execution number of the workflow execution.
-
-    Returns:
-        WorkflowExecution: The workflow execution object if found, otherwise None.
-    """
-    with Session(engine) as session:
-        return session.exec(
-            select(WorkflowExecution)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(WorkflowExecution.execution_number == execution_number)
-        ).first()
 
 
 def update_workflow_by_id(

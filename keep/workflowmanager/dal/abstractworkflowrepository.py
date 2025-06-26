@@ -4,6 +4,7 @@ from typing import List, Tuple
 
 from keep.workflowmanager.dal.models.workflowdalmodel import (
     WorkflowDalModel,
+    WorkflowStatus,
     WorkflowVersionDalModel,
     WorkflowWithLastExecutionsDalModel,
 )
@@ -156,6 +157,7 @@ class WorkflowRepository(ABC):
         execution_number: int = 1,
         event_id: str = None,
         fingerprint: str = None,
+        status: WorkflowStatus = None,
         execution_id: str = None,
         event_type: str = None,
         test_run: bool = False,
@@ -229,5 +231,19 @@ class WorkflowRepository(ABC):
         self, workflow_id: str, execution_number: int
     ) -> WorkflowExecutionDalModel | None:
         pass
+
+    # endregion
+
+    # region Workflow Execution Log
+    @abstractmethod
+    def add_workflow_execution_logs(
+        self, workflow_execution_log: list[WorkflowExecutioLogDalModel]
+    ):
+        """
+        Add logs for a workflow execution.
+
+        Args:
+            workflow_execution_log (list[WorkflowExecutioLogDalModel]): A list of workflow execution log models to add.
+        """
 
     # endregion

@@ -1,6 +1,4 @@
 from elasticsearch.dsl import Document, Text, Date, Boolean, Integer, Keyword, Object
-from keep.workflowmanager.dal.elasticsearch.models.client import es_client
-
 
 class WorkflowExecutionDoc(Document):
     id = Keyword()
@@ -10,7 +8,7 @@ class WorkflowExecutionDoc(Document):
     started = Date()
     triggered_by = Keyword()
     status = Keyword()
-    is_running = Boolean()
+    is_running = Integer()
     timeslot = Integer()
     execution_number = Integer()
     error = Text()
@@ -22,7 +20,3 @@ class WorkflowExecutionDoc(Document):
 
     class Index:
         name = "workflow-engine-workflow-execution-docs"
-
-
-# es_client.indices.delete(index=WorkflowExecutionDoc.Index.name, ignore_unavailable=True)
-WorkflowExecutionDoc.init(using=es_client)

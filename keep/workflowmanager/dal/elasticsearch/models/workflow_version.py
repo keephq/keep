@@ -1,5 +1,4 @@
 from elasticsearch.dsl import Document, Text, Date, Boolean, Integer, Keyword
-from keep.workflowmanager.dal.elasticsearch.models.client import es_client
 
 
 class WorkflowVersionDoc(Document):
@@ -16,7 +15,3 @@ class WorkflowVersionDoc(Document):
 
     class Index:
         name = "workflow-engine-workflow-version-docs"
-
-
-# es_client.indices.delete(index=WorkflowVersionDoc.Index.name, ignore_unavailable=True)
-WorkflowVersionDoc.init(using=es_client)
