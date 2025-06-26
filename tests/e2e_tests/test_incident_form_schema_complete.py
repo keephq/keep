@@ -80,6 +80,13 @@ def create_form_schema(tenant_id: str) -> Dict:
                 "max_value": 1000000,
                 "required": False,
             },
+            {
+                "name": "incident_date",
+                "label": "Incident Date",
+                "type": "date",
+                "description": "When did the incident occur?",
+                "required": True,
+            },
         ],
         "is_active": True,
     }
@@ -206,6 +213,12 @@ def test_dynamic_fields_appear_with_schema(browser: Page):
         assert number_inputs.count() >= 1, f"Expected at least 1 number input, found {number_inputs.count()}"
         print(f"✓ Found {number_inputs.count()} number field(s)")
         
+        # Look for date picker button - Tremor DatePicker renders as a button
+        date_picker_section = browser.locator("text=Incident Date").locator("..")
+        date_buttons = date_picker_section.locator("button")
+        assert date_buttons.count() >= 1, "Expected to find date picker button"
+        print("✓ Found date picker field")
+        
         # Verify the description text mentions Jira project
         description_text = browser.locator("text=Target Jira project for ticket creation")
         expect(description_text).to_be_visible()
@@ -322,6 +335,24 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         users_input = browser.locator("text=Number of Affected Users").locator("../..").locator("input[type='number']")
         users_input.fill("1500")
         print("Filled Affected Users: 1500")
+
+        # Fill Incident Date
+        # The DatePicker component renders a button that opens a calendar
+        date_field = browser.locator("text=Incident Date").locator("../..")
+        # Look for the button with the calendar icon and "Select date" text
+        date_picker_button = date_field.locator("button").filter(has_text="Select date").first
+        
+        # Click the button to open the date picker
+        date_picker_button.click()
+        browser.wait_for_timeout(1000)
+        
+        # Now click on day 15 using the exact selector structure
+        # The day buttons have name="day" and are inside the calendar popup
+        day_button = browser.locator('button[name="day"]').filter(has_text="15").first
+        day_button.click()
+        
+        browser.wait_for_timeout(100)
+        print("Selected Incident Date (day 15)")
         
         # Wait a bit for all fields to update state
         browser.wait_for_timeout(1000)
@@ -426,6 +457,20 @@ def test_create_incident_with_dynamic_fields(browser: Page):
         expect(affected_users_badge).to_be_visible()
         print("✓ Affected Users field visible with value: 1,500")
         
+        # Incident Date - should show the 15th of current month
+        # The date format will be YYYY-MM-DD
+        from datetime import datetime
+        current_month = datetime.now().strftime("%Y-%m")
+        expected_date = f"{current_month}-15"
+        incident_date_section = browser.locator("text=Incident Date").locator("../..")
+        # The date might be in a badge or span element
+        date_value = incident_date_section.locator(f"text={expected_date}")
+        if date_value.count() == 0:
+            # Try to find any element containing "15" in the date section
+            date_value = incident_date_section.locator("span").filter(has_text="15")
+        expect(date_value.first).to_be_visible()
+        print(f"✓ Incident Date field visible with selected date (15th): {expected_date}")
+        
         # Urgent status - this might be shown as a badge or indicator
         # Check for any indication of urgency
         urgent_indicator = browser.locator("text=Urgent").or_(browser.locator("text=urgent"))
@@ -502,6 +547,15 @@ def test_required_field_validation(browser: Page):
             if "OPS" in options and "SUPPORT" in options and "ENGINEERING" in options:
                 select.select_option("OPS")
                 break
+        
+        # Fill Incident Date (required dynamic field)
+        date_field = browser.locator("text=Incident Date").locator("../..")
+        date_picker_button = date_field.locator("button").filter(has_text="Select date").first
+        date_picker_button.click()
+        browser.wait_for_timeout(500)
+        # Click day 15
+        browser.locator('button[name="day"]').filter(has_text="15").first.click()
+        browser.wait_for_timeout(100)
         
         # Check if button is now enabled (all required fields filled)
         browser.wait_for_timeout(500)
