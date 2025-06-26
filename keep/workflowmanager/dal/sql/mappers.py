@@ -83,7 +83,7 @@ def workflow_execution_from_dto_to_db_partial(
 
 def workflow_execution_log_from_db_to_dto(
     db_workflow_execution_log: WorkflowExecutionLog,
-) -> WorkflowExecutionDalModel:
+) -> WorkflowExecutioLogDalModel:
     return WorkflowExecutioLogDalModel(
         id=db_workflow_execution_log.id,
         workflow_execution_id=db_workflow_execution_log.workflow_execution_id,

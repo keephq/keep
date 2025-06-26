@@ -111,7 +111,7 @@ def test_mapping_workflow_execution_log_db_to_dto():
         workflow_execution_log_db
     )
     assert isinstance(workflow_execution_log_dto, WorkflowExecutioLogDalModel)
-    assert workflow_execution_log_dto.id == workflow_execution_log_db.id
+    assert workflow_execution_log_dto.id == str(workflow_execution_log_db.id)
     assert (
         workflow_execution_log_dto.workflow_execution_id
         == workflow_execution_log_db.workflow_execution_id
