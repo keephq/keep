@@ -17,7 +17,6 @@ from keep.api.core.db import (
     get_workflow_execution,
     get_workflow_execution_with_logs,
     create_workflow_execution,
-    update_workflow_execution,
     get_interval_workflows,
     add_workflow,
 )
