@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-import enum
+from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
 import random
@@ -342,6 +341,7 @@ class WorkflowScheduler:
             triggered_by=triggered_by,
             execution_number=execution_number,
             event_id=event_id,
+            status=WorkflowStatus.IN_PROGRESS,
             fingerprint=fingerprint,
             execution_id=workflow_execution_id,
             event_type=event_type,
@@ -916,7 +916,10 @@ class WorkflowScheduler:
                 status=status.value,
                 error=workflow_execution_error,
                 execution_time=int(
-                    (datetime.utcnow() - workflow_execution.started).total_seconds()
+                    (
+                        datetime.now(tz=timezone.utc)
+                        - workflow_execution.started.replace(tzinfo=timezone.utc)
+                    ).total_seconds()
                 ),
             )
         )

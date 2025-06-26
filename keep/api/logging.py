@@ -1,5 +1,6 @@
 import http.client
 import inspect
+import json
 import logging
 import logging.config
 import logging.handlers
@@ -16,8 +17,12 @@ from pythonjsonlogger import jsonlogger
 from sqlmodel import Session
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
-from keep.api.core.db import get_session, push_logs_to_db
+from keep.api.core.db import get_session
 from keep.api.models.db.provider import ProviderExecutionLog
+from keep.workflowmanager.dal.factories import create_workflow_repository
+from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
+    WorkflowExecutioLogDalModel,
+)
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -121,6 +126,7 @@ class WorkflowDBHandler(logging.Handler):
         logging.getLogger(__name__).info("Starting WorkflowDBHandler timer thread")
         self._timer_thread.start()
         logging.getLogger(__name__).info("Started WorkflowDBHandler timer thread")
+        self.workflow_repository = create_workflow_repository()
 
     def _timer_run(self):
         while not self._stop_event.is_set():
@@ -145,8 +151,62 @@ class WorkflowDBHandler(logging.Handler):
     def push_logs_to_db(self):
         # Convert log records to a list of dictionaries and clean the self.records buffer
         log_entries, self.records = [record.__dict__ for record in self.records], []
-        # Push log entries to the database
-        push_logs_to_db(log_entries)
+        from keep.api.logging import LOG_FORMAT, LOG_FORMAT_OPEN_TELEMETRY
+
+        db_log_entries = []
+        if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY:
+            for log_entry in log_entries:
+                try:
+                    try:
+                        # after formatting
+                        message = log_entry["message"][0:255]
+                    except Exception:
+                        # before formatting, fallback
+                        message = log_entry["msg"][0:255]
+
+                    try:
+                        timestamp = datetime.strptime(
+                            log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"
+                        )
+                    except Exception:
+                        timestamp = log_entry["created"]
+
+                    log_entry = WorkflowExecutioLogDalModel(
+                        workflow_execution_id=log_entry["workflow_execution_id"],
+                        timestamp=timestamp,
+                        message=message,
+                        context=json.loads(
+                            json.dumps(log_entry.get("context", {}), default=str)
+                        ),  # workaround to serialize any object
+                    )
+                    db_log_entries.append(log_entry)
+                except Exception:
+                    print("Failed to parse log entry - ", log_entry)
+
+        else:
+            for log_entry in log_entries:
+                try:
+                    try:
+                        # after formatting
+                        message = log_entry["message"][0:255]
+                    except Exception:
+                        # before formatting, fallback
+                        message = log_entry["msg"][0:255]
+                    log_entry = WorkflowExecutioLogDalModel(
+                        workflow_execution_id=log_entry["workflow_execution_id"],
+                        timestamp=log_entry["created"],
+                        message=message,  # limit the message to 255 chars
+                        context=json.loads(
+                            json.dumps(log_entry.get("context", {}), default=str)
+                        ),  # workaround to serialize any object
+                    )
+                    db_log_entries.append(log_entry)
+                except Exception:
+                    print("Failed to parse log entry - ", log_entry)
+        try:
+            self.workflow_repository.add_workflow_execution_logs(db_log_entries)
+        except Exception as e:
+            print()
 
     def flush(self):
         if not self.records:
