@@ -29,11 +29,6 @@ services:
       - cluster.routing.allocation.disk.watermark.flood_stage=99%
     ports:
       - 9200:9200
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Frontend Services
   keep-frontend:
@@ -68,10 +63,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      keep-database:
-        condition: service_healthy
-      elasticsearch-wf-engine:
-        condition: service_healthy
+      - keep-database
+      - elasticsearch-wf-engine
 
   keep-redis:
     image: redis/redis-stack
