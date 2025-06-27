@@ -18,6 +18,7 @@ on:
 env:
   PYTHON_VERSION: 3.11
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+  SCHEMA_REPO_NAME: keephq/keep-workflow-schema
 
 jobs:
   release-schema:
@@ -80,7 +81,7 @@ jobs:
       - name: Checkout schema repository
         uses: actions/checkout@v4
         with:
-          repository: keephq/keep-workflow-schema
+          repository: ${{ env.SCHEMA_REPO_NAME }}
           token: ${{ secrets.SCHEMA_REPO_PAT }}
           path: schema-repo
 
@@ -109,7 +110,7 @@ jobs:
 
           # Update schema with version info
           jq --arg version "${{ steps.get_version.outputs.version }}" \
-             --arg id "https://raw.githubusercontent.com/keephq/keep-workflow-schema/v${{ steps.get_version.outputs.version }}/schema.json" \
+             --arg id "https://raw.githubusercontent.com/${{ env.SCHEMA_REPO_NAME }}/v${{ steps.get_version.outputs.version }}/schema.json" \
              '. + {version: $version, "$id": $id}' \
              schema-repo/schema.json > schema-repo/schema.tmp.json
 
@@ -141,6 +142,7 @@ jobs:
         if: steps.check_changes.outputs.changed == 'true' && steps.set_branch.outputs.branch == 'main'
         uses: softprops/action-gh-release@v1
         with:
+          repository: ${{ env.SCHEMA_REPO_NAME }}
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
           body: |
