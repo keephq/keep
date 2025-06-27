@@ -135,7 +135,7 @@ incident_field_configurations = [
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
-        map_to=["JSON(incident_enrichment.enrichments).*", "JSON(alert_enrichment.enrichments).*", "JSON(alert.event).*"],
+        map_to=["JSON(incidentenrichment.enrichments).*", "JSON(alert_enrichment.enrichments).*", "JSON(alert.event).*"],
     ),
 ]
 
