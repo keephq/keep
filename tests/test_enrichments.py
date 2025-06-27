@@ -15,6 +15,7 @@ from keep.api.models.db.alert import Alert
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
+from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 from tests.fixtures.workflow_manager import workflow_manager  # noqa
 
@@ -953,10 +954,15 @@ def test_incident_manual_enrichment_integration(db_session, client, test_app):
     assert incident_data["enrichments"]["jira_ticket"] == "12345"
 
 
-@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_incident_workflow_enrichment_integration(
-    db_session, client, test_app, workflow_manager
-):
+@pytest.mark.parametrize(
+    "test_app, db_session",
+    [
+        ("NO_AUTH", None),
+        ("NO_AUTH", {"db": "mysql"}),
+    ],
+    indirect=True,
+)
+def test_incident_workflow_enrichment_integration(db_session, client, test_app):
     """
     Test scenario 2: Create workflow that enriches incidents → create incident → fetch and check enrichment
     """
@@ -1013,23 +1019,9 @@ def test_incident_workflow_enrichment_integration(
     incident_data = response.json()
     incident_id = incident_data["id"]
 
-    # Create IncidentDto for workflow manager
-    incident_dto = IncidentDto(
-        id=incident_id,
-        user_generated_name="Test Incident for Workflow Enrichment",
-        user_summary="Test incident for workflow enrichment integration test",
-        alerts_count=0,
-        alert_sources=[],
-        services=[],
-        severity="critical",
-        status="firing",
-        is_predicted=False,
-        is_candidate=False,
-    )
-
-    # Trigger the workflow manually since incident creation via API may not automatically trigger workflows
-    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident_dto, "created")
-    print(workflow_manager.scheduler.workflows_to_run)
+    # wait a bit, to be sure workflow is added to the queue
+    sleep(2)
+    workflow_manager = WorkflowManager.get_instance()
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # Wait for workflow execution to complete
