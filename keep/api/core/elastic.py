@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from elasticsearch import ApiError, BadRequestError, Elasticsearch
 from elasticsearch.helpers import BulkIndexError, bulk
@@ -38,12 +39,34 @@ def create_elastic_client(
         )
     else:
         logger.debug("Using API key for Elastic")
-        return Elasticsearch(
+        es_client = Elasticsearch(
             api_key=api_key,
             hosts=hosts,
             verify_certs=verify_certs,
             **kwargs,
         )
+        MAX_RETRIES = 10
+        RETRY_DELAY = 5  # seconds
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                health = es_client.cluster.health()
+                print(f"[Attempt {attempt}] Cluster status: {health['status']}")
+                if health["status"] in {"green", "yellow"}:
+                    print("✅ Elasticsearch is healthy.")
+                    break
+            except ConnectionError as e:
+                print(f"[Attempt {attempt}] Connection error: {e}")
+            except Exception as e:
+                print(f"[Attempt {attempt}] Unexpected error: {e}")
+
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                print("❌ Elasticsearch did not become healthy in time.")
+                exit(1)
+
+        return es_client
 
 
 class ElasticClient:

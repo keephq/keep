@@ -70,10 +70,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      keep-database:
-        condition: service_healthy
-      elasticsearch-wf-engine:
-        condition: service_healthy
+      - keep-database
+      - elasticsearch-wf-engine
 
   keep-redis:
     image: redis/redis-stack
