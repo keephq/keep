@@ -83,15 +83,13 @@ class WorkflowStore:
 
         if not workflow.get("name"):  # workflow name is None or empty string
             workflow["name"] = workflow_id
-        else:
-            workflow_name = workflow.get("name")
 
         workflow_id = str(workflow_id) if workflow_id else str(uuid.uuid4())
 
         return self._add_or_update_workflow(
             workflow=WorkflowDalModel(
                 id=str(uuid.uuid4()),
-                name=workflow_name,
+                name=workflow["name"],
                 tenant_id=tenant_id,
                 description=workflow.get("description"),
                 created_by=created_by,
