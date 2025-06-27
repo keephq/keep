@@ -48,6 +48,4 @@ def create_elasticsearch_workflow_repository():
 
         config_dict["are_models_intialized"] = True
 
-    return ElasticSearchWorkflowRepository(
-        elastic_search_client=elastic_search_client, index_suffix=elastic_index_suffix
-    )
+    return ElasticSearchWorkflowRepository(elastic_search_client=elastic_search_client)

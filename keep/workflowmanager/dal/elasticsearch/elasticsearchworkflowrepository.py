@@ -43,7 +43,8 @@ from keep.workflowmanager.dal.elasticsearch.cel_fields_configuration import (
 from elasticsearch.dsl import Q, A
 
 class ElasticSearchWorkflowRepository(WorkflowRepository):
-    def __init__(self, elastic_search_client: Elasticsearch, index_suffix: str):
+
+    def __init__(self, elastic_search_client: Elasticsearch):
         super().__init__()
         self.elastic_search_client = elastic_search_client
         self.workflows_index = WorkflowDoc.Index.name
