@@ -326,7 +326,7 @@ class SqlWorkflowRepository(WorkflowRepository):
                 .where(WorkflowExecution.is_test_run == False)
                 .where(
                     (WorkflowExecution.status == WorkflowStatus.SUCCESS.value)
-                    | (WorkflowExecution.status == WorkflowStatus.ERROR)
+                    | (WorkflowExecution.status == WorkflowStatus.ERROR.value)
                     | (
                         WorkflowExecution.status
                         == WorkflowStatus.PROVIDERS_NOT_CONFIGURED.value
