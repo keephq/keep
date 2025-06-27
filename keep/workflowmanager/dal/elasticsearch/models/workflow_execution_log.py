@@ -1,4 +1,4 @@
-from elasticsearch.dsl import Document, Text, Date, Integer, Keyword, Object
+from elasticsearch.dsl import Document, Text, Date, Keyword, Object
 
 
 class WorkflowExecutionLogDoc(Document):
