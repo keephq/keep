@@ -1,6 +1,9 @@
 import { ZodSchema } from "zod";
 import zodToJsonSchema, { PostProcessCallback } from "zod-to-json-schema";
 
+const schemaName = "KeepWorkflowSchema";
+const rootPath = `#/definitions/${schemaName}/properties/workflow`;
+
 const makeRequiredEitherStepsOrActions: PostProcessCallback = (
   // The original output produced by the package itself:
   jsonSchema,
@@ -10,10 +13,8 @@ const makeRequiredEitherStepsOrActions: PostProcessCallback = (
   refs
 ) => {
   const path = refs.currentPath.join("/");
-  if (
-    jsonSchema &&
-    path === "#/definitions/WorkflowSchema/properties/workflow"
-  ) {
+  let rootVisited = false;
+  if (jsonSchema && path === rootPath) {
     // @ts-ignore
     jsonSchema.required = jsonSchema.required.filter(
       (r: string) => r !== "steps"
@@ -33,13 +34,17 @@ const makeRequiredEitherStepsOrActions: PostProcessCallback = (
         },
       },
     ];
+    rootVisited = true;
+  }
+  if (!rootVisited) {
+    throw new Error(`${rootPath} not found in the schema`);
   }
   return jsonSchema;
 };
 
 export function generateWorkflowYamlJsonSchema(zodSchema: ZodSchema) {
   return zodToJsonSchema(zodSchema, {
-    name: "KeepWorkflowSchema",
+    name: schemaName,
     // Make workflow valid if it has either actions or steps
     postProcess: makeRequiredEitherStepsOrActions,
   });
