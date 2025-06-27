@@ -40,7 +40,7 @@ from elasticsearch.helpers import bulk
 from keep.workflowmanager.dal.elasticsearch.cel_fields_configuration import (
     properties_metadata,
 )
-from elasticsearch.dsl import Q
+from elasticsearch.dsl import Q, A
 
 class ElasticSearchWorkflowRepository(WorkflowRepository):
     def __init__(self, elastic_search_client: Elasticsearch, index_suffix: str):
@@ -134,10 +134,43 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         triggers: List[str] | None = None,
         statuses: List[str] | None = None,
     ) -> WorkflowStatsDalModel | None:
+        query = (
+            WorkflowExecutionDoc.search(using=self.elastic_search_client)
+            .filter("term", tenant_id=tenant_id)
+            .filter("term", workflow_id=workflow_id)
+        )
+
+        if triggers:
+            for trigger in triggers:
+                query = query.filter("match", triggered_by=trigger)
+
+        if statuses:
+            query = query.filter("terms", status=statuses)
+
+        if time_delta:
+            query = query.filter(
+                "range",
+                started={
+                    "gte": (datetime.now(tz=timezone.utc) - time_delta).isoformat(),
+                },
+            )
+
+        query.aggs.bucket(
+            "success_count", A("filter", term={"status": WorkflowStatus.SUCCESS.value})
+        )
+        query.aggs.bucket(
+            "error_count", A("filter", term={"status": WorkflowStatus.ERROR.value})
+        )
+        query.aggs.metric("avg_duration", A("avg", field="execution_time"))
+
+        response = query.execute()
+        success_count = response.aggregations.success_count.doc_count
+        error_count = response.aggregations.error_count.doc_count
+        average_duration = response.aggregations.avg_duration.value
         return WorkflowStatsDalModel(
-            pass_count=0,
-            fail_count=0,
-            avg_duration=0,
+            pass_count=success_count or 0,
+            fail_count=error_count or 0,
+            avg_duration=average_duration or 0,
         )
 
     def get_workflows_with_last_executions(
