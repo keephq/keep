@@ -134,9 +134,11 @@ jobs:
           git config user.email "no-reply@keephq.dev"
           git add schema.json
           git commit -m "Release schema v${{ steps.get_version.outputs.version }}"
-          git tag "v${{ steps.get_version.outputs.version }}"
           git push origin ${{ steps.set_branch.outputs.branch }}
-          git push origin "v${{ steps.get_version.outputs.version }}"
+          if [ "${{ steps.set_branch.outputs.branch }}" = "main" ]; then
+            git tag "v${{ steps.get_version.outputs.version }}"
+            git push origin "v${{ steps.get_version.outputs.version }}"
+          fi
 
       - name: Create GitHub Release
         if: steps.check_changes.outputs.changed == 'true' && steps.set_branch.outputs.branch == 'main'
