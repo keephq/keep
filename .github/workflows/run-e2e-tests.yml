@@ -158,8 +158,8 @@ jobs:
           echo "Checking running containers every 5 seconds for 10 attempts..."
           for i in {1..10}; do
             echo "Attempt $i:"
-            docker ps
-            sleep 5
+            docker-compose logs elasticsearch-wf-engine
+            sleep 10
           done
 
       # Wait for all services to be ready
