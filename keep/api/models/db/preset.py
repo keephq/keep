@@ -124,6 +124,66 @@ class PresetDto(BaseModel, extra="ignore"):
         return query[0].get("value", "")
 
     @property
+    def column_visibility(self) -> Dict[str, bool]:
+        """Get column visibility configuration from preset options"""
+        config = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "column_visibility"
+        ]
+        if not config:
+            return {}
+        return config[0].get("value", {})
+
+    @property
+    def column_order(self) -> List[str]:
+        """Get column order configuration from preset options"""
+        config = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "column_order"
+        ]
+        if not config:
+            return []
+        return config[0].get("value", [])
+
+    @property
+    def column_rename_mapping(self) -> Dict[str, str]:
+        """Get column rename mapping from preset options"""
+        config = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "column_rename_mapping"
+        ]
+        if not config:
+            return {}
+        return config[0].get("value", {})
+
+    @property
+    def column_time_formats(self) -> Dict[str, str]:
+        """Get column time formats from preset options"""
+        config = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "column_time_formats"
+        ]
+        if not config:
+            return {}
+        return config[0].get("value", {})
+
+    @property
+    def column_list_formats(self) -> Dict[str, str]:
+        """Get column list formats from preset options"""
+        config = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "column_list_formats"
+        ]
+        if not config:
+            return {}
+        return config[0].get("value", {})
+
+    @property
     def query(self) -> PresetSearchQuery:
         return PresetSearchQuery(
             cel_query=self.cel_query,

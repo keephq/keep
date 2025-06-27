@@ -9,8 +9,8 @@ This provider requires authentication.
 - **verify**: Verify SSL certificates (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **authenticated**: Mandatory for all operations, ensures the user is authenticated. (mandatory)
-- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges. (mandatory)
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated. (mandatory) 
+- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges. (mandatory) 
 
 
 
@@ -26,7 +26,7 @@ steps:
       provider: graylog
       config: "{{ provider.my_provider_name }}"
       with:
-        events_search_parameters: {value}
+        events_search_parameters: {value}  
 ```
 
 
@@ -44,6 +44,8 @@ The provider exposes the following [Provider Methods](/providers/provider-method
     - `query_type`: The type of query to use. Default is "elastic".
     - `timerange_seconds`: The time range in seconds. Default is 300 seconds.
     - `timerange_type`: The type of time range. Default is "relative".
+    - `page`: Page number, starting from 0.
+    - `per_page`: Number of results per page.
 
 ## Connecting via Webhook (omnidirectional)
 This provider supports webhooks.
@@ -69,3 +71,4 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 8. Click on "Add Notification" and select the "keep-graylog-webhook-integration" that you created in step 3.
 9. Click on "Add Notification".
 10. Click `Next` > `Update` event definition
+
