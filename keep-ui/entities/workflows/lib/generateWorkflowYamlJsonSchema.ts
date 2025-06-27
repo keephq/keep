@@ -13,7 +13,6 @@ const makeRequiredEitherStepsOrActions: PostProcessCallback = (
   refs
 ) => {
   const path = refs.currentPath.join("/");
-  let rootVisited = false;
   if (jsonSchema && path === rootPath) {
     // @ts-ignore
     jsonSchema.required = jsonSchema.required.filter(
@@ -34,10 +33,6 @@ const makeRequiredEitherStepsOrActions: PostProcessCallback = (
         },
       },
     ];
-    rootVisited = true;
-  }
-  if (!rootVisited) {
-    throw new Error(`${rootPath} not found in the schema`);
   }
   return jsonSchema;
 };
