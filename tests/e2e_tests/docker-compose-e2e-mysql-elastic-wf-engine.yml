@@ -65,6 +65,8 @@ services:
     depends_on:
       keep-database:
         condition: service_healthy
+      elasticsearch-wf-engine:
+        condition: service_healthy
 
   keep-redis:
     image: redis/redis-stack
