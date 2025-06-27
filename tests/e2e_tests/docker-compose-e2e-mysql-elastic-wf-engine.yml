@@ -50,6 +50,7 @@ services:
       - POSTHOG_DISABLED=true
       - SENTRY_DISABLED=true
 
+
   # Backend Services
   keep-backend:
     # to be replaced in github actions
@@ -69,8 +70,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - keep-database
-      - elasticsearch-wf-engine
+      keep-database:
+        condition: service_healthy
+      elasticsearch-wf-engine:
+        condition: service_healthy
 
   keep-redis:
     image: redis/redis-stack
