@@ -21,7 +21,7 @@ services:
     environment:
       - bootstrap.memory_lock=true
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - ELASTIC_PASSWORD=keeptests
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
