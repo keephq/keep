@@ -39,17 +39,19 @@ def create_elastic_client(
         )
     else:
         logger.debug("Using API key for Elastic")
-        es_client = Elasticsearch(
-            api_key=api_key,
-            hosts=hosts,
-            verify_certs=verify_certs,
-            **kwargs,
-        )
+
         MAX_RETRIES = 10
         RETRY_DELAY = 5  # seconds
+        es_client = None
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
+                es_client = Elasticsearch(
+                    api_key=api_key,
+                    hosts=hosts,
+                    verify_certs=verify_certs,
+                    **kwargs,
+                )
                 health = es_client.cluster.health()
                 print(f"[Attempt {attempt}] Cluster status: {health['status']}")
                 if health["status"] in {"green", "yellow"}:
