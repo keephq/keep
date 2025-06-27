@@ -840,6 +840,7 @@ def test_run_workflow_from_alert_and_incident(
             "button", name="Run workflow"
         ).click()
         modal = page.get_by_test_id("manual-run-workflow-modal")
+        select = modal.get_by_test_id("manual-run-workflow-select-control")
         choose_combobox_option_with_retry(page, select, "Log every alert")
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
