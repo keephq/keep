@@ -1020,7 +1020,6 @@ def test_incident_workflow_enrichment_integration(db_session, client, test_app):
     incident_id = incident_data["id"]
 
     # wait a bit, to be sure workflow is added to the queue
-    sleep(2)
     workflow_manager = WorkflowManager.get_instance()
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
