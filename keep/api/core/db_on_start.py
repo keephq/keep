@@ -63,7 +63,7 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
             if not tenant:
                 # Do everything related with single tenant creation in here
                 logger.info("Creating single tenant")
-                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+                session.add(Tenant(id=tenant_id, name=tenant_id))
             else:
                 logger.info("Single tenant already exists")
 

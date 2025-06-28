@@ -4,6 +4,7 @@ import jwt
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
+from keep.api.core.db import create_tenant as create_tenant_in_db
 from keep.api.core.db import create_user as create_user_in_db
 from keep.api.core.db import delete_user as delete_user_from_db
 from keep.api.core.db import get_user
@@ -52,7 +53,7 @@ class DbIdentityManager(BaseIdentityManager):
             token = jwt.encode(
                 {
                     "email": user.username,
-                    "tenant_id": SINGLE_TENANT_UUID,
+                    "tenant_id": user.username.split('@')[1],
                     "role": user.role,
                 },
                 jwt_secret,
@@ -61,14 +62,15 @@ class DbIdentityManager(BaseIdentityManager):
             # return the token
             return {
                 "accessToken": token,
-                "tenantId": SINGLE_TENANT_UUID,
-                "email": user.username,
+                "tenantId": user.username,
+                "email": user.username.split('@')[1],
                 "role": user.role,
             }
 
         self.logger.info("Added signin endpoint")
 
     def get_users(self, tenant_id=None) -> list[User]:
+        tenant_id = tenant_id or self.tenant_id
         users = get_users_from_db(tenant_id)
         users = [
             User(
@@ -87,8 +89,13 @@ class DbIdentityManager(BaseIdentityManager):
     ) -> dict:
         # Username is redundant, but we need it in other auth types
         # Groups: for future use
+        tenant_id = user_email.split('@')[1]
+        if self.tenant_id != tenant_id and self.tenant_id != SINGLE_TENANT_UUID:
+            raise HTTPException(status_code=401, detail=f"A user at {tenant_id} can't be created by a user at {self.tenant_id}")
+        
         try:
-            user = create_user_in_db(self.tenant_id, user_email, password, role)
+            tenant_id = create_tenant_in_db(tenant_id)
+            user = create_user_in_db(tenant_id, user_email, password, role)
             return User(
                 email=user_email,
                 name=user_email,
@@ -100,6 +107,10 @@ class DbIdentityManager(BaseIdentityManager):
             raise HTTPException(status_code=409, detail="User already exists")
 
     def delete_user(self, user_email: str) -> dict:
+        tenant_id = user_email.split('@')[1]
+        if self.tenant_id != tenant_id and self.tenant_id != SINGLE_TENANT_UUID:
+            raise HTTPException(status_code=401, detail=f"A user at {tenant_id} can't be deleted by a user at {self.tenant_id}")
+
         try:
             delete_user_from_db(user_email)
             return {"status": "OK"}

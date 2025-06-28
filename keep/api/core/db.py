@@ -2036,7 +2036,7 @@ def get_user(username, password, update_sign_in=True):
     with Session(engine, expire_on_commit=False) as session:
         user = session.exec(
             select(User)
-            .where(User.tenant_id == SINGLE_TENANT_UUID)
+            .where(User.tenant_id == username.split('@')[1])
             .where(User.username == username)
             .where(User.password_hash == password_hash)
         ).first()
@@ -2053,9 +2053,11 @@ def get_users(tenant_id=None):
     tenant_id = tenant_id or SINGLE_TENANT_UUID
 
     with Session(engine) as session:
-        users = session.exec(select(User).where(User.tenant_id == tenant_id)).all()
+        if tenant_id == SINGLE_TENANT_UUID:
+            users = session.exec(select(User)).all()
+        else:
+            users = session.exec(select(User).where(User.tenant_id == tenant_id)).all()
     return users
-
 
 def delete_user(username):
     from keep.api.models.db.user import User
@@ -2063,7 +2065,7 @@ def delete_user(username):
     with Session(engine) as session:
         user = session.exec(
             select(User)
-            .where(User.tenant_id == SINGLE_TENANT_UUID)
+            .where(User.tenant_id == username.split('@')[1])
             .where(User.username == username)
         ).first()
         if user:
@@ -5852,6 +5854,7 @@ def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> No
 
 def create_tenant(tenant_name: str) -> str:
     with Session(engine) as session:
+        tenant_id = tenant_name
         try:
             # check if the tenant exist:
             logger.info("Checking if tenant exists")
@@ -5860,7 +5863,6 @@ def create_tenant(tenant_name: str) -> str:
             ).first()
             if not tenant:
                 # Do everything related with single tenant creation in here
-                tenant_id = str(uuid4())
                 logger.info(
                     "Creating tenant",
                     extra={"tenant_id": tenant_id, "tenant_name": tenant_name},
@@ -5897,7 +5899,7 @@ def create_single_tenant_for_e2e(tenant_id: str) -> None:
             if not tenant:
                 # Do everything related with single tenant creation in here
                 logger.info("Creating single tenant", extra={"tenant_id": tenant_id})
-                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+                session.add(Tenant(id=tenant_id, name=tenant_id))
             else:
                 logger.info("Single tenant already exists")
 
