@@ -2028,6 +2028,12 @@ def get_user_by_api_key(api_key: str):
     return api_key.created_by
 
 
+def _get_tenant_id(username):
+    if '@' not in username[1:-1]:
+        return SINGLE_TENANT_UUID
+    else:
+        return username.split('@')[1]
+
 # this is only for single tenant
 def get_user(username, password, update_sign_in=True):
     from keep.api.models.db.user import User
@@ -2036,7 +2042,7 @@ def get_user(username, password, update_sign_in=True):
     with Session(engine, expire_on_commit=False) as session:
         user = session.exec(
             select(User)
-            .where(User.tenant_id == username.split('@')[1])
+            .where(User.tenant_id == _get_tenant_id(username))
             .where(User.username == username)
             .where(User.password_hash == password_hash)
         ).first()
@@ -2065,7 +2071,7 @@ def delete_user(username):
     with Session(engine) as session:
         user = session.exec(
             select(User)
-            .where(User.tenant_id == username.split('@')[1])
+            .where(User.tenant_id == _get_tenant_id(username))
             .where(User.username == username)
         ).first()
         if user:
