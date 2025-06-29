@@ -25,6 +25,7 @@ export function LinkTicketModal({
   onSuccess,
 }: LinkTicketModalProps) {
   const [ticketId, setTicketId] = useState("");
+  const [ticketUrl, setTicketUrl] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const api = useApi();
@@ -58,8 +59,8 @@ export function LinkTicketModal({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!ticketId.trim()) {
-      showErrorToast(new Error("Please enter a ticket ID"));
+    if (!ticketUrl.trim()) {
+      showErrorToast(new Error("Please enter a ticket URL"));
       return;
     }
 
@@ -71,19 +72,29 @@ export function LinkTicketModal({
     setIsLoading(true);
     
     try {
-      // Enrich the incident with the ticket ID
-      const enrichmentKey = selectedProvider ? 
-        getTicketEnrichmentKey(selectedProvider) : 
-        'ticketing_ticket_id';
+      const enrichments: Record<string, string> = {};
+
+      // Add ticket ID if provided
+      if (ticketId.trim()) {
+        const enrichmentKey = selectedProvider ? 
+          getTicketEnrichmentKey(selectedProvider) : 
+          'ticketing_ticket_id';
+        enrichments[enrichmentKey] = ticketId.trim();
+      }
+
+      // Add ticket URL (required)
+      const urlEnrichmentKey = selectedProvider ? 
+        `${selectedProvider.display_name}_ticket_url` : 
+        'ticketing_ticket_url';
+      enrichments[urlEnrichmentKey] = ticketUrl.trim();
         
       await api.post(`/incidents/${incident.id}/enrich`, {
-        enrichments: {
-          [enrichmentKey]: ticketId.trim(),
-        },
+        enrichments,
       });
 
       showSuccessToast("Successfully linked incident to ticket");
       setTicketId("");
+      setTicketUrl("");
       setSelectedProviderId("");
       onSuccess?.();
       onClose();
@@ -96,6 +107,7 @@ export function LinkTicketModal({
 
   const handleCancel = () => {
     setTicketId("");
+    setTicketUrl("");
     setSelectedProviderId("");
     onClose();
   };
@@ -197,12 +209,24 @@ export function LinkTicketModal({
 
         <div>
           <Text className="mb-2">
-            Ticket ID <span className="text-red-500">*</span>
+            Ticket ID <span className="text-gray-500">(optional)</span>
           </Text>
           <TextInput
             placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
             value={ticketId}
             onChange={(e) => setTicketId(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <Text className="mb-2">
+            Ticket URL <span className="text-red-500">*</span>
+          </Text>
+          <TextInput
+            placeholder="Enter the full URL to the ticket (e.g., https://company.atlassian.net/browse/PROJ-123)"
+            value={ticketUrl}
+            onChange={(e) => setTicketUrl(e.target.value)}
             required
             disabled={isLoading}
           />
@@ -220,7 +244,7 @@ export function LinkTicketModal({
             variant="primary"
             color="orange"
             type="submit"
-            disabled={isLoading || !ticketId.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
+            disabled={isLoading || !ticketUrl.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
           >
             {isLoading ? "Linking..." : "Link Ticket"}
           </Button>

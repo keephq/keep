@@ -95,7 +95,7 @@ describe("ticketing-utils", () => {
 
     it("should extract Zendesk domain", () => {
       const result = getProviderBaseUrl(mockZendeskProvider);
-      expect(result).toBe("company.zendesk.com");
+      expect(result).toBe("https://company.zendesk.com");
     });
 
     it("should return empty string for provider without authentication", () => {
@@ -133,7 +133,7 @@ describe("ticketing-utils", () => {
         key: "zendesk_ticket_id"
       };
       const result = getTicketViewUrl(linkedTicket);
-      expect(result).toBe("company.zendesk.com/agent/tickets/12345");
+      expect(result).toBe("https://company.zendesk.com/agent/tickets/12345");
     });
 
     it("should return empty string for provider without base URL", () => {
@@ -151,24 +151,36 @@ describe("ticketing-utils", () => {
   describe("getTicketCreateUrl", () => {
     it("should construct ServiceNow create URL with parameters", () => {
       const result = getTicketCreateUrl(mockServiceNowProvider, "Test description", "Test title");
-      expect(result).toContain("https://company.service-now.com/now/nav/ui/classic/params/target/incident.do");
-      expect(result).toContain("description=Test+description");
-      expect(result).toContain("title=Test+title");
+      expect(result).toContain("https://company.service-now.com/now/sow/record/incident/-1/params/short_description=Test title&description=Test description");
     });
 
     it("should construct Jira create URL with parameters", () => {
       const result = getTicketCreateUrl(mockJiraProvider, "Test description", "Test title");
-      expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa?description=Test+description&title=Test+title");
+      expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa");
     });
 
     it("should construct Zendesk create URL with parameters", () => {
       const result = getTicketCreateUrl(mockZendeskProvider, "Test description", "Test title");
-      expect(result).toBe("company.zendesk.com/agent/filters/new?description=Test+description&title=Test+title");
+      expect(result).toBe("https://company.zendesk.com/agent/filters/new");
     });
 
     it("should handle empty parameters", () => {
       const result = getTicketCreateUrl(mockJiraProvider);
       expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa");
+    });
+
+    it("should use configured ticket creation URL when available", () => {
+      const providerWithCustomUrl = {
+        ...mockServiceNowProvider,
+        details: {
+          authentication: {
+            ...mockServiceNowProvider.details.authentication,
+            ticket_creation_url: "https://custom.service-now.com/custom/create"
+          }
+        }
+      };
+      const result = getTicketCreateUrl(providerWithCustomUrl, "Test description", "Test title");
+      expect(result).toBe("https://custom.service-now.com/custom/create");
     });
   });
 

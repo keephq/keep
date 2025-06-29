@@ -1,0 +1,1 @@
+{"authentication": {"install_webhook": false, "service_now_base_url": "https://service-now2.com", "username": "dolev", "password": "nezer"}, "name": "service-now2"}

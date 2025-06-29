@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Button, Text, Select, SelectItem } from "@tremor/react";
+import { Button, Text, Select, SelectItem, TextInput, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type IncidentDto } from "@/entities/incidents/model";
@@ -20,7 +20,15 @@ export function CreateTicketModal({
   onClose,
 }: CreateTicketModalProps) {
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  const [ticketTitle, setTicketTitle] = useState<string>("");
+  const [ticketDescription, setTicketDescription] = useState<string>("");
   const { installedProviders } = useFetchProviders();
+
+  // Initialize title and description when modal opens or incident changes
+  useEffect(() => {
+    setTicketTitle(incident.user_generated_name || "");
+    setTicketDescription(incident.user_summary || "");
+  }, [incident, isOpen]);
 
   const ticketingProviders = useMemo(() => {
     return installedProviders.filter(
@@ -44,10 +52,7 @@ export function CreateTicketModal({
   const handleCreateTicket = () => {
     if (!selectedProvider) return;
     
-    const description = incident.user_summary || "";
-    const title = incident.user_generated_name || "";
-    
-    const createUrl = getTicketCreateUrl(selectedProvider, description, title);
+    const createUrl = getTicketCreateUrl(selectedProvider, ticketDescription, ticketTitle);
     
     if (createUrl) {
       window.open(createUrl);
@@ -57,6 +62,8 @@ export function CreateTicketModal({
 
   const handleCancel = () => {
     setSelectedProviderId("");
+    setTicketTitle("");
+    setTicketDescription("");
     onClose();
   };
 
@@ -139,6 +146,31 @@ export function CreateTicketModal({
           </div>
         ) : null}
 
+        {/* Ticket Title Input */}
+        <div>
+          <Text className="mb-2">
+            Ticket Title <span className="text-red-500">*</span>
+          </Text>
+          <TextInput
+            placeholder="Enter ticket title"
+            value={ticketTitle}
+            onChange={(e) => setTicketTitle(e.target.value)}
+          />
+        </div>
+
+        {/* Ticket Description Input */}
+        <div>
+          <Text className="mb-2">
+            Ticket Description
+          </Text>
+          <Textarea
+            placeholder="Enter ticket description"
+            value={ticketDescription}
+            onChange={(e) => setTicketDescription(e.target.value)}
+            rows={4}
+          />
+        </div>
+
         {/* Show selected provider info */}
         {selectedProvider && (
           <div className="bg-gray-50 p-3 rounded-md">
@@ -147,16 +179,14 @@ export function CreateTicketModal({
               {selectedProvider.display_name || selectedProvider.id}
             </Text>
             <Text className="text-sm text-gray-500 mt-1">
-              You will be redirected to the {selectedProvider.display_name || selectedProvider.id} 
-              
-              ticketing provider with the following details:
+              You will be redirected to the {selectedProvider.display_name || selectedProvider.id} instance with the details above.
             </Text>
-            <Text className="text-sm text-gray-600 mt-1">
-              <strong>Title:</strong> {incident.user_generated_name || "No title"}
-            </Text>
-            <Text className="text-sm text-gray-600">
-              <strong>Description:</strong> {incident.user_summary || "No description"}
-            </Text>
+
+            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+              <Text className="text-sm text-blue-700">
+                <strong>Note:</strong> After creating the ticket, you'll need to manually link it back to this incident using the ticket URL.
+              </Text>
+            </div>
           </div>
         )}
         
@@ -171,7 +201,7 @@ export function CreateTicketModal({
             variant="primary"
             color="orange"
             onClick={handleCreateTicket}
-            disabled={!selectedProviderId}
+            disabled={!selectedProviderId || !ticketTitle.trim()}
           >
             Create Ticket
           </Button>

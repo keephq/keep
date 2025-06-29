@@ -13,11 +13,17 @@ export function getProviderBaseUrl(provider: Provider): string {
   if (!provider?.details?.authentication) return "";
   
   const auth = provider.details.authentication;
+  
+  // Handle Zendesk domain specifically
+  if (auth.zendesk_domain) {
+    return `https://${auth.zendesk_domain}`;
+  }
+  
   return auth.base_url || 
          auth.service_now_base_url || 
          auth.jira_base_url || 
-         auth.zendesk_domain ||
-         auth.freshdesk_domain ||
+         auth.host ||
+         auth.host_url ||
          "";
 }
 
@@ -49,6 +55,11 @@ export function getTicketViewUrl(linkedTicket: LinkedTicket): string {
  * Construct a URL to create a new ticket in the provider's system
  */
 export function getTicketCreateUrl(provider: Provider, description: string = "", title: string = ""): string {
+  // First check if the provider has a configured ticket creation URL
+  if (provider.details?.authentication?.ticket_creation_url) {
+    return provider.details.authentication.ticket_creation_url;
+  }
+  
   const baseUrl = getProviderBaseUrl(provider);
   
   if (!baseUrl) return "";
@@ -56,7 +67,7 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
   let createUrl = "";
   switch (provider.type) {
     case "servicenow":
-      createUrl = `${baseUrl}/now/nav/ui/classic/params/target/incident.do%3Fsysparm_query%3D%26sysparm_stack%3Dincident_list.do%3Fsysparm_query%3Dactive%3Dtrue%26sysparm_first_row%3D1%26sysparm_view%3D`;
+      createUrl = `${baseUrl}/now/sow/record/incident/-1/params/short_description=${title}&description=${description}`;
       break;
     case "jira":
       createUrl = `${baseUrl}/secure/CreateIssue.jspa`;
@@ -68,19 +79,11 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
       createUrl = `${baseUrl}/helpdesk/tickets/new`;
       break;
     default:
+      // Generic fallback - try to construct a reasonable URL
       createUrl = `${baseUrl}/tickets/new`;
       break;
   }
   
-  // Add description and title as query parameters if supported
-  if (description || title) {
-    const params = new URLSearchParams();
-    if (description) params.append("description", description);
-    if (title) params.append("title", title);
-    
-    const separator = createUrl.includes("?") ? "&" : "?";
-    createUrl += separator + params.toString();
-  }
   
   return createUrl;
 }
@@ -93,7 +96,7 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
   
   // Look for any ticketing provider's ticket ID in enrichments
   for (const provider of ticketingProviders) {
-    const ticketKey = `${provider.type}_ticket_id`;
+    const ticketKey = `${provider.display_name}_ticket_id`;
     if (incident.enrichments[ticketKey]) {
       return {
         provider,
@@ -109,5 +112,5 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
  * Get the enrichment key for a specific provider
  */
 export function getTicketEnrichmentKey(provider: Provider): string {
-  return `${provider.type}_ticket_id`;
+  return `${provider.display_name}_ticket_id`;
 } 
