@@ -931,3 +931,146 @@ def test_state_alerts_flapping(db_session):
                 assert alert.status == AlertStatus.PENDING
             else:
                 assert alert.status == AlertStatus.FIRING
+
+
+def test_cel_equality_int_str_type_coercion(db_session):
+    """
+    Reproduce the bug: CEL 'field == "2"' should match payload {"field": 2} and vice versa.
+    """
+    from keep.api.models.alert import AlertDto
+    from keep.rulesengine.rulesengine import RulesEngine
+
+    # Case 1: field is int, CEL checks for string
+    alert1 = AlertDto(id="a1", name="test", field=2, fingerprint="fp1")
+    cel1 = 'field == "2"'
+    engine = RulesEngine()
+    result1 = engine.filter_alerts([alert1], cel1)
+    print(f"Case 1 result: {result1}")
+    assert len(result1) == 1, "CEL 'field == \"2\"' should match payload {field: 2}"
+
+    # Case 2: field is str, CEL checks for int
+    alert2 = AlertDto(id="a2", name="test", field="2", fingerprint="fp2")
+    cel2 = "field == 2"
+    result2 = engine.filter_alerts([alert2], cel2)
+    print(f"Case 2 result: {result2}")
+    assert len(result2) == 1, "CEL 'field == 2' should match payload {field: '2'}"
+
+    # Case 3: field is int, CEL checks for int (should match)
+    alert3 = AlertDto(id="a3", name="test", field=2, fingerprint="fp3")
+    cel3 = "field == 2"
+    result3 = engine.filter_alerts([alert3], cel3)
+    assert len(result3) == 1
+
+    # Case 4: field is str, CEL checks for str (should match)
+    alert4 = AlertDto(id="a4", name="test", field="2", fingerprint="fp4")
+    cel4 = 'field == "2"'
+    result4 = engine.filter_alerts([alert4], cel4)
+    assert len(result4) == 1
+
+
+def test_check_if_rule_apply_int_str_type_coercion(db_session):
+    """
+    Test that _check_if_rule_apply handles type coercion between int and str in CEL expressions.
+    This reproduces the same bug as test_cel_equality_int_str_type_coercion but for rule evaluation.
+    """
+    from datetime import datetime
+
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.alert import AlertDto
+    from keep.api.models.db.rule import Rule
+    from keep.rulesengine.rulesengine import RulesEngine
+
+    # Create a test rule with CEL expression that checks for string equality with int payload
+    rule = Rule(
+        id="test-rule-1",
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Rule - Int Str Coercion",
+        definition_cel='field == "2"',  # CEL checks for string "2"
+        definition={},
+        timeframe=60,
+        timeunit="seconds",
+        created_by="test@keephq.dev",
+        creation_time=datetime.utcnow(),
+        grouping_criteria=[],
+        threshold=1,
+    )
+
+    engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+
+    # Case 1: field is int (2), CEL checks for string ("2") - should match
+    alert1 = AlertDto(id="a1", name="test", field=2, fingerprint="fp1", source=["test"])
+    matched_rules1 = engine._check_if_rule_apply(rule, alert1)
+    print(f"Case 1 - field=2, CEL='field == \"2\"': matched_rules={matched_rules1}")
+    assert (
+        len(matched_rules1) == 1
+    ), "Rule with 'field == \"2\"' should match alert with field=2"
+
+    # Case 2: field is string ("2"), CEL checks for int (2) - should match
+    rule2 = Rule(
+        id="test-rule-2",
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Rule - Str Int Coercion",
+        definition_cel="field == 2",  # CEL checks for int 2
+        definition={},
+        timeframe=60,
+        timeunit="seconds",
+        created_by="test@keephq.dev",
+        creation_time=datetime.utcnow(),
+        grouping_criteria=[],
+        threshold=1,
+    )
+
+    alert2 = AlertDto(
+        id="a2", name="test", field="2", fingerprint="fp2", source=["test"]
+    )
+    matched_rules2 = engine._check_if_rule_apply(rule2, alert2)
+    print(f"Case 2 - field='2', CEL='field == 2': matched_rules={matched_rules2}")
+    assert (
+        len(matched_rules2) == 1
+    ), "Rule with 'field == 2' should match alert with field='2'"
+
+    # Case 3: field is int (2), CEL checks for int (2) - should match
+    rule3 = Rule(
+        id="test-rule-3",
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Rule - Int Int",
+        definition_cel="field == 2",  # CEL checks for int 2
+        definition={},
+        timeframe=60,
+        timeunit="seconds",
+        created_by="test@keephq.dev",
+        creation_time=datetime.utcnow(),
+        grouping_criteria=[],
+        threshold=1,
+    )
+
+    alert3 = AlertDto(id="a3", name="test", field=2, fingerprint="fp3", source=["test"])
+    matched_rules3 = engine._check_if_rule_apply(rule3, alert3)
+    print(f"Case 3 - field=2, CEL='field == 2': matched_rules={matched_rules3}")
+    assert (
+        len(matched_rules3) == 1
+    ), "Rule with 'field == 2' should match alert with field=2"
+
+    # Case 4: field is string ("2"), CEL checks for string ("2") - should match
+    rule4 = Rule(
+        id="test-rule-4",
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Rule - Str Str",
+        definition_cel='field == "2"',  # CEL checks for string "2"
+        definition={},
+        timeframe=60,
+        timeunit="seconds",
+        created_by="test@keephq.dev",
+        creation_time=datetime.utcnow(),
+        grouping_criteria=[],
+        threshold=1,
+    )
+
+    alert4 = AlertDto(
+        id="a4", name="test", field="2", fingerprint="fp4", source=["test"]
+    )
+    matched_rules4 = engine._check_if_rule_apply(rule4, alert4)
+    print(f"Case 4 - field='2', CEL='field == \"2\"': matched_rules={matched_rules4}")
+    assert (
+        len(matched_rules4) == 1
+    ), "Rule with 'field == \"2\"' should match alert with field='2'"
