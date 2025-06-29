@@ -7,7 +7,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
-import { getTicketCreateUrl } from "./ticketing-utils";
+import { getProviderBaseUrl, getTicketCreateUrl } from "./ticketing-utils";
 
 interface CreateTicketModalProps {
   incident: IncidentDto;
@@ -75,7 +75,7 @@ export function CreateTicketModal({
         isOpen={isOpen}
         onClose={handleCancel}
         title="Create New Ticket"
-        className="w-[400px]"
+        className="w-[450px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-gray-500">
@@ -98,7 +98,7 @@ export function CreateTicketModal({
         isOpen={isOpen}
         onClose={handleCancel}
         title="Create New Ticket"
-        className="w-[400px]"
+        className="w-[450px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-red-500">
@@ -119,9 +119,9 @@ export function CreateTicketModal({
       isOpen={isOpen}
       onClose={handleCancel}
       title="Create New Ticket"
-      className="w-[400px]"
+      className="w-[450px]"
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {/* Only show Select if there are multiple providers */}
         {ticketingProviders.length > 1 ? (
           <div>
@@ -147,7 +147,7 @@ export function CreateTicketModal({
                       {provider.display_name || provider.id}
                       {provider.details?.authentication && (
                         <span className="text-gray-500 ml-2">
-                          ({provider.type})
+                          ({getProviderBaseUrl(provider)})
                         </span>
                       )}
                     </span>
@@ -188,7 +188,7 @@ export function CreateTicketModal({
           <>
             <Text className="text-sm font-medium mb-1">Selected Provider</Text>
 
-            <div className="bg-gray-50 p-4 rounded-md space-y-2">
+            <div className="bg-gray-50 p-3 rounded-md space-y-2">
               <div className="flex items-center gap-3">
                 <DynamicImageProviderIcon
                   src={`/icons/${selectedProvider.type}-icon.png`}
@@ -200,10 +200,13 @@ export function CreateTicketModal({
                 <Text className="text-base text-gray-600">
                   {selectedProvider.display_name || selectedProvider.id}
                 </Text>
-              </div>
 
+              </div>
+              <Text className="text-xsm text-gray-500 ml-2 break-all">
+                  {getProviderBaseUrl(selectedProvider)}
+                </Text>
             </div>
-            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-md">
               <Text className="text-sm text-blue-700">
                 <strong>Note:</strong> After creating the ticket, you'll need to manually link it back to this incident using the ticket URL.
               </Text>
@@ -215,7 +218,7 @@ export function CreateTicketModal({
         )}
 
 
-        <div className="flex justify-end gap-2 pt-3">
+        <div className="flex justify-end gap-2 pt-2">
           <Button
             variant="secondary"
             onClick={handleCancel}

@@ -1,0 +1,1 @@
+{"authentication": {"install_webhook": false, "service_now_base_url": "https://dolev.com", "username": "dolev", "password": "nez", "ticket_creation_url": "https://tickets"}, "name": "dolev2"}

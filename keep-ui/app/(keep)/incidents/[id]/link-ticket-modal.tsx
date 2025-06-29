@@ -191,9 +191,11 @@ export function LinkTicketModal({
                     />
                     <span>
                       {provider.display_name || provider.id}
+                    </span>
+                    <span>
                       {provider.details?.authentication && (
                         <span className="text-gray-500 ml-2">
-                          ({provider.type})
+                          ({getProviderBaseUrl(provider)})
                         </span>
                       )}
                     </span>
@@ -208,7 +210,7 @@ export function LinkTicketModal({
         {(ticketingProviders.length === 1 || selectedProviderId) && (
           <>
             <Text className="text-sm font-medium mb-1">Selected Provider</Text>
-            <div className="bg-gray-50 p-4 rounded-md space-y-2">
+            <div className="bg-gray-50 p-3 rounded-md space-y-2">
               <div className="flex items-center gap-3">
                 {selectedProvider && (
                   <>
@@ -225,53 +227,56 @@ export function LinkTicketModal({
                   </>
                 )}
               </div>
+              <Text className="text-xsm text-gray-500 ml-2 break-all">
+                {selectedProvider ? getProviderBaseUrl(selectedProvider) : ""}
+              </Text>
             </div>
           </>
         )}
 
-            <div>
-              <Text className="mb-2">
-                Ticket ID <span className="text-gray-500">(optional)</span>
-              </Text>
-              <TextInput
-                placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
-                value={ticketId}
-                onChange={(e) => setTicketId(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+        <div>
+          <Text className="mb-2">
+            Ticket ID <span className="text-gray-500">(optional)</span>
+          </Text>
+          <TextInput
+            placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
+            value={ticketId}
+            onChange={(e) => setTicketId(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
 
-            <div>
-              <Text className="mb-2">
-                Ticket URL <span className="text-red-500">*</span>
-              </Text>
-              <TextInput
-                placeholder="Enter the full URL to the ticket (e.g., https://company.atlassian.net/browse/PROJ-123)"
-                value={ticketUrl}
-                onChange={(e) => setTicketUrl(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
+        <div>
+          <Text className="mb-2">
+            Ticket URL <span className="text-red-500">*</span>
+          </Text>
+          <TextInput
+            placeholder="Enter the full URL to the ticket (e.g., https://company.atlassian.net/browse/PROJ-123)"
+            value={ticketUrl}
+            onChange={(e) => setTicketUrl(e.target.value)}
+            required
+            disabled={isLoading}
+          />
+        </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="secondary"
-                onClick={handleCancel}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                color="orange"
-                type="submit"
-                disabled={isLoading || !ticketUrl.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
-              >
-                {isLoading ? "Linking..." : "Link Ticket"}
-              </Button>
-            </div>
-          </form>
+        <div className="flex justify-end gap-2 pt-4">
+          <Button
+            variant="secondary"
+            onClick={handleCancel}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            color="orange"
+            type="submit"
+            disabled={isLoading || !ticketUrl.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
+          >
+            {isLoading ? "Linking..." : "Link Ticket"}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 } 
