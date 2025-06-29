@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Button, Text, Select, SelectItem } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui";
+import { DynamicImageProviderIcon } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { showSuccessToast, showErrorToast } from "@/shared/ui";
@@ -33,7 +34,7 @@ export function LinkTicketModal({
 
   const ticketingProviders = useMemo(() => {
     return installedProviders.filter(
-      (provider: Provider) => 
+      (provider: Provider) =>
         provider.tags.includes("ticketing")
     );
   }, [installedProviders]);
@@ -58,7 +59,7 @@ export function LinkTicketModal({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!ticketUrl.trim()) {
       showErrorToast(new Error("Please enter a ticket URL"));
       return;
@@ -70,24 +71,24 @@ export function LinkTicketModal({
     }
 
     setIsLoading(true);
-    
+
     try {
       const enrichments: Record<string, string> = {};
 
       // Add ticket ID if provided
       if (ticketId.trim()) {
-        const enrichmentKey = selectedProvider ? 
-          getTicketEnrichmentKey(selectedProvider) : 
+        const enrichmentKey = selectedProvider ?
+          getTicketEnrichmentKey(selectedProvider) :
           'ticketing_ticket_id';
         enrichments[enrichmentKey] = ticketId.trim();
       }
 
       // Add ticket URL (required)
-      const urlEnrichmentKey = selectedProvider ? 
-        `${selectedProvider.type}_ticket_url` : 
+      const urlEnrichmentKey = selectedProvider ?
+        `${selectedProvider.type}_ticket_url` :
         'ticketing_ticket_url';
       enrichments[urlEnrichmentKey] = ticketUrl.trim();
-        
+
       await api.post(`/incidents/${incident.id}/enrich`, {
         enrichments,
       });
@@ -180,12 +181,23 @@ export function LinkTicketModal({
             >
               {ticketingProviders.map((provider) => (
                 <SelectItem key={provider.id} value={provider.id}>
-                  {provider.display_name || provider.id}
-                  {provider.details?.authentication && (
-                    <span className="text-gray-500 ml-2">
-                      ({provider.type})
+                  <div className="flex items-center gap-2">
+                    <DynamicImageProviderIcon
+                      src={`/icons/${provider.type}-icon.png`}
+                      width={20}
+                      height={20}
+                      alt={provider.type}
+                      providerType={provider.type}
+                    />
+                    <span>
+                      {provider.display_name || provider.id}
+                      {provider.details?.authentication && (
+                        <span className="text-gray-500 ml-2">
+                          ({provider.type})
+                        </span>
+                      )}
                     </span>
-                  )}
+                  </div>
                 </SelectItem>
               ))}
             </Select>
@@ -194,62 +206,72 @@ export function LinkTicketModal({
 
         {/* Show selected provider info if single provider or provider is selected */}
         {(ticketingProviders.length === 1 || selectedProviderId) && (
-          <div className="bg-gray-50 p-3 rounded-md">
-            <Text className="text-sm font-medium mb-1">Selected Provider:</Text>
-            <Text className="text-sm text-gray-600">
-              {selectedProvider?.display_name || selectedProvider?.id}
-            </Text>
-            {providerBaseUrl && (
-              <Text className="text-sm text-gray-600">
-                Base URL: {providerBaseUrl}
-              </Text>
-            )}
-          </div>
+          <>
+            <Text className="text-sm font-medium mb-1">Selected Provider</Text>
+            <div className="bg-gray-50 p-4 rounded-md space-y-2">
+              <div className="flex items-center gap-3">
+                {selectedProvider && (
+                  <>
+                    <DynamicImageProviderIcon
+                      src={`/icons/${selectedProvider.type}-icon.png`}
+                      width={30}
+                      height={30}
+                      alt={selectedProvider.type}
+                      providerType={selectedProvider.type}
+                    />
+                    <Text className="text-base text-gray-600">
+                      {selectedProvider.display_name || selectedProvider.id}
+                    </Text>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
         )}
 
-        <div>
-          <Text className="mb-2">
-            Ticket ID <span className="text-gray-500">(optional)</span>
-          </Text>
-          <TextInput
-            placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
-            value={ticketId}
-            onChange={(e) => setTicketId(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
+            <div>
+              <Text className="mb-2">
+                Ticket ID <span className="text-gray-500">(optional)</span>
+              </Text>
+              <TextInput
+                placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
+                value={ticketId}
+                onChange={(e) => setTicketId(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
 
-        <div>
-          <Text className="mb-2">
-            Ticket URL <span className="text-red-500">*</span>
-          </Text>
-          <TextInput
-            placeholder="Enter the full URL to the ticket (e.g., https://company.atlassian.net/browse/PROJ-123)"
-            value={ticketUrl}
-            onChange={(e) => setTicketUrl(e.target.value)}
-            required
-            disabled={isLoading}
-          />
-        </div>
-        
-        <div className="flex justify-end gap-2 pt-4">
-          <Button
-            variant="secondary"
-            onClick={handleCancel}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            color="orange"
-            type="submit"
-            disabled={isLoading || !ticketUrl.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
-          >
-            {isLoading ? "Linking..." : "Link Ticket"}
-          </Button>
-        </div>
-      </form>
+            <div>
+              <Text className="mb-2">
+                Ticket URL <span className="text-red-500">*</span>
+              </Text>
+              <TextInput
+                placeholder="Enter the full URL to the ticket (e.g., https://company.atlassian.net/browse/PROJ-123)"
+                value={ticketUrl}
+                onChange={(e) => setTicketUrl(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="secondary"
+                onClick={handleCancel}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                color="orange"
+                type="submit"
+                disabled={isLoading || !ticketUrl.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
+              >
+                {isLoading ? "Linking..." : "Link Ticket"}
+              </Button>
+            </div>
+          </form>
     </Modal>
   );
 } 

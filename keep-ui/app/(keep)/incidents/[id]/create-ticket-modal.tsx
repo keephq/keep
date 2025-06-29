@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button, Text, Select, SelectItem, TextInput, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
+import { DynamicImageProviderIcon } from "@/components/ui";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
@@ -32,7 +33,7 @@ export function CreateTicketModal({
 
   const ticketingProviders = useMemo(() => {
     return installedProviders.filter(
-      (provider: Provider) => 
+      (provider: Provider) =>
         provider.tags.includes("ticketing")
     );
   }, [installedProviders]);
@@ -51,9 +52,9 @@ export function CreateTicketModal({
 
   const handleCreateTicket = () => {
     if (!selectedProvider) return;
-    
+
     const createUrl = getTicketCreateUrl(selectedProvider, ticketDescription, ticketTitle);
-    
+
     if (createUrl) {
       window.open(createUrl);
       onClose();
@@ -74,7 +75,7 @@ export function CreateTicketModal({
         isOpen={isOpen}
         onClose={handleCancel}
         title="Create New Ticket"
-        className="w-[500px]"
+        className="w-[400px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-gray-500">
@@ -97,7 +98,7 @@ export function CreateTicketModal({
         isOpen={isOpen}
         onClose={handleCancel}
         title="Create New Ticket"
-        className="w-[500px]"
+        className="w-[400px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-red-500">
@@ -118,9 +119,9 @@ export function CreateTicketModal({
       isOpen={isOpen}
       onClose={handleCancel}
       title="Create New Ticket"
-      className="w-[500px]"
+      className="w-[400px]"
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {/* Only show Select if there are multiple providers */}
         {ticketingProviders.length > 1 ? (
           <div>
@@ -134,12 +135,23 @@ export function CreateTicketModal({
             >
               {ticketingProviders.map((provider) => (
                 <SelectItem key={provider.id} value={provider.id}>
-                  {provider.display_name || provider.id}
-                  {provider.details?.authentication && (
-                    <span className="text-gray-500 ml-2">
-                      ({provider.type})
+                  <div className="flex items-center gap-2">
+                    <DynamicImageProviderIcon
+                      src={`/icons/${provider.type}-icon.png`}
+                      width={20}
+                      height={20}
+                      alt={provider.type}
+                      providerType={provider.type}
+                    />
+                    <span>
+                      {provider.display_name || provider.id}
+                      {provider.details?.authentication && (
+                        <span className="text-gray-500 ml-2">
+                          ({provider.type})
+                        </span>
+                      )}
                     </span>
-                  )}
+                  </div>
                 </SelectItem>
               ))}
             </Select>
@@ -173,24 +185,37 @@ export function CreateTicketModal({
 
         {/* Show selected provider info */}
         {selectedProvider && (
-          <div className="bg-gray-50 p-3 rounded-md">
-            <Text className="text-sm font-medium mb-1">Selected Provider:</Text>
-            <Text className="text-sm text-gray-600">
-              {selectedProvider.display_name || selectedProvider.id}
-            </Text>
-            <Text className="text-sm text-gray-500 mt-1">
-              You will be redirected to the {selectedProvider.display_name || selectedProvider.id} instance with the details above.
-            </Text>
+          <>
+            <Text className="text-sm font-medium mb-1">Selected Provider</Text>
 
-            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="bg-gray-50 p-4 rounded-md space-y-2">
+              <div className="flex items-center gap-3">
+                <DynamicImageProviderIcon
+                  src={`/icons/${selectedProvider.type}-icon.png`}
+                  width={30}
+                  height={30}
+                  alt={selectedProvider.type}
+                  providerType={selectedProvider.type}
+                />
+                <Text className="text-base text-gray-600">
+                  {selectedProvider.display_name || selectedProvider.id}
+                </Text>
+              </div>
+
+            </div>
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
               <Text className="text-sm text-blue-700">
                 <strong>Note:</strong> After creating the ticket, you'll need to manually link it back to this incident using the ticket URL.
               </Text>
             </div>
-          </div>
+            <Text className="text-sm text-orange-500 mt-1">
+              You will be redirected to the {selectedProvider.display_name || selectedProvider.id} instance with the details above.
+            </Text>
+          </>
         )}
-        
-        <div className="flex justify-end gap-2 pt-4">
+
+
+        <div className="flex justify-end gap-2 pt-3">
           <Button
             variant="secondary"
             onClick={handleCancel}
