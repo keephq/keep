@@ -1780,7 +1780,7 @@ def test_workflow_with_on_failure_action(db_session, workflow_manager, mocker):
     )
 
 
-def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
+def test_get_all_workflows_with_last_execution(db_session, workflow_manager, mocker):
     workflow = Workflow(
         id="log-every-alert",
         name="log-every-alert",
@@ -1789,6 +1789,7 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
         created_by="borat@keephq.dev",
         interval=0,
         workflow_raw=LOG_EVERY_ALERT_WORKFLOW,
+        last_updated=datetime.now(tz=pytz.utc),
     )
     db_session.add(workflow)
     db_session.commit()
@@ -1817,6 +1818,16 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
         severity=AlertSeverity.CRITICAL,
         lastReceived=datetime.now(tz=pytz.utc).isoformat(),
         should_fail="true",
+    )
+
+    def mock_notify(*args, **kwargs):
+        if kwargs.get("invalid-argument-to-fail-workflow"):
+            raise Exception("Workflow failed")
+        return True
+
+    mocker.patch(
+        "keep.providers.console_provider.console_provider.ConsoleProvider._notify",
+        mock_notify,
     )
 
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert1])

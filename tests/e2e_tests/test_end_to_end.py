@@ -35,6 +35,7 @@ from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
 from tests.e2e_tests.utils import (
     assert_connected_provider_count,
     assert_scope_text_count,
+    choose_combobox_option_with_retry,
     delete_provider,
     init_e2e_test,
     install_webhook_provider,
@@ -823,10 +824,8 @@ def test_run_workflow_from_alert_and_incident(
         page.wait_for_timeout(200)
         expect(modal).to_be_visible()
         page.wait_for_timeout(200)
-        modal.get_by_test_id("manual-run-workflow-select-control").click()
-        modal.get_by_role(
-            "option", name=re.compile(r"Log every incident")
-        ).first.click()
+        select = modal.get_by_test_id("manual-run-workflow-select-control")
+        choose_combobox_option_with_retry(page, select, "Log every incident")
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
         # Run workflow from alert
@@ -841,8 +840,8 @@ def test_run_workflow_from_alert_and_incident(
             "button", name="Run workflow"
         ).click()
         modal = page.get_by_test_id("manual-run-workflow-modal")
-        modal.get_by_test_id("manual-run-workflow-select-control").click()
-        modal.get_by_role("option", name=re.compile(r"Log every alert")).click()
+        select = modal.get_by_test_id("manual-run-workflow-select-control")
+        choose_combobox_option_with_retry(page, select, "Log every alert")
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
     except Exception:

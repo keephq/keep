@@ -1,14 +1,34 @@
 import json
 import os
+import re
 import sys
 from datetime import datetime
 
 import requests
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from keep.providers.providers_factory import ProvidersFactory
 
 KEEP_UI_URL = "http://localhost:3000"
+
+
+def choose_combobox_option_with_retry(
+    page: Page,
+    combobox_container_locator: Locator,
+    option_text: str,
+    max_retries: int = 3,
+):
+    for i in range(max_retries):
+        combobox_container_locator.click()
+        combobox = combobox_container_locator.get_by_role("combobox")
+        combobox.fill(option_text)
+        combobox.press("Enter")
+        if combobox_container_locator.get_by_text(re.compile(option_text)).is_visible():
+            return
+        page.wait_for_timeout(100)
+    raise Exception(
+        f"Failed to choose combobox option {option_text}, current value: {combobox.input_value()}"
+    )
 
 
 def trigger_alert(provider_name, tenant_id=None):
@@ -236,6 +256,12 @@ def save_failure_artifacts(page, log_entries=[], prefix=""):
 
     if prefix:
         current_test_name = prefix + "_" + current_test_name
+
+    # print current active element
+    print(
+        "current active element: ",
+        page.locator("body").evaluate("() => document.activeElement.outerHTML")[:200],
+    )
 
     # Save screenshot
     page.screenshot(path=current_test_name + ".png")

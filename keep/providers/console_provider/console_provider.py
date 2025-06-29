@@ -26,10 +26,18 @@ class ConsoleProvider(BaseProvider):
         # No need to dispose of anything, so just do nothing.
         pass
 
-    def _query(self, message: str = "", logger: bool = False, severity: str = "info"):
-        return self._notify(message, logger, severity)
+    def _query(
+        self, message: str = "", logger: bool = False, severity: str = "info", **kwargs
+    ):
+        return self._notify(message, logger, severity, **kwargs)
 
-    def _notify(self, message: str = "", logger: bool = False, severity: str = "info"):
+    def _notify(
+        self,
+        message: str = "",
+        logger: bool = False,
+        severity: str = "info",
+        **kwargs,  # `enrich_alert` is not removed from kwargs, so we need to allow as part of kwargs
+    ):
         """
         Output alert message simply using the print method.
 

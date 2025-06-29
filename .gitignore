@@ -217,6 +217,7 @@ scripts/keep_slack_bot.py
 *.db
 providers_cache.json
 providers_list.json
+workflow-yaml-json-schema.json
 
 tests/provision/*
 !tests/provision/workflows*
