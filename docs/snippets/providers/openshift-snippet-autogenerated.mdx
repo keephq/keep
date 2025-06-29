@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -17,6 +17,25 @@ Certain scopes may be required to perform specific actions or queries via the pr
 This provider can be used in workflows.
 
 
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query openshift
+      provider: openshift
+      config: "{{ provider.my_provider_name }}"
+      with:
+        command_type: {value}  # The type of query to perform. Supported queries are:
+- get_logs: Get logs from a pod  
+- get_events: Get events for a namespace or pod
+- get_pods: List pods in a namespace or across all namespaces
+- get_node_pressure: Get node pressure conditions
+- get_pvc: List persistent volume claims
+- get_routes: List OpenShift routes
+- get_deploymentconfigs: List OpenShift deployment configs
+- get_projects: List OpenShift projects
+        # Additional arguments for the query.
+```
+
 
 As "action" to make changes or update data, example:
 ```yaml
@@ -25,11 +44,18 @@ actions:
       provider: openshift
       config: "{{ provider.my_provider_name }}"
       with:
-        kind: {value}  # The kind of object to restart. Could be deployments, statefulset, daemonset.
-        name: {value}  # The name of the object to restart
-        project_name: {value}  # The project name where the object is located
+        action: {value}  # The action to perform. Supported actions are:
+- rollout_restart: Restart a deployment, statefulset, or daemonset
+- restart_pod: Restart a pod by deleting it
+- scale_deployment: Scale a deployment to specified replicas
+- scale_deploymentconfig: Scale a deployment config to specified replicas
+        # Additional arguments for the action.
 ```
 
 
 
-If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
+
+Check the following workflow examples:
+- [openshift_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/openshift_basic.yml)
+- [openshift_monitoring_and_remediation.yml](https://github.com/keephq/keep/blob/main/examples/workflows/openshift_monitoring_and_remediation.yml)
+- [openshift_pod_restart.yml](https://github.com/keephq/keep/blob/main/examples/workflows/openshift_pod_restart.yml)

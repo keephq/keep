@@ -39,7 +39,7 @@ class EksProviderAuthConfig:
     )
 
     access_key: str = dataclasses.field(
-        default=True,
+        default=None,
         metadata={
             "required": False,
             "description": "AWS access key (Leave empty if using IAM role at EC2)",
@@ -48,7 +48,7 @@ class EksProviderAuthConfig:
     )
 
     secret_access_key: str = dataclasses.field(
-        default=True,
+        default=None,
         metadata={
             "required": False,
             "description": "AWS secret access key (Leave empty if using IAM role at EC2)",
