@@ -5,7 +5,7 @@ This module contains the CRUD database functions for Keep.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import TypedDict, Tuple
+from typing import Tuple
 
 from sqlalchemy import and_, case, desc, func, literal_column, select, text
 from sqlmodel import Session
@@ -18,14 +18,28 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
 )
-from keep.api.core.db import existed_or_new_session
+from keep.api.core.db import engine
 from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.core.cel_to_sql.ast_nodes import DataType
+from keep.workflowmanager.dal.models.workflowdalmodel import (
+    WorkflowWithLastExecutionsDalModel,
+)
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
+from keep.workflowmanager.dal.sql.mappers import (
+    workflow_from_db_to_dto,
+)
 
 workflow_field_configurations = [
+    FieldMappingConfiguration(
+        map_from_pattern="id",
+        map_to="workflow.id",
+        data_type=DataType.STRING,
+    ),
     FieldMappingConfiguration(
         map_from_pattern="name",
         map_to="workflow.name",
@@ -250,14 +264,6 @@ def build_workflows_query(
     return query
 
 
-class WorkflowWithLastExecutions(TypedDict):
-    workflow: Workflow
-    workflow_last_run_started: datetime
-    workflow_last_run_time: datetime
-    workflow_last_run_status: str
-    workflow_last_executions: list[WorkflowExecution]
-
-
 def get_workflows_with_last_executions_v2(
     tenant_id: str,
     cel: str,
@@ -267,8 +273,8 @@ def get_workflows_with_last_executions_v2(
     sort_dir: str,
     fetch_last_executions: int = 15,
     session: Session = None,
-) -> Tuple[list[WorkflowWithLastExecutions], int]:
-    with existed_or_new_session(session) as session:
+) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
+    with Session(engine) as session:
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id, cel=cel
         )
@@ -310,12 +316,14 @@ def get_workflows_with_last_executions_v2(
             if workflow_id not in execution_dict:
                 execution_dict[workflow_id] = []
             execution_dict[workflow_id].append(
-                {
-                    "id": execution_id,
-                    "started": started,
-                    "execution_time": execution_time,
-                    "status": status,
-                }
+                WorkflowExecutionDalModel(
+                    id=execution_id,
+                    workflow_id=workflow_id,
+                    tenant_id=tenant_id,
+                    started=started,
+                    execution_time=execution_time,
+                    status=status,
+                )
             )
 
         result = []
@@ -323,13 +331,13 @@ def get_workflows_with_last_executions_v2(
             # workaround for filter. In query status is empty string if it is NULL in DB
             status = None if status == "" else status
             result.append(
-                {
-                    "workflow": workflow,
-                    "workflow_last_run_started": started,
-                    "workflow_last_run_time": execution_time,
-                    "workflow_last_run_status": status,
-                    "workflow_last_executions": execution_dict.get(workflow.id, []),
-                }
+                WorkflowWithLastExecutionsDalModel(
+                    workflow_last_run_started=started,
+                    workflow_last_run_time=execution_time,
+                    workflow_last_run_status=status,
+                    workflow_last_executions=execution_dict.get(workflow.id, []),
+                    **workflow_from_db_to_dto(workflow).dict()
+                )
             )
 
     return result, count

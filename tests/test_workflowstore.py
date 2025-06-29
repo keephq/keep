@@ -128,7 +128,7 @@ def test_get_workflow_meta_data_3832():
 def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
     """Test that workflows are not provisioned twice when provision_workflows is called multiple times."""
     # First provisioning
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -136,7 +136,7 @@ def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
     first_workflow_ids = {w.id for w in first_provisioned}
 
     # Second provisioning
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -167,14 +167,14 @@ def test_provision_workflows_no_duplicates(monkeypatch, db_session, test_app):
 def test_unprovision_workflows(monkeypatch, db_session, test_app):
     """Test that provisioned workflows are deleted when they are no longer provisioned via env or dir."""
     # First provisioning
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
     assert len(first_provisioned) == 1  # There is 1 workflow in workflows_3 directory
 
     monkeypatch.delenv("KEEP_WORKFLOWS_DIRECTORY")
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -197,7 +197,7 @@ def test_invalid_workflows_dir(monkeypatch, db_session, test_app):
 
     # First provisioning
     with pytest.raises(FileNotFoundError):
-        WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+        WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after first provisioning
     provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -217,7 +217,7 @@ def test_invalid_workflows_dir(monkeypatch, db_session, test_app):
 def test_change_workflow_provision_method(monkeypatch, db_session, test_app):
     """Test that provisioned workflows are deleted when they are no longer provisioned via env or dir."""
     # First provisioning
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -227,7 +227,7 @@ def test_change_workflow_provision_method(monkeypatch, db_session, test_app):
     monkeypatch.delenv("KEEP_WORKFLOWS_DIRECTORY")
     monkeypatch.setenv("KEEP_WORKFLOW", VALID_WORKFLOW)
 
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -418,8 +418,8 @@ def test_get_all_workflows_with_last_execution_no_dummy_workflow(db_session):
     )
 
     # Verify that we get the regular workflows but not the dummy workflow
-    workflow_ids = [w["workflow"].id for w in workflows]
-    workflow_names = [w["workflow"].name for w in workflows]
+    workflow_ids = [w.id for w in workflows]
+    workflow_names = [w.name for w in workflows]
 
     # Should contain regular workflows
     assert "regular-workflow-1" in workflow_ids
@@ -501,10 +501,10 @@ def test_get_all_workflows_with_last_execution_no_test_runs(db_session):
 
     assert len(workflows) == 1
     workflow_with_executions = workflows[0]
-    assert workflow_with_executions["workflow"].id == "workflow-1"
-    assert len(workflow_with_executions["workflow_last_executions"]) == 1
+    assert workflow_with_executions.id == "workflow-1"
+    assert len(workflow_with_executions.workflow_last_executions) == 1
     assert (
-        workflow_with_executions["workflow_last_executions"][0]["id"]
+        workflow_with_executions.workflow_last_executions[0].id
         == normal_execution_id
     )
 

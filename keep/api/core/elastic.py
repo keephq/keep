@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from elasticsearch import ApiError, BadRequestError, Elasticsearch
 from elasticsearch.helpers import BulkIndexError, bulk
@@ -10,6 +11,67 @@ from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
+
+
+def create_elastic_client(
+    api_key=None, hosts: list[str] = None, basic_auth=None, **kwargs
+) -> Elasticsearch:
+    logger = logging.getLogger("create_elastic_client")
+
+    api_key = api_key or os.environ.get("ELASTIC_API_KEY")
+    hosts = hosts or os.environ.get("ELASTIC_HOSTS", "").split(",")
+    verify_certs = os.environ.get("ELASTIC_VERIFY_CERTS", "true").lower() == "true"
+    basic_auth = basic_auth or (
+        os.environ.get("ELASTIC_USER"),
+        os.environ.get("ELASTIC_PASSWORD"),
+    )
+
+    if not (api_key or basic_auth) or not hosts:
+        raise ValueError("No Elastic configuration found although Elastic is enabled")
+
+    logger.debug("Using API key for Elastic")
+
+    MAX_RETRIES = 10
+    RETRY_DELAY = 5  # seconds
+    es_client = None
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            if any(basic_auth):
+                logger.debug("Using basic auth for Elastic")
+                es_client = Elasticsearch(
+                    basic_auth=basic_auth,
+                    hosts=hosts,
+                    verify_certs=verify_certs,
+                    **kwargs,
+                )
+            else:
+                logger.debug("Using API key for Elastic")
+                es_client = Elasticsearch(
+                    api_key=api_key,
+                    hosts=hosts,
+                    verify_certs=verify_certs,
+                    **kwargs,
+                )
+
+            health = es_client.cluster.health()
+            logger.warning(f"[Attempt {attempt}] Cluster status: {health['status']}")
+            if health["status"] in {"green", "yellow"}:
+                print("✅ Elasticsearch is healthy.")
+                logger.warning(
+                    f"✅ Elasticsearch is healthy with status: {health['status']}"
+                )
+                return es_client
+        except ConnectionError as e:
+            logger.warning(f"[Attempt {attempt}] Connection error: {e}. Retrying...")
+        except Exception as e:
+            logger.warning(f"[Attempt {attempt}] Unexpected error: {e}. Retrying...")
+
+        if attempt < MAX_RETRIES:
+            time.sleep(RETRY_DELAY)
+
+    logger.error("❌ Elasticsearch did not become healthy in time.")
+    exit(1)
 
 
 class ElasticClient:

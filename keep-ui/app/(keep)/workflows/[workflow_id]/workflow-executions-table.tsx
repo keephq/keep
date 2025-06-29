@@ -232,8 +232,10 @@ export function WorkflowExecutionsTable({
             return "";
           }
 
+          const stringDate = row.original.started.replace("+00:00", "");
+
           const formattedString = formatDistanceToNowStrict(
-            new Date(row.original.started + "Z"),
+            new Date(stringDate + "Z"),
             { addSuffix: true }
           );
 

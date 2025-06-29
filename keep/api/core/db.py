@@ -45,6 +45,7 @@ from sqlalchemy.sql import exists, expression
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
+
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
 from keep.api.core.db_utils import (
@@ -81,6 +82,7 @@ from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-imp
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
 from keep.api.models.time_stamp import TimeStampFilter
+
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +205,7 @@ def create_workflow_execution(
     execution_number: int = 1,
     event_id: str = None,
     fingerprint: str = None,
+    status: str = None,
     execution_id: str = None,
     event_type: str = "alert",
     test_run: bool = False,
@@ -222,7 +225,7 @@ def create_workflow_execution(
                 started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
-                status="in_progress",
+                status=status,
                 error=None,
                 execution_time=None,
                 results={},
@@ -278,170 +281,17 @@ def get_extraction_rule_by_id(
         return session.exec(query).first()
 
 
-def get_last_completed_execution(
-    session: Session, workflow_id: str
-) -> WorkflowExecution:
-    return session.exec(
-        select(WorkflowExecution)
-        .where(WorkflowExecution.workflow_id == workflow_id)
-        .where(WorkflowExecution.is_test_run == False)
-        .where(
-            (WorkflowExecution.status == "success")
-            | (WorkflowExecution.status == "error")
-            | (WorkflowExecution.status == "providers_not_configured")
-        )
-        .order_by(WorkflowExecution.execution_number.desc())
-        .limit(1)
-    ).first()
-
-
-def get_timeouted_workflow_exections():
-    with Session(engine) as session:
-        logger.debug("Checking for timeouted workflows")
-        timeouted_workflows = []
-        try:
-            result = session.exec(
-                select(WorkflowExecution)
-                .filter(WorkflowExecution.status == "in_progress")
-                .filter(
-                    WorkflowExecution.started <= datetime.utcnow() - WORKFLOWS_TIMEOUT
-                )
-            )
-            timeouted_workflows = result.all()
-        except Exception as e:
-            logger.exception("Failed to get timeouted workflows: ", e)
-
-        logger.debug(f"Found {len(timeouted_workflows)} timeouted workflows")
-        return timeouted_workflows
-
-
-def get_workflows_that_should_run():
+def get_interval_workflows():
     with Session(engine) as session:
         logger.debug("Checking for workflows that should run")
-        workflows_with_interval = []
-        try:
-            result = session.exec(
-                select(Workflow)
-                .filter(Workflow.is_deleted == False)
-                .filter(Workflow.is_disabled == False)
-                .filter(Workflow.interval != None)
-                .filter(Workflow.interval > 0)
-            )
-            workflows_with_interval = result.all() if result else []
-        except Exception:
-            logger.exception("Failed to get workflows with interval")
-
-        logger.debug(f"Found {len(workflows_with_interval)} workflows with interval")
-        workflows_to_run = []
-        # for each workflow:
-        for workflow in workflows_with_interval:
-            current_time = datetime.utcnow()
-            last_execution = get_last_completed_execution(session, workflow.id)
-            # if there no last execution, that's the first time we run the workflow
-            if not last_execution:
-                try:
-                    # try to get the lock
-                    workflow_execution_id = create_workflow_execution(
-                        workflow.id, workflow.revision, workflow.tenant_id, "scheduler"
-                    )
-                    # we succeed to get the lock on this execution number :)
-                    # let's run it
-                    workflows_to_run.append(
-                        {
-                            "tenant_id": workflow.tenant_id,
-                            "workflow_id": workflow.id,
-                            "workflow_execution_id": workflow_execution_id,
-                        }
-                    )
-                # some other thread/instance has already started to work on it
-                except IntegrityError:
-                    continue
-            # else, if the last execution was more than interval seconds ago, we need to run it
-            elif (
-                last_execution.started + timedelta(seconds=workflow.interval)
-                <= current_time
-            ):
-                try:
-                    # try to get the lock with execution_number + 1
-                    workflow_execution_id = create_workflow_execution(
-                        workflow.id,
-                        workflow.revision,
-                        workflow.tenant_id,
-                        "scheduler",
-                        last_execution.execution_number + 1,
-                    )
-                    # we succeed to get the lock on this execution number :)
-                    # let's run it
-                    workflows_to_run.append(
-                        {
-                            "tenant_id": workflow.tenant_id,
-                            "workflow_id": workflow.id,
-                            "workflow_execution_id": workflow_execution_id,
-                        }
-                    )
-                    # continue to the next one
-                    continue
-                # some other thread/instance has already started to work on it
-                except IntegrityError:
-                    # we need to verify the locking is still valid and not timeouted
-                    session.rollback()
-                    pass
-                # get the ongoing execution
-                ongoing_execution = session.exec(
-                    select(WorkflowExecution)
-                    .where(WorkflowExecution.workflow_id == workflow.id)
-                    .where(
-                        WorkflowExecution.execution_number
-                        == last_execution.execution_number + 1
-                    )
-                    .limit(1)
-                ).first()
-                # this is a WTF exception since if this (workflow_id, execution_number) does not exist,
-                # we would be able to acquire the lock
-                if not ongoing_execution:
-                    logger.error(
-                        f"WTF: ongoing execution not found {workflow.id} {last_execution.execution_number + 1}"
-                    )
-                    continue
-                # if this completed, error, than that's ok - the service who locked the execution is done
-                elif ongoing_execution.status != "in_progress":
-                    continue
-                # if the ongoing execution runs more than timeout minutes, relaunch it
-                elif (
-                    ongoing_execution.started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT
-                    <= current_time
-                ):
-                    ongoing_execution.status = "timeout"
-                    session.commit()
-                    # re-create the execution and try to get the lock
-                    try:
-                        workflow_execution_id = create_workflow_execution(
-                            workflow.id,
-                            workflow.revision,
-                            workflow.tenant_id,
-                            "scheduler",
-                            ongoing_execution.execution_number + 1,
-                        )
-                    # some other thread/instance has already started to work on it and that's ok
-                    except IntegrityError:
-                        logger.debug(
-                            f"Failed to create a new execution for workflow {workflow.id} [timeout]. Constraint is met."
-                        )
-                        continue
-                    # managed to acquire the (workflow_id, execution_number) lock
-                    workflows_to_run.append(
-                        {
-                            "tenant_id": workflow.tenant_id,
-                            "workflow_id": workflow.id,
-                            "workflow_execution_id": workflow_execution_id,
-                        }
-                    )
-            else:
-                logger.debug(
-                    f"Workflow {workflow.id} is already running by someone else"
-                )
-
-        return workflows_to_run
+        result = session.exec(
+            select(Workflow)
+            .filter(Workflow.is_deleted == False)
+            .filter(Workflow.is_disabled == False)
+            .filter(Workflow.interval != None)
+            .filter(Workflow.interval > 0)
+        )
+        return result.all() if result else []
 
 
 def update_workflow_by_id(
@@ -648,6 +498,63 @@ def add_or_update_workflow(
             session.add(version)
             session.commit()
             return workflow
+
+
+def add_workflow(
+    id: str,
+    name: str,
+    tenant_id: str,
+    description: str | None,
+    created_by: str,
+    interval: int | None,
+    workflow_raw: str,
+    is_disabled: bool,
+    updated_by: str,
+    provisioned: bool = False,
+    provisioned_file: str | None = None,
+    is_test: bool = False,
+):
+    with Session(engine, expire_on_commit=False) as session:
+        workflow = Workflow(
+            id=id,
+            revision=1,
+            name=name,
+            tenant_id=tenant_id,
+            description=description,
+            created_by=created_by,
+            updated_by=updated_by,
+            last_updated=datetime.now(tz=timezone.utc),
+            interval=interval,
+            is_disabled=is_disabled,
+            workflow_raw=workflow_raw,
+            provisioned=provisioned,
+            provisioned_file=provisioned_file,
+            is_test=is_test,
+        )
+        session.add(workflow)
+        session.commit()
+        return workflow
+
+
+def add_workflow_version(
+    id: str,
+    created_by: str,
+    workflow_raw: str,
+    updated_by: str,
+) -> Workflow:
+    with Session(engine, expire_on_commit=False) as session:
+        version = WorkflowVersion(
+            workflow_id=id,
+            revision=1,
+            workflow_raw=workflow_raw,
+            updated_by=updated_by,
+            comment=f"Created by {created_by}",
+            is_valid=True,
+            is_current=True,
+            updated_at=datetime.now(tz=timezone.utc),
+        )
+        session.add(version)
+        session.commit()
 
 
 def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None):
@@ -886,38 +793,6 @@ def get_workflow_by_id(tenant_id: str, workflow_id: str):
     return workflow
 
 
-def get_workflow_versions(tenant_id: str, workflow_id: str):
-    with Session(engine) as session:
-        versions = session.exec(
-            select(WorkflowVersion)
-            # starting from the 'workflow' table since it's smaller
-            .select_from(Workflow)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.id == workflow_id)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
-            .order_by(WorkflowVersion.revision.desc())
-        ).all()
-    return versions
-
-
-def get_workflow_version(tenant_id: str, workflow_id: str, revision: int):
-    with Session(engine) as session:
-        version = session.exec(
-            select(WorkflowVersion)
-            # starting from the 'workflow' table since it's smaller
-            .select_from(Workflow)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.id == workflow_id)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-            .join(WorkflowVersion, WorkflowVersion.workflow_id == Workflow.id)
-            .where(WorkflowVersion.revision == revision)
-        ).first()
-    return version
-
-
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
     logger.info("Updating provider last pull time", extra=extra)
@@ -959,7 +834,7 @@ def get_consumer_providers() -> List[Provider]:
         ).all()
     return providers
 
-
+# TODO: TO REMOVE
 def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     with Session(engine) as session:
         workflow_execution = session.exec(
@@ -997,6 +872,22 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
                 "execution_time": execution_time,
             },
         )
+
+
+def update_workflow_execution(workflow_execution_patch: dict):
+    if workflow_execution_patch.get("id") is None:
+        raise ValueError("Workflow execution ID must not be None")
+
+    with Session(engine) as session:
+        stmt = (
+            update(WorkflowExecution)
+            .where(WorkflowExecution.id == workflow_execution_patch.get("id"))
+            .values(
+                **workflow_execution_patch
+            )  # only update fields that are explicitly set in model
+        )
+        session.exec(stmt)
+        session.commit()
 
 
 def get_workflow_executions(
@@ -2131,7 +2022,7 @@ def update_user_role(tenant_id, username, role):
             session.commit()
     return user
 
-
+# TODO: deprecated, must be removed
 def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     with Session(engine) as session:
         workflow_execution = session.exec(
@@ -2154,19 +2045,6 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             workflow_execution.results = custom_serialize(workflow_results)
         # commit the changes
         session.commit()
-
-
-def get_workflow_by_name(tenant_id, workflow_name):
-    with Session(engine) as session:
-        workflow = session.exec(
-            select(Workflow)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.name == workflow_name)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-        ).first()
-
-        return workflow
 
 
 def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
