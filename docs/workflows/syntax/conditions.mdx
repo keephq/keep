@@ -4,110 +4,24 @@ title: "Conditions"
 
 # Conditions
 
-Conditions in Keep Workflow Engine define **logic to evaluate whether a step or action should execute**.
-
-They allow workflows to dynamically adapt based on outputs from previous steps, variables, or custom logic.
+Attach a condition to any step or action to decide at runtime whether it should run. A condition is a mustache expression that can reference outputs from earlier steps, workflow variables, or any other data in the execution context.
 
 Using conditions, you can introduce decision-making into workflows by asserting values, thresholds, or specific states.
 
-<Tip>
-Use sugar syntax: `if`
-
-You can simplify the use of conditions by adding an `if:` field directly to a step or action. This shorthand internally translates to a `conditions` block.
-
-```yaml
-actions:
-  - name: example-action
-    if: "{{ steps.some-step.results.some_value }} > 10"
-    provider:
-      type: slack
-      config: "{{ providers.slack }}"
-```
-</Tip>
-
----
-
-## General Structure
-
-### Explicit Conditions Block
-
-```yaml
-actions:
-  - name: example-action
-    provider:
-      type: slack
-      config: "{{ providers.slack }}"
-      condition:
-        - name: check-threshold
-          type: threshold
-          value: "{{ steps.some-step.results.some_value }}"
-          compare_to: 10
-          compare_type: lt
-```
-
-## Supported Condition Types
-
-
-### assert
-Checks whether a specific assertion is true.
-
-```yaml
-
-condition:
-  - name: assert-condition
-    type: assert
-    assert: "{{ steps.get-data.results.value }} == 'expected'"
-
-```
-
-### threshold
-Compares a value to a threshold using operators like `>` (gt) and `<` (lt), defaults to `>` (gt).
-
-```yaml
-condition:
-  - name: threshold-condition
-    type: threshold
-    value: "{{ steps.get-data.results.value }}"
-    compare_to: 100
-    compare_type: gt
-```
-
-
-## Examples
-
-### Simple Condition with `if`
+### Simple `if` condition
 
 ```yaml
 actions:
   - name: notify-slack
-    if: "{{ steps.get-data.results.value }} > 100"
+    if: "{{ alert.cpu_load }} > 70"
     provider:
       type: slack
       config: "{{ providers.slack }}"
       with:
-        message: "The value exceeded the threshold!"
+        message: "The CPU load exceeded the threshold!"
 ```
 
-### Threshold Condition in Full Syntax
-
-```yaml
-
-actions:
-  - name: notify-slack
-    provider:
-      type: slack
-      config: "{{ providers.slack }}"
-      condition:
-        - name: threshold-condition
-          type: threshold
-          value: "{{ steps.get-data.results.value }}"
-          compare_to: 100
-          compare_type: gt
-      with:
-        message: "The value exceeded the threshold!"
-```
-
-### Combining Steps and Actions with Conditions
+### Using results of other steps in condition
 
 ```yaml
 workflow:
@@ -130,18 +44,14 @@ workflow:
         config: "{{ providers.slack }}"
       with:
         message: "Disk usage is critical: {{ steps.get-disk-usage.results.disk_usage }}%"
-
 ```
 
-### Using `assert` for Complex Logic
+### Complex logic
 
 ```yaml
 actions:
   - name: create-incident
-    condition:
-      - name: assert-condition
-        type: assert
-        assert: "{{ steps.get-alert.results.severity }} == 'critical' and {{ steps.get-alert.results.source }} == 'datadog'"
+    if: "{{ steps.get-alert.results.severity }} == 'critical' and {{ steps.get-alert.results.source }} == 'datadog'"
     provider:
       type: servicenow
       config: "{{ providers.servicenow }}"
@@ -151,7 +61,7 @@ actions:
           short_description: "Critical Datadog alert received"
 ```
 
-### Foreach + Conditions
+### Condition with foreach
 
 ```yaml
 actions:
@@ -162,4 +72,51 @@ actions:
       type: slack
       with:
         message: "Pod {{ foreach.value.metadata.name }} has failed!"
+```
+
+## Condition with constants
+
+```yaml
+consts:
+  max_load: 70
+actions:
+  - name: process-pods
+    if: "{{ alert.cpu_load }} > {{ consts.max_load }}"
+    provider:
+      type: slack
+      with:
+        message: "Pod {{ foreach.value.metadata.name }} has failed!"
+```
+
+---
+
+## Explicit condition blocks (deprecated)
+
+<Warning>
+  Explicit condition blocks are deprecated and will be discontinued. Use the
+  `if` syntax instead.
+</Warning>
+
+### assert (deprecated)
+
+Checks whether a specific assertion is true.
+
+```yaml
+condition:
+  - name: assert-condition
+    type: assert
+    assert: "{{ steps.get-data.results.value }} == 'expected'"
+```
+
+### threshold (deprecated)
+
+Compares a value to a threshold using operators like `>` (gt) and `<` (lt), defaults to `>` (gt).
+
+```yaml
+condition:
+  - name: threshold-condition
+    type: threshold
+    value: "{{ steps.get-data.results.value }}"
+    compare_to: 100
+    compare_type: gt
 ```
