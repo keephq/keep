@@ -28,6 +28,20 @@ To start Keep with DB authentication, set the following environment variables:
 | KEEP_DEFAULT_PASSWORD | Default admin password | No | Backend | keep |
 | KEEP_FORCE_RESET_DEFAULT_PASSWORD | Override the current admin password | No | Backend | false |
 
+### Backend Setup Instructions for Multi-tenancy with DB-based authentication
+
+To start Keep with DB authentication that supports multi-tenancy, set the following environment variables for the backend service:
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|:-----------:|:--------:|:----------------:|:-------------:|
+| AUTH_TYPE | Set to 'DBMT' for database authentication | Yes | - |
+| KEEP_JWT_SECRET | Secret for JWT token generation | Yes | - |
+| KEEP_DEFAULT_USERNAME | Default admin username | No | keep@keep |
+| KEEP_DEFAULT_PASSWORD | Default admin password | No | keep |
+| KEEP_FORCE_RESET_DEFAULT_PASSWORD | Override the current admin password | false |
+
+Note: all user names must be in the form of 'user@tenant'
+
 ### Example configuration
 
 Use the `docker-compose-with-auth.yml` for an easy setup, which includes necessary environment variables for enabling basic authentication.
