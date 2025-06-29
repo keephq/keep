@@ -55,10 +55,10 @@ export function TicketingIncidentOptions({
     window.location.reload();
   };
 
-  const openInProvider = () => {
+  const openInProvider = (linkedTicket: LinkedTicket) => {
     if (!linkedTicket) return;
     
-    const providerUrl = getTicketViewUrl(linkedTicket);
+    const providerUrl = getTicketViewUrl(incident, linkedTicket.provider);
     if (providerUrl) {
       window.open(providerUrl);
     }
@@ -73,8 +73,8 @@ export function TicketingIncidentOptions({
           variant="secondary"
           className="!py-0.5 mr-2"
           icon={MdOutlineOpenInNew}
-          onClick={openInProvider}
-          disabled={!getTicketViewUrl(linkedTicket)}
+          onClick={() => openInProvider(linkedTicket)}
+          disabled={!getTicketViewUrl(incident, linkedTicket.provider)}
         >
           Open in {linkedTicket.provider.display_name}
         </Button>

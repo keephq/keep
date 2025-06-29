@@ -84,7 +84,7 @@ export function LinkTicketModal({
 
       // Add ticket URL (required)
       const urlEnrichmentKey = selectedProvider ? 
-        `${selectedProvider.display_name}_ticket_url` : 
+        `${selectedProvider.type}_ticket_url` : 
         'ticketing_ticket_url';
       enrichments[urlEnrichmentKey] = ticketUrl.trim();
         

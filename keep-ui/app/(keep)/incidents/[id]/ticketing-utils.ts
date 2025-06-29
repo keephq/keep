@@ -1,4 +1,5 @@
 import { type Provider } from "@/shared/api/providers";
+import { type IncidentDto } from "@/entities/incidents/model";
 
 export interface LinkedTicket {
   provider: Provider;
@@ -28,27 +29,13 @@ export function getProviderBaseUrl(provider: Provider): string {
 }
 
 /**
- * Construct a URL to view a ticket in the provider's system
+ * Get the ticket URL from an incident's enrichments for a specific provider
  */
-export function getTicketViewUrl(linkedTicket: LinkedTicket): string {
-  const { provider, ticketId } = linkedTicket;
-  const baseUrl = getProviderBaseUrl(provider);
+export function getTicketViewUrl(incident: IncidentDto, provider: Provider): string {
+  if (!incident.enrichments) return "";
   
-  if (!baseUrl) return "";
-  
-  switch (provider.type) {
-    case "servicenow":
-      return `${baseUrl}/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3D${ticketId}`;
-    case "jira":
-      return `${baseUrl}/browse/${ticketId}`;
-    case "zendesk":
-      return `${baseUrl}/agent/tickets/${ticketId}`;
-    case "freshdesk":
-      return `${baseUrl}/helpdesk/tickets/${ticketId}`;
-    default:
-      // Generic fallback - try to construct a reasonable URL
-      return `${baseUrl}/tickets/${ticketId}`;
-  }
+  const urlKey = `${provider.type}_ticket_url`;
+  return incident.enrichments[urlKey] || "";
 }
 
 /**
@@ -96,7 +83,7 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
   
   // Look for any ticketing provider's ticket ID in enrichments
   for (const provider of ticketingProviders) {
-    const ticketKey = `${provider.display_name}_ticket_id`;
+    const ticketKey = `${provider.type}_ticket_id`;
     if (incident.enrichments[ticketKey]) {
       return {
         provider,
@@ -112,5 +99,5 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
  * Get the enrichment key for a specific provider
  */
 export function getTicketEnrichmentKey(provider: Provider): string {
-  return `${provider.display_name}_ticket_id`;
+  return `${provider.type}_ticket_id`;
 } 
