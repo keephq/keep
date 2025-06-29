@@ -10,7 +10,7 @@ import {
   SelectItem,
   Switch,
 } from "@tremor/react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
 import { useUsers } from "@/entities/users/model/useUsers";
 import { useIncidentActions } from "@/entities/incidents/model";
 import type { IncidentDto } from "@/entities/incidents/model";
@@ -20,6 +20,7 @@ import "./react-quill-override.css";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
+import { DynamicIncidentForm, DynamicIncidentFormRef } from "@/components/ui/DynamicIncidentForm";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -42,8 +43,11 @@ export function CreateOrUpdateIncidentForm({
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
+  const [enrichments, setEnrichments] = useState<Record<string, any>>({});
+  const [dynamicFormHasErrors, setDynamicFormHasErrors] = useState(false); // Will be updated by DynamicIncidentForm
   const { data: users = [] } = useUsers();
-  const { addIncident, updateIncident } = useIncidentActions();
+  const { addIncident, updateIncident, enrichIncident } = useIncidentActions();
+  const dynamicFormRef = useRef<DynamicIncidentFormRef>(null);
 
   const editMode = incidentToEdit !== null;
 
@@ -66,6 +70,7 @@ export function CreateOrUpdateIncidentForm({
     setIncidentUserSummary("");
     setIncidentAssignee("");
     setResolveOnAlertsResolved("all");
+    setEnrichments({});
   };
 
   // If the Incident is successfully updated or the user cancels the update we exit the editMode and set the editRule in the incident.tsx to null.
@@ -99,6 +104,12 @@ export function CreateOrUpdateIncidentForm({
           resolve_on: resolveOnAlertsResolved,
           severity: incidentSeverity,
         });
+        
+        // Add enrichments if any custom fields were filled
+        if (Object.keys(enrichments).length > 0) {
+          await enrichIncident(newIncident.id, enrichments);
+        }
+        
         createCallback?.(newIncident.id);
         exitEditMode();
       } catch (error) {
@@ -108,7 +119,11 @@ export function CreateOrUpdateIncidentForm({
   };
 
   const submitEnabled = (): boolean => {
-    return !!incidentName;
+    // Check if incident name is filled
+    if (!incidentName) return false;
+    
+    // Check if there are validation errors in the dynamic form
+    return !dynamicFormHasErrors;
   };
 
   const formats = [
@@ -212,6 +227,13 @@ export function CreateOrUpdateIncidentForm({
           <Text>Resolve when all alerts are resolved</Text>
         </div>
       </div>
+
+      <DynamicIncidentForm 
+        ref={dynamicFormRef}
+        enrichments={enrichments} 
+        onChange={setEnrichments}
+        onValidationChange={setDynamicFormHasErrors}
+      />
 
       <Divider />
 

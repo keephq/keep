@@ -135,7 +135,7 @@ incident_field_configurations = [
     ),
     FieldMappingConfiguration(
         map_from_pattern="alert.*",
-        map_to=["JSON(alertenrichment.enrichments).*", "JSON(alert.event).*"],
+        map_to=["JSON(incidentenrichment.enrichments).*", "JSON(alert_enrichment.enrichments).*", "JSON(alert.event).*"],
     ),
 ]
 
@@ -226,6 +226,7 @@ def __build_base_incident_query(
     sql_query = select(*select_args).select_from(Incident)
 
     if fetch_alerts or force_fetch_alerts:
+        alert_enrichment = AlertEnrichment.__table__.alias("alert_enrichment")
         sql_query = (
             sql_query.outerjoin(
                 LastAlertToIncident,
@@ -246,14 +247,15 @@ def __build_base_incident_query(
                 and_(LastAlert.alert_id == Alert.id, LastAlert.tenant_id == tenant_id),
             )
             .outerjoin(
-                AlertEnrichment,
+                alert_enrichment,
                 and_(
-                    AlertEnrichment.alert_fingerprint == Alert.fingerprint,
-                    AlertEnrichment.tenant_id == tenant_id,
+                    alert_enrichment.c.alert_fingerprint == Alert.fingerprint,
+                    alert_enrichment.c.tenant_id == tenant_id,
                 ),
             )
         )
 
+    # Join incident enrichment using the module-level alias
     sql_query = sql_query.outerjoin(
         incident_enrichment,
         and_(
@@ -410,6 +412,7 @@ def __build_last_incidents_query(
         for sort_option in sort_options
     ]
 
+    # Include enrichment data in select to populate incident enrichments
     built_query_result = __build_base_incident_query(
         tenant_id=tenant_id,
         cel=cel,

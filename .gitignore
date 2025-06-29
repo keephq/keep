@@ -226,3 +226,5 @@ grafana/*
 keep/providers/grafana_provider/grafana/png/*
 topology.sh
 posthog.py
+
+.swp

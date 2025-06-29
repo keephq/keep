@@ -33,6 +33,7 @@ import { UserStatefulAvatar } from "@/entities/users/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { GenerateReportModal } from "./incidents-report";
 import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { TicketLink } from "@/components/ui/TicketLink";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 import { Pagination, PaginationState } from "@/features/filter/pagination";
 
@@ -258,6 +259,16 @@ export default function IncidentsTable({
       header: "Assignee",
       cell: ({ row }) => (
         <UserStatefulAvatar email={row.original.assignee} size="xs" />
+      ),
+    }),
+    columnHelper.display({
+      id: "ticket",
+      header: "Ticket",
+      cell: ({ row }) => (
+        <TicketLink 
+          url={row.original.enrichments?.ticket_url}
+          id={row.original.enrichments?.ticket_id}
+        />
       ),
     }),
     columnHelper.accessor("creation_time", {
