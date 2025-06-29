@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button, Text, Select, SelectItem } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui";
@@ -9,74 +9,86 @@ import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { showSuccessToast, showErrorToast } from "@/shared/ui";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
+import { getProviderBaseUrl, getTicketEnrichmentKey } from "./ticketing-utils";
 
-interface LinkServiceNowTicketModalProps {
+interface LinkTicketModalProps {
   incident: IncidentDto;
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export function LinkServiceNowTicketModal({
+export function LinkTicketModal({
   incident,
   isOpen,
   onClose,
   onSuccess,
-}: LinkServiceNowTicketModalProps) {
+}: LinkTicketModalProps) {
   const [ticketId, setTicketId] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const api = useApi();
   const { installedProviders } = useFetchProviders();
 
-  const serviceNowProviders = useMemo(() => {
+  const ticketingProviders = useMemo(() => {
     return installedProviders.filter(
       (provider: Provider) => 
-        provider.type === "servicenow"
+        provider.tags.includes("ticketing")
     );
   }, [installedProviders]);
 
+  // Auto-select the provider if there's only one
+  useEffect(() => {
+    if (ticketingProviders.length === 1) {
+      setSelectedProviderId(ticketingProviders[0].id);
+    }
+  }, [ticketingProviders]);
+
   // Get the selected provider
   const selectedProvider = useMemo(() => {
-    return serviceNowProviders.find(provider => provider.id === selectedProviderId);
-  }, [serviceNowProviders, selectedProviderId]);
+    return ticketingProviders.find(provider => provider.id === selectedProviderId);
+  }, [ticketingProviders, selectedProviderId]);
 
-  // Get the base URL from the selected provider
-  const serviceNowBaseUrl = useMemo(() => {
-    if (!selectedProvider?.details?.authentication) return "";
-    return selectedProvider.details.authentication.service_now_base_url || "";
+  // Get the base URL from the selected provider (if available)
+  const providerBaseUrl = useMemo(() => {
+    if (!selectedProvider) return "";
+    return getProviderBaseUrl(selectedProvider);
   }, [selectedProvider]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!ticketId.trim()) {
-      showErrorToast(new Error("Please enter a ServiceNow ticket ID"));
+      showErrorToast(new Error("Please enter a ticket ID"));
       return;
     }
 
-    if (serviceNowProviders.length > 1 && !selectedProviderId) {
-      showErrorToast(new Error("Please select a ServiceNow provider"));
+    if (ticketingProviders.length > 1 && !selectedProviderId) {
+      showErrorToast(new Error("Please select a ticketing provider"));
       return;
     }
 
     setIsLoading(true);
     
     try {
-      // Enrich the incident with the ServiceNow ticket ID
+      // Enrich the incident with the ticket ID
+      const enrichmentKey = selectedProvider ? 
+        getTicketEnrichmentKey(selectedProvider) : 
+        'ticketing_ticket_id';
+        
       await api.post(`/incidents/${incident.id}/enrich`, {
         enrichments: {
-          servicenow_ticket_id: ticketId.trim(),
+          [enrichmentKey]: ticketId.trim(),
         },
       });
 
-      showSuccessToast("Successfully linked incident to ServiceNow ticket");
+      showSuccessToast("Successfully linked incident to ticket");
       setTicketId("");
       setSelectedProviderId("");
       onSuccess?.();
       onClose();
     } catch (error) {
-      showErrorToast(error, "Failed to link incident to ServiceNow ticket");
+      showErrorToast(error, "Failed to link incident to ticket");
     } finally {
       setIsLoading(false);
     }
@@ -94,12 +106,12 @@ export function LinkServiceNowTicketModal({
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title="Link to Existing ServiceNow Ticket"
+        title="Link to Existing Ticket"
         className="w-[500px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-gray-500">
-            Loading ServiceNow providers...
+            Loading ticketing providers...
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
@@ -111,18 +123,18 @@ export function LinkServiceNowTicketModal({
     );
   }
 
-  // If no ServiceNow providers are available after loading
-  if (serviceNowProviders.length === 0) {
+  // If no ticketing providers are available after loading
+  if (ticketingProviders.length === 0) {
     return (
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title="Link to Existing ServiceNow Ticket"
+        title="Link to Existing Ticket"
         className="w-[500px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-red-500">
-            No ServiceNow providers are configured. Please configure a ServiceNow provider first.
+            No ticketing providers are configured. Please configure a ticketing provider first.
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
@@ -138,28 +150,28 @@ export function LinkServiceNowTicketModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Link to Existing ServiceNow Ticket"
+      title="Link to Existing Ticket"
       className="w-[500px]"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Provider Selection (only show if there are multiple Ticketing providers) */}
-        {serviceNowProviders.length > 1 && (
+        {/* Provider Selection (only show if there are multiple ticketing providers) */}
+        {ticketingProviders.length > 1 && (
           <div>
             <Text className="mb-2">
-              ServiceNow Provider <span className="text-red-500">*</span>
+              Ticketing Provider <span className="text-red-500">*</span>
             </Text>
             <Select
-              placeholder="Select a ServiceNow provider"
+              placeholder="Select a ticketing provider"
               value={selectedProviderId}
               onValueChange={setSelectedProviderId}
               disabled={isLoading}
             >
-              {serviceNowProviders.map((provider) => (
+              {ticketingProviders.map((provider) => (
                 <SelectItem key={provider.id} value={provider.id}>
                   {provider.display_name || provider.id}
-                  {provider.details?.authentication?.service_now_base_url && (
+                  {provider.details?.authentication && (
                     <span className="text-gray-500 ml-2">
-                      ({provider.details.authentication.service_now_base_url})
+                      ({provider.type})
                     </span>
                   )}
                 </SelectItem>
@@ -169,15 +181,15 @@ export function LinkServiceNowTicketModal({
         )}
 
         {/* Show selected provider info if single provider or provider is selected */}
-        {(serviceNowProviders.length === 1 || selectedProviderId) && (
+        {(ticketingProviders.length === 1 || selectedProviderId) && (
           <div className="bg-gray-50 p-3 rounded-md">
             <Text className="text-sm font-medium mb-1">Selected Provider:</Text>
             <Text className="text-sm text-gray-600">
               {selectedProvider?.display_name || selectedProvider?.id}
             </Text>
-            {serviceNowBaseUrl && (
+            {providerBaseUrl && (
               <Text className="text-sm text-gray-600">
-                Base URL: {serviceNowBaseUrl}
+                Base URL: {providerBaseUrl}
               </Text>
             )}
           </div>
@@ -185,10 +197,10 @@ export function LinkServiceNowTicketModal({
 
         <div>
           <Text className="mb-2">
-            ServiceNow Ticket ID <span className="text-red-500">*</span>
+            Ticket ID <span className="text-red-500">*</span>
           </Text>
           <TextInput
-            placeholder="Enter ServiceNow ticket ID (e.g., INC0012345)"
+            placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
             value={ticketId}
             onChange={(e) => setTicketId(e.target.value)}
             required
@@ -208,7 +220,7 @@ export function LinkServiceNowTicketModal({
             variant="primary"
             color="orange"
             type="submit"
-            disabled={isLoading || !ticketId.trim() || (serviceNowProviders.length > 1 && !selectedProviderId)}
+            disabled={isLoading || !ticketId.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
           >
             {isLoading ? "Linking..." : "Link Ticket"}
           </Button>

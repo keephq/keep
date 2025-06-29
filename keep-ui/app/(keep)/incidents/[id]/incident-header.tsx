@@ -19,7 +19,7 @@ import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
 import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { ServiceNowIncidentOptions } from "./service-now-incident-options";
+import { TicketingIncidentOptions } from "./ticketing-incident-options";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -83,8 +83,8 @@ export function IncidentHeader({
 
           {!incident.is_candidate && (
             <div className="flex">
-              {config?.KEEP_SERVICENOW_INCIDENT_TICKET_ENABLED && (
-                <ServiceNowIncidentOptions
+              {config?.KEEP_TICKETING_ENABLED && (
+                <TicketingIncidentOptions
                   incident={incident}
                 />
               )}

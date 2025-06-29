@@ -37,6 +37,6 @@ export interface InternalConfig {
   HIDE_NAVBAR_EXTRACTION: boolean;
   HIDE_NAVBAR_MAINTENANCE_WINDOW: boolean;
   HIDE_NAVBAR_AI_PLUGINS: boolean;
-  // ServiceNow integration
-  KEEP_SERVICENOW_INCIDENT_TICKET_ENABLED: boolean;
+  // Ticketing integration
+  KEEP_TICKETING_ENABLED: boolean;
 }

@@ -4,34 +4,39 @@ import { useState, useMemo } from "react";
 import { Button } from "@tremor/react";
 import { MdLink, MdModeEdit, MdOutlineBookmarkAdd, MdOutlineOpenInNew } from "react-icons/md";
 import { type IncidentDto } from "@/entities/incidents/model";
-import { LinkServiceNowTicketModal } from "./link-servicenow-ticket-modal";
+import { LinkTicketModal } from "./link-ticket-modal";
+import { CreateTicketModal } from "./create-ticket-modal";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type Provider } from "@/shared/api/providers";
+import { 
+  findLinkedTicket, 
+  getTicketViewUrl,
+  type LinkedTicket 
+} from "./ticketing-utils";
 
-interface ServiceNowIncidentOptionsProps {
+interface TicketingIncidentOptionsProps {
   incident: IncidentDto;
 }
 
-export function ServiceNowIncidentOptions({
+export function TicketingIncidentOptions({
   incident,
-}: ServiceNowIncidentOptionsProps) {
+}: TicketingIncidentOptionsProps) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { installedProviders } = useFetchProviders();
 
-  // Get ServiceNow providers from installed providers
-  const serviceNowProviders = useMemo(() => {
+  // Get ticketing providers from installed providers
+  const ticketingProviders = useMemo(() => {
     return installedProviders.filter(
       (provider: Provider) => 
-        provider.type === "servicenow" 
+        provider.tags.includes("ticketing")
     );
   }, [installedProviders]);
 
-  // Get the first ServiceNow provider's base URL (for the "Open in ServiceNow" button)
-  const serviceNowBaseUrl = useMemo(() => {
-    if (serviceNowProviders.length === 0) return "";
-    const firstProvider = serviceNowProviders[0];
-    return firstProvider.details?.authentication?.service_now_base_url || "";
-  }, [serviceNowProviders]);
+  // Find the first linked ticket for this incident
+  const linkedTicket = useMemo(() => {
+    return findLinkedTicket(incident, ticketingProviders);
+  }, [incident, ticketingProviders]);
 
   const linkIncidentToExistingTicket = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -39,35 +44,39 @@ export function ServiceNowIncidentOptions({
     setIsLinkModalOpen(true);
   };
 
+  const createNewTicket = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsCreateModalOpen(true);
+  };
+
   const handleLinkSuccess = () => {
     // Trigger revalidation of incident data
     window.location.reload();
   };
 
-  const openInServiceNow = () => {
-    if (!serviceNowBaseUrl || !incident.enrichments?.servicenow_ticket_id) {
-      return;
-    }
+  const openInProvider = () => {
+    if (!linkedTicket) return;
     
-    // Construct the ServiceNow incident URL
-    const ticketId = incident.enrichments.servicenow_ticket_id;
-    const serviceNowUrl = `${serviceNowBaseUrl}/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3D${ticketId}`;
-    window.open(serviceNowUrl);
+    const providerUrl = getTicketViewUrl(linkedTicket);
+    if (providerUrl) {
+      window.open(providerUrl);
+    }
   };
 
   return (
     <>
-      {incident.enrichments?.servicenow_ticket_id ? (
+      {linkedTicket ? (
         <Button
           color="orange"
           size="xs"
           variant="secondary"
           className="!py-0.5 mr-2"
           icon={MdOutlineOpenInNew}
-          onClick={openInServiceNow}
-          disabled={!serviceNowBaseUrl}
+          onClick={openInProvider}
+          disabled={!getTicketViewUrl(linkedTicket)}
         >
-          Open incident in ServiceNow
+          Open in {linkedTicket.provider.display_name}
         </Button>
       ) : (
         <>
@@ -77,14 +86,9 @@ export function ServiceNowIncidentOptions({
             variant="secondary"
             className="!py-0.5 mr-2"
             icon={MdOutlineBookmarkAdd}
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log(incident);
-              window.open(`https://localhost:3000/?description=${incident.user_summary}&short_description=${incident.user_generated_name}`);
-            }}
+            onClick={createNewTicket}
           >
-            Create New ServiceNow Ticket
+            Create New Ticket
           </Button>
           <Button
             color="orange"
@@ -94,16 +98,22 @@ export function ServiceNowIncidentOptions({
             icon={MdLink}
             onClick={linkIncidentToExistingTicket}
           >
-            Link to a ServiceNow Ticket
+            Link to Existing Ticket
           </Button>
         </>
       )}
 
-      <LinkServiceNowTicketModal
+      <LinkTicketModal
         incident={incident}
         isOpen={isLinkModalOpen}
         onClose={() => setIsLinkModalOpen(false)}
         onSuccess={handleLinkSuccess}
+      />
+
+      <CreateTicketModal
+        incident={incident}
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
       />
     </>
   );
