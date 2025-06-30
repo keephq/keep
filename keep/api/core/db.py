@@ -158,7 +158,8 @@ def get_session_sync() -> Session:
 def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
     try:
         return UUID(value)
-    except ValueError:
+    except (ValueError, TypeError) as e:
+        logger.exception(f"Error converting '{value}' to UUID: {e}")
         if should_raise:
             raise ValueError(f"Invalid UUID: {value}")
         return None
@@ -168,6 +169,7 @@ def __convert_to_uuid_dialect_str(value: str, dialect: Dialect):
     uuid_obj = __convert_to_uuid(value)
     if uuid_obj is None:
         # if it's not a valid UUID, return the original value
+        logger.warning(f"Invalid UUID: {value}, falling back to original string")
         return value
     return UUIDType(binary=False).process_bind_param(uuid_obj, dialect)
 
