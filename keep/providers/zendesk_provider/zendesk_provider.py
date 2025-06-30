@@ -13,6 +13,25 @@ class ZendeskProviderAuthConfig:
         metadata={"required": True, "description": "Zendesk API key", "sensitive": True}
     )
 
+    zendesk_domain: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Zendesk domain",
+            "sensitive": False,
+            "hint": "yourcompany.zendesk.com",
+        }
+    )
+
+    ticket_creation_url: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "URL for creating new tickets",
+            "sensitive": False,
+            "hint": "https://yourcompany.zendesk.com/agent/filters/new",
+        },
+        default="",
+    )
+
 
 class ZendeskProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Zendesk"
