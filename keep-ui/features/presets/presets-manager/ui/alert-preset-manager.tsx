@@ -7,7 +7,6 @@ import { CreateOrUpdatePresetForm } from "@/features/presets/create-or-update-pr
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresets } from "@/entities/presets/model/usePresets";
-import { migrateColumnConfigurations } from "@/entities/presets/model/columnConfigMigration";
 import { CopilotKit } from "@copilotkit/react-core";
 import { Button } from "@tremor/react";
 import { PushAlertToServerModal } from "@/features/alerts/simulate-alert";
@@ -73,17 +72,13 @@ export function AlertPresetManager({
     const newPresetName = preset.name.toLowerCase();
     const isNameChanged = selectedPreset && oldPresetName !== newPresetName;
     
-    if (isNameChanged && oldPresetName) {
-      // Migrate column configurations from old preset name to new preset name
-      migrateColumnConfigurations(oldPresetName, newPresetName);
-      
+    if (isNameChanged) {
       // For name changes, we need to ensure the preset data is fresh before navigating
       try {
         // Wait for the preset list to be revalidated
         await mutatePresets();
         
-        // Use replace instead of push to avoid adding to browser history
-        // and use window.location to force a full page reload which ensures
+        // Use window.location to force a full page reload which ensures
         // the new preset is properly loaded
         window.location.href = newUrl;
       } catch (error) {
