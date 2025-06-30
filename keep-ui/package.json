@@ -6,6 +6,7 @@
   "scripts": {
     "build-monaco-workers": "node scripts/build-monaco-workers-turbopack.js",
     "build": "./next_build.sh",
+    "build:workflow-yaml-json-schema": "ts-node -P tsconfig.scripts.json scripts/generate-workflow-yaml-json-schema.ts",
     "dev": "npm run build-monaco-workers && next dev --turbopack -p 3000",
     "dev:webpack": "next dev -p 3000",
     "lint": "next lint",
