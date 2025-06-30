@@ -67,7 +67,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def update_workflow(self, workflow: WorkflowDalModel):
         doc = WorkflowDoc(**workflow.dict())
         doc.meta.id = workflow.id
-        doc.save(using=self.elastic_search_client)
+        doc.save(using=self.elastic_search_client, refresh=True)
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.elastic_search_client.delete(
@@ -369,6 +369,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             doc.meta.id = workflow_execution.id
             doc.save(
                 using=self.elastic_search_client,
+                refresh=True,
             )
             return execution_id
         except ElasticsearchConflictError as conflict_error:
@@ -414,14 +415,16 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
-        search_response = (
+        search_query = (
             WorkflowExecutionDoc.search(using=self.elastic_search_client)
             .filter("term", id=workflow_execution_id)
             .filter("term", tenant_id=tenant_id)
-            .filter(
-                "term", is_test_run=is_test_run if is_test_run is not None else False
-            )
-        ).execute()
+        )
+
+        if is_test_run is not None:
+            search_query = search_query.filter("term", is_test_run=is_test_run)
+
+        search_response = search_query.execute()
 
         if not search_response:
             return None
