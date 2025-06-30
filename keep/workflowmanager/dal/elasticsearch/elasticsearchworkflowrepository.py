@@ -47,10 +47,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def __init__(self, elastic_search_client: Elasticsearch):
         super().__init__()
         self.elastic_search_client = elastic_search_client
-        self.workflows_index = WorkflowDoc.Index.name
-        self.workflows_versions_index = WorkflowVersionDoc.Index.name
-        self.workflow_executions_index = WorkflowExecutionDoc.Index.name
-        self.workflow_execution_logs_index = WorkflowExecutionLogDoc.Index.name
         self.elastic_search_cel_to_sql = CelToElasticSearchSqlProvider(
             properties_metadata
         )
@@ -74,8 +70,10 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         doc.save(using=self.elastic_search_client)
 
     def delete_workflow(self, tenant_id, workflow_id):
-        WorkflowDoc.get(id=workflow_id, using=self.elastic_search_client).delete(
-            using=self.elastic_search_client,
+        self.elastic_search_client.delete(
+            index=WorkflowDoc.Index.name,
+            id=workflow_id,
+            refresh=True,
         )
 
     def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
@@ -199,7 +197,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         offset = offset if offset is not None else 0
 
         sql = f"""
-                SELECT * FROM "{self.workflows_index}"
+                SELECT * FROM "{WorkflowDoc.Index.name}"
                 WHERE tenant_id = '{tenant_id}' {and_exp}
                 ORDER BY {sort_by} {sort_dir}
               """
@@ -216,7 +214,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             dsl_query["size"] = limit
 
         count_response = self.elastic_search_client.count(
-            index=self.workflows_index, body={"query": dsl_query["query"]}
+            index=WorkflowDoc.Index.name, body={"query": dsl_query["query"]}
         )
 
         count = count_response.body.get("count", 0)
@@ -225,7 +223,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             return [], 0
 
         search_result = self.elastic_search_client.search(
-            index=self.workflows_index, body=dsl_query
+            index=WorkflowDoc.Index.name, body=dsl_query
         )
 
         workflows = []
@@ -420,9 +418,9 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             WorkflowExecutionDoc.search(using=self.elastic_search_client)
             .filter("term", id=workflow_execution_id)
             .filter("term", tenant_id=tenant_id)
-            # .filter(
-            #     "term", is_test_run=is_test_run if is_test_run is not None else False
-            # )
+            .filter(
+                "term", is_test_run=is_test_run if is_test_run is not None else False
+            )
         ).execute()
 
         if not search_response:
