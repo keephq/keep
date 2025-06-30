@@ -403,14 +403,12 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             )
             .sort("-execution_number")
             .extra(size=1)
-            .exclude()
         ).execute()
 
         if not search_result:
             return None
 
-        result = WorkflowExecutionDalModel(**search_result[0])
-        return result
+        return WorkflowExecutionDalModel(**search_result[0])
 
     def get_workflow_execution(
         self,
