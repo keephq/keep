@@ -15,16 +15,10 @@ export function getProviderBaseUrl(provider: Provider): string {
   
   const auth = provider.details.authentication;
   
-  // Handle Zendesk domain specifically
-  if (auth.zendesk_domain) {
-    return `https://${auth.zendesk_domain}`;
-  }
-  
   return auth.base_url || 
          auth.service_now_base_url || 
          auth.jira_base_url || 
          auth.host ||
-         auth.host_url ||
          "";
 }
 
@@ -66,7 +60,6 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
       createUrl = `${baseUrl}/helpdesk/tickets/new`;
       break;
     default:
-      // Generic fallback - try to construct a reasonable URL
       createUrl = `${baseUrl}/tickets/new`;
       break;
   }
@@ -100,4 +93,12 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
  */
 export function getTicketEnrichmentKey(provider: Provider): string {
   return `${provider.type}_ticket_id`;
+}
+
+/**
+ * Check if a provider can create tickets
+ */
+export function canCreateTickets(provider: Provider): boolean {
+  // Check if provider has ticketing tag and ticket creation URL exists
+  return provider.tags.includes("ticketing") && Boolean(provider.details?.authentication?.ticket_creation_url);
 } 

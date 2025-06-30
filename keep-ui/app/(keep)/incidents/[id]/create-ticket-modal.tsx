@@ -7,7 +7,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
-import { getProviderBaseUrl, getTicketCreateUrl } from "./ticketing-utils";
+import { getProviderBaseUrl, getTicketCreateUrl, canCreateTickets } from "./ticketing-utils";
 
 interface CreateTicketModalProps {
   incident: IncidentDto;
@@ -32,10 +32,7 @@ export function CreateTicketModal({
   }, [incident, isOpen]);
 
   const ticketingProviders = useMemo(() => {
-    return installedProviders.filter(
-      (provider: Provider) =>
-        provider.tags.includes("ticketing")
-    );
+    return installedProviders.filter(canCreateTickets);
   }, [installedProviders]);
 
   // Auto-select the provider if there's only one
