@@ -262,6 +262,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             doc.meta.id = f"{workflow_version.workflow_id}-{workflow_version.revision}"
             doc.save(
                 using=self.elastic_search_client,
+                refresh=True,
             )
         except ElasticsearchConflictError as conflict_error:
             raise ConflictError(

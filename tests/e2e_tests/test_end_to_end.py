@@ -24,7 +24,7 @@ import random
 import re
 import string
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from playwright.sync_api import Page, expect
 import pytest
@@ -866,14 +866,25 @@ def test_run_interval_workflow(browser: Page):
         )
         page.get_by_role("button", name="Upload")
         expect(page.get_by_text("1 workflow uploaded successfully")).to_be_visible()
+        workflow_interval = 2
+        upload_time = datetime.now(tz=timezone.utc)
         page.wait_for_timeout(
             10000
         )  # wait 10 seconds to let interval workflow run few times
         page.reload()
         rows = page.locator("table tr", has_text="Interval workflow")
+
         expect(rows).not_to_have_count(0)
         executions_count = rows.count()
-        assert executions_count >= 4 and executions_count <= 8
+        elapsed_seconds = (datetime.now(tz=timezone.utc) - upload_time).total_seconds()
+        expected_runs_count = round(elapsed_seconds // workflow_interval)
+        print(
+            f"Time elapsed: {elapsed_seconds} seconds. Expected runs count: {expected_runs_count}"
+        )
+        assert (
+            executions_count >= expected_runs_count - 1
+            and executions_count <= expected_runs_count + 2
+        )
 
     except Exception:
         save_failure_artifacts(page, log_entries)
