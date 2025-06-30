@@ -70,7 +70,7 @@ class ServicenowProviderAuthConfig:
     ticket_creation_url: str = dataclasses.field(
         metadata={
             "required": False,
-            "description": "URL for creating new tickets (optional, will use default if not provided)",
+            "description": "URL for creating new tickets",
             "sensitive": False,
             "hint": "https://dev12345.service-now.com/now/sow/record/incident/-1",
         },

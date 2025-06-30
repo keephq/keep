@@ -25,7 +25,7 @@ class ZendeskProviderAuthConfig:
     ticket_creation_url: str = dataclasses.field(
         metadata={
             "required": False,
-            "description": "URL for creating new tickets (optional, will use default if not provided)",
+            "description": "URL for creating new tickets",
             "sensitive": False,
             "hint": "https://yourcompany.zendesk.com/agent/filters/new",
         },

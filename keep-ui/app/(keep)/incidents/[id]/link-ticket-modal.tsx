@@ -10,7 +10,7 @@ import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { showSuccessToast, showErrorToast } from "@/shared/ui";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
-import { getProviderBaseUrl, getTicketEnrichmentKey } from "@/entities/incidents/lib/ticketing-utils";
+import { getProviderBaseUrl } from "@/entities/incidents/lib/ticketing-utils";
 
 interface LinkTicketModalProps {
   incident: IncidentDto;
@@ -78,7 +78,7 @@ export function LinkTicketModal({
       // Add ticket ID if provided
       if (ticketId.trim()) {
         const enrichmentKey = selectedProvider ?
-          getTicketEnrichmentKey(selectedProvider) :
+          `${selectedProvider.type}_ticket_id` :
           'ticketing_ticket_id';
         enrichments[enrichmentKey] = ticketId.trim();
       }
@@ -167,7 +167,6 @@ export function LinkTicketModal({
       className="w-[500px]"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Provider Selection (only show if there are multiple ticketing providers) */}
         {ticketingProviders.length > 1 && (
           <div>
             <Text className="mb-2">
@@ -206,7 +205,7 @@ export function LinkTicketModal({
           </div>
         )}
 
-        {/* Show selected provider info if single provider or provider is selected */}
+        {/* Show selected provider info if there's a single ticketing provider or provider is selected */}
         {(ticketingProviders.length === 1 || selectedProviderId) && (
           <>
             <Text className="text-sm font-medium mb-1">Selected Provider</Text>

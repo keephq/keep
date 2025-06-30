@@ -33,7 +33,7 @@ export function getTicketViewUrl(incident: IncidentDto, provider: Provider): str
 }
 
 /**
- * Construct a URL to create a new ticket in the provider's system
+ * Get and construct a URL to create a new ticket in the provider's system
  */
 export function getTicketCreateUrl(provider: Provider, description: string = "", title: string = ""): string {
   if (!provider.details?.authentication?.ticket_creation_url) {
@@ -70,17 +70,7 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
   return null;
 }
 
-/**
- * Get the enrichment key for a specific provider
- */
-export function getTicketEnrichmentKey(provider: Provider): string {
-  return `${provider.type}_ticket_id`;
-}
 
-/**
- * Check if a provider can create tickets
- */
 export function canCreateTickets(provider: Provider): boolean {
-  // Check if provider has ticketing tag and ticket creation URL exists
   return provider.tags.includes("ticketing") && Boolean(provider.details?.authentication?.ticket_creation_url);
 } 
