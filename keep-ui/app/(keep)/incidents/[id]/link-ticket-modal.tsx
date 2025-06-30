@@ -30,7 +30,7 @@ export function LinkTicketModal({
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const api = useApi();
-  const { installedProviders } = useFetchProviders();
+  const { installedProviders, isLoading: isLoadingProviders } = useFetchProviders();
 
   const ticketingProviders = useMemo(() => {
     return installedProviders.filter(
@@ -114,7 +114,7 @@ export function LinkTicketModal({
   };
 
   // Show loading state while providers are being fetched
-  if (installedProviders.length === 0) {
+  if (isLoadingProviders) {
     return (
       <Modal
         isOpen={isOpen}

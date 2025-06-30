@@ -1,1 +1,0 @@
-{"authentication": {"provider_id": "d8ccdce599a64eb7a01c1cba0595674e", "install_webhook": false, "provider_name": "no tickets", "service_now_base_url": "https://service-now.com", "username": "ddd", "password": "dddddd", "ticket_creation_url": "https://localhost:5555/tickets"}, "name": "no tickets"}

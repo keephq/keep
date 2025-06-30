@@ -23,7 +23,7 @@ export function CreateTicketModal({
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [ticketTitle, setTicketTitle] = useState<string>("");
   const [ticketDescription, setTicketDescription] = useState<string>("");
-  const { installedProviders } = useFetchProviders();
+  const { installedProviders, isLoading: isLoadingProviders } = useFetchProviders();
 
   // Initialize title and description when modal opens or incident changes
   useEffect(() => {
@@ -66,7 +66,7 @@ export function CreateTicketModal({
   };
 
   // Show loading state while providers are being fetched
-  if (installedProviders.length === 0) {
+  if (isLoadingProviders) {
     return (
       <Modal
         isOpen={isOpen}
@@ -99,7 +99,7 @@ export function CreateTicketModal({
       >
         <div className="flex flex-col gap-4">
           <Text className="text-red-500">
-            No ticketing providers are configured. Please configure a ticketing provider first.
+            No providers with ticket creation URL are configured. Please configure a ticketing creation URL first.
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
