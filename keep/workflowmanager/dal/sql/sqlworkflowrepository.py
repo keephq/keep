@@ -276,7 +276,7 @@ class SqlWorkflowRepository(WorkflowRepository):
                 execution_number=workflow_execution.execution_number,
                 event_id=workflow_execution.event_id,
                 event_type=workflow_execution.event_type,
-                test_run=workflow_execution.test_run,
+                test_run=workflow_execution.is_test_run,
                 status=workflow_execution.status,
             )
         except IntegrityError as e:
