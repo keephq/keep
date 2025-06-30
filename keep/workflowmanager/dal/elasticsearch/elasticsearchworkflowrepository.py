@@ -83,20 +83,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
         return []
 
-    def get_all_workflows(
-        self, tenant_id: str, exclude_disabled: bool = False
-    ) -> List[WorkflowDalModel]:
-        search_query = WorkflowDoc.search(using=self.elastic_search_client).filter(
-            "term", tenant_id=tenant_id
-        )
-
-        if exclude_disabled:
-            search_query = search_query.filter("term", is_deleted=True)
-
-        search_response = search_query.execute()
-
-        return [WorkflowDalModel(**item) for item in search_response]
-
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
         search_result = (
             WorkflowDoc.search(using=self.elastic_search_client)
@@ -175,31 +161,54 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def get_workflows_with_last_executions(
         self,
         tenant_id: str,
-        cel: str,
-        limit: int,
-        offset: int,
-        sort_by: str,
-        sort_dir: str,
-        fetch_last_executions: int = 15,
+        cel: str = "",
+        limit: int = 100,
+        offset: int = 0,
+        sort_by: str = "created_at",
+        sort_dir: str = "desc",
+        is_disabled_filter: bool = False,
+        is_provisioned_filter: bool = False,
+        provisioned_file_filter: str | None = None,
+        fetch_last_executions: int = 0,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
+        is_disabled_filter = (
+            is_disabled_filter if is_disabled_filter is not None else False
+        )
+        is_provisioned_filter = (
+            is_provisioned_filter if is_provisioned_filter is not None else False
+        )
         cel_to_sql_result = self.elastic_search_cel_to_sql.convert_to_sql_str_v2(cel)
         and_exp = f"AND ({cel_to_sql_result.sql})" if cel_to_sql_result.sql else ""
 
+        if is_disabled_filter:
+            and_exp += f" AND is_disabled = {'true' if is_disabled_filter else 'false'}"
+
+        if is_provisioned_filter:
+            and_exp += (
+                f" AND is_provisioned = {'true' if is_provisioned_filter else 'false'}"
+            )
+
+        if provisioned_file_filter:
+            and_exp += f" AND provisioned_file = '{provisioned_file_filter}'"
+
+        sort_by_field = None
+        if sort_by:
+            sort_by_field = (
+                properties_metadata.get_property_metadata_for_str(sort_by)
+                .field_mappings[0]
+                .map_to
+                if sort_by
+                else "creation_time"
+            )
         sort_dir = sort_dir.lower() if sort_dir else "asc"
-        sort_by = (
-            properties_metadata.get_property_metadata_for_str(sort_by)
-            .field_mappings[0]
-            .map_to
-            if sort_by
-            else "creation_time"
-        )
+
         limit = limit if limit is not None else 20
         offset = offset if offset is not None else 0
 
         sql = f"""
                 SELECT * FROM "{WorkflowDoc.Index.name}"
                 WHERE tenant_id = '{tenant_id}' {and_exp}
-                ORDER BY {sort_by} {sort_dir}
+                {f'ORDER BY {sort_by_field} {sort_dir}' if sort_by_field else ''}
               """
         dsl_query_response = self.elastic_search_client.sql.translate(
             body={"query": sql}

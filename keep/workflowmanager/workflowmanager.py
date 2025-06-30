@@ -293,9 +293,7 @@ class WorkflowManager:
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
             self.logger.info("Getting all workflows", extra={"tenant_id": tenant_id})
-            all_workflow_models = self.workflow_store.get_all_workflows(
-                tenant_id, exclude_disabled=True
-            )
+            all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
             self.logger.info(
                 "Got all workflows",
                 extra={
@@ -422,7 +420,7 @@ class WorkflowManager:
 
                         compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
-                        
+
                         # Convert event to dict and normalize severity for CEL evaluation
                         event_payload = event.dict()
                         # Convert severity string to numeric order for proper comparison with preprocessed CEL
@@ -432,7 +430,7 @@ class WorkflowManager:
                             except (ValueError, AttributeError):
                                 # If severity conversion fails, keep original value
                                 pass
-                        
+
                         activation = celpy.json_to_cel(event_payload)
                         try:
                             should_run = program.evaluate(activation)

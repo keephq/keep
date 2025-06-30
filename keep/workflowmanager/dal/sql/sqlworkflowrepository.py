@@ -11,7 +11,6 @@ from keep.api.core.db import (
     delete_workflow,
     delete_workflow_by_provisioned_file,
     get_all_provisioned_workflows,
-    get_all_workflows,
     get_workflow_by_id,
     get_workflow_execution,
     get_workflow_execution_with_logs,
@@ -108,16 +107,6 @@ class SqlWorkflowRepository(WorkflowRepository):
             for db_workflow in get_all_provisioned_workflows(tenant_id=tenant_id)
         ]
 
-    def get_all_workflows(
-        self, tenant_id: str, exclude_disabled: bool = False
-    ) -> List[WorkflowDalModel]:
-        return [
-            workflow_from_db_to_dto(db_workflow)
-            for db_workflow in get_all_workflows(
-                tenant_id=tenant_id, exclude_disabled=exclude_disabled
-            )
-        ]
-
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
         return [
             workflow_from_db_to_dto(db_workflow)
@@ -178,12 +167,15 @@ class SqlWorkflowRepository(WorkflowRepository):
     def get_workflows_with_last_executions(
         self,
         tenant_id: str,
-        cel: str,
-        limit: int,
-        offset: int,
-        sort_by: str,
-        sort_dir: str,
-        fetch_last_executions: int = 15,
+        cel: str = "",
+        limit: int = 100,
+        offset: int = 0,
+        sort_by: str = "created_at",
+        sort_dir: str = "desc",
+        is_disabled_filter: bool = False,
+        is_provisioned_filter: bool = False,
+        provisioned_file_filter: str | None = None,
+        fetch_last_executions: int = 0,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         return get_workflows_with_last_executions_v2(
             tenant_id=tenant_id,
@@ -192,6 +184,9 @@ class SqlWorkflowRepository(WorkflowRepository):
             offset=offset,
             sort_by=sort_by,
             sort_dir=sort_dir,
+            is_disabled_filter=is_disabled_filter,
+            is_provisioned_filter=is_provisioned_filter,
+            provisioned_file_filter=provisioned_file_filter,
             fetch_last_executions=fetch_last_executions,
         )
 

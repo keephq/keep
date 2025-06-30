@@ -50,21 +50,6 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_workflows(
-        self, tenant_id: str, exclude_disabled: bool = False
-    ) -> List[WorkflowDalModel]:
-        """
-        Retrieve all workflows for a specific tenant.
-
-        Args:
-            tenant_id (str): The ID of the tenant.
-            exclude_disabled (bool): If True, disabled workflows will be excluded from the results. Defaults to False.
-
-        Returns:
-            List[WorkflowDalModel]: A list of workflow data models.
-        """
-
-    @abstractmethod
     def get_workflow_by_id(
         self, tenant_id: str, workflow_id: str
     ) -> WorkflowDalModel | None:
@@ -104,14 +89,34 @@ class WorkflowRepository(ABC):
     def get_workflows_with_last_executions(
         self,
         tenant_id: str,
-        cel: str,
-        limit: int,
-        offset: int,
-        sort_by: str,
-        sort_dir: str,
-        fetch_last_executions: int = 15,
+        cel: str = "",
+        limit: int = 100,
+        offset: int = 0,
+        sort_by: str = "created_at",
+        sort_dir: str = "desc",
+        is_disabled_filter: bool = False,
+        is_provisioned_filter: bool = False,
+        provisioned_file_filter: str | None = None,
+        fetch_last_executions: int = 0,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
-        pass
+        """
+        Retrieve workflows with their last executions.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            cel (str, optional): CEL filter string. Defaults to "".
+            limit (int, optional): Maximum number of workflows to return. Defaults to 100.
+            offset (int, optional): Offset for pagination. Defaults to 0.
+            sort_by (str, optional): Field to sort by. Defaults to "created_at".
+            sort_dir (str, optional): Sort direction ("asc" or "desc"). Defaults to "desc".
+            is_disabled_filter (bool, optional): Filter for disabled workflows. Defaults to False.
+            is_provisioned_filter (bool, optional): Filter for provisioned workflows. Defaults to False.
+            provisioned_file_filter (str | None, optional): Filter by provisioned file name. Defaults to None.
+            fetch_last_executions (int, optional): Number of last executions to fetch for each workflow. Defaults to 0.
+
+        Returns:
+            Tuple[list[WorkflowWithLastExecutionsDalModel], int]: A tuple containing a list of workflows with their last executions and the total count of workflows.
+        """
 
     # endregion
 

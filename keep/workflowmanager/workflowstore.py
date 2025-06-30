@@ -210,12 +210,10 @@ class WorkflowStore:
                 detail="Unable to parse workflow from dict",
             )
 
-    def get_all_workflows(
-        self, tenant_id: str, exclude_disabled: bool = False
-    ) -> list[WorkflowDalModel]:
+    def get_all_workflows(self, tenant_id: str) -> list[WorkflowDalModel]:
         # list all tenant's workflows
-        workflows = self.workflow_repository.get_all_workflows(
-            tenant_id, exclude_disabled
+        workflows, count = self.workflow_repository.get_workflows_with_last_executions(
+            tenant_id=tenant_id, limit=1000, offset=0, fetch_last_executions=0
         )
         return workflows
 
@@ -242,7 +240,13 @@ class WorkflowStore:
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
-        workflows = self.workflow_repository.get_all_workflows(tenant_id)
+        workflows, count = self.workflow_repository.get_workflows_with_last_executions(
+            tenant_id=tenant_id,
+            limit=1000,
+            offset=0,
+            is_disabled_filter=False,
+            is_provisioned_filter=False,
+        )
         return [workflow.workflow_raw for workflow in workflows]
 
     def get_workflows_from_path(
