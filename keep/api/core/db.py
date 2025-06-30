@@ -23,6 +23,7 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
 from retry import retry
 from sqlalchemy import (
+    Dialect,
     String,
     and_,
     case,
@@ -161,6 +162,14 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         if should_raise:
             raise ValueError(f"Invalid UUID: {value}")
         return None
+
+
+def __convert_to_uuid_dialect_str(value: str, dialect: Dialect):
+    uuid_obj = __convert_to_uuid(value)
+    if uuid_obj is None:
+        # if it's not a valid UUID, return the original value
+        return value
+    return UUIDType(binary=False).process_bind_param(uuid_obj, dialect)
 
 
 def retry_on_db_error(f):
@@ -1456,7 +1465,7 @@ def batch_enrich(
 
 def enrich_entity(
     tenant_id,
-    fingerprint,
+    _fingerprint,
     enrichments,
     action_type: ActionType,
     action_callee: str,
@@ -1466,6 +1475,7 @@ def enrich_entity(
     audit_enabled=True,
 ):
     with existed_or_new_session(session) as session:
+        fingerprint = __convert_to_uuid_dialect_str(_fingerprint, session.bind.dialect)
         return _enrich_entity(
             session,
             tenant_id,
