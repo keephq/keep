@@ -1,58 +1,31 @@
 services:
-  elasticsearch-wf-engine:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
+  keep-frontend-dev:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
     environment:
-      - bootstrap.memory_lock=true
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
-      - ELASTIC_PASSWORD=keeptests
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=false
-      - cluster.routing.allocation.disk.watermark.low=99%
-      - cluster.routing.allocation.disk.watermark.high=99%
-      - cluster.routing.allocation.disk.watermark.flood_stage=99%
-    ports:
-      - 9200:9200
-    healthcheck:
-      test: curl -s -u elastic:keeptests http://localhost:9200/_cluster/health || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # keep-frontend-dev:
-  #   extends:
-  #     file: docker-compose.common.yml
-  #     service: keep-frontend-common
-  #   environment:
-  #     - API_URL=http://keep-backend-dev:8080
-  #     - SENTRY_DISABLED=true
-  #   build:
-  #     dockerfile: docker/Dockerfile.dev.ui
-  #   volumes:
-  #     - ./keep-ui:/app
-  #     - /app/node_modules
-  #     - /app/.next
-  #   depends_on:
-  #     - keep-backend-dev
+      - API_URL=http://keep-backend-dev:8080
+      - SENTRY_DISABLED=true
+    build:
+      dockerfile: docker/Dockerfile.dev.ui
+    volumes:
+      - ./keep-ui:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - keep-backend-dev
 
   keep-backend-dev:
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
-    environment:
-      - WORKFLOW_ENGINE_USE_ELASTICSEARCH=true
-      - ELASTIC_HOSTS=http://elasticsearch-wf-engine:9200
-      - ELASTIC_USER=elastic
-      - ELASTIC_PASSWORD=keeptests
     build:
       dockerfile: docker/Dockerfile.dev.api
     volumes:
       - .:/app
       - ./state:/state
-    depends_on:
-      - elasticsearch-wf-engine
 
-  # keep-websocket-server:
-  #   extends:
-  #     file: docker-compose.common.yml
-  #     service: keep-websocket-server-common
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
