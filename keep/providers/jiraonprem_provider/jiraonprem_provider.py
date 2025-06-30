@@ -14,13 +14,14 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class JiraonpremProviderAuthConfig:
     """Jira On Prem authentication configuration."""
 
-    host: pydantic.AnyHttpUrl = dataclasses.field(
+    host: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Jira Host",
@@ -366,7 +367,9 @@ class JiraonpremProvider(BaseProvider):
                 update["labels"] = [{"set": label} for label in labels]
 
             if custom_fields:
-                update.update(custom_fields)
+                # Format custom fields properly for Jira API
+                for field_name, field_value in custom_fields.items():
+                    update[field_name] = [{"set": field_value}]
 
             request_body = {"update": update}
 
@@ -497,7 +500,13 @@ class JiraonpremProvider(BaseProvider):
         Notify jira by creating an issue.
         """
         # if the user didn't provider a project_key, try to extract it from the board name
-        issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
+        issue_type = (
+            issue_type
+            if issue_type
+            else (
+                kwargs.get("issuetype", "Task") if isinstance(kwargs, dict) else "Task"
+            )
+        )
         if labels and isinstance(labels, str):
             labels = json.loads(labels.replace("'", '"'))
         try:
