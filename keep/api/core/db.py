@@ -758,17 +758,6 @@ def get_all_provisioned_providers(tenant_id: str) -> List[Provider]:
     return list(providers)
 
 
-def get_all_workflows_yamls(tenant_id: str):
-    with Session(engine) as session:
-        workflows = session.exec(
-            select(Workflow.workflow_raw)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-        ).all()
-    return list(workflows)
-
-
 def get_workflow_by_name(tenant_id: str, workflow_name: str):
     with Session(engine) as session:
         workflow = session.exec(

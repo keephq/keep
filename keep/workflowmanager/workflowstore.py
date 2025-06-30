@@ -242,7 +242,8 @@ class WorkflowStore:
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
-        return list(self.workflow_repository.get_all_workflows_yamls(tenant_id))
+        workflows = self.workflow_repository.get_all_workflows(tenant_id)
+        return [workflow.workflow_raw for workflow in workflows]
 
     def get_workflows_from_path(
         self,

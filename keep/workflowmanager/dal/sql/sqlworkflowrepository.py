@@ -12,7 +12,6 @@ from keep.api.core.db import (
     delete_workflow_by_provisioned_file,
     get_all_provisioned_workflows,
     get_all_workflows,
-    get_all_workflows_yamls,
     get_workflow_by_id,
     get_workflow_execution,
     get_workflow_execution_with_logs,
@@ -124,9 +123,6 @@ class SqlWorkflowRepository(WorkflowRepository):
             workflow_from_db_to_dto(db_workflow)
             for db_workflow in get_interval_workflows()
         ]
-
-    def get_all_workflows_yamls(self, tenant_id: str) -> List[str]:
-        return get_all_workflows_yamls(tenant_id=tenant_id)
 
     def get_workflow_by_id(
         self, tenant_id: str, workflow_id: str

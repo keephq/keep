@@ -56,6 +56,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         self,
         workflow: WorkflowDalModel,
     ) -> WorkflowDalModel:
+        workflow.is_disabled = workflow.is_disabled or False
         doc = WorkflowDoc(**workflow.dict())
         doc.meta.id = workflow.id
         doc.save(
@@ -85,14 +86,16 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def get_all_workflows(
         self, tenant_id: str, exclude_disabled: bool = False
     ) -> List[WorkflowDalModel]:
-        docs = (
-            WorkflowDoc.search(using=self.elastic_search_client)
-            .filter("term", tenant_id=tenant_id)
-            .filter("term", is_disabled=not exclude_disabled)
-            .execute()
+        search_query = WorkflowDoc.search(using=self.elastic_search_client).filter(
+            "term", tenant_id=tenant_id
         )
 
-        return [WorkflowDalModel(**item) for item in docs]
+        if exclude_disabled:
+            search_query = search_query.filter("term", is_deleted=True)
+
+        search_response = search_query.execute()
+
+        return [WorkflowDalModel(**item) for item in search_response]
 
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
         search_result = (
@@ -104,9 +107,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         )
 
         return [WorkflowDalModel(**item) for item in search_result]
-
-    def get_all_workflows_yamls(self, tenant_id: str) -> List[str]:
-        return []
 
     def get_workflow_by_id(
         self, tenant_id: str, workflow_id: str

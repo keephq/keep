@@ -33,7 +33,13 @@ class WorkflowRepository(ABC):
 
     @abstractmethod
     def delete_workflow(self, tenant_id, workflow_id):
-        pass
+        """
+        Delete a workflow by its ID.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_id (str): The ID of the workflow to delete.
+        """
 
     @abstractmethod
     def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
@@ -47,11 +53,16 @@ class WorkflowRepository(ABC):
     def get_all_workflows(
         self, tenant_id: str, exclude_disabled: bool = False
     ) -> List[WorkflowDalModel]:
-        pass
+        """
+        Retrieve all workflows for a specific tenant.
 
-    @abstractmethod
-    def get_all_workflows_yamls(self, tenant_id: str):
-        pass
+        Args:
+            tenant_id (str): The ID of the tenant.
+            exclude_disabled (bool): If True, disabled workflows will be excluded from the results. Defaults to False.
+
+        Returns:
+            List[WorkflowDalModel]: A list of workflow data models.
+        """
 
     @abstractmethod
     def get_workflow_by_id(
