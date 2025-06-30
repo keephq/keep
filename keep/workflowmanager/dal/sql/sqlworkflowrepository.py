@@ -325,11 +325,12 @@ class SqlWorkflowRepository(WorkflowRepository):
                 .where(WorkflowExecution.workflow_id == workflow_id)
                 .where(WorkflowExecution.is_test_run == False)
                 .where(
-                    (WorkflowExecution.status == WorkflowStatus.SUCCESS.value)
-                    | (WorkflowExecution.status == WorkflowStatus.ERROR.value)
-                    | (
-                        WorkflowExecution.status
-                        == WorkflowStatus.PROVIDERS_NOT_CONFIGURED.value
+                    WorkflowExecution.status.in_(
+                        [
+                            WorkflowStatus.SUCCESS.value,
+                            WorkflowStatus.ERROR.value,
+                            WorkflowStatus.PROVIDERS_NOT_CONFIGURED.value,
+                        ]
                     )
                 )
                 .order_by(WorkflowExecution.execution_number.desc())
