@@ -112,8 +112,10 @@ def pull_data_from_providers(
                 provider_id=provider.id,
                 provider_type=provider.type,
             )
+
+            
             sorted_provider_alerts_by_fingerprint = (
-                provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
+                provider_class.get_alerts_by_fingerprint_without_enrich(tenant_id=tenant_id)
             )
             logger.info(
                 f"Pulling alerts from provider {provider.type} ({provider.id}) completed",

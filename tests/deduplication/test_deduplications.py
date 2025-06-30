@@ -12,6 +12,7 @@ from keep.api.core.db import get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import DeduplicationRuleDto, AlertStatus
 from keep.api.models.db.alert import AlertDeduplicationRule, AlertDeduplicationEvent, Alert
+from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.providers.providers_factory import ProvidersFactory
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
@@ -906,3 +907,30 @@ def test_full_deduplication_last_received(db_session, create_alert):
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
 
     assert alerts_dto[0].lastReceived == dt2.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def test_alert_deduplicator_hash_consistency():
+    """
+    Checks that the alert hash is the same when the order of keys in the dict is different
+    """
+    
+    deduplicator = AlertDeduplicator(tenant_id="test-tenant")
+    rule = DeduplicationRuleDto(id="dummy-rule", ignore_fields=[])
+    
+    # First alert: normal order
+    alert1 = AlertDto(
+        id= 1,
+        message= Test,
+        timestamp="2025-06-30T12:00:00Z"
+    )
+    # Second alert: different key order (via dict)
+    alert2 = AlertDto(
+        message= Test,
+        id= 1,        
+        timestamp="2025-06-30T12:00:00Z"
+    )
+
+    result1 = deduplicator._apply_deduplication_rule(alert1, rule, last_alert_fingerprint_to_hash={})
+    result2 = deduplicator._apply_deduplication_rule(alert2, rule, last_alert_fingerprint_to_hash={})
+
+    assert result1.alert_hash == result2.alert_hash, f"Hashes differ: {result1.alert_hash} != {result2.alert_hash}"

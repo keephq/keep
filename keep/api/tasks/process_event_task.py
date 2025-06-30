@@ -698,7 +698,14 @@ def process_event(
                                 )
                             )
                         else:
-                            event_list.append(event_item)
+                            #set fingerprint to alerts pulled from provider _get_alerts() and started from preset.py
+                            event_list.append(
+                                provider_class.format_alert_fingerprint(
+                                    tenant_id=tenant_id,
+                                    formatted_alert=event_item,
+                                    provider_id=provider_id,
+                                    provider_type=provider_type,
+                                ))                        
                     event = event_list
                 else:
                     event = provider_class.format_alert(

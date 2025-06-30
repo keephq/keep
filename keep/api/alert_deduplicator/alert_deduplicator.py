@@ -47,7 +47,7 @@ class AlertDeduplicator:
         alert: AlertDto,
         rule: DeduplicationRuleDto,
         last_alert_fingerprint_to_hash: dict[str, str] | None = None,
-    ) -> bool:
+    ) -> AlertDto:
         """
         Apply a deduplication rule to an alert.
 
@@ -63,9 +63,10 @@ class AlertDeduplicator:
         for field in rule.ignore_fields:
             alert_copy = self._remove_field(field, alert_copy)
 
-        # calculate the hash
+        # calculate the hash for the alert 
+        # we use the alert dict to get the fields in the correct order
         alert_hash = hashlib.sha256(
-            json.dumps(alert_copy.dict(), default=str).encode()
+            json.dumps(alert_copy.dict(), default=str, sort_keys=True).encode()
         ).hexdigest()
         alert.alert_hash = alert_hash
         # Check if the hash is already in the database.

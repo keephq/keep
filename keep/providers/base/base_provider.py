@@ -413,6 +413,53 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("format_alert() method not implemented")
 
+
+    @classmethod
+    def format_alert_fingerprint(
+        cls,
+        formatted_alerts: list[AlertDto],
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
+    ) -> list[AlertDto] | None:
+        logger = logging.getLogger(__name__)
+
+   
+        if formatted_alerts is None:
+            logger.debug(
+                "Provider returned None, which means it decided not to format the alert"
+            )
+            return None
+        logger.debug("Alert formatted")
+        # after the provider calculated the default fingerprint
+        #   check if there is a custom deduplication rule and apply
+        custom_deduplication_rule = get_custom_deduplication_rule(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+        )
+    
+        # if there is no custom deduplication rule, return the formatted alert
+        if not custom_deduplication_rule:
+            return formatted_alerts        
+        
+        # if there is a custom deduplication rule, apply it
+        # apply the custom deduplication rule to calculate the fingerprint
+        for alert in formatted_alerts:
+            logger.info(
+                "Applying custom deduplication rule",
+                extra={
+                    "tenant_id": tenant_id,
+                    "provider_id": provider_id,
+                    "alert_id": alert.id,
+                },
+            )
+            alert.fingerprint = cls.get_alert_fingerprint(
+                alert, custom_deduplication_rule.fingerprint_fields
+            )
+        return formatted_alert
+
+
     @classmethod
     def format_alert(
         cls,
@@ -420,7 +467,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         tenant_id: str | None,
         provider_type: str | None,
         provider_id: str | None,
-    ) -> AlertDto | list[AlertDto] | None:
+    ) -> list[AlertDto] | None:
         logger = logging.getLogger(__name__)
 
         provider_instance: BaseProvider | None = None
@@ -451,19 +498,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 )
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event, provider_instance)
-        if formatted_alert is None:
-            logger.debug(
-                "Provider returned None, which means it decided not to format the alert"
-            )
-            return None
-        logger.debug("Alert formatted")
-        # after the provider calculated the default fingerprint
-        #   check if there is a custom deduplication rule and apply
-        custom_deduplication_rule = get_custom_deduplication_rule(
-            tenant_id=tenant_id,
-            provider_id=provider_id,
-            provider_type=provider_type,
-        )
 
         if not isinstance(formatted_alert, list):
             formatted_alert.providerId = provider_id
@@ -475,39 +509,20 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 alert.providerId = provider_id
                 alert.providerType = provider_type
 
-        # if there is no custom deduplication rule, return the formatted alert
-        if not custom_deduplication_rule:
-            return formatted_alert
-        # if there is a custom deduplication rule, apply it
-        # apply the custom deduplication rule to calculate the fingerprint
-        for alert in formatted_alert:
-            logger.info(
-                "Applying custom deduplication rule",
-                extra={
-                    "tenant_id": tenant_id,
-                    "provider_id": provider_id,
-                    "alert_id": alert.id,
-                },
-            )
-            alert.fingerprint = cls.get_alert_fingerprint(
-                alert, custom_deduplication_rule.fingerprint_fields
-            )
-        return formatted_alert
+        return cls.format_alert_fingerprint(
+            formatted_alert,
+            tenant_id,
+            provider_type,
+            provider_id,
+        )
+
 
     @staticmethod
     def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
-        """
-        Get the fingerprint of an alert.
-
-        Args:
-            event (AlertDto): The alert to get the fingerprint of.
-            fingerprint_fields (list, optional): The fields we calculate the fingerprint upon. Defaults to [].
-
-        Returns:
-            str: hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
-        """
+        logger = logging.getLogger(__name__)
         if not fingerprint_fields:
             return alert.name
+        
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
         for fingerprint_field in fingerprint_fields:
@@ -563,7 +578,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 alert.providerType = self.provider_type
             return alerts
 
-    def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
+    def get_alerts_by_fingerprint_without_enrich(self, tenant_id: str) -> dict[str, list[AlertDto]]:
         """
         Get alerts from the provider grouped by fingerprint, sorted by lastReceived.
 
@@ -591,7 +606,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     get_attr,
                 )
             }
+        return grouped_alerts
 
+    def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
+        
+        grouped_alerts = self.get_alerts_by_fingerprint_without_enrich(tenant_id)
+        
         # enrich alerts
         with tracer.start_as_current_span(f"{self.__class__.__name__}-enrich_alerts"):
             pulled_alerts_enrichments = get_enrichments(
