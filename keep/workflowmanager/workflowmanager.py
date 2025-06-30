@@ -54,6 +54,10 @@ class WorkflowManager:
             self.logger.info("Workflow manager already started")
             return
 
+        if not self.scheduler:
+            self.logger.error("Scheduler is not initialized, initializing it")
+            self.scheduler = WorkflowScheduler(self)
+
         await self.scheduler.start()
         self.started = True
 
