@@ -1,6 +1,7 @@
 import hashlib
 import importlib
 import sys
+import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +12,9 @@ from keep.api.models.db.tenant import TenantApiKey
 
 @pytest.fixture
 def test_app(monkeypatch, request, db_session):
+    # db_session fixture dropping tables causing error when trying to store workflow logs
+    os.environ["KEEP_STORE_WORKFLOW_LOGS"] = "false"
+
     # Store original setup_logging function
     import keep.api.logging
 
@@ -21,9 +25,6 @@ def test_app(monkeypatch, request, db_session):
 
     try:
         monkeypatch.setenv("KEEP_USE_LIMITER", "false")
-        monkeypatch.setenv(
-            "KEEP_STORE_WORKFLOW_LOGS", "false"
-        )  # db_session fixture dropping tables causing error when trying to store workflow logs
         # Check if request.param is a dict or a string
         if isinstance(request.param, dict):
             # Set environment variables based on the provided dictionary
