@@ -12,14 +12,14 @@ export interface LinkedTicket {
  */
 export function getProviderBaseUrl(provider: Provider): string {
   if (!provider?.details?.authentication) return "";
-  
+
   const auth = provider.details.authentication;
-  
-  return auth.base_url || 
-         auth.service_now_base_url || 
-         auth.jira_base_url || 
-         auth.host ||
-         "";
+
+  return auth.base_url ||
+    auth.service_now_base_url ||
+    auth.jira_base_url ||
+    auth.host ||
+    "";
 }
 
 /**
@@ -27,7 +27,7 @@ export function getProviderBaseUrl(provider: Provider): string {
  */
 export function getTicketViewUrl(incident: IncidentDto, provider: Provider): string {
   if (!incident.enrichments) return "";
-  
+
   const urlKey = `${provider.type}_ticket_url`;
   return incident.enrichments[urlKey] || "";
 }
@@ -36,35 +36,17 @@ export function getTicketViewUrl(incident: IncidentDto, provider: Provider): str
  * Construct a URL to create a new ticket in the provider's system
  */
 export function getTicketCreateUrl(provider: Provider, description: string = "", title: string = ""): string {
-  // First check if the provider has a configured ticket creation URL
-  if (provider.details?.authentication?.ticket_creation_url) {
-    return provider.details.authentication.ticket_creation_url;
+  if (!provider.details?.authentication?.ticket_creation_url) {
+    return "";
   }
-  
-  const baseUrl = getProviderBaseUrl(provider);
-  
-  if (!baseUrl) return "";
-  
-  let createUrl = "";
-  switch (provider.type) {
-    case "servicenow":
-      createUrl = `${baseUrl}/now/sow/record/incident/-1/params/short_description=${title}&description=${description}`;
-      break;
-    case "jira":
-      createUrl = `${baseUrl}/secure/CreateIssue.jspa`;
-      break;
-    case "zendesk":
-      createUrl = `${baseUrl}/agent/filters/new`;
-      break;
-    case "freshdesk":
-      createUrl = `${baseUrl}/helpdesk/tickets/new`;
-      break;
-    default:
-      createUrl = `${baseUrl}/tickets/new`;
-      break;
+
+  let createUrl = provider.details.authentication.ticket_creation_url;
+
+  // TODO: might need to add other providers here
+  if (provider.type === "servicenow") {
+    createUrl = `${createUrl}/short_description=${title}&description=${description}`;
   }
-  
-  
+
   return createUrl;
 }
 
@@ -73,7 +55,7 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
  */
 export function findLinkedTicket(incident: any, ticketingProviders: Provider[]): LinkedTicket | null {
   if (!incident.enrichments) return null;
-  
+
   // Look for any ticketing provider's ticket ID in enrichments
   for (const provider of ticketingProviders) {
     const ticketKey = `${provider.type}_ticket_id`;
