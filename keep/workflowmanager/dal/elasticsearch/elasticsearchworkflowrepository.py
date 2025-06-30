@@ -80,9 +80,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
         pass
 
-    def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
-        return []
-
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
         search_result = (
             WorkflowDoc.search(using=self.elastic_search_client)
@@ -162,7 +159,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         self,
         tenant_id: str,
         cel: str = "",
-        limit: int = 100,
+        limit: int = None,
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",

@@ -46,10 +46,6 @@ class WorkflowRepository(ABC):
         pass
 
     @abstractmethod
-    def get_all_provisioned_workflows(self, tenant_id: str) -> List[WorkflowDalModel]:
-        pass
-
-    @abstractmethod
     def get_workflow_by_id(
         self, tenant_id: str, workflow_id: str
     ) -> WorkflowDalModel | None:
@@ -90,7 +86,7 @@ class WorkflowRepository(ABC):
         self,
         tenant_id: str,
         cel: str = "",
-        limit: int = 100,
+        limit: int = None,
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",
@@ -105,7 +101,7 @@ class WorkflowRepository(ABC):
         Args:
             tenant_id (str): The ID of the tenant.
             cel (str, optional): CEL filter string. Defaults to "".
-            limit (int, optional): Maximum number of workflows to return. Defaults to 100.
+            limit (int, optional): Maximum number of workflows to return. Defaults to None, which means no limit.
             offset (int, optional): Offset for pagination. Defaults to 0.
             sort_by (str, optional): Field to sort by. Defaults to "created_at".
             sort_dir (str, optional): Sort direction ("asc" or "desc"). Defaults to "desc".
