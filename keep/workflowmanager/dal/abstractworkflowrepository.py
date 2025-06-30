@@ -148,7 +148,7 @@ class WorkflowRepository(ABC):
 
     # region Workflow Execution
     @abstractmethod
-    def create_workflow_execution(
+    def add_workflow_execution(
         self,
         workflow_id: str,
         workflow_revision: int,

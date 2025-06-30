@@ -111,9 +111,7 @@ def test_handle_manual_event_workflow():
     workflow_scheduler._finish_workflow_execution = Mock()
 
     # Mock create_workflow_execution
-    mock_workflow_repository.create_workflow_execution.return_value = (
-        "test_execution_id"
-    )
+    mock_workflow_repository.add_workflow_execution.return_value = "test_execution_id"
 
     tenant_id = "test_tenant"
     triggered_by_user = "test_user"
@@ -159,9 +157,7 @@ def test_handle_manual_event_workflow_test_run():
     workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
     workflow_scheduler._finish_workflow_execution = Mock()
     # Mock create_workflow_execution
-    mock_workflow_repository.create_workflow_execution.return_value = (
-        "test_execution_id"
-    )
+    mock_workflow_repository.add_workflow_execution.return_value = "test_execution_id"
     tenant_id = "test_tenant"
     triggered_by_user = "test_user"
 

@@ -334,7 +334,7 @@ class WorkflowScheduler:
         )
         if len(triggered_by) > 255:
             triggered_by = triggered_by[:255]
-        return self.workflow_repository.create_workflow_execution(
+        return self.workflow_repository.add_workflow_execution(
             workflow_id=workflow_id,
             workflow_revision=workflow_revision,
             tenant_id=tenant_id,

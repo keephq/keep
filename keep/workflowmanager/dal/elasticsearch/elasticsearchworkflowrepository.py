@@ -336,7 +336,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     # endregion
 
     # region Workflow Execution
-    def create_workflow_execution(
+    def add_workflow_execution(
         self,
         workflow_id: str,
         workflow_revision: int,
