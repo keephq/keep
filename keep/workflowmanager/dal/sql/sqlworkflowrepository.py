@@ -264,34 +264,24 @@ class SqlWorkflowRepository(WorkflowRepository):
     # region Workflow Execution
     def add_workflow_execution(
         self,
-        workflow_id: str,
-        workflow_revision: int,
-        tenant_id: str,
-        triggered_by: str,
-        execution_number: int = 1,
-        event_id: str = None,
-        fingerprint: str = None,
-        status: WorkflowStatus = None,
-        execution_id: str = None,
-        event_type: str = None,
-        test_run: bool = False,
+        workflow_execution: WorkflowExecutionDalModel,
     ) -> str:
         try:
             return create_workflow_execution(
-                workflow_id=workflow_id,
-                workflow_revision=workflow_revision,
-                tenant_id=tenant_id,
-                triggered_by=triggered_by,
-                execution_number=execution_number,
-                event_id=event_id,
-                execution_id=execution_id,
-                event_type=event_type,
-                test_run=test_run,
-                status=status.value if status else None,
+                execution_id=workflow_execution.id,
+                workflow_id=workflow_execution.workflow_id,
+                workflow_revision=workflow_execution.workflow_revision,
+                tenant_id=workflow_execution.tenant_id,
+                triggered_by=workflow_execution.triggered_by,
+                execution_number=workflow_execution.execution_number,
+                event_id=workflow_execution.event_id,
+                event_type=workflow_execution.event_type,
+                test_run=workflow_execution.test_run,
+                status=workflow_execution.status,
             )
         except IntegrityError as e:
             raise ConflictError(
-                f"Workflow execution for workflow {workflow_id} with revision {workflow_revision} already exists."
+                f"Workflow execution for workflow {workflow_execution.workflow_id} with revision {workflow_execution.workflow_revision} already exists."
             ) from e
 
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):

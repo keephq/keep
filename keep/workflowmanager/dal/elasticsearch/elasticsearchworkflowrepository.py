@@ -339,40 +339,17 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     # region Workflow Execution
     def add_workflow_execution(
         self,
-        workflow_id: str,
-        workflow_revision: int,
-        tenant_id: str,
-        triggered_by: str,
-        execution_number: int = 1,
-        event_id: str = None,
-        fingerprint: str = None,
-        status: WorkflowStatus = None,
-        execution_id: str = None,
-        event_type: str = None,
-        test_run: bool = False,
+        workflow_execution: WorkflowExecutionDalModel,
     ) -> str:
         try:
-            workflow_execution = WorkflowExecutionDalModel(
-                id=execution_id,
-                workflow_id=workflow_id,
-                workflow_revision=workflow_revision,
-                tenant_id=tenant_id,
-                triggered_by=triggered_by,
-                execution_number=execution_number,
-                event_id=event_id,
-                fingerprint=fingerprint,
-                status=status.value if status else None,
-                event_type=event_type,
-                is_test_run=test_run,
-                started=datetime.now(tz=timezone.utc),
-            )
+            workflow_execution.is_test_run = workflow_execution.is_test_run or False
             doc = WorkflowExecutionDoc(**workflow_execution.dict())
             doc.meta.id = workflow_execution.id
             doc.save(
                 using=self.elastic_search_client,
                 refresh=True,
             )
-            return execution_id
+            return workflow_execution.id
         except ElasticsearchConflictError as conflict_error:
             raise ConflictError(
                 "Workflow execution with the same ID already exists."

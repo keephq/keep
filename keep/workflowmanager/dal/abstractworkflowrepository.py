@@ -150,19 +150,17 @@ class WorkflowRepository(ABC):
     @abstractmethod
     def add_workflow_execution(
         self,
-        workflow_id: str,
-        workflow_revision: int,
-        tenant_id: str,
-        triggered_by: str,
-        execution_number: int = 1,
-        event_id: str = None,
-        fingerprint: str = None,
-        status: WorkflowStatus = None,
-        execution_id: str = None,
-        event_type: str = None,
-        test_run: bool = False,
+        workflow_execution: WorkflowExecutionDalModel,
     ) -> str:
-        pass
+        """
+        Add a new workflow execution.
+
+        Args:
+            workflow_execution (WorkflowExecutionDalModel): The workflow execution model to add.
+
+        Returns:
+            str: The ID of the added workflow execution.
+        """
 
     @abstractmethod
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):

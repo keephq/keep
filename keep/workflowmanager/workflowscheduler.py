@@ -336,17 +336,20 @@ class WorkflowScheduler:
         if len(triggered_by) > 255:
             triggered_by = triggered_by[:255]
         return self.workflow_repository.add_workflow_execution(
-            workflow_id=workflow_id,
-            workflow_revision=workflow_revision,
-            tenant_id=tenant_id,
-            triggered_by=triggered_by,
-            execution_number=execution_number,
-            event_id=event_id,
-            status=WorkflowStatus.IN_PROGRESS,
-            fingerprint=fingerprint,
-            execution_id=workflow_execution_id,
-            event_type=event_type,
-            test_run=test_run,
+            WorkflowExecutionDalModel(
+                id=workflow_execution_id,
+                workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
+                tenant_id=tenant_id,
+                triggered_by=triggered_by,
+                execution_number=execution_number,
+                event_id=event_id,
+                fingerprint=fingerprint,
+                status=WorkflowStatus.IN_PROGRESS.value,
+                event_type=event_type,
+                is_test_run=test_run,
+                started=datetime.now(tz=timezone.utc),
+            )
         )
 
     def _run_workflow(
