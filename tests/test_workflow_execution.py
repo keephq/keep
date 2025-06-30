@@ -1857,3 +1857,67 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager):
     )
     assert second_execution_wf_store is not None
     assert second_execution_wf_store["status"] == "error"
+
+
+def test_workflow_if_with_numbers(db_session, workflow_manager, mocker):
+    mock_console = mocker.patch(
+        "keep.providers.console_provider.console_provider.ConsoleProvider._notify"
+    )
+
+    IF_WITH_NUMBERS_WORKFLOW = """workflow:
+id: 7f16b30c-485c-4f44-8138-b5ca41dCbf
+name: number comparison
+description: compare numbers
+disabled: false
+triggers:
+  - type: alert
+    cel: "name == 'api-service-error'"
+inputs: []
+owners: []
+services: []
+consts:
+  a: -10
+steps:
+  - name: console-step
+    if: "{{consts.a}} > {{alert.error_code}}"
+    provider:
+      type: console
+      with:
+        message: hey
+actions: []
+    """
+    workflow = Workflow(
+        id="if-with-numbers",
+        name="if-with-numbers",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="workflow which logs every alert, and fails if alert.should_fail is true",
+        created_by="borat@keephq.dev",
+        interval=0,
+        workflow_raw=IF_WITH_NUMBERS_WORKFLOW,
+        last_updated=datetime.now(tz=pytz.utc),
+    )
+
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Create an alert to trigger the workflow
+    alert = AlertDto(
+        id="alert-1",
+        fingerprint="upsdown-1",
+        source=["grafana"],
+        name="api-service-error",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now(tz=pytz.utc).isoformat(),
+        error_code=-1,
+    )
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [alert])
+
+    workflow_execution = wait_for_workflow_execution(SINGLE_TENANT_UUID, workflow.id)
+
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # we expect no console call because the if condition is not met, -10 > -1 is false
+    assert mock_console.call_count == 0
