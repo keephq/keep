@@ -200,7 +200,7 @@ class WorkflowScheduler:
         workflows_to_run = []
         # for each workflow:
         for workflow in workflows_with_interval:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(tz=timezone.utc)
             last_execution = (
                 self.workflow_repository.get_last_completed_workflow_execution(
                     workflow.id
