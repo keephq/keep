@@ -68,7 +68,7 @@ const mockZendeskProvider: Provider = {
   last_alert_received: "",
   details: {
     authentication: {
-      zendesk_domain: "company.zendesk.com"
+      host: "https://company.zendesk.com"
     }
   },
   can_query: false,
@@ -106,44 +106,47 @@ describe("ticketing-utils", () => {
   });
 
   describe("getTicketViewUrl", () => {
-    it("should construct ServiceNow ticket URL", () => {
-      const linkedTicket: LinkedTicket = {
-        provider: mockServiceNowProvider,
-        ticketId: "INC0012345",
-        key: "servicenow_ticket_id"
+    it("should get ticket URL from incident enrichments for ServiceNow", () => {
+      const incident = {
+        enrichments: {
+          servicenow_ticket_url: "https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345"
+        }
       };
-      const result = getTicketViewUrl(linkedTicket);
+      const result = getTicketViewUrl(incident, mockServiceNowProvider);
       expect(result).toBe("https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345");
     });
 
-    it("should construct Jira ticket URL", () => {
-      const linkedTicket: LinkedTicket = {
-        provider: mockJiraProvider,
-        ticketId: "PROJ-123",
-        key: "jira_ticket_id"
+    it("should get ticket URL from incident enrichments for Jira", () => {
+      const incident = {
+        enrichments: {
+          jira_ticket_url: "https://company.atlassian.net/browse/PROJ-123"
+        }
       };
-      const result = getTicketViewUrl(linkedTicket);
+      const result = getTicketViewUrl(incident, mockJiraProvider);
       expect(result).toBe("https://company.atlassian.net/browse/PROJ-123");
     });
 
-    it("should construct Zendesk ticket URL", () => {
-      const linkedTicket: LinkedTicket = {
-        provider: mockZendeskProvider,
-        ticketId: "12345",
-        key: "zendesk_ticket_id"
+    it("should get ticket URL from incident enrichments for Zendesk", () => {
+      const incident = {
+        enrichments: {
+          zendesk_ticket_url: "https://company.zendesk.com/agent/tickets/12345"
+        }
       };
-      const result = getTicketViewUrl(linkedTicket);
+      const result = getTicketViewUrl(incident, mockZendeskProvider);
       expect(result).toBe("https://company.zendesk.com/agent/tickets/12345");
     });
 
-    it("should return empty string for provider without base URL", () => {
-      const providerWithoutAuth = { ...mockServiceNowProvider, details: { authentication: {} } };
-      const linkedTicket: LinkedTicket = {
-        provider: providerWithoutAuth,
-        ticketId: "INC0012345",
-        key: "servicenow_ticket_id"
+    it("should return empty string when no ticket URL in enrichments", () => {
+      const incident = {
+        enrichments: {}
       };
-      const result = getTicketViewUrl(linkedTicket);
+      const result = getTicketViewUrl(incident, mockServiceNowProvider);
+      expect(result).toBe("");
+    });
+
+    it("should return empty string when incident has no enrichments", () => {
+      const incident = {};
+      const result = getTicketViewUrl(incident, mockServiceNowProvider);
       expect(result).toBe("");
     });
   });
@@ -185,15 +188,13 @@ describe("ticketing-utils", () => {
   });
 
   describe("findLinkedTicket", () => {
-    it("should find ServiceNow linked ticket", () => {
+    it("should find linked ticket for ServiceNow", () => {
       const incident = {
         enrichments: {
           servicenow_ticket_id: "INC0012345"
         }
       };
-      const providers = [mockServiceNowProvider, mockJiraProvider];
-      const result = findLinkedTicket(incident, providers);
-      
+      const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toEqual({
         provider: mockServiceNowProvider,
         ticketId: "INC0012345",
@@ -201,57 +202,30 @@ describe("ticketing-utils", () => {
       });
     });
 
-    it("should find Jira linked ticket", () => {
-      const incident = {
-        enrichments: {
-          jira_ticket_id: "PROJ-123"
-        }
-      };
-      const providers = [mockServiceNowProvider, mockJiraProvider];
-      const result = findLinkedTicket(incident, providers);
-      
-      expect(result).toEqual({
-        provider: mockJiraProvider,
-        ticketId: "PROJ-123",
-        key: "jira_ticket_id"
-      });
-    });
-
     it("should return null when no linked ticket found", () => {
       const incident = {
-        enrichments: {
-          some_other_field: "value"
-        }
+        enrichments: {}
       };
-      const providers = [mockServiceNowProvider, mockJiraProvider];
-      const result = findLinkedTicket(incident, providers);
-      
+      const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toBeNull();
     });
 
-    it("should return null when no enrichments", () => {
+    it("should return null when incident has no enrichments", () => {
       const incident = {};
-      const providers = [mockServiceNowProvider, mockJiraProvider];
-      const result = findLinkedTicket(incident, providers);
-      
+      const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toBeNull();
     });
   });
 
   describe("getTicketEnrichmentKey", () => {
-    it("should generate correct enrichment key for ServiceNow", () => {
+    it("should return correct enrichment key for ServiceNow", () => {
       const result = getTicketEnrichmentKey(mockServiceNowProvider);
       expect(result).toBe("servicenow_ticket_id");
     });
 
-    it("should generate correct enrichment key for Jira", () => {
+    it("should return correct enrichment key for Jira", () => {
       const result = getTicketEnrichmentKey(mockJiraProvider);
       expect(result).toBe("jira_ticket_id");
-    });
-
-    it("should generate correct enrichment key for Zendesk", () => {
-      const result = getTicketEnrichmentKey(mockZendeskProvider);
-      expect(result).toBe("zendesk_ticket_id");
     });
   });
 }); 

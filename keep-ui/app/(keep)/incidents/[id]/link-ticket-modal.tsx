@@ -10,7 +10,7 @@ import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { showSuccessToast, showErrorToast } from "@/shared/ui";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
-import { getProviderBaseUrl, getTicketEnrichmentKey } from "./ticketing-utils";
+import { getProviderBaseUrl, getTicketEnrichmentKey } from "@/entities/incidents/lib/ticketing-utils";
 
 interface LinkTicketModalProps {
   incident: IncidentDto;

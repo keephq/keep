@@ -7,7 +7,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
-import { getProviderBaseUrl, getTicketCreateUrl, canCreateTickets } from "./ticketing-utils";
+import { getProviderBaseUrl, getTicketCreateUrl, canCreateTickets } from "@/entities/incidents/lib/ticketing-utils";
 
 interface CreateTicketModalProps {
   incident: IncidentDto;

@@ -12,7 +12,7 @@ import {
   findLinkedTicket, 
   getTicketViewUrl,
   type LinkedTicket 
-} from "./ticketing-utils";
+} from "@/entities/incidents/lib/ticketing-utils";
 
 interface TicketingIncidentOptionsProps {
   incident: IncidentDto;
