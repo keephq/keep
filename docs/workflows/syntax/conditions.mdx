@@ -13,13 +13,19 @@ Using conditions, you can introduce decision-making into workflows by asserting 
 ```yaml
 actions:
   - name: notify-slack
-    if: "{{ alert.cpu_load }} > 70"
+    if: "{{ alert.cpu_load }} == '70'"
     provider:
       type: slack
       config: "{{ providers.slack }}"
       with:
         message: "The CPU load exceeded the threshold!"
 ```
+
+<Warning>
+  **Values of variables will be quoted when evaluated**. For example, if
+  `alert.cpu_load` is `70`, it will resolve to `'70'` (number quoted with single
+  quotes).
+</Warning>
 
 ### Using results of other steps in condition
 
