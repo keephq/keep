@@ -387,11 +387,9 @@ class WorkflowStore:
 
         # Get all existing provisioned workflows
         logger.info("Getting all already provisioned workflows")
-        provisioned_workflows = (
+        provisioned_workflows, count = (
             self.workflow_repository.get_workflows_with_last_executions(
-                tenant_id=tenant_id,
-                is_provisioned_filter=True,
-                fetch_last_executions=0
+                tenant_id=tenant_id, is_provisioned_filter=True, fetch_last_executions=0
             )
         )
         logger.info(f"Found {len(provisioned_workflows)} provisioned workflows")
