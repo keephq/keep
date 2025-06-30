@@ -51,8 +51,7 @@ export function ManualRunWorkflowModal({
   const { workflows } = useWorkflowsV2({
     ...DEFAULT_WORKFLOWS_QUERY,
     limit: 100, // Fetch more workflows at once for the dropdown
-    // FIXME: this is a temporary solution until 'disabled == false' query is fixed
-    cel: "(disabled in ['0']) || (disabled == false)", // Only show enabled workflows
+    cel: "(disabled == false)", // Only show enabled workflows
   });
   const filteredWorkflows = workflows?.filter((w) => w.canRun);
   const api = useApi();
