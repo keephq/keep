@@ -230,7 +230,8 @@ class WorkflowScheduler:
                     continue
             # else, if the last execution was more than interval seconds ago, we need to run it
             elif (
-                last_execution.started + timedelta(seconds=workflow.interval)
+                last_execution.started.replace(tzinfo=timezone.utc)
+                + timedelta(seconds=workflow.interval)
                 <= current_time
             ):
                 try:

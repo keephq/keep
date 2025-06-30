@@ -323,7 +323,7 @@ class SqlWorkflowRepository(WorkflowRepository):
                     selectinload(WorkflowExecution.workflow_to_incident_execution),
                 )
                 .where(WorkflowExecution.workflow_id == workflow_id)
-                .where(WorkflowExecution.is_test_run is False)
+                .where(WorkflowExecution.is_test_run == False)
                 .where(
                     WorkflowExecution.status.in_(
                         [
