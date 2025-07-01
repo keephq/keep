@@ -56,7 +56,7 @@ class WorkflowManager:
             self.logger.info("Workflow manager already started")
             return
 
-        if self.scheduler is None:
+        if not self.scheduler:
             self.logger.warning(
                 "Workflow manager does not have a scheduler and cannot be started"
             )
@@ -70,7 +70,7 @@ class WorkflowManager:
         if not self.started:
             return
 
-        if self.scheduler is None:
+        if not self.scheduler:
             self.logger.warning(
                 "Workflow manager does not have a scheduler, looks like it was already stopped"
             )
