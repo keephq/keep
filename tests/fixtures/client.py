@@ -13,7 +13,8 @@ from keep.api.models.db.tenant import TenantApiKey
 @pytest.fixture
 def test_app(monkeypatch, request, db_session):
     # db_session fixture dropping tables causing error when trying to store workflow logs
-    monkeypatch.setenv("KEEP_STORE_WORKFLOW_LOGS", "false")
+    # monkeypatch is not working for this case, so we set the environment variable directly
+    os.environ["KEEP_STORE_WORKFLOW_LOGS"] = "false"
 
     # Store original setup_logging function
     import keep.api.logging
