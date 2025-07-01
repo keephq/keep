@@ -160,7 +160,6 @@ class SqlWorkflowRepository(WorkflowRepository):
     def get_workflows(
         self,
         tenant_id: str,
-        name_filter: str | None = None,
         is_disabled_filter: bool = None,
         is_provisioned_filter: bool = None,
         provisioned_file_filter: str | None = None,
@@ -169,12 +168,9 @@ class SqlWorkflowRepository(WorkflowRepository):
             query = (
                 select(Workflow)
                 .where(Workflow.tenant_id == tenant_id)
-                .where(Workflow.is_deleted is False)
-                .where(Workflow.is_test is False)
+                .where(Workflow.is_deleted == False)
+                .where(Workflow.is_test == False)
             )
-
-            if name_filter:
-                query = query.where(Workflow.name == name_filter)
 
             if is_disabled_filter is not None:
                 query = query.where(Workflow.is_disabled == is_disabled_filter)
@@ -184,11 +180,11 @@ class SqlWorkflowRepository(WorkflowRepository):
 
             if provisioned_file_filter:
                 query = query.where(
-                    Workflow.provisioned_file.like(f"%{provisioned_file_filter}%")
+                    Workflow.provisioned_file == provisioned_file_filter
                 )
 
             return [
-                workflow_from_db_to_dto(db_workflow)
+                workflow_from_db_to_dto(db_workflow[0])
                 for db_workflow in session.exec(query).all()
             ]
 

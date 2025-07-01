@@ -76,7 +76,6 @@ class WorkflowRepository(ABC):
     def get_workflows(
         self,
         tenant_id: str,
-        name_filter: str = None,
         is_disabled_filter: bool = None,
         is_provisioned_filter: bool = None,
         provisioned_file_filter: str | None = None,

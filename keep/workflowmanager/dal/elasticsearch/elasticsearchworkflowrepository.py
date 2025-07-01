@@ -158,7 +158,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     def get_workflows(
         self,
         tenant_id: str,
-        name_filter: str | None = None,
         is_disabled_filter: bool = None,
         is_provisioned_filter: bool = None,
         provisioned_file_filter: str | None = None,
@@ -166,9 +165,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         search_query = WorkflowDoc.search(using=self.elastic_search_client).filter(
             "term", tenant_id=tenant_id
         )
-
-        if name_filter:
-            search_query = search_query.query("term", name__keyword=name_filter)
 
         if is_disabled_filter is not None:
             search_query = search_query.filter("term", is_disabled=is_disabled_filter)
