@@ -122,9 +122,9 @@ jobs:
         run: |
           git add schema.json
           if git diff --cached --quiet schema.json; then
-            echo "changed=false"
+            echo "changed=false" >> $GITHUB_OUTPUT
           else
-            echo "changed=true"
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Commit and push schema
