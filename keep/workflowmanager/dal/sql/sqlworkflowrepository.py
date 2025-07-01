@@ -157,6 +157,41 @@ class SqlWorkflowRepository(WorkflowRepository):
                 avg_duration=avg_duration or 0,
             )
 
+    def get_workflows(
+        self,
+        tenant_id: str,
+        name_filter: str | None = None,
+        is_disabled_filter: bool = None,
+        is_provisioned_filter: bool = None,
+        provisioned_file_filter: str | None = None,
+    ):
+        with Session(engine) as session:
+            query = (
+                select(Workflow)
+                .where(Workflow.tenant_id == tenant_id)
+                .where(Workflow.is_deleted is False)
+                .where(Workflow.is_test is False)
+            )
+
+            if name_filter:
+                query = query.where(Workflow.name == name_filter)
+
+            if is_disabled_filter is not None:
+                query = query.where(Workflow.is_disabled == is_disabled_filter)
+
+            if is_provisioned_filter is not None:
+                query = query.where(Workflow.provisioned == is_provisioned_filter)
+
+            if provisioned_file_filter:
+                query = query.where(
+                    Workflow.provisioned_file.like(f"%{provisioned_file_filter}%")
+                )
+
+            return [
+                workflow_from_db_to_dto(db_workflow)
+                for db_workflow in session.exec(query).all()
+            ]
+
     def get_workflows_with_last_executions(
         self,
         tenant_id: str,
@@ -165,9 +200,6 @@ class SqlWorkflowRepository(WorkflowRepository):
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",
-        is_disabled_filter: bool = None,
-        is_provisioned_filter: bool = None,
-        provisioned_file_filter: str | None = None,
         fetch_last_executions: int = 0,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         return get_workflows_with_last_executions_v2(
@@ -177,9 +209,6 @@ class SqlWorkflowRepository(WorkflowRepository):
             offset=offset,
             sort_by=sort_by,
             sort_dir=sort_dir,
-            is_disabled_filter=is_disabled_filter,
-            is_provisioned_filter=is_provisioned_filter,
-            provisioned_file_filter=provisioned_file_filter,
             fetch_last_executions=fetch_last_executions,
         )
 

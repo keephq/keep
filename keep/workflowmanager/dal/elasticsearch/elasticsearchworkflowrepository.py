@@ -155,6 +155,36 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             avg_duration=average_duration or 0,
         )
 
+    def get_workflows(
+        self,
+        tenant_id: str,
+        name_filter: str | None = None,
+        is_disabled_filter: bool = None,
+        is_provisioned_filter: bool = None,
+        provisioned_file_filter: str | None = None,
+    ):
+        search_query = WorkflowDoc.search(using=self.elastic_search_client).filter(
+            "term", tenant_id=tenant_id
+        )
+
+        if name_filter:
+            search_query = search_query.query("term", name__keyword=name_filter)
+
+        if is_disabled_filter is not None:
+            search_query = search_query.filter("term", is_disabled=is_disabled_filter)
+
+        if is_provisioned_filter is not None:
+            search_query = search_query.filter(
+                "term", provisioned=is_provisioned_filter
+            )
+
+        if provisioned_file_filter is not None:
+            search_query = search_query.filter(
+                "term", provisioned_file=provisioned_file_filter
+            )
+        search_response = search_query.execute()
+        return [WorkflowDalModel(**item) for item in search_response]
+
     def get_workflows_with_last_executions(
         self,
         tenant_id: str,
@@ -163,24 +193,10 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",
-        is_disabled_filter: bool = None,
-        is_provisioned_filter: bool = None,
-        provisioned_file_filter: str | None = None,
         fetch_last_executions: int = None,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         cel_to_sql_result = self.elastic_search_cel_to_sql.convert_to_sql_str_v2(cel)
         and_exp = f"AND ({cel_to_sql_result.sql})" if cel_to_sql_result.sql else ""
-
-        if is_disabled_filter:
-            and_exp += f" AND is_disabled = {'true' if is_disabled_filter else 'false'}"
-
-        if is_provisioned_filter is not None:
-            and_exp += (
-                f" AND provisioned = {'true' if is_provisioned_filter else 'false'}"
-            )
-
-        if provisioned_file_filter is not None:
-            and_exp += f" AND provisioned_file = '{provisioned_file_filter}'"
 
         sort_by_field = None
         if sort_by:

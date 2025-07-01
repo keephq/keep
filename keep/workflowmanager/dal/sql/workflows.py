@@ -170,9 +170,6 @@ def build_workflow_executions_query(
 
 def __build_base_query(
     tenant_id: str,
-    is_disabled_filter: bool,
-    is_provisioned_filter: bool,
-    provisioned_file_filter: str,
     select_statements=None,
     latest_executions_subquery_cte=None,
 ):
@@ -205,24 +202,10 @@ def __build_base_query(
                 latest_executions_subquery_cte.c.row_num <= 1,
             ),
         )
-    )
-
-    base_query = (
-        base_query.where(Workflow.tenant_id == tenant_id)
+        .where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
         .where(Workflow.is_test == False)
     )
-
-    if is_disabled_filter is not None:
-        base_query = base_query.where(Workflow.is_disabled == is_disabled_filter)
-
-    if is_provisioned_filter is not None:
-        base_query = base_query.where(Workflow.provisioned == is_provisioned_filter)
-
-    if provisioned_file_filter:
-        base_query = base_query.where(
-            Workflow.provisioned_file == provisioned_file_filter
-        )
 
     return base_query
 
@@ -230,15 +213,9 @@ def __build_base_query(
 def build_workflows_total_count_query(
     tenant_id: str,
     cel: str,
-    is_disabled_filter: bool,
-    is_provisioned_filter: bool,
-    provisioned_file_filter: str,
 ):
     query = __build_base_query(
         tenant_id=tenant_id,
-        is_disabled_filter=is_disabled_filter,
-        is_provisioned_filter=is_provisioned_filter,
-        provisioned_file_filter=provisioned_file_filter,
         select_statements=[func.count(func.distinct(Workflow.id))],
     )
 
@@ -259,18 +236,12 @@ def build_workflows_query(
     offset: int,
     sort_by: str,
     sort_dir: str,
-    is_disabled_filter: bool,
-    is_provisioned_filter: bool,
-    provisioned_file_filter: str,
 ):
     limit = limit if limit is not None else 20
     offset = offset if offset is not None else 0
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     query = __build_base_query(
         tenant_id=tenant_id,
-        is_disabled_filter=is_disabled_filter,
-        is_provisioned_filter=is_provisioned_filter,
-        provisioned_file_filter=provisioned_file_filter,
         select_statements=[
             Workflow,
             literal_column("started").label("started"),
@@ -301,9 +272,6 @@ def get_workflows_with_last_executions_v2(
     offset: int,
     sort_by: str,
     sort_dir: str,
-    is_disabled_filter: bool,
-    is_provisioned_filter: bool,
-    provisioned_file_filter: str,
     fetch_last_executions: int,
 ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
     with Session(engine) as session:
@@ -315,9 +283,6 @@ def get_workflows_with_last_executions_v2(
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id,
             cel=cel,
-            is_disabled_filter=is_disabled_filter,
-            is_provisioned_filter=is_provisioned_filter,
-            provisioned_file_filter=provisioned_file_filter,
         )
 
         count = session.exec(total_count_query).one()[0]
@@ -328,9 +293,6 @@ def get_workflows_with_last_executions_v2(
         workflows_query = build_workflows_query(
             tenant_id=tenant_id,
             cel=cel,
-            is_disabled_filter=is_disabled_filter,
-            is_provisioned_filter=is_provisioned_filter,
-            provisioned_file_filter=provisioned_file_filter,
             limit=limit,
             offset=offset,
             sort_by=sort_by,
@@ -437,9 +399,6 @@ def get_workflow_facets_data(
             tenant_id=tenant_id,
             select_statements=select_statement,
             latest_executions_subquery_cte=latest_executions_subquery_cte,
-            is_disabled_filter=False,
-            is_provisioned_filter=False,
-            provisioned_file_filter=None,
         )
 
     return get_facet_options(

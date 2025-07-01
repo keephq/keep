@@ -214,10 +214,9 @@ class WorkflowStore:
 
     def get_all_workflows(self, tenant_id: str) -> list[WorkflowDalModel]:
         # list all tenant's workflows
-        workflows, count = self.workflow_repository.get_workflows_with_last_executions(
-            tenant_id=tenant_id, is_disabled_filter=False, limit=1000, offset=0
+        return self.workflow_repository.get_workflows(
+            tenant_id=tenant_id, is_disabled_filter=False
         )
-        return workflows
 
     def get_all_workflows_with_last_execution(
         self,
@@ -241,11 +240,7 @@ class WorkflowStore:
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
-        workflows, count = self.workflow_repository.get_workflows_with_last_executions(
-            tenant_id=tenant_id,
-            limit=1000,
-            offset=0,
-        )
+        workflows = self.workflow_repository.get_workflows(tenant_id=tenant_id)
         return [workflow.workflow_raw for workflow in workflows]
 
     def get_workflows_from_path(
@@ -387,10 +382,8 @@ class WorkflowStore:
         # Get all existing provisioned workflows
         logger.info("Getting all already provisioned workflows")
 
-        provisioned_workflows, count = (
-            self.workflow_repository.get_workflows_with_last_executions(
-                tenant_id=tenant_id, is_provisioned_filter=True, fetch_last_executions=0
-            )
+        provisioned_workflows = self.workflow_repository.get_workflows(
+            tenant_id=tenant_id, is_provisioned_filter=True
         )
         logger.info(f"Found {len(provisioned_workflows)} provisioned workflows")
 

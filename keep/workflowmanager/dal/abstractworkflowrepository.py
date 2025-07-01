@@ -73,6 +73,28 @@ class WorkflowRepository(ABC):
         """
 
     @abstractmethod
+    def get_workflows(
+        self,
+        tenant_id: str,
+        name_filter: str = None,
+        is_disabled_filter: bool = None,
+        is_provisioned_filter: bool = None,
+        provisioned_file_filter: str | None = None,
+    ):
+        """
+        Retrieve workflows for a specific tenant.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            is_disabled_filter (bool, optional): Filter for disabled workflows. Defaults to None, which means no filter.
+            is_provisioned_filter (bool, optional): Filter for provisioned workflows. Defaults to None, which means no filter.
+            provisioned_file_filter (str | None, optional): Filter by provisioned file name. Defaults to None.
+
+        Returns:
+            List[WorkflowDalModel]: A list of workflow data models.
+        """
+
+    @abstractmethod
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
         """
         Retrieve all workflows that are set to run at regular intervals.
@@ -90,9 +112,6 @@ class WorkflowRepository(ABC):
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",
-        is_disabled_filter: bool = None,
-        is_provisioned_filter: bool = None,
-        provisioned_file_filter: str | None = None,
         fetch_last_executions: int = None,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
         """
@@ -105,9 +124,6 @@ class WorkflowRepository(ABC):
             offset (int, optional): Offset for pagination. Defaults to 0.
             sort_by (str, optional): Field to sort by. Defaults to "created_at".
             sort_dir (str, optional): Sort direction ("asc" or "desc"). Defaults to "desc".
-            is_disabled_filter (bool, optional): Filter for disabled workflows. Defaults to None, which means no filter.
-            is_provisioned_filter (bool, optional): Filter for provisioned workflows. Defaults to None, which means no filter.
-            provisioned_file_filter (str | None, optional): Filter by provisioned file name. Defaults to None.
             fetch_last_executions (int, optional): Number of last executions to fetch for each workflow. Defaults to None, which means no last executions are fetched.
 
         Returns:
