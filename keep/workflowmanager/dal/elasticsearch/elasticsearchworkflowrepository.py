@@ -163,29 +163,23 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",
-        is_disabled_filter: bool = False,
-        is_provisioned_filter: bool = False,
+        is_disabled_filter: bool = None,
+        is_provisioned_filter: bool = None,
         provisioned_file_filter: str | None = None,
-        fetch_last_executions: int = 0,
+        fetch_last_executions: int = None,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
-        is_disabled_filter = (
-            is_disabled_filter if is_disabled_filter is not None else False
-        )
-        is_provisioned_filter = (
-            is_provisioned_filter if is_provisioned_filter is not None else False
-        )
         cel_to_sql_result = self.elastic_search_cel_to_sql.convert_to_sql_str_v2(cel)
         and_exp = f"AND ({cel_to_sql_result.sql})" if cel_to_sql_result.sql else ""
 
         if is_disabled_filter:
             and_exp += f" AND is_disabled = {'true' if is_disabled_filter else 'false'}"
 
-        if is_provisioned_filter:
+        if is_provisioned_filter is not None:
             and_exp += (
                 f" AND provisioned = {'true' if is_provisioned_filter else 'false'}"
             )
 
-        if provisioned_file_filter:
+        if provisioned_file_filter is not None:
             and_exp += f" AND provisioned_file = '{provisioned_file_filter}'"
 
         sort_by_field = None
@@ -236,7 +230,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         for hit in search_result["hits"]["hits"]:
             workflows.append(WorkflowWithLastExecutionsDalModel(**hit["_source"]))
 
-        if fetch_last_executions > 0:
+        if fetch_last_executions is not None and fetch_last_executions > 0:
             search_result = (
                 WorkflowExecutionDoc.search(using=self.elastic_search_client)
                 .filter("term", tenant_id=tenant_id)

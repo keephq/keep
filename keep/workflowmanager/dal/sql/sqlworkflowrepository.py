@@ -165,8 +165,8 @@ class SqlWorkflowRepository(WorkflowRepository):
         offset: int = 0,
         sort_by: str = "created_at",
         sort_dir: str = "desc",
-        is_disabled_filter: bool = False,
-        is_provisioned_filter: bool = False,
+        is_disabled_filter: bool = None,
+        is_provisioned_filter: bool = None,
         provisioned_file_filter: str | None = None,
         fetch_last_executions: int = 0,
     ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:

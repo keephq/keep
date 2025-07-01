@@ -213,7 +213,7 @@ class WorkflowStore:
     def get_all_workflows(self, tenant_id: str) -> list[WorkflowDalModel]:
         # list all tenant's workflows
         workflows, count = self.workflow_repository.get_workflows_with_last_executions(
-            tenant_id=tenant_id, limit=1000, offset=0, fetch_last_executions=0
+            tenant_id=tenant_id, limit=1000, offset=0
         )
         return workflows
 
@@ -225,7 +225,6 @@ class WorkflowStore:
         offset: int = None,
         sort_by: str = None,
         sort_dir: str = None,
-        session=None,
     ):
         # list all tenant's workflows
         return self.workflow_repository.get_workflows_with_last_executions(
@@ -244,8 +243,6 @@ class WorkflowStore:
             tenant_id=tenant_id,
             limit=1000,
             offset=0,
-            is_disabled_filter=False,
-            is_provisioned_filter=False,
         )
         return [workflow.workflow_raw for workflow in workflows]
 

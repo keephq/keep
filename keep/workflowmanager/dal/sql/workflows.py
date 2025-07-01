@@ -204,9 +204,11 @@ def __build_base_query(
         .where(Workflow.is_test == False)
     )
 
-    base_query = base_query.where(Workflow.is_disabled == is_disabled_filter).where(
-        Workflow.provisioned == is_provisioned_filter
-    )
+    if is_disabled_filter is not None:
+        base_query = base_query.where(Workflow.is_disabled == is_disabled_filter)
+
+    if is_provisioned_filter is not None:
+        base_query = base_query.where(Workflow.provisioned == is_provisioned_filter)
 
     if provisioned_file_filter:
         base_query = base_query.where(
@@ -304,8 +306,7 @@ def get_workflows_with_last_executions_v2(
     is_disabled_filter: bool,
     is_provisioned_filter: bool,
     provisioned_file_filter: str,
-    fetch_last_executions: int = 15,
-    session: Session = None,
+    fetch_last_executions: int,
 ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
     with Session(engine) as session:
         total_count_query = build_workflows_total_count_query(
