@@ -3985,8 +3985,7 @@ def get_incident_by_id(
                 AlertEnrichment,
                 and_(
                     Incident.tenant_id == AlertEnrichment.tenant_id,
-                    cast(col(Incident.id), String)
-                    == foreign(AlertEnrichment.alert_fingerprint),
+                    Incident.id == foreign(AlertEnrichment.alert_fingerprint),
                 ),
             )
             .filter(
