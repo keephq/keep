@@ -15,7 +15,13 @@ from keep.api.models.db.alert import Alert
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
+from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
+from tests.fixtures.workflow_manager import workflow_manager  # noqa
+
+from keep.api.models.db.workflow import Workflow
+from keep.api.models.incident import IncidentDto
+from tests.fixtures.workflow_manager import wait_for_workflow_execution
 
 
 @pytest.fixture(autouse=True)
@@ -900,3 +906,140 @@ def test_batch_enrichment(db_session, client, test_app, create_alert, elastic_cl
 
     assert len(alerts) == 10
     assert [a["status"] for a in alerts] == ["acknowledged"] * 10
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_incident_manual_enrichment_integration(db_session, client, test_app):
+    """
+    Test scenario 1: Create incident via API → enrich it manually → fetch and check enrichment
+    """
+    # Create incident via API
+    incident_payload = {
+        "user_generated_name": "Test Incident for Manual Enrichment",
+        "user_summary": "Test incident for manual enrichment integration test",
+        "severity": "critical",
+        "status": "firing",
+    }
+
+    # Create the incident
+    response = client.post(
+        "/incidents",
+        headers={"x-api-key": "some-key"},
+        json=incident_payload,
+    )
+    assert response.status_code == 202
+    incident_data = response.json()
+    incident_id = incident_data["id"]
+
+    # Enrich the incident manually with jira_ticket field
+    enrichment_payload = {"enrichments": {"jira_ticket": "12345"}}
+
+    response = client.post(
+        f"/incidents/{incident_id}/enrich",
+        headers={"x-api-key": "some-key"},
+        json=enrichment_payload,
+    )
+    assert response.status_code == 202
+
+    # Fetch the incident and check the enrichment is there
+    response = client.get(
+        f"/incidents/{incident_id}",
+        headers={"x-api-key": "some-key"},
+    )
+    assert response.status_code == 200
+    incident_data = response.json()
+
+    # Verify the enrichment was applied
+    assert "enrichments" in incident_data
+    assert incident_data["enrichments"]["jira_ticket"] == "12345"
+
+
+@pytest.mark.parametrize(
+    "test_app, db_session",
+    [
+        ("NO_AUTH", None),
+        ("NO_AUTH", {"db": "mysql"}),
+    ],
+    indirect=True,
+)
+def test_incident_workflow_enrichment_integration(db_session, client, test_app):
+    """
+    Test scenario 2: Create workflow that enriches incidents → create incident → fetch and check enrichment
+    """
+
+    # Create a workflow that enriches every incident with jira_ticket field
+    workflow_definition = """workflow:
+  id: incident-jira-enricher-test
+  name: Incident JIRA Enricher Test
+  description: Test workflow that enriches incidents with JIRA ticket
+  disabled: false
+  triggers:
+    - type: incident
+      events:
+        - created
+  actions:
+    - name: enrich-with-jira
+      provider:
+        type: console
+        with:
+          message: "Enriching incident {{ incident.user_generated_name }} with JIRA ticket"
+          enrich_incident:
+            - key: jira_ticket
+              value: "12345"
+"""
+
+    # Add the workflow to the database
+    workflow = Workflow(
+        id="incident-jira-enricher-test",
+        name="Incident JIRA Enricher Test",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test workflow that enriches incidents with JIRA ticket",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition,
+        last_updated=datetime.utcnow(),
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    # Create incident via API
+    incident_payload = {
+        "user_generated_name": "Test Incident for Workflow Enrichment",
+        "user_summary": "Test incident for workflow enrichment integration test",
+        "severity": "critical",
+        "status": "firing",
+    }
+
+    response = client.post(
+        "/incidents",
+        headers={"x-api-key": "some-key"},
+        json=incident_payload,
+    )
+    assert response.status_code == 202
+    incident_data = response.json()
+    incident_id = incident_data["id"]
+
+    # wait a bit, to be sure workflow is added to the queue
+    workflow_manager = WorkflowManager.get_instance()
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
+
+    # Wait for workflow execution to complete
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "incident-jira-enricher-test"
+    )
+
+    # Verify workflow execution was successful
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # Fetch the incident and check the enrichment is there
+    response = client.get(
+        f"/incidents/{incident_id}",
+        headers={"x-api-key": "some-key"},
+    )
+    assert response.status_code == 200
+    incident_data = response.json()
+
+    # Verify the enrichment was applied by the workflow
+    assert "enrichments" in incident_data
+    assert incident_data["enrichments"]["jira_ticket"] == "12345"

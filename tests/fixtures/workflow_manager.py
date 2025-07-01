@@ -11,6 +11,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 def workflow_manager():
     """
     Fixture to create and manage a WorkflowManager instance.
+    IMPORTANT: Do not use together with test_app fixture or scheduler instance won't be updated.
     """
     manager = None
     try:

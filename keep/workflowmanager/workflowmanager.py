@@ -67,6 +67,7 @@ class WorkflowManager:
         self.started = False
         # Clear the scheduler reference
         self.scheduler = None
+        WorkflowManager._instance = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
@@ -407,17 +408,19 @@ class WorkflowManager:
 
                         compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
-                        
+
                         # Convert event to dict and normalize severity for CEL evaluation
                         event_payload = event.dict()
                         # Convert severity string to numeric order for proper comparison with preprocessed CEL
                         if isinstance(event_payload.get("severity"), str):
                             try:
-                                event_payload["severity"] = AlertSeverity(event_payload["severity"].lower()).order
+                                event_payload["severity"] = AlertSeverity(
+                                    event_payload["severity"].lower()
+                                ).order
                             except (ValueError, AttributeError):
                                 # If severity conversion fails, keep original value
                                 pass
-                        
+
                         activation = celpy.json_to_cel(event_payload)
                         try:
                             should_run = program.evaluate(activation)
