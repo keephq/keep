@@ -784,8 +784,9 @@ class EnrichmentsBl:
         if should_exist:
             try:
                 self.elastic_client.enrich_alert(
-                    # alert_fingerprint representation can differ, therefore use final enrichment.alert_fingerprint
-                    alert_fingerprint=enrichment.alert_fingerprint,
+                    alert_fingerprint=(
+                        enrichment.alert_fingerprint if enrichment else str(fingerprint)
+                    ),
                     alert_enrichments=enrichments,
                 )
             except NotFoundError:
