@@ -9,6 +9,7 @@ from pympler.asizeof import asizeof
 from keep.api.core.config import config
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.models.alert import AlertDto
+from keep.api.models.incident import IncidentDto
 
 
 class ForeachContext(TypedDict):
@@ -33,7 +34,7 @@ class ContextManager:
         self.providers_context = {}
         self.actions_context = {}
         self.event_context: AlertDto = {}
-        self.incident_context = {}
+        self.incident_context: IncidentDto | None = None
         self.foreach_context: ForeachContext = {
             "value": None,
             "items": None,
@@ -118,7 +119,7 @@ class ContextManager:
     def set_event_context(self, event):
         self.event_context = event
 
-    def set_incident_context(self, incident):
+    def set_incident_context(self, incident: IncidentDto):
         self.incident_context = incident
 
     def set_consts_context(self, consts):

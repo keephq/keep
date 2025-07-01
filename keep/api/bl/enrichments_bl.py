@@ -722,7 +722,7 @@ class EnrichmentsBl:
 
     def enrich_entity(
         self,
-        fingerprint: str,
+        fingerprint: str | UUID,
         enrichments: dict,
         action_type: ActionType,
         action_callee: str,
@@ -761,7 +761,7 @@ class EnrichmentsBl:
                 }
             enrichments.update(disposable_enrichments)
 
-        enrich_alert_db(
+        enrichment = enrich_alert_db(
             self.tenant_id,
             fingerprint,
             enrichments,
@@ -784,7 +784,8 @@ class EnrichmentsBl:
         if should_exist:
             try:
                 self.elastic_client.enrich_alert(
-                    alert_fingerprint=fingerprint,
+                    # alert_fingerprint representation can differ, therefore use final enrichment.alert_fingerprint
+                    alert_fingerprint=enrichment.alert_fingerprint,
                     alert_enrichments=enrichments,
                 )
             except NotFoundError:

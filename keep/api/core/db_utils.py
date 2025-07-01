@@ -8,6 +8,8 @@ import json
 import logging
 import os
 from enum import Enum
+from uuid import UUID
+from sqlalchemy_utils import UUIDType
 from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 
 import pymysql
@@ -15,7 +17,7 @@ from dotenv import find_dotenv, load_dotenv
 from fastapi.encoders import jsonable_encoder
 from google.cloud.sql.connector import Connector
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import Dialect, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
@@ -294,3 +296,7 @@ def custom_serialize(obj: Any) -> Any:
         except Exception:
             # If even jsonable_encoder fails, convert to string as a last resort
             return str(obj)
+
+
+def uuid_to_dialect_value(value: UUID, dialect: Dialect):
+    return UUIDType(binary=False).process_bind_param(value, dialect)

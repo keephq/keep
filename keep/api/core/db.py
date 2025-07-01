@@ -53,6 +53,7 @@ from keep.api.core.db_utils import (
     custom_serialize,
     get_json_extract_field,
     get_or_create,
+    uuid_to_dialect_value,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
@@ -165,13 +166,15 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
         return None
 
 
-def __convert_to_uuid_dialect_str(value: str, dialect: Dialect):
+def __convert_to_uuid_dialect_str(value: str | UUID, dialect: Dialect):
+    if isinstance(value, UUID):
+        return uuid_to_dialect_value(value, dialect)
     uuid_obj = __convert_to_uuid(value)
     if uuid_obj is None:
         # if it's not a valid UUID, return the original value
         logger.warning(f"Invalid UUID: {value}, falling back to original string")
         return value
-    return UUIDType(binary=False).process_bind_param(uuid_obj, dialect)
+    return uuid_to_dialect_value(uuid_obj, dialect)
 
 
 def retry_on_db_error(f):
@@ -1467,7 +1470,7 @@ def batch_enrich(
 
 def enrich_entity(
     tenant_id,
-    _fingerprint,
+    fingerprint,
     enrichments,
     action_type: ActionType,
     action_callee: str,
@@ -1477,7 +1480,6 @@ def enrich_entity(
     audit_enabled=True,
 ):
     with existed_or_new_session(session) as session:
-        fingerprint = __convert_to_uuid_dialect_str(_fingerprint, session.bind.dialect)
         return _enrich_entity(
             session,
             tenant_id,
@@ -1530,7 +1532,13 @@ def get_enrichment(tenant_id, fingerprint, refresh=False):
 
 
 @retry(exceptions=(Exception,), tries=3, delay=0.1, backoff=2)
-def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
+def get_enrichment_with_session(
+    session, tenant_id, fingerprint: str | UUID, refresh=False
+):
+    # for alerts fingerprint is string, for incidents it's UUID
+    # alert enrichments looks up by string, incident enrichments looks up by UUID
+    if isinstance(fingerprint, UUID):
+        fingerprint = uuid_to_dialect_value(fingerprint, session.bind.dialect)
     try:
         alert_enrichment = session.exec(
             select(AlertEnrichment)

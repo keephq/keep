@@ -242,7 +242,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             else:
                 fingerprint = self.context_manager.event_context.fingerprint
         elif self.context_manager.incident_context:
-            fingerprint = str(self.context_manager.incident_context.id)
+            fingerprint = self.context_manager.incident_context.id
         else:
             fingerprint = None
 
