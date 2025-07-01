@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@tremor/react";
-import { MdLink, MdModeEdit, MdOutlineBookmarkAdd, MdOutlineOpenInNew } from "react-icons/md";
+import { MdLink, MdOutlineBookmarkAdd, MdOutlineOpenInNew } from "react-icons/md";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { LinkTicketModal } from "./link-ticket-modal";
 import { CreateTicketModal } from "./create-ticket-modal";
@@ -64,6 +64,12 @@ export function TicketingIncidentOptions({
     }
   };
 
+  // Get the provider URL for the linked ticket to avoid redundant calls
+  const linkedTicketUrl = useMemo(() => {
+    if (!linkedTicket) return "";
+    return getTicketViewUrl(incident, linkedTicket.provider);
+  }, [incident, linkedTicket]);
+
   return (
     <>
       {linkedTicket ? (
@@ -74,7 +80,7 @@ export function TicketingIncidentOptions({
           className="!py-0.5 mr-2"
           icon={MdOutlineOpenInNew}
           onClick={() => openInProvider(linkedTicket)}
-          disabled={!getTicketViewUrl(incident, linkedTicket.provider)}
+          disabled={!linkedTicketUrl}
         >
           Open in {linkedTicket.provider.display_name}
         </Button>
