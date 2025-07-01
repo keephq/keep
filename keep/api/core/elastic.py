@@ -57,8 +57,7 @@ def create_elastic_client(
             health = es_client.cluster.health()
             logger.warning(f"[Attempt {attempt}] Cluster status: {health['status']}")
             if health["status"] in {"green", "yellow"}:
-                print("✅ Elasticsearch is healthy.")
-                logger.warning(
+                logger.info(
                     f"✅ Elasticsearch is healthy with status: {health['status']}"
                 )
                 return es_client

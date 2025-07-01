@@ -20,7 +20,15 @@ class WorkflowRepository(ABC):
     # region Workflow
     @abstractmethod
     def add_workflow(self, workflow: WorkflowDalModel) -> WorkflowDalModel:
-        pass
+        """
+        Add a new workflow.
+
+        Args:
+            workflow (WorkflowDalModel): The workflow model to add.
+
+        Returns:
+            WorkflowDalModel: The added workflow model.
+        """
 
     @abstractmethod
     def update_workflow(self, workflow: WorkflowDalModel):
@@ -49,7 +57,16 @@ class WorkflowRepository(ABC):
     def get_workflow_by_id(
         self, tenant_id: str, workflow_id: str
     ) -> WorkflowDalModel | None:
-        pass
+        """
+        Retrieve a workflow by its ID.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_id (str): The ID of the workflow.
+
+        Returns:
+            WorkflowDalModel | None: The workflow model if found, otherwise None.
+        """
 
     @abstractmethod
     def get_workflow_stats(
@@ -190,7 +207,12 @@ class WorkflowRepository(ABC):
 
     @abstractmethod
     def update_workflow_execution(self, workflow_execution: WorkflowExecutionDalModel):
-        pass
+        """
+        Update an existing workflow execution.
+
+        Args:
+            workflow_execution (WorkflowExecutionDalModel): The workflow execution model to update.
+        """
 
     @abstractmethod
     def get_workflow_execution(
@@ -199,7 +221,17 @@ class WorkflowRepository(ABC):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> WorkflowExecutionDalModel | None:
-        pass
+        """
+        Retrieve a workflow execution by its ID.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_execution_id (str): The ID of the workflow execution.
+            is_test_run (bool | None, optional): Filter by test runs. Defaults to None, which means no filter.
+
+        Returns:
+            WorkflowExecutionDalModel | None: The workflow execution model if found, otherwise None.
+        """
 
     @abstractmethod
     def get_workflow_executions(
@@ -235,26 +267,63 @@ class WorkflowRepository(ABC):
         workflow_execution_id: str,
         is_test_run: bool | None = None,
     ) -> tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None:
-        pass
+        """
+        Retrieve a workflow execution with its logs.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_execution_id (str): The ID of the workflow execution.
+            is_test_run (bool | None, optional): Filter by test runs. Defaults to None, which means no filter.
+
+        Returns:
+            tuple[WorkflowExecutionDalModel, List[WorkflowExecutioLogDalModel]] | None: A tuple containing the workflow execution model and its logs if found, otherwise None.
+        """
 
     @abstractmethod
     def get_previous_workflow_execution(
         self, tenant_id: str, workflow_id: str, workflow_execution_id: str
     ) -> WorkflowExecutioLogDalModel | None:
-        pass
+        """
+        Retrieve the previous workflow execution before the specified execution ID.
+
+        Args:
+            tenant_id (str): The ID of the tenant.
+            workflow_id (str): The ID of the workflow.
+            workflow_execution_id (str): The ID of the current workflow execution.
+
+        Returns:
+            WorkflowExecutioLogDalModel | None: The previous workflow execution log model if found, otherwise None.
+        """
 
     @abstractmethod
     def get_last_completed_workflow_execution(
         self,
         workflow_id: str,
     ) -> WorkflowExecutionDalModel | None:
-        pass
+        """
+        Retrieve the last completed workflow execution for a specific workflow.
+
+        Args:
+            workflow_id (str): The ID of the workflow.
+
+        Returns:
+            WorkflowExecutionDalModel | None: The last completed workflow execution model if found, otherwise None.
+        """
 
     @abstractmethod
     def get_workflow_execution_by_execution_number(
         self, workflow_id: str, execution_number: int
     ) -> WorkflowExecutionDalModel | None:
-        pass
+        """
+        Retrieve a workflow execution by its execution number.
+
+        Args:
+            workflow_id (str): The ID of the workflow.
+            execution_number (int): The execution number of the workflow.
+
+        Returns:
+            WorkflowExecutionDalModel | None: The workflow execution model if found, otherwise None.
+        """
 
     # endregion
 
