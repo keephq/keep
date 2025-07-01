@@ -13,7 +13,7 @@ from keep.api.core.db import get_enrichment_with_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import Alert
+from keep.api.models.db.alert import Alert, AlertEnrichment
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
@@ -634,6 +634,14 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
 
     mock_alert_dto.service = "test-service"
 
+    expected_enrichments = {
+        "source_provider_id": "unknown",
+        "service": "test-service",
+        "environment": "unknown",
+        "display_name": "Test Service",
+        "is_manual": False,
+    }
+
     # Mock the get_topology_data_by_dynamic_matcher to return the mock topology service
     with patch(
         "keep.api.bl.enrichments_bl.get_topology_data_by_dynamic_matcher",
@@ -641,7 +649,12 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
     ):
         # Mock the enrichment database function so no actual DB actions occur
         with patch(
-            "keep.api.bl.enrichments_bl.enrich_alert_db"
+            "keep.api.bl.enrichments_bl.enrich_alert_db",
+            return_value=AlertEnrichment(
+                alert_fingerprint=mock_alert_dto.fingerprint,
+                tenant_id="test_tenant",
+                enrichments=expected_enrichments,
+            ),
         ) as mock_enrich_alert_db:
             # Run the mapping rule logic for the topology
             result_event = enrichment_bl.run_mapping_rules(mock_alert_dto)
@@ -653,13 +666,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
             mock_enrich_alert_db.assert_called_once_with(
                 "test_tenant",
                 mock_alert_dto.fingerprint,
-                {
-                    "source_provider_id": "unknown",
-                    "service": "test-service",
-                    "environment": "unknown",
-                    "display_name": "Test Service",
-                    "is_manual": False,
-                },
+                expected_enrichments,
                 action_callee="system",
                 action_type=ActionType.MAPPING_RULE_ENRICH,
                 action_description="Alert enriched with mapping from rule `topology_rule`",
@@ -911,6 +918,7 @@ def test_batch_enrichment(db_session, client, test_app, create_alert, elastic_cl
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+# @pytest.mark.parametrize("elastic_client", [False, True], indirect=True)
 def test_incident_manual_enrichment_integration(db_session, client, test_app):
     """
     Test scenario 1: Create incident via API → enrich it manually → fetch and check enrichment
