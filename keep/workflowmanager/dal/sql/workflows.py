@@ -203,7 +203,7 @@ def __build_base_query(
                 Workflow.id == latest_executions_subquery_cte.c.workflow_id,
                 latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
             ),
-        )
+        ).subquery()
 
     base_query = (
         base_query.where(Workflow.tenant_id == tenant_id)
