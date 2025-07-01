@@ -42,6 +42,7 @@ from keep.workflowmanager.dal.elasticsearch.cel_fields_configuration import (
 )
 from elasticsearch.dsl import Q, A
 
+
 class ElasticSearchWorkflowRepository(WorkflowRepository):
 
     def __init__(self, elastic_search_client: Elasticsearch):
@@ -76,9 +77,6 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             id=workflow_id,
             refresh=True,
         )
-
-    def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
-        pass
 
     def get_all_interval_workflows(self) -> List[WorkflowDalModel]:
         search_result = (
@@ -485,6 +483,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             return None
 
         return WorkflowExecutionDalModel(**search_result[0])
+
     # endregion
 
     # region Workflow Execution Log

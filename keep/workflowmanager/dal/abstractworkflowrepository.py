@@ -50,10 +50,6 @@ class WorkflowRepository(ABC):
         """
 
     @abstractmethod
-    def delete_workflow_by_provisioned_file(self, tenant_id, provisioned_file):
-        pass
-
-    @abstractmethod
     def get_workflow_by_id(
         self, tenant_id: str, workflow_id: str
     ) -> WorkflowDalModel | None:

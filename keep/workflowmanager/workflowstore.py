@@ -503,9 +503,7 @@ class WorkflowStore:
                     logger.info(
                         f"Deprovisioning workflow {workflow.id} as its file no longer exists or is outside the workflows directory"
                     )
-                    self.workflow_repository.delete_workflow_by_provisioned_file(
-                        tenant_id, workflow.provisioned_file
-                    )
+                    self.workflow_repository.delete_workflow(tenant_id, workflow.id)
                     logger.info(f"Workflow {workflow.id} deprovisioned successfully")
 
             # Provision new workflows from the directory
