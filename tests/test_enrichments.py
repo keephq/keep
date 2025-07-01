@@ -2,12 +2,14 @@
 import time
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
+import uuid
 
 import pytest
 from sqlalchemy import text
 from tenacity import sleep
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.core.db import get_enrichment_with_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
@@ -1043,3 +1045,70 @@ def test_incident_workflow_enrichment_integration(db_session, client, test_app):
     # Verify the enrichment was applied by the workflow
     assert "enrichments" in incident_data
     assert incident_data["enrichments"]["jira_ticket"] == "12345"
+
+
+@pytest.mark.parametrize(
+    "test_app, db_session",
+    [
+        ("NO_AUTH", None),
+        ("NO_AUTH", {"db": "mysql"}),
+    ],
+    indirect=True,
+)
+def test_get_enrichment_with_session(db_session, client, test_app, create_alert):
+
+    fingerprint = str(uuid.uuid4())
+
+    create_alert(
+        fingerprint,
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
+    )
+
+    client.post(
+        "/alerts/enrich",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": fingerprint,
+            "enrichments": {
+                "jira_ticket": "12345",
+            },
+        },
+    )
+
+    enrichment = get_enrichment_with_session(
+        db_session, SINGLE_TENANT_UUID, fingerprint
+    )
+
+    assert enrichment is not None
+    assert enrichment.alert_fingerprint == fingerprint
+    assert enrichment.tenant_id == SINGLE_TENANT_UUID
+    assert enrichment.enrichments == {"jira_ticket": "12345"}
+
+    create_alert(
+        "not-uuid-fingerprint",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
+    )
+
+    client.post(
+        "/alerts/enrich",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": "not-uuid-fingerprint",
+            "enrichments": {
+                "jira_ticket": "12345",
+            },
+        },
+    )
+
+    enrichment = get_enrichment_with_session(
+        db_session, SINGLE_TENANT_UUID, "not-uuid-fingerprint"
+    )
+
+    assert enrichment is not None
+    assert enrichment.alert_fingerprint == "not-uuid-fingerprint"
+    assert enrichment.tenant_id == SINGLE_TENANT_UUID
+    assert enrichment.enrichments == {"jira_ticket": "12345"}
