@@ -146,6 +146,37 @@ def calculated_firing_counter(
     return previous_alert.firingCounter + 1
 
 
+def calculated_unresolved_counter(
+    alert: AlertDto, previous_alert: AlertDto | list[AlertDto]
+) -> int:
+    """
+    Calculate the unresolved counter of an alert based on the previous alert.
+
+    Args:
+        alert (AlertDto): The alert to calculate the firing counter for.
+        previous_alert (AlertDto): The previous alert.
+
+    Returns:
+        int: The calculated unresolved counter.
+    """
+    # if it's a resolved alert, the unresolved counter is 0
+    if alert.status == AlertStatus.RESOLVED.value:
+        return 0
+
+    # if this is the first alert, the unresolved counter is 1
+    if not previous_alert:
+        return 1
+    elif isinstance(previous_alert, list):
+        previous_alert = previous_alert[0]
+
+    if previous_alert.status == AlertStatus.RESOLVED.value:
+        return 1
+
+    # else, increment counter if the previous alert was firing
+    # NOTE: unresolvedCounter -> 0 only if resolved
+    return previous_alert.unresolvedCounter + 1
+
+
 def convert_db_alerts_to_dto_alerts(
     alerts: list[Alert | tuple[Alert, LastAlertToIncident]],
     with_incidents: bool = False,
@@ -217,6 +248,10 @@ def convert_db_alerts_to_dto_alerts(
                 # if the alert is acknowledged, the firing counter is 0
                 if alert_dto.status == AlertStatus.ACKNOWLEDGED.value:
                     alert_dto.firingCounter = 0
+
+                # if the alert is resolved, the unresolved counter is 0
+                if alert_dto.status == AlertStatus.RESOLVED.value:
+                    alert_dto.unresolvedCounter = 0
 
                 # always update provider id and type to the new values
                 alert_dto.providerId = alert.provider_id
