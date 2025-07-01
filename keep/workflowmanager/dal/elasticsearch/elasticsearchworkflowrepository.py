@@ -99,12 +99,12 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             .execute()
         )
 
-        doc = result[0] if result else None
+        workflow_doc = result[0] if result else None
 
-        if not doc:
+        if not workflow_doc:
             return None
 
-        return WorkflowDalModel(**doc)
+        return WorkflowDalModel(**workflow_doc)
 
     def get_workflow_stats(
         self,
@@ -266,11 +266,13 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     # region Workflow Version
     def add_workflow_version(self, workflow_version: WorkflowVersionDalModel):
         try:
-            doc = WorkflowVersionDoc(
+            workflow_version_doc = WorkflowVersionDoc(
                 **workflow_version.dict(),
             )
-            doc.meta.id = f"{workflow_version.workflow_id}-{workflow_version.revision}"
-            doc.save(
+            workflow_version_doc.meta.id = (
+                f"{workflow_version.workflow_id}-{workflow_version.revision}"
+            )
+            workflow_version_doc.save(
                 using=self.elastic_search_client,
                 refresh=True,
             )
@@ -283,8 +285,14 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         self, tenant_id: str, workflow_id: str, revision: int
     ) -> WorkflowVersionDalModel | None:
         version_id = f"{workflow_id}-{revision}"
-        doc = WorkflowVersionDoc.get(id=version_id, using=self.elastic_search_client)
-        return WorkflowVersionDalModel(**doc) if doc else None
+        workflow_version_doc = WorkflowVersionDoc.get(
+            id=version_id, using=self.elastic_search_client
+        )
+        return (
+            WorkflowVersionDalModel(**workflow_version_doc)
+            if workflow_version_doc
+            else None
+        )
 
     def get_workflow_versions(
         self, tenant_id: str, workflow_id: str
@@ -353,9 +361,9 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
     ) -> str:
         try:
             workflow_execution.is_test_run = workflow_execution.is_test_run or False
-            doc = WorkflowExecutionDoc(**workflow_execution.dict())
-            doc.meta.id = workflow_execution.id
-            doc.save(
+            workflow_execution_doc = WorkflowExecutionDoc(**workflow_execution.dict())
+            workflow_execution_doc.meta.id = workflow_execution.id
+            workflow_execution_doc.save(
                 using=self.elastic_search_client,
                 refresh=True,
             )

@@ -196,7 +196,8 @@ class WorkflowRepository(ABC):
 
         Args:
             workflow_execution (WorkflowExecutionDalModel): The workflow execution model to add.
-
+        Raises:
+            ConflictError: If a workflow execution with the specified ID already exists.
         Returns:
             str: The ID of the added workflow execution.
         """
