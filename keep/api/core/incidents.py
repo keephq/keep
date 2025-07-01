@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import String, and_, case, cast, func, select
+from sqlalchemy import and_, case, func, select
 from sqlmodel import Session, col, text
 from sqlalchemy.orm import foreign, aliased
 
