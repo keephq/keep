@@ -1583,7 +1583,7 @@ def test_workflow_executions_after_reprovisioning(
 ):
     """Test that workflow executions remain attached to workflows after reprovisioning."""
     # First provision the workflows
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after first provisioning
     first_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -1614,7 +1614,7 @@ def test_workflow_executions_after_reprovisioning(
     first_execution_id = workflow_execution.id
 
     # Reprovision the workflows
-    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
+    WorkflowStore().provision_workflows(SINGLE_TENANT_UUID)
 
     # Get workflows after second provisioning
     second_provisioned = get_all_provisioned_workflows(SINGLE_TENANT_UUID)
@@ -1853,18 +1853,16 @@ def test_get_all_workflows_with_last_execution(db_session, workflow_manager, moc
     )
 
     # Verify that the workflow was executed twice
-    workflow = next(w for w in workflows if w["workflow"].id == workflow.id)
+    workflow = next(w for w in workflows if w.id == workflow.id)
     assert workflow is not None
-    assert len(workflow["workflow_last_executions"]) == 2
+    assert len(workflow.workflow_last_executions) == 2
     first_execution_wf_store = next(
-        w for w in workflow["workflow_last_executions"] if w["id"] == first_execution.id
+        w for w in workflow.workflow_last_executions if w.id == first_execution.id
     )
     assert first_execution_wf_store is not None
-    assert first_execution_wf_store["status"] == "success"
+    assert first_execution_wf_store.status == "success"
     second_execution_wf_store = next(
-        w
-        for w in workflow["workflow_last_executions"]
-        if w["id"] == second_execution.id
+        w for w in workflow.workflow_last_executions if w.id == second_execution.id
     )
     assert second_execution_wf_store is not None
-    assert second_execution_wf_store["status"] == "error"
+    assert second_execution_wf_store.status == "error"

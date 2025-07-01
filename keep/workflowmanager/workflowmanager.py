@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -11,13 +12,18 @@ from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
     get_previous_alert_by_fingerprint,
-    save_workflow_results,
 )
+from keep.api.core.db_utils import custom_serialize
 from keep.api.core.metrics import workflow_execution_duration
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
+from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
+from keep.workflowmanager.dal.factories import create_workflow_repository
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -29,21 +35,30 @@ class WorkflowManager:
     PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
 
     @staticmethod
+    def create_instance() -> "WorkflowManager":
+        return WorkflowManager(
+            workflow_repository=create_workflow_repository(),
+        )
+
+    @staticmethod
     def get_instance() -> "WorkflowManager":
         if not hasattr(WorkflowManager, "_instance"):
-            WorkflowManager._instance = WorkflowManager()
+            WorkflowManager._instance = WorkflowManager.create_instance()
         return WorkflowManager._instance
 
-    def __init__(self):
+    def __init__(self, workflow_repository: WorkflowRepository):
         self.logger = logging.getLogger(__name__)
         self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
 
-        self.scheduler = WorkflowScheduler(self)
-        self.workflow_store = WorkflowStore()
+        self.scheduler = WorkflowScheduler(
+            workflow_manager=self, workflow_repository=workflow_repository
+        )
+        self.workflow_store = WorkflowStore(workflow_repository=workflow_repository)
         self.started = False
         self.cel_environment = celpy.Environment()
+        self.workflow_repository = workflow_repository
         # this is to enqueue the workflows in the REDIS queue
         # SHAHAR: todo - finish the REDIS implementation
         # self.loop = None
@@ -278,9 +293,7 @@ class WorkflowManager:
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
             self.logger.info("Getting all workflows", extra={"tenant_id": tenant_id})
-            all_workflow_models = self.workflow_store.get_all_workflows(
-                tenant_id, exclude_disabled=True
-            )
+            all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
             self.logger.info(
                 "Got all workflows",
                 extra={
@@ -407,7 +420,7 @@ class WorkflowManager:
 
                         compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
-                        
+
                         # Convert event to dict and normalize severity for CEL evaluation
                         event_payload = event.dict()
                         # Convert severity string to numeric order for proper comparison with preprocessed CEL
@@ -417,7 +430,7 @@ class WorkflowManager:
                             except (ValueError, AttributeError):
                                 # If severity conversion fails, keep original value
                                 pass
-                        
+
                         activation = celpy.json_to_cel(event_payload)
                         try:
                             should_run = program.evaluate(activation)
@@ -719,15 +732,22 @@ class WorkflowManager:
         workflow_results = {
             action.name: action.provider.results for action in workflow.workflow_actions
         }
+
         if workflow.workflow_steps:
             workflow_results.update(
                 {step.name: step.provider.results for step in workflow.workflow_steps}
             )
+
+        serialized_workflow_results = self._serialize_workflow_result(
+            workflow_results=workflow_results
+        )
+
         try:
-            save_workflow_results(
-                tenant_id=workflow.context_manager.tenant_id,
-                workflow_execution_id=workflow_execution_id,
-                workflow_results=workflow_results,
+            self.workflow_repository.update_workflow_execution(
+                WorkflowExecutionDalModel(
+                    id=workflow_execution_id,
+                    results=serialized_workflow_results,
+                )
             )
         except Exception as e:
             self.logger.error(
@@ -736,6 +756,20 @@ class WorkflowManager:
             )
             raise
         self.logger.info(f"Workflow {workflow.workflow_id} results saved")
+
+    def _serialize_workflow_result(self, workflow_results):
+        try:
+            # backward comptability - try to serialize the workflow results
+            json.dumps(workflow_results)
+            # if that's ok, use the original way
+            return workflow_results
+        except Exception:
+            # if that's not ok, use the Keep way (e.g. alerdto is not json serializable)
+            self.logger.warning(
+                "Failed to serialize workflow results, using fastapi encoder",
+            )
+            # use some other way to serialize the workflow results
+            return custom_serialize(workflow_results)
 
     def _run_workflows_from_cli(self, workflows: typing.List[Workflow]):
         workflows_errors = []

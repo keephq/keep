@@ -1,25 +1,17 @@
-import enum
+from datetime import datetime, timedelta, timezone
 import hashlib
 import logging
+import random
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from threading import Lock
 
-from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution
-from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
-from keep.api.core.db import (
-    get_enrichment,
-    get_previous_execution_id,
-    get_timeouted_workflow_exections,
-)
-from keep.api.core.db import get_workflow_by_id as get_workflow_db
-from keep.api.core.db import get_workflows_that_should_run
+from keep.api.core.db import get_enrichment
 from keep.api.core.metrics import (
     workflow_execution_errors_total,
     workflow_execution_status,
@@ -31,17 +23,21 @@ from keep.api.models.alert import AlertDto
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
+
+from keep.workflowmanager.dal.abstractworkflowrepository import WorkflowRepository
+from keep.workflowmanager.dal.exceptions import ConflictError
+from keep.workflowmanager.dal.models.workflowdalmodel import WorkflowStatus
+from keep.workflowmanager.dal.models.workflowexecutiondalmodel import (
+    WorkflowExecutionDalModel,
+)
+from keep.workflowmanager.dal.sql.sqlworkflowrepository import SqlWorkflowRepository
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 MAX_WORKERS = config("WORKFLOWS_MAX_WORKERS", default="20")
-
-
-class WorkflowStatus(enum.Enum):
-    SUCCESS = "success"
-    ERROR = "error"
-    PROVIDERS_NOT_CONFIGURED = "providers_not_configured"
+INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
+WORKFLOWS_TIMEOUT = timedelta(minutes=120)
 
 
 def timing_histogram(histogram):
@@ -76,10 +72,17 @@ class WorkflowScheduler:
     MAX_SIZE_SIGNED_INT = 2147483647
     MAX_WORKERS = config("KEEP_MAX_WORKFLOW_WORKERS", default="20", cast=int)
 
-    def __init__(self, workflow_manager):
+    def __init__(
+        self, workflow_manager, workflow_repository: WorkflowRepository = None
+    ):
+        self.workflow_repository = (
+            workflow_repository if workflow_repository else SqlWorkflowRepository()
+        )
         self.logger = logging.getLogger(__name__)
         self.workflow_manager = workflow_manager
-        self.workflow_store = WorkflowStore()
+        self.workflow_store = WorkflowStore(
+            workflow_repository=self.workflow_repository
+        )
         # all workflows that needs to be run due to alert event
         self.workflows_to_run = []
         self._stop = False
@@ -121,7 +124,7 @@ class WorkflowScheduler:
 
         try:
             # get all workflows that should run due to interval
-            workflows = get_workflows_that_should_run()
+            workflows = self.get_workflows_that_should_run()
         except Exception as ex:
             self.logger.warning(
                 "Error getting workflows that should run",
@@ -180,6 +183,173 @@ class WorkflowScheduler:
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
+
+    def get_workflows_that_should_run(self):
+        self.logger.debug("Checking for workflows that should run")
+        workflows_with_interval = []
+        try:
+            workflows_with_interval = (
+                self.workflow_repository.get_all_interval_workflows()
+            )
+        except Exception:
+            self.logger.exception("Failed to get workflows with interval")
+
+        self.logger.debug(
+            f"Found {len(workflows_with_interval)} workflows with interval"
+        )
+        workflows_to_run = []
+        # for each workflow:
+        for workflow in workflows_with_interval:
+            current_time = datetime.now(tz=timezone.utc)
+            last_execution = (
+                self.workflow_repository.get_last_completed_workflow_execution(
+                    workflow.id
+                )
+            )
+            # if there no last execution, that's the first time we run the workflow
+            if not last_execution:
+                try:
+                    # try to get the lock
+                    workflow_execution_id = self._create_workflow_execution(
+                        workflow.id,
+                        workflow.revision,
+                        workflow.tenant_id,
+                        "scheduler",
+                    )
+                    # we succeed to get the lock on this execution number :)
+                    # let's run it
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
+                # some other thread/instance has already started to work on it
+                except ConflictError:
+                    continue
+            # else, if the last execution was more than interval seconds ago, we need to run it
+            elif (
+                last_execution.started.replace(tzinfo=timezone.utc)
+                + timedelta(seconds=workflow.interval)
+                <= current_time
+            ):
+                try:
+                    # try to get the lock with execution_number + 1
+                    workflow_execution_id = self._create_workflow_execution(
+                        workflow.id,
+                        workflow.revision,
+                        workflow.tenant_id,
+                        "scheduler",
+                        last_execution.execution_number + 1,
+                    )
+                    # we succeed to get the lock on this execution number :)
+                    # let's run it
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
+                    # continue to the next one
+                    continue
+                # some other thread/instance has already started to work on it
+                except ConflictError:
+                    # we need to verify the locking is still valid and not timeouted
+                    # session.rollback() TODO: THINK WHAT TO DO HERE  <<<<<<<-----------------------------------------------------------------------------------
+                    pass
+                # get the ongoing execution
+                ongoing_execution = (
+                    self.workflow_repository.get_workflow_execution_by_execution_number(
+                        workflow.id, last_execution.execution_number + 1
+                    )
+                )
+                # this is a WTF exception since if this (workflow_id, execution_number) does not exist,
+                # we would be able to acquire the lock
+                if not ongoing_execution:
+                    self.logger.error(
+                        f"WTF: ongoing execution not found {workflow.id} {last_execution.execution_number + 1}"
+                    )
+                    continue
+                # if this completed, error, than that's ok - the service who locked the execution is done
+                elif ongoing_execution.status != "in_progress":
+                    continue
+                # if the ongoing execution runs more than timeout minutes, relaunch it
+                elif (
+                    ongoing_execution.started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT
+                    <= current_time
+                ):
+                    ongoing_execution.status = "timeout"
+                    self.workflow_repository.update_workflow_execution(
+                        workflow_execution=WorkflowExecutionDalModel(
+                            id=ongoing_execution.id,
+                            status=WorkflowStatus.TIMEOUT.value,
+                        )
+                    )
+                    # re-create the execution and try to get the lock
+                    try:
+                        workflow_execution_id = self._create_workflow_execution(
+                            workflow.id,
+                            workflow.revision,
+                            workflow.tenant_id,
+                            "scheduler",
+                            ongoing_execution.execution_number + 1,
+                        )
+                    # some other thread/instance has already started to work on it and that's ok
+                    except ConflictError:
+                        self.logger.debug(
+                            f"Failed to create a new execution for workflow {workflow.id} [timeout]. Constraint is met."
+                        )
+                        continue
+                    # managed to acquire the (workflow_id, execution_number) lock
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
+            else:
+                self.logger.debug(
+                    f"Workflow {workflow.id} is already running by someone else"
+                )
+
+        return workflows_to_run
+
+    def _create_workflow_execution(
+        self,
+        workflow_id: str,
+        workflow_revision: int,
+        tenant_id: str,
+        triggered_by: str,
+        execution_number: int = 1,
+        event_id: str = None,
+        fingerprint: str = None,
+        event_type: str = "alert",
+        test_run: bool = False,
+    ) -> str:
+        workflow_execution_id = (
+            str(uuid.uuid4()) if not test_run else "test_" + str(uuid.uuid4())
+        )
+        if len(triggered_by) > 255:
+            triggered_by = triggered_by[:255]
+        return self.workflow_repository.add_workflow_execution(
+            WorkflowExecutionDalModel(
+                id=workflow_execution_id,
+                workflow_id=workflow_id,
+                workflow_revision=workflow_revision,
+                tenant_id=tenant_id,
+                triggered_by=triggered_by,
+                execution_number=execution_number,
+                event_id=event_id,
+                fingerprint=fingerprint,
+                status=WorkflowStatus.IN_PROGRESS.value,
+                event_type=event_type,
+                is_test_run=test_run,
+                started=datetime.now(tz=timezone.utc),
+            )
+        )
 
     def _run_workflow(
         self,
@@ -306,7 +476,7 @@ class WorkflowScheduler:
                 event_type = "alert"
                 fingerprint = event.fingerprint
 
-            workflow_execution_id = create_workflow_execution(
+            workflow_execution_id = self._create_workflow_execution(
                 workflow_id=workflow_id,
                 workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
@@ -375,8 +545,15 @@ class WorkflowScheduler:
         """
         Record timeout for workflows that are running for too long.
         """
-        workflow_executions = get_timeouted_workflow_exections()
-        for workflow_execution in workflow_executions:
+        timeouted_workflow_executions = self.workflow_repository.get_workflow_executions(
+            workflow_id=None,
+            tenant_id=None,
+            statuses=[WorkflowStatus.IN_PROGRESS.value],
+            time_delta=WORKFLOWS_TIMEOUT,
+            limit=10000,  # temporary, we should iterate through all executions using limit/offset instead of fetching all in one go
+            offset=0,
+        )
+        for workflow_execution in timeouted_workflow_executions:
             self.logger.info(
                 "Timeout workflow execution detected",
                 extra={
@@ -497,9 +674,8 @@ class WorkflowScheduler:
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
             if not workflow_execution_id:
-                # creating the execution id here to be able to trace it in logs even in case of IntegrityError
+                # creating the execution id here to be able to trace it in logs even in case of ConflictError
                 # eventually, workflow_execution_id == execution_id
-                execution_id = str(uuid.uuid4())
                 try:
                     # if the workflow can run in parallel, we just to create a some random execution number
                     if workflow.workflow_strategy == WorkflowStrategy.PARALLEL.value:
@@ -509,7 +685,7 @@ class WorkflowScheduler:
                         workflow_execution_number = self._get_unique_execution_number(
                             fingerprint, workflow_id
                         )
-                    workflow_execution_id = create_workflow_execution(
+                    workflow_execution_id = self._create_workflow_execution(
                         workflow_id=workflow_id,
                         workflow_revision=workflow.workflow_revision,
                         tenant_id=tenant_id,
@@ -517,11 +693,10 @@ class WorkflowScheduler:
                         execution_number=workflow_execution_number,
                         fingerprint=fingerprint,
                         event_id=event_id,
-                        execution_id=execution_id,
                         event_type=event_type,
                     )
                 # If there is already running workflow from the same event
-                except IntegrityError:
+                except ConflictError:
                     # if the strategy is with RETRY, just put a warning and add it back to the queue
                     if (
                         workflow.workflow_strategy
@@ -715,19 +890,49 @@ class WorkflowScheduler:
         status: WorkflowStatus,
         error=None,
     ):
-        # mark the workflow execution as finished in the db
-        finish_workflow_execution_db(
+        workflow_execution = self.workflow_repository.get_workflow_execution(
             tenant_id=tenant_id,
-            workflow_id=workflow_id,
-            execution_id=workflow_execution_id,
-            status=status.value,
-            error=error,
+            workflow_execution_id=workflow_execution_id,
+        )
+        # some random number to avoid collisions
+        if not workflow_execution:
+            self.logger.warning(
+                f"Failed to finish workflow execution {workflow_execution_id} for workflow {workflow_id}. Execution not found.",
+                extra={
+                    "tenant_id": tenant_id,
+                    "workflow_id": workflow_id,
+                    "workflow_execution_id": workflow_execution_id,
+                },
+            )
+            raise ValueError("Execution not found")
+
+        # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
+        #   we need to fix it in the future, create a migration that increases the size of the error field
+        #   and then we can remove the [:511] from here
+        workflow_execution_error = error[:511] if error else None
+
+        # mark the workflow execution as finished in the db
+        self.workflow_repository.update_workflow_execution(
+            workflow_execution=WorkflowExecutionDalModel(
+                id=workflow_execution.id,
+                is_running=random.randint(1, 2147483647 - 1),
+                status=status.value,
+                error=workflow_execution_error,
+                execution_time=int(
+                    (
+                        datetime.now(tz=timezone.utc)
+                        - workflow_execution.started.replace(tzinfo=timezone.utc)
+                    ).total_seconds()
+                ),
+            )
         )
 
         if KEEP_EMAILS_ENABLED:
             # get the previous workflow execution id
-            previous_execution = get_previous_execution_id(
-                tenant_id, workflow_id, workflow_execution_id
+            previous_execution = (
+                self.workflow_repository.get_previous_workflow_execution(
+                    tenant_id, workflow_id, workflow_execution_id
+                )
             )
             # if error, send an email
             if status == WorkflowStatus.ERROR and (
@@ -735,7 +940,9 @@ class WorkflowScheduler:
                 is None  # this means this is the first execution, for example
                 or previous_execution.status != WorkflowStatus.ERROR.value
             ):
-                workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
+                workflow = self.workflow_repository.get_workflow_by_id(
+                    tenant_id=tenant_id, workflow_id=workflow_id
+                )
                 try:
                     keep_platform_url = config(
                         "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"

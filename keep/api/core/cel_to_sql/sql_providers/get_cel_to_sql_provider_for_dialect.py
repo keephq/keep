@@ -1,5 +1,8 @@
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
+from keep.api.core.cel_to_sql.sql_providers.elastic_search import (
+    CelToElasticSearchSqlProvider,
+)
 from keep.api.core.cel_to_sql.sql_providers.postgresql import CelToPostgreSqlProvider
 from keep.api.core.cel_to_sql.sql_providers.sqlite import CelToSqliteProvider
 from keep.api.core.cel_to_sql.sql_providers.mysql import CelToMySqlProvider
@@ -22,6 +25,8 @@ def get_cel_to_sql_provider_for_dialect(
         return CelToMySqlProvider(engine.dialect, properties_metadata)
     elif dialect_name == "postgresql":
         return CelToPostgreSqlProvider(engine.dialect, properties_metadata)
+    elif dialect_name == "elasticsearch":
+        return CelToElasticSearchSqlProvider(properties_metadata)
 
     else:
         raise ValueError(f"Unsupported dialect: {engine.dialect.name}")
