@@ -31,8 +31,6 @@ from keep.workflowmanager.dal.models.workflowexecutionlogdalmodel import (
     WorkflowExecutioLogDalModel,
 )
 from elasticsearch import (
-    # ApiError,
-    # BadRequestError,
     Elasticsearch,
     ConflictError as ElasticsearchConflictError,
 )

@@ -287,7 +287,6 @@ class WorkflowScheduler:
                             status=WorkflowStatus.TIMEOUT.value,
                         )
                     )
-                    # session.commit() TODO: THINK WHAT TO DO HERE  <<<<<<<-----------------------------------------------------------------------------------
                     # re-create the execution and try to get the lock
                     try:
                         workflow_execution_id = self._create_workflow_execution(

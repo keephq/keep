@@ -4,7 +4,3 @@ class ConflictError(Exception):
 
 class NotFoundError(Exception):
     """Raised when an object is not found in the store."""
-
-
-class LockError(Exception):
-    """Raised when there is an issue with acquiring a lock"""

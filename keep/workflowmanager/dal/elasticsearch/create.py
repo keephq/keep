@@ -23,16 +23,6 @@ def create_elasticsearch_workflow_repository():
     elastic_search_client = create_elastic_client()
 
     if not config_dict.get("are_models_intialized", False):
-        # for doc in [
-        #     WorkflowDoc,
-        #     WorkflowExecutionDoc,
-        #     WorkflowExecutionLogDoc,
-        #     WorkflowVersionDoc,
-        # ]:
-        #     elastic_search_client.indices.delete(
-        #         index=doc.Index.name, ignore_unavailable=True
-        #     )
-
         WorkflowDoc.init(
             using=elastic_search_client,
         )
