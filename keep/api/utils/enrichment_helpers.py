@@ -153,7 +153,7 @@ def calculated_unresolved_counter(
     Calculate the unresolved counter of an alert based on the previous alert.
 
     Args:
-        alert (AlertDto): The alert to calculate the firing counter for.
+        alert (AlertDto): The alert to calculate the unresolved counter for.
         previous_alert (AlertDto): The previous alert.
 
     Returns:

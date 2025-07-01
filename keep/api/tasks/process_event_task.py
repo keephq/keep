@@ -50,7 +50,8 @@ from keep.api.utils.enrichment_helpers import (
     calculate_firing_time_since_last_resolved,
     calculated_firing_counter,
     calculated_start_firing_time,
-    convert_db_alerts_to_dto_alerts, calculated_unresolved_counter,
+    convert_db_alerts_to_dto_alerts,
+    calculated_unresolved_counter,
 )
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
