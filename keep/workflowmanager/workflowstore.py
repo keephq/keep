@@ -471,6 +471,7 @@ class WorkflowStore:
                         provisioned_file=None,  # No file for env var provisioned workflows
                     ),
                     lookup_by_name=True,
+                    provisioning_check=True,
                 )
 
                 provisioned_workflows.append(workflow_yaml)
@@ -534,6 +535,7 @@ class WorkflowStore:
                                 provisioned_file=workflow_path,
                             ),
                             lookup_by_name=True,
+                            provisioning_check=True,
                         )
                         provisioned_workflows.append(workflow_yaml)
                         logger.info(f"Workflow from {file} provisioned successfully")
@@ -773,6 +775,7 @@ class WorkflowStore:
         force_update: bool = True,
         lookup_by_name: bool = False,
         operation=None,
+        provisioning_check: bool = True,
     ) -> WorkflowDalModel:
         now = datetime.datetime.now(tz=datetime.UTC)
         workflow.name = workflow.name or workflow.id
@@ -804,6 +807,12 @@ class WorkflowStore:
         if operation == "update" and not existing_workflow:
             raise NotFoundError(f"Workflow {workflow.id} not found for update")
         workflow_version_comment = None
+
+        if provisioning_check and existing_workflow and existing_workflow.provisioned:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Cannot update provisioned workflow {workflow.id}.",
+            )
 
         if not existing_workflow:
             is_created_or_updated = True
