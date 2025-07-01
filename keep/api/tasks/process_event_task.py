@@ -51,6 +51,7 @@ from keep.api.utils.enrichment_helpers import (
     calculated_firing_counter,
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
+    calculated_unresolved_counter,
 )
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -208,8 +209,12 @@ def __save_to_db(
                     )
                 )
 
-                # we now need to update the firing counter
+                # we now need to update the firing and unresolved counters
                 formatted_event.firingCounter = calculated_firing_counter(
+                    formatted_event, previous_alert
+                )
+
+                formatted_event.unresolvedCounter = calculated_unresolved_counter(
                     formatted_event, previous_alert
                 )
 
