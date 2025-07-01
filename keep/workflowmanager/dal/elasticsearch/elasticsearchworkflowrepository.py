@@ -182,7 +182,7 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
 
         if is_provisioned_filter:
             and_exp += (
-                f" AND is_provisioned = {'true' if is_provisioned_filter else 'false'}"
+                f" AND provisioned = {'true' if is_provisioned_filter else 'false'}"
             )
 
         if provisioned_file_filter:

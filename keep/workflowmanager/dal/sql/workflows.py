@@ -204,11 +204,9 @@ def __build_base_query(
         .where(Workflow.is_test == False)
     )
 
-    if is_disabled_filter:
-        base_query = base_query.where(Workflow.is_disabled == is_disabled_filter)
-
-    if is_provisioned_filter:
-        base_query = base_query.where(Workflow.provisioned == is_provisioned_filter)
+    base_query = base_query.where(Workflow.is_disabled == is_disabled_filter).where(
+        Workflow.provisioned == is_provisioned_filter
+    )
 
     if provisioned_file_filter:
         base_query = base_query.where(
