@@ -44,7 +44,7 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
 
   // TODO: might need to add other providers here
   if (provider.type === "servicenow") {
-    createUrl = `${createUrl}/short_description=${title}&description=${description}`;
+    createUrl = `${createUrl}/short_description=${title}^description=${description}`;
   }
 
   return createUrl;
@@ -70,7 +70,13 @@ export function findLinkedTicket(incident: any, ticketingProviders: Provider[]):
   return null;
 }
 
-
 export function canCreateTickets(provider: Provider): boolean {
   return provider.tags.includes("ticketing") && Boolean(provider.details?.authentication?.ticket_creation_url);
+}
+
+/**
+ * Get the enrichment key for a provider's ticket ID
+ */
+export function getTicketEnrichmentKey(provider: Provider): string {
+  return `${provider.type}_ticket_id`;
 } 

@@ -28,7 +28,7 @@ export function CreateTicketModal({
   // Initialize title and description when modal opens or incident changes
   useEffect(() => {
     setTicketTitle(incident.user_generated_name || "");
-    setTicketDescription(incident.user_summary || "");
+    setTicketDescription((incident.user_summary || "").replace(/<[^>]*>/g, ''));
   }, [incident, isOpen]);
 
   const ticketingProviders = useMemo(() => {
@@ -175,7 +175,7 @@ export function CreateTicketModal({
           <Textarea
             placeholder="Enter ticket description"
             value={ticketDescription}
-            onChange={(e) => setTicketDescription(e.target.value)}
+            onChange={(e) => setTicketDescription(e.target.value.replace(/<[^>]*>/g, ''))}
             rows={4}
           />
         </div>

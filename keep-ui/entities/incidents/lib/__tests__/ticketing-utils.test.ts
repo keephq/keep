@@ -20,7 +20,8 @@ const mockServiceNowProvider: Provider = {
   last_alert_received: "",
   details: {
     authentication: {
-      service_now_base_url: "https://company.service-now.com"
+      service_now_base_url: "https://company.service-now.com",
+      ticket_creation_url: "https://company.service-now.com/now/sow/record/incident/-1/params"
     }
   },
   can_query: false,
@@ -44,7 +45,8 @@ const mockJiraProvider: Provider = {
   last_alert_received: "",
   details: {
     authentication: {
-      jira_base_url: "https://company.atlassian.net"
+      jira_base_url: "https://company.atlassian.net",
+      ticket_creation_url: "https://company.atlassian.net/secure/CreateIssue.jspa"
     }
   },
   can_query: false,
@@ -68,7 +70,8 @@ const mockZendeskProvider: Provider = {
   last_alert_received: "",
   details: {
     authentication: {
-      host: "https://company.zendesk.com"
+      host: "https://company.zendesk.com",
+      ticket_creation_url: "https://company.zendesk.com/agent/filters/new"
     }
   },
   can_query: false,

@@ -51,12 +51,6 @@ export function LinkTicketModal({
     return ticketingProviders.find(provider => provider.id === selectedProviderId);
   }, [ticketingProviders, selectedProviderId]);
 
-  // Get the base URL from the selected provider (if available)
-  const providerBaseUrl = useMemo(() => {
-    if (!selectedProvider) return "";
-    return getProviderBaseUrl(selectedProvider);
-  }, [selectedProvider]);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
