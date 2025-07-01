@@ -226,56 +226,6 @@ def __build_base_query(
 
     return base_query
 
-    # if latest_executions_subquery_cte is None:
-    #     latest_executions_subquery_cte = __build_workflow_executions_query(
-    #         tenant_id
-    #     ).cte("latest_executions_subquery")
-
-    # if select_statements is None:
-    #     select_statements = [
-    #         Workflow,
-    #         Workflow.id.label("entity_id"),
-    #         # here it creates aliases for table columns that will be used in filtering and faceting
-    #         case(
-    #             (
-    #                 literal_column("status").isnot(None),
-    #                 literal_column("status"),
-    #             ),
-    #             else_="",
-    #         ).label("filter_last_execution_status"),
-    #     ]
-
-    # base_query = (
-    #     select(*select_statements)
-    #     .select_from(Workflow)
-    #     .outerjoin(
-    #         latest_executions_subquery_cte,
-    #         and_(
-    #             Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-    #             latest_executions_subquery_cte.c.row_num <= 1,
-    #         ),
-    #     )
-    # )
-
-    # base_query = (
-    #     base_query.where(Workflow.tenant_id == tenant_id)
-    #     .where(Workflow.is_deleted == False)
-    #     .where(Workflow.is_test == False)
-    # )
-
-    # if is_disabled_filter is not None:
-    #     base_query = base_query.where(Workflow.is_disabled == is_disabled_filter)
-
-    # if is_provisioned_filter is not None:
-    #     base_query = base_query.where(Workflow.provisioned == is_provisioned_filter)
-
-    # if provisioned_file_filter:
-    #     base_query = base_query.where(
-    #         Workflow.provisioned_file == provisioned_file_filter
-    #     )
-
-    # return base_query
-
 
 def build_workflows_total_count_query(
     tenant_id: str,
