@@ -120,10 +120,11 @@ jobs:
         id: check_changes
         working-directory: schema-repo
         run: |
-          if git diff --quiet schema.json; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+          git add schema.json
+          if git diff --cached --quiet schema.json; then
+            echo "changed=false"
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true"
           fi
 
       - name: Commit and push schema
@@ -132,7 +133,6 @@ jobs:
         run: |
           git config user.name "Keep Schema Bot"
           git config user.email "no-reply@keephq.dev"
-          git add schema.json
           git commit -m "Release schema v${{ steps.get_version.outputs.version }}"
           git push origin ${{ steps.set_branch.outputs.branch }}
           if [ "${{ steps.set_branch.outputs.branch }}" = "main" ]; then
