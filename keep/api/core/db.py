@@ -1308,6 +1308,9 @@ def _enrich_entity(
         force (bool): Whether to force the enrichment to be updated. This is used to dispose enrichments if necessary.
     """
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
+    fingerprint_str = fingerprint
+    if isinstance(fingerprint, UUID):
+        fingerprint_str = str(uuid_to_dialect_value(fingerprint, session.bind.dialect))
     if enrichment:
         # if force - override exisitng enrichments. being used to dispose enrichments if necessary
         if force:
@@ -1326,7 +1329,7 @@ def _enrich_entity(
             # add audit event
             audit = AlertAudit(
                 tenant_id=tenant_id,
-                fingerprint=fingerprint,
+                fingerprint=fingerprint_str,
                 user_id=action_callee,
                 action=action_type.value,
                 description=action_description,
@@ -1340,7 +1343,7 @@ def _enrich_entity(
         try:
             alert_enrichment = AlertEnrichment(
                 tenant_id=tenant_id,
-                alert_fingerprint=fingerprint,
+                alert_fingerprint=fingerprint_str,
                 enrichments=enrichments,
             )
             session.add(alert_enrichment)
@@ -1348,7 +1351,7 @@ def _enrich_entity(
             if audit_enabled:
                 audit = AlertAudit(
                     tenant_id=tenant_id,
-                    fingerprint=fingerprint,
+                    fingerprint=fingerprint_str,
                     user_id=action_callee,
                     action=action_type.value,
                     description=action_description,
@@ -1535,11 +1538,11 @@ def get_enrichment(tenant_id, fingerprint, refresh=False):
 def get_enrichment_with_session(
     session, tenant_id, fingerprint: str | UUID, refresh=False
 ):
-    # for alerts fingerprint is string, for incidents it's UUID
-    # alert enrichments looks up by string, incident enrichments looks up by UUID
-    if isinstance(fingerprint, UUID):
-        fingerprint = uuid_to_dialect_value(fingerprint, session.bind.dialect)
     try:
+        # for alerts fingerprint is string, for incidents it's UUID
+        # alert enrichments looks up by string, incident enrichments looks up by UUID
+        if isinstance(fingerprint, UUID):
+            fingerprint = uuid_to_dialect_value(fingerprint, session.bind.dialect)
         alert_enrichment = session.exec(
             select(AlertEnrichment)
             .where(AlertEnrichment.tenant_id == tenant_id)
