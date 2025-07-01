@@ -31,7 +31,7 @@ class WorkflowManager:
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
-        if WorkflowManager._instance is None:
+        if not WorkflowManager._instance:
             WorkflowManager._instance = WorkflowManager()
         return WorkflowManager._instance
 
