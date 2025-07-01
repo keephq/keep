@@ -59,7 +59,9 @@ class WorkflowStore:
         is_test_run: bool | None = None,
     ):
         execution_with_logs = self.workflow_repository.get_workflow_execution_with_logs(
-            tenant_id, workflow_execution_id, is_test_run
+            tenant_id,
+            workflow_execution_id,
+            is_test_run,
         )
 
         if not execution_with_logs:
@@ -213,7 +215,7 @@ class WorkflowStore:
     def get_all_workflows(self, tenant_id: str) -> list[WorkflowDalModel]:
         # list all tenant's workflows
         workflows, count = self.workflow_repository.get_workflows_with_last_executions(
-            tenant_id=tenant_id, limit=1000, offset=0
+            tenant_id=tenant_id, is_disabled_filter=False, limit=1000, offset=0
         )
         return workflows
 

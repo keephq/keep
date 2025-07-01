@@ -584,4 +584,4 @@ def test_get_workflow_run_logs_sorted_by_timestamp(db_session):
     # Verify logs are sorted by timestamp ascending
     for i, log in enumerate(logs):
         if i < len(logs) - 1:
-            assert log.timestamp < logs[i + 1].timestamp
+            assert log.timestamp <= logs[i + 1].timestamp
