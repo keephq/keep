@@ -196,10 +196,19 @@ def __build_base_query(
             ).label("filter_last_execution_status"),
         ]
 
+    base_query = select(*select_statements).select_from(Workflow)
+
+    if fetch_last_executions > 0:
+        base_query = base_query.outerjoin(
+            latest_executions_subquery_cte,
+            and_(
+                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
+                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
+            ),
+        )
+
     base_query = (
-        select(*select_statements)
-        .select_from(Workflow)
-        .where(Workflow.tenant_id == tenant_id)
+        base_query.where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
         .where(Workflow.is_test == False)
     )
@@ -213,15 +222,6 @@ def __build_base_query(
     if provisioned_file_filter:
         base_query = base_query.where(
             Workflow.provisioned_file == provisioned_file_filter
-        )
-
-    if fetch_last_executions > 0:
-        base_query = base_query.outerjoin(
-            latest_executions_subquery_cte,
-            and_(
-                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
-            ),
         )
 
     return base_query
