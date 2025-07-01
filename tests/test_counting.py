@@ -400,11 +400,11 @@ def test_unresolved_counter_empty_list():
 
 
 def test_unresolved_counter_resolved_status():
-    """ONLY RESOLVED ALERTS SHOULD HAVE A FIRING COUNTER OF 0"""
+    """ONLY RESOLVED ALERTS SHOULD HAVE A UNRESOLVED COUNTER OF 0"""
     # Create a resolved alert
     alert = AlertDto(
         name="Test Alert",
-        status=AlertStatus.ACKNOWLEDGED.value,
+        status=AlertStatus.RESOLVED.value,
         source=["test"],
         fingerprint="test-fingerprint",
     )
@@ -422,7 +422,7 @@ def test_unresolved_counter_resolved_status():
     counter = calculated_unresolved_counter(alert, previous_alert)
 
     # Assert that the counter is 0 for resolved alerts
-    assert counter == 6
+    assert counter == 0
 
 
 def test_unresolved_counter_multiple_previous_alerts():
@@ -497,8 +497,8 @@ def test_unresolved_counter_no_previous_counter():
         fingerprint="test-fingerprint",
     )
 
-    # Calculate firing counter
-    counter = calculated_firing_counter(alert, previous_alert)
+    # Calculate unresolved counter
+    counter = calculated_unresolved_counter(alert, previous_alert)
 
     # Assert that the counter starts at 1 when previous has no counter
     assert counter == 1
