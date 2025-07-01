@@ -173,7 +173,6 @@ def __build_base_query(
     is_disabled_filter: bool,
     is_provisioned_filter: bool,
     provisioned_file_filter: str,
-    fetch_last_executions: int = 1,
     select_statements=None,
     latest_executions_subquery_cte=None,
 ):
@@ -196,70 +195,36 @@ def __build_base_query(
             ).label("filter_last_execution_status"),
         ]
 
-    workflows_with_last_executions_query = (
+    base_query = (
         select(*select_statements)
         .select_from(Workflow)
         .outerjoin(
             latest_executions_subquery_cte,
             and_(
                 Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
+                latest_executions_subquery_cte.c.row_num <= 1,
             ),
         )
-        .where(Workflow.tenant_id == tenant_id)
+    )
+
+    base_query = (
+        base_query.where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
         .where(Workflow.is_test == False)
     )
 
-    return workflows_with_last_executions_query
-    # if latest_executions_subquery_cte is None:
-    #     latest_executions_subquery_cte = __build_workflow_executions_query(
-    #         tenant_id
-    #     ).cte("latest_executions_subquery")
+    if is_disabled_filter is not None:
+        base_query = base_query.where(Workflow.is_disabled == is_disabled_filter)
 
-    # if select_statements is None:
-    #     select_statements = [
-    #         Workflow,
-    #         Workflow.id.label("entity_id"),
-    #         # here it creates aliases for table columns that will be used in filtering and faceting
-    #         case(
-    #             (
-    #                 literal_column("status").isnot(None),
-    #                 literal_column("status"),
-    #             ),
-    #             else_="",
-    #         ).label("filter_last_execution_status"),
-    #     ]
+    if is_provisioned_filter is not None:
+        base_query = base_query.where(Workflow.provisioned == is_provisioned_filter)
 
-    # base_query = select(*select_statements).select_from(Workflow)
+    if provisioned_file_filter:
+        base_query = base_query.where(
+            Workflow.provisioned_file == provisioned_file_filter
+        )
 
-    # if fetch_last_executions > 0:
-    #     base_query = base_query.outerjoin(
-    #         latest_executions_subquery_cte,
-    #         and_(
-    #             Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-    #             latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
-    #         ),
-    #     )
-
-    # base_query = (
-    #     base_query.where(Workflow.tenant_id == tenant_id)
-    #     .where(Workflow.is_deleted == False)
-    #     .where(Workflow.is_test == False)
-    # )
-
-    # if is_disabled_filter is not None:
-    #     base_query = base_query.where(Workflow.is_disabled == is_disabled_filter)
-
-    # if is_provisioned_filter is not None:
-    #     base_query = base_query.where(Workflow.provisioned == is_provisioned_filter)
-
-    # if provisioned_file_filter:
-    #     base_query = base_query.where(
-    #         Workflow.provisioned_file == provisioned_file_filter
-    #     )
-
-    # return base_query
+    return base_query
 
 
 def build_workflows_total_count_query(
@@ -297,7 +262,6 @@ def build_workflows_query(
     is_disabled_filter: bool,
     is_provisioned_filter: bool,
     provisioned_file_filter: str,
-    fetch_last_executions: int = 15,
 ):
     limit = limit if limit is not None else 20
     offset = offset if offset is not None else 0
@@ -307,7 +271,6 @@ def build_workflows_query(
         is_disabled_filter=is_disabled_filter,
         is_provisioned_filter=is_provisioned_filter,
         provisioned_file_filter=provisioned_file_filter,
-        fetch_last_executions=fetch_last_executions,
         select_statements=[
             Workflow,
             literal_column("started").label("started"),
@@ -367,19 +330,22 @@ def get_workflows_with_last_executions_v2(
             offset=offset,
             sort_by=sort_by,
             sort_dir=sort_dir,
-            fetch_last_executions=1,
         )
 
         query_result = session.exec(workflows_query).all()
         workflow_ids = [workflow.id for workflow, *_ in query_result]
 
-        workflow_executions_query = build_workflow_executions_query(
-            tenant_id=tenant_id,
-            workflow_ids=workflow_ids,
-            limit_per_workflow=fetch_last_executions,
-        )
+        workflow_executions_query_result = []
 
-        workflow_executions_query_result = session.exec(workflow_executions_query).all()
+        if fetch_last_executions is not None and fetch_last_executions > 0:
+            workflow_executions_query = build_workflow_executions_query(
+                tenant_id=tenant_id,
+                workflow_ids=workflow_ids,
+                limit_per_workflow=fetch_last_executions,
+            )
+            workflow_executions_query_result = session.exec(
+                workflow_executions_query
+            ).all()
 
         execution_dict = {}
         for (
