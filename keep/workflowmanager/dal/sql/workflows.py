@@ -178,7 +178,9 @@ def __build_base_query(
     latest_executions_subquery_cte=None,
 ):
     if latest_executions_subquery_cte is None:
-        latest_executions_subquery_cte = __build_workflow_executions_query(tenant_id)
+        latest_executions_subquery_cte = __build_workflow_executions_query(
+            tenant_id
+        ).subquery("latest_executions_subquery")
 
     if select_statements is None:
         select_statements = [
@@ -203,7 +205,7 @@ def __build_base_query(
                 Workflow.id == latest_executions_subquery_cte.c.workflow_id,
                 latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
             ),
-        ).subquery()
+        )
 
     base_query = (
         base_query.where(Workflow.tenant_id == tenant_id)
