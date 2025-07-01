@@ -269,12 +269,13 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
             workflow_version_doc = WorkflowVersionDoc(
                 **workflow_version.dict(),
             )
-            workflow_version_doc.meta.id = (
+            workflow_version_id = (
                 f"{workflow_version.workflow_id}-{workflow_version.revision}"
             )
-            workflow_version_doc.save(
-                using=self.elastic_search_client,
-                refresh=True,
+            self.elastic_search_client.create(
+                index=WorkflowVersionDoc.Index.name,
+                id=workflow_version_id,
+                body=workflow_version_doc.to_dict(),
             )
         except ElasticsearchConflictError as conflict_error:
             raise ConflictError(
@@ -362,10 +363,11 @@ class ElasticSearchWorkflowRepository(WorkflowRepository):
         try:
             workflow_execution.is_test_run = workflow_execution.is_test_run or False
             workflow_execution_doc = WorkflowExecutionDoc(**workflow_execution.dict())
-            workflow_execution_doc.meta.id = workflow_execution.id
-            workflow_execution_doc.save(
-                using=self.elastic_search_client,
-                refresh=True,
+
+            self.elastic_search_client.create(
+                index=WorkflowExecutionDoc.Index.name,
+                id=workflow_execution.id,
+                body=workflow_execution_doc.to_dict(),
             )
             return workflow_execution.id
         except ElasticsearchConflictError as conflict_error:
