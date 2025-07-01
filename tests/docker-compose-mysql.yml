@@ -1,7 +1,7 @@
 # MySQL server for testing
 services:
   keep-database:
-      image: mysql:latest
+      image: mysql:8.0
       container_name: keep-database-tests
       environment:
         - MYSQL_ROOT_PASSWORD=keep
