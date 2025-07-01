@@ -27,10 +27,11 @@ from keep.api.utils.cel_utils import preprocess_cel_expression
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
     PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
+    _instance: typing.Optional["WorkflowManager"] = None
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
-        if not hasattr(WorkflowManager, "_instance"):
+        if WorkflowManager._instance is None:
             WorkflowManager._instance = WorkflowManager()
         return WorkflowManager._instance
 
@@ -55,9 +56,11 @@ class WorkflowManager:
             self.logger.info("Workflow manager already started")
             return
 
-        if not self.scheduler:
-            self.logger.error("Scheduler is not initialized, initializing it")
-            self.scheduler = WorkflowScheduler(self)
+        if self.scheduler is None:
+            self.logger.warning(
+                "Workflow manager does not have a scheduler and cannot be started"
+            )
+            return
 
         await self.scheduler.start()
         self.started = True
@@ -67,10 +70,18 @@ class WorkflowManager:
         if not self.started:
             return
 
+        if self.scheduler is None:
+            self.logger.warning(
+                "Workflow manager does not have a scheduler, looks like it was already stopped"
+            )
+            return
+
         self.scheduler.stop()
         self.started = False
         # Clear the scheduler reference
         self.scheduler = None
+        # Clear the workflow manager singleton reference
+        WorkflowManager._instance = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
@@ -411,17 +422,19 @@ class WorkflowManager:
 
                         compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
-                        
+
                         # Convert event to dict and normalize severity for CEL evaluation
                         event_payload = event.dict()
                         # Convert severity string to numeric order for proper comparison with preprocessed CEL
                         if isinstance(event_payload.get("severity"), str):
                             try:
-                                event_payload["severity"] = AlertSeverity(event_payload["severity"].lower()).order
+                                event_payload["severity"] = AlertSeverity(
+                                    event_payload["severity"].lower()
+                                ).order
                             except (ValueError, AttributeError):
                                 # If severity conversion fails, keep original value
                                 pass
-                        
+
                         activation = celpy.json_to_cel(event_payload)
                         try:
                             should_run = program.evaluate(activation)
