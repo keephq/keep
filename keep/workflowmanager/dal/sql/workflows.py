@@ -307,6 +307,10 @@ def get_workflows_with_last_executions_v2(
     fetch_last_executions: int,
 ) -> Tuple[list[WorkflowWithLastExecutionsDalModel], int]:
     with Session(engine) as session:
+
+        version = session.execute(text("SELECT VERSION();")).scalar()
+        major, minor, patch = version.split(".")  # Get the version number only
+        assert int(major) > 8, f"❌ MySQL 8+ required — but got: {version}"
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id,
             cel=cel,

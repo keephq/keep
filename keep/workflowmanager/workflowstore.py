@@ -386,19 +386,12 @@ class WorkflowStore:
 
         # Get all existing provisioned workflows
         logger.info("Getting all already provisioned workflows")
-        provisioned_workflows = []
-        try:
-            __provisioned_workflows, count = (
-                self.workflow_repository.get_workflows_with_last_executions(
-                    tenant_id=tenant_id,
-                    is_provisioned_filter=True,
-                    fetch_last_executions=0,
-                )
-            )
-            provisioned_workflows = __provisioned_workflows
-        except Exception as e:
-            logger.error(e)
 
+        provisioned_workflows, count = (
+            self.workflow_repository.get_workflows_with_last_executions(
+                tenant_id=tenant_id, is_provisioned_filter=True, fetch_last_executions=0
+            )
+        )
         logger.info(f"Found {len(provisioned_workflows)} provisioned workflows")
 
         if not (provisioned_workflows_dir or provisioned_workflow_yaml):
