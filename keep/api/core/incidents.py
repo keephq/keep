@@ -258,8 +258,7 @@ def __build_base_incident_query(
         incident_enrichment,
         and_(
             Incident.tenant_id == incident_enrichment.tenant_id,
-            cast(col(Incident.id), String)
-            == foreign(incident_enrichment.alert_fingerprint),
+            Incident.id == foreign(incident_enrichment.alert_fingerprint),
         ),
     )
 
