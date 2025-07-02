@@ -29,6 +29,7 @@ env:
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       mysql:
         image: mysql:5.7
