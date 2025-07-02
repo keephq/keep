@@ -906,3 +906,115 @@ def test_full_deduplication_last_received(db_session, create_alert):
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
 
     assert alerts_dto[0].lastReceived == dt2.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+        },
+    ],
+    indirect=True,
+)
+def test_sort_keys_deduplication_fix(db_session, client, test_app):
+    """
+    Test that alerts with same content but different key ordering are properly deduplicated.
+    This tests the sort_keys=True fix in the alert deduplicator hash calculation.
+    """
+    import hashlib
+    import json
+    from datetime import datetime, timezone
+
+    # Create a base alert with specific structure using proper prometheus format
+    base_labels = {
+        "alertname": "TestAlert",
+        "env": "production",
+        "team": "backend",
+        "priority": "high"
+    }
+
+    # Calculate fingerprint like prometheus does
+    fingerprint_src = json.dumps(base_labels, sort_keys=True)
+    fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
+
+    base_alert = {
+        "summary": "Test summary",
+        "labels": base_labels,
+        "annotations": {
+            "runbook": "http://example.com",
+            "description": "Test description"
+        },
+        "generatorURL": "http://prometheus:9090/graph",
+        "startsAt": datetime.now(tz=timezone.utc).isoformat(),
+        "endsAt": "0001-01-01T00:00:00Z",
+        "status": "firing",
+        "fingerprint": fingerprint
+    }
+
+    # Create the same alert but with different key ordering in nested objects
+    # This should still be considered the same alert and deduplicated
+    reordered_labels = {
+        "priority": "high",  # different order
+        "env": "production",
+        "alertname": "TestAlert",
+        "team": "backend"
+    }
+
+    # Same fingerprint since label content is identical
+    reordered_alert = {
+        "summary": "Test summary",
+        "labels": reordered_labels,
+        "generatorURL": "http://prometheus:9090/graph",  # different position
+        "annotations": {
+            "runbook": "http://example.com",
+            "description": "Test description"
+        },
+        "startsAt": datetime.now(tz=timezone.utc).isoformat(),
+        "endsAt": "0001-01-01T00:00:00Z",
+        "status": "firing",
+        "fingerprint": fingerprint  # Same fingerprint
+    }
+
+    # Send both alerts to prometheus provider
+    client.post(
+        "/alerts/event/prometheus",
+        json=base_alert,
+        headers={"x-api-key": "some-api-key"}
+    )
+    time.sleep(0.1)
+
+    client.post(
+        "/alerts/event/prometheus",
+        json=reordered_alert,
+        headers={"x-api-key": "some-api-key"}
+    )
+    time.sleep(0.1)
+
+    # Should only have 1 alert because they should be deduplicated
+    wait_for_alerts(client, 1)
+
+    # Check deduplication rules to verify deduplication occurred
+    deduplication_rules = client.get(
+        "/deduplications", headers={"x-api-key": "some-api-key"}
+    ).json()
+
+    # Wait for deduplication ratio to be calculated
+    while not any(
+        [rule for rule in deduplication_rules if rule.get("dedup_ratio", 0) > 0]
+    ):
+        time.sleep(0.1)
+        deduplication_rules = client.get(
+            "/deduplications", headers={"x-api-key": "some-api-key"}
+        ).json()
+
+    # Find the prometheus deduplication rule
+    prometheus_rule = None
+    for rule in deduplication_rules:
+        if rule.get("provider_type") == "prometheus" and rule.get("default"):
+            prometheus_rule = rule
+            break
+
+    assert prometheus_rule is not None
+    assert prometheus_rule.get("ingested") == 2
+    assert prometheus_rule.get("dedup_ratio") == 50.0  # 1 out of 2 was deduplicated
