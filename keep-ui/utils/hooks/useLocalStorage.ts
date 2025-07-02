@@ -1,7 +1,7 @@
 "use client";
 // culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/common/hooks/useLocalStorage.ts
 
-import { useMemo, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 const STORAGE_EVENT = "keephq";
 
@@ -10,7 +10,7 @@ function getSnapshot(key: string): string | null {
   if (typeof window === "undefined" || typeof localStorage === "undefined") {
     return null;
   }
-
+  
   try {
     return localStorage.getItem(`keephq-${key}`);
   } catch {
@@ -30,15 +30,14 @@ function getParsedJson<T>(
 }
 
 export const useLocalStorage = <T>(key: string, initialValue: T) => {
-  const localStorageValue = useSyncExternalStore(
-    subscribe,
-    () => getSnapshot(key),
+  const localStorageValue = useSyncExternalStore(subscribe, () =>
+    getSnapshot(key),
     () => JSON.stringify(initialValue)
   );
-  const initialValueRef = useRef(initialValue);
-  initialValueRef.current = initialValue;
-
-  const parsedLocalStorageValue = useMemo(() => getParsedJson(localStorageValue, initialValueRef.current), [localStorageValue]);
+  const parsedLocalStorageValue = getParsedJson(
+    localStorageValue,
+    initialValue
+  );
 
   /**
    * @description Set value to local storage
@@ -49,7 +48,7 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
     if (typeof window === "undefined" || typeof localStorage === "undefined") {
       return;
     }
-
+    
     // Allow value to be a function so we have same API as useState
     const valueToStore =
       value instanceof Function ? value(parsedLocalStorageValue) : value;
