@@ -100,7 +100,7 @@ jobs:
             sleep 1
           done
           echo "MySQL is up and running!"
-          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout=60 --integration --ignore=tests/e2e_tests/ -v --log-cli-level=INFO
+          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout=60 --integration --ignore=tests/e2e_tests/ ${{ runner.debug == '1' && '-v --log-cli-level=INFO' || '' }}
 
       - name: Convert coverage results to JSON
         run: poetry run coverage json --omit="keep/providers/*"
