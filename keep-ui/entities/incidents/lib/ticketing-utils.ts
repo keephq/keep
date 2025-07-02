@@ -46,6 +46,9 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
   if (provider.type === "servicenow") {
     createUrl = `${createUrl}/short_description=${title}^description=${description}`;
   }
+  else{
+    createUrl = `${createUrl}/title=${title}^description=${description}`;
+  }
 
   return createUrl;
 }
