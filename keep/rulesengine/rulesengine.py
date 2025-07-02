@@ -140,7 +140,7 @@ class RulesEngine:
                                 )
                                 firing_count = sum(
                                     [
-                                        alert.event.get("firingCounter", 1)
+                                        alert.event.get("unresolvedCounter", 1)
                                         for alert in incident.alerts
                                     ]
                                 )
