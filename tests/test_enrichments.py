@@ -9,7 +9,6 @@ from sqlalchemy import text
 from tenacity import sleep
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import get_enrichment_with_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
@@ -22,7 +21,6 @@ from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 from tests.fixtures.workflow_manager import workflow_manager  # noqa
 
 from keep.api.models.db.workflow import Workflow
-from keep.api.models.incident import IncidentDto
 from tests.fixtures.workflow_manager import wait_for_workflow_execution
 
 
@@ -1063,8 +1061,7 @@ def test_incident_workflow_enrichment_integration(db_session, client, test_app):
     ],
     indirect=True,
 )
-def test_get_enrichment_with_session(db_session, client, test_app, create_alert):
-
+def test_alert_enrichment_via_api_uuid(db_session, client, test_app, create_alert):
     fingerprint = str(uuid.uuid4())
 
     create_alert(
@@ -1074,34 +1071,7 @@ def test_get_enrichment_with_session(db_session, client, test_app, create_alert)
         {},
     )
 
-    client.post(
-        "/alerts/enrich",
-        headers={"x-api-key": "some-key"},
-        json={
-            "fingerprint": fingerprint,
-            "enrichments": {
-                "jira_ticket": "12345",
-            },
-        },
-    )
-
-    enrichment = get_enrichment_with_session(
-        db_session, SINGLE_TENANT_UUID, fingerprint
-    )
-
-    assert enrichment is not None
-    assert enrichment.alert_fingerprint == fingerprint
-    assert enrichment.tenant_id == SINGLE_TENANT_UUID
-    assert enrichment.enrichments == {"jira_ticket": "12345"}
-
-    create_alert(
-        "not-uuid-fingerprint",
-        AlertStatus.FIRING,
-        datetime.utcnow(),
-        {},
-    )
-
-    client.post(
+    enrichment_response = client.post(
         "/alerts/enrich",
         headers={"x-api-key": "some-key"},
         json={
@@ -1112,11 +1082,56 @@ def test_get_enrichment_with_session(db_session, client, test_app, create_alert)
         },
     )
 
-    enrichment = get_enrichment_with_session(
-        db_session, SINGLE_TENANT_UUID, "not-uuid-fingerprint"
+    assert enrichment_response.status_code == 200
+
+    alert_response = client.get(
+        f"/alerts/{fingerprint}",
+        headers={"x-api-key": "some-key"},
+    )
+    assert alert_response.status_code == 200
+    alert_data = alert_response.json()
+
+    assert alert_data["enriched_fields"] == ["jira_ticket"]
+    assert alert_data["jira_ticket"] == "12345"
+
+
+@pytest.mark.parametrize(
+    "test_app, db_session",
+    [
+        ("NO_AUTH", None),
+        ("NO_AUTH", {"db": "mysql"}),
+    ],
+    indirect=True,
+)
+def test_alert_enrichment_via_api_non_uuid(db_session, client, test_app, create_alert):
+    not_uuid_fingerprint = "not-uuid-fingerprint"
+
+    create_alert(
+        not_uuid_fingerprint,
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
     )
 
-    assert enrichment is not None
-    assert enrichment.alert_fingerprint == "not-uuid-fingerprint"
-    assert enrichment.tenant_id == SINGLE_TENANT_UUID
-    assert enrichment.enrichments == {"jira_ticket": "12345"}
+    enrichment_response = client.post(
+        "/alerts/enrich",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": "not-uuid-fingerprint",
+            "enrichments": {
+                "jira_ticket": "12345",
+            },
+        },
+    )
+
+    assert enrichment_response.status_code == 200
+
+    alert_response = client.get(
+        f"/alerts/{not_uuid_fingerprint}",
+        headers={"x-api-key": "some-key"},
+    )
+    assert alert_response.status_code == 200
+    alert_data = alert_response.json()
+
+    assert alert_data["enriched_fields"] == ["jira_ticket"]
+    assert alert_data["jira_ticket"] == "12345"
