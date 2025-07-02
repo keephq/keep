@@ -10,7 +10,7 @@ def sanitize_alert(alert_raw: dict) -> dict:
     """
     if alert_raw is None:
         return None
-    
+
     if not isinstance(alert_raw, dict):
         raise ValueError("Input must be a dictionary")
 
@@ -21,5 +21,6 @@ def sanitize_alert(alert_raw: dict) -> dict:
             return {k: sanitize(v) for k, v in value.items()}
         elif isinstance(value, list):
             return [sanitize(i) for i in value]
-        
+        return value
+
     return sanitize(alert_raw)

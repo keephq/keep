@@ -1,14 +1,22 @@
 import pytest
 from keep.api.utils.alert_utils import sanitize_alert
 
+
 @pytest.mark.parametrize(
     "input_data,expected_output",
     [
         ({"key": "value\x00"}, {"key": "value"}),
         ({"key": ["value1", "value\x00"]}, {"key": ["value1", "value"]}),
-        ({"key": ["value1", {"key": "\x00value"}]}, {"key": ["value1", {"key": "value"}]}),
+        (
+            {"key": ["value1", {"key": "\x00value"}]},
+            {"key": ["value1", {"key": "value"}]},
+        ),
         ({"nested": {"key": "\x00value"}}, {"nested": {"key": "value"}}),
         ({"nested": {"key": "value"}}, {"nested": {"key": "value"}}),
+        (
+            {"nested": {"bool": True, "number": 1234}},
+            {"nested": {"bool": True, "number": 1234}},
+        ),
         (None, None),
     ],
 )
