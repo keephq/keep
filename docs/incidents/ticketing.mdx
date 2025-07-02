@@ -1,0 +1,231 @@
+---
+title: "Ticketing Integration"
+sidebarTitle: "Ticketing"
+description: "Learn how to create and link tickets to incidents in Keep using various ticketing systems"
+---
+
+## Overview
+
+Keep provides comprehensive ticketing integration capabilities that allow you to create new tickets and link existing tickets to incidents. This integration supports multiple ticketing systems and provides a seamless workflow between incident management and ticketing platforms.
+
+## Features
+
+### Create New Tickets
+- Create tickets directly from incidents in the Keep UI
+- Pre-populated forms with incident information
+- Support for multiple ticketing providers
+- Automatic ticket tracking and status updates
+
+### Link Existing Tickets
+- Link existing tickets to incidents
+- Support for all configured ticketing providers
+- Manual ticket ID and URL input
+- Automatic incident enrichment with ticket information
+
+## Supported Ticketing Providers
+
+Keep supports the following ticketing systems:
+
+- **Jira Cloud** - Issue tracking and project management
+- **Jira On-Premise** - Self-hosted Jira instances  
+- **ServiceNow** - IT service management platform
+- **Linear** - Issue tracking for software teams
+- **YouTrack** - JetBrains issue tracking
+- **Redmine** - Open-source project management
+- **Zendesk** - Customer service platform
+- **Asana** - Project management and task tracking
+
+## Configuration
+
+### Environment Variables
+
+To enable ticketing features, you must configure the following environment variable:
+
+```bash
+# Enable ticketing features in the frontend
+KEEP_TICKETING_ENABLED=true
+```
+
+<Info>
+The `KEEP_TICKETING_ENABLED` environment variable controls the frontend ticketing features, including the ability to create and link tickets from the Keep UI. This variable must be set to `true` to enable the ticketing buttons and modals in the incident interface.
+</Info>
+
+### Provider Configuration
+
+Each ticketing provider requires specific configuration. See the [provider documentation](/providers/overview) for detailed setup instructions for each supported ticketing system.
+
+**Important**: When configuring ticketing providers, you must specify the **ticket creation URL** in the provider's authentication settings. This URL is required for the "Create Ticket" functionality to work properly. The ticket creation URL should point to the page where new tickets can be created in your ticketing system.
+
+For example:
+- **Jira**: `https://your-instance.atlassian.net/secure/CreateIssue.jspa`
+- **ServiceNow**: `https://your-instance.service-now.com/now/sow/record/incident/-1`
+- **Linear**: `https://linear.app/your-team/issue/new`
+- **Zendesk**: `https://your-company.zendesk.com/agent/filters/new`
+
+Without this URL configured, the ticket creation feature will not be available in the Keep UI.
+
+## Using Ticketing Features
+
+### Creating New Tickets
+
+1. Navigate to an incident in the Keep UI
+2. Look for the "Create Ticket" button in the incident actions
+3. Click the button to open the ticket creation modal
+4. Select the appropriate ticketing provider (if multiple are configured)
+5. Review and modify the pre-populated information:
+   - **Title**: Incident name (auto-populated)
+   - **Description**: Incident summary and details (auto-populated)
+   - **Priority**: Mapped from incident severity
+   - **Service/Component**: Affected services
+6. Add any additional information specific to your ticketing system
+7. Submit to create the ticket
+
+<Info>
+The ticket creation form is automatically pre-populated with incident information, including the incident name, summary, severity, and affected services. You can modify any of these fields before creating the ticket.
+</Info>
+
+### Linking Existing Tickets
+
+1. Navigate to an incident in the Keep UI
+2. Click the "Link Ticket" button in the incident actions
+3. Select the appropriate ticketing provider (if multiple are configured)
+4. Enter the ticket information:
+   - **Ticket ID** (optional): The ticket identifier in your ticketing system
+   - **Ticket URL** (required): The full URL to the ticket (e.g., `https://company.atlassian.net/browse/PROJ-123`)
+5. Submit to link the ticket to the incident
+
+<Info>
+When linking tickets, the ticket URL is required and should be the full URL to the ticket in your ticketing system. The ticket ID is optional but recommended for better tracking and integration.
+</Info>
+
+## Ticket Information Display
+
+Once a ticket is created or linked to an incident, Keep displays the following information:
+
+- **Ticket ID**: The unique identifier in the ticketing system
+- **Ticket URL**: Direct link to the ticket
+- **Ticket Status**: Current status of the ticket
+- **Provider**: The ticketing system used
+- **Created/Linked Date**: When the ticket was created or linked
+
+## Best Practices
+
+### Ticket Creation
+- Review and enhance the auto-populated title and description
+- Set appropriate priority based on incident severity
+- Assign tickets to the correct team or individual
+- Add relevant labels or tags for categorization
+- Include technical details and context in the description
+
+### Ticket Linking
+- Use the full ticket URL for proper linking
+- Include the ticket ID when available for better tracking
+- Verify the ticket exists and is accessible before linking
+- Consider linking related tickets to provide full context
+
+### Provider Management
+- Configure multiple providers for flexibility
+- Test provider connections regularly
+- Keep provider credentials secure and up-to-date
+- Monitor provider API limits and quotas
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Ticketing buttons not visible**
+   - Verify `KEEP_TICKETING_ENABLED=true` is set
+   - Ensure at least one ticketing provider is properly configured
+
+2. **Authentication errors**
+   - Verify provider credentials are correct and not expired
+   - Check API tokens and permissions
+   - Ensure the provider instance is accessible
+
+3. **Ticket creation fails**
+   - Verify the ticket creation URL is configured in the provider settings
+   - Check that the ticket creation URL is correct and accessible
+   - Verify required fields are filled correctly
+   - Check project/team IDs are valid
+   - Review error messages for specific issues
+   - Ensure user has create permissions in the ticketing system
+
+4. **Ticket linking fails**
+   - Verify the ticket URL is correct and accessible
+   - Check that the ticket exists in the specified provider
+   - Ensure proper permissions to access the ticket
+
+### Debugging Steps
+
+1. **Check environment variable**
+   ```bash
+   echo $KEEP_TICKETING_ENABLED
+   ```
+
+2. **Verify provider configuration**
+   - Test provider connection in Keep settings
+   - Check authentication status
+   - Verify required permissions
+   - Ensure ticket creation URL is configured and accessible
+
+3. **Review application logs**
+   - Check Keep application logs for errors
+   - Look for provider-specific error messages
+   - Verify network connectivity
+
+## Configuration Examples
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  keep:
+    image: keeppro/keep:latest
+    environment:
+      - KEEP_TICKETING_ENABLED=true
+      # Jira configuration
+      - KEEP_JIRA_EMAIL=your-email@company.com
+      - KEEP_JIRA_API_TOKEN=your-api-token
+      - KEEP_JIRA_HOST=your-instance.atlassian.net
+      # ServiceNow configuration
+      - KEEP_SERVICENOW_BASE_URL=https://your-instance.service-now.com
+      - KEEP_SERVICENOW_USERNAME=your-username
+      - KEEP_SERVICENOW_PASSWORD=your-password
+    ports:
+      - "3000:3000"
+```
+
+### Kubernetes
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keep
+spec:
+  template:
+    spec:
+      containers:
+      - name: keep
+        image: keeppro/keep:latest
+        env:
+        - name: KEEP_TICKETING_ENABLED
+          value: "true"
+        - name: KEEP_SERVICENOW_BASE_URL
+          value: "https://your-instance.service-now.com"
+        - name: KEEP_SERVICENOW_USERNAME
+          value: "your-username"
+        - name: KEEP_SERVICENOW_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keep-secrets
+              key: servicenow-password
+```
+
+## Related Documentation
+
+- [Ticket Creation Workflows](/workflows/syntax/ticket-creation) - Detailed guide for manual ticket creation
+- [Provider Configuration](/providers/overview) - Setup instructions for ticketing providers
+- [Incident Management](/incidents/overview) - Overview of incident management features
+- [Workflow Examples](/workflows/examples) - Examples of automated ticket creation workflows 
