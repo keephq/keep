@@ -15,7 +15,7 @@ export const useFetchProviders = () => {
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]);
   const { data: config } = useConfig();
-  const { data, error, mutate } = useProviders();
+  const { data, error, mutate, isLoading } = useProviders();
 
   if (error) {
     throw error;
@@ -108,6 +108,7 @@ export const useFetchProviders = () => {
     error,
     isLocalhost,
     mutate,
+    isLoading,
   };
 };
 
