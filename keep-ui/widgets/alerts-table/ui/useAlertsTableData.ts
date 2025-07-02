@@ -153,11 +153,12 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
       return;
     }
 
+    const filterCel = query.filterCel ? `(${query.filterCel})` : "";
     const alertsQuery: AlertsQuery = {
       limit: query.limit,
       offset: query.offset,
       sortOptions: query.sortOptions,
-      cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
+      cel: [mainCelQuery, filterCel].filter(Boolean).join(" && "),
     };
 
     setAlertsQueryState(alertsQuery);

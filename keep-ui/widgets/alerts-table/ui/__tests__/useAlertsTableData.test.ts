@@ -107,7 +107,7 @@ describe("useAlertsTableData", () => {
   it("calls useLastAlerts with correct query", () => {
     const query: AlertsTableDataQuery = {
       searchCel: "name == 'foo'",
-      filterCel: "(description in ['bar', 'baz'])",
+      filterCel: "description in ['bar', 'baz']",
       limit: 10,
       offset: 200,
       sortOptions: [{ sortBy: "name", sortDirection: "ASC" }],
@@ -268,8 +268,8 @@ describe("useAlertsTableData", () => {
       useAlertsTableData({
         ...defaultQuery,
         timeFrame: {
-            type: "all-time",
-            isPaused: false,
+          type: "all-time",
+          isPaused: false,
         } as AllTimeFrame,
         searchCel: "name == 'foo'",
         filterCel: "",
