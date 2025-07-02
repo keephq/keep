@@ -100,7 +100,7 @@ jobs:
             sleep 1
           done
           echo "MySQL is up and running!"
-          poetry run coverage run --omit="*/test*" --branch -m pytest --integration --ignore=tests/e2e_tests/
+          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout=300 --integration --ignore=tests/e2e_tests/ -v
 
       - name: Convert coverage results to JSON
         run: poetry run coverage json --omit="keep/providers/*"
