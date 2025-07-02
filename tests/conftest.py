@@ -164,10 +164,11 @@ def is_mysql_responsive(host, port, user, password, database):
 
         # Check if the connection is established
         if connection.is_connected():
+            print("✅ Mysql is up")
             return True
 
     except Exception:
-        print("Mysql still not up")
+        print("⏳ Mysql still not up")
         pass
 
     return False
@@ -199,6 +200,7 @@ def mysql_container(docker_ip, docker_services):
 def db_session(request, monkeypatch, tmp_path):
     # Create a database connection
     print("Creating db session")
+    db_type = "sqlite"
     os.environ["DB_ECHO"] = "true"
     # Set up a temporary directory for secret manager
     os.environ["SECRET_MANAGER_DIRECTORY"] = str(tmp_path)
@@ -314,10 +316,20 @@ actions:
 
     logger = logging.getLogger(__name__)
     logger.info("Dropping all tables")
-    # delete the database
-    SQLModel.metadata.drop_all(mock_engine)
-    # Clean up after the test
-    session.close()
+
+    if db_type == "mysql":
+        with mock_engine.connect() as conn:
+            result = conn.execute(text("SHOW PROCESSLIST"))
+            processes = result.fetchall()
+            logger.info(f"Active processes: {processes}")
+
+    try:
+        # delete the database
+        SQLModel.metadata.drop_all(mock_engine)
+        # Clean up after the test
+        # session.close()
+    except Exception as e:
+        logger.warning(f"Error during test_app fixture cleanup: {e}")
 
 
 @pytest.fixture
