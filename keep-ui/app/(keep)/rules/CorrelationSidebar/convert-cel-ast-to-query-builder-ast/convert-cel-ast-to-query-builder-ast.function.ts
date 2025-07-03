@@ -174,7 +174,7 @@ export function visitCelAstNode(node: CelAst.Node): DefaultRuleGroupType {
 export function convertCelAstToQueryBuilderAst(
   node: CelAst.Node
 ): DefaultRuleGroupType {
-  const rulesGroup = visitCelAstNode(node);
+  let rulesGroup = visitCelAstNode(node);
 
   if (rulesGroup.combinator === "or") {
     // React Query Builder requires all rules to be within "and" combinator groups to function correctly.
@@ -190,6 +190,13 @@ export function convertCelAstToQueryBuilderAst(
 
       return rule;
     });
+  }
+
+  if (rulesGroup.combinator == "and") {
+    rulesGroup = {
+      combinator: "and",
+      rules: [rulesGroup],
+    };
   }
 
   return rulesGroup;

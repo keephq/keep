@@ -4,6 +4,7 @@ import uuid
 from time import sleep
 
 import pytest
+from sqlalchemy import desc, text
 
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import (
@@ -18,6 +19,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Alert, Incident
 from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -2248,3 +2250,211 @@ def test_incident_created_without_assignee(db_session):
     incident = results[0]
     assert incident.assignee is None
     assert incident.user_generated_name == "test-rule-without-assignee"
+
+
+def test_rule_alerts_threshold_with_grouping(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        grouping_criteria=["group"],
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ANY.value,
+        threshold=2,
+    )
+
+    create_alert(
+        "Critical Alert G1.1",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+            "group": "group-1"
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    incident_1 = db_session.query(Incident).first()
+    alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident_1], db_session)
+
+    assert incident_1.alerts_count == 1
+    assert len(incident_1.alerts) == 1
+    assert incident_1.alerts[0].id == alert_1.id
+
+    create_alert(
+        "Critical Alert G2.1",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+            "group": "group-2",
+        },
+    )
+
+    db_session.refresh(incident_1)
+    alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # Still no incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But two hidden groups are there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 2
+    incident_2 = db_session.query(Incident).order_by(Incident.creation_time.desc()).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident_2], db_session)
+
+    assert incident_2.alerts_count == 1
+    assert len(incident_2.alerts) == 1
+    assert incident_2.alerts[0].id == alert_2.id
+
+    create_alert(
+        "Critical Alert G1.2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+            "group": "group-1",
+        },
+    )
+
+
+    # One incident was official started
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+    # But another is still hidden
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    alert_3 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    db_session.refresh(incident_1)
+    assert incident_1.alerts_count == 2
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident_1.id),
+        session=db_session,
+    )
+    assert alert_count == 2
+    assert len(alerts) == 2
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    assert alert_1.fingerprint in fingerprints
+    assert alert_3.fingerprint in fingerprints
+
+
+def test_rule_alerts_threshold_same_fingerprint(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=10,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ANY.value,
+        threshold=2,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # But hidden group is there
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+
+    incident = db_session.query(Incident).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 1
+    assert len(incident.alerts) == 1
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # Hidden group is still hidden
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+
+    incident = db_session.query(Incident).first()
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    assert incident.alerts_count == 1
+    assert len(incident.alerts) == 1
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    db_session.refresh(incident)
+
+    # No incident yet
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    # Hidden group is still hidden
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # And incident was official started
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+
+    db_session.refresh(incident)
+    assert incident.alerts_count == 1
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        session=db_session,
+    )
+    assert alert_count == 1
+    assert len(alerts) == 1
+
+
+    last_alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+    last_alert_dto = convert_db_alerts_to_dto_alerts(
+        [last_alert],
+    )
+    assert last_alert_dto[0].unresolvedCounter == 2
