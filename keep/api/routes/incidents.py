@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+from uuid import UUID
 
 from arq import ArqRedis
 from fastapi import (
@@ -13,8 +14,6 @@ from fastapi import (
     Response,
 )
 from pusher import Pusher
-from pydantic.types import UUID
-from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool

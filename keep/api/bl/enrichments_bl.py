@@ -4,7 +4,6 @@ import json
 import logging
 import re
 import uuid
-from typing import Literal
 from uuid import UUID
 
 import celpy
