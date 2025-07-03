@@ -1071,18 +1071,14 @@ async def enrich_incident(
 
     # Use the existing enrichment infrastructure
     enrichment_bl = EnrichmentsBl(tenant_id, db_session)
-    fingerprint = UUIDType(binary=False).process_bind_param(
-        incident_id, db_session.bind.dialect
-    )
 
     enrichment_bl.enrich_entity(
-        fingerprint=fingerprint,
+        fingerprint=incident_id,
         enrichments=enrichment.enrichments,
         action_type=ActionType.INCIDENT_ENRICH,
         action_callee=authenticated_entity.email,
         action_description=f"Incident enriched by {authenticated_entity.email}",
         force=enrichment.force,
-        entity_type="incident",
     )
 
     # Notify clients if pusher is available

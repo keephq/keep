@@ -21,7 +21,7 @@ import opentelemetry.trace as trace
 import requests
 from dateutil.parser import parse
 
-from keep.api.bl.enrichments_bl import EnrichmentsBl, EntityType
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
     get_custom_deduplication_rule,
     get_enrichments,
@@ -206,7 +206,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         self.logger.debug("Extracting the fingerprint from the alert")
         event = None
-        entity_type: EntityType = "alert"
+        entity_type: Literal["alert", "incident"] = "alert"
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         elif self.context_manager.foreach_context.get("value", {}):
@@ -322,7 +322,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
             common_kwargs = {
                 "fingerprint": fingerprint,
-                "entity_type": entity_type,
                 "action_type": ActionType.WORKFLOW_ENRICH,
                 "action_callee": "system",
                 "audit_enabled": audit_enabled,
@@ -336,7 +335,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     **common_kwargs,
                 )
 
-            if disposable_enrichments:
+            # todo: incidents do not have disposable enrichments
+            if disposable_enrichments and entity_type == "alert":
                 # enrich with disposable enrichments
                 enrichments_bl.disposable_enrich_entity(
                     enrichments=disposable_enrichments,
