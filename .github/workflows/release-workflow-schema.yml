@@ -80,8 +80,13 @@ jobs:
         working-directory: keep-ui
         run: npm run build:workflow-yaml-json-schema
 
+      - name: Exit if it's a fork
+        if: ${{ env.IS_FORK == 'true' }}
+        run: |
+          echo "This is a fork, skipping schema release"
+          exit 0
+
       - name: Checkout schema repository
-        if: ${{ env.IS_FORK != 'true' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ env.SCHEMA_REPO_NAME }}
@@ -89,7 +94,6 @@ jobs:
           path: schema-repo
 
       - name: Set target branch variable
-        if: ${{ env.IS_FORK != 'true' }}
         id: set_branch
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -99,7 +103,6 @@ jobs:
           fi
 
       - name: Create or switch to target branch in schema repo
-        if: ${{ env.IS_FORK != 'true' }}
         working-directory: schema-repo
         run: |
           git fetch origin
@@ -110,7 +113,6 @@ jobs:
           fi
 
       - name: Copy schema to target repository
-        if: ${{ env.IS_FORK != 'true' }}
         run: |
           cp workflow-yaml-json-schema.json schema-repo/schema.json
 
@@ -124,7 +126,6 @@ jobs:
 
       - name: Check if schema changed
         id: check_changes
-        if: ${{ env.IS_FORK != 'true' }}
         working-directory: schema-repo
         run: |
           git add schema.json
@@ -135,7 +136,7 @@ jobs:
           fi
 
       - name: Commit and push schema
-        if: ${{ env.IS_FORK != 'true' }} && steps.check_changes.outputs.changed == 'true'
+        if: steps.check_changes.outputs.changed == 'true'
         working-directory: schema-repo
         run: |
           git config user.name "Keep Schema Bot"
@@ -148,7 +149,7 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        if: ${{ env.IS_FORK != 'true' }} && steps.check_changes.outputs.changed == 'true' && steps.set_branch.outputs.branch == 'main'
+        if: steps.check_changes.outputs.changed == 'true' && steps.set_branch.outputs.branch == 'main'
         uses: softprops/action-gh-release@v1
         with:
           repository: ${{ env.SCHEMA_REPO_NAME }}
