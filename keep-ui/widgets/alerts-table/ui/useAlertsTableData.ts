@@ -141,7 +141,10 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     }
 
     const filterArray = [query?.searchCel, dateRangeCel];
-    return filterArray.filter(Boolean).join(" && ");
+    return filterArray
+      .filter(Boolean)
+      .map((cel) => `(${cel})`)
+      .join(" && ");
   }, [query?.searchCel, dateRangeCel]);
 
   useEffect(() => {
@@ -150,11 +153,12 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
       return;
     }
 
+    const filterCel = query.filterCel ? `(${query.filterCel})` : "";
     const alertsQuery: AlertsQuery = {
       limit: query.limit,
       offset: query.offset,
       sortOptions: query.sortOptions,
-      cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
+      cel: [mainCelQuery, filterCel].filter(Boolean).join(" && "),
     };
 
     setAlertsQueryState(alertsQuery);
