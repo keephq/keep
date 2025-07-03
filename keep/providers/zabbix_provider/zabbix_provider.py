@@ -364,7 +364,7 @@ class ZabbixProvider(BaseProvider):
         # Handle integer input
         severity = 0
         if isinstance(new_severity, int):
-            if 0 < new_severity <= 5:
+            if 0 <= new_severity <= 5:
                 severity = new_severity
         else:
             # Handle string input
