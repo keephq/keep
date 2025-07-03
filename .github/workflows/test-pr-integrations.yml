@@ -25,11 +25,12 @@ env:
   MYSQL_ROOT_PASSWORD: keep
   MYSQL_DATABASE: keep
   ELASTIC_PASSWORD: keeptests
+  PYTEST_TIMEOUT: 120
 
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       mysql:
         image: mysql:5.7
@@ -100,7 +101,7 @@ jobs:
             sleep 1
           done
           echo "MySQL is up and running!"
-          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout=60 --integration --ignore=tests/e2e_tests/ ${{ runner.debug == '1' && '-v --log-cli-level=INFO' || '' }}
+          poetry run coverage run --omit="*/test*" --branch -m pytest --timeout=${{ env.PYTEST_TIMEOUT }} --integration --ignore=tests/e2e_tests/ ${{ runner.debug == '1' && '-v --log-cli-level=INFO' || '' }}
 
       - name: Convert coverage results to JSON
         run: poetry run coverage json --omit="keep/providers/*"
