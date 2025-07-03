@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import uuid
+from typing import Literal
 from uuid import UUID
 
 import celpy
@@ -44,6 +45,8 @@ from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.rule import ResolveOn
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+
+EntityType = Literal["alert", "incident"]
 
 
 def is_valid_uuid(uuid_str):
@@ -690,6 +693,7 @@ class EnrichmentsBl:
         should_exist=True,
         force=False,
         audit_enabled=True,
+        entity_type: EntityType = "alert",
     ):
 
         common_kwargs = {
@@ -699,6 +703,7 @@ class EnrichmentsBl:
             "action_description": action_description,
             "should_exist": should_exist,
             "force": force,
+            "entity_type": entity_type,
         }
 
         self.enrich_entity(
@@ -731,6 +736,7 @@ class EnrichmentsBl:
         dispose_on_new_alert=False,
         force=False,
         audit_enabled=True,
+        entity_type: EntityType = "alert",
     ):
         """
         should_exist = False only in mapping where the alert is not yet in elastic
@@ -740,6 +746,10 @@ class EnrichmentsBl:
         Enrich the alert with extraction and mapping rules
         """
         # enrich db
+        if entity_type == "incident":
+            fingerprint = UUIDType(binary=False).process_bind_param(
+                fingerprint, self.db_session.bind.dialect
+            )
         self.logger.debug(
             "enriching alert db",
             extra={"fingerprint": fingerprint, "tenant_id": self.tenant_id},
