@@ -403,7 +403,10 @@ class ZabbixProvider(BaseProvider):
                     validated_scopes[scope.name] = "Permission denied"
                     continue
                 else:
-                    if error and "invalid parameter" in error.lower():
+                    if error and any(phrase in error.lower() for phrase in [
+                        "invalid parameter",
+                        "incorrect arguments"
+                    ]):
                         # This is OK, it means the request is broken but we have access to the endpoint.
                         pass
                     else:
