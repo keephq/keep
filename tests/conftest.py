@@ -213,7 +213,12 @@ def db_session(request, monkeypatch, tmp_path):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
         monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
-        mock_engine = create_engine(db_connection_string)
+        mock_engine = create_engine(
+            db_connection_string,
+            pool_timeout=30,
+            pool_recycle=3600,
+            connect_args={"connect_timeout": 30},
+        )
     # sqlite
     else:
         db_connection_string = "sqlite:///:memory:"
@@ -253,9 +258,7 @@ def db_session(request, monkeypatch, tmp_path):
     # Prepopulate the database with test data
 
     # 1. Create a tenant
-    tenant_data = [
-        Tenant(id=SINGLE_TENANT_UUID, name="test-tenant", created_by="tests@keephq.dev")
-    ]
+    tenant_data = [Tenant(id=SINGLE_TENANT_UUID, name="test-tenant")]
     session.add_all(tenant_data)
     session.commit()
     # 2. Create some workflows
@@ -277,6 +280,7 @@ actions:
             created_by="test@keephq.dev",
             interval=0,
             workflow_raw=mock_raw_workflow.format("test-id-1"),
+            last_updated=datetime.now(timezone.utc),
         ),
         Workflow(
             id="test-id-2",
@@ -286,6 +290,7 @@ actions:
             created_by="test@keephq.dev",
             interval=0,
             workflow_raw=mock_raw_workflow.format("test-id-2"),
+            last_updated=datetime.now(timezone.utc),
         ),
         WorkflowExecution(
             id="test-execution-id-1",
@@ -295,6 +300,8 @@ actions:
             status="success",
             execution_number=1,
             results={},
+            error=None,
+            execution_time=0,
         ),
         WorkflowToAlertExecution(
             id=1,
@@ -327,7 +334,7 @@ actions:
         # delete the database
         SQLModel.metadata.drop_all(mock_engine)
         # Clean up after the test
-        # session.close()
+        session.close()
     except Exception as e:
         logger.warning(f"Error during test_app fixture cleanup: {e}")
 
