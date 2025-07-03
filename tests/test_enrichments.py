@@ -1065,7 +1065,7 @@ def test_alert_enrichment_via_api_uuid(db_session, client, test_app, create_aler
         "/alerts/enrich",
         headers={"x-api-key": "some-key"},
         json={
-            "fingerprint": "not-uuid-fingerprint",
+            "fingerprint": fingerprint,
             "enrichments": {
                 "jira_ticket": "12345",
             },
