@@ -23,7 +23,7 @@ env:
   IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
 
 jobs:
-  release-schema:
+  generate-schema:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -80,12 +80,23 @@ jobs:
         working-directory: keep-ui
         run: npm run build:workflow-yaml-json-schema
 
-      - name: Exit if it's a fork
-        if: ${{ env.IS_FORK == 'true' }}
-        run: |
-          echo "This is a fork, skipping schema release"
-          exit 0
+      - name: Upload schema artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-schema
+          path: workflow-yaml-json-schema.json
 
+  release-schema:
+    runs-on: ubuntu-latest
+    needs: generate-schema
+    if: ${{ env.IS_FORK != 'true' }}
+
+    steps:
+      - name: Download schema artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: workflow-schema
+          path: .
       - name: Checkout schema repository
         uses: actions/checkout@v4
         with:
@@ -117,8 +128,8 @@ jobs:
           cp workflow-yaml-json-schema.json schema-repo/schema.json
 
           # Update schema with version info
-          jq --arg version "${{ steps.get_version.outputs.version }}" \
-             --arg id "https://raw.githubusercontent.com/${{ env.SCHEMA_REPO_NAME }}/v${{ steps.get_version.outputs.version }}/schema.json" \
+          jq --arg version "${{ needs.generate-schema.outputs.version }}" \
+             --arg id "https://raw.githubusercontent.com/${{ env.SCHEMA_REPO_NAME }}/v${{ needs.generate-schema.outputs.version }}/schema.json" \
              '. + {version: $version, "$id": $id}' \
              schema-repo/schema.json > schema-repo/schema.tmp.json
 
@@ -141,11 +152,11 @@ jobs:
         run: |
           git config user.name "Keep Schema Bot"
           git config user.email "no-reply@keephq.dev"
-          git commit -m "Release schema v${{ steps.get_version.outputs.version }}"
+          git commit -m "Release schema v${{ needs.generate-schema.outputs.version }}"
           git push origin ${{ steps.set_branch.outputs.branch }}
           if [ "${{ steps.set_branch.outputs.branch }}" = "main" ]; then
-            git tag "v${{ steps.get_version.outputs.version }}"
-            git push origin "v${{ steps.get_version.outputs.version }}"
+            git tag "v${{ needs.generate-schema.outputs.version }}"
+            git push origin "v${{ needs.generate-schema.outputs.version }}"
           fi
 
       - name: Create GitHub Release
