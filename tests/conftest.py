@@ -327,12 +327,6 @@ actions:
         logger = logging.getLogger(__name__)
         print("Dropping all tables")
 
-        if db_type == "mysql":
-            with mock_engine.connect() as conn:
-                result = conn.execute(text("SHOW PROCESSLIST"))
-                processes = result.fetchall()
-                print(f"Active processes: {processes}")
-
         try:
             # delete the database
             SQLModel.metadata.drop_all(mock_engine)

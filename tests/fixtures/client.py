@@ -66,6 +66,15 @@ def test_app(monkeypatch, request, db_session):
         # Restore the original setup_logging function
         keep.api.logging.setup_logging = original_setup_logging
 
+        try:
+            from keep.workflowmanager.workflowmanager import WorkflowManager
+
+            if hasattr(WorkflowManager, "_instance") and WorkflowManager._instance:
+                WorkflowManager._instance.stop()
+                print("WorkflowManager stopped")
+        except Exception as e:
+            print(f"Error cleaning up WorkflowManager: {e}")
+
 
 # Fixture for TestClient using the test_app fixture
 @pytest.fixture
