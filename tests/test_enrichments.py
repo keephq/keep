@@ -2,6 +2,7 @@
 import time
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
+import uuid
 
 import pytest
 from sqlalchemy import text
