@@ -140,7 +140,7 @@ class RulesEngine:
                                 )
                                 firing_count = sum(
                                     [
-                                        alert.event.get("firingCounter", 1)
+                                        alert.event.get("unresolvedCounter", 1)
                                         for alert in incident.alerts
                                     ]
                                 )
@@ -443,6 +443,9 @@ class RulesEngine:
         return sanitized
 
     def _check_if_rule_apply(self, rule: Rule, event: AlertDto) -> List[str]:
+        """
+        Evaluates if a rule applies to an event using CEL. Handles type coercion for ==/!= between int and str.
+        """
         sub_rules = self._extract_subrules(rule.definition_cel)
         payload = event.dict()
         # workaround since source is a list
@@ -474,11 +477,76 @@ class RulesEngine:
                 if "no such member" in str(e):
                     continue
                 # unknown
+                # --- Fix for https://github.com/keephq/keep/issues/5107 ---
+                if "no such overload" in str(e) or "found no matching overload" in str(
+                    e
+                ):
+                    try:
+                        coerced = self._coerce_eq_type_error(
+                            sub_rule, prgm, activation, event
+                        )
+                        if coerced:
+                            sub_rules_matched.append(sub_rule)
+                            continue
+                    except Exception:
+                        pass
                 raise
             if r:
                 sub_rules_matched.append(sub_rule)
         # no subrules matched
         return sub_rules_matched
+
+    def _coerce_eq_type_error(self, cel, prgm, activation, alert):
+        """
+        Helper for type coercion fallback for ==/!= between int and str in CEL.
+        Fixes https://github.com/keephq/keep/issues/5107
+        """
+        import re
+
+        m = re.match(r"([a-zA-Z0-9_\.]+)\s*([!=]=)\s*(.+)", cel)
+        if not m:
+            return False
+        left, op, right = m.groups()
+        left = left.strip()
+        right = (
+            right.strip().strip('"')
+            if right.strip().startswith('"') and right.strip().endswith('"')
+            else right.strip()
+        )
+        try:
+
+            def get_nested(d, path):
+                for part in path.split("."):
+                    if isinstance(d, dict):
+                        d = d.get(part)
+                    else:
+                        return None
+                return d
+
+            left_val = get_nested(activation, left)
+            try:
+                right_val = int(right)
+            except Exception:
+                try:
+                    right_val = float(right)
+                except Exception:
+                    right_val = right
+            # If one is str and the other is int/float, compare as str
+            if (isinstance(left_val, (int, float)) and isinstance(right_val, str)) or (
+                isinstance(left_val, str) and isinstance(right_val, (int, float))
+            ):
+                if op == "==":
+                    return str(left_val) == str(right_val)
+                else:
+                    return str(left_val) != str(right_val)
+            # Also handle both as str for robustness
+            if op == "==":
+                return str(left_val) == str(right_val)
+            else:
+                return str(left_val) != str(right_val)
+        except Exception:
+            pass
+        return False
 
     def _calc_rule_fingerprint(self, event: AlertDto, rule: Rule) -> list[list[str]]:
         # extract all the grouping criteria from the event
@@ -639,12 +707,19 @@ class RulesEngine:
                 if "no such member" in str(e):
                     continue
                 # unknown
-                elif "no such overload" in str(e):
-                    logger.debug(
-                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
-                    )
-                    continue
-                elif "found no matching overload" in str(e):
+                elif "no such overload" in str(
+                    e
+                ) or "found no matching overload" in str(e):
+                    # Try type coercion for == and !=
+                    try:
+                        coerced = self._coerce_eq_type_error(
+                            cel, prgm, activation, alert
+                        )
+                        if coerced:
+                            filtered_alerts.append(alert)
+                            continue
+                    except Exception:
+                        pass
                     logger.debug(
                         f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
                     )

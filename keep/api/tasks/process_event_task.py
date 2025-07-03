@@ -46,11 +46,13 @@ from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.incident import IncidentDto
 from keep.api.tasks.notification_cache import get_notification_cache
+from keep.api.utils.alert_utils import sanitize_alert
 from keep.api.utils.enrichment_helpers import (
     calculate_firing_time_since_last_resolved,
     calculated_firing_counter,
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
+    calculated_unresolved_counter,
 )
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -208,8 +210,12 @@ def __save_to_db(
                     )
                 )
 
-                # we now need to update the firing counter
+                # we now need to update the firing and unresolved counters
                 formatted_event.firingCounter = calculated_firing_counter(
+                    formatted_event, previous_alert
+                )
+
+                formatted_event.unresolvedCounter = calculated_unresolved_counter(
                     formatted_event, previous_alert
                 )
 
@@ -249,6 +255,7 @@ def __save_to_db(
                 "fingerprint": formatted_event.fingerprint,
                 "alert_hash": formatted_event.alert_hash,
             }
+            alert_args = sanitize_alert(alert_args)
             if timestamp_forced is not None:
                 alert_args["timestamp"] = timestamp_forced
 

@@ -134,6 +134,14 @@ alert_field_configurations = [
         data_type=DataType.INTEGER,
     ),
     FieldMappingConfiguration(
+        map_from_pattern="unresolvedCounter",
+        map_to=[
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
+        ],
+        data_type=DataType.INTEGER,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="*",
         map_to=[
             "JSON(alertenrichment.enrichments).*",
@@ -395,7 +403,7 @@ def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
             alerts_with_start = session.execute(data_query).all()
         except OperationalError as e:
             logger.warning(
-                f"Failed to query alerts for query object '{json.dumps(query_with_defaults)}': {e}"
+                f"Failed to query alerts for query object '{json.dumps(query_with_defaults.dict(exclude_unset=True))}': {e}"
             )
             return [], 0
 

@@ -125,7 +125,7 @@ class KeepProvider(BaseProvider):
                 raise ValueError("Filter is required for version 2")
             try:
                 alerts = search_engine.search_alerts_by_cel(
-                    cel_query=filter, limit=limit or 100, timeframe=int(time_delta)
+                    cel_query=filter, limit=limit or 100, timeframe=float(time_delta)
                 )
             except Exception as e:
                 self.logger.exception(
@@ -462,16 +462,13 @@ class KeepProvider(BaseProvider):
         """
         self.logger.debug("Starting _notify_alert")
         context = self.context_manager.get_full_context()
-        alert_step = context.get("alert_step", None)
-        self.logger.debug("Got alert step", extra={"alert_step": alert_step})
 
-        # if alert_step is provided, get alert results
-        if alert_step:
-            alert_results = (
-                context.get("steps", {}).get(alert_step, {}).get("results", {})
-            )
-            self.logger.info(
-                "Got alert results from alert_step",
+        alert_results = context.get("foreach", {}).get("items", None)
+
+        # if foreach_context is provided, get alert results
+        if alert_results:
+            self.logger.debug(
+                "Got alert results from foreach context",
                 extra={"alert_results": alert_results},
             )
         # else, the last step results are the alert results
