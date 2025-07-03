@@ -91,7 +91,7 @@ jobs:
   release-schema:
     runs-on: ubuntu-latest
     needs: generate-schema
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
 
     steps:
       - name: Download schema artifact
