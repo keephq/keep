@@ -27,11 +27,17 @@ from keep.api.utils.cel_utils import preprocess_cel_expression
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
     PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
+    _lock = threading.Lock()
+    _instance: typing.Optional["WorkflowManager"] = None
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
-        if not hasattr(WorkflowManager, "_instance"):
-            WorkflowManager._instance = WorkflowManager()
+        if not WorkflowManager._instance:
+            # We don't want to lock if the instance is already created
+            with WorkflowManager._lock:
+                # Another thread might have created the instance while we were waiting for the lock
+                if not WorkflowManager._instance:
+                    WorkflowManager._instance = WorkflowManager()
         return WorkflowManager._instance
 
     def __init__(self):
