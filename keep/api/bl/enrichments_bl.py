@@ -890,6 +890,104 @@ class EnrichmentsBl:
                 "enrichments disposed", extra={"fingerprint": fingerprint}
             )
 
+    def dispose_dismiss_disposables(self, fingerprint: str):
+        """
+        If dismissUntil has expired:
+        - Sets dismissed to False (bool)
+        - Sets dismissedUntil to "" (empty string)
+        - Removes all disposable_* fields
+        If dismissedUntil has not expired or is forever:
+        - Only normalizes dismissed to bool
+        """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping dispose dismiss disposables")
+            return
+
+        self.logger.debug("Disposing dismiss-related disposable enrichments", extra={"fingerprint": fingerprint})
+        enrichments = get_enrichment_with_session(
+            self.db_session, self.tenant_id, fingerprint
+        )
+        if not enrichments or not enrichments.enrichments:
+            self.logger.debug(
+                "No enrichments to dispose", extra={"fingerprint": fingerprint}
+            )
+            return
+
+        dismiss_until = enrichments.enrichments.get("dismissUntil")
+        try:
+            if dismiss_until:
+                # Support ISO format, with/without millis and with 'Z'
+                if dismiss_until.endswith("Z"):
+                    dismiss_until_fmt = dismiss_until[:-1] + "+00:00"
+                else:
+                    dismiss_until_fmt = dismiss_until
+                dt = datetime.datetime.fromisoformat(dismiss_until_fmt)
+                now = datetime.datetime.now(datetime.timezone.utc)
+                if dt < now:
+                    self.logger.info(
+                        f"Removing dismissUntil (expired): {dt} < {now}",
+                        extra={"fingerprint": fingerprint}
+                    )
+                    # Remove disposable_* fields
+                    keys_to_remove = [
+                        k for k in enrichments.enrichments.keys()
+                        if k.startswith("disposable_")
+                    ]
+                    new_enrichments = {
+                        k: v
+                        for k, v in enrichments.enrichments.items()
+                        if k not in keys_to_remove
+                    }
+                    # Set dismissed to False and dismissedUntil to ""
+                    new_enrichments["dismissed"] = False
+                    new_enrichments["dismissUntil"] = ""
+                    # Normalize type just in case
+                    if isinstance(new_enrichments["dismissed"], str):
+                        new_enrichments["dismissed"] = new_enrichments["dismissed"].lower() == "true"
+                    enrich_alert_db(
+                        self.tenant_id,
+                        fingerprint,
+                        new_enrichments,
+                        session=self.db_session,
+                        action_callee="system",
+                        action_type=ActionType.DISPOSE_ENRICHED_ALERT,
+                        action_description=f"Disposing dismiss enrichments from alert - {keys_to_remove + ['dismissed', 'dismissUntil']}",
+                        force=True,
+                    )
+                    self.elastic_client.enrich_alert(fingerprint, new_enrichments)
+                    self.logger.info(
+                        f"Dismiss enrichments disposed: {keys_to_remove + ['dismissed', 'dismissUntil']}",
+                        extra={"fingerprint": fingerprint}
+                    )
+                else:
+                    self.logger.debug(
+                        f"dismissUntil still in future: {dt} >= {now}",
+                        extra={"fingerprint": fingerprint}
+                    )
+                    # ALWAYS normalize dismissed as bool
+                    if "dismissed" in enrichments.enrichments:
+                        val = enrichments.enrichments["dismissed"]
+                        if isinstance(val, str):
+                            enrichments.enrichments["dismissed"] = val.lower() == "true"
+            else:
+                # Case dismissed forever or if there is no dismissUntil: normalize anyway
+                if "dismissed" in enrichments.enrichments:
+                    val = enrichments.enrichments["dismissed"]
+                    if isinstance(val, str):
+                        enrichments.enrichments["dismissed"] = val.lower() == "true"
+        except Exception as e:
+            self.logger.warning(
+                f"Could not parse dismissUntil date: {dismiss_until} ({e})",
+                extra={"fingerprint": fingerprint}
+            )
+            # Even if parsing fails, normalize dismissed
+            if "dismissed" in enrichments.enrichments:
+                val = enrichments.enrichments["dismissed"]
+                if isinstance(val, str):
+                    enrichments.enrichments["dismissed"] = val.lower() == "true"
+            return
+ 
+
     def _track_enrichment_event(
         self,
         alert_id: UUID | None,

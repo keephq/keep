@@ -1272,6 +1272,18 @@ def add_audit(
     return audit
 
 
+def normalize_enrichments(enrichments: dict) -> dict:
+    """
+    Normalize enrichment fields to proper Python types before persisting.
+    Ensures 'dismissed' is always stored as boolean value.
+    """
+    if "dismissed" in enrichments:
+        val = enrichments["dismissed"]
+        if isinstance(val, str):
+            enrichments["dismissed"] = val.lower() == "true"
+
+    return enrichments
+
 def _enrich_entity(
     session,
     tenant_id,
@@ -1293,6 +1305,7 @@ def _enrich_entity(
         enrichments (dict): The enrichments to add to the alert.
         force (bool): Whether to force the enrichment to be updated. This is used to dispose enrichments if necessary.
     """
+    # Normalize enrichment values for correct data types
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
         # if force - override exisitng enrichments. being used to dispose enrichments if necessary
@@ -1355,7 +1368,6 @@ def _enrich_entity(
             session.rollback()
             return get_enrichment_with_session(session, tenant_id, fingerprint)
 
-
 def batch_enrich(
     tenant_id,
     fingerprints,
@@ -1383,6 +1395,9 @@ def batch_enrich(
     Returns:
         List[AlertEnrichment]: List of enriched alert objects.
     """
+    # Normalize enrichment values for correct types before bulk persistence
+    enrichments = normalize_enrichments(enrichments)
+
     with existed_or_new_session(session) as session:
         # Get all existing enrichments in one query
         existing_enrichments = {
@@ -1394,14 +1409,12 @@ def batch_enrich(
             ).all()
         }
 
-        # Prepare bulk update for existing enrichments
         to_update = []
         to_create = []
         audit_entries = []
 
         for fingerprint in fingerprints:
             existing = existing_enrichments.get(fingerprint)
-
             if existing:
                 to_update.append(existing.id)
             else:
@@ -1452,7 +1465,6 @@ def batch_enrich(
         ).all()
 
         return result
-
 
 def enrich_entity(
     tenant_id,

@@ -4,6 +4,7 @@ services:
       file: docker-compose.common.yml
       service: keep-frontend-common
     environment:
+      - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend-dev:8080
       - SENTRY_DISABLED=true
     build:
@@ -14,11 +15,15 @@ services:
       - /app/.next
     depends_on:
       - keep-backend-dev
+    ports:
+      - "3000:3000"
 
   keep-backend-dev:
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
+    environment:
+    - AUTH_TYPE=NO_AUTH
     build:
       dockerfile: docker/Dockerfile.dev.api
     volumes:
@@ -29,3 +34,4 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+ 
