@@ -213,12 +213,7 @@ def db_session(request, monkeypatch, tmp_path):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
         monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
-        mock_engine = create_engine(
-            db_connection_string,
-            pool_timeout=30,
-            pool_recycle=3600,
-            connect_args={"connect_timeout": 30},
-        )
+        mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
         db_connection_string = "sqlite:///:memory:"
