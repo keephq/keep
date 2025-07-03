@@ -314,29 +314,33 @@ actions:
     session.add_all(workflow_data)
     session.commit()
 
-    with patch("keep.api.core.db.engine", mock_engine):
-        with patch("keep.api.core.db_utils.create_db_engine", return_value=mock_engine):
-            with patch("keep.api.core.alerts.engine", mock_engine):
-                yield session
-
-    import logging
-
-    logger = logging.getLogger(__name__)
-    logger.info("Dropping all tables")
-
-    if db_type == "mysql":
-        with mock_engine.connect() as conn:
-            result = conn.execute(text("SHOW PROCESSLIST"))
-            processes = result.fetchall()
-            logger.info(f"Active processes: {processes}")
-
     try:
-        # delete the database
-        SQLModel.metadata.drop_all(mock_engine)
-        # Clean up after the test
-        session.close()
-    except Exception as e:
-        logger.warning(f"Error during test_app fixture cleanup: {e}")
+        with patch("keep.api.core.db.engine", mock_engine):
+            with patch(
+                "keep.api.core.db_utils.create_db_engine", return_value=mock_engine
+            ):
+                with patch("keep.api.core.alerts.engine", mock_engine):
+                    yield session
+    finally:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info("Dropping all tables")
+
+        if db_type == "mysql":
+            with mock_engine.connect() as conn:
+                result = conn.execute(text("SHOW PROCESSLIST"))
+                processes = result.fetchall()
+                logger.info(f"Active processes: {processes}")
+
+        try:
+            # delete the database
+            SQLModel.metadata.drop_all(mock_engine)
+            # Clean up after the test
+            session.close()
+            mock_engine.dispose()
+        except Exception as e:
+            logger.warning(f"Error during test_app fixture cleanup: {e}")
 
 
 @pytest.fixture
