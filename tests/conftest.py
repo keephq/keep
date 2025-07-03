@@ -325,13 +325,13 @@ actions:
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.info("Dropping all tables")
+        print("Dropping all tables")
 
         if db_type == "mysql":
             with mock_engine.connect() as conn:
                 result = conn.execute(text("SHOW PROCESSLIST"))
                 processes = result.fetchall()
-                logger.info(f"Active processes: {processes}")
+                print(f"Active processes: {processes}")
 
         try:
             # delete the database
