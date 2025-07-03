@@ -328,8 +328,17 @@ actions:
         print("Dropping all tables")
 
         try:
-            # delete the database
-            SQLModel.metadata.drop_all(mock_engine)
+            # Much faster cleanup - should complete in <5 seconds
+            if db_type == "mysql":
+                with mock_engine.connect() as conn:
+                    # TRUNCATE is 10-100x faster than DROP/CREATE
+                    conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+                    for table in reversed(SQLModel.metadata.sorted_tables):
+                        conn.execute(text(f"TRUNCATE TABLE {table.name}"))
+                    conn.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+            else:
+                # delete the database
+                SQLModel.metadata.drop_all(mock_engine)
             # Clean up after the test
             session.close()
             mock_engine.dispose()
