@@ -698,3 +698,4 @@ class ProviderEncoder(json.JSONEncoder):
         elif isinstance(o, _MISSING_TYPE):
             return None
         return o.dict()
+
