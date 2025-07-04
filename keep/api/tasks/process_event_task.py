@@ -685,7 +685,15 @@ def process_event(
                 except Exception:
                     provider_class = ProvidersFactory.get_provider_class("keep")
 
-                if isinstance(event, list):
+                if isinstance(event, list) and all(isinstance(e, AlertDto) for e in event):
+                    #set fingerprint to alerts pulled from provider _get_alerts() and started from preset.py
+                    event = provider_class.format_alert_fingerprint(
+                                    tenant_id=tenant_id,
+                                    formatted_alerts=event,
+                                    provider_id=provider_id,
+                                    provider_type=provider_type                   
+                                )
+                elif isinstance(event, list):
                     event_list = []
                     for event_item in event:
                         if not isinstance(event_item, AlertDto):
@@ -696,16 +704,7 @@ def process_event(
                                     provider_id=provider_id,
                                     provider_type=provider_type,
                                 )
-                            )
-                        else:
-                            #set fingerprint to alerts pulled from provider _get_alerts() and started from preset.py
-                            event_list.append(
-                                provider_class.format_alert_fingerprint(
-                                    tenant_id=tenant_id,
-                                    formatted_alert=event_item,
-                                    provider_id=provider_id,
-                                    provider_type=provider_type,
-                                ))                        
+                            )                      
                     event = event_list
                 else:
                     event = provider_class.format_alert(
