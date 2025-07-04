@@ -206,6 +206,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         self.logger.debug("Extracting the fingerprint from the alert")
         event = None
+        entity_type: Literal["alert", "incident"] = "alert"
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         elif self.context_manager.foreach_context.get("value", {}):
@@ -242,7 +243,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
             else:
                 fingerprint = self.context_manager.event_context.fingerprint
         elif self.context_manager.incident_context:
-            fingerprint = str(self.context_manager.incident_context.id)
+            entity_type = "incident"
+            fingerprint = self.context_manager.incident_context.id
         else:
             fingerprint = None
 
@@ -329,15 +331,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 # enrich the alert with _enrichments
                 enrichments_bl.enrich_entity(
                     enrichments=_enrichments,
-                    action_description=f"Workflow enriched the alert with {enrichment_string}",
+                    action_description=f"Workflow enriched the {entity_type} with {enrichment_string}",
                     **common_kwargs,
                 )
 
-            if disposable_enrichments:
+            # todo: incidents do not have disposable enrichments
+            if disposable_enrichments and entity_type == "alert":
                 # enrich with disposable enrichments
                 enrichments_bl.disposable_enrich_entity(
                     enrichments=disposable_enrichments,
-                    action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
+                    action_description=f"Workflow enriched the {entity_type} with {disposable_enrichment_string}",
                     **common_kwargs,
                 )
 
@@ -351,11 +354,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         except Exception as e:
             self.logger.error(
-                "Failed to enrich alert in db",
+                f"Failed to enrich {entity_type} in db",
                 extra={"fingerprint": fingerprint, "provider": self.provider_id},
             )
             raise e
-        self.logger.info("Alert enriched", extra={"fingerprint": fingerprint})
+        self.logger.info(
+            f"{entity_type.capitalize()} enriched", extra={"fingerprint": fingerprint}
+        )
 
     def _notify(self, **kwargs):
         """
