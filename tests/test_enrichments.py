@@ -19,7 +19,10 @@ from keep.api.models.db.topology import TopologyService
 from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, setup_api_key, test_app
-from tests.fixtures.workflow_manager import wait_for_workflow_execution  # noqa
+from tests.fixtures.workflow_manager import (
+    wait_for_workflow_execution,
+    wait_for_workflow_in_run_queue,
+)  # noqa
 
 
 @pytest.fixture(autouse=True)
@@ -1018,8 +1021,7 @@ def test_incident_workflow_enrichment_integration(db_session, client, test_app):
     incident_id = incident_data["id"]
 
     # wait a bit, to be sure workflow is added to the queue
-    workflow_manager = WorkflowManager.get_instance()
-    assert len(workflow_manager.scheduler.workflows_to_run) == 1
+    assert wait_for_workflow_in_run_queue("incident-jira-enricher-test")
 
     # Wait for workflow execution to complete
     workflow_execution = wait_for_workflow_execution(
