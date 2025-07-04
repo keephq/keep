@@ -245,6 +245,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/nagios-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/nagios-icon.png" alt="Nagios"/><br/>
+            Nagios
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/netbox-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/netbox-icon.png" alt="NetBox"/><br/>
             NetBox
