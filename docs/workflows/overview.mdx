@@ -25,6 +25,7 @@ The general structure of a workflow is:
 workflow:
   id: aks-example
   description: aks-example
+  templating: mustache or jinja2
   triggers:
     # list of triggers
     - type: manual
@@ -56,6 +57,7 @@ Let's dive into building workflows:
 - [Variables](#variables)
 - [Foreach Loops](#foreach-loops)
 - [Alert Enrichment](#alert-enrichment)
+- [Templating](#templating)
 
 
 ### Triggers
@@ -105,3 +107,9 @@ Iterate over a list of results from a step to perform repeated actions for each 
 Add context to alerts, like customer details or ticket metadata, using enrichment mechanisms in steps or actions.
 
 [See syntax](/workflows/syntax/enrichment)
+
+### Templating
+
+Keep supports both Jinja2 and Mustache templating for dynamic values throughout workflows. Users can manually select the templating engine, with Mustache syntax set as the default.
+
+[See syntax](/workflows/syntax/templating)
