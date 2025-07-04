@@ -73,7 +73,9 @@ class WorkflowManager:
         self.started = False
         # Clear the scheduler reference
         self.scheduler = None
-        WorkflowManager._instance = None
+        # Clear the instance with lock protection to prevent race conditions with _get_instance method
+        with WorkflowManager._lock:
+            WorkflowManager._instance = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
