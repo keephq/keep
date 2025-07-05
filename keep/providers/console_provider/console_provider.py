@@ -26,10 +26,23 @@ class ConsoleProvider(BaseProvider):
         # No need to dispose of anything, so just do nothing.
         pass
 
-    def _query(self, message: str = "", logger: bool = False, severity: str = "info"):
+    def _query(
+        self,
+        message: str = "",
+        logger: bool = False,
+        severity: str = "info",
+        **kwargs,  # TODO: remove '**kwargs', when we will pop it from the notify method in the base provider
+    ):
         return self._notify(message, logger, severity)
 
-    def _notify(self, message: str = "", logger: bool = False, severity: str = "info"):
+    def _notify(
+        self,
+        message: str = "",
+        logger: bool = False,
+        severity: str = "info",
+        **kwargs,
+        # TODO: remove '**kwargs', when we will pop it from the notify method in the base provider
+    ):
         """
         Output alert message simply using the print method.
 

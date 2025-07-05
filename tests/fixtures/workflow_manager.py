@@ -55,3 +55,42 @@ def wait_for_workflow_execution(
             time.sleep(1)
             count += 1
     return workflow_execution
+
+
+def _get_workflow_ids_in_run_queue(workflow_manager: WorkflowManager):
+    """Helper function to extract workflow IDs from the run queue."""
+    if (
+        not workflow_manager.scheduler
+        or not workflow_manager.scheduler.workflows_to_run
+    ):
+        return []
+    return [
+        workflow.get("workflow_id")
+        for workflow in workflow_manager.scheduler.workflows_to_run
+    ]
+
+
+def wait_for_workflow_in_run_queue(workflow_id, max_wait_count=30):
+    """
+    Wait for the workflow to be in the run queue.
+
+    Args:
+        workflow_id: The ID of the workflow to wait for
+        max_wait_count: Maximum number of seconds to wait (default: 30)
+
+    Returns:
+        bool: True if workflow is found in run queue, False if timeout reached
+    """
+    workflow_manager = WorkflowManager.get_instance()
+
+    for _ in range(max_wait_count):
+        workflow_ids_in_queue = _get_workflow_ids_in_run_queue(workflow_manager)
+
+        if workflow_id in workflow_ids_in_queue:
+            return True
+
+        time.sleep(1)
+
+    # Final check after timeout
+    workflow_ids_in_queue = _get_workflow_ids_in_run_queue(workflow_manager)
+    return workflow_id in workflow_ids_in_queue

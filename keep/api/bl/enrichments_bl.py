@@ -722,7 +722,7 @@ class EnrichmentsBl:
 
     def enrich_entity(
         self,
-        fingerprint: str,
+        fingerprint: str | UUID,
         enrichments: dict,
         action_type: ActionType,
         action_callee: str,
@@ -740,6 +740,10 @@ class EnrichmentsBl:
         Enrich the alert with extraction and mapping rules
         """
         # enrich db
+        if isinstance(fingerprint, UUID):
+            fingerprint = UUIDType(binary=False).process_bind_param(
+                fingerprint, self.db_session.bind.dialect
+            )
         self.logger.debug(
             "enriching alert db",
             extra={"fingerprint": fingerprint, "tenant_id": self.tenant_id},
