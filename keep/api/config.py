@@ -56,6 +56,7 @@ def on_starting(server=None):
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
         IdentityManagerTypes.DB.value,
+        IdentityManagerTypes.DBMT.value,
         IdentityManagerTypes.NOAUTH.value,
         IdentityManagerTypes.OAUTH2PROXY.value,
         "no_auth",  # backwards compatibility
