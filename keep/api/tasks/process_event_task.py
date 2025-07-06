@@ -704,7 +704,10 @@ def process_event(
                                     provider_id=provider_id,
                                     provider_type=provider_type,
                                 )
-                            )                      
+                            )
+                        else:
+                            #this is a never happens, but just in case
+                            event_list.append(event_item)         
                     event = event_list
                 else:
                     event = provider_class.format_alert(
