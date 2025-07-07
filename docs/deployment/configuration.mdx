@@ -239,10 +239,26 @@ Keep is highly configurable through environment variables. This allows you to cu
 
 |      Env var       |        Purpose        | Required | Default Value |        Valid options         |
 | :----------------: | :-------------------: | :------: | :-----------: | :--------------------------: |
+|      **REDIS**     |    Redis enabled      |    No    |     false     |        true or false         |
 |   **REDIS_HOST**   | Redis server hostname |    No    |  "localhost"  | Valid hostname or IP address |
 |   **REDIS_PORT**   |   Redis server port   |    No    |     6379      |      Valid port number       |
 | **REDIS_USERNAME** |    Redis username     |    No    |     None      |    Valid username string     |
 | **REDIS_PASSWORD** |    Redis password     |    No    |     None      |    Valid password string     |
+
+#### Redis Sentinel
+<Info>
+  Redis sentinel configuration specifies the connection details for Keep's Redis sentinel
+  instance. Redis sentinel is used when you have a redis cluster and it acts as a broker.
+</Info>
+
+|               Env var               |        Purpose              | Required |    Default Value    |                Valid options                |
+| :---------------------------------: | :----------------------:    | :------: | :-----------------: | :-----------------------------------------: |
+|             **REDIS**               |        Redis enabled        |    No    |       false         |              true or false                  |
+|      **REDIS_SENTINEL_HOSTS**       |   Redis sentinel server(s)  |    No    |  "localhost:26379"  | "host1:port1,host2:port2" (comma-separated) |
+|   **REDIS_SENTINEL_SERVICE_NAME**   | Redis sentinel service name |    No    |    "mymaster"       |         Valid service name string           |
+|         **REDIS_USERNAME**          |      Redis username         |    No    |       None          |           Valid username string             |
+|         **REDIS_PASSWORD**          |      Redis password         |    No    |       None          |           Valid password string             |
+
 
 ### ARQ
 
