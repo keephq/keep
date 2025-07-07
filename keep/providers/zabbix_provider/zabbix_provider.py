@@ -214,6 +214,7 @@ class ZabbixProvider(BaseProvider):
     }
 
     SEVERITY_NAME_TO_ID_MAP = {
+        "not_classified": 0,
         "not classified": 0,
         "information": 1,
         "warning": 2,
