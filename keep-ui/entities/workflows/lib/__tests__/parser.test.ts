@@ -10,6 +10,7 @@ import {
   Definition,
   V2StepForeach,
   V2StepConditionThreshold,
+  V2ActionStep,
 } from "@/entities/workflows";
 import {
   YamlAssertCondition,
@@ -429,6 +430,54 @@ workflow:
       expect((result.sequence[1] as V2StepForeach).sequence[0].type).toBe(
         "action-ntfy"
       );
+    });
+
+    describe("should parse condition with foreach", () => {
+      const workflowYaml = `
+workflow:
+  id: 0de77269-dd1a-43d9-88a5-4f8f275d2822
+  name: assert in the loop
+  description: l
+  disabled: false
+  triggers:
+    - type: manual
+  inputs: []
+  consts:
+    array: [1,2,3,4,5]
+    assert_value: 1
+  owners: []
+  services: []
+  steps:
+    - name: console-step
+      foreach: "{{consts.array}}"
+      condition:
+        - type: assert
+          name: check-a-b
+          assert: '{{foreach.value}} > {{consts.assert_value}}'
+      provider:
+        type: console
+        config: "{{ providers.default-console }}"
+        with:
+          message: hety
+  actions: []
+      `;
+
+      const result = parseWorkflow(workflowYaml, mockProviders);
+
+      expect(result.sequence).toHaveLength(1);
+      expect(result.sequence[0].type).toBe("foreach");
+      expect(result.sequence[0].componentType).toBe("container");
+      const foreach = result.sequence[0] as V2StepForeach;
+      expect(foreach.properties.value).toBe("{{consts.array}}");
+      expect(foreach.sequence).toHaveLength(1);
+      expect(foreach.sequence[0].componentType).toBe("switch");
+      const condition = foreach.sequence[0] as V2StepConditionThreshold;
+      expect(condition.properties.value).toBe("{{item}}");
+      expect(condition.properties.compare_to).toBe("1");
+      expect(condition.branches.true).toHaveLength(1);
+      const action = condition.branches.true[0] as V2ActionStep;
+      expect(action.type).toBe("action-console");
+      expect(action.properties.with?.message).toBe("hety");
     });
   });
 
