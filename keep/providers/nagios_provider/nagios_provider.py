@@ -28,6 +28,13 @@ class NagiosProvider(BaseProvider):
     def __init__(self, context_manager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
     
+    def _determine_severity(self, event: dict) -> AlertSeverity:
+        if "service_state" in event:
+            return self._state_mapping.get(event.get("service_state"), AlertSeverity.INFO)
+        elif "host_state" in event:
+            return self._state_mapping.get(event.get("host_state"), AlertSeverity.INFO)
+        return AlertSeverity.INFO
+
     def _format_alert(self, event: dict) -> AlertDto:
         try:
             host_name = event.get("host_name")
@@ -36,12 +43,7 @@ class NagiosProvider(BaseProvider):
             if not host_name:
                 raise ValueError("Missing required field: host_name")
                 
-            severity = AlertSeverity.INFO
-            if "service_state" in event:
-                severity = self._state_mapping.get(event.get("service_state", AlertSeverity.INFO))
-            elif "host_state" in event:
-                severity = self._state_mapping.get(event.get("host_state"), AlertSeverity.INFO)
-
+            severity = self._determine_severity(event)
             status = AlertStatus.FIRING if severity != AlertSeverity.LOW else AlertStatus.RESOLVED
             
             alert_id = event.get("id")  # nagios doesnt have unique event id. so generate fingerprint ...
