@@ -15,25 +15,25 @@ class NagiosProvider(BaseProvider):
     PROVIDER_TAGS = ["alerting", "monitoring"]
     PROVIDER_CATEGORY = "monitoring"
 
+    _state_mapping = {
+        "OK": AlertSeverity.LOW,
+        "WARNING": AlertSeverity.WARNING,
+        "UNKNOWN": AlertSeverity.INFO,
+        "CRITICAL": AlertSeverity.HIGH,
+        "UP": AlertSeverity.LOW,
+        "DOWN": AlertSeverity.CRITICAL,
+        "UNREACHABLE": AlertSeverity.CRITICAL
+    }
+
     def __init__(self, context_manager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
     
-    def _format_alert(event: dict) -> AlertDto:
-        state_mapping = {
-            "OK": AlertSeverity.LOW,
-            "WARNING": AlertSeverity.WARNING,
-            "UNKNOWN": AlertSeverity.INFO,
-            "CRITICAL": AlertSeverity.HIGH,
-            "UP": AlertSeverity.LOW,
-            "DOWN": AlertSeverity.CRITICAL,
-            "UNREACHABLE": AlertSeverity.CRITICAL
-        }
-
+    def _format_alert(self, event: dict) -> AlertDto:
         severity = AlertSeverity.INFO
         if "service_state" in event:
-            severity = state_mapping.get(event.get("service_state", AlertSeverity.INFO))
+            severity = self._state_mapping.get(event.get("service_state", AlertSeverity.INFO))
         elif "host_state" in event:
-            severity = state_mapping.get(event.get("host_state"), AlertSeverity.INFO)
+            severity = self._state_mapping.get(event.get("host_state"), AlertSeverity.INFO)
 
         status = AlertStatus.FIRING if severity != AlertSeverity.LOW else AlertSeverity.RESOLVED
 
@@ -49,4 +49,3 @@ class NagiosProvider(BaseProvider):
             service=event.get("service_description"),
             **event
         )
-    
