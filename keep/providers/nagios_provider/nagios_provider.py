@@ -49,7 +49,4 @@ class NagiosProvider(BaseProvider):
             service=event.get("service_description"),
             **event
         )
-    def webhook(self, tenant_id: str, event: dict, **kwargs: Any) -> AlertDto:
-        logger.info("Received event from Nagios", extra={"event": event})
-        return self._format_alert(event)
     
