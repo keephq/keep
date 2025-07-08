@@ -29,23 +29,38 @@ class NagiosProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
     
     def _format_alert(self, event: dict) -> AlertDto:
-        severity = AlertSeverity.INFO
-        if "service_state" in event:
-            severity = self._state_mapping.get(event.get("service_state", AlertSeverity.INFO))
-        elif "host_state" in event:
-            severity = self._state_mapping.get(event.get("host_state"), AlertSeverity.INFO)
+        try:
+            host_name = event.get("host_name")
+            service_description = event.get("service_description")
+            
+            if not host_name:
+                raise ValueError("Missing required field: host_name")
+                
+            severity = AlertSeverity.INFO
+            if "service_state" in event:
+                severity = self._state_mapping.get(event.get("service_state", AlertSeverity.INFO))
+            elif "host_state" in event:
+                severity = self._state_mapping.get(event.get("host_state"), AlertSeverity.INFO)
 
-        status = AlertStatus.FIRING if severity != AlertSeverity.LOW else AlertSeverity.RESOLVED
-
-        return AlertDto(
-            id=event.get("id"), #nagios doesnt have unique event id. so generate fingerprint ...
-            name=event.get("service_description") or event.get("host_name"),
-            status=status,
-            severity=severity,
-            lastReceived=event.get("timestamp"),
-            description=event.get("output"),
-            source=["nagios"],
-            host=event.get("host_name"),
-            service=event.get("service_description"),
-            **event
-        )
+            status = AlertStatus.FIRING if severity != AlertSeverity.LOW else AlertStatus.RESOLVED
+            
+            alert_id = event.get("id")  # nagios doesnt have unique event id. so generate fingerprint ...
+            timestamp = event.get("timestamp")
+            description = event.get("output")
+            
+            return AlertDto(
+                id=alert_id,
+                name=service_description or host_name,
+                status=status,
+                severity=severity,
+                lastReceived=timestamp,
+                description=description,
+                source=["nagios"],
+                host=host_name,
+                service=service_description,
+                **event
+            )
+            
+        except Exception as e:
+            logger.error(f"Error formatting Nagios alert: {str(e)}")
+            raise
