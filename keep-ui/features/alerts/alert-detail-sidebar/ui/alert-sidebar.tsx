@@ -89,6 +89,24 @@ export const AlertSidebar = ({
     }
   };
 
+  const handleCopyUrl = async (alertUrl: string) => {
+    if (!alertUrl) {
+      showErrorToast(new Error("Alert has no URL"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(alertUrl);
+      showSuccessToast("URL copied to clipboard");
+    } catch (err) {
+      showErrorToast(
+        err,
+        <p>
+          Failed to copy URL. Please check your browser permissions.{" "}
+        </p>
+      );
+    }
+  };
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog onClose={toggle}>
@@ -219,6 +237,33 @@ export const AlertSidebar = ({
                       />
                     </div>
                   </p>
+                  {alert.url && (
+                    <p>
+                      <FieldHeader>URL</FieldHeader>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={alert.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline truncate max-w-[calc(100%-40px)] inline-block"
+                        >
+                          {alert.url}
+                        </Link>
+                        <Button
+                          icon={ClipboardDocumentIcon}
+                          size="xs"
+                          color="orange"
+                          variant="light"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCopyUrl(alert.url);
+                          }}
+                          tooltip="Copy URL"
+                        />
+                      </div>
+                    </p>
+                  )}
                 </div>
                 {alert.incident_dto && (
                   <div>
