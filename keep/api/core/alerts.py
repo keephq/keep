@@ -134,6 +134,14 @@ alert_field_configurations = [
         data_type=DataType.INTEGER,
     ),
     FieldMappingConfiguration(
+        map_from_pattern="unresolvedCounter",
+        map_to=[
+            "JSON(alertenrichment.enrichments).*",
+            "JSON(alert.event).*",
+        ],
+        data_type=DataType.INTEGER,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="*",
         map_to=[
             "JSON(alertenrichment.enrichments).*",
