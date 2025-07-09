@@ -1,0 +1,164 @@
+---
+title: Templating
+---
+
+Keep supports two templating engines for dynamic values inside workflow YAML definitions:
+
+- Jinja2 — powerful and Pythonic
+- Mustache — simple and logic-less
+
+You can select the templating engine by setting the templating parameter in your YAML workflow. By default, Keep uses Mustache.
+
+## 🔀 Switching Between Engines
+
+Set the templating mode at the top of your workflow:
+
+- Default (no need to specify): mustache
+- To use Jinja2: add templating: jinja2
+
+Example:
+
+```yaml
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: mustache
+    actions:
+      ...
+```
+
+or
+
+```yaml
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: jinja2
+    actions:
+      ...
+```
+
+---
+
+## Mustache Syntax (Default)
+
+Mustache uses double curly braces for variable interpolation and does not support logic like if/else.
+
+### Variables
+```mustache
+{{ alert.alertname }}
+{{ alert.annotations.summary }}
+{{ alert.generatorURL }}
+```
+
+### Sections (conditionally rendered if value exists)
+```mustache
+{{#alert.channel}}
+*Channel:* {{ alert.channel }}
+{{/alert.channel}}
+```
+
+### Inverted Sections (rendered if value is missing or false)
+```mustache
+{{^alert.alertgroup}}
+*Alertgroup:* None
+{{/alert.alertgroup}}
+```
+
+[See more in the docs](https://github.com/noahmorrison/chevron)
+
+## 🧠 Jinja2 Syntax
+
+Jinja2 provides more advanced capabilities including conditionals, filters, and logic.
+
+Set:
+```yaml
+templating: jinja2
+```
+
+### Variables
+```jinja2
+{{ alert.alertname }}
+{{ alert.annotations.summary }}
+```
+
+### Conditionals
+```jinja2
+{% if alert.channel %}
+*Channel:* {{ alert.channel }}
+{% endif %}
+```
+
+### Default Values
+```jinja2
+{{ alert.alertgroup or 'None' }}
+```
+
+### Filters
+```jinja2
+{{ alert.labels | join(', ') }}
+{{ alert.cluster | default('Unknown Cluster') }}
+```
+
+[See more in the docs](https://jinja.palletsprojects.com/en/stable/)
+
+## 📦 Example: JiraOnPrem with Mustache (Default)
+
+```yaml
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: mustache
+    actions:
+      - name: jiraonprem-action
+        provider:
+          type: jiraonprem
+          config: "{{ providers.jiraOnPrem }}"
+          with:
+            description: |
+              *Alertname:* {{ alert.alertname }}
+              *Summary:* {{ alert.annotations.summary }}
+              {{#alert.channel}}
+              *Channel:* {{ alert.channel }}
+              {{/alert.channel}}
+              {{#alert.annotations.runbook_url}}
+              Runbook: [Runbook|{{ alert.annotations.runbook_url }}]
+              {{/alert.annotations.runbook_url}}
+```
+
+
+
+## 📦 Example: JiraOnPrem with Jinja2
+
+```yaml
+templating: jinja2
+
+workflows:
+  - id: jiraonprem-investigate
+    name: Create investigation
+    templating: jinja2
+    actions:
+      - name: jiraonprem-action
+        provider:
+          type: jiraonprem
+          config: "{{ providers.jiraOnPrem }}"
+          with:
+            description: |
+              *Alertname:* {{ alert.alertname }}
+              *Summary:* {{ alert.annotations.summary }}
+              {% if alert.channel %}
+              *Channel:* {{ alert.channel }}
+              {% endif %}
+              {% if alert.annotations.runbook_url %}
+              Runbook: [Runbook|{{ alert.annotations.runbook_url }}]
+              {% endif %}
+```
+
+
+## ✅ Best Practices
+
+- Use mustache for simple output formatting.
+- Use jinja2 if you need conditions, defaults, or filters.
+- Always wrap multiline strings with quotes and indent properly in YAML.
+- In Jinja2, use `{% if %}` to check for presence of values.
+- In Mustache, use `{{#section}}` and `{{^section}}` for presence/absence.
