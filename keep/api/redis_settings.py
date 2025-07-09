@@ -12,21 +12,22 @@ from keep.api.core.config import config
 def get_redis_settings() -> RedisSettings:
     """
     Get Redis configuration, supporting both direct Redis and Redis Sentinel.
-    
+
     For Redis Sentinel, set:
+    - REDIS=true
     - REDIS_SENTINEL_ENABLED=true
     - REDIS_SENTINEL_HOSTS=host1:port1,host2:port2 (comma-separated)
     - REDIS_SENTINEL_SERVICE_NAME=mymaster (default: mymaster)
-    
+
     For direct Redis (default):
     - REDIS_HOST=localhost (default: localhost)
     - REDIS_PORT=6379 (default: 6379)
-    
+
     Returns:
         RedisSettings: Configured Redis settings for ARQ
     """
     sentinel_enabled = config("REDIS_SENTINEL_ENABLED", cast=bool, default=False)
-    
+
     if sentinel_enabled:
         # Parse sentinel hosts from comma-separated string
         sentinel_hosts_str = config("REDIS_SENTINEL_HOSTS", default="localhost:26379")
@@ -38,9 +39,9 @@ def get_redis_settings() -> RedisSettings:
                 sentinel_hosts.append((host.strip(), int(port.strip())))
             else:
                 sentinel_hosts.append((host_port, 26379))
-        
+
         service_name = config("REDIS_SENTINEL_SERVICE_NAME", default="mymaster")
-        
+
         return RedisSettings(
             host=sentinel_hosts,
             sentinel=True,

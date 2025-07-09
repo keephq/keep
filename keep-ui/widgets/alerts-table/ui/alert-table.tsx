@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Card, Table } from "@tremor/react";
 import {
@@ -200,66 +200,70 @@ export function AlertTable({
   const { toggleAll, areAllGroupsExpanded } = groupExpansionState;
   const isGroupingActive = grouping.length > 0;
 
-  const filteredAlerts = alerts.filter((alert) => {
-    // First apply tab filter
-    if (!tabs[selectedTab].filter(alert)) {
-      return false;
-    }
-
-    // Then apply facet filters
-    return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
-      // If no values are included, don't filter
-      if (includedValues.length === 0) {
-        return true;
-      }
-
-      let value;
-      if (facetKey.includes(".")) {
-        // Handle nested keys like "labels.job"
-        const [parentKey, childKey] = facetKey.split(".");
-        const parentValue = alert[parentKey as keyof AlertDto];
-
-        if (
-          typeof parentValue === "object" &&
-          parentValue !== null &&
-          !Array.isArray(parentValue) &&
-          !(parentValue instanceof Date)
-        ) {
-          value = (parentValue as Record<string, unknown>)[childKey];
-        }
-      } else {
-        value = alert[facetKey as keyof AlertDto];
-      }
-
-      // Handle source array separately
-      if (facetKey === "source") {
-        const sources = value as string[];
-
-        // Check if n/a is selected and sources is empty/null
-        if (includedValues.includes("n/a")) {
-          return !sources || sources.length === 0;
-        }
-
-        return (
-          Array.isArray(sources) &&
-          sources.some((source) => includedValues.includes(source))
-        );
-      }
-
-      // Handle n/a cases for other facets
-      if (includedValues.includes("n/a")) {
-        return value === null || value === undefined || value === "";
-      }
-
-      // For non-n/a cases, convert value to string for comparison
-      // Skip null/undefined values as they should only match n/a
-      if (value === null || value === undefined || value === "") {
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter((alert) => {
+      // First apply tab filter
+      if (!tabs[selectedTab].filter(alert)) {
         return false;
       }
 
-      return includedValues.includes(String(value));
+      // Then apply facet filters
+      return Object.entries(facetFilters).every(
+        ([facetKey, includedValues]) => {
+          // If no values are included, don't filter
+          if (includedValues.length === 0) {
+            return true;
+          }
+
+          let value;
+          if (facetKey.includes(".")) {
+            // Handle nested keys like "labels.job"
+            const [parentKey, childKey] = facetKey.split(".");
+            const parentValue = alert[parentKey as keyof AlertDto];
+
+            if (
+              typeof parentValue === "object" &&
+              parentValue !== null &&
+              !Array.isArray(parentValue) &&
+              !(parentValue instanceof Date)
+            ) {
+              value = (parentValue as Record<string, unknown>)[childKey];
+            }
+          } else {
+            value = alert[facetKey as keyof AlertDto];
+          }
+
+          // Handle source array separately
+          if (facetKey === "source") {
+            const sources = value as string[];
+
+            // Check if n/a is selected and sources is empty/null
+            if (includedValues.includes("n/a")) {
+              return !sources || sources.length === 0;
+            }
+
+            return (
+              Array.isArray(sources) &&
+              sources.some((source) => includedValues.includes(source))
+            );
+          }
+
+          // Handle n/a cases for other facets
+          if (includedValues.includes("n/a")) {
+            return value === null || value === undefined || value === "";
+          }
+
+          // For non-n/a cases, convert value to string for comparison
+          // Skip null/undefined values as they should only match n/a
+          if (value === null || value === undefined || value === "") {
+            return false;
+          }
+
+          return includedValues.includes(String(value));
+        }
+      );
     });
-  });
+  }, [alerts, facetFilters, selectedTab, tabs]);
 
   const leftPinnedColumns = noisyAlertsEnabled
     ? ["severity", "checkbox", "status", "source", "name", "noise"]
@@ -372,8 +376,8 @@ export function AlertTable({
             isCreateIncidentWithAIOpen={isCreateIncidentWithAIOpen}
           />
         ) : (
-          <AlertPresetManager 
-            table={table} 
+          <AlertPresetManager
+            table={table}
             presetName={presetName}
             isGroupingActive={isGroupingActive}
             onToggleAllGroups={toggleAll}
@@ -395,7 +399,7 @@ export function AlertTable({
               onDelete={handleFacetDelete}
               table={table}
               showSkeleton={showSkeleton}
-            />
+            /> 
           </div>
 
           <div className="flex-1 flex flex-col min-w-0">

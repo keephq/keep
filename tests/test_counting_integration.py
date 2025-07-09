@@ -214,3 +214,204 @@ def test_firing_counter_with_different_status(db_session, client, test_app):
     assert refired_alert["status"] == "firing"
     # Should have incremented from the resolved state
     assert refired_alert["firingCounter"] == resolved_firing_counter + 1
+
+
+@pytest.mark.timeout(15)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_CALCULATE_START_FIRING_TIME_ENABLED": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_unresolved_counter_increment_on_same_alert(db_session, client, test_app):
+    """Test that unresolved counter increments when the same alert fires multiple times."""
+    # Get a simulated datadog alert
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert = provider.simulate_alert()
+    # we want another alert with the same monitor id but different attributes (so alert is correlated)
+    alert2 = provider.simulate_alert()
+    alert2["monitor_id"] = alert["monitor_id"]
+    alert2["scopes"] = alert["scopes"]
+    alert["alert_transition"] = "Triggered"
+    alert2["alert_transition"] = "Triggered"
+
+    # Send the alert
+    response = client.post(
+        "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the alert to check its initial unresolved counter
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    assert len(alerts) == 1
+
+    fingerprint = alerts[0]["fingerprint"]
+    assert alerts[0]["unresolvedCounter"] == 1
+
+    # Send the same alert again
+    response = client.post(
+        "/alerts/event/datadog", json=alert2, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the updated alert
+    updated_alert = get_alert_by_fingerprint(client, fingerprint)
+    assert updated_alert is not None
+    assert updated_alert["unresolvedCounter"] == 2
+
+
+@pytest.mark.timeout(15)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_CALCULATE_START_FIRING_TIME_ENABLED": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_unresolved_counter_reset_on_resolved(db_session, client, test_app):
+    """Test that unresolved counter resets to 0 when an alert is resolved."""
+    # Get a simulated datadog alert
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert = provider.simulate_alert()
+    alert2 = provider.simulate_alert()
+    alert2["monitor_id"] = alert["monitor_id"]
+    alert2["scopes"] = alert["scopes"]
+    alert["alert_transition"] = "Triggered"
+    alert2["alert_transition"] = "Triggered"
+
+    # Send the alert
+    response = client.post(
+        "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the alert to check its initial unresolved counter
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    assert len(alerts) == 1
+
+    fingerprint = alerts[0]["fingerprint"]
+    assert alerts[0]["unresolvedCounter"] == 1
+
+    # Acknowledge the alert
+    payload = {
+        "enrichments": {
+            "status": "resolved",
+            "dismissed": False,
+            "dismissUntil": "",
+        },
+        "fingerprint": alerts[0]["fingerprint"],
+    }
+    response = client.post(
+        "/alerts/enrich?dispose_on_new_alert=true",
+        json=payload,
+        headers={"x-api-key": "some-api-key"},
+    )
+    assert response.status_code == 200
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the updated alert
+    updated_alert = get_alert_by_fingerprint(client, fingerprint)
+    assert updated_alert is not None
+    assert updated_alert["unresolvedCounter"] == 0
+
+    # Fire the same alert again after it was acknowledged
+    response = client.post(
+        "/alerts/event/datadog", json=alert2, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the updated alert
+    updated_alert = get_alert_by_fingerprint(client, fingerprint)
+    assert updated_alert is not None
+    assert updated_alert["unresolvedCounter"] == 1
+
+
+@pytest.mark.timeout(15)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_CALCULATE_START_FIRING_TIME_ENABLED": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_unresolved_counter_with_different_status(db_session, client, test_app):
+    """Test unresolved counter behavior with different alert statuses."""
+    # Get a simulated datadog alert
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert = provider.simulate_alert()
+    alert2 = provider.simulate_alert()
+    alert2["monitor_id"] = alert["monitor_id"]
+    alert2["scopes"] = alert["scopes"]
+    alert["alert_transition"] = "Triggered"
+    alert2["alert_transition"] = "Muted"
+    # Send the alert (FIRING by default)
+    response = client.post(
+        "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the alert to check its initial unresolved counter
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    assert len(alerts) == 1
+
+    fingerprint = alerts[0]["fingerprint"]
+    assert alerts[0]["unresolvedCounter"] == 1
+
+    response = client.post(
+        "/alerts/event/datadog", json=alert2, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the updated alert
+    acknowledge_alert = get_alert_by_fingerprint(client, fingerprint)
+    assert acknowledge_alert is not None
+
+    # Check status and unresolved counter (should keep previous value when resolved)
+    assert acknowledge_alert["status"] == "suppressed"
+    # The counter will likely have incremented here since it's just a new alert with a different status
+    ack_firing_counter = acknowledge_alert["unresolvedCounter"]
+
+    response = client.post(
+        "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 202
+
+    # Wait for processing
+    time.sleep(1)
+
+    # Get the updated alert
+    refired_alert = get_alert_by_fingerprint(client, fingerprint)
+    assert refired_alert is not None
+    assert refired_alert["status"] == "firing"
+    # Should have incremented from the resolved state
+    assert refired_alert["unresolvedCounter"] == ack_firing_counter + 1
