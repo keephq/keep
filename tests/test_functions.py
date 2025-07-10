@@ -69,6 +69,14 @@ def test_keep_mul_function():
     assert functions.mul(1, 2) == 2
     assert functions.mul(1, 2, 3) == 6
 
+def test_keep_mul_function_with_zero():
+    """
+    Test the multiply function
+    """
+    assert functions.mul("1", "2", "0") == 0
+    assert functions.mul(0, 1, 5) == 0
+    assert functions.mul(1, 0, 5) == 0
+
 
 def test_keep_div_function():
     """
