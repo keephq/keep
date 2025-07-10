@@ -1,4 +1,7 @@
-FROM python:3.11.10-slim-bullseye as base
+FROM python:3.13.5-alpine as base
+
+# Install bash and runtime dependencies for grpc
+RUN apk add --no-cache bash libstdc++
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -12,10 +15,24 @@ ENV PYTHONFAULTHANDLER=1 \
 #    procps && \
 #    rm -rf /var/lib/apt/lists/*
 
-RUN useradd --user-group --system --create-home --no-log-init keep
+RUN addgroup -g 1000 keep && \
+    adduser -u 1000 -G keep -s /bin/sh -D keep
 WORKDIR /app
 
 FROM base as builder
+
+# Install build dependencies for Alpine
+RUN apk add --no-cache \
+    gcc \
+    g++ \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    postgresql-dev \
+    mysql-client \
+    build-base \
+    linux-headers \
+    git
 
 ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -34,8 +51,8 @@ COPY examples examples
 COPY keep-ui/public/icons/unknown-icon.png unknown-icon.png
 RUN /venv/bin/pip install --use-deprecated=legacy-resolver . && \
     rm -rf /root/.cache/pip && \
-    find /venv -type d -name "__pycache__" -exec rm -r {} + && \
-    find /venv -type f -name "*.pyc" -delete
+    find /venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /venv -type f -name "*.pyc" -delete 2>/dev/null || true
 
 FROM base as final
 ENV PATH="/venv/bin:${PATH}"
@@ -50,6 +67,6 @@ RUN chgrp -R 0 /app && chmod -R g=u /app && \
     chown -R keep:keep /venv
 USER keep
 
-ENTRYPOINT ["/venv/lib/python3.11/site-packages/keep/entrypoint.sh"]
+ENTRYPOINT ["/venv/lib/python3.13/site-packages/keep/entrypoint.sh"]
 
-CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py", "--preload"]
+CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.13/site-packages/keep/api/config.py", "--preload"]
