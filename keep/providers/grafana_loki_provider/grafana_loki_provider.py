@@ -123,15 +123,16 @@ class GrafanaLokiProvider(BaseProvider):
         """
         Generate the authentication headers.
         """
+        credentials = {}
         if self.authentication_config.authentication_type == "Basic":
-            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode(
+            username_password = f"{self.authentication_config.username}:{self.authentication_config.password}".encode(
                 "utf-8"
             )
-            encoded_credentials = base64.b64encode(credentials).decode("utf-8")
-            return {"Authorization": f"Basic {encoded_credentials}"}
+            encoded_credentials = base64.b64encode(username_password).decode("utf-8")
+            credentials["Authorization"] = f"Basic {encoded_credentials}"
 
         if self.authentication_config.authentication_type == "X-Scope-OrgID":
-            return {"X-Scope-OrgID": self.authentication_config.x_scope_orgid}
+            credentials["X-Scope-OrgID"] = self.authentication_config.x_scope_orgid
 
         return {}
 
