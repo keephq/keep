@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
-SINGLE_TENANT_EMAIL = "admin@keephq"
+SINGLE_TENANT_EMAIL = "keep@keep"
 
 PUSHER_ROOT_CA = config("PUSHER_ROOT_CA", default=None)
 
