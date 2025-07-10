@@ -134,7 +134,7 @@ class GrafanaLokiProvider(BaseProvider):
         if self.authentication_config.authentication_type == "X-Scope-OrgID":
             credentials["X-Scope-OrgID"] = self.authentication_config.x_scope_orgid
 
-        return {}
+        return credentials
 
     def validate_scopes(self):
         """
