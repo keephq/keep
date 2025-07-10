@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -39,7 +39,13 @@ The provider exposes the following [Provider Methods](/providers/provider-method
 - **change_severity** No description. (action, scopes: event.acknowledge)
 
     - `id`: The problem id.
-    - `new_severity`: The new severity, can be one of the following: Not classified, Information, Warning, Average, High, Disaster
+    - `new_severity`: The new severity. Can be an integer (0-5) or string:
+- 0 or "Not classified"
+- 1 or "Information"
+- 2 or "Warning"
+- 3 or "Average"
+- 4 or "High"
+- 5 or "Disaster"
 - **surrpress_problem** No description. (action, scopes: event.acknowledge)
 
     - `id`: The problem id.

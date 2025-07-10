@@ -26,16 +26,21 @@ describe("convertCelAstToQueryBuilderAst", () => {
       combinator: "and",
       rules: [
         {
-          field: "field1",
-          operator: "=",
-          value: "value1",
-          id: expect.any(String),
-        },
-        {
-          field: "field2",
-          operator: "!=",
-          value: "value2",
-          id: expect.any(String),
+          combinator: "and",
+          rules: [
+            {
+              field: "field1",
+              operator: "=",
+              value: "value1",
+              id: expect.any(String),
+            },
+            {
+              field: "field2",
+              operator: "!=",
+              value: "value2",
+              id: expect.any(String),
+            },
+          ],
         },
       ],
     });
@@ -169,9 +174,14 @@ describe("convertCelAstToQueryBuilderAst", () => {
       combinator: "and",
       rules: [
         {
-          field: "field1",
-          operator: "null",
-          id: expect.any(String),
+          combinator: "and",
+          rules: [
+            {
+              field: "field1",
+              operator: "null",
+              id: expect.any(String),
+            },
+          ],
         },
       ],
     });
@@ -201,10 +211,15 @@ describe("convertCelAstToQueryBuilderAst", () => {
         combinator: "and",
         rules: [
           {
-            field: "field1.field2",
-            operator: queryBuilderOperator,
-            value: "testValue",
-            id: expect.any(String),
+            combinator: "and",
+            rules: [
+              {
+                field: "field1.field2",
+                operator: queryBuilderOperator,
+                value: "testValue",
+                id: expect.any(String),
+              },
+            ],
           },
         ],
       });
@@ -227,9 +242,14 @@ describe("convertCelAstToQueryBuilderAst", () => {
       combinator: "and",
       rules: [
         {
-          field: "field1.field2",
-          operator: "notNull",
-          id: expect.any(String),
+          combinator: "and",
+          rules: [
+            {
+              field: "field1.field2",
+              operator: "notNull",
+              id: expect.any(String),
+            },
+          ],
         },
       ],
     });
@@ -253,10 +273,15 @@ describe("convertCelAstToQueryBuilderAst", () => {
       combinator: "and",
       rules: [
         {
-          field: "field1",
-          operator: "notIn",
-          value: [1, 2, 3],
-          id: expect.any(String),
+          combinator: "and",
+          rules: [
+            {
+              field: "field1",
+              operator: "notIn",
+              value: [1, 2, 3],
+              id: expect.any(String),
+            },
+          ],
         },
       ],
     });
@@ -286,10 +311,15 @@ describe("convertCelAstToQueryBuilderAst", () => {
         combinator: "and",
         rules: [
           {
-            field: "field1",
-            operator: queryBuilderOperator,
-            value: "testValue",
-            id: expect.any(String),
+            combinator: "and",
+            rules: [
+              {
+                field: "field1",
+                operator: queryBuilderOperator,
+                value: "testValue",
+                id: expect.any(String),
+              },
+            ],
           },
         ],
       });

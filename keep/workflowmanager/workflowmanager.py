@@ -21,16 +21,23 @@ from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.api.utils.cel_utils import preprocess_cel_expression
 
 
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
     PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
+    _lock = threading.Lock()
+    _instance: typing.Optional["WorkflowManager"] = None
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
-        if not hasattr(WorkflowManager, "_instance"):
-            WorkflowManager._instance = WorkflowManager()
+        if not WorkflowManager._instance:
+            # We don't want to lock if the instance is already created
+            with WorkflowManager._lock:
+                # Another thread might have created the instance while we were waiting for the lock
+                if not WorkflowManager._instance:
+                    WorkflowManager._instance = WorkflowManager()
         return WorkflowManager._instance
 
     def __init__(self):
@@ -66,6 +73,9 @@ class WorkflowManager:
         self.started = False
         # Clear the scheduler reference
         self.scheduler = None
+        # Clear the instance with lock protection to prevent race conditions with _get_instance method
+        with WorkflowManager._lock:
+            WorkflowManager._instance = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
@@ -380,9 +390,46 @@ class WorkflowManager:
                                 )
                                 continue
 
+                        # Preprocess the CEL expression to handle severity comparisons properly
+                        try:
+                            cel = preprocess_cel_expression(cel)
+                            self.logger.debug(
+                                "Preprocessed CEL expression",
+                                extra={
+                                    "original_cel": trigger.get("cel", ""),
+                                    "preprocessed_cel": cel,
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                        except Exception:
+                            self.logger.exception(
+                                "Error preprocessing CEL expression",
+                                extra={
+                                    "cel": cel,
+                                    "trigger": trigger,
+                                    "workflow_id": workflow_model.id,
+                                    "tenant_id": tenant_id,
+                                },
+                            )
+                            continue
+
                         compiled_ast = self.cel_environment.compile(cel)
                         program = self.cel_environment.program(compiled_ast)
-                        activation = celpy.json_to_cel(event.dict())
+
+                        # Convert event to dict and normalize severity for CEL evaluation
+                        event_payload = event.dict()
+                        # Convert severity string to numeric order for proper comparison with preprocessed CEL
+                        if isinstance(event_payload.get("severity"), str):
+                            try:
+                                event_payload["severity"] = AlertSeverity(
+                                    event_payload["severity"].lower()
+                                ).order
+                            except (ValueError, AttributeError):
+                                # If severity conversion fails, keep original value
+                                pass
+
+                        activation = celpy.json_to_cel(event_payload)
                         try:
                             should_run = program.evaluate(activation)
                         except celpy.evaluation.CELEvalError as e:

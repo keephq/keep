@@ -38,28 +38,28 @@ export default function ColumnSelection({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   // Local state to track checkbox changes before submission
-  // Use a ref to avoid re-initializing on every render
   const [localColumnVisibility, setLocalColumnVisibility] =
     useState<VisibilityState>(columnVisibility);
+  
+  // Use a ref to track the previous columnVisibility to prevent infinite loops
+  const prevColumnVisibilityRef = React.useRef<VisibilityState>(columnVisibility);
 
-  // Update local state when backend state changes - but only if the component just mounted
-  // or if the visibility object has actually changed (not just a new reference)
+  // Update local state when backend state changes
   React.useEffect(() => {
-    const currentKeys = Object.keys(localColumnVisibility);
-    const newKeys = Object.keys(columnVisibility);
-
-    // Only update if the keys or values have actually changed
-    const hasChanged =
-      currentKeys.length !== newKeys.length ||
-      currentKeys.some(
-        (key) => localColumnVisibility[key] !== columnVisibility[key]
-      ) ||
-      newKeys.some((key) => !(key in localColumnVisibility));
-
-    if (hasChanged) {
+    console.log('ColumnSelection: columnVisibility changed', {
+      presetName,
+      useBackend,
+      columnVisibility,
+      localColumnVisibility
+    });
+    
+    // Only update if the columnVisibility has actually changed
+    if (JSON.stringify(prevColumnVisibilityRef.current) !== JSON.stringify(columnVisibility)) {
+      console.log('ColumnSelection: updating localColumnVisibility');
       setLocalColumnVisibility(columnVisibility);
+      prevColumnVisibilityRef.current = columnVisibility;
     }
-  }, [columnVisibility]); // Don't include localColumnVisibility in deps to avoid infinite loop
+  }, [columnVisibility, presetName]);
 
   const columnsOptions = tableColumns
     .filter((col) => col.getIsPinned() === false)
@@ -95,10 +95,20 @@ export default function ColumnSelection({
   };
 
   const handleCheckboxChange = (column: string, checked: boolean) => {
-    setLocalColumnVisibility((prev) => ({
-      ...prev,
-      [column]: checked,
-    }));
+    console.log('ColumnSelection: handleCheckboxChange', {
+      column,
+      checked,
+      currentLocalState: localColumnVisibility
+    });
+    
+    setLocalColumnVisibility((prev) => {
+      const newState = {
+        ...prev,
+        [column]: checked,
+      };
+      console.log('ColumnSelection: new local state', newState);
+      return newState;
+    });
   };
 
   const onMultiSelectChange = async (event: FormEvent<HTMLFormElement>) => {

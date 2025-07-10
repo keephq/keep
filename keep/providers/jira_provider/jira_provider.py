@@ -348,7 +348,9 @@ class JiraProvider(BaseProvider):
                 update["labels"] = [{"set": label} for label in labels]
 
             if custom_fields:
-                update.update(custom_fields)
+                # Format custom fields properly for Jira API
+                for field_name, field_value in custom_fields.items():
+                    update[field_name] = [{"set": field_value}]
 
             request_body = {"update": update}
 
@@ -437,7 +439,13 @@ class JiraProvider(BaseProvider):
             components (List[str]): The components of the issue.
             custom_fields (dict): The custom fields of the issue.
         """
-        issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
+        issue_type = (
+            issue_type
+            if issue_type
+            else (
+                kwargs.get("issuetype", "Task") if isinstance(kwargs, dict) else "Task"
+            )
+        )
         if labels and isinstance(labels, str):
             labels = json.loads(labels.replace("'", '"'))
         try:
