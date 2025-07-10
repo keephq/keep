@@ -37,4 +37,6 @@ export interface InternalConfig {
   HIDE_NAVBAR_EXTRACTION: boolean;
   HIDE_NAVBAR_MAINTENANCE_WINDOW: boolean;
   HIDE_NAVBAR_AI_PLUGINS: boolean;
+  // Ticketing integration
+  KEEP_TICKETING_ENABLED: boolean;
 }
