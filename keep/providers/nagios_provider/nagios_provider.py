@@ -136,12 +136,9 @@ class NagiosProvider(BaseProvider):
             filtered_event = {
                 k: v for k, v in event.items()
                 if k in [
-                    "host_name", 
-                    "service_description", 
                     "service_state",
                     "host_state", 
-                    "output", 
-                    "timestamp"
+                    "output"
                 ]
             }
 
