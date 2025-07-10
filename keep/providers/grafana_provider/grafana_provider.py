@@ -321,10 +321,9 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             dashboard_url = alert.get("dashboardURL", None)
             panel_url = alert.get("panelURL", None)
 
-            # backward compatibility
-            description = alert.get("annotations", {}).get("summary", "")
-            if not description:
-                description = alert.get("annotations", {}).get("description")
+            description = alert.get("annotations", {}).get("description") or alert.get(
+                "annotations", {}
+            ).get("summary", "")
 
             valueString = alert.get("valueString")
 
