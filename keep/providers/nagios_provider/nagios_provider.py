@@ -20,7 +20,8 @@ class NagiosProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME: str = "Nagios"
     PROVIDER_TAGS: list[str] = ["alert", "incident"]
-    PROVIDER_CATEGORY: str = "Monitoring"
+    PROVIDER_CATEGORY: list[str] = ["Monitoring"]
+    PROVIDER_ICON = "nagios-icon.png"
 
     _state_mapping: Dict[str, AlertSeverity] = {
         "OK": AlertSeverity.LOW,
