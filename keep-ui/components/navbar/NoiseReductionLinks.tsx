@@ -104,7 +104,11 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_DEDUPLICATION}
         >
           <li>
-            <LinkWithIcon href="/deduplication" icon={IoMdGitMerge}>
+            <LinkWithIcon
+              href="/deduplication"
+              icon={IoMdGitMerge}
+              testId="deduplication"
+            >
               <Subtitle className="text-xs">Deduplication</Subtitle>
             </LinkWithIcon>
           </li>
@@ -113,7 +117,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_CORRELATION}
         >
           <li>
-            <LinkWithIcon href="/rules" icon={Rules}>
+            <LinkWithIcon href="/rules" icon={Rules} testId="rules">
               <Subtitle className="text-xs">Correlations</Subtitle>
             </LinkWithIcon>
           </li>
@@ -122,7 +126,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_WORKFLOWS}
         >
           <li>
-            <LinkWithIcon href="/workflows" icon={Workflows}>
+            <LinkWithIcon href="/workflows" icon={Workflows} testId="workflows">
               <Subtitle className="text-xs">Workflows</Subtitle>
             </LinkWithIcon>
           </li>
@@ -139,6 +143,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               count={
                 topologyData?.length === 0 ? undefined : topologyData?.length
               }
+              testId="service-topology"
             >
               <Subtitle className="text-xs">Service Topology</Subtitle>
             </LinkWithIcon>
@@ -148,7 +153,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_MAPPING}
         >
           <li>
-            <LinkWithIcon href="/mapping" icon={Mapping}>
+            <LinkWithIcon href="/mapping" icon={Mapping} testId="mapping">
               <Subtitle className="text-xs">Mapping</Subtitle>
             </LinkWithIcon>
           </li>
@@ -157,7 +162,11 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_EXTRACTION}
         >
           <li>
-            <LinkWithIcon href="/extraction" icon={ExportIcon}>
+            <LinkWithIcon
+              href="/extraction"
+              icon={ExportIcon}
+              testId="extraction"
+            >
               <Subtitle className="text-xs">Extraction</Subtitle>
             </LinkWithIcon>
           </li>
@@ -166,7 +175,11 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_MAINTENANCE_WINDOW}
         >
           <li>
-            <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
+            <LinkWithIcon
+              href="/maintenance"
+              icon={FaVolumeMute}
+              testId="maintenance"
+            >
               <Subtitle className="text-xs">Maintenance Windows</Subtitle>
             </LinkWithIcon>
           </li>
