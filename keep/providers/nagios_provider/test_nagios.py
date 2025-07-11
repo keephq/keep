@@ -1,8 +1,5 @@
-import json
-import os
 from .nagios_provider import NagiosProvider
 from keep.providers.models.provider_config import ProviderConfig
-from keep.api.models.alert import AlertSeverity, AlertStatus
 
 ALERTS_MOCK = [
     # Service alert - OK state
