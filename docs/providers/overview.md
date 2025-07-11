@@ -74,7 +74,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [Monday](/providers/documentation/monday-provider)
 - [MongoDB](/providers/documentation/mongodb-provider)
 - [MySQL](/providers/documentation/mysql-provider)
-- [Nagios](/providers/documentation/nagios-provider)git 
+- [Nagios](/providers/documentation/nagios-provider)
 - [NetBox](/providers/documentation/netbox-provider)
 - [Netdata](/providers/documentation/netdata-provider)
 - [New Relic](/providers/documentation/new-relic-provider)
