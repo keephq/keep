@@ -17,6 +17,7 @@ Context variables can be accessed using curly braces (`{{ }}`). You can use thes
 3. **Steps and Actions Results**: Retrieve data produced by previous steps or actions using their unique IDs.
 
 ### Alert Data
+
 You can access attributes of the alert anywhere in the workflow:
 
 ```yaml
@@ -24,6 +25,7 @@ message: "Alert triggered: {{ alert.name }} - Severity: {{ alert.severity }}"
 ```
 
 ### Incident Data
+
 For incident workflows, access incident-related context:
 
 ```yaml
@@ -39,35 +41,42 @@ message: "Query results: {{ steps.get-max-datetime.results }}"
 ```
 
 ### Action Results
+
 Retrieve data from completed actions:
 
 ```yaml
 if: "{{ actions.trigger-email.results.success }}"
-
 ```
 
 ### Constants
 
 Define reusable values in the workflow and access them:
 
-```
+```yaml
 consts:
   alert_message: "Critical system alert!"
   escalation_policy: "tier-1"
-
-...
-
-message: "{{ consts.alert_message }}"
+  slack_channels:
+    sre_team: CH00001
+    payments_team: CH00002
+actions:
+  - name: notify-slack
+    if: "{{alert.source}} == 'datadog'"
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      with:
+        channel: "{{ consts.slack_channels.sre_team }}"
+        message: "{{ consts.alert_message }}"
 ```
-
 
 ## Using Context in Loops
 
 When iterating over data in a `foreach` loop, the context provides `foreach.value` for the current iteration.
 
 For example:
-```yaml
 
+```yaml
 steps:
   - name: get-alerts
     provider:
@@ -82,13 +91,11 @@ actions:
       type: slack
       with:
         message: "Alert: {{ foreach.value.name }} is firing!"
-
 ```
 
 ---
 
 ## Examples of Context Usage
-
 
 ### Dynamic Action Execution
 
@@ -102,10 +109,10 @@ actions:
       type: slack
       with:
         message: "Critical alert: {{ alert.name }}"
-
 ```
 
 ### Enriching Alerts
+
 You can use results from a step to enrich an alert
 
 ```yaml
@@ -132,10 +139,9 @@ actions:
 ```yaml
 actions:
   - name: trigger-slack
-    if: "{{ steps.get-pods.results[0].status.phase == 'Running' }}"
+    if: "{{ steps.get-pods.results.0.status.phase == 'Running' }}"
     provider:
       type: slack
       with:
-        message: "Pod is running: {{ steps.get-pods.results[0].metadata.name }}"
-
+        message: "Pod is running: {{ steps.get-pods.results.0.metadata.name }}"
 ```
