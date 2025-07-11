@@ -520,15 +520,16 @@ def test_add_upload_workflow_with_alert_trigger(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        init_e2e_test(browser, next_url="/signin")
-        browser.get_by_role("link", name="Workflows").hover()
-        browser.get_by_role("link", name="Workflows").click()
+        init_e2e_test(browser, next_url="/workflows")
         browser.get_by_role("button", name="Upload Workflows").click()
         file_input = browser.locator("#workflowFile")
         file_input.set_input_files("./tests/e2e_tests/workflow-sample.yaml")
         browser.get_by_role("button", name="Upload")
         # new behavior: is redirecting to the detail page of the workflow, so we need to go back to the list page
-        browser.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        expect(browser.locator("a", has_text="Workflow Details")).to_be_visible()
+        expect(browser.locator("[data-testid='wf-name']")).to_have_text(
+            "test_add_upload_workflow_with_alert_trigger"
+        )
         browser.wait_for_timeout(500)
         trigger_alert("prometheus")
         browser.wait_for_timeout(2000)
@@ -650,8 +651,7 @@ def test_workflow_inputs(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        init_e2e_test(browser, next_url="/signin")
-        page.goto("http://localhost:3000/workflows")
+        init_e2e_test(browser, next_url="/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         file_input = page.locator("#workflowFile")
         file_input.set_input_files("./tests/e2e_tests/workflow-inputs-alert.yaml")
@@ -797,8 +797,7 @@ def test_run_workflow_from_alert_and_incident(
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        init_e2e_test(browser, next_url="/signin")
-        page.goto("http://localhost:3000/workflows")
+        init_e2e_test(browser, next_url="/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         file_input = page.locator("#workflowFile")
         file_input.set_input_files(
@@ -810,7 +809,7 @@ def test_run_workflow_from_alert_and_incident(
         page.get_by_role("button", name="Upload")
         expect(page.get_by_text("2 workflows uploaded successfully")).to_be_visible()
         # Run workflow from incident
-        page.goto("http://localhost:3000/incidents")
+        page.locator("[data-testid='incidents-link']").click()
         # wait for the incidents facets to load, so it doesn't interfere with the dropdown
         page.wait_for_selector("[data-testid='facet-value']")
         page.wait_for_timeout(500)
@@ -829,7 +828,7 @@ def test_run_workflow_from_alert_and_incident(
         modal.get_by_role("button", name="Run").click()
         expect(page.get_by_text("Workflow started successfully")).to_be_visible()
         # Run workflow from alert
-        page.goto("http://localhost:3000/alerts/feed")
+        page.locator("[data-testid='menu-alerts-feed-link']").click()
         # wait for the alerts facets to load, so it doesn't interfere with the dropdown
         page.wait_for_selector("[data-testid='facet-value']")
         page.wait_for_timeout(500)
@@ -854,8 +853,7 @@ def test_run_interval_workflow(browser: Page):
     log_entries = []
     setup_console_listener(browser, log_entries)
     try:
-        init_e2e_test(browser, next_url="/signin")
-        page.goto("http://localhost:3000/workflows")
+        init_e2e_test(browser, next_url="/workflows")
         page.get_by_role("button", name="Upload Workflows").click()
         file_input = page.locator("#workflowFile")
         file_input.set_input_files(
