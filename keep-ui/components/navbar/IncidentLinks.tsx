@@ -56,6 +56,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
             href="/incidents"
             icon={MdFlashOn}
             count={incidents?.count}
+            testId="incidents"
           >
             <Subtitle className="text-xs">Incidents</Subtitle>
           </LinkWithIcon>
