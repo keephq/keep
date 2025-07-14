@@ -89,7 +89,7 @@ export const AlertSidebar = ({
     }
   };
 
-  const handleCopyUrl = async (alertUrl: string) => {
+  const handleCopyUrl = async (alertUrl: string | undefined) => {
     if (!alertUrl) {
       showErrorToast(new Error("Alert has no URL"));
       return;
@@ -238,31 +238,31 @@ export const AlertSidebar = ({
                     </div>
                   </p>
                   {alert.url && (
-                    <p>
-                      <FieldHeader>URL</FieldHeader>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={alert.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline truncate max-w-[calc(100%-40px)] inline-block"
-                        >
-                          {alert.url}
-                        </Link>
-                        <Button
-                          icon={ClipboardDocumentIcon}
-                          size="xs"
-                          color="orange"
-                          variant="light"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleCopyUrl(alert.url);
-                          }}
-                          tooltip="Copy URL"
-                        />
-                      </div>
-                    </p>
+                  <p>
+                    <FieldHeader>URL</FieldHeader>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={alert.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate max-w-[calc(100%-40px)] inline-block"
+                      >
+                        {alert.url}
+                      </Link>
+                      <Button
+                        icon={ClipboardDocumentIcon}
+                        size="xs"
+                        color="orange"
+                        variant="light"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCopyUrl(alert.url);
+                        }}
+                        tooltip="Copy URL"
+                      />
+                    </div>
+                  </p>
                   )}
                 </div>
                 {alert.incident_dto && (
