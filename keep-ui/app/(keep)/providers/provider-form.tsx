@@ -412,13 +412,18 @@ const ProviderForm = ({
     if (!validate()) return;
     setIsLoading(true);
     submit(`/providers/${provider.id}`, "PUT")
-      .then(() => {
-        setIsLoading(false);
-        toast.success("Updated provider successfully", {
-          position: "top-left",
-        });
-        mutate();
-      })
+      .then(
+        (responseJson: {
+          validatedScopes: { [key: string]: boolean | string };
+        }) => {
+          setIsLoading(false);
+          toast.success("Updated provider successfully", {
+            position: "top-left",
+          });
+          setProviderValidatedScopes(responseJson.validatedScopes);
+          mutate();
+        }
+      )
       .catch((error) => {
         showErrorToast("Failed to update provider");
         handleSubmitError(error);

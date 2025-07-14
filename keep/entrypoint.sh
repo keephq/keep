@@ -49,7 +49,7 @@ else
         --access-logfile - \
         --error-logfile - \
         --name "arq_worker" \
-        -c "/venv/lib/python3.11/site-packages/keep/api/config.py" \
+        -c "/venv/lib/python3.13/site-packages/keep/api/config.py" \
         "--preload" \
         "keep.api.arq_worker_gunicorn:create_app()" &
 
