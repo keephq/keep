@@ -1,6 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch
-from nagios_provider import NagiosProvider
+from unittest.mock import Mock
 from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.nagios_provider.nagios_provider import NagiosProvider
