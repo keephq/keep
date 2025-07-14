@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "keep"
-version = "0.45.13"
+version = "0.46.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<3.14"
 click = "^8.1.3"
 pyyaml = "^6.0"
 requests = "^2.32.4"
@@ -71,7 +71,7 @@ google-cloud-trace = "1.15.0"
 hvac = "^2.1.0"
 python-keycloak = "4.2.3"
 sqlalchemy-utils = "^0.41.1"
-splunk-sdk = "^1.7.4"
+splunk-sdk = "^2.1.0"
 openshift-client = "^2.0.4"
 uptime-kuma-api = "^1.2.1"
 packaging = "^24.0"
