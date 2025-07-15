@@ -294,7 +294,14 @@ class IOHandler:
                     else:
                         _arg = arg.id
                     # if the value is empty '', we still need to pass it to the function
-                    if _arg or _arg == "":
+                    # also, if the value is 0 or 0.0, we need to pass it to the function
+                    # 0 == False, so we need to check if the value is not False explicitly
+                    if (
+                        _arg
+                        or _arg == ""
+                        or (_arg == 0 or _arg == 0.0)
+                        and _arg is not False
+                    ):
                         _args.append(_arg)
 
                 # Parse keyword args
@@ -639,12 +646,14 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {
-        "header": "HTTP API Error {{ alert.labels.statusCode }}",
-        "labels": {"statusCode": "404"},
+    context_manager.steps_context = {
+        "query-keep": {"results": [{"a": 1}, {"b": 2}]},
+        "postgres-selection": {"results": []},
     }
     iohandler = IOHandler(context_manager)
-    res = iohandler.render("{{ alert.header }}")
+    res = iohandler.render(
+        "keep.mul(keep.len({{ steps.query-keep.results }}), keep.len({{ steps.postgres-selection.results }})) > 0"
+    )
     from asteval import Interpreter
 
     aeval = Interpreter()
