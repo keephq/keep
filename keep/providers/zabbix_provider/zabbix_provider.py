@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Literal
+from typing import Literal, Union
 
 import pydantic
 import requests
@@ -205,12 +205,22 @@ class ZabbixProvider(BaseProvider):
     ]
 
     SEVERITIES_MAP = {
-        "not_classified": AlertSeverity.LOW,
-        "information": AlertSeverity.INFO,
-        "warning": AlertSeverity.WARNING,
-        "average": AlertSeverity.WARNING,
-        "high": AlertSeverity.HIGH,
-        "disaster": AlertSeverity.CRITICAL,
+        0: AlertSeverity.LOW,
+        1: AlertSeverity.INFO,
+        2: AlertSeverity.WARNING,
+        3: AlertSeverity.WARNING,
+        4: AlertSeverity.HIGH,
+        5: AlertSeverity.CRITICAL,
+    }
+
+    SEVERITY_NAME_TO_ID_MAP = {
+        "not_classified": 0,
+        "not classified": 0,
+        "information": 1,
+        "warning": 2,
+        "average": 3,
+        "high": 4,
+        "disaster": 5,
     }
 
     STATUS_MAP = {
@@ -342,27 +352,33 @@ class ZabbixProvider(BaseProvider):
     def change_severity(
         self,
         id: str,
-        new_severity: Literal[
-            "Not classified", "Information", "Warning", "Average", "High", "Disaster"
+        new_severity: Union[
+            int,
+            Literal[
+                "Not classified", "Information", "Warning", "Average", "High", "Disaster"
+            ],
         ],
     ):
         """
         Change the severity of a problem.
         Args:
             id (str): The problem id.
-            new_severity (str): The new severity, can be one of the following: Not classified, Information, Warning, Average, High, Disaster
+            new_severity (int | str): The new severity. Can be an integer (0-5) or string:
+                - 0 or "Not classified"
+                - 1 or "Information"
+                - 2 or "Warning"
+                - 3 or "Average"
+                - 4 or "High"
+                - 5 or "Disaster"
         """
+        # Handle integer input
         severity = 0
-        if new_severity.lower() == "information":
-            severity = 1
-        elif new_severity.lower() == "warning":
-            severity = 2
-        elif new_severity.lower() == "average":
-            severity = 3
-        elif new_severity.lower() == "high":
-            severity = 4
-        elif new_severity.lower() == "disaster":
-            severity = 5
+        if isinstance(new_severity, int):
+            if 0 <= new_severity <= 5:
+                severity = new_severity
+        else:
+            # Handle string input
+            severity = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.get(new_severity.lower(), 0)
         self.__send_request(
             "event.acknowledge", {"eventids": id, "severity": severity, "action": 8}
         )
@@ -388,7 +404,10 @@ class ZabbixProvider(BaseProvider):
                     validated_scopes[scope.name] = "Permission denied"
                     continue
                 else:
-                    if error and "invalid parameter" in error.lower():
+                    if error and any(phrase in error.lower() for phrase in [
+                        "invalid parameter",
+                        "incorrect arguments"
+                    ]):
                         # This is OK, it means the request is broken but we have access to the endpoint.
                         pass
                     else:
@@ -460,6 +479,40 @@ class ZabbixProvider(BaseProvider):
             raise ProviderMethodException(error_data)
         return response_json
 
+    @staticmethod
+    def _convert_severity(severity: Union[int, str]) -> AlertSeverity:
+        """
+        Convert Zabbix severity to Keep AlertSeverity.
+
+        Args:
+            severity (Union[int, str]): The severity value. Can be:
+                - Integer (0-5): 0=Not classified, 1=Information, 2=Warning, 3=Average, 4=High, 5=Disaster
+                - String: "not classified", "information", "warning", "average", "high", "disaster"
+
+        Returns:
+            AlertSeverity: The corresponding Keep AlertSeverity
+        """
+        if isinstance(severity, int):
+            return ZabbixProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+
+        # Handle string input
+        if isinstance(severity, str):
+            severity_stripped = severity.strip()
+
+            # First, check if it's a numeric string
+            if severity_stripped.isdigit():
+                severity_int = int(severity_stripped)
+                if 0 <= severity_int <= 5:
+                    return ZabbixProvider.SEVERITIES_MAP.get(severity_int, AlertSeverity.INFO)
+
+            # If not a valid integer string, handle as text
+            severity_lower = severity_stripped.lower()
+            severity_int = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.get(severity_lower, 1)  # Default to Information
+            return ZabbixProvider.SEVERITIES_MAP.get(severity_int, AlertSeverity.INFO)
+
+        # Fallback for any other type
+        return AlertSeverity.INFO
+
     def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
         time_from = int(
@@ -482,9 +535,7 @@ class ZabbixProvider(BaseProvider):
             if environment is None:
                 environment = "unknown"
 
-            severity = ZabbixProvider.SEVERITIES_MAP.get(
-                problem.pop("severity", "").lower(), AlertSeverity.INFO
-            )
+            severity = self._convert_severity(problem.pop("severity", 1))
             status = ZabbixProvider.STATUS_MAP.get(
                 problem.pop("status", "").lower(), AlertStatus.FIRING
             )
@@ -691,8 +742,7 @@ class ZabbixProvider(BaseProvider):
                 f"{zabbix_url}/tr_events.php?triggerid={trigger_id}&eventid={event_id}"
             )
 
-        severity = event.pop("severity", "").lower()
-        severity = ZabbixProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+        severity = ZabbixProvider._convert_severity(event.pop("severity", 1))
 
         status = event.pop("status", "").lower()
         status = ZabbixProvider.STATUS_MAP.get(status, AlertStatus.FIRING)

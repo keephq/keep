@@ -6,6 +6,7 @@
   "scripts": {
     "build-monaco-workers": "node scripts/build-monaco-workers-turbopack.js",
     "build": "./next_build.sh",
+    "build:workflow-yaml-json-schema": "ts-node -P tsconfig.scripts.json scripts/generate-workflow-yaml-json-schema.ts",
     "dev": "npm run build-monaco-workers && next dev --turbopack -p 3000",
     "dev:webpack": "next dev -p 3000",
     "lint": "next lint",
@@ -59,7 +60,7 @@
     "lucide-react": "^0.479.0",
     "monaco-editor": "^0.52.2",
     "monaco-yaml": "^5.3.1",
-    "next": "^15.3.1",
+    "next": "^15.3.4",
     "next-auth": "^5.0.0-beta.27",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",
