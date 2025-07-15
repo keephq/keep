@@ -7,6 +7,7 @@ import {
   type LinkedTicket 
 } from "../ticketing-utils";
 import { type Provider } from "@/shared/api/providers";
+import { Status, Severity, type IncidentDto } from "@/entities/incidents/model/models";
 
 // Mock provider data for testing
 const mockServiceNowProvider: Provider = {
@@ -84,6 +85,32 @@ const mockZendeskProvider: Provider = {
   health: false,
 };
 
+// Mock incident data for testing
+const createMockIncident = (enrichments: Record<string, any> = {}): IncidentDto => ({
+  id: "test-incident-id",
+  user_generated_name: "Test Incident",
+  ai_generated_name: "Test Incident",
+  user_summary: "Test summary",
+  generated_summary: "Test generated summary",
+  assignee: "test-assignee",
+  status: Status.Firing,
+  severity: Severity.High,
+  alerts_count: 1,
+  alert_sources: ["test-source"],
+  services: ["test-service"],
+  creation_time: new Date(),
+  is_candidate: false,
+  rule_fingerprint: "test-fingerprint",
+  same_incident_in_the_past_id: "",
+  following_incidents_ids: [],
+  merged_into_incident_id: "",
+  merged_by: "",
+  merged_at: new Date(),
+  fingerprint: "test-fingerprint",
+  enrichments,
+  resolve_on: "all_resolved",
+});
+
 describe("ticketing-utils", () => {
   describe("getProviderBaseUrl", () => {
     it("should extract ServiceNow base URL", () => {
@@ -110,45 +137,37 @@ describe("ticketing-utils", () => {
 
   describe("getTicketViewUrl", () => {
     it("should get ticket URL from incident enrichments for ServiceNow", () => {
-      const incident = {
-        enrichments: {
-          servicenow_ticket_url: "https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345"
-        }
-      };
+      const incident = createMockIncident({
+        servicenow_ticket_url: "https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345"
+      });
       const result = getTicketViewUrl(incident, mockServiceNowProvider);
       expect(result).toBe("https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345");
     });
 
     it("should get ticket URL from incident enrichments for Jira", () => {
-      const incident = {
-        enrichments: {
-          jira_ticket_url: "https://company.atlassian.net/browse/PROJ-123"
-        }
-      };
+      const incident = createMockIncident({
+        jira_ticket_url: "https://company.atlassian.net/browse/PROJ-123"
+      });
       const result = getTicketViewUrl(incident, mockJiraProvider);
       expect(result).toBe("https://company.atlassian.net/browse/PROJ-123");
     });
 
     it("should get ticket URL from incident enrichments for Zendesk", () => {
-      const incident = {
-        enrichments: {
-          zendesk_ticket_url: "https://company.zendesk.com/agent/tickets/12345"
-        }
-      };
+      const incident = createMockIncident({
+        zendesk_ticket_url: "https://company.zendesk.com/agent/tickets/12345"
+      });
       const result = getTicketViewUrl(incident, mockZendeskProvider);
       expect(result).toBe("https://company.zendesk.com/agent/tickets/12345");
     });
 
     it("should return empty string when no ticket URL in enrichments", () => {
-      const incident = {
-        enrichments: {}
-      };
+      const incident = createMockIncident({});
       const result = getTicketViewUrl(incident, mockServiceNowProvider);
       expect(result).toBe("");
     });
 
     it("should return empty string when incident has no enrichments", () => {
-      const incident = {};
+      const incident = createMockIncident();
       const result = getTicketViewUrl(incident, mockServiceNowProvider);
       expect(result).toBe("");
     });
@@ -192,11 +211,9 @@ describe("ticketing-utils", () => {
 
   describe("findLinkedTicket", () => {
     it("should find linked ticket for ServiceNow", () => {
-      const incident = {
-        enrichments: {
-          servicenow_ticket_id: "INC0012345"
-        }
-      };
+      const incident = createMockIncident({
+        servicenow_ticket_id: "INC0012345"
+      });
       const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toEqual({
         provider: mockServiceNowProvider,
@@ -206,15 +223,13 @@ describe("ticketing-utils", () => {
     });
 
     it("should return null when no linked ticket found", () => {
-      const incident = {
-        enrichments: {}
-      };
+      const incident = createMockIncident({});
       const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toBeNull();
     });
 
     it("should return null when incident has no enrichments", () => {
-      const incident = {};
+      const incident = createMockIncident();
       const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toBeNull();
     });

@@ -205,7 +205,7 @@ export function CreateTicketModal({
             </div>
             <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-md">
               <Text className="text-sm text-blue-700">
-                <strong>Note:</strong> After creating the ticket, you'll need to manually link it back to this incident using the ticket URL.
+                <strong>Note:</strong> After creating the ticket, you&apos;ll need to manually link it back to this incident using the ticket URL.
               </Text>
             </div>
             <Text className="text-sm text-orange-500 mt-1">
