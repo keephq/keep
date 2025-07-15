@@ -129,8 +129,13 @@ class NagiosProvider(BaseProvider):
             description = event.get("output", "No description provided")
             
             severity = self._determine_severity(event)
-            status = (AlertStatus.FIRING if severity != AlertSeverity.LOW 
-                     else AlertStatus.RESOLVED)
+            
+            # Status Determination ...
+            status = AlertStatus.FIRING
+            if "service_state" in event and event["service_state"] == "OK":
+                status = AlertStatus.RESOLVED
+            elif "host_state" in event and event["host_state"] == "UP":
+                status = AlertStatus.RESOLVED
             
             alert_id = event.get("id") or self._generate_alert_id(event)
 
@@ -148,7 +153,7 @@ class NagiosProvider(BaseProvider):
                 name=service_description or host_name,
                 status=status,
                 severity=severity,
-                lastReceived=timestamp,
+                lastReceived=datetime.fromisoformat(timestamp.replace('Z', '+00:00')),
                 description=description,
                 source=["nagios"],
                 host=host_name,
