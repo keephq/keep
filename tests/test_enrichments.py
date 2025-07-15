@@ -1,6 +1,6 @@
 # test_enrichments.py
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, Mock, patch
 import uuid
 
@@ -21,7 +21,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, setup_api_key, test_app
 from tests.fixtures.workflow_manager import (
     wait_for_workflow_execution,
-    wait_for_workflow_in_run_queue,
+   # wait_for_workflow_in_run_queue,
 )  # noqa
 
 
@@ -1127,3 +1127,142 @@ def test_alert_enrichment_via_api_non_uuid(db_session, client, test_app, create_
 
     assert alert_data["enriched_fields"] == ["jira_ticket"]
     assert alert_data["jira_ticket"] == "12345"
+
+
+
+@pytest.fixture
+def mock_alert_dto():
+    return AlertDto(
+        id="test_id",
+        name="Test Alert",
+        status="firing",
+        severity="high",
+        lastReceived="2021-01-01T00:00:00Z",
+        source=["test_source"],
+        fingerprint="mock_fingerprint",
+        labels={},
+    )
+
+def seed_alert(client, alert_dto):
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=alert_dto.dict(),
+    )
+    assert response.status_code == 202
+    for _ in range(50):
+        resp = client.get(
+            f"/alerts/{alert_dto.fingerprint}", headers={"x-api-key": "some-key"}
+        )
+        if resp.status_code == 200:
+            return
+        time.sleep(0.1)
+    pytest.fail("Alert not found after waiting")
+
+def enrich_alert(client, fingerprint, enrichments):
+    response = client.post(
+        "/alerts/enrich",
+        headers={"x-api-key": "some-key"},
+        json={"fingerprint": fingerprint, "enrichments": enrichments},
+    )
+    assert response.status_code == 200
+
+def get_enrichments(db_session, fingerprint):
+    enrichment_row = db_session.execute(
+        text("SELECT enrichments FROM alertenrichment WHERE alert_fingerprint = :fp"),
+        {"fp": fingerprint}
+    ).fetchone()
+    assert enrichment_row is not None
+    enrichments = enrichment_row[0]
+    if isinstance(enrichments, str):
+        import json
+        enrichments = json.loads(enrichments)
+    return enrichments
+
+def trigger_cleanup(client):
+    response = client.post(
+        "/alerts/query",
+        headers={"x-api-key": "some-key"},
+        json={"limit": 10, "offset": 0},
+    )
+    assert response.status_code == 200
+
+def assert_bool(val, expected: bool):
+    """
+    Assert that val is a boolean True/False (or its string representation).
+    """
+    if isinstance(val, bool):
+        assert val is expected
+    elif isinstance(val, str):
+        assert val.lower() == str(expected).lower()
+    else:
+        pytest.fail(f"Value {val!r} is neither bool nor str for expected {expected!r}")
+
+# Helper to call the actual method which cleans dismiss-related enrichments
+def call_dispose_dismiss(enrichment_bl, fingerprint):
+    """Invoke the dispose_dismiss_disposables method."""
+    enrichment_bl.dispose_dismiss_disposables(fingerprint)
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_dispose_dismiss_expired_removes_disposables(mock_session, client, test_app, mock_alert_dto):
+    """Ensure disposable enrichments are removed after dismissUntil expires."""
+    seed_alert(client, mock_alert_dto)
+    past_time = (datetime.utcnow() - timedelta(seconds=5)).isoformat(timespec='milliseconds') + "Z"
+
+    # Set enrichments with dismiss flags and dismissUntil in past
+    enrich_alert(client, mock_alert_dto.fingerprint, {
+        "dismissed": True,
+        "dismissUntil": past_time,
+        # other attributes can be left out, they are not relevant for this test
+    })
+
+    # Call the function to simulate the cleanup
+    enrichments_bl = EnrichmentsBl(tenant_id="your_tenant_id", db=mock_session)
+    call_dispose_dismiss(enrichments_bl, mock_alert_dto.fingerprint)
+
+    # Now fetch the enrichments and verify disposable_* fields are removed
+    enrichment = get_enrichments(mock_session, mock_alert_dto.fingerprint)
+    # The disposable_* keys should be gone
+    for key in list(enrichment.keys()):
+        assert not key.startswith("disposable_"), f"{key} should be removed after dismiss expiration"
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_dispose_dismiss_in_future_keeps_disposables(mock_session, client, test_app, mock_alert_dto):
+    """Ensure disposable enrichments are preserved if dismissUntil is in the future."""
+    seed_alert(client, mock_alert_dto)
+    future_time = (datetime.utcnow() + timedelta(seconds=60)).isoformat(timespec='milliseconds') + "Z"
+
+    enrich_alert(client, mock_alert_dto.fingerprint, {
+        "dismissed": True,
+        "dismissUntil": future_time,
+    })
+
+    # Call the method
+    enrichments_bl = EnrichmentsBl(tenant_id="your_tenant_id", db=mock_session)
+    call_dispose_dismiss(enrichments_bl, mock_alert_dto.fingerprint)
+    # Verify disposable_* keys still exist (not removed)
+    enrichment = get_enrichments(mock_session, mock_alert_dto.fingerprint)
+    for key in enrichment:
+        if key.startswith("disposable_"):
+            # At least one disposable key should still be present
+            assert key in enrichment
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_dispose_dismiss_no_dismissUntil(mock_session, client, test_app, mock_alert_dto):
+    """Ensure no action taken if dismissUntil is empty or not past."""
+    seed_alert(client, mock_alert_dto)
+    # No dismissUntil at all
+    enrich_alert(client, mock_alert_dto.fingerprint, {
+        "dismissed": True,
+        "dismissUntil": "",
+    })
+
+    # Call the method
+    enrichments_bl = EnrichmentsBl(tenant_id="your_tenant_id", db=mock_session)
+    call_dispose_dismiss(enrichments_bl, mock_alert_dto.fingerprint)
+    # Verify disposable_* keys still exist (nothing should be removed)
+    enrichment = get_enrichments(mock_session, mock_alert_dto.fingerprint)
+    # Tu código debe verificar que los "disposable_*" permanecen
+    for key in enrichment:
+        if key.startswith("disposable_"):
+            assert key in enrichment

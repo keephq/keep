@@ -111,6 +111,7 @@ class AlertDto(BaseModel):
 
     enriched_fields: list = []
     incident: str | None = None
+    previous_status: AlertStatus | None = None  # The previous status of the alert
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -260,8 +261,11 @@ class AlertDto(BaseModel):
             )
             values["severity"] = AlertSeverity.INFO
 
-        # Check and set default status
+       # Check and set default status
         status = values.get("status")
+        if status is not None:
+            if isinstance(status, str):
+                status = status.lower()
         try:
             values["status"] = AlertStatus(status)
         except ValueError:
@@ -290,11 +294,33 @@ class AlertDto(BaseModel):
     # after root_validator to ensure that the values are set
     @root_validator(pre=False)
     def validate_status(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        # if dismissed, change status to SUPPRESSED
-        # note this is happen AFTER validate_dismissed which already consider
-        #   dismissed + dismissUntil
-        # if values.get("dismissed"):
-        #     values["status"] = AlertStatus.SUPPRESSED
+        original_status = values.get("status", AlertStatus.FIRING)  # Asume firing por defecto si nada.
+        dismissed = values.get("dismissed")
+        dismiss_until = values.get("dismissUntil")
+        now = datetime.datetime.now(datetime.timezone.utc)
+        is_suppressed = False
+
+        if dismissed:
+            if dismiss_until and dismiss_until != "forever":
+                try:
+                    try:
+                        dt = datetime.datetime.strptime(dismiss_until, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    except ValueError:
+                        dt = datetime.datetime.strptime(dismiss_until, "%Y-%m-%dT%H:%M:%SZ")
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+                    if dt > now:
+                        is_suppressed = True
+                except Exception:
+                    pass
+            else:
+
+                is_suppressed = True
+
+        if is_suppressed:
+            values["status"] = AlertStatus.SUPPRESSED
+        else:
+            # other status remain the same(pending, acknowledged, resolved, etc.)
+            values["status"] = original_status if original_status != AlertStatus.SUPPRESSED else AlertStatus.FIRING
         return values
 
     class Config:
@@ -368,7 +394,7 @@ class EnrichAlertRequestBody(BaseModel):
 
 
 class BatchEnrichAlertRequestBody(BaseModel):
-    enrichments: dict[str, str]
+    enrichments: list[Dict[str, Any]]
     fingerprints: Optional[list[str]] = None
     cel: Optional[str] = None
 
