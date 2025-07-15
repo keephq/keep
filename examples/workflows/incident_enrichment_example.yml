@@ -1,60 +1,100 @@
 workflow:
-  id: incident-enrichment-example  
-  description: Example workflow showing how to use incident form enrichments for ticket creation
+  id: incident-enrichment-example
+  name: Incident Form Enrichment to Jira Ticket
+  description: Demonstrates incident form schema integration with automatic Jira ticket creation based on custom form fields
   triggers:
     - type: incident
-      filters:
-        - key: status
-          value: firing
-        # Only trigger for incidents that have custom enrichments
-        - key: enrichments
-          value: "{{ incident.enrichments | length > 0 }}"
+      events: ["created"]
   
   steps:
-    - name: log-enrichment-data
+    - name: check-enrichments
       provider:
         type: console
         with:
           message: |
-            New incident created with enrichments:
-            Incident ID: {{ incident.id }}
-            Name: {{ incident.user_generated_name }}
-            
-            Custom Fields:
-            {% for key, value in incident.enrichments.items() %}
-            - {{ key }}: {{ value }}
-            {% endfor %}
+            📋 Processing incident with form enrichments:
+            - Incident: {{ incident.user_generated_name }}
+            - Project: {{ incident.enrichments.project_key }}
+            - Priority: {{ incident.enrichments.priority }}
+            - Create Ticket: {{ incident.enrichments.create_ticket }}
+            - Business Impact: {{ incident.enrichments.business_impact }}
 
-    - name: create-ticket-with-enrichments
-      condition: "{{ incident.enrichments.create_ticket == true }}"
+    - name: create-jira-ticket
+      condition:
+        - type: assert
+          assert: "{{ incident.enrichments.create_ticket == true }}"
       provider:
         type: jira
+        config: "{{ providers.jira }}"
         with:
+          # Use project from form enrichment
           project_key: "{{ incident.enrichments.project_key }}"
-          summary: "{{ incident.enrichments.ticket_title or incident.user_generated_name }}"
+          
+          # Build ticket summary with priority indicator
+          summary: "[{{ incident.enrichments.priority }}] {{ incident.user_generated_name }}"
+          
+          # Comprehensive ticket description from enrichments
           description: |
-            Incident: {{ incident.user_generated_name }}
-            Priority: {{ incident.enrichments.priority }}
-            Expected Resolution: {{ incident.enrichments.resolution_date }}
+            **Incident Details:**
+            - ID: {{ incident.id }}
+            - Status: {{ incident.status }}
+            - Severity: {{ incident.severity }}
+            - Created: {{ incident.creation_time }}
             
-            Description:
-            {{ incident.enrichments.description or incident.user_summary }}
+            **Business Impact:**
+            {{ incident.enrichments.business_impact }}
             
-            Business Impact: {{ incident.enrichments.business_impact }}
-            Affected Systems: {{ incident.enrichments.affected_systems }}
+            **Affected Systems:**
+            {{ incident.enrichments.affected_systems or 'Not specified' }}
+            
+            **Expected Resolution:**
+            {{ incident.enrichments.resolution_date or 'Not specified' }}
+            
+            **Incident Summary:**
+            {{ incident.user_summary }}
+            
+            **Keep Incident URL:**
+            {{ keep_base_url }}/incidents/{{ incident.id }}
           
           issue_type: "{{ incident.enrichments.issue_type or 'Bug' }}"
           
-          # Map enrichment priority to Jira priority
+          labels:
+            - "keep-incident"
+            - "severity-{{ incident.severity | lower }}"
+            - "priority-{{ incident.enrichments.priority | lower }}"
+            - "auto-created"
+          
+          # Map form priority to Jira priority
           custom_fields:
             priority: 
               name: "{{ incident.enrichments.priority }}"
 
-    - name: update-incident-with-ticket
-      condition: "{{ steps.create-ticket-with-enrichments.results }}"
+    - name: enrich-incident-with-ticket
+      condition:
+        - type: assert
+          assert: "{{ steps.create-jira-ticket.results }}"
       provider:
         type: keep
         with:
           enrichments:
-            ticket_id: "{{ steps.create-ticket-with-enrichments.results.issue.key }}"
-            ticket_url: "{{ steps.create-ticket-with-enrichments.results.ticket_url }}"
+            # Required for ticket link display
+            ticket_id: "{{ steps.create-jira-ticket.results.issue.key }}"
+            ticket_url: "{{ steps.create-jira-ticket.results.ticket_url }}"
+            # Additional tracking information
+            ticket_type: "jira"
+            ticket_created_at: "{{ now() }}"
+            ticket_project: "{{ incident.enrichments.project_key }}"
+
+    - name: log-success
+      condition:
+        - type: assert
+          assert: "{{ steps.create-jira-ticket.results }}"
+      provider:
+        type: console
+        with:
+          message: |
+            ✅ Jira ticket created successfully!
+            - Ticket: {{ steps.create-jira-ticket.results.issue.key }}
+            - URL: {{ steps.create-jira-ticket.results.ticket_url }}
+            - Project: {{ incident.enrichments.project_key }}
+            The incident has been enriched with ticket information.

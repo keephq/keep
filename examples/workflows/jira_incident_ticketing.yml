@@ -1,16 +1,16 @@
 workflow:
   id: jira-incident-ticketing
-  description: Automatically create Jira tickets for new incidents with enrichment data
+  name: Automatic Jira Ticketing for Incidents
+  description: Automatically create Jira tickets when incidents are created, using both default and enrichment data
   triggers:
     - type: incident
-      filters:
-        - key: status
-          value: firing
+      events: ["created"]
   
   steps:
     - name: create-jira-ticket
       provider:
         type: jira
+        config: "{{ providers.jira }}"
         with:
           # Extract project key from incident enrichments or use default
           project_key: "{{ incident.enrichments.jira_project or 'INCIDENT' }}"
@@ -34,8 +34,8 @@ workflow:
             {% if incident.enrichments %}
             *Custom Information:*
             {% for key, value in incident.enrichments.items() %}
-            {% if key != 'jira_project' and key != 'ticket_id' %}
-            - *{{ key | title }}:* {{ value }}
+            {% if key not in ['jira_project', 'ticket_id', 'ticket_url'] %}
+            - *{{ key | title | replace('_', ' ') }}:* {{ value }}
             {% endif %}
             {% endfor %}
             {% endif %}
@@ -54,10 +54,11 @@ workflow:
           # Add custom fields if they exist in enrichments
           custom_fields:
             # Example: Priority field mapping
-            priority: "{{ incident.enrichments.priority | default('Medium') }}"
+            priority: 
+              name: "{{ incident.enrichments.priority or 'Medium' }}"
             
             # Example: Component mapping
-            components: "{{ incident.enrichments.components | default([]) }}"
+            components: "{{ incident.enrichments.components or [] }}"
 
     - name: enrich-incident-with-ticket-info
       provider:
@@ -67,18 +68,19 @@ workflow:
           enrichments:
             ticket_id: "{{ steps.create-jira-ticket.results.issue.key }}"
             ticket_url: "{{ steps.create-jira-ticket.results.ticket_url }}"
+            ticket_type: "jira"
+            ticket_created_at: "{{ now() }}"
             
-    - name: notify-assignee
-      condition: "{{ incident.assignee }}"
+    - name: log-ticket-creation
       provider:
-        type: slack  # or teams, email, etc.
+        type: console  
         with:
           message: |
-            🎫 *New Jira ticket created for incident*
+            🎫 Jira ticket created for incident {{ incident.id }}
             
-            *Incident:* {{ incident.user_generated_name or incident.ai_generated_name }}
-            *Ticket:* <{{ steps.create-jira-ticket.results.ticket_url }}|{{ steps.create-jira-ticket.results.issue.key }}>
-            *Assignee:* {{ incident.assignee }}
+            Ticket: {{ steps.create-jira-ticket.results.issue.key }}
+            URL: {{ steps.create-jira-ticket.results.ticket_url }}
+            Project: {{ incident.enrichments.jira_project or 'INCIDENT' }}
             
-            Click the ticket link above to view and work on the issue in Jira.
-          channel: "#incidents"
+            The incident has been enriched with ticket information.
+            The ticket link will appear in the incidents table.
