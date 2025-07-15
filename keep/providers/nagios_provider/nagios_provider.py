@@ -153,7 +153,7 @@ class NagiosProvider(BaseProvider):
                 name=service_description or host_name,
                 status=status,
                 severity=severity,
-                lastReceived=datetime.fromisoformat(timestamp.replace('Z', '+00:00')),
+                lastReceived=timestamp,
                 description=description,
                 source=["nagios"],
                 host=host_name,

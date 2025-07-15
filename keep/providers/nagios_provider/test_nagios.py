@@ -3,8 +3,6 @@ from unittest.mock import Mock
 from keep.api.models.alert import AlertSeverity, AlertStatus, AlertDto
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.nagios_provider.nagios_provider import NagiosProvider
-from datetime import datetime, timezone
-
 
 class TestableNagiosProvider(NagiosProvider):
     """Testable version of NagiosProvider implemented abstract methods"""
@@ -107,7 +105,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.LOW,
                     "status": AlertStatus.RESOLVED,
                     "name": "HTTP",
-                    "lastReceived": datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:00:00Z",
                     "description": "HTTP OK: HTTP/1.1 200 OK - 1234 bytes in 0.123 second response time",
                     "source": ["nagios"],
                     "service_state": "OK",
@@ -122,7 +120,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.HIGH,
                     "status": AlertStatus.FIRING,
                     "name": "MySQL",
-                    "lastReceived": datetime(2024, 1, 1, 10, 5, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:05:00Z",
                     "description": "CRITICAL - Cannot connect to MySQL: Connection refused",
                     "source": ["nagios"],
                     "service_state": "CRITICAL",
@@ -137,7 +135,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.WARNING,
                     "status": AlertStatus.FIRING,
                     "name": "CPU Load",
-                    "lastReceived": datetime(2024, 1, 1, 10, 10, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:10:00Z",
                     "description": "WARNING - load average: 5.23, 4.12, 3.55",
                     "source": ["nagios"],
                     "service_state": "WARNING",
@@ -152,7 +150,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.CRITICAL,
                     "status": AlertStatus.FIRING,
                     "name": "network-switch-01",
-                    "lastReceived": datetime(2024, 1, 1, 10, 15, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:15:00Z",
                     "description": "PING CRITICAL - Packet loss = 100%",
                     "source": ["nagios"],
                     "host_state": "DOWN",
@@ -167,7 +165,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.LOW,
                     "status": AlertStatus.RESOLVED,
                     "name": "firewall-01",
-                    "lastReceived": datetime(2024, 1, 1, 10, 20, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:20:00Z",
                     "description": "PING OK - Packet loss = 0%, RTA = 0.42 ms",
                     "source": ["nagios"],
                     "host_state": "UP",
@@ -182,7 +180,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.CRITICAL,
                     "status": AlertStatus.FIRING,
                     "name": "remote-site-router",
-                    "lastReceived": datetime(2024, 1, 1, 10, 25, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:25:00Z",
                     "description": "CRITICAL - Host Unreachable",
                     "source": ["nagios"],
                     "host_state": "UNREACHABLE",
@@ -197,7 +195,7 @@ class TestNagiosProvider:
                     "severity": AlertSeverity.INFO,
                     "status": AlertStatus.FIRING,
                     "name": "Disk Space",
-                    "lastReceived": datetime(2024, 1, 1, 10, 30, 0, tzinfo=timezone.utc),
+                    "lastReceived": "2024-01-01T10:30:00Z",
                     "description": "UNKNOWN - Unable to read disk statistics",
                     "source": ["nagios"],
                     "service_state": "UNKNOWN",
