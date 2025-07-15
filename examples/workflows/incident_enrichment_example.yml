@@ -20,9 +20,7 @@ workflow:
             - Business Impact: {{ incident.enrichments.business_impact }}
 
     - name: create-jira-ticket
-      condition:
-        - type: assert
-          assert: "{{ incident.enrichments.create_ticket == true }}"
+      if: "{{ incident.enrichments.create_ticket == true }}"
       provider:
         type: jira
         config: "{{ providers.jira }}"
@@ -70,9 +68,7 @@ workflow:
               name: "{{ incident.enrichments.priority }}"
 
     - name: enrich-incident-with-ticket
-      condition:
-        - type: assert
-          assert: "{{ steps.create-jira-ticket.results }}"
+      if: "{{ steps.create-jira-ticket.results }}"
       provider:
         type: keep
         with:
@@ -86,9 +82,7 @@ workflow:
             ticket_project: "{{ incident.enrichments.project_key }}"
 
     - name: log-success
-      condition:
-        - type: assert
-          assert: "{{ steps.create-jira-ticket.results }}"
+      if: "{{ steps.create-jira-ticket.results }}"
       provider:
         type: console
         with:
