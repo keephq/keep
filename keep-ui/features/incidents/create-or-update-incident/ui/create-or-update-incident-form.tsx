@@ -38,16 +38,17 @@ export function CreateOrUpdateIncidentForm({
   const [incidentSeverity, setIncidentSeverity] = useState<Severity>(
     Severity.Critical
   );
-  const [incidentName, setIncidentName] = useState<string>("");
-  const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
-  const [incidentAssignee, setIncidentAssignee] = useState<string>("");
-  const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
-    useState<string>("all");
-  const { data: users = [] } = useUsers();
   const { data: session } = useSession();
   const currentUser = session?.user;
-  const { addIncident, updateIncident } = useIncidentActions();
+  const [incidentName, setIncidentName] = useState<string>("");
+  const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
+  const [incidentAssignee, setIncidentAssignee] = useState<string>(currentUser?.email || "");
+  const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
+    useState<string>("all");
 
+  const { data: users = [] } = useUsers();
+
+  const { addIncident, updateIncident } = useIncidentActions();
     // Sort users alphabetically
   const sortedUsers = [...users].sort((a, b) =>
     (a.name || a.email).localeCompare(b.name || b.email)
@@ -65,7 +66,7 @@ useEffect(() => {
     );
     setIncidentAssignee(incidentToEdit.assignee ?? "");
     setResolveOnAlertsResolved(incidentToEdit.resolve_on ?? "all");
-  }
+  } 
 }, [incidentToEdit]);
 
   const clearForm = () => {
@@ -182,7 +183,6 @@ useEffect(() => {
         <Text className="mb-2">Assignee</Text>
         {sortedUsers.length > 0 ? (
           <Select
-            defaultValue={currentUser?.email || "Who is responsible"}
             value={incidentAssignee}
             onValueChange={setIncidentAssignee}
           >
