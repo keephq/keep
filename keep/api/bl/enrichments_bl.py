@@ -643,14 +643,14 @@ class EnrichmentsBl:
         )
 
     def batch_enrich(
-            self,
-            fingerprints: list[str],
-            enrichments_list: list[dict],
-            action_type: ActionType,
-            action_callee: str,
-            action_description: str,
-            dispose_on_new_alert=False,
-            audit_enabled=True,
+        self,
+        fingerprints: list[str],
+        enrichments_list: list[dict],
+        action_type: ActionType,
+        action_callee: str,
+        action_description: str,
+        dispose_on_new_alert=False,
+        audit_enabled=True,
     ):
         self.logger.debug(
             "enriching multiple fingerprints",
@@ -751,6 +751,10 @@ class EnrichmentsBl:
         Enrich the alert with extraction and mapping rules
         """
         # enrich db
+        if isinstance(fingerprint, UUID):
+            fingerprint = UUIDType(binary=False).process_bind_param(
+                fingerprint, self.db_session.bind.dialect
+            )
         self.logger.debug(
             "enriching alert db",
             extra={"fingerprint": fingerprint, "tenant_id": self.tenant_id},
