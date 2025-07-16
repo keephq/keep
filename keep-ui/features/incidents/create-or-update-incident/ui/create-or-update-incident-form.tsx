@@ -46,7 +46,6 @@ export function CreateOrUpdateIncidentForm({
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
   const { data: users = [] } = useUsers();
-
   const { addIncident, updateIncident } = useIncidentActions();
 
     // Sort users alphabetically
