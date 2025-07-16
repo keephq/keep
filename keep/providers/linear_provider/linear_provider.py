@@ -21,6 +21,16 @@ class LinearProviderAuthConfig:
         }
     )
 
+    ticket_creation_url: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "URL for creating new tickets",
+            "sensitive": False,
+            "hint": "https://linear.app/your-team/issue/new",
+        },
+        default="",
+    )
+
 
 class LinearProvider(BaseProvider):
     """Enrich alerts with Linear tickets."""
