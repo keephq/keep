@@ -45,10 +45,10 @@ export function CreateOrUpdateIncidentForm({
   const [incidentAssignee, setIncidentAssignee] = useState<string>(currentUser?.email || "");
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
-
   const { data: users = [] } = useUsers();
 
   const { addIncident, updateIncident } = useIncidentActions();
+
     // Sort users alphabetically
   const sortedUsers = [...users].sort((a, b) =>
     (a.name || a.email).localeCompare(b.name || b.email)
@@ -66,7 +66,7 @@ export function CreateOrUpdateIncidentForm({
       );
       setIncidentAssignee(incidentToEdit.assignee ?? "");
       setResolveOnAlertsResolved(incidentToEdit.resolve_on ?? "all");
-    } 
+    }
   }, [incidentToEdit]);
 
   const clearForm = () => {
