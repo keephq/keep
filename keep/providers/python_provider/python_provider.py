@@ -40,6 +40,8 @@ class PythonProvider(BaseProvider):
                             loaded_modules[attr_name] = getattr(
                                 imported_module, attr_name
                             )
+                    # Add the module itself too..
+                    loaded_modules[module] = imported_module
                 except Exception:
                     raise ProviderConfigException(
                         f"{self.__class__.__name__} failed to import library: {module}",

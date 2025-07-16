@@ -43,6 +43,16 @@ class YoutrackProviderAuthConfig:
         }
     )
 
+    ticket_creation_url: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "URL for creating new tickets",
+            "sensitive": False,
+            "hint": "https://example.youtrack.cloud/issues/new",
+        },
+        default="",
+    )
+
 class YoutrackProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "YouTrack"
     PROVIDER_TAGS = ["ticketing"]
