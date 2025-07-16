@@ -83,7 +83,7 @@ export default function MaintenanceRulesTable({
       id: "start_time",
       header: "Start Time",
       cell: (context) =>
-        new Date(context.row.original.start_time).toLocaleString(),
+        new Date(context.row.original.start_time + "Z").toLocaleString(),
     }),
     columnHelper.display({
       id: "CEL",
@@ -95,7 +95,7 @@ export default function MaintenanceRulesTable({
       header: "End Time",
       cell: (context) =>
         context.row.original.end_time
-          ? new Date(context.row.original.end_time).toLocaleString()
+          ? new Date(context.row.original.end_time + "Z").toLocaleString()
           : "N/A",
     }),
     columnHelper.display({
