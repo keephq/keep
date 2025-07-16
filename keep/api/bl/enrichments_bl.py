@@ -733,7 +733,7 @@ class EnrichmentsBl:
 
     def enrich_entity(
         self,
-        fingerprint: str,
+        fingerprint: str | UUID,
         enrichments: dict,
         action_type: ActionType,
         action_callee: str,
