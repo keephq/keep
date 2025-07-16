@@ -36,10 +36,7 @@ from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
 )
-from keep.api.models.db.alert import (
-    Alert,
-    AlertEnrichment,
-)
+from keep.api.models.db.alert import Alert
 from keep.api.models.db.enrichment_event import (
     EnrichmentEvent,
     EnrichmentLog,
@@ -931,9 +928,10 @@ class EnrichmentsBl:
 
         # Create AlertDto to validate and parse previous_status
         try:
-            alert = AlertDto(**enrichments.enrichments)
-        except:
-            return  # Failed to create AlertDto, exit
+            _ = AlertDto(**enrichments.enrichments)
+        except Exception:
+            self.logger.warning("Error creating AlertDTO")
+            return
 
         # Convert previous_status to lowercase string if it's a string
         prev_status_str = previous_status.lower() if isinstance(previous_status, str) else previous_status
