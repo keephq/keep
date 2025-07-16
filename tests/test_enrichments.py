@@ -21,7 +21,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, setup_api_key, test_app
 from tests.fixtures.workflow_manager import (
     wait_for_workflow_execution,
-   # wait_for_workflow_in_run_queue,
+    wait_for_workflow_in_run_queue,
 )  # noqa
 
 
