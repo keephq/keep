@@ -58,16 +58,16 @@ export function CreateOrUpdateIncidentForm({
   // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
   const cancellable = editMode || exitCallback;
 
-useEffect(() => {
-  if (incidentToEdit) {
-    setIncidentName(getIncidentName(incidentToEdit));
-    setIncidentUserSummary(
-      incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? ""
-    );
-    setIncidentAssignee(incidentToEdit.assignee ?? "");
-    setResolveOnAlertsResolved(incidentToEdit.resolve_on ?? "all");
-  } 
-}, [incidentToEdit]);
+  useEffect(() => {
+    if (incidentToEdit) {
+      setIncidentName(getIncidentName(incidentToEdit));
+      setIncidentUserSummary(
+        incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? ""
+      );
+      setIncidentAssignee(incidentToEdit.assignee ?? "");
+      setResolveOnAlertsResolved(incidentToEdit.resolve_on ?? "all");
+    } 
+  }, [incidentToEdit]);
 
   const clearForm = () => {
     setIncidentName("");
