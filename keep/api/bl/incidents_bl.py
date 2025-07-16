@@ -498,8 +498,8 @@ class IncidentBl:
             raise HTTPException(status_code=404, detail="Incident not found")
 
         if new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            enrichments = {"status": new_status.value}
             fingerprints = [alert.fingerprint for alert in incident.alerts]
+            enrichments = [{"status": new_status.value} for _ in fingerprints]
             enrichments_bl = EnrichmentsBl(self.tenant_id, db=self.session)
             (
                 action_type,
