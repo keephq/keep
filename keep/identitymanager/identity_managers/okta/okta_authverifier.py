@@ -68,10 +68,11 @@ class OktaAuthVerifier(AuthVerifierBase):
             email = payload.get("email") or payload.get("sub") or payload.get("preferred_username")
             
             # Look for role in standard locations with a default of "user"
+            groups = payload.get("groups", [])
             role_name = (
                 payload.get("keep_role") or 
                 payload.get("role") or
-                payload.get("groups", [None])[0] or
+                (groups[0] if groups else None) or
                 DEFAULT_ROLE_NAME  # Use constant for consistency
             )
             
