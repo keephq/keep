@@ -6,14 +6,15 @@ This provider requires authentication.
 - **email**: Atlassian Jira Email (required: True, sensitive: False)
 - **api_token**: Atlassian Jira API Token (required: True, sensitive: True)
 - **host**: Atlassian Jira Host (required: True, sensitive: False)
+- **ticket_creation_url**: URL for creating new tickets (optional, will use default if not provided) (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **BROWSE_PROJECTS**: Browse Jira Projects (mandatory)
-- **CREATE_ISSUES**: Create Jira Issues (mandatory)
-- **CLOSE_ISSUES**: Close Jira Issues
-- **EDIT_ISSUES**: Edit Jira Issues
-- **DELETE_ISSUES**: Delete Jira Issues
-- **MODIFY_REPORTER**: Modify Jira Issue Reporter
+- **BROWSE_PROJECTS**: Browse Jira Projects (mandatory) 
+- **CREATE_ISSUES**: Create Jira Issues (mandatory) 
+- **CLOSE_ISSUES**: Close Jira Issues  
+- **EDIT_ISSUES**: Edit Jira Issues  
+- **DELETE_ISSUES**: Delete Jira Issues  
+- **MODIFY_REPORTER**: Modify Jira Issue Reporter  
 
 
 
