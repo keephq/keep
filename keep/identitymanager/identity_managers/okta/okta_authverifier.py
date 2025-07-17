@@ -39,9 +39,15 @@ class OktaAuthVerifier(AuthVerifierBase):
         self.jwks_client = jwt.PyJWKClient(self.jwks_url)
         logger.info(f"Initialized JWKS client with URL: {self.jwks_url}")
 
-    def _verify_bearer_token(self, token: str = Depends(oauth2_scheme)) -> AuthenticatedEntity:
+    def _verify_bearer_token(self, token: str = Depends(oauth2_scheme), retry_count: int = 0) -> AuthenticatedEntity:
         if not token:
             raise HTTPException(status_code=401, detail="No token provided")
+        
+        # Prevent infinite recursion
+        max_retries = 3
+        if retry_count >= max_retries:
+            logger.error(f"Max retries ({max_retries}) reached for JWKS refresh")
+            raise HTTPException(status_code=401, detail="Failed to verify token after multiple JWKS refresh attempts")
         
         try:
             # Get the signing key directly from the JWT
@@ -87,10 +93,10 @@ class OktaAuthVerifier(AuthVerifierBase):
             
         except jwt.exceptions.InvalidKeyError:
             # Refresh the JWKS and try again
-            logger.warning("Invalid key error, refreshing JWKS")
+            logger.warning(f"Invalid key error, refreshing JWKS (retry {retry_count + 1})")
             self.jwks_client = jwt.PyJWKClient(self.jwks_url)
-            # Try again with the refreshed client
-            return self._verify_bearer_token(token)
+            # Try again with the refreshed client, incrementing retry count
+            return self._verify_bearer_token(token, retry_count + 1)
         except jwt.ExpiredSignatureError:
             logger.warning("Token has expired")
             raise HTTPException(status_code=401, detail="Token has expired")
