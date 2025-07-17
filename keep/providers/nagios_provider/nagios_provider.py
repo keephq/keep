@@ -49,6 +49,18 @@ class NagiosProvider(BaseProvider):
         """
         super().__init__(context_manager, provider_id, config)
 
+    def dispose(self):
+        """
+        Dispose of the provider's resources.
+        """
+        pass
+
+    def validate_config(self):
+        """
+        Validates the provider configuration.
+        """
+        pass
+
 
     def _generate_alert_id(self, event: Dict[str, Any]) -> str:
         """Generate unique alert ID from event data.
@@ -124,7 +136,6 @@ class NagiosProvider(BaseProvider):
             timestamp = event.get("timestamp")
             if not self._validate_timestamp(timestamp):
                 raise ValueError("Invalid or missing timestamp")
-
             service_description = event.get("service_description")
             description = event.get("output", "No description provided")
             
@@ -137,7 +148,7 @@ class NagiosProvider(BaseProvider):
             elif "host_state" in event and event["host_state"] == "UP":
                 status = AlertStatus.RESOLVED
             
-            alert_id = event.get("id") or self._generate_alert_id(event)
+            alert_id = self._generate_alert_id(event)
 
             filtered_event = {
                 k: v for k, v in event.items()

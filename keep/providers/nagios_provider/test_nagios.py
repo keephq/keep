@@ -69,8 +69,6 @@ ALERTS_MOCK = [
         "output": "UNKNOWN - Unable to read disk statistics",
     },
 ]
-
-
 class TestNagiosProvider:
     """Test suite for NagiosProvider"""
 
@@ -106,10 +104,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.RESOLVED,
                     "name": "HTTP",
                     "lastReceived": "2024-01-01T10:00:00Z",
-                    "description": "HTTP OK: HTTP/1.1 200 OK - 1234 bytes in 0.123 second response time",
                     "source": ["nagios"],
                     "service_state": "OK",
-                    "output": "HTTP OK: HTTP/1.1 200 OK - 1234 bytes in 0.123 second response time"
+                    "output": "HTTP OK: HTTP/1.1 200 OK - 1234 bytes in 0.123 second response time",
                 },
             ),
             (
@@ -121,10 +118,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.FIRING,
                     "name": "MySQL",
                     "lastReceived": "2024-01-01T10:05:00Z",
-                    "description": "CRITICAL - Cannot connect to MySQL: Connection refused",
                     "source": ["nagios"],
                     "service_state": "CRITICAL",
-                    "output": "CRITICAL - Cannot connect to MySQL: Connection refused"
+                    "output": "CRITICAL - Cannot connect to MySQL: Connection refused",
                 },
             ),
             (
@@ -136,10 +132,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.FIRING,
                     "name": "CPU Load",
                     "lastReceived": "2024-01-01T10:10:00Z",
-                    "description": "WARNING - load average: 5.23, 4.12, 3.55",
                     "source": ["nagios"],
                     "service_state": "WARNING",
-                    "output": "WARNING - load average: 5.23, 4.12, 3.55"
+                    "output": "WARNING - load average: 5.23, 4.12, 3.55",
                 },
             ),
             (
@@ -151,10 +146,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.FIRING,
                     "name": "network-switch-01",
                     "lastReceived": "2024-01-01T10:15:00Z",
-                    "description": "PING CRITICAL - Packet loss = 100%",
                     "source": ["nagios"],
                     "host_state": "DOWN",
-                    "output": "PING CRITICAL - Packet loss = 100%"
+                    "output": "PING CRITICAL - Packet loss = 100%",
                 },
             ),
             (
@@ -166,10 +160,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.RESOLVED,
                     "name": "firewall-01",
                     "lastReceived": "2024-01-01T10:20:00Z",
-                    "description": "PING OK - Packet loss = 0%, RTA = 0.42 ms",
                     "source": ["nagios"],
                     "host_state": "UP",
-                    "output": "PING OK - Packet loss = 0%, RTA = 0.42 ms"
+                    "output": "PING OK - Packet loss = 0%, RTA = 0.42 ms",
                 },
             ),
             (
@@ -181,10 +174,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.FIRING,
                     "name": "remote-site-router",
                     "lastReceived": "2024-01-01T10:25:00Z",
-                    "description": "CRITICAL - Host Unreachable",
                     "source": ["nagios"],
                     "host_state": "UNREACHABLE",
-                    "output": "CRITICAL - Host Unreachable"
+                    "output": "CRITICAL - Host Unreachable",
                 },
             ),
             (
@@ -196,10 +188,9 @@ class TestNagiosProvider:
                     "status": AlertStatus.FIRING,
                     "name": "Disk Space",
                     "lastReceived": "2024-01-01T10:30:00Z",
-                    "description": "UNKNOWN - Unable to read disk statistics",
                     "source": ["nagios"],
                     "service_state": "UNKNOWN",
-                    "output": "UNKNOWN - Unable to read disk statistics"
+                    "output": "UNKNOWN - Unable to read disk statistics",
                 },
             ),
         ],
@@ -208,20 +199,27 @@ class TestNagiosProvider:
         """Test Nagios alert formatting with mock data using parametrization."""
         formatted_alert = provider._format_alert(alert)
 
-        expected_alert_dto = AlertDto(
-            id=formatted_alert.id,
-            name=expected["name"],
-            status=expected["status"],
-            severity=expected["severity"],
-            lastReceived=expected["lastReceived"],
-            description=expected["description"],
-            source=expected["source"],
-            host=expected["host"],
-            service=expected["service"],
-            service_state=alert.get("service_state"),
-            output=alert.get("output"),
-            host_state=alert.get("host_state"),
-        )
+        # The provider sets `description` from `output`. We should test that behavior directly.
+        description = alert.get("output", "No description provided")
+        expected_dto_kwargs = {
+            "id": formatted_alert.id,
+            "name": expected["name"],
+            "status": expected["status"],
+            "severity": expected["severity"],
+            "lastReceived": expected["lastReceived"],
+            "description": description,
+            "source": expected["source"],
+            "host": expected["host"],
+            "service": expected["service"],
+            "output": alert.get("output"),
+        }
+
+        if "service_state" in alert:
+            expected_dto_kwargs["service_state"] = alert["service_state"]
+        if "host_state" in alert:
+            expected_dto_kwargs["host_state"] = alert["host_state"]
+
+        expected_alert_dto = AlertDto(**expected_dto_kwargs)
         assert formatted_alert == expected_alert_dto
 
     @pytest.mark.parametrize(
