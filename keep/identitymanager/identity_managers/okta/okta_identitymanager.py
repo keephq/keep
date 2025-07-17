@@ -1,17 +1,13 @@
 import logging
 import os
-from typing import List, Optional
 
-import jwt
-import requests
-from fastapi import HTTPException
 
 from keep.api.models.user import Group, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.identity_managers.okta.okta_authverifier import OktaAuthVerifier
-from keep.identitymanager.identitymanager import BaseIdentityManager, PREDEFINED_ROLES
+from keep.identitymanager.identitymanager import BaseIdentityManager
 
 logger = logging.getLogger(__name__)
 

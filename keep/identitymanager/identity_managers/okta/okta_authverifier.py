@@ -2,12 +2,10 @@ import logging
 import os
 
 import jwt
-import requests
 from fastapi import Depends, HTTPException
 
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
-from jwt.algorithms import RSAAlgorithm
 
 logger = logging.getLogger(__name__)
 
