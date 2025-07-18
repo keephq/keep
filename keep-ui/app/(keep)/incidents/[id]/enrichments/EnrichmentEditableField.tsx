@@ -9,8 +9,8 @@ import { MdModeEdit } from "react-icons/md";
 interface EnrichmentEditableFieldProps {
   name?: string;
   value: string | string[] | number | boolean | null;
-  onUpdate: (fieldName: string, newValue: string | string[] | number | boolean) => void;
-  onDelete?: (fieldName: string) => void;
+  onUpdate: (fieldName: string, newValue: string | string[] | number | boolean) => Promise<void>;
+  onDelete?: (fieldName: string) => Promise<void>;
   children?: React.ReactNode;
 }
 
@@ -55,7 +55,7 @@ export const EnrichmentEditableField = ({
 
     if (Array.isArray(newValue) && Array.isArray(value) && xor(value, newValue).length === 0) {
       return;
-    } else if (value == newValue) {
+    } else if (value === newValue) {
       return;
     }
 
