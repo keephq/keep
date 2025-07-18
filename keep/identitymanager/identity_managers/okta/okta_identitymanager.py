@@ -1,4 +1,3 @@
-import logging
 import os
 
 
@@ -8,8 +7,6 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.identity_managers.okta.okta_authverifier import OktaAuthVerifier
 from keep.identitymanager.identitymanager import BaseIdentityManager
-
-logger = logging.getLogger(__name__)
 
 
 class OktaIdentityManager(BaseIdentityManager):
