@@ -399,34 +399,12 @@ def get_incident_form_schema(
             },
         )
             
-        # Convert fields to dicts for the response to avoid Pydantic validation issues
-        fields_as_dicts = []
-        for field in schema.fields:
-            if isinstance(field, FormFieldSchema):
-                fields_as_dicts.append(field.dict())
-            elif isinstance(field, dict):
-                fields_as_dicts.append(field)
-            else:
-                # Handle case where it might be some other type
-                try:
-                    if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
-                        fields_as_dicts.append(field.dict())
-                    elif hasattr(field, '__dict__'):
-                        fields_as_dicts.append(field.__dict__)
-                    else:
-                        # Skip invalid fields rather than crashing
-                        logger.warning(f"Skipping unsupported field type: {type(field)}")
-                        continue
-                except Exception as e:
-                    logger.error(f"Failed to convert field to dict: {e}")
-                    continue
-        
         return IncidentFormSchemaResponse(
             id=schema.id,
             tenant_id=schema.tenant_id,
             name=schema.name,
             description=schema.description,
-            fields=fields_as_dicts,
+            fields=schema.fields,
             is_active=schema.is_active,
             created_by=schema.created_by,
             created_at=schema.created_at,
@@ -463,34 +441,12 @@ def get_incident_form_schema(
         
         result = []
         for schema in schemas:
-            # Convert fields to dicts for the response to avoid Pydantic validation issues
-            fields_as_dicts = []
-            for field in schema.fields:
-                if isinstance(field, FormFieldSchema):
-                    fields_as_dicts.append(field.dict())
-                elif isinstance(field, dict):
-                    fields_as_dicts.append(field)
-                else:
-                    # Handle case where it might be some other type
-                    try:
-                        if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
-                            fields_as_dicts.append(field.dict())
-                        elif hasattr(field, '__dict__'):
-                            fields_as_dicts.append(field.__dict__)
-                        else:
-                            # Skip invalid fields rather than crashing
-                            logger.warning(f"Skipping unsupported field type: {type(field)}")
-                            continue
-                    except Exception as e:
-                        logger.error(f"Failed to convert field to dict: {e}")
-                        continue
-            
             result.append(IncidentFormSchemaResponse(
                 id=schema.id,
                 tenant_id=schema.tenant_id,
                 name=schema.name,
                 description=schema.description,
-                fields=fields_as_dicts,
+                fields=schema.fields,  # Direct use - no conversion needed
                 is_active=schema.is_active,
                 created_by=schema.created_by,
                 created_at=schema.created_at,
@@ -557,22 +513,10 @@ def create_or_update_incident_form_schema(
             extra={"tenant_id": tenant_id},
         )
         
-        # Convert fields to dicts before storing to ensure proper JSON serialization
-        fields_as_dicts_for_storage = []
-        for field in schema_data.fields:
-            if isinstance(field, FormFieldSchema):
-                field_dict = field.dict()
-                # Convert enum values to strings for JSON serialization
-                if 'type' in field_dict and hasattr(field_dict['type'], 'value'):
-                    field_dict['type'] = field_dict['type'].value
-                fields_as_dicts_for_storage.append(field_dict)
-            else:
-                fields_as_dicts_for_storage.append(field)
-        
         # Update existing schema
         existing_schema.name = schema_data.name
         existing_schema.description = schema_data.description
-        existing_schema.fields = fields_as_dicts_for_storage
+        existing_schema.fields = schema_data.fields  # Direct assignment - type handles conversion
         existing_schema.is_active = schema_data.is_active
         existing_schema.updated_at = datetime.utcnow()
             
@@ -589,34 +533,12 @@ def create_or_update_incident_form_schema(
                 )
             raise
         
-        # Convert fields to dicts for the response to avoid Pydantic validation issues
-        fields_as_dicts = []
-        for field in existing_schema.fields:
-            if isinstance(field, FormFieldSchema):
-                fields_as_dicts.append(field.dict())
-            elif isinstance(field, dict):
-                fields_as_dicts.append(field)
-            else:
-                # Handle case where it might be some other type
-                try:
-                    if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
-                        fields_as_dicts.append(field.dict())
-                    elif hasattr(field, '__dict__'):
-                        fields_as_dicts.append(field.__dict__)
-                    else:
-                        # Skip invalid fields rather than crashing
-                        logger.warning(f"Skipping unsupported field type: {type(field)}")
-                        continue
-                except Exception as e:
-                    logger.error(f"Failed to convert field to dict: {e}")
-                    continue
-        
         return IncidentFormSchemaResponse(
             id=existing_schema.id,
             tenant_id=existing_schema.tenant_id,
             name=existing_schema.name,
             description=existing_schema.description,
-            fields=fields_as_dicts,
+            fields=existing_schema.fields,  # Direct use - no conversion needed
             is_active=existing_schema.is_active,
             created_by=existing_schema.created_by,
             created_at=existing_schema.created_at,
@@ -628,24 +550,12 @@ def create_or_update_incident_form_schema(
             extra={"tenant_id": tenant_id},
         )
         
-        # Convert fields to dicts before storing to ensure proper JSON serialization
-        fields_as_dicts_for_storage = []
-        for field in schema_data.fields:
-            if isinstance(field, FormFieldSchema):
-                field_dict = field.dict()
-                # Convert enum values to strings for JSON serialization
-                if 'type' in field_dict and hasattr(field_dict['type'], 'value'):
-                    field_dict['type'] = field_dict['type'].value
-                fields_as_dicts_for_storage.append(field_dict)
-            else:
-                fields_as_dicts_for_storage.append(field)
-        
         # Create new schema
         new_schema = IncidentFormSchema(
             tenant_id=tenant_id,
             name=schema_data.name,
             description=schema_data.description,
-            fields=fields_as_dicts_for_storage,
+            fields=schema_data.fields,  # Direct assignment - type handles conversion
             is_active=schema_data.is_active,
             created_by=user_email,
             created_at=datetime.utcnow(),
@@ -670,34 +580,12 @@ def create_or_update_incident_form_schema(
             extra={"tenant_id": tenant_id, "schema_name": new_schema.name},
         )
         
-        # Convert fields to dicts for the response to avoid Pydantic validation issues
-        fields_as_dicts = []
-        for field in new_schema.fields:
-            if isinstance(field, FormFieldSchema):
-                fields_as_dicts.append(field.dict())
-            elif isinstance(field, dict):
-                fields_as_dicts.append(field)
-            else:
-                # Handle case where it might be some other type
-                try:
-                    if hasattr(field, 'dict') and callable(getattr(field, 'dict')):
-                        fields_as_dicts.append(field.dict())
-                    elif hasattr(field, '__dict__'):
-                        fields_as_dicts.append(field.__dict__)
-                    else:
-                        # Skip invalid fields rather than crashing
-                        logger.warning(f"Skipping unsupported field type: {type(field)}")
-                        continue
-                except Exception as e:
-                    logger.error(f"Failed to convert field to dict: {e}")
-                    continue
-        
         return IncidentFormSchemaResponse(
             id=new_schema.id,
             tenant_id=new_schema.tenant_id,
             name=new_schema.name,
             description=new_schema.description,
-            fields=fields_as_dicts,
+            fields=new_schema.fields,  # Direct use - no conversion needed
             is_active=new_schema.is_active,
             created_by=new_schema.created_by,
             created_at=new_schema.created_at,

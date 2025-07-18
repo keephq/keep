@@ -7,13 +7,15 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import UniqueConstraint
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlmodel import Column, Field, SQLModel
+
+from keep.api.models.db.types import PydanticListType
+from keep.api.models.incident_form_schema import FormFieldSchema
 
 
 class IncidentFormSchema(SQLModel, table=True):
     """Database model for incident form schemas - multiple per tenant allowed"""
     
-    __tablename__ = "incident_form_schema"
     __table_args__ = (
         UniqueConstraint("tenant_id", "name", name="uq_tenant_schema_name"),
     )
@@ -35,9 +37,9 @@ class IncidentFormSchema(SQLModel, table=True):
         default=None,
         description="Schema description"
     )
-    fields: List[dict] = Field(
-        sa_column=Column(JSON),
-        description="JSON array of form field definitions"
+    fields: List[FormFieldSchema] = Field(
+        sa_column=Column(PydanticListType(FormFieldSchema)),
+        description="Form field definitions with automatic serialization"
     )
     created_by: str = Field(
         description="User who created the schema"
