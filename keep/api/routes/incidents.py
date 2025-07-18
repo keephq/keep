@@ -47,7 +47,6 @@ from keep.api.core.incidents import (
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
 from keep.api.models.incident_form_schema import (
-    FormFieldSchema,
     IncidentFormSchemaDto,
     IncidentFormSchemaResponse,
 )

@@ -3,7 +3,7 @@ Custom SQLAlchemy types for Keep.
 """
 
 import logging
-from typing import List, Type
+from typing import Type
 
 from pydantic import BaseModel
 from sqlalchemy.types import JSON, TypeDecorator
