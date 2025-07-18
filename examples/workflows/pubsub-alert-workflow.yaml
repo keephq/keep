@@ -1,0 +1,18 @@
+id: pubsub-alert-workflow
+description: Publish all incoming alerts to Google Cloud Pub/Sub
+triggers:
+  - type: alert
+    filters:
+      - key: source
+        value: r".*"
+actions:
+  - name: publish-to-pubsub
+    provider:
+      type: pubsub
+      config: "{{ providers.pubsub }}"
+      with:
+        alert: "{{ alert }}"  # Pass the entire alert object
+        message: |
+          "Alert: {{ alert.name }} - {{ alert.description }}
+          Alert details: {{ alert }}"
+        title: "Keep Alert: {{ alert.name }}"
