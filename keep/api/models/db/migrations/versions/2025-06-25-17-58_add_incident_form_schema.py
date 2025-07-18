@@ -47,7 +47,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("tenant_id", "name", name="uq_tenant_schema_name"),
     )
-    op.create_index(op.f("ix_incident_form_schema_tenant_id"), "incident_form_schema", ["tenant_id"], unique=False)
+    op.create_index(op.f("ix_incident_form_schema_tenant_id"), "incidentformschema", ["tenant_id"], unique=False)
     # ### end Alembic commands ###
 
 
