@@ -7,6 +7,7 @@ import {
   SelectItem,
   Subtitle,
   TextInput,
+  Switch,
 } from "@tremor/react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -16,13 +17,15 @@ import {
   useWatch,
   useFieldArray,
 } from "react-hook-form";
-import { LayoutItem, Threshold } from "../../types";
+import { LayoutItem, Threshold, PresetPanelType } from "../../types";
 import ColumnsSelection from "./columns-selection";
 
 interface PresetForm {
   selectedPreset: string;
   countOfLastAlerts: string;
   thresholds: Threshold[];
+  presetPanelType: PresetPanelType;
+  showFiringOnly: boolean;
 }
 
 export interface PresetWidgetFormProps {
@@ -50,6 +53,8 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         { value: 0, color: "#22c55e" }, // Green
         { value: 20, color: "#ef4444" }, // Red
       ],
+      presetPanelType: editingItem?.presetPanelType || PresetPanelType.ALERT_TABLE,
+      showFiringOnly: editingItem?.showFiringOnly ?? false,
     },
   });
   const [presetColumns, setPresetColumns] = useState<string[] | undefined>(
@@ -72,6 +77,8 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         ...t,
         value: parseInt(t.value?.toString() as string, 10) || 0,
       })),
+      presetPanelType: formValues.presetPanelType || PresetPanelType.ALERT_TABLE,
+      showFiringOnly: formValues.showFiringOnly ?? false,
     };
   }, [formValues, presetColumns]);
 
@@ -80,8 +87,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       return {} as LayoutItem;
     }
 
-    const itemHeight = normalizedFormValues.countOfLastAlerts > 0 ? 6 : 4;
-    const itemWidth = normalizedFormValues.countOfLastAlerts > 0 ? 4 : 3;
+    const isAlertTable = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE;
+    const itemHeight = isAlertTable && normalizedFormValues.countOfLastAlerts > 0 ? 6 : 4;
+    const itemWidth = isAlertTable && normalizedFormValues.countOfLastAlerts > 0 ? 4 : 3;
 
     return {
       w: itemWidth,
@@ -102,6 +110,8 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         },
         presetColumns: normalizedFormValues.presetColumns,
         thresholds: normalizedFormValues.thresholds,
+        presetPanelType: normalizedFormValues.presetPanelType,
+        showFiringOnly: normalizedFormValues.showFiringOnly,
       },
       isValid
     );
@@ -158,33 +168,82 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         />
       </div>
       <div className="mb-4 mt-2">
-        <Subtitle>Last alerts count to display</Subtitle>
+        <Subtitle>Panel Type</Subtitle>
         <Controller
-          name="countOfLastAlerts"
+          name="presetPanelType"
           control={control}
           rules={{
             required: {
               value: true,
-              message: "Preset selection is required",
+              message: "Panel type selection is required",
             },
           }}
           render={({ field }) => (
-            <TextInput
+            <Select
               {...field}
-              error={!!get(errors, "countOfLastAlerts.message")}
-              errorMessage={get(errors, "countOfLastAlerts.message")}
-              onBlur={handleThresholdBlur}
-              type="number"
-              placeholder="Value indicating how many alerts to display in widget"
-              required
-            />
+              placeholder="Select a panel type"
+              error={!!get(errors, "presetPanelType.message")}
+              errorMessage={get(errors, "presetPanelType.message")}
+            >
+              <SelectItem value={PresetPanelType.ALERT_TABLE}>
+                Alert Table
+              </SelectItem>
+              <SelectItem value={PresetPanelType.ALERT_COUNT_PANEL}>
+                Alert Count Panel
+              </SelectItem>
+            </Select>
           )}
         />
       </div>
-      <ColumnsSelection
-        selectedColumns={presetColumns}
-        onChange={(selectedColumns) => setPresetColumns(selectedColumns)}
-      ></ColumnsSelection>
+      {formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL && (
+        <div className="mb-4 mt-2">
+          <div className="flex items-center justify-between">
+            <Subtitle>Show Firing Alerts Only</Subtitle>
+            <Controller
+              name="showFiringOnly"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+        </div>
+      )}
+      {formValues.presetPanelType === PresetPanelType.ALERT_TABLE && (
+        <>
+          <div className="mb-4 mt-2">
+            <Subtitle>Last alerts count to display</Subtitle>
+            <Controller
+              name="countOfLastAlerts"
+              control={control}
+              rules={{
+                required: {
+                  value: true,
+                  message: "Preset selection is required",
+                },
+              }}
+              render={({ field }) => (
+                <TextInput
+                  {...field}
+                  error={!!get(errors, "countOfLastAlerts.message")}
+                  errorMessage={get(errors, "countOfLastAlerts.message")}
+                  onBlur={handleThresholdBlur}
+                  type="number"
+                  placeholder="Value indicating how many alerts to display in widget"
+                  required
+                />
+              )}
+            />
+          </div>
+          <ColumnsSelection
+            selectedColumns={presetColumns}
+            onChange={(selectedColumns) => setPresetColumns(selectedColumns)}
+          ></ColumnsSelection>
+        </>
+      )}
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <Subtitle>Thresholds</Subtitle>
