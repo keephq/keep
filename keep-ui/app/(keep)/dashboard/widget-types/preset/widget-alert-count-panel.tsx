@@ -123,7 +123,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
 
   return (
     <div
-      style={{
+      style={{ 
         background: hexToRgb(color, 0.15),
         borderColor: color,
         borderWidth: '2px'
@@ -132,7 +132,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     >
       <div className="flex flex-col h-full">
         {/* Header with preset name */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <div className="text-xs font-semibold text-gray-800 truncate">
             {preset?.name}
           </div>
@@ -147,12 +147,12 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 flex flex-col justify-center">
+        <div className="flex-1 flex flex-col justify-center min-h-0">
           {/* Alert count display */}
           <div className="text-center mb-1">
-            <div
-              className="text-2xl font-black tracking-tight"
-              style={{
+            <div 
+              className="text-2xl font-black tracking-tight" 
+              style={{ 
                 color,
                 textShadow: `0 1px 2px rgba(0,0,0,0.1)`
               }}
@@ -166,7 +166,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
           </div>
 
           {/* Label with icon */}
-          <div className="flex items-center justify-center text-xs font-medium text-gray-700">
+          <div className="flex items-center justify-center text-xs font-medium text-gray-700 h-4">
             <span>{label}</span>
             {showFiringOnly && (
               <Icon
@@ -180,17 +180,17 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         </div>
 
         {/* Status indicator */}
-        {!isLoading && (
-          <div className="mt-1 flex justify-center">
-            <div
+        <div className="mt-1 flex justify-center flex-shrink-0 h-2">
+          {!isLoading && (
+            <div 
               className="w-2 h-2 rounded-full shadow-sm"
-              style={{
+              style={{ 
                 backgroundColor: color,
                 boxShadow: `0 1px 2px ${hexToRgb(color, 0.3)}`
               }}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
