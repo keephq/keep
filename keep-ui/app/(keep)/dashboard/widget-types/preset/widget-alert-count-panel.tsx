@@ -31,34 +31,49 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     }
     return "";
   }, [searchParams]);
-  
+
   const presets = useDashboardPreset();
   const preset = useMemo(
     () => presets.find((preset) => preset.name === presetName),
     [presets, presetName]
   );
-  
+
   const presetCel = useMemo(
     () => preset?.options.find((option) => option.label === "CEL")?.value || "",
     [preset]
   );
-  
+
   const filterCel = useMemo(
     () => [timeRangeCel, presetCel].filter(Boolean).join(" && "),
     [presetCel, timeRangeCel]
   );
 
+  // Get total alerts count
   const {
-    totalCount: presetAlertsCount,
-    isLoading,
+    totalCount: totalAlertsCount,
+    isLoading: isLoadingTotal,
   } = usePresetAlertsCount(
     filterCel,
-    showFiringOnly,
-    0, // No limit for count panel
+    false, // Always get total count
     0,
-    10000 // refresh interval
+    0,
+    10000
   );
-  
+
+  // Get firing alerts count
+  const {
+    totalCount: firingAlertsCount,
+    isLoading: isLoadingFiring,
+  } = usePresetAlertsCount(
+    filterCel,
+    true, // Get firing count
+    0,
+    0,
+    10000
+  );
+
+  const isLoading = isLoadingTotal || isLoadingFiring;
+
   const router = useRouter();
 
   function handleGoToPresetClick() {
@@ -99,13 +114,17 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   }
 
   const label = showFiringOnly ? "Firing Alerts" : "Total Alerts";
-  const count = isLoading ? "..." : presetAlertsCount;
-  const color = getColor(presetAlertsCount);
+  const displayCount = showFiringOnly ? firingAlertsCount : totalAlertsCount;
+  const count = isLoading ? "..." : displayCount;
+
+  // Use firing count for threshold colors when showFiringOnly is selected
+  const thresholdCount = showFiringOnly ? firingAlertsCount : totalAlertsCount;
+  const color = getColor(thresholdCount);
 
   return (
     <div
-      style={{ 
-        background: background || hexToRgb(color, 0.15),
+      style={{
+        background: hexToRgb(color, 0.15),
         borderColor: color,
         borderWidth: '2px'
       }}
@@ -131,9 +150,9 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         <div className="flex-1 flex flex-col justify-center">
           {/* Alert count display */}
           <div className="text-center mb-1">
-            <div 
-              className="text-2xl font-black tracking-tight" 
-              style={{ 
+            <div
+              className="text-2xl font-black tracking-tight"
+              style={{
                 color,
                 textShadow: `0 1px 2px rgba(0,0,0,0.1)`
               }}
@@ -163,9 +182,9 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         {/* Status indicator */}
         {!isLoading && (
           <div className="mt-1 flex justify-center">
-            <div 
+            <div
               className="w-2 h-2 rounded-full shadow-sm"
-              style={{ 
+              style={{
                 backgroundColor: color,
                 boxShadow: `0 1px 2px ${hexToRgb(color, 0.3)}`
               }}
