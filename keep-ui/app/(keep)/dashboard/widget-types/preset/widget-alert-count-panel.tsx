@@ -66,7 +66,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   }
 
   const getColor = (count: number) => {
-    let color = "#000000";
+    let color = "#1f2937"; // Default dark gray instead of black
     if (thresholds && thresholds.length > 0) {
       for (let i = thresholds.length - 1; i >= 0; i--) {
         if (count >= thresholds[i].value) {
@@ -78,25 +78,25 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     return color;
   };
 
-  function hexToRgb(hex: string, alpha: number = 1) {
-    // Remove '#' if present
-    hex = hex.replace(/^#/, "");
+  // function hexToRgb(hex: string, alpha: number = 1) {
+  //   // Remove '#' if present
+  //   hex = hex.replace(/^#/, "");
 
-    // Handle shorthand form (#f44 → #ff4444)
-    if (hex.length === 3) {
-      hex = hex
-        .split("")
-        .map((c) => c + c)
-        .join("");
-    }
+  //   // Handle shorthand form (#f44 → #ff4444)
+  //   if (hex.length === 3) {
+  //     hex = hex
+  //       .split("")
+  //       .map((c) => c + c)
+  //       .join("");
+  //   }
 
-    const bigint = parseInt(hex, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
+  //   const bigint = parseInt(hex, 16);
+  //   const r = (bigint >> 16) & 255;
+  //   const g = (bigint >> 8) & 255;
+  //   const b = bigint & 255;
 
-    return `rgb(${r}, ${g}, ${b}, ${alpha})`;
-  }
+  //   return `rgb(${r}, ${g}, ${b}, ${alpha})`;
+  // }
 
   const label = showFiringOnly ? "Firing Alerts" : "Total Alerts";
   const count = isLoading ? "..." : presetAlertsCount;
@@ -104,39 +104,74 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
 
   return (
     <div
-      style={{ background: background || hexToRgb(color, 0.1) }}
-      className="bg-opacity-25 max-w-full border rounded-md p-4"
+      style={{ 
+        background: background,
+        borderColor: color,
+        borderWidth: '2px'
+      }}
+      className="max-w-full border rounded-lg p-3 h-full shadow-sm"
     >
-      <div className="flex flex-col items-center justify-center text-center space-y-4">
-        <div className="text-2xl font-bold" style={{ color }}>
-          {isLoading ? (
-            <Skeleton containerClassName="h-8 w-16" />
-          ) : (
-            count
-          )}
+      <div className="flex flex-col h-full">
+        {/* Header with preset name */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold text-gray-800 truncate">
+            {preset?.name}
+          </div>
+          <Button
+            color="orange"
+            variant="secondary"
+            size="xs"
+            onClick={handleGoToPresetClick}
+          >
+            Go to Preset
+          </Button>
         </div>
-        <div className="text-sm text-gray-600">
-          {label}
-          {showFiringOnly && (
-            <Icon
-              className="ml-2 inline-block"
-              style={{ color }}
-              size="sm"
-              icon={FireIcon}
+
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col justify-center">
+          {/* Alert count display */}
+          <div className="text-center mb-2">
+            <div 
+              className="text-4xl font-black tracking-tight" 
+              style={{ 
+                color,
+                textShadow: `0 1px 2px rgba(0,0,0,0.1)`
+              }}
+            >
+              {isLoading ? (
+                <Skeleton containerClassName="h-10 w-20 mx-auto" />
+              ) : (
+                count
+              )}
+            </div>
+          </div>
+
+          {/* Label with icon */}
+          <div className="flex items-center justify-center text-sm font-medium text-gray-700">
+            <span>{label}</span>
+            {showFiringOnly && (
+              <Icon
+                className="ml-1"
+                style={{ color }}
+                size="sm"
+                icon={FireIcon}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Status indicator */}
+        {!isLoading && (
+          <div className="mt-3 flex justify-center">
+            <div 
+              className="w-3 h-3 rounded-full shadow-sm"
+              style={{ 
+                backgroundColor: color,
+                // boxShadow: `0 2px 4px ${hexToRgb(color, 0.3)}`
+              }}
             />
-          )}
-        </div>
-        <div className="text-xs text-gray-500">
-          {preset?.name}
-        </div>
-        <Button
-          color="orange"
-          variant="secondary"
-          size="xs"
-          onClick={handleGoToPresetClick}
-        >
-          Go to Preset
-        </Button>
+          </div>
+        )}
       </div>
     </div>
   );

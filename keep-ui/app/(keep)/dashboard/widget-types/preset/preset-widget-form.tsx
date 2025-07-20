@@ -50,8 +50,8 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         ? editingItem.preset.countOfLastAlerts || 0
         : 5,
       thresholds: editingItem?.thresholds || [
-        { value: 0, color: "#22c55e" }, // Green
-        { value: 20, color: "#ef4444" }, // Red
+        { value: 0, color: "#10b981" }, // Bold emerald green
+        { value: 20, color: "#dc2626" }, // Bold red
       ],
       presetPanelType: editingItem?.presetPanelType || PresetPanelType.ALERT_TABLE,
       showFiringOnly: editingItem?.showFiringOnly ?? false,
