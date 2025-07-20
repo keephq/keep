@@ -88,8 +88,22 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
     }
 
     const isAlertTable = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE;
+    const isAlertCountPanel = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+    
+    if (isAlertCountPanel) {
+      // Narrower, more compact layout for count panels with no minimum width
+      return {
+        w: 4,
+        h: 3,
+        minW: 0,
+        minH: 2,
+        static: false,
+      } as LayoutItem;
+    }
+    
+    // Original layout for alert tables
     const itemHeight = isAlertTable && normalizedFormValues.countOfLastAlerts > 0 ? 6 : 4;
-    const itemWidth = isAlertTable && normalizedFormValues.countOfLastAlerts > 0 ? 4 : 3;
+    const itemWidth = isAlertTable && normalizedFormValues.countOfLastAlerts > 0 ? 8 : 6;
 
     return {
       w: itemWidth,
