@@ -241,21 +241,21 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
               }}
               render={({ field }) => (
                 <TextInput
-                  {...field}
-                  error={!!get(errors, "countOfLastAlerts.message")}
-                  errorMessage={get(errors, "countOfLastAlerts.message")}
-                  onBlur={handleThresholdBlur}
-                  type="number"
-                  placeholder="Value indicating how many alerts to display in widget"
-                  required
-                />
-              )}
+              {...field}
+              error={!!get(errors, "countOfLastAlerts.message")}
+              errorMessage={get(errors, "countOfLastAlerts.message")}
+              onBlur={handleThresholdBlur}
+              type="number"
+              placeholder="Value indicating how many alerts to display in widget"
+              required
             />
-          </div>
-          <ColumnsSelection
-            selectedColumns={presetColumns}
-            onChange={(selectedColumns) => setPresetColumns(selectedColumns)}
-          ></ColumnsSelection>
+          )}
+        />
+      </div>
+      <ColumnsSelection
+        selectedColumns={presetColumns}
+        onChange={(selectedColumns) => setPresetColumns(selectedColumns)}
+      ></ColumnsSelection>
         </>
       )}
       <div className="mb-4">

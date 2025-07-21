@@ -131,10 +131,18 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
       className="max-w-full border rounded-lg p-2 h-full shadow-sm"
     >
       <div className="flex flex-col h-full">
-        {/* Header with preset name */}
+        {/* Header with label and button */}
         <div className="flex items-center justify-between mb-2 flex-shrink-0">
-          <div className="text-xs font-semibold text-gray-800 truncate">
-            {preset?.name}
+          <div className="flex items-center justify-center text-sm font-medium text-gray-700 h-4">
+            <span>{label}</span>
+            {showFiringOnly && (
+              <Icon
+                className="ml-1"
+                style={{ color }}
+                size="sm"
+                icon={FireIcon}
+              />
+            )}
           </div>
           <Button
             color="orange"
@@ -146,50 +154,27 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
           </Button>
         </div>
 
-        {/* Main content area */}
+        {/* Main content area with diagonal alignment */}
         <div className="flex-1 flex flex-col justify-center min-h-0">
-          {/* Alert count display */}
-          <div className="text-center mb-1">
+          {/* Preset name and count in diagonal layout */}
+          <div className="flex flex-col space-y-2 items-center">
+            <div className="text-2xl font-bold text-gray-700">
+              {preset?.name}
+            </div>
             <div 
-              className="text-2xl font-black tracking-tight" 
+              className="text-4xl font-black tracking-tight" 
               style={{ 
                 color,
                 textShadow: `0 1px 2px rgba(0,0,0,0.1)`
               }}
             >
               {isLoading ? (
-                <Skeleton containerClassName="h-6 w-12 mx-auto" />
+                <Skeleton containerClassName="h-8 w-16" />
               ) : (
                 count
               )}
             </div>
           </div>
-
-          {/* Label with icon */}
-          <div className="flex items-center justify-center text-xs font-medium text-gray-700 h-4">
-            <span>{label}</span>
-            {showFiringOnly && (
-              <Icon
-                className="ml-1"
-                style={{ color }}
-                size="xs"
-                icon={FireIcon}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Status indicator */}
-        <div className="mt-1 flex justify-center flex-shrink-0 h-2">
-          {!isLoading && (
-            <div 
-              className="w-2 h-2 rounded-full shadow-sm"
-              style={{ 
-                backgroundColor: color,
-                boxShadow: `0 1px 2px ${hexToRgb(color, 0.3)}`
-              }}
-            />
-          )}
         </div>
       </div>
     </div>

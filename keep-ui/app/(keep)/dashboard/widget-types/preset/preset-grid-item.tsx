@@ -185,32 +185,32 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     <div className="flex flex-col overflow-y-auto gap-2">
       {isAlertTable && (
         <>
-          <div className="flex gap-2">
-            <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
-              <div className="flex gap-1 items-center">
-                <div>Preset name:</div>
-                <div className="truncate">{preset?.name}</div>
-              </div>
-              {renderCEL()}
-              {renderAlertsCountText()}
-            </div>
-            <div className="flex items-center">
-              <Button
-                color="orange"
-                variant="secondary"
-                size="xs"
-                onClick={handleGoToPresetClick}
-              >
-                Go to preset
-              </Button>
-            </div>
+      <div className="flex gap-2">
+        <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
+          <div className="flex gap-1 items-center">
+            <div>Preset name:</div>
+            <div className="truncate">{preset?.name}</div>
           </div>
-          {countOfLastAlerts > 0 && (
-            <WidgetAlertsTable
-              presetName={preset?.name as string}
-              alerts={isLoading ? undefined : alerts}
-              columns={(item as any)?.presetColumns}
-              background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
+          {renderCEL()}
+          {renderAlertsCountText()}
+        </div>
+        <div className="flex items-center">
+          <Button
+            color="orange"
+            variant="secondary"
+            size="xs"
+            onClick={handleGoToPresetClick}
+          >
+            Go to preset
+          </Button>
+        </div>
+      </div>
+      {countOfLastAlerts > 0 && (
+        <WidgetAlertsTable
+          presetName={preset?.name as string}
+          alerts={isLoading ? undefined : alerts}
+          columns={(item as any)?.presetColumns}
+          background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
             />
           )}
         </>
