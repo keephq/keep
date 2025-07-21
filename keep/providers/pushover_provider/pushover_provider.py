@@ -24,7 +24,7 @@ class PushoverProviderAuthConfig:
         metadata={"required": True, "description": "Pushover user key"}
     )
     sound: str = dataclasses.field(
-        default="pushoverecho",
+        default="pushover",
         metadata={"required": False, "description": "Pushover notification sound"}
     )
     priority: int = dataclasses.field(
