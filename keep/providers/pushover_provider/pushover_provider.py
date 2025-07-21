@@ -1,4 +1,5 @@
 import dataclasses
+import os
 
 import pydantic
 import requests
@@ -21,6 +22,17 @@ class PushoverProviderAuthConfig:
     )
     user_key: str = dataclasses.field(
         metadata={"required": True, "description": "Pushover user key"}
+    )
+    sound: str = dataclasses.field(
+        default="pushoverecho",
+        metadata={"required": False, "description": "Pushover notification sound"}
+    )
+    priority: int = dataclasses.field(
+        default=0,
+        metadata={
+            "required": False,
+            "description": "Pushover Priority (-2=Lowest, -1=Low, 0=Normal, 1=High, 2=Emergency)"
+        }
     )
 
 
@@ -55,12 +67,16 @@ class PushoverProvider(BaseProvider):
             message (str): The content of the message.
         """
         self.logger.debug("Notifying alert message to Pushover")
+        sound = self.authentication_config.sound
+        priority = self.authentication_config.priority
         resp = requests.post(
             "https://api.pushover.net/1/messages.json",
             data={
                 "token": self.authentication_config.token,
                 "user": self.authentication_config.user_key,
                 "message": message,
+                "sound": sound,
+                "priority": priority,
             },
         )
         resp.raise_for_status()
