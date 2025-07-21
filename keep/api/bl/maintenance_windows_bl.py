@@ -24,6 +24,7 @@ class MaintenanceWindowsBl:
             .filter(MaintenanceWindowRule.tenant_id == tenant_id)
             .filter(MaintenanceWindowRule.enabled == True)
             .filter(MaintenanceWindowRule.end_time >= datetime.datetime.now())
+            .filter(MaintenanceWindowRule.start_time <= datetime.datetime.now())
             .all()
         )
 
