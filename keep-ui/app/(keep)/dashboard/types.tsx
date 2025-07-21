@@ -43,6 +43,7 @@ export interface WidgetData extends LayoutItem {
   metric?: MetricsWidget;
   presetPanelType?: PresetPanelType;
   showFiringOnly?: boolean;
+  customLink?: string;
 }
 
 export interface Threshold {

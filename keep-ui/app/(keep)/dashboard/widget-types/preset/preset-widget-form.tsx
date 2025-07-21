@@ -26,6 +26,7 @@ interface PresetForm {
   thresholds: Threshold[];
   presetPanelType: PresetPanelType;
   showFiringOnly: boolean;
+  customLink?: string;
 }
 
 export interface PresetWidgetFormProps {
@@ -55,6 +56,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       ],
       presetPanelType: editingItem?.presetPanelType || PresetPanelType.ALERT_TABLE,
       showFiringOnly: editingItem?.showFiringOnly ?? false,
+      customLink: editingItem?.customLink || "",
     },
   });
   const [presetColumns, setPresetColumns] = useState<string[] | undefined>(
@@ -79,6 +81,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       })),
       presetPanelType: formValues.presetPanelType || PresetPanelType.ALERT_TABLE,
       showFiringOnly: formValues.showFiringOnly ?? false,
+      customLink: formValues.customLink || "",
     };
   }, [formValues, presetColumns]);
 
@@ -126,6 +129,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         thresholds: normalizedFormValues.thresholds,
         presetPanelType: normalizedFormValues.presetPanelType,
         showFiringOnly: normalizedFormValues.showFiringOnly,
+        customLink: normalizedFormValues.customLink,
       },
       isValid
     );
@@ -210,21 +214,37 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         />
       </div>
       {formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL && (
-        <div className="mb-4 mt-2">
-          <div className="flex items-center justify-between">
-            <Subtitle>Show Firing Alerts Only</Subtitle>
+        <>
+          <div className="mb-4 mt-2">
+            <div className="flex items-center justify-between">
+              <Subtitle>Show Firing Alerts Only</Subtitle>
+              <Controller
+                name="showFiringOnly"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+          </div>
+          <div className="mb-4 mt-2">
+            <Subtitle>Custom Link (optional)</Subtitle>
             <Controller
-              name="showFiringOnly"
+              name="customLink"
               control={control}
               render={({ field }) => (
-                <Switch
-                  checked={field.value}
-                  onChange={field.onChange}
+                <TextInput
+                  {...field}
+                  placeholder="https://example.com or leave empty for preset link"
+                  type="url"
                 />
               )}
             />
           </div>
-        </div>
+        </>
       )}
       {formValues.presetPanelType === PresetPanelType.ALERT_TABLE && (
         <>

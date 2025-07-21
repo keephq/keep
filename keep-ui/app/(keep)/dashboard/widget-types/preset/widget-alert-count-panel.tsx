@@ -14,6 +14,7 @@ interface WidgetAlertCountPanelProps {
   showFiringOnly?: boolean;
   background?: string;
   thresholds?: Threshold[];
+  customLink?: string;
 }
 
 const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
@@ -21,6 +22,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   showFiringOnly = false,
   background,
   thresholds = [],
+  customLink,
 }) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(() => {
@@ -80,6 +82,12 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     router.push(`/alerts/${preset?.name.toLowerCase()}`);
   }
 
+  function handleCustomLinkClick() {
+    if (customLink) {
+      window.open(customLink, '_blank');
+    }
+  }
+
   const getColor = (count: number) => {
     let color = "#1f2937"; // Default dark gray instead of black
     if (thresholds && thresholds.length > 0) {
@@ -122,15 +130,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   const color = getColor(thresholdCount);
 
   return (
-    <div
-      style={{ 
-        background: hexToRgb(color, 0.15),
-        borderColor: color,
-        borderWidth: '2px'
-      }}
-      className="max-w-full border rounded-lg p-2 h-full shadow-sm"
-    >
-      <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full">
         {/* Header with label and button */}
         <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <div className="flex items-center justify-center text-sm font-medium text-gray-700 h-4">
@@ -144,15 +144,36 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               />
             )}
           </div>
-          <Button
-            color="orange"
-            variant="secondary"
-            size="xs"
-            onClick={handleGoToPresetClick}
-          >
-            Go to Preset
-          </Button>
+          <div className="flex items-center space-x-1">
+            <Button
+              color="orange"
+              variant="secondary"
+              size="xs"
+              onClick={handleGoToPresetClick}
+            >
+              Go to Preset
+            </Button>
+            {customLink && (
+              <Button
+                color="blue"
+                variant="secondary"
+                size="xs"
+                onClick={handleCustomLinkClick}
+              >
+                Go to Link
+              </Button>
+            )}
+          </div>
         </div>
+    <div
+      style={{ 
+        background: hexToRgb(color, 0.15),
+        borderColor: color,
+        borderWidth: '2px'
+      }}
+      className="max-w-full border rounded-lg p-2 h-full shadow-sm"
+    >
+      
 
         {/* Main content area with diagonal alignment */}
         <div className="flex-1 flex flex-col justify-center min-h-0">

@@ -221,6 +221,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           showFiringOnly={item.showFiringOnly}
           background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
           thresholds={item.thresholds}
+          customLink={item.customLink}
         />
       )}
     </div>
