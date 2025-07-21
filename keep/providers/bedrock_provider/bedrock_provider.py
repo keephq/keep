@@ -8,7 +8,6 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.exceptions.provider_exception import ProviderException
-from botocore.exceptions import ClientError, NoCredentialsError, ProfileNotFound
 import logging
 
 logger = logging.getLogger(__name__)
