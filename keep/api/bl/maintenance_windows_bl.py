@@ -5,10 +5,11 @@ import logging
 import celpy
 from sqlmodel import Session
 
+from keep.api.consts import MAINTENANCE_WINDOW_ALERT_STRATEGY
 from keep.api.core.db import get_session_sync
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import AlertAudit
+from keep.api.models.db.alert import Alert, AlertAudit
 from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
@@ -55,32 +56,8 @@ class MaintenanceWindowsBl:
                 )
                 continue
 
-            cel = preprocess_cel_expression(maintenance_rule.cel_query)
-            ast = env.compile(cel)
-            prgm = env.program(ast)
+            cel_result = MaintenanceWindowsBl.evaluate_cel(maintenance_rule, alert, env, self.logger, extra)
 
-            payload = alert.dict()
-            # todo: fix this in the future
-            payload["source"] = payload["source"][0]
-
-            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
-
-            try:
-                cel_result = prgm.evaluate(activation)
-            except celpy.evaluation.CELEvalError as e:
-                error_msg = str(e).lower()
-                if "no such member" in error_msg or "undeclared reference" in error_msg:
-                    self.logger.debug(
-                        f"Skipping maintenance window rule due to missing field: {str(e)}",
-                        extra={**extra, "maintenance_rule_id": maintenance_rule.id},
-                    )
-                    continue
-                # Log unexpected CEL errors but don't fail the entire event processing
-                self.logger.error(
-                    f"Unexpected CEL evaluation error: {str(e)}",
-                    extra={**extra, "maintenance_rule_id": maintenance_rule.id},
-                )
-                continue
             if cel_result:
                 self.logger.info(
                     "Alert is in maintenance window",
@@ -112,9 +89,47 @@ class MaintenanceWindowsBl:
 
                 if maintenance_rule.suppress:
                     # If user chose to suppress the alert, let it in but override the status.
-                    alert.status = AlertStatus.SUPPRESSED.value
+                    if MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
+                        alert.previous_status = alert.status
+                        alert.status = AlertStatus.MAINTENANCE.value
+                    else:
+                        alert.status = AlertStatus.SUPPRESSED.value
                     return False
 
                 return True
         self.logger.info("Alert is not in maintenance window", extra=extra)
         return False
+
+    @staticmethod
+    def evaluate_cel(maintenance_window: MaintenanceWindowRule, alert: AlertDto | Alert, environment: celpy.Environment, logger, logger_extra_info: dict) -> bool:
+
+        cel = preprocess_cel_expression(maintenance_window.cel_query)
+        ast = environment.compile(cel)
+        prgm = environment.program(ast)
+
+        if isinstance(alert, AlertDto):
+            payload = alert.dict()
+        else:
+            payload = alert.event
+        # todo: fix this in the future
+        payload["source"] = payload["source"][0]
+
+        activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+
+        try:
+            cel_result = prgm.evaluate(activation)
+            return True if cel_result else False
+        except celpy.evaluation.CELEvalError as e:
+            error_msg = str(e).lower()
+            if "no such member" in error_msg or "undeclared reference" in error_msg:
+                logger.debug(
+                    f"Skipping maintenance window rule due to missing field: {str(e)}",
+                    extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
+                )
+                return False
+            # Log unexpected CEL errors but don't fail the entire event processing
+            logger.error(
+                f"Unexpected CEL evaluation error: {str(e)}",
+                extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
+            )
+            return False
