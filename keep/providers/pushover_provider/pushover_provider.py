@@ -23,17 +23,6 @@ class PushoverProviderAuthConfig:
     user_key: str = dataclasses.field(
         metadata={"required": True, "description": "Pushover user key"}
     )
-    sound: str = dataclasses.field(
-        default="pushover",
-        metadata={"required": False, "description": "Pushover notification sound"}
-    )
-    priority: int = dataclasses.field(
-        default=0,
-        metadata={
-            "required": False,
-            "description": "Pushover Priority (-2=Lowest, -1=Low, 0=Normal, 1=High, 2=Emergency)"
-        }
-    )
 
 
 class PushoverProvider(BaseProvider):
@@ -67,8 +56,10 @@ class PushoverProvider(BaseProvider):
             message (str): The content of the message.
         """
         self.logger.debug("Notifying alert message to Pushover")
-        sound = self.authentication_config.sound
-        priority = self.authentication_config.priority
+        sound = kwargs.get("sound", "pushover")
+        priority = kwargs.get("priority", 0)
+        retry = kwargs.get("retry", 60)
+        expire = kwargs.get("expire", 3600)
         resp = requests.post(
             "https://api.pushover.net/1/messages.json",
             data={
@@ -77,6 +68,7 @@ class PushoverProvider(BaseProvider):
                 "message": message,
                 "sound": sound,
                 "priority": priority,
+                **({"retry": retry, "expire": expire} if priority == 2 else {}),
             },
         )
         resp.raise_for_status()
