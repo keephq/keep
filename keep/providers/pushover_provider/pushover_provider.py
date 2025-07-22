@@ -57,7 +57,7 @@ class PushoverProvider(BaseProvider):
         """
         self.logger.debug("Notifying alert message to Pushover")
         sound = kwargs.get("sound", "pushover")
-        priority = kwargs.get("priority", 0)
+        priority = int(kwargs.get("priority", 0))
         retry = kwargs.get("retry", 60)
         expire = kwargs.get("expire", 3600)
         resp = requests.post(
