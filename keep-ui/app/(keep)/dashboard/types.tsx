@@ -29,6 +29,11 @@ export enum WidgetType {
   GENERICS_METRICS = "GENERICS_METRICS",
 }
 
+export enum PresetPanelType {
+  ALERT_TABLE = "ALERT_TABLE",
+  ALERT_COUNT_PANEL = "ALERT_COUNT_PANEL",
+}
+
 export interface WidgetData extends LayoutItem {
   thresholds?: Threshold[];
   preset?: Preset;
@@ -36,6 +41,9 @@ export interface WidgetData extends LayoutItem {
   widgetType: WidgetType;
   genericMetrics?: GenericsMetrics;
   metric?: MetricsWidget;
+  presetPanelType?: PresetPanelType;
+  showFiringOnly?: boolean;
+  customLink?: string;
 }
 
 export interface Threshold {
