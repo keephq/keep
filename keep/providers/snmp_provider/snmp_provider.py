@@ -151,6 +151,8 @@ class SnmpProvider(BaseProvider):
         self.trap_receiver_thread = None
         self.stop_event = threading.Event()
         self.received_traps = []
+        self.trap_lock = threading.Lock()  # Thread safety for received_traps
+        self.receiver_lock = threading.Lock()  # Prevent multiple receiver startups
 
     def dispose(self):
         """
@@ -330,10 +332,9 @@ class SnmpProvider(BaseProvider):
                 'rfc3412.receiveMessage:request'
             )
             if exec_context:
-                transport_domain, transport_address = exec_context.get(
-                    'transportDomain', (None, None)
-                ), exec_context.get('transportAddress', (None, None))
-                if transport_address:
+                transport_domain = exec_context.get('transportDomain')
+                transport_address = exec_context.get('transportAddress')
+                if transport_address and len(transport_address) >= 2:
                     transport_info['source_ip'] = transport_address[0]
                     transport_info['source_port'] = transport_address[1]
             
@@ -344,13 +345,14 @@ class SnmpProvider(BaseProvider):
             # Convert to AlertDto
             alert = self._convert_trap_to_alert(trap_data)
             
-            # Store the alert with overflow protection
-            max_alerts = 1000  # Maximum alerts to keep in memory
-            if len(self.received_traps) >= max_alerts:
-                self.logger.warning(f"Alert buffer full ({max_alerts}), removing oldest alert")
-                self.received_traps.pop(0)
-            
-            self.received_traps.append(alert)
+            # Store the alert with overflow protection (thread-safe)
+            with self.trap_lock:
+                max_alerts = 1000  # Maximum alerts to keep in memory
+                if len(self.received_traps) >= max_alerts:
+                    self.logger.warning(f"Alert buffer full ({max_alerts}), removing oldest alert")
+                    self.received_traps.pop(0)
+                
+                self.received_traps.append(alert)
             
             self.logger.info(
                 "Received SNMP trap",
@@ -489,17 +491,19 @@ class SnmpProvider(BaseProvider):
 
     def _get_alerts(self) -> List[AlertDto]:
         """
-        Get received SNMP trap alerts
+        Get received SNMP trap alerts (thread-safe)
         """
         self.logger.info("Getting SNMP trap alerts")
         
-        # Start trap receiver if not already running
-        if not self.trap_receiver_thread or not self.trap_receiver_thread.is_alive():
-            self._start_trap_receiver()
+        # Start trap receiver if not already running (thread-safe)
+        with self.receiver_lock:
+            if not self.trap_receiver_thread or not self.trap_receiver_thread.is_alive():
+                self._start_trap_receiver()
         
-        # Return accumulated alerts
-        alerts = self.received_traps.copy()
-        self.received_traps.clear()  # Clear after retrieving
+        # Return accumulated alerts (thread-safe)
+        with self.trap_lock:
+            alerts = self.received_traps.copy()
+            self.received_traps.clear()  # Clear after retrieving
         
         return alerts
 
