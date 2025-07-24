@@ -1,4 +1,5 @@
 import dataclasses
+import os
 
 import pydantic
 import requests
@@ -55,12 +56,19 @@ class PushoverProvider(BaseProvider):
             message (str): The content of the message.
         """
         self.logger.debug("Notifying alert message to Pushover")
+        sound = kwargs.get("sound", "pushover")
+        priority = int(kwargs.get("priority", 0))
+        retry = kwargs.get("retry", 60)
+        expire = kwargs.get("expire", 3600)
         resp = requests.post(
             "https://api.pushover.net/1/messages.json",
             data={
                 "token": self.authentication_config.token,
                 "user": self.authentication_config.user_key,
                 "message": message,
+                "sound": sound,
+                "priority": priority,
+                **({"retry": retry, "expire": expire} if priority == 2 else {}),
             },
         )
         resp.raise_for_status()
