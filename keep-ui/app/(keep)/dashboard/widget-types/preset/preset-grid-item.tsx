@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { WidgetData, WidgetType } from "../../types";
+import { WidgetData, WidgetType, PresetPanelType } from "../../types";
 import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import TimeAgo from "react-timeago";
 import { useSearchParams } from "next/navigation";
 import WidgetAlertsTable from "./widget-alerts-table";
+import WidgetAlertCountPanel from "./widget-alert-count-panel";
 import CelInput from "@/features/cel-input/cel-input";
 
 interface GridItemProps {
@@ -177,8 +178,13 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
     );
   }
 
+  const isAlertTable = item.presetPanelType === PresetPanelType.ALERT_TABLE || !item.presetPanelType;
+  const isAlertCountPanel = item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+
   return (
     <div className="flex flex-col overflow-y-auto gap-2">
+      {isAlertTable && (
+        <>
       <div className="flex gap-2">
         <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
           <div className="flex gap-1 items-center">
@@ -205,6 +211,17 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           alerts={isLoading ? undefined : alerts}
           columns={(item as any)?.presetColumns}
           background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
+            />
+          )}
+        </>
+      )}
+      {isAlertCountPanel && (
+        <WidgetAlertCountPanel
+          presetName={preset?.name as string}
+          showFiringOnly={item.showFiringOnly}
+          background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
+          thresholds={item.thresholds}
+          customLink={item.customLink}
         />
       )}
     </div>
