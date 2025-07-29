@@ -3,6 +3,7 @@ import {
   CheckCircleIcon,
   CircleStackIcon,
   PauseIcon,
+  SpeakerWaveIcon,
 } from "@heroicons/react/24/outline";
 import { IoIosGitPullRequest } from "react-icons/io";
 
@@ -10,16 +11,17 @@ import { IoIosGitPullRequest } from "react-icons/io";
  * Maps an alert/incident status string to the appropriate icon component
  * 
  * @param status - The status string to convert to an icon
+ * @param isNoisy - Whether the alert is noisy (optional)
  * @returns A React icon component based on the status
  * 
  * @example
  * const AlertIcon = getStatusIcon("firing");
  * // Returns ExclamationCircleIcon
  */
-export const getStatusIcon = (status: string) => {
+export const getStatusIcon = (status: string, isNoisy?: boolean) => {
   switch (status.toLowerCase()) {
     case "firing":
-      return ExclamationCircleIcon;
+      return isNoisy ? SpeakerWaveIcon : ExclamationCircleIcon;
     case "resolved":
       return CheckCircleIcon;
     case "acknowledged":
