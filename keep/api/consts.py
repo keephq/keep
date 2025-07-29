@@ -28,7 +28,10 @@ STATIC_PRESETS = {
         tags=[],
     )
 }
-
+MAINTENANCE_WINDOW_ALERT_STRATEGY = os.environ.get(
+    "KEEP_MAINTENANCE_WINDOW_ALERT_STRATEGY", "default"
+)  # recover_previous_status or default
+WATCHER_LAPSED_TIME = int(os.environ.get("KEEP_WATCHER_LAPSED_TIME", 60))  # in seconds
 ###
 # Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai"
 # to split the tasks between the workers.
