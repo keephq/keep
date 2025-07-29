@@ -1,16 +1,20 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
+import threading
 import time
 from contextlib import asynccontextmanager
 from functools import wraps
 from importlib import metadata
 from typing import Awaitable, Callable
 
+from arq import ArqRedis
+from filelock import FileLock
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -21,8 +25,11 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
+from keep.api.arq_pool import get_pool
+from keep.api.core.tenant_configuration import TenantConfiguration
 import keep.api.logging
 import keep.api.observability
+from keep.api.tasks import process_watcher_task
 import keep.api.utils.import_ee
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
@@ -59,11 +66,13 @@ from keep.api.routes import (
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
 from keep.topologies.topology_processor import TopologyProcessor
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
 
 # load all providers into cache
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -80,7 +89,7 @@ TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
 KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
-
+MAINTENANCE_WINDOWS = config("MAINTENANCE_WINDOWS", default="false", cast=bool)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -156,6 +165,32 @@ async def startup():
         except Exception:
             logger.exception("Failed to start the topology processor")
 
+    if MAINTENANCE_WINDOWS and MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
+        if REDIS:
+            try:
+                logger.info("Starting the watcher process")
+                redis: ArqRedis = await get_pool()
+                job = await redis.enqueue_job(
+                    "async_process_watcher",
+                    _queue_name="basic_processing",
+                )
+                logger.info(
+                    "Enqueued job",
+                    extra={
+                        "job_id": job.job_id,
+                        "queue": KEEP_ARQ_QUEUE_BASIC,
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to start the maintenance windows")
+        else:
+            asyncio.create_task(process_watcher_task.async_process_watcher())
+            logger.info(
+                "Added task",
+                extra={
+                    "task": "task",
+                },
+            )
     logger.info("Services started successfully")
 
 

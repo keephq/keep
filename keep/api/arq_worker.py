@@ -6,7 +6,7 @@ from typing import Optional
 from uuid import uuid4
 
 import redis
-from arq import Worker
+from arq import Worker, cron
 from arq.worker import create_worker
 from dotenv import find_dotenv, load_dotenv
 from pydantic.utils import import_string
@@ -18,6 +18,7 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL,
     KEEP_ARQ_TASK_POOL_ALL,
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
+    WATCHER_LAPSED_TIME,
 )
 from keep.api.core.config import config
 from keep.api.redis_settings import get_redis_settings
@@ -120,6 +121,7 @@ async def process_event_in_worker(
 FUNCTIONS.append(process_event_in_worker)
 
 
+
 async def startup(ctx):
     """ARQ worker startup callback"""
     EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
@@ -155,6 +157,7 @@ class WorkerSettings:
     redis_settings = get_redis_settings()
     timeout = 30
     functions: list = FUNCTIONS
+    cron_jobs: list = [cron("keep.api.tasks.process_watcher_task.async_process_watcher", second=WATCHER_LAPSED_TIME-1)]
     queue_name: str
     health_check_interval: int = 10
     health_check_key: str
