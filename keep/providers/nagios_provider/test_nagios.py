@@ -257,23 +257,33 @@ class TestNagiosProvider:
         assert provider._validate_timestamp(timestamp) is expected
 
     def test_alert_id_generation(self, provider):
-        """Test alert ID generation"""
-        event = {
+        """Test alert ID generation for proper deduplication"""
+        event1 = {
             "host_name": "test-host",
             "service_description": "test-service",
             "timestamp": "2024-01-01T10:00:00Z",
         }
+        event2 = {
+            "host_name": "test-host",
+            "service_description": "test-service",
+            "timestamp": "2024-01-01T10:05:00Z",  # Different timestamp
+        }
 
-        # Should generate consistent IDs for same event
-        id1 = provider._generate_alert_id(event)
-        id2 = provider._generate_alert_id(event)
+        # Should generate consistent IDs for same event source
+        id1 = provider._generate_alert_id(event1)
+        id2 = provider._generate_alert_id(event2)
         assert id1 == id2
 
-        # Should generate different IDs for different events
-        event2 = event.copy()
-        event2["host_name"] = "different-host"
-        id3 = provider._generate_alert_id(event2)
+        # Should generate different IDs for different event sources
+        event3 = event1.copy()
+        event3["host_name"] = "different-host"
+        id3 = provider._generate_alert_id(event3)
         assert id1 != id3
+
+        event4 = event1.copy()
+        event4["service_description"] = "different-service"
+        id4 = provider._generate_alert_id(event4)
+        assert id1 != id4
 
     def test_missing_required_fields(self, provider):
         """Test error handling for missing required fields"""

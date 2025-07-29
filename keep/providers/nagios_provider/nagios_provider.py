@@ -73,8 +73,7 @@ class NagiosProvider(BaseProvider):
         """
         key_fields = {
             "host_name": event.get("host_name", ""),
-            "service_description": event.get("service_description", ""),
-            "timestamp": event.get("timestamp", "")
+            "service_description": event.get("service_description", "")
         }
         hash_input = json.dumps(key_fields, sort_keys=True).encode()
         return hashlib.md5(hash_input).hexdigest()
