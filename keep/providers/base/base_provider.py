@@ -84,7 +84,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         context_manager: ContextManager,
         provider_id: str,
         config: ProviderConfig,
-        webhooke_template: Optional[str] = None,
+        webhook_template: Optional[str] = None,
         webhook_description: Optional[str] = None,
         webhook_markdown: Optional[str] = None,
         provider_description: Optional[str] = None,
@@ -99,7 +99,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.provider_id = provider_id
 
         self.config = config
-        self.webhooke_template = webhooke_template
+        self.webhook_template = webhook_template
         self.webhook_description = webhook_description
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
