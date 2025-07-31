@@ -19,18 +19,21 @@ export const POST = async (req: NextRequest) => {
         const bedrockModel = new ChatBedrockConverse({
           model: process.env.BEDROCK_MODEL_ID,
           region: process.env.AWS_REGION,
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-            ...(process.env.AWS_SESSION_TOKEN && {
-              sessionToken: process.env.AWS_SESSION_TOKEN,
-            }),
-          },
+          // Use default credential provider chain (same as Bedrock provider)
+          // This will use AWS profile, SSO, or environment variables automatically
         });
         
         serviceAdapter = new LangChainAdapter({
           chainFn: async ({ messages }) => {
-            const response = await bedrockModel.invoke(messages);
+            // Filter out empty messages and ensure proper format
+            const filteredMessages = messages.filter(msg => 
+              msg.content && 
+              (typeof msg.content === 'string' && msg.content.trim().length > 0)
+            );
+            
+            console.log("DEBUG: Filtered messages:", filteredMessages.length, "out of", messages.length);
+            
+            const response = await bedrockModel.invoke(filteredMessages);
             return response;
           },
         });
