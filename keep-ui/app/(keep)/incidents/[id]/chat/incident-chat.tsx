@@ -547,6 +547,11 @@ export function IncidentChat({
     // using 'incident-chat' class to apply styles only to that chat component
     <Card className="h-full incident-chat">
       <div className="chat-container">
+        <div className="flex items-center justify-between p-2 border-b border-tremor-border">
+          <span className="text-sm text-tremor-content-subtle">
+            AI Model: {process.env.NEXT_PUBLIC_BEDROCK_MODEL_ID || "Unknown"}
+          </span>
+        </div>
         <div className="chat-messages">
           <CopilotChat
             className="-mx-2"

@@ -16,6 +16,7 @@ export const POST = async (req: NextRequest) => {
       let serviceAdapter;
       
       if (provider === "bedrock") {
+        console.log("DEBUG: Using Bedrock model:", process.env.BEDROCK_MODEL_ID, "in region:", process.env.AWS_REGION);
         const bedrockModel = new ChatBedrockConverse({
           model: process.env.BEDROCK_MODEL_ID,
           region: process.env.AWS_REGION,
