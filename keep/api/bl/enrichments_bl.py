@@ -358,7 +358,7 @@ class EnrichmentsBl:
         # Check if the alert has any of the attributes defined in matchers
         match = False
         for matcher in rule.matchers:
-            if get_nested_attribute(alert, matcher) is not None:
+            if matcher and get_nested_attribute(alert, matcher) is not None:
                 self._add_enrichment_log(
                     f"Alert matched a mapping rule for matcher: {matcher}",
                     "debug",
