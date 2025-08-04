@@ -21,6 +21,7 @@ from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
+from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     enrich_alerts_with_incidents,
@@ -61,7 +62,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 # Opt-outs/ins
 KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
-KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
+
 KEEP_ALERT_FIELDS_ENABLED = (
     os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "true") == "true"
 )
@@ -520,6 +521,20 @@ def __handle_formatted_events(
                     )
                     continue
 
+    if MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
+        ignored_events = list(
+            filter(
+                lambda event: event.status == AlertStatus.MAINTENANCE.value,
+                enriched_formatted_events
+            )
+        )
+        enriched_formatted_events = list(
+            filter(
+                lambda event: event.status != AlertStatus.MAINTENANCE.value,
+                enriched_formatted_events
+            )
+        )
+
     with tracer.start_as_current_span("process_event_push_to_workflows"):
         try:
             # Now run any workflow that should run based on this alert
@@ -560,6 +575,9 @@ def __handle_formatted_events(
                         "tenant_id": tenant_id,
                     },
                 )
+
+    if MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
+        enriched_formatted_events.extend(ignored_events)
 
     with tracer.start_as_current_span("process_event_notify_client"):
         pusher_client = get_pusher_client() if notify_client else None
