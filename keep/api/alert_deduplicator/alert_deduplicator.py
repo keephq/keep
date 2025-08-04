@@ -65,7 +65,7 @@ class AlertDeduplicator:
 
         # calculate the hash
         alert_hash = hashlib.sha256(
-            json.dumps(alert_copy.dict(), default=str).encode()
+            json.dumps(alert_copy.dict(), default=str, sort_keys=True).encode()
         ).hexdigest()
         alert.alert_hash = alert_hash
         # Check if the hash is already in the database.

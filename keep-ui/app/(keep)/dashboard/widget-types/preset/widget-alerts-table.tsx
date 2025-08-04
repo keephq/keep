@@ -67,7 +67,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
         renderHeader: () => <div className="min-w-4"></div>,
         renderValue: (alert: any) => (
           <Icon
-            icon={getStatusIcon(alert.status)}
+            icon={getStatusIcon(alert.status, alert.isNoisy)}
             size="sm"
             color={getStatusColor(alert.status)}
             className="!p-0"

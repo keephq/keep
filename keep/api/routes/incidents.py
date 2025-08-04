@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+from uuid import UUID
 
 from arq import ArqRedis
 from fastapi import (
@@ -13,8 +14,6 @@ from fastapi import (
     Response,
 )
 from pusher import Pusher
-from pydantic.types import UUID
-from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -36,7 +35,8 @@ from keep.api.core.db import (
     get_rule,
     get_session,
     get_workflow_executions_for_incident_or_alert,
-    merge_incidents_to_id, get_enrichment,
+    merge_incidents_to_id,
+    get_enrichment,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.incidents import (
@@ -45,7 +45,11 @@ from keep.api.core.incidents import (
     get_incident_potential_facet_fields,
 )
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import AlertDto, EnrichIncidentRequestBody, UnEnrichIncidentRequestBody
+from keep.api.models.alert import (
+    AlertDto,
+    EnrichIncidentRequestBody,
+    UnEnrichIncidentRequestBody,
+)
 from keep.api.models.db.alert import (
     AlertAudit,
     CommentMention,
@@ -903,7 +907,7 @@ def add_comment(
         "commenter": authenticated_entity.email,
         "comment": change.comment,
         "incident_id": str(incident_id),
-        "tagged_users": change.tagged_users
+        "tagged_users": change.tagged_users,
     }
     logger.info("Adding comment to incident", extra=extra)
     comment = add_audit(
@@ -913,7 +917,7 @@ def add_comment(
         ActionType.INCIDENT_COMMENT,
         change.comment,
         session=session,
-        commit=False
+        commit=False,
     )
 
     if change.tagged_users:
@@ -921,10 +925,10 @@ def add_comment(
             mention = CommentMention(
                 comment_id=comment.id,
                 mentioned_user_id=user_email,
-                tenant_id=authenticated_entity.tenant_id
+                tenant_id=authenticated_entity.tenant_id,
             )
             session.add(mention)
-    
+
     session.commit()
     session.refresh(comment)
 
@@ -1066,12 +1070,9 @@ async def enrich_incident(
 
     # Use the existing enrichment infrastructure
     enrichment_bl = EnrichmentsBl(tenant_id, db_session)
-    fingerprint = UUIDType(binary=False).process_bind_param(
-        incident_id, db_session.bind.dialect
-    )
 
     enrichment_bl.enrich_entity(
-        fingerprint=fingerprint,
+        fingerprint=incident_id,
         enrichments=enrichment.enrichments,
         action_type=ActionType.INCIDENT_ENRICH,
         action_callee=authenticated_entity.email,

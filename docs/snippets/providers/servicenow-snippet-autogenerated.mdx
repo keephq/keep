@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -8,6 +8,7 @@ This provider requires authentication.
 - **password**: The password of the ServiceNow user (required: True, sensitive: True)
 - **client_id**: The client ID to use OAuth 2.0 based authentication (required: False, sensitive: False)
 - **client_secret**: The client secret to use OAuth 2.0 based authentication (required: False, sensitive: True)
+- **ticket_creation_url**: URL for creating new tickets (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **itil**: The user can read/write tickets from the table (mandatory) ([Documentation](https://docs.servicenow.com/bundle/sandiego-platform-administration/page/administer/roles/reference/r_BaseSystemRoles.html))
@@ -57,6 +58,6 @@ Check the following workflow examples:
 
 
 ## Topology
-This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
-and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
 for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).

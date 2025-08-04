@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -6,6 +6,7 @@ This provider requires authentication.
 - **email**: Atlassian Jira Email (required: True, sensitive: False)
 - **api_token**: Atlassian Jira API Token (required: True, sensitive: True)
 - **host**: Atlassian Jira Host (required: True, sensitive: False)
+- **ticket_creation_url**: URL for creating new tickets (optional, will use default if not provided) (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **BROWSE_PROJECTS**: Browse Jira Projects (mandatory) 
@@ -59,4 +60,6 @@ Check the following workflow examples:
 - [create_jira_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_jira_ticket_upon_alerts.yml)
 - [incident-enrich.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/incident-enrich.yaml)
 - [jira_on_prem.yml](https://github.com/keephq/keep/blob/main/examples/workflows/jira_on_prem.yml)
+- [test_jira_create_with_custom_fields.yml](https://github.com/keephq/keep/blob/main/examples/workflows/test_jira_create_with_custom_fields.yml)
+- [test_jira_custom_fields_fix.yml](https://github.com/keephq/keep/blob/main/examples/workflows/test_jira_custom_fields_fix.yml)
 - [update_jira_ticket.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_jira_ticket.yml)
