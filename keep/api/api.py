@@ -1,8 +1,6 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
-import threading
 import time
 from contextlib import asynccontextmanager
 from functools import wraps
@@ -10,11 +8,10 @@ from importlib import metadata
 from typing import Awaitable, Callable
 
 from arq import ArqRedis
-from filelock import FileLock
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -26,7 +23,6 @@ from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
 from keep.api.arq_pool import get_pool
-from keep.api.core.tenant_configuration import TenantConfiguration
 import keep.api.logging
 import keep.api.observability
 from keep.api.tasks import process_watcher_task
@@ -66,13 +62,12 @@ from keep.api.routes import (
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
-from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
 from keep.topologies.topology_processor import TopologyProcessor
-from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
+from keep.api.consts import KEEP_ARQ_QUEUE_MAINTENANCE, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
 
 # load all providers into cache
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -172,13 +167,13 @@ async def startup():
                 redis: ArqRedis = await get_pool()
                 job = await redis.enqueue_job(
                     "async_process_watcher",
-                    _queue_name="basic_processing",
+                    _queue_name=KEEP_ARQ_QUEUE_MAINTENANCE,
                 )
                 logger.info(
                     "Enqueued job",
                     extra={
                         "job_id": job.job_id,
-                        "queue": KEEP_ARQ_QUEUE_BASIC,
+                        "queue": KEEP_ARQ_QUEUE_MAINTENANCE,
                     },
                 )
             except Exception:

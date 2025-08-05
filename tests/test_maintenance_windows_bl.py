@@ -414,8 +414,8 @@ def test_strategy_alert_launch_workflow(
                                               value: acknowledged
                             """
     workflow = Workflow(
-        id="alert-time-check",
-        name="alert-time-check",
+        id="workflow_strategy_mw",
+        name="workflow_strategy_mw",
         tenant_id=alert_maint.tenant_id,
         description="Handle alerts based on startedAt timestamp",
         created_by="test@keephq.dev",
@@ -428,7 +428,7 @@ def test_strategy_alert_launch_workflow(
     )
     monkeypatch.setattr(
         "keep.workflowmanager.workflowstore.get_workflow_by_id",
-        lambda self, tenant_id, workflow_id="alert-time-check", exclude_disabled=False: workflow
+        lambda self, tenant_id, workflow_id="workflow_strategy_mw", exclude_disabled=False: workflow
     )
     # AND there is no maintenance window active
     retrieve_windows_session = MagicMock()
@@ -448,7 +448,7 @@ def test_strategy_alert_launch_workflow(
         MaintenanceWindowsBl.recover_strategy(logger=loggerMag, session=mock_session)
 
     workflow_execution = wait_for_workflow_execution(
-        alert_maint.tenant_id, "alert-time-check"
+        alert_maint.tenant_id, "workflow_strategy_mw"
     )
 
     # THEN the workflow should be launched
