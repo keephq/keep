@@ -186,6 +186,21 @@ def test_keep_provider_time_delta_filtering_version_1(db_session):
     db_session.add_all(alerts)
     db_session.commit()
     
+    # Create LastAlert entries (required by get_alerts_with_filters)
+    last_alerts = []
+    for alert in alerts:
+        last_alert = LastAlert(
+            tenant_id=tenant_id,
+            fingerprint=alert.fingerprint,
+            timestamp=alert.timestamp,
+            first_timestamp=alert.timestamp,
+            alert_id=alert.id,
+        )
+        last_alerts.append(last_alert)
+    
+    db_session.add_all(last_alerts)
+    db_session.commit()
+    
     # Test using get_alerts_with_filters directly (version 1 approach)
     time_delta_1_minute = 0.000694445
     
