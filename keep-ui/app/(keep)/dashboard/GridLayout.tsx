@@ -44,7 +44,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
           onLayoutChange(updatedLayout as LayoutItem[]);
         }}
         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+        cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }}
         rowHeight={30}
         containerPadding={[0, 0]}
         margin={[10, 10]}
@@ -53,6 +53,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         isResizable={true}
         compactType={null}
         draggableHandle=".grid-item__widget"
+        transformScale={1}
       >
         {data.map((item) => {
           //Updating the static hardcode db value.
