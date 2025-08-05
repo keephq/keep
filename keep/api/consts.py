@@ -29,7 +29,7 @@ STATIC_PRESETS = {
     )
 }
 MAINTENANCE_WINDOW_ALERT_STRATEGY = os.environ.get(
-    "KEEP_MAINTENANCE_WINDOW_ALERT_STRATEGY", "default"
+    "MAINTENANCE_WINDOW_STRATEGY", "default"
 )  # recover_previous_status or default
 WATCHER_LAPSED_TIME = int(os.environ.get("KEEP_WATCHER_LAPSED_TIME", 60))  # in seconds
 ###
