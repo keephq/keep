@@ -106,7 +106,7 @@ class SearchEngine:
                 time_ago.astimezone(timezone.utc).replace(microsecond=0).isoformat()
             )
             cel_list = [
-                f"lastReceived >= '{iso_utc_date}'",
+                f"timestamp >= '{iso_utc_date}'",
                 cel_query,
             ]
             cel_query = " && ".join(f"({cel})" for cel in cel_list if cel)
