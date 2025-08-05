@@ -246,7 +246,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const api = useApi();
 
   const handleBulkEnrichmentChange = async (
-    fields: Record<string, string | string[]>
+    fields: Record<string, string | string[] | number | boolean>
   ) => {
     try {
       const requestData = {
@@ -277,7 +277,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   const handleEnrichmentChange = async (
     fieldName: string,
-    fieldValue: string | string[]
+    fieldValue: string | string[] | number | boolean
   ) => {
     await handleBulkEnrichmentChange({ [fieldName]: fieldValue });
   };
