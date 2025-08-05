@@ -106,6 +106,7 @@ alert_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="lastReceived",
         map_to=[
+            "lastalert.timestamp",
             "JSON(alertenrichment.enrichments).*",
             "JSON(alert.event).*",
         ],
