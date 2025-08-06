@@ -161,6 +161,7 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         details: typing.Dict[str, str] | None = None,
         entity: str | None = None,
         priority: str | None = None,
+        **kwargs: dict,
     ):
         """
         Creates OpsGenie Alert.
