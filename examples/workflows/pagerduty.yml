@@ -18,7 +18,7 @@ workflow:
         type: pagerduty
         config: "{{ providers.PagerDuty }}"
         with:
-          routing_key: 'your_routing_key'
+          routing_key: 'your_routing_key' # optional, otherwise it will take from provider configuration$
           severity: critical
           source: keep
           component: job_service
