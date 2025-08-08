@@ -402,7 +402,6 @@ class PagerdutyProvider(
                 "severity": severity,
             },
         }
-
         custom_details = kwargs.get("custom_details", {})
         if isinstance(custom_details, str):
             custom_details = json.loads(custom_details)
@@ -435,7 +434,6 @@ class PagerdutyProvider(
             if isinstance(links, str):
                 links = json.loads(links)
             payload["payload"]["links"] = links
-
         return payload
 
     def _send_alert(
