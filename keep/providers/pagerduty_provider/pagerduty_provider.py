@@ -345,6 +345,7 @@ class PagerdutyProvider(
     def _build_alert(
         self,
         title: str,
+        routing_key: str,
         dedup: str | None = None,
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
@@ -392,7 +393,7 @@ class PagerdutyProvider(
                 source = self.context_manager.event_context.service or "custom_event"
 
         payload = {
-            "routing_key": self.authentication_config.routing_key,
+            "routing_key": routing_key,
             "event_action": event_type,
             "dedup_key": dedup,
             "payload": {
@@ -401,7 +402,6 @@ class PagerdutyProvider(
                 "severity": severity,
             },
         }
-
         custom_details = kwargs.get("custom_details", {})
         if isinstance(custom_details, str):
             custom_details = json.loads(custom_details)
@@ -434,12 +434,12 @@ class PagerdutyProvider(
             if isinstance(links, str):
                 links = json.loads(links)
             payload["payload"]["links"] = links
-
         return payload
 
     def _send_alert(
         self,
         title: str,
+        routing_key: str,
         dedup: str | None = None,
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
@@ -458,7 +458,7 @@ class PagerdutyProvider(
         url = "https://events.pagerduty.com/v2/enqueue"
 
         payload = self._build_alert(
-            title, dedup, severity, event_type, source, **kwargs
+            title, routing_key, dedup, severity, event_type, source, **kwargs
         )
         result = requests.post(url, json=payload)
         result.raise_for_status()
@@ -468,7 +468,7 @@ class PagerdutyProvider(
             extra={
                 "status_code": result.status_code,
                 "response_text": result.text,
-                "routing_key": self.authentication_config.routing_key,
+                "routing_key": routing_key,
             },
         )
         return result.json()
@@ -685,6 +685,7 @@ class PagerdutyProvider(
         title: str = "",
         dedup: str = "",
         service_id: str = "",
+        routing_key: str = "",
         requester: str = "",
         incident_id: str = "",
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
@@ -704,6 +705,7 @@ class PagerdutyProvider(
             title (str): Title of the alert or incident
             dedup (str | None): String used to deduplicate alerts for events API, max 255 chars
             service_id (str): ID of the service for incidents
+            routing_key (str): API routing_key (optional), if not specified, fallbacks to the one provided in provider
             body (dict): Body of the incident as per https://developer.pagerduty.com/api-reference/a7d81b0e9200f-create-an-incident#request-body
             requester (str): Email of the user requesting the incident creation
             incident_id (str | None): Key to identify the incident. UUID generated if not provided
@@ -715,11 +717,14 @@ class PagerdutyProvider(
             resolution (str): Resolution note for resolved incidents
             kwargs (dict): Additional event/incident fields
         """
-        if self.authentication_config.routing_key:
+        if not routing_key: # If routing_key not specified in workflow, fallback to config routing_key
+            routing_key = self.authentication_config.routing_key
+        if  routing_key:
             return self._send_alert(
                 title,
                 dedup=dedup,
                 event_type=event_type,
+                routing_key=routing_key,
                 source=source,
                 severity=severity,
                 **kwargs,
