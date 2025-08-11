@@ -741,9 +741,11 @@ class PagerdutyProvider(
                 resolution,
             )
 
-    def _query(self, incident_id: str = None):
+    def _query(self, incident_id: str = None, incident_key: str = None):
         if incident_id:
             return self._get_specific_incident(incident_id)
+        elif incident_key: # Query Incident via incident_key (dedup_key)
+            return self._get_specific_incident_with_incident_key(incident_key)
         else:
             return self.__get_all_incidents_or_alerts()
 
@@ -850,6 +852,29 @@ class PagerdutyProvider(
         self.logger.info("Getting Incident", extra={"incident_id": incident_id})
         url = f"{self.BASE_API_URL}/incidents/{incident_id}"
         params = {
+            "include[]": [
+                "acknowledgers",
+                "agents",
+                "assignees",
+                "conference_bridge",
+                "custom_fields",
+                "escalation_policies",
+                "first_trigger_log_entries",
+                "priorities",
+                "services",
+                "teams",
+                "users",
+            ]
+        }
+        response = requests.get(url, headers=self.__get_headers(), params=params)
+        response.raise_for_status()
+        return response.json()
+
+    def _get_specific_incident_with_incident_key(self, incident_key: str): # Query Incident via incident_key (dedup_key)
+        self.logger.info("Getting Incident", extra={"incident_key": incident_key})
+        url = f"{self.BASE_API_URL}/incidents"
+        params = {
+            "incident_key": incident_key,
             "include[]": [
                 "acknowledgers",
                 "agents",
