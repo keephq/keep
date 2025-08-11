@@ -12,6 +12,12 @@ workflow:
         config: "{{ providers.PagerDuty }}"
         with:
           incident_id: "{{ incident.fingerprint }}"
+    - name: check-incident-exist-pd-incident-key-dedup-key
+      provider:
+        type: pagerduty
+        config: "{{ providers.PagerDuty }}"
+        with:
+          incident_key: "7f3baa50-e7ef-4891-bd4a-d1ee310dff8f"
   actions:
     - name: pd-create-event
       provider:
