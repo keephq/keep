@@ -1,0 +1,86 @@
+workflow:
+  id: jira-incident-ticketing
+  name: Automatic Jira Ticketing for Incidents
+  description: Automatically create Jira tickets when incidents are created, using both default and enrichment data
+  triggers:
+    - type: incident
+      events: ["created"]
+  
+  steps:
+    - name: create-jira-ticket
+      provider:
+        type: jira
+        config: "{{ providers.jira }}"
+        with:
+          # Extract project key from incident enrichments or use default
+          project_key: "{{ incident.enrichments.jira_project or 'INCIDENT' }}"
+          
+          # Use incident name as ticket summary
+          summary: "Incident: {{ incident.user_generated_name or incident.ai_generated_name }}"
+          
+          # Create detailed description with incident information
+          description: |
+            *Incident Details:*
+            - *ID:* {{ incident.id }}
+            - *Status:* {{ incident.status }}
+            - *Severity:* {{ incident.severity }}
+            - *Start Time:* {{ incident.start_time }}
+            - *Alerts Count:* {{ incident.alerts_count }}
+            - *Services:* {{ incident.services | join(', ') }}
+            
+            *Summary:*
+            {{ incident.user_summary or incident.generated_summary }}
+            
+            {% if incident.enrichments %}
+            *Custom Information:*
+            {% for key, value in incident.enrichments.items() %}
+            {% if key not in ['jira_project', 'ticket_id', 'ticket_url'] %}
+            - *{{ key | title | replace('_', ' ') }}:* {{ value }}
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+            
+            *Keep Incident URL:* {{ keep_base_url }}/incidents/{{ incident.id }}
+          
+          # Set issue type from enrichments or default to Task
+          issue_type: "{{ incident.enrichments.issue_type or 'Task' }}"
+          
+          # Add labels for better organization
+          labels:
+            - "keep-incident"
+            - "severity-{{ incident.severity | lower }}"
+            - "auto-created"
+          
+          # Add custom fields if they exist in enrichments
+          custom_fields:
+            # Example: Priority field mapping
+            priority: 
+              name: "{{ incident.enrichments.priority or 'Medium' }}"
+            
+            # Example: Component mapping
+            components: "{{ incident.enrichments.components or [] }}"
+
+    - name: enrich-incident-with-ticket-info
+      provider:
+        type: keep
+        with:
+          # Store the Jira ticket information back to the incident
+          enrichments:
+            ticket_id: "{{ steps.create-jira-ticket.results.issue.key }}"
+            ticket_url: "{{ steps.create-jira-ticket.results.ticket_url }}"
+            ticket_type: "jira"
+            ticket_created_at: "{{ now() }}"
+            
+    - name: log-ticket-creation
+      provider:
+        type: console  
+        with:
+          message: |
+            🎫 Jira ticket created for incident {{ incident.id }}
+            
+            Ticket: {{ steps.create-jira-ticket.results.issue.key }}
+            URL: {{ steps.create-jira-ticket.results.ticket_url }}
+            Project: {{ incident.enrichments.jira_project or 'INCIDENT' }}
+            
+            The incident has been enriched with ticket information.
+            The ticket link will appear in the incidents table.
