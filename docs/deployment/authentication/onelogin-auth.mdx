@@ -1,0 +1,64 @@
+---
+title: "OneLogin Authentication"
+---
+
+This document provides comprehensive information about the OneLogin integration in Keep
+
+## Overview
+
+Keep supports OneLogin as an authentication provider, enabling:
+- Single Sign-On (SSO) via OneLogin
+- OAuth2/OIDC authentication flow
+- Token refresh capabilities
+- Role-based access control through custom claims
+- Session management through NextAuth.js
+
+## Environment Variables
+
+### Backend Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `"ONELOGIN"` to enable OneLogin authentication | `ONELOGIN` |
+| `ONELOGIN_ISSUER` | The issuer URL for your OneLogin application | `https://company.onelogin.com/oidc/2` |
+| `ONELOGIN_CLIENT_ID` | Client ID of your OneLogin application | `abc123def456ghi789` |
+| `ONELOGIN_CLIENT_SECRET` | Client Secret of your OneLogin application | `abcd1234efgh5678ijkl9012` |
+| `ONELOGIN_ADMIN_ROLE` | Role to be mapped to a keep admin role | `KeepAdmin` |
+| `ONELOGIN_NOC_ROLE` | Role to be mapped to a keep noc role | `KeepNoc` |
+| `ONELOGIN_WEBHOOK_ROLE` | Role to be mapped to a keep webhook role | `KeepWebhook` |
+| `ONELOGIN_AUTO_CREATE_USER` | Whether to try and create autocreate users in keep | `True` |
+
+### Frontend Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `"ONELOGIN"` to enable OneLogin authentication | `ONELOGIN` |
+| `ONELOGIN_ISSUER` | The issuer URL for your OneLogin application | `https://company.onelogin.com/oidc/2` |
+| `ONELOGIN_CLIENT_ID` | Client ID of your OneLogin application | `abc123def456ghi789` |
+| `ONELOGIN_CLIENT_SECRET` | Client Secret of your OneLogin application | `abcd1234efgh5678ijkl9012` |
+
+## OneLogin Configuration
+
+### Creating a OneLogin Application
+
+1. Sign in to your OneLogin Admin Console
+2. Navigate to **Applications**
+3. Click **Add App**
+4. Search for **OpenId Connect (OIDC)** and select it
+5. Click **Save**
+
+### Application Settings
+
+1. **Display Name**: Enter a name for your application (e.g., "Keep")
+2. **Redirect URIs**: Enter your app's callback URL, e.g., `https://your-keep-domain.com/api/auth/callback/onelogin`
+3. **Login URL**: Enter your app's login URL, e.g., `https://your-keep-domain.com/signin`
+4. **Role Mapping**:
+    - Go to the Parameters tab
+    - Map the groups to user roles or groups with the default value being semicolon delimited input values
+5. Go to the **SSO** tab and configure:
+   - **Application Type**: Web
+   - **Token Endpoint**: Client Secret Post
+6. **Access**:
+   - Assign to appropriate roles or users
+7. Click **Save**
+8. Copy the client id, client secret and issuer URL from the SSO tab

@@ -1,21 +1,21 @@
-import type { NextAuthConfig } from "next-auth";
+import type {NextAuthConfig, User} from "next-auth";
+import {AuthError} from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Keycloak from "next-auth/providers/keycloak";
 import Auth0 from "next-auth/providers/auth0";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import Okta from "next-auth/providers/okta";
-import { AuthError } from "next-auth";
-import { AuthenticationError, AuthErrorCodes } from "@/errors";
-import type { JWT } from "next-auth/jwt";
-import type { User } from "next-auth";
-import { getApiURL } from "@/utils/apiUrl";
+import OneLogin from "next-auth/providers/onelogin";
+import {AuthenticationError, AuthErrorCodes} from "@/errors";
+import type {JWT} from "next-auth/jwt";
+import {getApiURL} from "@/utils/apiUrl";
 import {
   AuthType,
   MULTI_TENANT,
-  SINGLE_TENANT,
   NO_AUTH,
-  NoAuthUserEmail,
   NoAuthTenant,
+  NoAuthUserEmail,
+  SINGLE_TENANT,
 } from "@/utils/authenticationType";
 
 export class BackendRefusedError extends AuthError {
@@ -47,19 +47,32 @@ async function refreshAccessToken(token: any) {
   let clientId = "";
   let clientSecret = "";
   let refreshTokenUrl = "";
-  
-  if (authType === AuthType.KEYCLOAK) {
-    issuerUrl = process.env.KEYCLOAK_ISSUER || "";
-    clientId = process.env.KEYCLOAK_ID || "";
-    clientSecret = process.env.KEYCLOAK_SECRET || "";
-    refreshTokenUrl = `${issuerUrl}/protocol/openid-connect/token`;
-  } else if (authType === AuthType.OKTA) {
-    issuerUrl = process.env.OKTA_ISSUER || "";
-    clientId = process.env.OKTA_CLIENT_ID || "";
-    clientSecret = process.env.OKTA_CLIENT_SECRET || "";
-    refreshTokenUrl = `${issuerUrl}/v1/token`;
-  } else {
-    throw new Error("Refresh token not supported for this auth type");
+
+  switch (authType) {
+    case AuthType.KEYCLOAK: {
+      issuerUrl = process.env.KEYCLOAK_ISSUER || "";
+      clientId = process.env.KEYCLOAK_ID || "";
+      clientSecret = process.env.KEYCLOAK_SECRET || "";
+      refreshTokenUrl = `${issuerUrl}/protocol/openid-connect/token`;
+      break;
+    }
+    case AuthType.OKTA: {
+      issuerUrl = process.env.OKTA_ISSUER || "";
+      clientId = process.env.OKTA_CLIENT_ID || "";
+      clientSecret = process.env.OKTA_CLIENT_SECRET || "";
+      refreshTokenUrl = `${issuerUrl}/v1/token`;
+      break;
+    }
+    case AuthType.ONELOGIN: {
+      issuerUrl = process.env.ONELOGIN_ISSUER || "";
+      clientId = process.env.ONELOGIN_CLIENT_ID || "";
+      clientSecret = process.env.ONELOGIN_CLIENT_SECRET || "";
+      refreshTokenUrl = `${issuerUrl}/token`;
+      break;
+    }
+    default: {
+      throw new Error("Refresh token not supported for this auth type");
+    }
   }
 
   try {
@@ -229,6 +242,14 @@ const baseProviderConfigs = {
       authorization: { params: { scope: "openid email profile" } },
     }),
   ],
+  [AuthType.ONELOGIN]: [
+    OneLogin({
+      clientId: process.env.ONELOGIN_CLIENT_ID!,
+      clientSecret: process.env.ONELOGIN_CLIENT_SECRET!,
+      issuer: process.env.ONELOGIN_ISSUER!,
+      authorization: { params: { scope: "openid email profile groups" } },
+    }),
+  ],
   [AuthType.AZUREAD]: [
     MicrosoftEntraID({
       clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
@@ -326,6 +347,11 @@ export const config = {
           tenantId = (profile as any).keep_tenant_id || "keep";
           role = (profile as any).keep_role || "user";
           accessToken = account.access_token;
+        } else if (authType === AuthType.ONELOGIN) {
+          // Extract tenant and role from OneLogin token - use ID token for user data
+          tenantId = (profile as any).keep_tenant_id || "keep";
+          role = (profile as any).keep_role || "user";
+          accessToken = account.id_token; // Use ID token instead of access token
         } else {
           accessToken =
             user.accessToken || account.access_token || account.id_token;
@@ -414,15 +440,15 @@ export const config = {
             }
           }
         }
-        
-        // Refresh token logic for both Keycloak and Okta
-        if (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA) {
+
+        // Refresh token logic for Keycloak, Okta and OneLogin
+        if (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA || authType === AuthType.ONELOGIN) {
           token.refreshToken = account.refresh_token;
           token.accessTokenExpires =
             Date.now() + (account.expires_in as number) * 1000;
         }
       } else if (
-        (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA) &&
+        (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA || authType === AuthType.ONELOGIN) &&
         token.refreshToken &&
         token.accessTokenExpires &&
         typeof token.accessTokenExpires === "number" &&
