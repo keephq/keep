@@ -1484,6 +1484,7 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
             assert "incident_id" in data
             assert data["incident_id"] == str(incident_dto.id)
 
+            # Check workflow manager
             # Created, updated (added event), alert_association_change(added event), updated(deleted event), alert_association_changed(deleted event)
             assert len(workflow_manager.events) == 5
             wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
