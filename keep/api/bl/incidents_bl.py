@@ -21,7 +21,6 @@ from keep.api.core.db import (
     delete_incident_by_id,
     enrich_alerts_with_incidents,
     get_all_alerts_by_fingerprints,
-    get_enrichment,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     is_all_alerts_resolved,
