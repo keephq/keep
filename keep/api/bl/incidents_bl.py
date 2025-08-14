@@ -21,6 +21,7 @@ from keep.api.core.db import (
     delete_incident_by_id,
     enrich_alerts_with_incidents,
     get_all_alerts_by_fingerprints,
+    get_enrichment,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     is_all_alerts_resolved,
@@ -159,6 +160,10 @@ class IncidentBl:
                 "alert_fingerprints": alert_fingerprints,
             },
         )
+
+        incident_dto = IncidentDto.from_db_incident(incident)
+        self.send_workflow_event(incident_dto, "alert_association_changed")
+
         self.__postprocess_alerts_change(incident, alert_fingerprints)
         await self.__generate_summary(incident_id, incident)
         self.logger.info(
@@ -268,6 +273,10 @@ class IncidentBl:
         remove_alerts_to_incident_by_incident_id(
             self.tenant_id, incident_id, alert_fingerprints
         )
+
+        incident_dto = IncidentDto.from_db_incident(incident)
+        self.send_workflow_event(incident_dto, "alert_association_changed")
+
         self.__postprocess_alerts_change(incident, alert_fingerprints)
 
     def delete_incident(self, incident_id: UUID) -> None:
