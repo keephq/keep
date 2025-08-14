@@ -160,9 +160,6 @@ class IncidentBl:
             },
         )
 
-        incident_dto = IncidentDto.from_db_incident(incident)
-        self.send_workflow_event(incident_dto, "alert_association_changed")
-
         self.__postprocess_alerts_change(incident, alert_fingerprints)
         await self.__generate_summary(incident_id, incident)
         self.logger.info(
@@ -273,9 +270,6 @@ class IncidentBl:
             self.tenant_id, incident_id, alert_fingerprints
         )
 
-        incident_dto = IncidentDto.from_db_incident(incident)
-        self.send_workflow_event(incident_dto, "alert_association_changed")
-
         self.__postprocess_alerts_change(incident, alert_fingerprints)
 
     def delete_incident(self, incident_id: UUID) -> None:
@@ -351,6 +345,7 @@ class IncidentBl:
                 "alert_fingerprints": alert_fingerprints,
             },
         )
+        self.send_workflow_event(incident_dto, "alert_association_changed")
 
     def update_severity(
         self,
