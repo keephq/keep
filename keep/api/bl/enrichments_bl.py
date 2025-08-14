@@ -772,7 +772,7 @@ class EnrichmentsBl:
         #   in elastic the alertdto is being kept which is alert + enrichments
         # so for example, in mapping, the enrichment happens before the alert is indexed in elastic
         #
-        if should_exist:
+        if should_exist and self.elastic_client:
             self.elastic_client.enrich_alert(
                 alert_fingerprint=fingerprint,
                 alert_enrichments=enrichments,
