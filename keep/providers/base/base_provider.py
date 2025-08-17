@@ -256,16 +256,24 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     else:
                         setattr(event, enrichment["key"], value)
             except Exception:
-                self.logger.error(
+                self.logger.exception(
                     f"Failed to enrich alert - enrichment: {enrichment}",
-                    extra={"fingerprint": fingerprint, "provider": self.provider_id},
+                    extra={
+                        "fingerprint": fingerprint,
+                        "provider": self.provider_id,
+                        "results": results,
+                    },
                 )
                 continue
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
-            enrichment_string = ", ".join([f"{key}={value}" for key, value in _enrichments.items()])
-            disposable_enrichment_string = ", ".join([f"{key}={value}" for key, value in disposable_enrichments.items()])
+            enrichment_string = ", ".join(
+                [f"{key}={value}" for key, value in _enrichments.items()]
+            )
+            disposable_enrichment_string = ", ".join(
+                [f"{key}={value}" for key, value in disposable_enrichments.items()]
+            )
 
             common_kwargs = {
                 "fingerprint": fingerprint,
@@ -278,18 +286,20 @@ class BaseProvider(metaclass=abc.ABCMeta):
             enrichments_bl.enrich_entity(
                 enrichments=_enrichments,
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
-                **common_kwargs
+                **common_kwargs,
             )
 
             # enrich with disposable enrichments
             enrichments_bl.disposable_enrich_entity(
                 enrichments=disposable_enrichments,
                 action_description=f"Workflow enriched the alert with {disposable_enrichment_string}",
-                **common_kwargs
+                **common_kwargs,
             )
 
-            should_check_incidents_resolution = (_enrichments.get("status", None) == "resolved"
-                                                 or disposable_enrichments.get("status", None) == "resolved")
+            should_check_incidents_resolution = (
+                _enrichments.get("status", None) == "resolved"
+                or disposable_enrichments.get("status", None) == "resolved"
+            )
 
             if event and should_check_incidents_resolution:
                 enrichments_bl.check_incident_resolution(event)
