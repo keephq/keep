@@ -5941,17 +5941,18 @@ def recover_prev_alert_status(alert: Alert, session: Optional[Session] = None):
     It'll restore the previous status of the alert.
     """
     with existed_or_new_session(session) as session:
-        event_updated = copy.deepcopy(alert.event)
         try:
-            event_updated["previous_status"] = alert.event.get("status")
-            event_updated["status"] = alert.event.get("previous_status")
+            status = alert.event.get("status")
+            prev_status = alert.event.get("previous_status")
+            alert.event["status"] = prev_status
+            alert.event["previous_status"] = status
         except KeyError:
             logger.warning(f"Alert {alert.id} does not have previous status.")
         query = (
             update(Alert)
             .where(Alert.id == alert.id)
             .values(
-                event = event_updated
+                event = alert.event
             )
         )
         session.exec(query)
