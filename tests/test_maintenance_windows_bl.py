@@ -350,7 +350,7 @@ def test_strategy_alert_block_by_window(
     Feature: Strategy - recover previous status
     Scenario: Alert is blocked (continue with the same status) by maintenance window
     """
-    # GIVEN The strategy is block_alert_by_maintenance_window
+    # GIVEN The strategy is recover_previous_status
     monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
     importlib.reload(keep.api.consts)
     importlib.reload(keep.api.bl.maintenance_windows_bl)
