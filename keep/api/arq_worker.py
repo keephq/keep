@@ -157,7 +157,7 @@ class WorkerSettings:
     redis_settings = get_redis_settings()
     timeout = 30
     functions: list = FUNCTIONS
-    cron_jobs: list = [cron("keep.api.tasks.process_watcher_task.async_process_watcher", second=WATCHER_LAPSED_TIME-1)]
+    cron_jobs: list = [cron("keep.api.tasks.process_watcher_task.async_process_watcher", second=max(0, WATCHER_LAPSED_TIME-1))]
     queue_name: str
     health_check_interval: int = 10
     health_check_key: str
