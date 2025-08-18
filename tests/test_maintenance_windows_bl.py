@@ -124,7 +124,7 @@ def test_alert_in_active_maintenance_window(
     mock_session, active_maintenance_window_rule, alert_dto
 ):
     # Simulate the query to return the active maintenance_window
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule
     ]
 
@@ -140,7 +140,7 @@ def test_alert_in_active_maintenance_window_with_suppress(
     mock_session, active_maintenance_window_rule_with_suppression_on, alert_dto
 ):
     # Simulate the query to return the active maintenance_window
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule_with_suppression_on
     ]
 
@@ -260,7 +260,7 @@ def test_alert_not_ignored_due_to_custom_status(
 ):
     # Set the alert status to RESOLVED
 
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule_custom_ignore
     ]
 
@@ -290,7 +290,7 @@ def test_strategy_restore_update_status(
     importlib.reload(keep.api.consts)
     importlib.reload(keep.api.bl.maintenance_windows_bl)
     # AND there is a maintenance window rule with suppression on active
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule_with_suppression_on
     ]
 
@@ -339,8 +339,8 @@ def test_strategy_clean_status(
 
     # THEN the new status will be the previous status, and the previous status will be the old status
     _, new_status, new_previous_status, _ = list(recover_status_session.exec.call_args[0][0]._values.values())[0].value.values()
-    assert new_status == alert_maint.event["previous_status"]
-    assert new_previous_status == alert_maint.event["status"]
+    assert new_status == AlertStatus.FIRING.value
+    assert new_previous_status == AlertStatus.MAINTENANCE.value
 
 
 def test_strategy_alert_block_by_window(
