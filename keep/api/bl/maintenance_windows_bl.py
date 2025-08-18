@@ -7,7 +7,14 @@ from sqlmodel import Session
 
 from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY
 from opentelemetry import trace
-from keep.api.core.db import add_audit, get_alerts_by_status, get_all_presets_dtos, get_maintenance_windows_started, get_session, get_session_sync, recover_prev_alert_status
+from keep.api.core.db import (
+    add_audit,
+    get_alerts_by_status,
+    get_all_presets_dtos,
+    get_maintenance_windows_started,
+    get_session_sync,
+    recover_prev_alert_status,
+)
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus

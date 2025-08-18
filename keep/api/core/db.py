@@ -9,7 +9,6 @@ import json
 import logging
 import random
 import uuid
-import copy
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
