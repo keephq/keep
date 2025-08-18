@@ -1,13 +1,17 @@
 from datetime import UTC, datetime, timedelta
+import importlib
 from itertools import cycle
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import and_, desc, distinct, func
 
+import keep.api.consts
+
 from keep.api.bl.incidents_bl import IncidentBl
+from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     IncidentSorting,
     add_alerts_to_incident,
@@ -16,13 +20,14 @@ from keep.api.core.db import (
     get_alerts_data_for_incident,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
+    get_incidents_count,
     get_last_incidents,
     merge_incidents_to_id,
     remove_alerts_to_incident_by_incident_id,
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_EMAIL, SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     NULL_FOR_DELETED_AT,
     Alert,
@@ -1787,3 +1792,77 @@ def test_incident_auto_resolve_only_if_active(db_session, create_alert):
         )
         assert incident_bl_mock.call_count == 2 # firing and acknowledged
 
+def test_incident_not_created_maintenance(
+    db_session,
+    create_alert,
+    create_window_maintenance_active,
+    finalize_window_maintenance,
+    monkeypatch,
+):
+    """
+    Feature: Creation incident
+    Scenario: The Firing alert came in a Maintenance Window swaping its state to Maintenance.
+              In the same window, came in the Resolved one.
+              Once the Maintenance Window is over, the Maintenance alert is swapping again to
+              recover its previous status (Firing) but as there was a Resolved matching
+              with Firing by fingerprints, the incident shouldn't be created.
+    """
+    # GIVEN The strategy is block_alert_by_maintenance_window
+    monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
+    importlib.reload(keep.api.consts)
+    importlib.reload(keep.api.bl.maintenance_windows_bl)
+    #AND A rule matching by Source
+    correlation_rule = Rule(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Rule-test",
+        definition={
+            "sql": "((source = :source_1))",
+            "params": {"source_1": "test-source"},
+        },
+        definition_cel='source == "test-source"',
+        timeframe=600,
+        timeunit="seconds",
+        created_by=SINGLE_TENANT_EMAIL,
+        creation_time=(datetime.now(UTC) - timedelta(hours=3)).isoformat(),
+        require_approve=False,
+        resolve_on=ResolveOn.ALL.value,
+        create_on=CreateIncidentOn.ANY.value,
+    )
+    db_session.add(correlation_rule)
+    db_session.commit()
+    db_session.refresh(correlation_rule)
+    #AND A Maintenance Window matching by Source
+    maintenance_w = create_window_maintenance_active(
+        start=datetime.now(UTC) - timedelta(hours=3),
+        end=datetime.now(UTC) + timedelta(hours=1),
+        cel='source == "test-source"'
+    )
+    #AND An alert come in from Maintenance Window with Firing
+    create_alert(
+        "test-fingerprint",
+        AlertStatus.FIRING,
+        datetime.now(UTC) - timedelta(hours=1),
+        {"severity": AlertSeverity.INFO.value,
+        "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+        "source": ["test-source"]},
+        tenant_id=SINGLE_TENANT_UUID,
+    )
+    #AND An alert received in the same Maintenance Window with Resolved
+    create_alert(
+        "test-fingerprint",
+        AlertStatus.RESOLVED,
+        datetime.now(UTC) - timedelta(hours=1),
+        {"severity": AlertSeverity.INFO.value,
+        "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+        "source": ["test-source"]},
+        tenant_id=SINGLE_TENANT_UUID,
+    )
+    #AND an expired window
+    finalize_window_maintenance(maintenance_w.id)
+    #WHEN The recover strategy is checked
+    MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
+    #THEN its creation is refuse because of the Firing has been already closed by the Resolved.
+    _, total = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
+    )
+    assert total == 0
