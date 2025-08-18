@@ -39,7 +39,7 @@ async def async_process_watcher(*args):
                     resp = await loop.run_in_executor(None, MaintenanceWindowsBl.recover_strategy, logger)
                     logger.info("Sleeping for 60 seconds before next run.")
                     complete_time = datetime.datetime.now()
-                    await asyncio.sleep(WATCHER_LAPSED_TIME - (complete_time - init_time).total_seconds())
+                    await asyncio.sleep(max(0, WATCHER_LAPSED_TIME - (complete_time - init_time).total_seconds()))
                     logger.info("Unlock process completed.")
             except Timeout:
                 logger.info("Watcher process is already running, skipping this run.")
