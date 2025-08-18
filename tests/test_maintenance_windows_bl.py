@@ -386,7 +386,7 @@ def test_strategy_alert_launch_workflow(
     Feature: Strategy - recover previous status
     Scenario: Having the Maintenance Window expired, the alert in its previous status, workflows should be launched.
     """
-    # GIVEN The strategy is block_alert_by_maintenance_window
+    # GIVEN The strategy is recover_previous_status
     monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
     importlib.reload(keep.api.consts)
     importlib.reload(keep.api.bl.maintenance_windows_bl)
