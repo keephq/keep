@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY
 from opentelemetry import trace
-from keep.api.core.db import add_audit, get_alerts_by_status, get_all_presets_dtos, get_maintenance_windows_started, get_session_sync, recover_prev_alert_status
+from keep.api.core.db import add_audit, get_alerts_by_status, get_all_presets_dtos, get_maintenance_windows_started, get_session, get_session_sync, recover_prev_alert_status
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
@@ -30,7 +30,8 @@ class MaintenanceWindowsBl:
             self.session.query(MaintenanceWindowRule)
             .filter(MaintenanceWindowRule.tenant_id == tenant_id)
             .filter(MaintenanceWindowRule.enabled == True)
-            .filter(MaintenanceWindowRule.end_time >= datetime.datetime.now())
+            .filter(MaintenanceWindowRule.end_time >= datetime.datetime.now(datetime.UTC))
+            .filter(MaintenanceWindowRule.start_time <= datetime.datetime.now(datetime.UTC))
             .all()
         )
 
@@ -55,7 +56,7 @@ class MaintenanceWindowsBl:
                 )
                 continue
 
-            if maintenance_rule.end_time <= datetime.datetime.now():
+            if maintenance_rule.end_time.replace(tzinfo=datetime.UTC) <= datetime.datetime.now(datetime.UTC):
                 # this is wtf error, should not happen because of query in init
                 self.logger.error(
                     "Fetched maintenance window which already ended by mistake, should not happen!"
@@ -168,6 +169,8 @@ class MaintenanceWindowsBl:
         """
         logger.info("Starting recover strategy for maintenance windows review.")
         env = celpy.Environment()
+        if session is None:
+            session = get_session_sync()
         windows = get_maintenance_windows_started(session)
         alerts_in_maint = get_alerts_by_status(AlertStatus.MAINTENANCE, session)
         for alert in alerts_in_maint:
@@ -197,7 +200,7 @@ class MaintenanceWindowsBl:
                     action=ActionType.MAINTENANCE_EXPIRED,
                     description=(
                         f"Alert {alert.id} has recover its previous status, "
-                        f"from {alert.event.get('status')} to {alert.event.get('previous_status')}"
+                        f"from {alert.event.get('previous_status')} to {alert.event.get('status')}"
                     ),
                 )
 
