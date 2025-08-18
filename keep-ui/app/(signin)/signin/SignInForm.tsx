@@ -21,6 +21,7 @@ export interface Providers {
   credentials?: Provider;
   keycloak?: Provider;
   "microsoft-entra-id"?: Provider;
+  okta?: Provider;
 }
 
 interface SignInFormInputs {
@@ -74,6 +75,9 @@ export default function SignInForm({
       } else if (providers.keycloak) {
         console.log("Signing in with keycloak provider");
         signIn("keycloak", { callbackUrl: "/" });
+      } else if (providers.okta) {
+        console.log("Signing in with Okta provider");
+        signIn("okta", { callbackUrl: "/" });
       } else if (providers["microsoft-entra-id"]) {
         console.log("Signing in with Azure AD provider");
         signIn("microsoft-entra-id", { callbackUrl: "/" });

@@ -157,7 +157,7 @@ def test_alert_not_in_expired_maintenance_window(
     mock_session, expired_maintenance_window_rule, alert_dto
 ):
     # Simulate the query to return the expired maintenance_window
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         expired_maintenance_window_rule
     ]
 
@@ -172,7 +172,7 @@ def test_alert_not_in_expired_maintenance_window(
 
 def test_alert_in_no_maintenance_window(mock_session, alert_dto):
     # Simulate the query to return no maintenance_windows
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = (
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = (
         []
     )
 
@@ -189,7 +189,7 @@ def test_alert_in_maintenance_window_with_non_matching_cel(
 ):
     # Modify the cel_query so that the alert won't match
     active_maintenance_window_rule.cel_query = 'source == "other-source"'
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule
     ]
 
@@ -207,7 +207,7 @@ def test_alert_ignored_due_to_resolved_status(
     # Set the alert status to RESOLVED
     alert_dto.status = "resolved"
 
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule
     ]
 
@@ -226,7 +226,7 @@ def test_alert_ignored_due_to_acknowledged_status(
     # Set the alert status to ACKNOWLEDGED
     alert_dto.status = "acknowledged"
 
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule
     ]
 
@@ -242,7 +242,7 @@ def test_alert_ignored_due_to_acknowledged_status(
 def test_alert_with_missing_cel_field(mock_session, active_maintenance_window_rule, alert_dto):
     # Modify the cel_query to reference a non-existent field
     active_maintenance_window_rule.cel_query = 'alertname == "test-alert"'
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule
     ]
 

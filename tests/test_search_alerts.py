@@ -1450,12 +1450,12 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
 @pytest.mark.parametrize(
     "cel_query, timeframe, limit, expected_cel",
     [
-        (None, 0.1667, 223, "(lastReceived >= '2025-06-18T11:51:20+00:00')"),
+        (None, 0.1667, 223, "(timestamp >= '2025-06-18T11:51:20+00:00')"),
         (
             "providerType != 'gcp'",
             0.1667,
             500,
-            "(lastReceived >= '2025-06-18T11:51:20+00:00') && (providerType != 'gcp')",
+            "(timestamp >= '2025-06-18T11:51:20+00:00') && (providerType != 'gcp')",
         ),
         ("providerType != 'gcp'", None, 2, "providerType != 'gcp'"),
         ("    providerType != 'gcp'    ", None, 2, "providerType != 'gcp'"),
@@ -1463,7 +1463,7 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
             "name.contains('CPU')",
             0.5,
             2,
-            "(lastReceived >= '2025-06-18T03:51:23+00:00') && (name.contains('CPU'))",
+            "(timestamp >= '2025-06-18T03:51:23+00:00') && (name.contains('CPU'))",
         ),
     ],
 )
