@@ -52,6 +52,8 @@ class AlertStatus(Enum):
     SUPPRESSED = "suppressed"
     # No Data
     PENDING = "pending"
+    #Affected by Maintenance Windows
+    MAINTENANCE = "maintenance"
 
 
 class DismissAlertRequest(BaseModel):
