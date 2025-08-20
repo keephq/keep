@@ -628,8 +628,8 @@ class KibanaProvider(BaseProvider):
             )
             # use map
             severity = KibanaProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
-            service = event.pop("service", None)
-            url = event.pop("url", None)
+            service = event.pop("service", {}).get("name", None)
+            url = event.pop("url", {}).get("full", None)
             if not isinstance(url, str):
                 logger.warning(
                     "Could not extract url in SIEM Kibana alert", extra={"url": url}
