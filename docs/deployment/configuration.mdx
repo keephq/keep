@@ -298,6 +298,19 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 
 </Note>
 
+
+### Maintenance Windows
+
+<Info>
+  The strategy enables the ability to manage how the alerts are handled
+  in case of a match with the Maintenance Windows Rules.
+</Info>
+
+|             Env var              |                      Purpose                |        Required         | Default Value |               Valid options                       |
+| :------------------------------: | :-----------------------------------------: | :---------------------: | :-----------: | :-----------------------------------------------: |
+| **MAINTENANCE_WINDOW_STRATEGY**  |          Choose the strategy                |           No            |    "default"  |      "default" or "recover_previous_status"       |
+| **WATCHER_LAPSED_TIME**          | Time in seconds to execute the alert review |           No            |       60      |             Valid positive integer                |
+
 ## Frontend Environment Variables
 
 <Info>
