@@ -628,12 +628,26 @@ class KibanaProvider(BaseProvider):
             )
             # use map
             severity = KibanaProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+            service = event.pop("service", None)
+            url = event.pop("url", None)
+            if not isinstance(url, str):
+                logger.warning(
+                    "Could not extract url in SIEM Kibana alert", extra={"url": url}
+                )
+                url = None
+            if not isinstance(service, str):
+                logger.warning(
+                    "Could not extract service in SIEM Kibana alert", extra={"service": service}
+                )
+                service = None
             alert_dto = AlertDto(
                 name=name,
                 description=description,
                 status=status,
                 severity=severity,
                 source=["kibana"],
+                service=service,
+                url=url,
                 **event,
             )
             logger.info("Finished to parse SIEM Kibana alert")
