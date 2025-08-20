@@ -17,6 +17,7 @@ from keep.api.core.db import (
     assign_alert_to_incident,
     create_incident_for_grouping_rule,
     enrich_incidents_with_alerts,
+    get_alerts_by_fingerprint,
     get_incident_for_grouping_rule,
 )
 from keep.api.core.db import get_rules as get_rules_db
@@ -115,11 +116,18 @@ class RulesEngine:
                     rule_fingerprints = self._calc_rule_fingerprint(event, rule)
 
                     for rule_fingerprint in rule_fingerprints:
+                        # #If the alert recover its previous status, we need to check if there are any alerts with the same fingerprint that were resolved
+                        creation_allowed = True
+                        if hasattr(event, "previous_status") and (event.previous_status == AlertStatus.MAINTENANCE.value):
+                            alerts_solved = get_alerts_by_fingerprint(self.tenant_id, event.fingerprint, status=AlertStatus.RESOLVED.value)
+                            if alerts_solved and any(event.last_received < solved_alert.event["last_received"] for solved_alert in alerts_solved):
+                                creation_allowed = False
                         incident, send_created_event = self._get_or_create_incident(
                             rule=rule,
                             rule_fingerprint=",".join(rule_fingerprint),
                             session=session,
                             event=event,
+                            creation_allowed=creation_allowed
                         )
                         if incident:
                             incident = assign_alert_to_incident(
@@ -239,7 +247,7 @@ class RulesEngine:
         return re.findall(regex, incident_name_template)
 
     def _get_or_create_incident(
-        self, rule: Rule, rule_fingerprint, session, event
+        self, rule: Rule, rule_fingerprint, session, event, creation_allowed=True
     ) -> (Optional[Incident], bool):
 
         existed_incident, expired = get_incident_for_grouping_rule(
@@ -308,7 +316,7 @@ class RulesEngine:
         # else, this is the first time
         # Starting new incident ONLY if alert is firing
         # https://github.com/keephq/keep/issues/3418
-        if event.status == AlertStatus.FIRING.value:
+        if creation_allowed and (event.status == AlertStatus.FIRING.value):
             if rule.incident_name_template:
                 incident_name = copy.copy(rule.incident_name_template)
                 variables = self.get_vaiables(rule.incident_name_template)
