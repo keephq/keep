@@ -21,9 +21,12 @@ from starlette_context import context, request_cycle_context
 from playwright.sync_api import Page
 
 # This import is required to create the tables
+from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
+from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
@@ -755,6 +758,55 @@ def create_alert(db_session):
 
     return _create_alert
 
+@pytest.fixture
+def create_window_maintenance_active(db_session):
+    def _create_window_maintenance_active(
+        start: datetime,
+        end: datetime,
+        cel: str,
+        tenant_id: str = SINGLE_TENANT_UUID,
+        name: str = "Test Maintenance Window",
+        description: str = "This is a test maintenance window",
+    ):
+        """Create a maintenance window in the database."""
+        window = MaintenanceWindowRule(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
+            name=name,
+            description=description,
+            start_time=start,
+            end_time=end,
+            created_by="test_user",
+            cel_query=cel,
+            enabled=True,
+            suppress=True,
+            ignore_statuses=[AlertStatus.RESOLVED.value, AlertStatus.ACKNOWLEDGED.value],
+
+        )
+        db_session.add(window)
+        db_session.commit()
+        return window
+
+    return _create_window_maintenance_active
+
+@pytest.fixture
+def finalize_window_maintenance(db_session):
+    def _finalize_window_maintenance(rule_id, tenant_id: str = SINGLE_TENANT_UUID):
+        rule: MaintenanceWindowRule = (
+            db_session.query(MaintenanceWindowRule)
+            .filter(
+                MaintenanceWindowRule.tenant_id == tenant_id,
+                MaintenanceWindowRule.id == rule_id,
+            )
+            .first()
+        )
+        rule.end_time = datetime.now(tz=timezone.utc) - timedelta(seconds=30)
+        rule.enabled = False
+
+        db_session.commit()
+        db_session.refresh(rule)
+
+    return _finalize_window_maintenance
 
 def pytest_addoption(parser):
     """

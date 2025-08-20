@@ -28,7 +28,10 @@ STATIC_PRESETS = {
         tags=[],
     )
 }
-
+MAINTENANCE_WINDOW_ALERT_STRATEGY = os.environ.get(
+    "MAINTENANCE_WINDOW_STRATEGY", "default"
+)  # recover_previous_status or default
+WATCHER_LAPSED_TIME = int(os.environ.get("KEEP_WATCHER_LAPSED_TIME", 60))  # in seconds
 ###
 # Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai"
 # to split the tasks between the workers.
@@ -39,6 +42,7 @@ KEEP_ARQ_TASK_POOL_BASIC_PROCESSING = "basic_processing"  # Everything except AI
 # Define queues for different task types
 KEEP_ARQ_QUEUE_BASIC = "basic_processing"
 KEEP_ARQ_QUEUE_WORKFLOWS = "workflows"
+KEEP_ARQ_QUEUE_MAINTENANCE = "maintenance"
 
 REDIS = os.environ.get("REDIS", "false") == "true"
 
@@ -48,3 +52,5 @@ else:
     KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)
 
 OPENAI_MODEL_NAME = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-2024-08-06")
+
+KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
