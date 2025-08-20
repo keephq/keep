@@ -39,6 +39,7 @@ In Keep, certain alert statuses are automatically ignored by Maintenance Window 
 ### Why Are Some Statuses Ignored?
 
     •	RESOLVED Alerts: These alerts indicate that an issue has been resolved. By allowing these alerts to bypass Maintenance Window rules, Keep ensures that any active incidents related to the alert can be properly closed, maintaining the integrity of the alert lifecycle.
+    
     •	ACKNOWLEDGED Alerts: These alerts have been acknowledged by an operator, signaling that they are being addressed. Ignoring these alerts in Maintenance Windows ensures that operators can track the progress of incidents and take necessary actions without interference.
 
 By excluding these statuses from Maintenance Window suppression, Keep allows for the continuous and accurate management of alerts, even during Maintenance Window periods, ensuring that resolution processes are not disrupted.
@@ -61,3 +62,40 @@ To create a Maintenance Window rule:
 - **Plan Maintenance Windows in Advance**: Schedule Maintenance Window periods in advance for known maintenance windows to prevent unnecessary alerts.
 - **Use Specific Conditions**: Define precise CEL queries to ensure only the intended alerts are suppressed.
 - **Review and Update Maintenance Windows**: Regularly review active Maintenance Window rules to ensure they are still relevant and adjust them as necessary.
+
+
+## Strategies
+
+In order to handle the alerts during Maintenance Windows, Keep provides some Strategies to handle how these alerts are treated:
+
+### 1. Default
+
+The default behaviour of Maintenance Windows is to **Suppressed** alerts that match the defined conditions.
+
+### 2. Recover status
+
+This strategy relies on the following premise:
+<Tip>
+   An alert received inside the Maintenance Window must be inhibited and once the Maintenance Window is over, the alert must recover its previous flow.
+</Tip>
+
+The following actions will therefore be taken with a new alert:
+- When an alert is received, it will be checked against the Maintenance Window rules.
+- If the alert matches any Maintenance Window rule, its status will be set to **Maintenance**.
+- Workflows and Incidents handling are skipped.
+
+Every WATCHER_LAPSED_TIME seconds, the watcher will check whether there is any active Maintenance Window for every alert with a Maintenance status.
+If so, the following actions will be taken:
+- The alert will swap its status, and previous status.
+- Workflows, Incidents handling, Pusher and Presets notifications will be launched in the same way as a new alert.
+
+#### 2.1 What is an expired Maintenance Window?
+
+For a maintenance window to be considered expired, the following conditions must be met:
+- The **End Time** must be earlier than the current time.
+- The **Enabled** flag must be set to **False**.
+
+#### 2.2 What are the specific conditions to use the Recover Status Strategy?
+- Set **MAINTENANCE_WINDOW_STRATEGY** environment variable to **recover_previous_status**.
+- "Alerts will show in suppressed status" option must be set to **True** in the Maintenance Window rule configuration.
+- **Enabled** flag must be set to **True** in the Maintenance Window rule configuration.

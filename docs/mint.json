@@ -288,7 +288,8 @@
             "deployment/authentication/azuread-auth",
             "deployment/authentication/keycloak-auth",
             "deployment/authentication/oauth2proxy-auth",
-            "deployment/authentication/oauth2-proxy-gitlab"
+            "deployment/authentication/oauth2-proxy-gitlab",
+            "deployment/authentication/onelogin-auth"
           ]
         },
         {

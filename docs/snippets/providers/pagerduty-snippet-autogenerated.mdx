@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -29,6 +29,7 @@ steps:
       config: "{{ provider.my_provider_name }}"
       with:
         incident_id: {value}  
+        incident_key: {value}  
 ```
 
 
@@ -42,6 +43,7 @@ actions:
         title: {value}  # Title of the alert or incident
         dedup: {value}  # String used to deduplicate alerts for events API, max 255 chars
         service_id: {value}  # ID of the service for incidents
+        routing_key: {value}  # API routing_key (optional), if not specified, fallbacks to the one provided in provider
         requester: {value}  # Email of the user requesting the incident creation
         incident_id: {value}  # Key to identify the incident. UUID generated if not provided
         event_type: {value}  # Event type for events API (trigger/acknowledge/resolve)
@@ -57,11 +59,12 @@ actions:
 
 
 
-Check the following workflow example:
+Check the following workflow examples:
 - [ifelse.yml](https://github.com/keephq/keep/blob/main/examples/workflows/ifelse.yml)
+- [pagerduty.yml](https://github.com/keephq/keep/blob/main/examples/workflows/pagerduty.yml)
 
 
 ## Topology
-This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
-and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
 for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).
