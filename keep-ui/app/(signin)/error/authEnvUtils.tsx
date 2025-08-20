@@ -37,6 +37,12 @@ export function getAuthTypeEnvVars(authType: string | undefined): AuthEnvVars {
         OKTA_ISSUER: maskValue(process.env.OKTA_ISSUER),
         OKTA_DOMAIN: maskValue(process.env.OKTA_DOMAIN),
       };
+    case AuthType.ONELOGIN:
+      return {
+        ONELOGIN_CLIENT_ID: maskValue(process.env.ONELOGIN_CLIENT_ID),
+        ONELOGIN_CLIENT_SECRET: maskValue(process.env.ONELOGIN_CLIENT_SECRET),
+        ONELOGIN_ISSUER: maskValue(process.env.ONELOGIN_ISSUER),
+      };
     case AuthType.DB:
       return {
         API_URL: maskValue(process.env.API_URL),
