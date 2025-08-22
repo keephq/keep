@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Literal, Union
+from typing import Union
 
 import pydantic
 import requests
