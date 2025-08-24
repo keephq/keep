@@ -7,8 +7,6 @@ for dismissed == false, even though their payload shows dismissed: false.
 """
 
 import datetime
-import pytest
-import time
 import uuid
 from datetime import timezone, timedelta
 from freezegun import freeze_time
@@ -19,7 +17,6 @@ from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert, LastAlert
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
-from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.searchengine.searchengine import SearchEngine
 
 

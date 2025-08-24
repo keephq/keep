@@ -9,7 +9,7 @@ import datetime
 import logging
 from typing import List, Optional
 
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 from keep.api.core.db import get_session_sync
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.elastic import ElasticClient  
@@ -47,10 +47,20 @@ class DismissalExpiryBl:
         dismissed_field = get_json_extract_field(session, AlertEnrichment.enrichments, "dismissed")
         dismissed_until_field = get_json_extract_field(session, AlertEnrichment.enrichments, "dismissUntil")
         
+        # Build cross-database compatible boolean comparison
+        # Different databases store/extract JSON booleans differently:
+        # - SQLite: json_extract returns 1/0 for true/false  
+        # - MySQL: JSON_UNQUOTE(JSON_EXTRACT()) returns "true"/"false" strings
+        # - PostgreSQL: ->> operator returns "true"/"false" strings
+        if session.bind.dialect.name == "sqlite":
+            dismissed_condition = dismissed_field == 1
+        else:
+            # For MySQL and PostgreSQL, compare with string "true"
+            dismissed_condition = dismissed_field == "true"
+        
         query = session.exec(
             select(AlertEnrichment).where(
-                # SQLite uses 1 for boolean true, PostgreSQL uses boolean true
-                (dismissed_field == 1) | (dismissed_field == True) | (dismissed_field == "true"),
+                dismissed_condition,
                 # dismissedUntil is not null
                 dismissed_until_field.isnot(None),
                 # dismissedUntil is not "forever"
@@ -196,7 +206,7 @@ class DismissalExpiryBl:
                     )
                     session.add(audit)
                     logger.info(
-                        f"Added audit trail for expired dismissal",
+                        "Added audit trail for expired dismissal",
                         extra={
                             "tenant_id": enrichment.tenant_id,
                             "fingerprint": enrichment.alert_fingerprint
