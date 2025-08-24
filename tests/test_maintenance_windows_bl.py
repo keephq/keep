@@ -137,8 +137,13 @@ def test_alert_in_active_maintenance_window(
 
 
 def test_alert_in_active_maintenance_window_with_suppress(
-    mock_session, active_maintenance_window_rule_with_suppression_on, alert_dto
+    mock_session, active_maintenance_window_rule_with_suppression_on, alert_dto, monkeypatch
 ):
+    # Ensure we use the default strategy (not recover_previous_status from other tests)
+    monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "default")
+    importlib.reload(keep.api.consts)
+    importlib.reload(keep.api.bl.maintenance_windows_bl)
+    
     # Simulate the query to return the active maintenance_window
     mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule_with_suppression_on
