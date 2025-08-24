@@ -37,6 +37,7 @@ class ActionType(enum.Enum):
     UNCOMMENT = "a comment was removed from the alert"
     MAINTENANCE = "Alert is in maintenance window"
     MAINTENANCE_EXPIRED = "Alert has been removed from maintenance window"
+    DISMISSAL_EXPIRED = "Alert dismissal expired"
     INCIDENT_COMMENT = "A comment was added to the incident"
     INCIDENT_ENRICH = "Incident enriched"
     INCIDENT_STATUS_CHANGE = "Incident status changed"
