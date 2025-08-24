@@ -1395,15 +1395,20 @@ def batch_enrich(
         }
 
         # Prepare bulk update for existing enrichments
-        to_update = []
         to_create = []
         audit_entries = []
 
         for fingerprint in fingerprints:
             existing = existing_enrichments.get(fingerprint)
-
             if existing:
-                to_update.append(existing.id)
+                # AlertEnrichment exist, update and merge enrichments
+                new_enrichment_data = {**existing.enrichments, **enrichments}
+                stmt = (
+                    update(AlertEnrichment)
+                    .where(AlertEnrichment.id == existing.id)
+                    .values(enrichments=new_enrichment_data)
+                )
+                session.execute(stmt)
             else:
                 # For new entries
                 to_create.append(
@@ -1424,15 +1429,6 @@ def batch_enrich(
                         description=action_description,
                     )
                 )
-
-        # Bulk update in a single query
-        if to_update:
-            stmt = (
-                update(AlertEnrichment)
-                .where(AlertEnrichment.id.in_(to_update))
-                .values(enrichments=enrichments)
-            )
-            session.execute(stmt)
 
         # Bulk insert new enrichments
         if to_create:
