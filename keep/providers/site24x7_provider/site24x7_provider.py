@@ -171,6 +171,7 @@ class Site24X7Provider(BaseProvider):
             )
         return {
             "authenticated": authentication_scope,
+            "valid_tld": True
         }
 
     def setup_webhook(
