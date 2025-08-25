@@ -1,0 +1,53 @@
+services:
+  # PostgreSQL with custom schema setup
+  postgres-custom-schema:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: keepuser
+      POSTGRES_PASSWORD: keeppassword
+      POSTGRES_DB: keepdb
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./docker-entrypoint-initdb.d/init-custom-schema.sql:/docker-entrypoint-initdb.d/01-init-custom-schema.sql
+      - postgres-schema-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keepuser -d keepdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Keep backend with custom schema
+  keep-backend-custom-schema:
+    image: "us-central1-docker.pkg.dev/keephq/keep/keep-api:latest"
+    ports:
+      - "8082:8080"
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@postgres-custom-schema:5432/keepdb
+      - POSTGRES_SCHEMA=keep_custom
+      - POSTHOG_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=/app
+      - SQLALCHEMY_WARN_20=1
+      - DATABASE_ECHO=true  # Enable to see SQL queries
+    depends_on:
+      postgres-custom-schema:
+        condition: service_healthy
+
+  # Keep frontend for testing
+  keep-frontend-custom-schema:
+    image: "us-central1-docker.pkg.dev/keephq/keep/keep-ui:latest"
+    ports:
+      - "3002:3000"
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3002
+      - API_URL=http://keep-backend-custom-schema:8080
+      - POSTHOG_DISABLED=true
+      - SENTRY_DISABLED=true
+    depends_on:
+      - keep-backend-custom-schema
+
+volumes:
+  postgres-schema-test-data:
