@@ -1272,6 +1272,17 @@ def add_audit(
     return audit
 
 
+def normalize_enrichments(enrichments: dict) -> dict:
+    """
+    Normalize enrichment fields to proper Python types before persisting.
+    Ensures 'dismissed' is always stored as boolean value.
+    """
+    if "dismissed" in enrichments:
+        val = enrichments["dismissed"]
+        if isinstance(val, str):
+            enrichments["dismissed"] = val.lower() == "true"
+    return enrichments
+
 def _enrich_entity(
     session,
     tenant_id,
@@ -1293,6 +1304,7 @@ def _enrich_entity(
         enrichments (dict): The enrichments to add to the alert.
         force (bool): Whether to force the enrichment to be updated. This is used to dispose enrichments if necessary.
     """
+    # Normalize enrichment values for correct data types
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
         # if force - override exisitng enrichments. being used to dispose enrichments if necessary
@@ -1355,11 +1367,10 @@ def _enrich_entity(
             session.rollback()
             return get_enrichment_with_session(session, tenant_id, fingerprint)
 
-
 def batch_enrich(
     tenant_id,
-    fingerprints,
-    enrichments,
+    fingerprints: list[str],
+    enrichments_list: List[Dict[str, Any]],
     action_type: ActionType,
     action_callee: str,
     action_description: str,
@@ -1372,17 +1383,26 @@ def batch_enrich(
     Args:
         tenant_id (str): The tenant ID to filter the alert enrichments by.
         fingerprints (List[str]): List of alert fingerprints to enrich.
-        enrichments (dict): The enrichments to add to all alerts.
+        enrichments_list (List[Dict[str, Any]]): List of enrichments, one per fingerprint.
         action_type (ActionType): The type of action being performed.
         action_callee (str): The ID of the user performing the action.
         action_description (str): Description of the action.
         session (Session, optional): Database session to use.
-        force (bool, optional): Whether to override existing enrichments. Defaults to False.
         audit_enabled (bool, optional): Whether to create audit entries. Defaults to True.
 
     Returns:
         List[AlertEnrichment]: List of enriched alert objects.
     """
+
+    # Validate that the fingerprints and enrichments_list have the same length
+    if len(fingerprints) != len(enrichments_list):
+        raise ValueError("Fingerprints and enrichments lists must be the same length.")
+
+    # Normalize each enrichment to ensure consistent format
+    normalized_enrichments = [
+        normalize_enrichments(enrichments) for enrichments in enrichments_list
+    ]
+
     with existed_or_new_session(session) as session:
         # Get all existing enrichments in one query
         existing_enrichments = {
@@ -1394,19 +1414,23 @@ def batch_enrich(
             ).all()
         }
 
-        # Prepare bulk update for existing enrichments
-        to_update = []
-        to_create = []
+        # List to hold audit entries if auditing is enabled
         audit_entries = []
 
-        for fingerprint in fingerprints:
+        # Update each record individually
+        for idx, fingerprint in enumerate(fingerprints):
+            enrichments = normalized_enrichments[idx]
             existing = existing_enrichments.get(fingerprint)
-
             if existing:
-                to_update.append(existing.id)
+                # Update existing enrichment
+                session.execute(
+                    update(AlertEnrichment)
+                    .where(AlertEnrichment.id == existing.id)
+                    .values(enrichments=enrichments)
+                )
             else:
-                # For new entries
-                to_create.append(
+                # Create new enrichment record
+                session.add(
                     AlertEnrichment(
                         tenant_id=tenant_id,
                         alert_fingerprint=fingerprint,
@@ -1414,6 +1438,7 @@ def batch_enrich(
                     )
                 )
 
+            # Create audit entry if enabled
             if audit_enabled:
                 audit_entries.append(
                     AlertAudit(
@@ -1425,26 +1450,14 @@ def batch_enrich(
                     )
                 )
 
-        # Bulk update in a single query
-        if to_update:
-            stmt = (
-                update(AlertEnrichment)
-                .where(AlertEnrichment.id.in_(to_update))
-                .values(enrichments=enrichments)
-            )
-            session.execute(stmt)
-
-        # Bulk insert new enrichments
-        if to_create:
-            session.add_all(to_create)
-
-        # Bulk insert audit entries
-        if audit_entries:
+        # Insert audit entries in batch if any
+        if audit_enabled and audit_entries:
             session.add_all(audit_entries)
 
+        # Commit all changes
         session.commit()
 
-        # Get all updated/created enrichments
+        # Return all updated or inserted enrichments
         result = session.exec(
             select(AlertEnrichment)
             .where(AlertEnrichment.tenant_id == tenant_id)
@@ -1452,7 +1465,6 @@ def batch_enrich(
         ).all()
 
         return result
-
 
 def enrich_entity(
     tenant_id,
