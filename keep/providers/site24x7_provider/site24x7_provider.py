@@ -149,34 +149,28 @@ class Site24X7Provider(BaseProvider):
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        valid_tlds = [".com", ".eu", ".com.cn", ".in", ".com.au", ".jp"]
-        valid_tld_scope = "TLD not in [.com | .eu | .com.cn | .in | .com.au | .jp]"
-        authentication_scope = "Validate TLD first"
-        if self.authentication_config.zohoAccountTLD in valid_tlds:
-            valid_tld_scope = True
-            response = requests.get(
-                f'{self.__get_url(paths=["monitors"])}', headers=self.__get_headers()
+        response = requests.get(
+            f'{self.__get_url(paths=["monitors"])}', headers=self.__get_headers()
+        )
+        if response.status_code == 401:
+            authentication_scope = response.json()
+            self.logger.error(
+                "Failed to authenticate user",
+                extra={"response": authentication_scope},
             )
-            if response.status_code == 401:
-                authentication_scope = response.json()
-                self.logger.error(
-                    "Failed to authenticate user",
-                    extra={"response": authentication_scope},
-                )
-            elif response.status_code == 200:
-                authentication_scope = True
-                self.logger.info("Authenticated user successfully")
-            else:
-                authentication_scope = (
-                    f"Error while authenticating user, {response.status_code}"
-                )
-                self.logger.error(
-                    "Error while authenticating user",
-                    extra={"status_code": response.status_code},
-                )
+        elif response.status_code == 200:
+            authentication_scope = True
+            self.logger.info("Authenticated user successfully")
+        else:
+            authentication_scope = (
+                f"Error while authenticating user, {response.status_code}"
+            )
+            self.logger.error(
+                "Error while authenticating user",
+                extra={"status_code": response.status_code},
+            )
         return {
             "authenticated": authentication_scope,
-            "valid_tld": valid_tld_scope,
         }
 
     def setup_webhook(
