@@ -32,6 +32,7 @@
     "@headlessui/react": "^2.2.0",
     "@headlessui/tailwindcss": "^0.2.2",
     "@heroicons/react": "^2.2.0",
+    "@langchain/aws": "^0.1.12",
     "@monaco-editor/react": "v4.7.0-rc.0",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-hover-card": "^1.1.6",
