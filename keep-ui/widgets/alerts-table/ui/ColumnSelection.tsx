@@ -61,9 +61,46 @@ export default function ColumnSelection({
     }
   }, [columnVisibility, presetName]);
 
-  const columnsOptions = tableColumns
-    .filter((col) => col.getIsPinned() === false)
-    .map((col) => col.id);
+  // Common enrichment fields that should always be available for selection
+  const COMMON_ENRICHMENT_FIELDS = [
+    'ticket_id',
+    'ticket_url',
+    'ticket_type',
+    'ticket_status',
+    'environment',
+    'service',
+    'region',
+    'cluster',
+    'namespace',
+    'pod',
+    'container',
+    'host',
+    'instance',
+    'application',
+    'team',
+    'owner',
+    'runbook_url',
+    'dashboard_url',
+    'logs_url',
+    'metrics_url',
+    'impacted_customer_name',
+    'severity_override',
+    'priority',
+    'escalation_policy',
+    'on_call_engineer',
+    'alert_enrichment',
+  ];
+
+  const columnsOptions = [
+    // Include columns from table data
+    ...tableColumns
+      .filter((col) => col.getIsPinned() === false)
+      .map((col) => col.id),
+    // Include common enrichment fields that might not be in current data
+    ...COMMON_ENRICHMENT_FIELDS.filter(field => 
+      !tableColumns.some(col => col.id === field)
+    )
+  ];
 
   const filteredColumns = React.useMemo(() => {
     return columnsOptions.filter((column) =>
