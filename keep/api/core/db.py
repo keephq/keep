@@ -2027,10 +2027,12 @@ def get_alerts_by_status(
         return session.exec(query).all()
 
 
-def get_api_key(api_key: str) -> TenantApiKey:
+def get_api_key(api_key: str, include_deleted: bool = False) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
+        if not include_deleted:
+            statement = statement.where(TenantApiKey.is_deleted != True)
         tenant_api_key = session.exec(statement).first()
     return tenant_api_key
 
