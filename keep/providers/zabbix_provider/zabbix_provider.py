@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Literal, Union
+from typing import Union
 
 import pydantic
 import requests
@@ -352,33 +352,39 @@ class ZabbixProvider(BaseProvider):
     def change_severity(
         self,
         id: str,
-        new_severity: Union[
-            int,
-            Literal[
-                "Not classified", "Information", "Warning", "Average", "High", "Disaster"
-            ],
-        ],
+        new_severity: str,
     ):
         """
         Change the severity of a problem.
         Args:
             id (str): The problem id.
-            new_severity (int | str): The new severity. Can be an integer (0-5) or string:
-                - 0 or "Not classified"
-                - 1 or "Information"
-                - 2 or "Warning"
-                - 3 or "Average"
-                - 4 or "High"
-                - 5 or "Disaster"
+            new_severity (str): The new severity. Can be an integer string (0-5) or severity name:
+                - "0" or "Not classified"
+                - "1" or "Information"
+                - "2" or "Warning"
+                - "3" or "Average"
+                - "4" or "High"
+                - "5" or "Disaster"
         """
-        # Handle integer input
+        # Validate and convert input
         severity = 0
-        if isinstance(new_severity, int):
-            if 0 <= new_severity <= 5:
-                severity = new_severity
+
+        # Handle numeric string input
+        if new_severity.isdigit():
+            severity_int = int(new_severity)
+            if 0 <= severity_int <= 5:
+                severity = severity_int
+            else:
+                raise ValueError(f"Invalid severity number: {new_severity}. Must be between 0-5.")
         else:
             # Handle string input
-            severity = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.get(new_severity.lower(), 0)
+            severity_lower = new_severity.lower().strip()
+            if severity_lower in ZabbixProvider.SEVERITY_NAME_TO_ID_MAP:
+                severity = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP[severity_lower]
+            else:
+                valid_severities = list(ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.keys()) + ["0", "1", "2", "3", "4", "5"]
+                raise ValueError(f"Invalid severity: {new_severity}. Valid values are: {valid_severities}")
+
         self.__send_request(
             "event.acknowledge", {"eventids": id, "severity": severity, "action": 8}
         )

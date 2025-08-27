@@ -79,6 +79,8 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         self.configuration = opsgenie_sdk.Configuration()
         self.configuration.retry_http_response = ["429", "500", "502-599", "404"]
         self.configuration.short_polling_max_retries = 3
+        # IMPORTANT: Create a new dict to avoid sharing with other instances
+        self.configuration.api_key = {}
         self.configuration.api_key["Authorization"] = self.authentication_config.api_key
 
     def validate_scopes(self):

@@ -13,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union, Optional
 from uuid import UUID, uuid4
 
 from dateutil.parser import parse
@@ -2015,10 +2015,24 @@ def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert
         return None
 
 
-def get_api_key(api_key: str) -> TenantApiKey:
+def get_alerts_by_status(
+    status: AlertStatus, session: Optional[Session] = None
+) -> List[Alert]:
+    with existed_or_new_session(session) as session:
+        status_field = get_json_extract_field(session, Alert.event, "status")
+        query = (
+            select(Alert).
+            where(status_field == status.value)
+        )
+        return session.exec(query).all()
+
+
+def get_api_key(api_key: str, include_deleted: bool = False) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
+        if not include_deleted:
+            statement = statement.where(TenantApiKey.is_deleted != True)
         tenant_api_key = session.exec(statement).first()
     return tenant_api_key
 
@@ -5911,3 +5925,36 @@ def create_single_tenant_for_e2e(tenant_id: str) -> None:
         except Exception:
             logger.exception("Failed to create single tenant")
             pass
+
+def get_maintenance_windows_started(session: Optional[Session] = None) -> List[MaintenanceWindowRule]:
+    """
+    It will return all windows started, i.e start_time < currentTime
+    """
+    with existed_or_new_session(session) as session:
+        query = (
+            select(MaintenanceWindowRule)
+            .where(MaintenanceWindowRule.start_time <= datetime.now(tz=timezone.utc))
+        )
+        return session.exec(query).all()
+
+def recover_prev_alert_status(alert: Alert, session: Optional[Session] = None):
+    """
+    It'll restore the previous status of the alert.
+    """
+    with existed_or_new_session(session) as session:
+        try:
+            status = alert.event.get("status")
+            prev_status = alert.event.get("previous_status")
+            alert.event["status"] = prev_status
+            alert.event["previous_status"] = status
+        except KeyError:
+            logger.warning(f"Alert {alert.id} does not have previous status.")
+        query = (
+            update(Alert)
+            .where(Alert.id == alert.id)
+            .values(
+                event = alert.event
+            )
+        )
+        session.exec(query)
+        session.commit()
