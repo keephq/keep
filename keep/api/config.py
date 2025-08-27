@@ -58,14 +58,19 @@ def on_starting(server=None):
         IdentityManagerTypes.DB.value,
         IdentityManagerTypes.NOAUTH.value,
         IdentityManagerTypes.OAUTH2PROXY.value,
+        IdentityManagerTypes.ONELOGIN.value,
         "no_auth",  # backwards compatibility
         "single_tenant",  # backwards compatibility
     ]:
+        excluded_from_default_user = [
+            IdentityManagerTypes.OAUTH2PROXY.value,
+            IdentityManagerTypes.ONELOGIN.value,
+        ]
         # for oauth2proxy, we don't want to create the default user
         try_create_single_tenant(
             SINGLE_TENANT_UUID,
             create_default_user=(
-                False if AUTH_TYPE == IdentityManagerTypes.OAUTH2PROXY.value else True
+                False if AUTH_TYPE in excluded_from_default_user else True
             ),
         )
 

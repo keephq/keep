@@ -4,4 +4,4 @@
 echo "Env vars:"
 env
 echo "Building"
-next build
+NODE_OPTIONS="--max-old-space-size=8192" next build
