@@ -1,4 +1,5 @@
 import { Button } from "@tremor/react";
+import { useState } from "react";
 import { AlertDto } from "@/entities/alerts/model";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
@@ -12,6 +13,8 @@ import { Table } from "@tanstack/react-table";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronDoubleRightIcon } from "@heroicons/react/24/solid";
+import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status/ui/alert-change-status-modal";
 
 interface Props {
   selectedAlertsFingerprints: string[];
@@ -41,6 +44,7 @@ export default function AlertActions({
   const { data: config } = useConfig();
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
+  const [modalAlert, setModalAlert] = useState<AlertDto | AlertDto[] | null>(null);
 
   // TODO: refactor
   const searchParams = useSearchParams();
@@ -123,6 +127,24 @@ export default function AlertActions({
       >
         Clear Selection
       </Button>
+      <Button
+        icon={ChevronDoubleRightIcon}
+        size="xs"
+        color="blue"
+        title="Resolve"
+        onClick={() => {
+          setModalAlert(selectedAlerts);
+        }}
+      >
+        Change status of {selectedAlertsFingerprints.length} alert(s)
+      </Button>
+      {modalAlert && (
+        <AlertChangeStatusModal
+          alert={modalAlert}
+          presetName="resolve"
+          handleClose={() => setModalAlert(null)}
+        />
+      )}
       <Button
         icon={SilencedDoorbellNotification}
         size="xs"
