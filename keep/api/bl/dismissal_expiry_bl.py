@@ -49,13 +49,17 @@ class DismissalExpiryBl:
         
         # Build cross-database compatible boolean comparison
         # Different databases store/extract JSON booleans differently:
-        # - SQLite: json_extract returns 1/0 for true/false  
-        # - MySQL: JSON_UNQUOTE(JSON_EXTRACT()) returns "true"/"false" strings
-        # - PostgreSQL: ->> operator returns "true"/"false" strings
+        # - SQLite: json_extract can return 1/0 for true/false OR "True"/"False"/"true"/"false" strings depending on how data was stored
+        # - MySQL: JSON_UNQUOTE(JSON_EXTRACT()) returns "true"/"false" strings (lowercase)
+        # - PostgreSQL: json_extract_path_text() returns "true"/"false" strings (lowercase) OR "True"/"False" (depending on input)
         if session.bind.dialect.name == "sqlite":
-            dismissed_condition = dismissed_field == 1
+            # Handle both integer and string representations in SQLite
+            dismissed_condition = (dismissed_field == 1) | (dismissed_field == "True") | (dismissed_field == "true")
+        elif session.bind.dialect.name == "postgresql":
+            # PostgreSQL can return both "true"/"false" and "True"/"False" depending on how the data was stored
+            dismissed_condition = (dismissed_field == "true") | (dismissed_field == "True")
         else:
-            # For MySQL and PostgreSQL, compare with string "true"
+            # For MySQL, compare with lowercase string "true"
             dismissed_condition = dismissed_field == "true"
         
         query = session.exec(
