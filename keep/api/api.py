@@ -81,6 +81,7 @@ PORT = config("PORT", default=8080, cast=int)
 SCHEDULER = config("SCHEDULER", default="true", cast=bool)
 CONSUMER = config("CONSUMER", default="true", cast=bool)
 TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
+WATCHER = config("WATCHER", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
 KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
@@ -160,7 +161,7 @@ async def startup():
         except Exception:
             logger.exception("Failed to start the topology processor")
 
-    if MAINTENANCE_WINDOWS and MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
+    if WATCHER or (MAINTENANCE_WINDOWS and MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status"):
         if REDIS:
             try:
                 logger.info("Starting the watcher process")

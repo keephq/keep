@@ -104,12 +104,12 @@ def test_dismissal_validation_at_creation_time():
 
 def test_dismissal_expiry_bug_search_filters(db_session):
     """
-    Test that reproduces the dismissedUntil expiry bug with search filters.
+    Test that verifies the dismissedUntil expiry fix works correctly with search filters.
 
-    This test demonstrates the bug where alerts with expired dismissedUntil
-    don't appear in searches for dismissed == false.
+    This test demonstrates that alerts with expired dismissedUntil properly appear
+    in searches for dismissed == false after the watcher processes them.
 
-    This test should FAIL due to the bug (without watcher running).
+    This test should PASS with the fixed watcher implementation.
     """
     tenant_id = SINGLE_TENANT_UUID
     
@@ -200,14 +200,14 @@ def test_dismissal_expiry_bug_search_filters(db_session):
             cel_query="dismissed == false",  # or !dismissed
         )
         
-        # BUG: This should return the alert because its dismissal has expired,
-        # but it won't because there's no background process updating the status
+        # Before watcher: Alert still appears dismissed in database because 
+        # the enrichment hasn't been updated yet (dismissal expired but database not updated)
         non_dismissed_alerts_before = SearchEngine(tenant_id=tenant_id).search_alerts(search_query_not_dismissed)
         
-        # Demonstrate the bug exists - should return 0 because bug prevents proper filtering
+        # Before watcher runs: Database still shows alert as dismissed (expected behavior)
         assert len(non_dismissed_alerts_before) == 0, (
-            "Bug reproduction confirmed: Alert doesn't appear in non-dismissed filter after "
-            "dismissUntil expires (this is the bug we're fixing)"
+            "Before watcher: Alert doesn't appear in non-dismissed filter because "
+            "database hasn't been updated yet (dismissal expired but enrichment not processed)"
         )
         
         # NOW APPLY THE FIX: Run dismissal expiry watcher
@@ -216,7 +216,7 @@ def test_dismissal_expiry_bug_search_filters(db_session):
         # AFTER FIX: The alert should now appear correctly
         non_dismissed_alerts_after = SearchEngine(tenant_id=tenant_id).search_alerts(search_query_not_dismissed)
         
-        # This should now PASS - proving our fix works
+        # After watcher runs: Alert should now appear in non-dismissed filter
         assert len(non_dismissed_alerts_after) == 1, (
             "FIXED: Alert now appears in non-dismissed filter after watcher processes expired dismissal"
         )
@@ -226,10 +226,10 @@ def test_dismissal_expiry_bug_search_filters(db_session):
 
 def test_dismissal_expiry_bug_sidebar_filter(db_session):
     """
-    Test that reproduces the bug specifically with sidebar "Not dismissed" filter.
+    Test that verifies sidebar "Not dismissed" filter works correctly after watcher processes expired dismissals.
     
     This simulates the UI scenario described in the GitHub issue.
-    This test should FAIL due to the bug.
+    This test should PASS with the fixed watcher implementation.
     """
     tenant_id = SINGLE_TENANT_UUID
     
@@ -395,9 +395,9 @@ def test_dismissal_expiry_bug_sidebar_filter(db_session):
 
 def test_dismissal_expiry_bug_with_cel_filter(db_session):
     """
-    Test the bug specifically with CEL-based filters like dismissed == false.
+    Test that CEL-based filters work correctly with dismissed == false after watcher processes expired dismissals.
     
-    This test should FAIL due to the bug.
+    This test should PASS with the fixed watcher implementation.
     """
     tenant_id = SINGLE_TENANT_UUID
     
@@ -475,13 +475,13 @@ def test_dismissal_expiry_bug_with_cel_filter(db_session):
                 cel_query=cel_expr,
             )
             
-            # BUG: All of these should return 1 alert, but will return 0
+            # Before watcher: Database hasn't been updated yet, so filter won't find the alert
             results_before = SearchEngine(tenant_id=tenant_id).search_alerts(search_query)
             
-            # Demonstrate the bug exists - should return 0 due to bug
+            # Before watcher runs: Database still shows alert as dismissed
             assert len(results_before) == 0, (
-                f"Bug reproduction: CEL expression '{cel_expr}' should return 1 alert "
-                f"after dismissal expires, but returns {len(results_before)} due to bug"
+                f"Before watcher: CEL expression '{cel_expr}' returns 0 because "
+                f"database hasn't been updated yet (dismissal expired but not processed)"
             )
         
         # APPLY THE FIX: Run dismissal expiry watcher
@@ -500,7 +500,7 @@ def test_dismissal_expiry_bug_with_cel_filter(db_session):
             # Should now return 1 alert correctly
             results_after = SearchEngine(tenant_id=tenant_id).search_alerts(search_query)
             
-            # This should now PASS - proving our fix works
+            # After watcher runs: Should now work correctly
             assert len(results_after) == 1, (
                 f"FIXED: CEL expression '{cel_expr}' now correctly returns 1 alert "
                 f"after watcher processes expired dismissal"
@@ -774,6 +774,70 @@ def test_dismissal_expiry_bug_fixed_with_watcher(db_session):
         # Verify disposable fields were cleaned up
         assert not hasattr(non_dismissed_alerts_after[0], 'disposable_dismissed') or \
                getattr(non_dismissed_alerts_after[0], 'disposable_dismissed', None) is None
+
+
+def test_dismissal_expiry_boolean_comparison_fix(db_session):
+    """
+    Test that specifically validates the boolean comparison fix in get_alerts_with_expired_dismissals.
+    
+    This test ensures that the function correctly finds dismissed alerts stored with different boolean
+    formats across different database types, which was the root cause of the original bug.
+    """
+    from keep.api.bl.dismissal_expiry_bl import DismissalExpiryBl
+    import datetime
+    from keep.api.models.db.alert import AlertEnrichment
+    
+    tenant_id = SINGLE_TENANT_UUID
+    current_time = datetime.datetime.now(datetime.timezone.utc)
+    past_time = current_time - datetime.timedelta(hours=1)
+    past_time_str = past_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    # Test different boolean representations that might be encountered
+    test_cases = [
+        {
+            "fingerprint": "boolean-test-True",
+            "dismissed": "True",  # Capitalized string (common in JavaScript/Python serialization)
+            "description": "Capitalized 'True' string"
+        },
+        {
+            "fingerprint": "boolean-test-true", 
+            "dismissed": "true",  # Lowercase string (JSON standard)
+            "description": "Lowercase 'true' string"
+        }
+    ]
+    
+    created_enrichments = []
+    for test_case in test_cases:
+        enrichment = AlertEnrichment(
+            tenant_id=tenant_id,
+            alert_fingerprint=test_case["fingerprint"],
+            enrichments={
+                "dismissed": test_case["dismissed"],
+                "dismissUntil": past_time_str,  # Expired timestamp
+                "status": "suppressed"
+            },
+            timestamp=current_time
+        )
+        created_enrichments.append(enrichment)
+        db_session.add(enrichment)
+    
+    db_session.commit()
+    
+    # Test that get_alerts_with_expired_dismissals finds all variations
+    expired_dismissals = DismissalExpiryBl.get_alerts_with_expired_dismissals(db_session)
+    found_fingerprints = {e.alert_fingerprint for e in expired_dismissals}
+    
+    # Verify all test cases are found regardless of boolean format
+    for test_case in test_cases:
+        assert test_case["fingerprint"] in found_fingerprints, (
+            f"Boolean comparison fix should find dismissed alerts with {test_case['description']} "
+            f"(found: {found_fingerprints})"
+        )
+        
+        # Verify the found enrichment has the expected data
+        test_found = next(e for e in expired_dismissals if e.alert_fingerprint == test_case["fingerprint"])
+        assert test_found.enrichments["dismissed"] == test_case["dismissed"]
+        assert test_found.enrichments["dismissUntil"] == past_time_str
 
 
 def test_github_issue_5047_cel_filters_dismisseduntil_bug_fixed(db_session):
