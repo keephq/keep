@@ -840,6 +840,150 @@ def test_dismissal_expiry_boolean_comparison_fix(db_session):
         assert test_found.enrichments["dismissUntil"] == past_time_str
 
 
+def test_dismissal_expiry_status_and_disposable_fields_cleanup(db_session):
+    """
+    Test that reproduces the bug where status and disposable fields remain after watcher processes expired dismissals.
+    
+    This test ensures that after watcher runs:
+    1. dismissed = False and dismissUntil = None (currently working)  
+    2. status is properly reset (currently broken)
+    3. disposable fields are completely removed (currently broken)
+    """
+    from keep.api.bl.dismissal_expiry_bl import DismissalExpiryBl
+    from keep.api.bl.enrichments_bl import EnrichmentsBl
+    from keep.api.models.action_type import ActionType
+    from keep.api.models.db.alert import Alert, LastAlert, AlertEnrichment
+    from keep.searchengine.searchengine import SearchEngine
+    from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
+    import datetime
+    from freezegun import freeze_time
+    
+    tenant_id = SINGLE_TENANT_UUID
+    
+    # Step 1: Create an alert
+    initial_time = datetime.datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+    
+    with freeze_time(initial_time):
+        alert = Alert(
+            tenant_id=tenant_id,
+            provider_type="test",
+            provider_id="test",
+            event=_create_valid_event({
+                "id": "test-status-disposable-bug",
+                "status": AlertStatus.FIRING.value,
+                "dismissed": False,
+                "dismissUntil": None,
+                "fingerprint": "status-disposable-test-fp",
+            }),
+            fingerprint="status-disposable-test-fp",
+            timestamp=initial_time
+        )
+        
+        db_session.add(alert)
+        db_session.commit()
+        
+        last_alert = LastAlert(
+            tenant_id=tenant_id,
+            fingerprint=alert.fingerprint,
+            timestamp=alert.timestamp,
+            first_timestamp=alert.timestamp,
+            alert_id=alert.id,
+        )
+        db_session.add(last_alert)
+        db_session.commit()
+
+    # Step 2: Dismiss the alert with status and disposable fields (like a maintenance workflow would)
+    dismiss_time = initial_time + timedelta(minutes=30)
+    dismiss_until_time = initial_time + timedelta(hours=1)
+    dismiss_until_str = dismiss_until_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    with freeze_time(dismiss_time):
+        enrichment_bl = EnrichmentsBl(tenant_id, db_session)
+        enrichment_bl.enrich_entity(
+            fingerprint="status-disposable-test-fp",
+            enrichments={
+                "dismissed": True,
+                "dismissUntil": dismiss_until_str,
+                "status": "suppressed",  # This should be reset after expiry
+                "note": "Maintenance window",
+                # Disposable fields that should be completely removed
+                "disposable_dismissed": True,
+                "disposable_dismissedUntil": dismiss_until_str, 
+                "disposable_dismissUntil": dismiss_until_str,  # Alternative field name
+                "disposable_note": "Maintenance window",
+                "disposable_status": "suppressed"
+            },
+            action_callee="maintenance_workflow",
+            action_description="Maintenance dismissal with status and disposables",
+            action_type=ActionType.GENERIC_ENRICH,
+        )
+
+    # Step 3: Time travel past dismissal expiry and run watcher
+    after_expiry_time = dismiss_until_time + timedelta(minutes=30)
+    
+    with freeze_time(after_expiry_time):
+        # Run the watcher
+        wait_for_dismissal_expiry_processing(tenant_id, db_session)
+        
+        # Get the enrichment directly from database to inspect all fields
+        enrichment = db_session.query(AlertEnrichment).filter(
+            AlertEnrichment.tenant_id == tenant_id,
+            AlertEnrichment.alert_fingerprint == "status-disposable-test-fp"
+        ).first()
+        
+        print(f"\\nAfter watcher - Enrichment fields:")
+        for key, value in enrichment.enrichments.items():
+            print(f"  {key} = {repr(value)}")
+        
+        # Test 1: Main dismissal fields should be correctly updated
+        assert enrichment.enrichments.get("dismissed") == False, "dismissed should be False after watcher"
+        assert enrichment.enrichments.get("dismissUntil") is None, "dismissUntil should be None after watcher"
+        
+        # Test 2: Status should be removed from enrichments (let AlertDto use original alert status)
+        assert "status" not in enrichment.enrichments or enrichment.enrichments.get("status") != "suppressed", (
+            f"Status should be removed or not be 'suppressed', but is '{enrichment.enrichments.get('status')}'"
+        )
+        
+        # Test 3: All disposable fields should be completely removed (CURRENTLY FAILS - this is the bug!)
+        disposable_fields_found = []
+        for key in enrichment.enrichments.keys():
+            if key.startswith("disposable_"):
+                disposable_fields_found.append(key)
+        
+        assert not disposable_fields_found, (
+            f"Disposable fields should be removed but found: {disposable_fields_found}"
+        )
+        
+        # Test 4: Verify that the alert appears correctly in search results
+        search_query = SearchQuery(
+            sql_query={
+                "sql": "dismissed != :dismissed_1",
+                "params": {"dismissed_1": "true"},
+            },
+            cel_query="dismissed == false",
+        )
+        
+        results = SearchEngine(tenant_id=tenant_id).search_alerts(search_query)
+        assert len(results) == 1, "Alert should appear in non-dismissed search"
+        
+        alert_dto = results[0]
+        print(f"\\nSearchEngine result:")
+        print(f"  dismissed = {alert_dto.dismissed}")
+        print(f"  status = {getattr(alert_dto, 'status', 'N/A')}")
+        print(f"  dismissUntil = {alert_dto.dismissUntil}")
+        
+        # Test 5: The final AlertDto should not be suppressed
+        # This is the key issue - the AlertDto should use the original alert status (from alert.event)
+        assert alert_dto.dismissed == False, "AlertDto should show dismissed=False"
+        # The status should come from the original alert event, not be "suppressed"
+        actual_status = getattr(alert_dto, 'status', None)
+        assert actual_status != "suppressed", (
+            f"AlertDto status should not be 'suppressed' but is '{actual_status}'"
+        )
+        # The status should be the original alert status (firing, resolved, etc.)
+        print(f"Final AlertDto status: {actual_status} (should be original alert status, not 'suppressed')")
+
+
 def test_github_issue_5047_cel_filters_dismisseduntil_bug_fixed(db_session):
     """
     Explicit test that solves GitHub Issue #5047:
