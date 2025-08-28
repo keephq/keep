@@ -241,10 +241,17 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         """
         Calculate fingerprint for alert.
         """
+
+        # First, try to get fingerprint from alert
+        fingerprint = alert.get("fingerprint", "")
+        if fingerprint:
+            logger.debug("Fingerprint provided in alert")
+            return fingerprint
+        
         labels = alert.get("labels", {})
         fingerprint = labels.get("fingerprint", "")
         if fingerprint:
-            logger.debug("Fingerprint provided in alert")
+            logger.debug("Fingerprint provided in alert labels")
             return fingerprint
 
         fingerprint_string = None
