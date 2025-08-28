@@ -614,6 +614,8 @@ class KibanaProvider(BaseProvider):
                 logger.warning("Could not find name in SIEM Kibana alert")
                 name = "SIEM Kibana Alert"
 
+            fingerprint = event.get("kibana", {}).get("alert", {}).get("id", "")
+
             status = event.get("kibana", {}).get("alert", {}).get("status", "")
             if not status:
                 logger.warning("Could not find status in SIEM Kibana alert")
@@ -640,6 +642,8 @@ class KibanaProvider(BaseProvider):
                     "Could not extract service in SIEM Kibana alert", extra={"service": service}
                 )
                 service = None
+
+            
             alert_dto = AlertDto(
                 name=name,
                 description=description,
@@ -650,6 +654,9 @@ class KibanaProvider(BaseProvider):
                 url=url,
                 **event,
             )
+            if fingerprint:
+                alert_dto.fingerprint = fingerprint
+                
             logger.info("Finished to parse SIEM Kibana alert")
             return alert_dto
         # Check if this is the new webhook format
