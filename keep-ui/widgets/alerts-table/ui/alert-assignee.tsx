@@ -10,12 +10,28 @@ export default function AlertAssignee({ assignee }: Props) {
   const [imageError, setImageError] = useState(false);
   const { data: users = [] } = useUsers();
 
-  if (!assignee || users.length < 1) {
+  if (!assignee) {
     return null;
   }
 
   const user = users.find((user) => user.email === assignee);
-  const userName = user?.name || "Keep";
+  const userName = user?.name || assignee;
+
+  // If users haven't loaded yet, show a simple text fallback
+  if (users.length === 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+          <span className="text-xs font-medium text-orange-600">
+            {assignee.charAt(0).toUpperCase()}
+          </span>
+        </div>
+        <span className="text-sm text-gray-700 truncate" title={assignee}>
+          {assignee}
+        </span>
+      </div>
+    );
+  }
 
   return !imageError ? (
     // eslint-disable-next-line @next/next/no-img-element
