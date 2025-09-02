@@ -36,7 +36,7 @@ export function AlertChangeStatusModal({
   presetName,
 }: Props) {
   const api = useApi();
-  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState<Boolean>(true);
+  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const revalidateMultiple = useRevalidateMultiple();
   const { alertsMutator } = useAlerts();
@@ -49,7 +49,12 @@ export function AlertChangeStatusModal({
   if (!alert) return null;
 
   const statusOptions = Object.values(Status)
-    .filter((status) => status !== alert.status) // Exclude current status
+    .filter((status) => {
+      if (!Array.isArray(alert)) {
+        return status !== alert.status; // Exclude current status for single alert
+      }
+      return true; // For batch, show all statuses
+    })
     .map((status) => ({
       value: status,
       label: (
@@ -70,7 +75,10 @@ export function AlertChangeStatusModal({
       showErrorToast(new Error("Please select a new status."));
       return;
     }
-
+    if (Array.isArray(alert)) {
+      showErrorToast(new Error("Batch status change should use batch handler."));
+      return;
+    }
     try {
       await api.post(
         `/alerts/enrich?dispose_on_new_alert=${disposeOnNewAlert}`,
