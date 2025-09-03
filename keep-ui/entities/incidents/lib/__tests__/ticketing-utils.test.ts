@@ -212,13 +212,13 @@ describe("ticketing-utils", () => {
   describe("findLinkedTicket", () => {
     it("should find linked ticket for ServiceNow", () => {
       const incident = createMockIncident({
-        servicenow_ticket_id: "INC0012345"
+        servicenow_ticket_url: "https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345"
       });
       const result = findLinkedTicket(incident, [mockServiceNowProvider]);
       expect(result).toEqual({
         provider: mockServiceNowProvider,
-        ticketId: "INC0012345",
-        key: "servicenow_ticket_id"
+        ticketUrl: "https://company.service-now.com/now/nav/ui/classic/params/target/incident.do%3Fsys_id%3DINC0012345",
+        key: "servicenow_ticket_url"
       });
     });
 
