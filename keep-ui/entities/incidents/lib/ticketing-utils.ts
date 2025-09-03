@@ -3,7 +3,7 @@ import { type IncidentDto } from "@/entities/incidents/model";
 
 export interface LinkedTicket {
   provider: Provider;
-  ticketId: string;
+  ticketUrl: string;
   key: string;
 }
 
@@ -59,13 +59,13 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
 export function findLinkedTicket(incident: any, ticketingProviders: Provider[]): LinkedTicket | null {
   if (!incident.enrichments) return null;
 
-  // Look for any ticketing provider's ticket ID in enrichments
+  // Look for any ticketing provider's ticket URL in enrichments
   for (const provider of ticketingProviders) {
-    const ticketKey = `${provider.type}_ticket_id`;
+    const ticketKey = `${provider.type}_ticket_url`;
     if (incident.enrichments[ticketKey]) {
       return {
         provider,
-        ticketId: incident.enrichments[ticketKey],
+        ticketUrl: incident.enrichments[ticketKey],
         key: ticketKey
       };
     }
