@@ -156,7 +156,7 @@ receivers:
                 self.authentication_config.username, self.authentication_config.password
             )
         response = requests.get(
-            f"{self.authentication_config.url}/api/v1/alerts",
+            f"{self.authentication_config.url}/api/v2/alerts",
             auth=auth,
             verify=self.authentication_config.verify,
         )
