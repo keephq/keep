@@ -120,11 +120,17 @@ class KubernetesProvider(BaseProvider):
                 - get_logs: Get logs from a pod
                 - get_deployment_logs: Get logs from all pods in a deployment
                 - get_events: Get events for a namespace or pod
+                - get_nodes: List nodes
                 - get_pods: List pods
                 - get_node_pressure: Get node pressure conditions
                 - get_pvc: List persistent volume claims
+                - get_deployments: List deployments
+                - get_statefulsets: List statefulsets
+                - get_daemonsets: List daemonsets
                 - get_services: List services
                 - get_namespaces: List namespaces
+                - get_ingresses: List ingresses for a namespace or all namespaces
+                - get_jobs: List jobs
             **kwargs: Additional arguments for the query.
         """
         api_client = self.__create_k8s_client()
@@ -135,6 +141,8 @@ class KubernetesProvider(BaseProvider):
             return self.__get_deployment_logs(api_client, **kwargs)
         elif command_type == "get_events":
             return self.__get_events(api_client, **kwargs)
+        elif command_type == "get_nodes":
+            return self.__get_nodes(api_client, **kwargs)
         elif command_type == "get_pods":
             return self.__get_pods(api_client, **kwargs)
         elif command_type == "get_node_pressure":
@@ -143,8 +151,19 @@ class KubernetesProvider(BaseProvider):
             return self.__get_pvc(api_client, **kwargs)
         elif command_type == "get_services":
             return self.__get_services(api_client, **kwargs)
+        elif command_type == "get_deployments":
+            return self.__get_deployments(api_client, **kwargs)
+        elif command_type == "get_daemonsets":
+            return self.__get_daemonsets(api_client, **kwargs)
+        elif command_type == "get_statefulsets":
+            return self.__get_statefulsets(api_client, **kwargs)
         elif command_type == "get_namespaces":
             return self.__get_namespaces(api_client, **kwargs)
+        elif command_type == "get_ingresses":
+            return self.__get_ingresses(api_client, **kwargs)
+        elif command_type == "get_jobs":
+            return self.__get_jobs(api_client, **kwargs)
+
         else:
             raise NotImplementedError(f"Command type {command_type} is not implemented")
 
@@ -350,6 +369,37 @@ class KubernetesProvider(BaseProvider):
             )
             raise Exception(f"Error getting events: {e}") from e
 
+    def __get_nodes(self, api_client, label_selector=None, return_full=False, **kwargs):
+        """
+        List all nodes in the cluster.
+
+        Args:
+            return_full (bool): If True, return full node objects as dicts.
+                                If False (default), return only basic info.
+        """
+        self.logger.info("Listing all nodes in the cluster")
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            nodes = core_v1.list_node(label_selector=label_selector)
+            if return_full:
+                return [node.to_dict() for node in nodes.items]
+            else:
+                # Return basic info: name, status, labels
+                basic_info = []
+                for node in nodes.items:
+                    info = {
+                        "name": node.metadata.name,
+                        "labels": node.metadata.labels,
+                        "status": node.status.conditions[-1].type if node.status.conditions else None,
+                        "addresses": [addr.address for addr in node.status.addresses] if node.status.addresses else [],
+                    }
+                    basic_info.append(info)
+                return basic_info
+        except ApiException as e:
+            self.logger.error(f"Error listing nodes: {e}")
+            raise Exception(f"Error listing nodes: {e}")
+
     def __get_pods(self, api_client, namespace=None, label_selector=None, **kwargs):
         """
         List pods in a namespace or across all namespaces.
@@ -424,9 +474,13 @@ class KubernetesProvider(BaseProvider):
             self.logger.error(f"Error listing PVCs: {e}")
             raise Exception(f"Error listing PVCs: {e}")
 
-    def __get_services(self, api_client, namespace=None, **kwargs):
+    def __get_services(self, api_client, namespace=None, return_full=False, **kwargs):
         """
         List services in a namespace or across all namespaces.
+
+        Args:
+            return_full (bool): If True, return full service objects as dicts.
+                                If False (default), return only the service names.
         """
         core_v1 = client.CoreV1Api(api_client)
 
@@ -438,24 +492,174 @@ class KubernetesProvider(BaseProvider):
                 self.logger.info("Listing services across all namespaces")
                 services = core_v1.list_service_for_all_namespaces()
 
-            return [service.to_dict() for service in services.items]
+            if return_full:
+                # Sanitize the services data to ensure JSON serialization
+                sanitized_services = []
+                for service in services.items:
+                    service_dict = service.to_dict()
+
+                    # Convert any datetime objects to strings
+                    def sanitize_dict(obj):
+                        if isinstance(obj, dict):
+                            return {k: sanitize_dict(v) for k, v in obj.items()}
+                        elif isinstance(obj, list):
+                            return [sanitize_dict(item) for item in obj]
+                        elif hasattr(obj, 'isoformat'):  # datetime objects
+                            return obj.isoformat()
+                        elif obj is None:
+                            return None
+                        else:
+                            return obj
+
+                    sanitized_service = sanitize_dict(service_dict)
+                    sanitized_services.append(sanitized_service)
+
+                return sanitized_services
+            else:
+                # Return only service names
+                return [service.metadata.name for service in services.items]
         except ApiException as e:
             self.logger.error(f"Error listing services: {e}")
             raise Exception(f"Error listing services: {e}")
 
-    def __get_namespaces(self, api_client, **kwargs):
+    def __get_deployments(self, api_client, namespace=None, return_full=False, **kwargs):
+        """
+        List deployments in a namespace or across all namespaces.
+        """
+        apps_v1 = client.AppsV1Api(api_client)
+
+        try:
+            if namespace:
+                self.logger.info(f"Listing deployments in namespace {namespace}")
+                deployments = apps_v1.list_namespaced_deployment(namespace=namespace)
+            else:
+                self.logger.info("Listing deployments across all namespaces")
+                deployments = apps_v1.list_deployment_for_all_namespaces()
+
+            if return_full:
+                return [deployment.to_dict() for deployment in deployments.items]
+            else:
+                return [deployment.metadata.name for deployment in deployments.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing deployments: {e}")
+            raise Exception(f"Error listing deployments: {e}")
+
+    def __get_statefulsets(self, api_client, namespace=None, return_full=False, **kwargs):
+        """
+        List statefulsets in a namespace or across all namespaces.
+        """
+        apps_v1 = client.AppsV1Api(api_client)
+        try:
+            if namespace:
+                self.logger.info(f"Listing statefulsets in namespace {namespace}")
+                statefulsets = apps_v1.list_namespaced_stateful_set(namespace=namespace)
+            else:
+                self.logger.info("Listing statefulsets across all namespaces")
+                statefulsets = apps_v1.list_stateful_set_for_all_namespaces()
+            if return_full:
+                return [statefulset.to_dict() for statefulset in statefulsets.items]
+            else:
+                return [statefulset.metadata.name for statefulset in statefulsets.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing statefulsets: {e}")
+            raise Exception(f"Error listing statefulsets: {e}")
+
+    def __get_daemonsets(self, api_client, namespace=None, return_full=False, **kwargs):
+        """
+        List daemonsets in a namespace or across all namespaces.
+        """
+        apps_v1 = client.AppsV1Api(api_client)
+        try:
+            if namespace:
+                self.logger.info(f"Listing daemonsets in namespace {namespace}")
+                daemonsets = apps_v1.list_namespaced_daemon_set(namespace=namespace)
+            else:
+                self.logger.info("Listing daemonsets across all namespaces")
+                daemonsets = apps_v1.list_daemon_set_for_all_namespaces()
+        except ApiException as e:
+            self.logger.error(f"Error listing daemonsets: {e}")
+            raise Exception(f"Error listing daemonsets: {e}")
+
+        if return_full:
+            return [daemonset.to_dict() for daemonset in daemonsets.items]
+        else:
+            return [daemonset.metadata.name for daemonset in daemonsets.items]
+
+
+    def __get_namespaces(self, api_client, return_full=False, **kwargs):
         """
         List all namespaces.
+
+        Args:
+            return_full (bool): If True, return full namespace objects as dicts.
+                                If False (default), return only the names.
         """
         self.logger.info("Listing namespaces")
         core_v1 = client.CoreV1Api(api_client)
 
         try:
             namespaces = core_v1.list_namespace()
-            return [namespace.to_dict() for namespace in namespaces.items]
+            if return_full:
+                return [namespace.to_dict() for namespace in namespaces.items]
+            else:
+                return [namespace.metadata.name for namespace in namespaces.items]
         except ApiException as e:
             self.logger.error(f"Error listing namespaces: {e}")
             raise Exception(f"Error listing namespaces: {e}")
+
+    def __get_ingresses(self, api_client, namespace=None, return_full=False, **kwargs):
+        """
+        List ingresses in a namespace or across all namespaces.
+
+        Args:
+            return_full (bool): If True, return full ingress objects as dicts.
+                                If False (default), return only the names.
+        """
+        networking_v1 = client.NetworkingV1Api(api_client)
+
+        try:
+            if namespace:
+                self.logger.info(f"Listing ingresses in namespace {namespace}")
+                ingresses = networking_v1.list_namespaced_ingress(namespace=namespace)
+            else:
+                self.logger.info("Listing ingresses across all namespaces")
+                ingresses = networking_v1.list_ingress_for_all_namespaces()
+
+            if return_full:
+                return [ingress.to_dict() for ingress in ingresses.items]
+            else:
+                return [ingress.metadata.name for ingress in ingresses.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing ingresses: {e}")
+            raise Exception(f"Error listing ingresses: {e}")
+
+    def __get_jobs(self, api_client, namespace=None, return_full=False, **kwargs):
+        """
+        List jobs in a namespace or across all namespaces.
+
+        Args:
+            return_full (bool): If True, return full job objects as dicts.
+                                If  False (default), return only the names.
+        """
+
+        batch_v1 = client.BatchV1Api(api_client)
+
+        try:
+            if namespace:
+                self.logger.info(f"Listing jobs in namespace {namespace}")
+                jobs = batch_v1.list_namespaced_job(namespace=namespace)
+            else:
+                self.logger.info("Listing jobs across all namespaces")
+                jobs = batch_v1.list_job_for_all_namespaces()
+
+            if return_full:
+                return [job.to_dict() for job in jobs.items]
+            else:
+                return [job.metadata.name for job in jobs.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing jobs: {e}")
+            raise Exception(f"Error listing jobs: {e}")
+
 
     def __rollout_restart(self, kind, name, namespace, labels=None, **kwargs):
         """
