@@ -116,13 +116,23 @@ class KubernetesProvider(BaseProvider):
         """
         Query Kubernetes resources.
         Args:
-            command_type (str): The type of query to perform. Supported queries are get_logs, get_events, get_pods, get_node_pressure, and get_pvc.
+            command_type (str): The type of query to perform. Supported queries are:
+                - get_logs: Get logs from a pod
+                - get_deployment_logs: Get logs from all pods in a deployment
+                - get_events: Get events for a namespace or pod
+                - get_pods: List pods
+                - get_node_pressure: Get node pressure conditions
+                - get_pvc: List persistent volume claims
+                - get_services: List services
+                - get_namespaces: List namespaces
             **kwargs: Additional arguments for the query.
         """
         api_client = self.__create_k8s_client()
 
         if command_type == "get_logs":
             return self.__get_logs(api_client, **kwargs)
+        elif command_type == "get_deployment_logs":
+            return self.__get_deployment_logs(api_client, **kwargs)
         elif command_type == "get_events":
             return self.__get_events(api_client, **kwargs)
         elif command_type == "get_pods":
@@ -131,6 +141,10 @@ class KubernetesProvider(BaseProvider):
             return self.__get_node_pressure(api_client, **kwargs)
         elif command_type == "get_pvc":
             return self.__get_pvc(api_client, **kwargs)
+        elif command_type == "get_services":
+            return self.__get_services(api_client, **kwargs)
+        elif command_type == "get_namespaces":
+            return self.__get_namespaces(api_client, **kwargs)
         else:
             raise NotImplementedError(f"Command type {command_type} is not implemented")
 
@@ -138,13 +152,33 @@ class KubernetesProvider(BaseProvider):
         """
         Perform actions on Kubernetes resources.
         Args:
-            action (str): The action to perform. Supported actions are rollout_restart and restart_pod.
+            action (str): The action to perform. Supported actions are:
+                - rollout_restart: Restart a deployment/statefulset/daemonset
+                - restart_pod: Restart a specific pod
+                - cordon_node: Mark node as unschedulable
+                - uncordon_node: Mark node as schedulable
+                - drain_node: Safely evict pods from node
+                - scale_deployment: Scale deployment up/down
+                - scale_statefulset: Scale statefulset up/down
+                - exec_pod_command: Execute command in pod
             **kwargs: Additional arguments for the action.
         """
         if action == "rollout_restart":
             return self.__rollout_restart(**kwargs)
         elif action == "restart_pod":
             return self.__restart_pod(**kwargs)
+        elif action == "cordon_node":
+            return self.__cordon_node(**kwargs)
+        elif action == "uncordon_node":
+            return self.__uncordon_node(**kwargs)
+        elif action == "drain_node":
+            return self.__drain_node(**kwargs)
+        elif action == "scale_deployment":
+            return self.__scale_deployment(**kwargs)
+        elif action == "scale_statefulset":
+            return self.__scale_statefulset(**kwargs)
+        elif action == "exec_pod_command":
+            return self.__exec_pod_command(**kwargs)
         else:
             raise NotImplementedError(f"Action {action} is not implemented")
 
@@ -183,6 +217,70 @@ class KubernetesProvider(BaseProvider):
         except ApiException as e:
             self.logger.error(f"Error getting logs for pod {pod_name}: {e}")
             raise Exception(f"Error getting logs for pod {pod_name}: {e}")
+
+    def __get_deployment_logs(
+        self,
+        api_client,
+        namespace,
+        deployment_name,
+        container_name=None,
+        tail_lines=100,
+        **kwargs,
+    ):
+        """
+        Get logs from all pods in a deployment.
+        """
+        self.logger.info(f"Getting logs for deployment {deployment_name} in namespace {namespace}")
+        
+        # First get pods for the deployment
+        core_v1 = client.CoreV1Api(api_client)
+        apps_v1 = client.AppsV1Api(api_client)
+        
+        try:
+            # Get deployment to find its selector
+            deployment = apps_v1.read_namespaced_deployment(
+                name=deployment_name, namespace=namespace
+            )
+            
+            # Build label selector from deployment's selector
+            match_labels = deployment.spec.selector.match_labels
+            label_selector = ",".join([f"{k}={v}" for k, v in match_labels.items()])
+            
+            # Get pods matching the selector
+            pods = core_v1.list_namespaced_pod(
+                namespace=namespace, label_selector=label_selector
+            )
+            
+            deployment_logs = {}
+            
+            for pod in pods.items:
+                pod_name = pod.metadata.name
+                try:
+                    logs = core_v1.read_namespaced_pod_log(
+                        name=pod_name,
+                        namespace=namespace,
+                        container=container_name,
+                        tail_lines=tail_lines,
+                        pretty=True,
+                    )
+                    deployment_logs[pod_name] = logs.splitlines()
+                except UnicodeEncodeError:
+                    logs = core_v1.read_namespaced_pod_log(
+                        name=pod_name,
+                        namespace=namespace,
+                        container=container_name,
+                        tail_lines=tail_lines,
+                    )
+                    deployment_logs[pod_name] = logs.splitlines()
+                except ApiException as pod_e:
+                    self.logger.warning(f"Could not get logs for pod {pod_name}: {pod_e}")
+                    deployment_logs[pod_name] = [f"Error getting logs: {pod_e}"]
+            
+            return deployment_logs
+            
+        except ApiException as e:
+            self.logger.error(f"Error getting deployment logs for {deployment_name}: {e}")
+            raise Exception(f"Error getting deployment logs for {deployment_name}: {e}")
 
     def __get_events(
         self, api_client, namespace, pod_name=None, sort_by=None, **kwargs
@@ -326,6 +424,39 @@ class KubernetesProvider(BaseProvider):
             self.logger.error(f"Error listing PVCs: {e}")
             raise Exception(f"Error listing PVCs: {e}")
 
+    def __get_services(self, api_client, namespace=None, **kwargs):
+        """
+        List services in a namespace or across all namespaces.
+        """
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            if namespace:
+                self.logger.info(f"Listing services in namespace {namespace}")
+                services = core_v1.list_namespaced_service(namespace=namespace)
+            else:
+                self.logger.info("Listing services across all namespaces")
+                services = core_v1.list_service_for_all_namespaces()
+
+            return [service.to_dict() for service in services.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing services: {e}")
+            raise Exception(f"Error listing services: {e}")
+
+    def __get_namespaces(self, api_client, **kwargs):
+        """
+        List all namespaces.
+        """
+        self.logger.info("Listing namespaces")
+        core_v1 = client.CoreV1Api(api_client)
+
+        try:
+            namespaces = core_v1.list_namespace()
+            return [namespace.to_dict() for namespace in namespaces.items]
+        except ApiException as e:
+            self.logger.error(f"Error listing namespaces: {e}")
+            raise Exception(f"Error listing namespaces: {e}")
+
     def __rollout_restart(self, kind, name, namespace, labels=None, **kwargs):
         """
         Perform a rollout restart on a deployment, statefulset, or daemonset.
@@ -445,6 +576,332 @@ class KubernetesProvider(BaseProvider):
             self.logger.error(error_message)
             raise Exception(error_message)
 
+    def __cordon_node(self, node_name, **kwargs):
+        """
+        Mark a node as unschedulable (cordon).
+        """
+        api_client = self.__create_k8s_client()
+        core_v1 = client.CoreV1Api(api_client)
+        
+        self.logger.info(f"Cordoning node {node_name}")
+        
+        try:
+            # Get the node
+            node = core_v1.read_node(name=node_name)
+            
+            # Update the node to be unschedulable
+            node.spec.unschedulable = True
+            
+            # Patch the node
+            core_v1.patch_node(name=node_name, body=node)
+            
+            self.logger.info(f"Successfully cordoned node {node_name}")
+            return {
+                "status": "success",
+                "message": f"Node {node_name} has been cordoned (marked unschedulable)",
+            }
+        except ApiException as e:
+            error_message = f"Error cordoning node {node_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+
+    def __uncordon_node(self, node_name, **kwargs):
+        """
+        Mark a node as schedulable (uncordon).
+        """
+        api_client = self.__create_k8s_client()
+        core_v1 = client.CoreV1Api(api_client)
+        
+        self.logger.info(f"Uncordoning node {node_name}")
+        
+        try:
+            # Get the node
+            node = core_v1.read_node(name=node_name)
+            
+            # Update the node to be schedulable
+            node.spec.unschedulable = False
+            
+            # Patch the node
+            core_v1.patch_node(name=node_name, body=node)
+            
+            self.logger.info(f"Successfully uncordoned node {node_name}")
+            return {
+                "status": "success",
+                "message": f"Node {node_name} has been uncordoned (marked schedulable)",
+            }
+        except ApiException as e:
+            error_message = f"Error uncordoning node {node_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+
+    def __drain_node(self, node_name, force=False, ignore_daemonsets=True, delete_emptydir_data=False, **kwargs):
+        """
+        Safely evict pods from a node (drain).
+        """
+        api_client = self.__create_k8s_client()
+        core_v1 = client.CoreV1Api(api_client)
+        
+        self.logger.info(f"Draining node {node_name}")
+        
+        try:
+            # First cordon the node
+            self.__cordon_node(node_name)
+            
+            # Get all pods on the node
+            field_selector = f"spec.nodeName={node_name}"
+            pods = core_v1.list_pod_for_all_namespaces(field_selector=field_selector)
+            
+            evicted_pods = []
+            failed_pods = []
+            
+            for pod in pods.items:
+                # Skip pods that are already terminating
+                if pod.metadata.deletion_timestamp:
+                    continue
+                    
+                # Skip DaemonSet pods if ignore_daemonsets is True
+                if ignore_daemonsets:
+                    owner_references = pod.metadata.owner_references or []
+                    is_daemonset_pod = any(
+                        ref.kind == "DaemonSet" for ref in owner_references
+                    )
+                    if is_daemonset_pod:
+                        continue
+                
+                # Skip pods with emptyDir volumes unless explicitly allowed
+                if not delete_emptydir_data:
+                    volumes = pod.spec.volumes or []
+                    has_emptydir = any(
+                        vol.empty_dir is not None for vol in volumes
+                    )
+                    if has_emptydir and not force:
+                        failed_pods.append({
+                            "name": pod.metadata.name,
+                            "namespace": pod.metadata.namespace,
+                            "reason": "Has emptyDir volumes (use delete_emptydir_data=True to override)"
+                        })
+                        continue
+                
+                try:
+                    # Create eviction object
+                    eviction = client.V1Eviction(
+                        metadata=client.V1ObjectMeta(
+                            name=pod.metadata.name,
+                            namespace=pod.metadata.namespace
+                        )
+                    )
+                    
+                    # Evict the pod
+                    core_v1.create_namespaced_pod_eviction(
+                        name=pod.metadata.name,
+                        namespace=pod.metadata.namespace,
+                        body=eviction
+                    )
+                    
+                    evicted_pods.append({
+                        "name": pod.metadata.name,
+                        "namespace": pod.metadata.namespace
+                    })
+                    
+                except ApiException as e:
+                    if e.status == 429:  # Too Many Requests - PodDisruptionBudget
+                        if force:
+                            # Force delete the pod if force is True
+                            try:
+                                core_v1.delete_namespaced_pod(
+                                    name=pod.metadata.name,
+                                    namespace=pod.metadata.namespace,
+                                    grace_period_seconds=0
+                                )
+                                evicted_pods.append({
+                                    "name": pod.metadata.name,
+                                    "namespace": pod.metadata.namespace,
+                                    "forced": True
+                                })
+                            except ApiException as delete_e:
+                                failed_pods.append({
+                                    "name": pod.metadata.name,
+                                    "namespace": pod.metadata.namespace,
+                                    "reason": f"Could not force delete: {delete_e}"
+                                })
+                        else:
+                            failed_pods.append({
+                                "name": pod.metadata.name,
+                                "namespace": pod.metadata.namespace,
+                                "reason": f"Blocked by PodDisruptionBudget (use force=True to override): {e}"
+                            })
+                    else:
+                        failed_pods.append({
+                            "name": pod.metadata.name,
+                            "namespace": pod.metadata.namespace,
+                            "reason": str(e)
+                        })
+            
+            result = {
+                "status": "success" if not failed_pods else "partial_success",
+                "message": f"Node {node_name} drain completed",
+                "evicted_pods": evicted_pods,
+                "failed_pods": failed_pods,
+                "summary": {
+                    "total_evicted": len(evicted_pods),
+                    "total_failed": len(failed_pods)
+                }
+            }
+            
+            self.logger.info(f"Drain completed for node {node_name}: {len(evicted_pods)} evicted, {len(failed_pods)} failed")
+            return result
+            
+        except ApiException as e:
+            error_message = f"Error draining node {node_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+
+    def __scale_deployment(self, namespace, deployment_name, replicas, **kwargs):
+        """
+        Scale a deployment to the specified number of replicas.
+        """
+        api_client = self.__create_k8s_client()
+        apps_v1 = client.AppsV1Api(api_client)
+        
+        self.logger.info(f"Scaling deployment {deployment_name} in namespace {namespace} to {replicas} replicas")
+        
+        try:
+            # Get current deployment
+            deployment = apps_v1.read_namespaced_deployment(
+                name=deployment_name, namespace=namespace
+            )
+            
+            current_replicas = deployment.spec.replicas
+            
+            # Update replicas
+            deployment.spec.replicas = replicas
+            
+            # Patch the deployment
+            apps_v1.patch_namespaced_deployment(
+                name=deployment_name,
+                namespace=namespace,
+                body=deployment
+            )
+            
+            self.logger.info(f"Successfully scaled deployment {deployment_name} from {current_replicas} to {replicas} replicas")
+            return {
+                "status": "success",
+                "message": f"Deployment {deployment_name} scaled from {current_replicas} to {replicas} replicas",
+                "previous_replicas": current_replicas,
+                "new_replicas": replicas,
+            }
+        except ApiException as e:
+            error_message = f"Error scaling deployment {deployment_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+
+    def __scale_statefulset(self, namespace, statefulset_name, replicas, **kwargs):
+        """
+        Scale a statefulset to the specified number of replicas.
+        """
+        api_client = self.__create_k8s_client()
+        apps_v1 = client.AppsV1Api(api_client)
+        
+        self.logger.info(f"Scaling statefulset {statefulset_name} in namespace {namespace} to {replicas} replicas")
+        
+        try:
+            # Get current statefulset
+            statefulset = apps_v1.read_namespaced_stateful_set(
+                name=statefulset_name, namespace=namespace
+            )
+            
+            current_replicas = statefulset.spec.replicas
+            
+            # Update replicas
+            statefulset.spec.replicas = replicas
+            
+            # Patch the statefulset
+            apps_v1.patch_namespaced_stateful_set(
+                name=statefulset_name,
+                namespace=namespace,
+                body=statefulset
+            )
+            
+            self.logger.info(f"Successfully scaled statefulset {statefulset_name} from {current_replicas} to {replicas} replicas")
+            return {
+                "status": "success",
+                "message": f"StatefulSet {statefulset_name} scaled from {current_replicas} to {replicas} replicas",
+                "previous_replicas": current_replicas,
+                "new_replicas": replicas,
+            }
+        except ApiException as e:
+            error_message = f"Error scaling statefulset {statefulset_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+
+    def __exec_pod_command(self, namespace, pod_name, command, container_name=None, **kwargs):
+        """
+        Execute a command inside a pod.
+        """
+        api_client = self.__create_k8s_client()
+        core_v1 = client.CoreV1Api(api_client)
+        
+        self.logger.info(f"Executing command in pod {pod_name} in namespace {namespace}: {command}")
+        
+        try:
+            from kubernetes.stream import stream
+            
+            # Prepare the command
+            if isinstance(command, str):
+                # Split command string into list
+                exec_command = ['/bin/sh', '-c', command]
+            else:
+                exec_command = command
+            
+            # Execute the command
+            resp = stream(
+                core_v1.connect_get_namespaced_pod_exec,
+                pod_name,
+                namespace,
+                command=exec_command,
+                container=container_name,
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+                _preload_content=False
+            )
+            
+            # Read the output
+            output = ""
+            error = ""
+            
+            while resp.is_open():
+                resp.update(timeout=1)
+                if resp.peek_stdout():
+                    output += resp.read_stdout()
+                if resp.peek_stderr():
+                    error += resp.read_stderr()
+            
+            resp.close()
+            
+            result = {
+                "status": "success",
+                "command": command,
+                "stdout": output,
+                "stderr": error,
+                "pod_name": pod_name,
+                "namespace": namespace,
+                "container": container_name,
+            }
+            
+            self.logger.info(f"Successfully executed command in pod {pod_name}")
+            return result
+            
+        except ApiException as e:
+            error_message = f"Error executing command in pod {pod_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+        except Exception as e:
+            error_message = f"Error executing command in pod {pod_name}: {e}"
+            self.logger.error(error_message)
+            raise Exception(error_message)
+
 
 if __name__ == "__main__":
     # Output debug messages
@@ -461,6 +918,7 @@ if __name__ == "__main__":
     insecure = os.environ.get("KUBERNETES_INSECURE", "false").lower() == "true"
     namespace = os.environ.get("KUBERNETES_NAMESPACE", "default")
     pod_name = os.environ.get("KUBERNETES_POD_NAME")
+    deployment_name = os.environ.get("KUBERNETES_DEPLOYMENT_NAME")
 
     context_manager = ContextManager(
         tenant_id="singletenant",
@@ -478,20 +936,26 @@ if __name__ == "__main__":
     kubernetes_provider = KubernetesProvider(
         context_manager, "kubernetes_keephq", config
     )
-
+    
     # Example queries
     if pod_name:
         print("Getting logs:")
-        logs = kubernetes_provider.query(
-            command_type="get_logs", namespace=namespace, pod_name=pod_name
-        )
-        print(logs[:10])  # Print first 10 lines
+        try:
+            logs = kubernetes_provider.query(
+                command_type="get_logs", namespace=namespace, pod_name=pod_name
+            )
+            print(logs[:10])  # Print first 10 lines
+        except Exception as e:
+            print(f"Error: {e}")
 
         print("\nGetting events:")
-        events = kubernetes_provider.query(
-            command_type="get_events", namespace=namespace, pod_name=pod_name
-        )
-        print(json.dumps(events[:3], indent=2))  # Print first 3 events
+        try:
+            events = kubernetes_provider.query(
+                command_type="get_events", namespace=namespace, pod_name=pod_name
+            )
+            print(json.dumps(events[:3], indent=2))  # Print first 3 events
+        except Exception as e:
+            print(f"Error: {e}")
 
         print("\nRestarting pod:")
         restart_result = kubernetes_provider.notify(
@@ -501,7 +965,31 @@ if __name__ == "__main__":
             message=f"Manually restarting pod {pod_name}",
         )
         print(json.dumps(restart_result, indent=2))
+
     else:
         print("Getting pods:")
-        pods = kubernetes_provider.query(command_type="get_pods", namespace=namespace)
-        print(f"Found {len(pods)} pods in namespace {namespace}")
+        try:
+            pods = kubernetes_provider.query(command_type="get_pods", namespace=namespace)
+            print(f"Found {len(pods)} pods in namespace {namespace}")
+        except Exception as e:
+            print(f"Error: {e}")
+
+    # Get namespaces
+    print("\nGetting namespaces:")
+    try:
+        namespaces = kubernetes_provider.query(command_type="get_namespaces")
+        print(f"Found {len(namespaces)} namespaces")
+        for ns in namespaces[:3]:  # Show first 3
+            print(f"  - {ns['metadata']['name']}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Get services
+    print("\nGetting services:")
+    try:
+        services = kubernetes_provider.query(command_type="get_services", namespace=namespace)
+        print(f"Found {len(services)} services in namespace {namespace}")
+        for svc in services[:3]:  # Show first 3
+            print(f"  - {svc['metadata']['name']} ({svc['spec']['type']})")
+    except Exception as e:
+        print(f"Error: {e}")
