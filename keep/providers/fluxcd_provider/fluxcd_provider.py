@@ -15,6 +15,7 @@ from typing import (  # noqa: F401 - Used for type hints
     Union,
 )
 from unittest.mock import MagicMock  # For testing
+from datetime import datetime, timezone
 
 import pydantic
 
@@ -450,6 +451,74 @@ class FluxcdProvider(BaseTopologyProvider):
         return {
             "authenticated": authenticated,
         }
+
+    def _notify(self, action: str, **kwargs):
+        """
+        Perform actions on FluxCD resources.
+        Args:
+            action (str): The action to perform. Supported actions are:
+                - reconcile: Trigger a reconciliation for a FluxCD resource.
+            **kwargs: Additional arguments for the action.
+        """
+        if action == "reconcile":
+            return self.__trigger_reconcile(**kwargs)
+        else:
+            raise NotImplementedError(f"Action {action} is not implemented")
+
+    def __trigger_reconcile(self, kind: str, name: str, namespace: str, force: bool = False, **kwargs):
+        """
+        Trigger a reconciliation for a FluxCD resource by adding an annotation.
+        Args:
+            kind (str): The kind of the resource to reconcile (e.g., HelmRelease, Kustomization).
+            name (str): The name of the resource.
+            namespace (str): The namespace of the resource.
+            force (bool): Whether to force the reconciliation to run immediately rather than waiting for the next update..
+        """
+        self.logger.info(f"Triggering reconciliation for {kind}/{name} in namespace {namespace}")
+        if self.k8s_client is None:
+            raise Exception("Kubernetes client is not available.")
+
+        # Mapping from kind to the API group, version, and plural form
+        kind_map = {
+            "HelmRelease": ("helm.toolkit.fluxcd.io", "v2beta1", "helmreleases"),
+            "Kustomization": ("kustomize.toolkit.fluxcd.io", "v1beta2", "kustomizations"),
+            "GitRepository": ("source.toolkit.fluxcd.io", "v1beta2", "gitrepositories"),
+            "OCIRepository": ("source.toolkit.fluxcd.io", "v1beta2", "ocirepositories"),
+            "HelmRepository": ("source.toolkit.fluxcd.io", "v1beta2", "helmrepositories"),
+        }
+
+        kind_lower = kind.lower()
+        kind_map_lower = {k.lower(): v for k, v in kind_map.items()}
+        if kind_lower not in kind_map_lower:
+            raise ValueError(f"Unsupported kind: {kind}. Supported kinds are: {list(kind_map.keys())}")
+
+        group, version, plural = kind_map_lower[kind_lower]
+
+        # The annotation to trigger reconciliation
+        now = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+        annotations = {"reconcile.fluxcd.io/requestedAt": now}
+        if force:
+            annotations["reconcile.fluxcd.io/forceAt"] = now
+        patch = {
+            "metadata": {
+            "annotations": annotations
+            }
+        }
+
+        try:
+            self.k8s_client.patch_namespaced_custom_object(
+                group=group,
+                version=version,
+                namespace=namespace,
+                plural=plural,
+                name=name,
+                body=patch,
+            )
+            self.logger.info(f"Successfully triggered reconciliation for {kind}/{name}")
+            return {"status": "success", "kind": kind, "name": name, "namespace": namespace}
+        except ApiException as e:
+            self.logger.error(f"Error triggering reconciliation for {kind}/{name}: {e}")
+            raise
 
     def __list_git_repositories(self) -> Dict[str, Any]:
         """
