@@ -81,7 +81,7 @@ class GrafanaOncallProvider(BaseProvider):
 
 
     def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
-        
+
         super().__init__(context_manager, provider_id, config)
         KEEP_INTEGRATION_NAME = "Keep Integration"
 
@@ -93,7 +93,7 @@ class GrafanaOncallProvider(BaseProvider):
             "Authorization": f"{config.authentication['token']}",
             "Content-Type": "application/json",
         }
-        
+
         response = requests.post(
             url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
             headers=headers,
@@ -121,7 +121,7 @@ class GrafanaOncallProvider(BaseProvider):
         else:
             logger.error(f"Error installing the provider: {response.status_code}")
             raise Exception(f"Error installing the provider: {response.status_code}")
-        
+
         if "integrations/v1/" in urlsplit(existing_integration_link).path:
             self.config.authentication["oncall_integration_link"] = existing_integration_link
         else:
