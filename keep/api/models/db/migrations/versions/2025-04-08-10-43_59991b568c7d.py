@@ -48,7 +48,7 @@ def upgrade() -> None:
                     FROM pg_class c
                     JOIN pg_namespace n ON n.oid = c.relnamespace
                     WHERE c.relname = 'idx_status_started'
-                    AND n.nspname = 'public'
+                    AND n.nspname = current_schema()
                 ) THEN
                     CREATE INDEX idx_status_started
                     ON workflowexecution (status, started);
