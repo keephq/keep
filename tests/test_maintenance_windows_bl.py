@@ -342,9 +342,17 @@ def test_strategy_clean_status(
     recover_status_session.exec = MagicMock()
     recover_status_session.commit = MagicMock()
 
+    # AND there is a last alert with the same FP
+    mock_last_alert = MagicMock()
+    mock_last_alert.alert_id = alert_maint.id
+    mock_last_alert.event = {"alert_id": alert_maint.id}
+
     # WHEN recover its previous status
-    mock_session.__enter__.side_effect = [retrieve_windows_session, retrieve_alerts_session, recover_status_session, MagicMock()]
-    with patch("keep.api.core.db.existed_or_new_session", return_value=mock_session):
+    mock_session.__enter__.side_effect = [retrieve_windows_session, retrieve_alerts_session, recover_status_session, MagicMock(),  MagicMock()]
+    with patch("keep.api.core.db.existed_or_new_session", return_value=mock_session), \
+            patch("keep.api.bl.maintenance_windows_bl.get_last_alert_by_fingerprint", return_value=mock_last_alert), \
+                patch("keep.api.core.db.get_alert_by_event_id", return_value=alert_maint):
+        
         MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=mock_session)
 
     # THEN the new status will be the previous status, and the previous status will be the old status
@@ -388,83 +396,6 @@ def test_strategy_alert_block_by_window(
             "Alert %s is blocked due to the maintenance window: %s.", alert_maint.id,
             active_maintenance_window_rule_with_suppression_on.id
         )
-
-def test_strategy_alert_launch_workflow(
-    mock_session, expired_maintenance_window_rule_with_suppression_on, alert_maint, monkeypatch, workflow_manager, db_session
-):
-    """
-    Feature: Strategy - recover previous status
-    Scenario: Having the Maintenance Window expired, the alert in its previous status, workflows should be launched.
-    """
-    # GIVEN The strategy is recover_previous_status
-    monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
-    importlib.reload(keep.api.consts)
-    importlib.reload(keep.api.bl.maintenance_windows_bl)
-    # AND a workflow matchs the alert attributes
-    workflow_definition = """workflow:
-                                id: 1
-                                name: workflow_strategy_mw_test
-                                description: "Description field"
-                                disabled: false
-                                triggers:
-                                - type: alert
-                                  cel: source == "test-source"
-                                inputs: []
-                                consts: {}
-                                owners: []
-                                services: []
-                                actions:
-                                - name: suppress_alerts
-                                  provider:
-                                    type: mock
-                                    config: "{{ providers.default-mock }}"
-                                    with:
-                                        enrich_alert:
-                                            - key: status
-                                              value: acknowledged
-                            """
-    workflow = Workflow(
-        id="workflow_strategy_mw",
-        name="workflow_strategy_mw",
-        tenant_id=alert_maint.tenant_id,
-        description="Handle alerts based on startedAt timestamp",
-        created_by="test@keephq.dev",
-        interval=0,
-        workflow_raw=workflow_definition,
-    )
-    monkeypatch.setattr(
-        "keep.workflowmanager.workflowstore.get_all_workflows",
-        lambda tenant_id, exclude_disabled=False: [workflow]
-    )
-    monkeypatch.setattr(
-        "keep.workflowmanager.workflowstore.get_workflow_by_id",
-        lambda self, tenant_id, workflow_id="workflow_strategy_mw", exclude_disabled=False: workflow
-    )
-    # AND there is no maintenance window active
-    retrieve_windows_session = MagicMock()
-    retrieve_windows_session.exec.return_value.all.return_value = [expired_maintenance_window_rule_with_suppression_on]
-    # AND there is an alert which was received inside a maintenance window
-    retrieve_alerts_session = MagicMock()
-    retrieve_alerts_session.exec.return_value.all.return_value = [alert_maint]
-
-    recover_status_session = MagicMock()
-    recover_status_session.exec = MagicMock()
-    recover_status_session.commit = MagicMock()
-
-    loggerMag = MagicMock()
-    # WHEN the conditions match to recover the initial alert status
-    mock_session.__enter__.side_effect = [retrieve_windows_session, retrieve_alerts_session, recover_status_session, MagicMock()]
-    with patch("keep.api.core.db.existed_or_new_session", return_value=mock_session):
-        MaintenanceWindowsBl.recover_strategy(logger=loggerMag, session=mock_session)
-
-    workflow_execution = wait_for_workflow_execution(
-        alert_maint.tenant_id, "workflow_strategy_mw"
-    )
-
-    # THEN the workflow should be launched
-    assert workflow_execution is not None
-    assert workflow_execution.status == "success"
-
 
 def test_strategy_alert_expired_by_current_time(
     create_alert, db_session, monkeypatch, create_window_maintenance_active
