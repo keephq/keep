@@ -9,11 +9,14 @@ from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_S
 from opentelemetry import trace
 from keep.api.core.db import (
     add_audit,
+    get_alert_by_event_id,
     get_alerts_by_status,
     get_all_presets_dtos,
+    get_last_alert_by_fingerprint,
     get_maintenance_windows_started,
     get_session_sync,
     recover_prev_alert_status,
+    set_maintenance_windows_trace,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.action_type import ActionType
@@ -180,6 +183,7 @@ class MaintenanceWindowsBl:
             session = get_session_sync()
         windows = get_maintenance_windows_started(session)
         alerts_in_maint = get_alerts_by_status(AlertStatus.MAINTENANCE, session)
+        fingerprints_to_check: set = set()
         for alert in alerts_in_maint:
             active = False
             for window in windows:
@@ -189,17 +193,24 @@ class MaintenanceWindowsBl:
                 if window.tenant_id != alert.tenant_id:
                     continue
                 # Check active windows
-                if w_start < alert.timestamp and alert.timestamp < w_end and is_enable:
+                if (
+                    w_start < alert.timestamp
+                    and alert.timestamp < w_end
+                    and w_end > datetime.datetime.utcnow()
+                    and is_enable
+                ):
                     logger.info("Checking alert %s in maintenance window %s", alert.id, window.id)
                     is_in_cel = MaintenanceWindowsBl.evaluate_cel(
-                                window, alert, env, logger, {"tenant_id": alert.tenant_id, "alert_id": alert.id}
-                                )
+                        window, alert, env, logger, {"tenant_id": alert.tenant_id, "alert_id": alert.id}
+                    )
                     if is_in_cel:
                         active = True
+                        set_maintenance_windows_trace(alert, window, session)
                         logger.info("Alert %s is blocked due to the maintenance window: %s.", alert.id, window.id)
                         break
             if not active:
                 recover_prev_alert_status(alert, session)
+                fingerprints_to_check.add((alert.tenant_id, alert.fingerprint))
                 add_audit(
                     tenant_id=alert.tenant_id,
                     fingerprint=alert.fingerprint,
@@ -211,88 +222,99 @@ class MaintenanceWindowsBl:
                     ),
                 )
 
-                alert_dto = AlertDto(**alert.event)
-                with tracer.start_as_current_span("mw_recover_strategy_push_to_workflows"):
+        for (tenant, fp) in fingerprints_to_check:
+            last_alert = get_last_alert_by_fingerprint(tenant, fp, session)
+            alert = get_alert_by_event_id(tenant, str(last_alert.alert_id), session)
+            if not ("previous_status" in alert.event):
+                logger.info(
+                    f"Alert {alert.id} does not have previous status, cannot proceed with recover strategy",
+                    extra={"tenant_id": tenant, "fingerprint": fp, "alert_id": alert.id, "alert.status": alert.event.get("status")},
+                )
+                continue
+            if not isinstance(alert.event.get("source"), list):
+                alert.event["source"] = [alert.event["source"]]
+            alert_dto = AlertDto(**alert.event)
+            with tracer.start_as_current_span("mw_recover_strategy_push_to_workflows"):
+                try:
+                    # Now run any workflow that should run based on this alert
+                    # TODO: this should publish event
+                    workflow_manager = WorkflowManager.get_instance()
+                    # insert the events to the workflow manager process queue
+                    logger.info("Adding event to the workflow manager queue")
+                    workflow_manager.insert_events(tenant, [alert_dto])
+                    logger.info("Added event to the workflow manager queue")
+                except Exception:
+                    logger.exception(
+                        "Failed to run workflows based on alerts",
+                        extra={
+                            "provider_type": alert_dto.providerType,
+                            "provider_id": alert_dto.providerId,
+                            "tenant_id": tenant,
+                        },
+                    )
+
+            with tracer.start_as_current_span("mw_recover_strategy_run_rules_engine"):
+                # Now we need to run the rules engine
+                if KEEP_CORRELATION_ENABLED:
+                    incidents = []
                     try:
-                        # Now run any workflow that should run based on this alert
-                        # TODO: this should publish event
-                        workflow_manager = WorkflowManager.get_instance()
-                        # insert the events to the workflow manager process queue
-                        logger.info("Adding event to the workflow manager queue")
-                        workflow_manager.insert_events(alert.tenant_id, [alert_dto])
-                        logger.info("Added event to the workflow manager queue")
+                        rules_engine = RulesEngine(tenant_id=tenant)
+                        # handle incidents, also handle workflow execution as
+                        incidents = rules_engine.run_rules(
+                            [alert_dto], session=session
+                        )
                     except Exception:
                         logger.exception(
-                            "Failed to run workflows based on alerts",
+                            "Failed to run rules engine",
                             extra={
                                 "provider_type": alert_dto.providerType,
                                 "provider_id": alert_dto.providerId,
-                                "tenant_id": alert.tenant_id,
+                                "tenant_id": tenant,
                             },
                         )
-
-                with tracer.start_as_current_span("mw_recover_strategy_run_rules_engine"):
-                    # Now we need to run the rules engine
-                    if KEEP_CORRELATION_ENABLED:
-                        incidents = []
+                    pusher_cache = get_notification_cache()
+                    if incidents and pusher_cache.should_notify(tenant, "incident-change"):
+                        pusher_client = get_pusher_client()
                         try:
-                            rules_engine = RulesEngine(tenant_id=alert.tenant_id)
-                            # handle incidents, also handle workflow execution as
-                            incidents = rules_engine.run_rules(
-                                [alert_dto], session=session
+                            pusher_client.trigger(
+                                f"private-{tenant}",
+                                "incident-change",
+                                {},
                             )
                         except Exception:
-                            logger.exception(
-                                "Failed to run rules engine",
-                                extra={
-                                    "provider_type": alert_dto.providerType,
-                                    "provider_id": alert_dto.providerId,
-                                    "tenant_id": alert.tenant_id,
-                                },
-                            )
-                        pusher_cache = get_notification_cache()
-                        if incidents and pusher_cache.should_notify(alert.tenant_id, "incident-change"):
-                            pusher_client = get_pusher_client()
-                            try:
-                                pusher_client.trigger(
-                                    f"private-{alert.tenant_id}",
-                                    "incident-change",
-                                    {},
-                                )
-                            except Exception:
-                                logger.exception("Failed to tell the client to pull incidents")
+                            logger.exception("Failed to tell the client to pull incidents")
 
-                    try:
-                        presets = get_all_presets_dtos(alert.tenant_id)
-                        rules_engine = RulesEngine(tenant_id=alert.tenant_id)
-                        presets_do_update = []
-                        for preset_dto in presets:
-                            # filter the alerts based on the search query
-                            filtered_alerts = rules_engine.filter_alerts(
-                                [alert_dto], preset_dto.cel_query
-                            )
-                            # if not related alerts, no need to update
-                            if not filtered_alerts:
-                                continue
-                            presets_do_update.append(preset_dto)
-                        if pusher_cache.should_notify(alert.tenant_id, "poll-presets"):
-                            try:
-                                pusher_client.trigger(
-                                    f"private-{alert.tenant_id}",
-                                    "poll-presets",
-                                    json.dumps(
-                                        [p.name.lower() for p in presets_do_update], default=str
-                                    ),
-                                )
-                            except Exception:
-                                logger.exception("Failed to send presets via pusher")
-                    except Exception:
-                        logger.exception(
-                            "Failed to send presets via pusher",
-                            extra={
-                                "provider_type": alert_dto.providerType,
-                                "provider_id": alert_dto.providerId,
-                                "tenant_id": alert.tenant_id,
-                            },
+                try:
+                    presets = get_all_presets_dtos(tenant)
+                    rules_engine = RulesEngine(tenant_id=tenant)
+                    presets_do_update = []
+                    for preset_dto in presets:
+                        # filter the alerts based on the search query
+                        filtered_alerts = rules_engine.filter_alerts(
+                            [alert_dto], preset_dto.cel_query
                         )
+                        # if not related alerts, no need to update
+                        if not filtered_alerts:
+                            continue
+                        presets_do_update.append(preset_dto)
+                    if pusher_cache.should_notify(tenant, "poll-presets"):
+                        try:
+                            pusher_client.trigger(
+                                f"private-{tenant}",
+                                "poll-presets",
+                                json.dumps(
+                                    [p.name.lower() for p in presets_do_update], default=str
+                                ),
+                            )
+                        except Exception:
+                            logger.exception("Failed to send presets via pusher")
+                except Exception:
+                    logger.exception(
+                        "Failed to send presets via pusher",
+                        extra={
+                            "provider_type": alert_dto.providerType,
+                            "provider_id": alert_dto.providerId,
+                            "tenant_id": tenant,
+                        },
+                    )
         logger.info("Finished recover strategy for maintenance windows review.")
