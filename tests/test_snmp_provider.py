@@ -303,7 +303,7 @@ class TestSnmpProvider:
         severity_enum = schema["properties"]["severity"]["enum"]
         assert "info" in severity_enum
         assert "warning" in severity_enum
-        assert "error" in severity_enum
+        assert "high" in severity_enum  # "error" maps to "high" in Keep
         assert "critical" in severity_enum
 
     @patch('keep.providers.snmp_provider.snmp_provider.socket.socket')
@@ -341,3 +341,41 @@ class TestSnmpProvider:
         # Verify state unchanged
         assert snmp_provider.running is False
         assert snmp_provider.snmp_engine is None
+
+    def test_format_alert(self):
+        """Test the format_alert static method."""
+        event = {
+            "title": "SNMP Trap: coldStart",
+            "description": "Test SNMP trap",
+            "severity": "warning",
+            "fingerprint": "test-fingerprint",
+            "source": ["snmp"],
+            "labels": {"device": "test-device"},
+            "raw_data": '{"test": "data"}',
+            "created_at": "2025-09-22T16:00:00.000000"
+        }
+        
+        formatted = SnmpProvider.format_alert(event)
+        
+        assert formatted["title"] == "SNMP Trap: coldStart"
+        assert formatted["description"] == "Test SNMP trap"
+        assert formatted["severity"] == "warning"
+        assert formatted["fingerprint"] == "test-fingerprint"
+        assert formatted["source"] == ["snmp"]
+        assert formatted["labels"] == {"device": "test-device"}
+        assert formatted["raw_data"] == '{"test": "data"}'
+        assert formatted["created_at"] == "2025-09-22T16:00:00.000000"
+
+    def test_format_alert_with_defaults(self):
+        """Test format_alert with minimal event data."""
+        event = {}
+        
+        formatted = SnmpProvider.format_alert(event)
+        
+        assert formatted["title"] == "SNMP Trap Received"
+        assert formatted["description"] == "SNMP trap received"
+        assert formatted["severity"] == "warning"
+        assert formatted["source"] == ["snmp"]
+        assert formatted["labels"] == {}
+        assert "snmp-" in formatted["fingerprint"]
+        assert "created_at" in formatted

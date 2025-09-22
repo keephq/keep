@@ -7,7 +7,7 @@ import json
 import socket
 import threading
 from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 from pysnmp.carrier.asyncio.dgram import udp
@@ -37,10 +37,10 @@ class SnmpProviderAuthConfig:
     port: int = dataclasses.field(
         metadata={
             "required": False,
-            "description": "UDP port to listen on for SNMP traps",
+            "description": "UDP port to listen on for SNMP traps (use 1162+ for non-root environments)",
             "config_main_group": "authentication",
         },
-        default=162,
+        default=1162,
     )
 
     community: str = dataclasses.field(
@@ -53,7 +53,7 @@ class SnmpProviderAuthConfig:
         default="public",
     )
 
-    severity_mapping: str = dataclasses.field(
+    severity_mapping: Optional[str] = dataclasses.field(
         metadata={
             "required": False,
             "description": "JSON mapping of OID patterns to Keep severity levels",
@@ -88,18 +88,19 @@ class SnmpProvider(BaseProvider):
         self.trap_thread = None
         self.running = False
         self._severity_mapping = {}
+    
+    def validate_config(self):
+        """Validate the provider configuration."""
+        self.authentication_config = SnmpProviderAuthConfig(**self.config.authentication)
         
         # Parse severity mapping if provided
-        if self.authentication_config.severity_mapping:
+        if hasattr(self.authentication_config, 'severity_mapping') and self.authentication_config.severity_mapping:
             try:
                 self._severity_mapping = json.loads(self.authentication_config.severity_mapping)
                 self.logger.info(f"Loaded severity mapping: {self._severity_mapping}")
             except json.JSONDecodeError as e:
                 self.logger.error(f"Failed to parse severity mapping JSON: {e}")
-    
-    def validate_config(self):
-        """Validate the provider configuration."""
-        self.authentication_config = SnmpProviderAuthConfig(**self.config.authentication)
+                self._severity_mapping = {}
     
     def _query(self, **kwargs):
         """Query method for provider - not applicable for SNMP trap receiver."""
@@ -398,7 +399,7 @@ class SnmpProvider(BaseProvider):
             "properties": {
                 "title": {"type": "string", "description": "Alert title"},
                 "description": {"type": "string", "description": "Detailed description of the SNMP trap"},
-                "severity": {"type": "string", "enum": ["info", "warning", "error", "critical"]},
+                "severity": {"type": "string", "enum": ["info", "warning", "high", "critical"]},
                 "source": {"type": "array", "items": {"type": "string"}, "description": "Sources of the SNMP trap"},
                 "raw_data": {"type": "object", "description": "Raw trap data as OID-value pairs"},
             }
@@ -467,3 +468,33 @@ class SnmpProvider(BaseProvider):
             }),
             "created_at": datetime.utcnow().isoformat(),
         }
+    
+    @staticmethod
+    def format_alert(event: Dict[str, Any], provider_instance: "SnmpProvider" = None) -> Dict[str, Any]:
+        """
+        Format an SNMP event into a Keep alert.
+        
+        Args:
+            event: The raw SNMP event data
+            provider_instance: Optional provider instance for context
+            
+        Returns:
+            Formatted alert dictionary
+        """
+        # The event is already in the correct format from _handle_trap or simulate_alert
+        # Just ensure all required fields are present
+        formatted_alert = {
+            "title": event.get("title", "SNMP Trap Received"),
+            "description": event.get("description", "SNMP trap received"),
+            "severity": event.get("severity", "warning"),
+            "fingerprint": event.get("fingerprint", f"snmp-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"),
+            "source": event.get("source", ["snmp"]),
+            "labels": event.get("labels", {}),
+            "created_at": event.get("created_at", datetime.utcnow().isoformat()),
+        }
+        
+        # Include raw_data if present
+        if "raw_data" in event:
+            formatted_alert["raw_data"] = event["raw_data"]
+            
+        return formatted_alert
