@@ -203,6 +203,9 @@ class MaintenanceWindowsBl:
                     is_in_cel = MaintenanceWindowsBl.evaluate_cel(
                         window, alert, env, logger, {"tenant_id": alert.tenant_id, "alert_id": alert.id}
                     )
+                    # Recover source structure
+                    if not isinstance(alert.event.get("source"), list):
+                        alert.event["source"] = [alert.event["source"]]
                     if is_in_cel:
                         active = True
                         set_maintenance_windows_trace(alert, window, session)
