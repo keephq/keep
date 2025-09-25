@@ -115,14 +115,14 @@ class WebhookProvider(BaseProvider):
 
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
-        # try to send the webhook with TEST payload
+        # Validate configuration without sending actual webhook
         try:
-            self._notify(body={"test": "payload"})
+            # Just validate the configuration is correct
+            self.validate_config()
+            validated_scopes["send_webhook"] = True
         except Exception as e:
             self.logger.exception("Error validating scopes")
             validated_scopes["send_webhook"] = str(e)
-            return validated_scopes
-        validated_scopes["send_webhook"] = True
         return validated_scopes
 
     def validate_config(self):
