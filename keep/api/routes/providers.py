@@ -65,6 +65,21 @@ def _is_localhost():
     return False
 
 
+@router.post("/provision", description="Provision providers from file or directory")
+def provision_providers(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:providers"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Reloading provisioned providers", extra={"tenant_id": tenant_id})
+    ProvidersService.provision_providers(tenant_id)
+    return {
+        "provision": "done",
+        "is_localhost": _is_localhost(),
+    }
+
+
 @router.get("", description="Get all providers")
 def get_providers(
     authenticated_entity: AuthenticatedEntity = Depends(

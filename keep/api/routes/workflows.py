@@ -74,6 +74,20 @@ tracer = trace.get_tracer(__name__)
 PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev")
 
 
+@router.post("/provision", description="Provision workflows from a directory")
+def provision_providers(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Reloading provisioned workfflows", extra={"tenant_id": tenant_id})
+    WorkflowStore.provision_workflows(tenant_id)
+    return {
+            "provision": "done",
+    }
+
+
 @router.post(
     "/facets/options",
     description="Query workflows facet options. Accepts dictionary where key is facet id and value is cel to query facet",
