@@ -53,6 +53,7 @@ import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui";
 import {
   base64urlencode,
+  generatePkceVerifier,
   generateRandomString,
   sha256,
 } from "@/shared/lib/encodings";
@@ -103,7 +104,7 @@ function getInitialFormValues(provider: Provider, isHealthCheck?: boolean) {
   const initialValues: ProviderFormData = {
     provider_id: provider.id,
     install_webhook: !isHealthCheck
-      ? provider.can_setup_webhook ?? false
+      ? (provider.can_setup_webhook ?? false)
       : false,
     pulling_enabled: provider.pulling_enabled,
   };
@@ -205,7 +206,7 @@ const ProviderForm = ({
   const callInstallWebhook = async () => await installWebhook(provider);
 
   async function handleOauth() {
-    const verifier = generateRandomString();
+    const verifier = generatePkceVerifier();
     cookieCutter.set("verifier", verifier);
     cookieCutter.set(
       "oauth2_install_webhook",
