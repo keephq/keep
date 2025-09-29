@@ -490,6 +490,22 @@ class RulesEngine:
                     e
                 ):
                     try:
+                        if "StringType" in str(e) and "BoolType" in str(e):
+                            # Normilize boolean strings to actual booleans base on AlertDTO
+                            for field_name, model_field in AlertDto.__fields__.items():
+                                if issubclass(model_field.type_, bool) and isinstance(payload.get(field_name), str):
+                                    if payload[field_name].lower() == "true":
+                                        payload[field_name] = True
+                                    elif payload[field_name].lower() == "false":
+                                        payload[field_name] = False
+                            activation = celpy.json_to_cel(payload)
+                            try:
+                                r = prgm.evaluate(activation)
+                                if r:
+                                    sub_rules_matched.append(sub_rule)
+                                continue
+                            except celpy.evaluation.CELEvalError:
+                                pass
                         coerced = self._coerce_eq_type_error(
                             sub_rule, prgm, activation, event
                         )
