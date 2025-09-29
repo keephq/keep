@@ -228,7 +228,7 @@ class MaintenanceWindowsBl:
         for (tenant, fp) in fingerprints_to_check:
             last_alert = get_last_alert_by_fingerprint(tenant, fp, session)
             alert = get_alert_by_event_id(tenant, str(last_alert.alert_id), session)
-            if not ("previous_status" in alert.event):
+            if "previous_status" not in alert.event:
                 logger.info(
                     f"Alert {alert.id} does not have previous status, cannot proceed with recover strategy",
                     extra={"tenant_id": tenant, "fingerprint": fp, "alert_id": alert.id, "alert.status": alert.event.get("status")},
