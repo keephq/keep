@@ -428,24 +428,49 @@ class WorkflowManager:
                             except (ValueError, AttributeError):
                                 # If severity conversion fails, keep original value
                                 pass
-
                         activation = celpy.json_to_cel(event_payload)
                         try:
                             should_run = program.evaluate(activation)
                         except celpy.evaluation.CELEvalError as e:
-                            self.logger.exception(
-                                "Error evaluating CEL for event in insert_events",
-                                extra={
-                                    "exception": e,
-                                    "event": event,
-                                    "trigger": trigger,
-                                    "workflow_id": workflow_model.id,
-                                    "tenant_id": tenant_id,
-                                    "cel": trigger["cel"],
-                                    "deprecated_filters": trigger.get("filters"),
-                                },
-                            )
-                            continue
+                            if "StringType" in str(e) and "BoolType" in str(e):
+                                # Normilize boolean strings to actual booleans base on AlertDTO
+                                for field_name, model_field in AlertDto.__fields__.items():
+                                    if issubclass(model_field.type_, bool) and isinstance(event_payload.get(field_name), str):
+                                        if event_payload[field_name].lower() == "true":
+                                            event_payload[field_name] = True
+                                        elif event_payload[field_name].lower() == "false":
+                                            event_payload[field_name] = False
+                                activation = celpy.json_to_cel(event_payload)
+                                try:
+                                    should_run = program.evaluate(activation)
+                                except celpy.evaluation.CELEvalError as exc:
+                                    self.logger.exception(
+                                        "Error evaluating CEL for event in insert_events after normalizing boolean strings",
+                                        extra={
+                                            "exception": exc,
+                                            "event": event,
+                                            "trigger": trigger,
+                                            "workflow_id": workflow_model.id,
+                                            "tenant_id": tenant_id,
+                                            "cel": trigger["cel"],
+                                            "deprecated_filters": trigger.get("filters"),
+                                        },
+                                    )
+                                    continue
+                            else:
+                                self.logger.exception(
+                                    "Error evaluating CEL for event in insert_events",
+                                    extra={
+                                        "exception": e,
+                                        "event": event,
+                                        "trigger": trigger,
+                                        "workflow_id": workflow_model.id,
+                                        "tenant_id": tenant_id,
+                                        "cel": trigger["cel"],
+                                        "deprecated_filters": trigger.get("filters"),
+                                    },
+                                )
+                                continue
 
                     if bool(should_run) is False:
                         self.logger.debug(
