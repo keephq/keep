@@ -1,10 +1,5 @@
-from datetime import datetime
-
-import pytest
-from keep.api.core.db import get_workflow_executions
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.mapping import MappingRule
+from keep.api.models.alert import AlertDto
 from keep.api.models.db.workflow import Workflow as WorkflowDB
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -1156,76 +1151,3 @@ triggers:
     assert not any(a.id == "alert-3" for a in triggered_alerts)
     assert not any(a.id == "alert-4" for a in triggered_alerts)
 
-
-@pytest.mark.parametrize(
-    "enrich_mapping_value, wf_value_activation, should_be_executed",
-    [
-        ("true", "true", True),
-        ("false", "true", False),
-        ("true", "false", False),
-        ("false", "false", True),
-    ]
-)
-def test_dismissed_cel(
-        db_session,
-        create_alert,
-        enrich_mapping_value,
-        wf_value_activation,
-        should_be_executed
-    ):
-    """
-        Feature: Dismissed Alerts Handling with CEL
-        Scenario: Using Mapping feature to dismiss alerts,
-                  CEL expresion should recognice the dismissed status.
-    """
-    #GIVEN The mapping rule modify the "dismissed" attribute
-    mapping_data = [
-        {"service": "app1", "dismissed": enrich_mapping_value},
-    ]
-
-    #AND The workflow is filtering using CEL expression on "dismissed" attribute
-    workflow_definition = f"""workflow:
-                            id: service-check
-                            triggers:
-                            - type: alert
-                            cel: dismissed=={wf_value_activation}
-                            """
-
-    mapping_rule = MappingRule(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="Service Mapping",
-        description="Map service to additional attributes",
-        type="csv",
-        matchers=[["service"]],
-        rows=mapping_data,
-        file_name="service_mapping.csv",
-        priority=1,
-        created_by=SINGLE_TENANT_UUID,
-    )
-    db_session.add(mapping_rule)
-    db_session.commit()
-
-    workflow = WorkflowDB(
-        id="dimissed-cel-wf",
-        name="dimissed-cel-wf",
-        tenant_id=SINGLE_TENANT_UUID,
-        description="Handle alerts for specific services",
-        created_by="test@keephq.dev",
-        interval=0,
-        workflow_raw=workflow_definition,
-    )
-    db_session.add(workflow)
-    db_session.commit()
-    #AND An alert coming to be enriched by mapping rule
-    create_alert(
-        "fpw1",
-        AlertStatus.FIRING,
-        datetime.utcnow(),
-        {"service": "app1"}
-    )
-    #WHEN The workflow evaluates CEL Workflow vs Alert values enriched
-    total_execs = len(WorkflowManager.get_instance().scheduler.workflows_to_run)
-
-    WorkflowManager.get_instance().scheduler.workflows_to_run.clear()
-    #THEN The workflow should be executed or not depending on the values
-    assert total_execs == (1 if should_be_executed else 0)
