@@ -367,7 +367,8 @@ def test_provider_deletion(browser: Page):
             f"button:has-text('Webhook'):has-text('Connected'):has-text('{provider_name}')"
         ).click()
         browser.get_by_placeholder("Enter url").clear()
-        browser.get_by_placeholder("Enter url").fill("https://this_is_UwU")
+        # Use a blacklisted URL to trigger validation error
+        browser.get_by_placeholder("Enter url").fill("https://metadata.google.internal/test")
 
         browser.get_by_role("button", name="Update", exact=True).click()
         browser.wait_for_timeout(500)
@@ -375,7 +376,7 @@ def test_provider_deletion(browser: Page):
         browser.get_by_role("button", name="Validate Scopes", exact=True).click()
         browser.wait_for_timeout(500)
         assert_scope_text_count(
-            browser=browser, contains_text="HTTPSConnectionPool", count=1
+            browser=browser, contains_text="blacklisted", count=1
         )
         browser.mouse.click(10, 10)
         delete_provider(
