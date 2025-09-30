@@ -44,6 +44,7 @@ from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import exists, expression
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, SQLModel, col, or_, select, text
+from sqlalchemy.orm.attributes import flag_modified
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
@@ -5776,6 +5777,19 @@ def set_last_alert(
             # break the retry loop
             break
 
+def set_maintenance_windows_trace(alert: Alert, maintenance_w: MaintenanceWindowRule,  session: Optional[Session] = None):
+    mw_id = str(maintenance_w.id)
+    if mw_id in alert.event.get("maintenance_windows_trace", []):
+        return
+    with existed_or_new_session(session) as session:
+        if "maintenance_windows_trace" in alert.event:
+            if mw_id not in alert.event['maintenance_windows_trace']:
+                alert.event['maintenance_windows_trace'].append(mw_id)
+        else:
+            alert.event['maintenance_windows_trace'] = [mw_id]
+        flag_modified(alert, "event")
+        session.add(alert)
+        session.commit()
 
 def get_provider_logs(
     tenant_id: str, provider_id: str, limit: int = 100
