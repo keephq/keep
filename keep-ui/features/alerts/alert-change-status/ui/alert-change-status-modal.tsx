@@ -42,10 +42,6 @@ export function AlertChangeStatusModal({
   const { alertsMutator } = useAlerts();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
 
-  useEffect(() => {
-    setDisposeOnNewAlert(alert && !Array.isArray(alert) ? true : false);
-  }, [alert]);
-
   if (!alert) return null;
 
   const statusOptions = Object.values(Status)

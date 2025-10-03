@@ -142,7 +142,10 @@ export default function AlertActions({
         <AlertChangeStatusModal
           alert={modalAlert}
           presetName="resolve"
-          handleClose={() => setModalAlert(null)}
+          handleClose={() => {
+            setModalAlert(null);
+            clearRowSelection();
+          }}
         />
       )}
       <Button
