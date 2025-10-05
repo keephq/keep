@@ -6,6 +6,8 @@ export enum AuthType {
   KEYCLOAK = "KEYCLOAK",
   OAUTH2PROXY = "OAUTH2PROXY",
   AZUREAD = "AZUREAD",
+  OKTA = "OKTA",
+  ONELOGIN = "ONELOGIN",
   NOAUTH = "NOAUTH", // Default
 }
 

@@ -20,6 +20,8 @@ class IdentityManagerTypes(enum.Enum):
 
     AUTH0 = "auth0"
     KEYCLOAK = "keycloak"
+    OKTA = "okta"
+    ONELOGIN = "onelogin"
     DB = "db"
     NOAUTH = "noauth"
     OAUTH2PROXY = "oauth2proxy"

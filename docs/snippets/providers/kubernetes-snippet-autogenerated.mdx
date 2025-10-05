@@ -8,7 +8,7 @@ This provider requires authentication.
 - **insecure**: Skip TLS verification (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **connect_to_kubernetes**: Check if the provided token can connect to the kubernetes server (mandatory)
+- **connect_to_kubernetes**: Check if the provided token can connect to the kubernetes server (mandatory) 
 
 
 
@@ -24,7 +24,21 @@ steps:
       provider: kubernetes
       config: "{{ provider.my_provider_name }}"
       with:
-        command_type: {value}  # The type of query to perform. Supported queries are get_logs, get_events, get_pods, get_node_pressure, and get_pvc.
+        command_type: {value}  # The type of query to perform. Supported queries are:
+- get_logs: Get logs from a pod
+- get_deployment_logs: Get logs from all pods in a deployment
+- get_events: Get events for a namespace or pod
+- get_nodes: List nodes
+- get_pods: List pods
+- get_node_pressure: Get node pressure conditions
+- get_pvc: List persistent volume claims
+- get_deployments: List deployments
+- get_statefulsets: List statefulsets
+- get_daemonsets: List daemonsets
+- get_services: List services
+- get_namespaces: List namespaces
+- get_ingresses: List ingresses for a namespace or all namespaces
+- get_jobs: List jobs
         # Additional arguments for the query.
 ```
 
@@ -36,7 +50,15 @@ actions:
       provider: kubernetes
       config: "{{ provider.my_provider_name }}"
       with:
-        action: {value}  # The action to perform. Supported actions are rollout_restart and restart_pod.
+        action: {value}  # The action to perform. Supported actions are:
+- rollout_restart: Restart a deployment/statefulset/daemonset
+- restart_pod: Restart a specific pod
+- cordon_node: Mark node as unschedulable
+- uncordon_node: Mark node as schedulable
+- drain_node: Safely evict pods from node
+- scale_deployment: Scale deployment up/down
+- scale_statefulset: Scale statefulset up/down
+- exec_pod_command: Execute command in pod
         # Additional arguments for the action.
 ```
 

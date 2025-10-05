@@ -18,6 +18,8 @@ import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
 import { CopilotKit } from "@copilotkit/react-core";
 import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { TicketingIncidentOptions } from "./ticketing-incident-options";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -30,6 +32,7 @@ export function IncidentHeader({
   });
   const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
   const incident = fetchedIncident || initialIncidentData;
+  const { data: config } = useConfig();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -80,6 +83,11 @@ export function IncidentHeader({
 
           {!incident.is_candidate && (
             <div className="flex">
+              {config?.KEEP_TICKETING_ENABLED && (
+                <TicketingIncidentOptions
+                  incident={incident}
+                />
+              )}
               <Button
                 color="orange"
                 size="xs"

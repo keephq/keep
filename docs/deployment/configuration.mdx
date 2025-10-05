@@ -94,7 +94,7 @@ Keep is highly configurable through environment variables. This allows you to cu
 
 |                Env var                |                              Purpose                              | Required | Default Value |                   Valid options                    |
 | :-----------------------------------: | :---------------------------------------------------------------: | :------: | :-----------: | :------------------------------------------------: |
-|             **AUTH_TYPE**             |                 Specifies the authentication type                 |    No    |   "NOAUTH"    | "AUTH0", "KEYCLOAK", "DB", "NOAUTH", "OAUTH2PROXY" |
+|             **AUTH_TYPE**             |                 Specifies the authentication type                 |    No    |   "NOAUTH"    | "AUTH0", "KEYCLOAK", "DB", "NOAUTH", "OAUTH2PROXY", "OKTA", "ONELOGIN" |
 |          **KEEP_JWT_SECRET**          | Secret key for JWT token generation and validation (DB auth only) |   Yes    |     None      |              Any strong secret string              |
 |       **KEEP_DEFAULT_USERNAME**       |        Default username for the admin user (DB auth only)         |    No    |    "keep"     |             Any valid username string              |
 |       **KEEP_DEFAULT_PASSWORD**       |        Default password for the admin user (DB auth only)         |    No    |    "keep"     |             Any strong password string             |
@@ -245,7 +245,7 @@ Keep is highly configurable through environment variables. This allows you to cu
 | **REDIS_USERNAME** |    Redis username     |    No    |     None      |    Valid username string     |
 | **REDIS_PASSWORD** |    Redis password     |    No    |     None      |    Valid password string     |
 
-#### Redis Sentinel
+### Redis Sentinel
 <Info>
   Redis sentinel configuration specifies the connection details for Keep's Redis sentinel
   instance. Redis sentinel is used when you have a redis cluster and it acts as a broker.
@@ -298,6 +298,19 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 
 </Note>
 
+
+### Maintenance Windows
+
+<Info>
+  The strategy enables the ability to manage how the alerts are handled
+  in case of a match with the Maintenance Windows Rules.
+</Info>
+
+|             Env var              |                      Purpose                |        Required         | Default Value |               Valid options                       |
+| :------------------------------: | :-----------------------------------------: | :---------------------: | :-----------: | :-----------------------------------------------: |
+| **MAINTENANCE_WINDOW_STRATEGY**  |          Choose the strategy                |           No            |    "default"  |      "default" or "recover_previous_status"       |
+| **WATCHER_LAPSED_TIME**          | Time in seconds to execute the alert review |           No            |       60      |             Valid positive integer                |
+
 ## Frontend Environment Variables
 
 <Info>
@@ -331,7 +344,7 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 
 |       Env var       |              Purpose              | Required | Default Value |                   Valid options                    |
 | :-----------------: | :-------------------------------: | :------: | :-----------: | :------------------------------------------------: |
-|    **AUTH_TYPE**    | Specifies the authentication type |    No    |   "noauth"    | "auth0", "keycloak", "db", "noauth", "oauth2proxy" |
+|    **AUTH_TYPE**    | Specifies the authentication type |    No    |   "NOAUTH"    | "AUTH0", "KEYCLOAK", "DB", "NOAUTH", "OAUTH2PROXY", "OKTA", "ONELOGIN" |
 |  **NEXTAUTH_URL**   |  URL for NextAuth authentication  |   Yes    |     None      |                     Valid URL                      |
 | **NEXTAUTH_SECRET** |      Secret key for NextAuth      |   Yes    |     None      |                Strong secret string                |
 

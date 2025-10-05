@@ -30,6 +30,19 @@ export function getAuthTypeEnvVars(authType: string | undefined): AuthEnvVars {
         KEYCLOAK_SECRET: maskValue(process.env.KEYCLOAK_SECRET),
         KEYCLOAK_ISSUER: maskValue(process.env.KEYCLOAK_ISSUER),
       };
+    case AuthType.OKTA:
+      return {
+        OKTA_CLIENT_ID: maskValue(process.env.OKTA_CLIENT_ID),
+        OKTA_CLIENT_SECRET: maskValue(process.env.OKTA_CLIENT_SECRET),
+        OKTA_ISSUER: maskValue(process.env.OKTA_ISSUER),
+        OKTA_DOMAIN: maskValue(process.env.OKTA_DOMAIN),
+      };
+    case AuthType.ONELOGIN:
+      return {
+        ONELOGIN_CLIENT_ID: maskValue(process.env.ONELOGIN_CLIENT_ID),
+        ONELOGIN_CLIENT_SECRET: maskValue(process.env.ONELOGIN_CLIENT_SECRET),
+        ONELOGIN_ISSUER: maskValue(process.env.ONELOGIN_ISSUER),
+      };
     case AuthType.DB:
       return {
         API_URL: maskValue(process.env.API_URL),

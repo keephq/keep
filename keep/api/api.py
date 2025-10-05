@@ -7,6 +7,7 @@ from functools import wraps
 from importlib import metadata
 from typing import Awaitable, Callable
 
+from arq import ArqRedis
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -21,8 +22,10 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
+from keep.api.arq_pool import get_pool
 import keep.api.logging
 import keep.api.observability
+from keep.api.tasks import process_watcher_task
 import keep.api.utils.import_ee
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
@@ -64,6 +67,7 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerTypes,
 )
 from keep.topologies.topology_processor import TopologyProcessor
+from keep.api.consts import KEEP_ARQ_QUEUE_MAINTENANCE, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
 
 # load all providers into cache
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -77,10 +81,11 @@ PORT = config("PORT", default=8080, cast=int)
 SCHEDULER = config("SCHEDULER", default="true", cast=bool)
 CONSUMER = config("CONSUMER", default="true", cast=bool)
 TOPOLOGY = config("KEEP_TOPOLOGY_PROCESSOR", default="false", cast=bool)
+WATCHER = config("WATCHER", default="false", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 KEEP_DEBUG_MIDDLEWARES = config("KEEP_DEBUG_MIDDLEWARES", default="false", cast=bool)
 KEEP_USE_LIMITER = config("KEEP_USE_LIMITER", default="false", cast=bool)
-
+MAINTENANCE_WINDOWS = config("MAINTENANCE_WINDOWS", default="false", cast=bool)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -156,6 +161,32 @@ async def startup():
         except Exception:
             logger.exception("Failed to start the topology processor")
 
+    if WATCHER or (MAINTENANCE_WINDOWS and MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status"):
+        if REDIS:
+            try:
+                logger.info("Starting the watcher process")
+                redis: ArqRedis = await get_pool()
+                job = await redis.enqueue_job(
+                    "async_process_watcher",
+                    _queue_name=KEEP_ARQ_QUEUE_MAINTENANCE,
+                )
+                logger.info(
+                    "Enqueued job",
+                    extra={
+                        "job_id": job.job_id,
+                        "queue": KEEP_ARQ_QUEUE_MAINTENANCE,
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to start the maintenance windows")
+        else:
+            asyncio.create_task(process_watcher_task.async_process_watcher())
+            logger.info(
+                "Added task",
+                extra={
+                    "task": "task",
+                },
+            )
     logger.info("Services started successfully")
 
 

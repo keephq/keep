@@ -17,6 +17,7 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import "react-quill-new/dist/quill.snow.css";
 import "./react-quill-override.css";
+import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
@@ -37,14 +38,20 @@ export function CreateOrUpdateIncidentForm({
   const [incidentSeverity, setIncidentSeverity] = useState<Severity>(
     Severity.Critical
   );
+  const { data: session } = useSession();
+  const currentUser = session?.user;
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
-  const [incidentAssignee, setIncidentAssignee] = useState<string>("");
+  const [incidentAssignee, setIncidentAssignee] = useState<string>(currentUser?.email || "");
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
   const { data: users = [] } = useUsers();
   const { addIncident, updateIncident } = useIncidentActions();
 
+    // Sort users alphabetically
+  const sortedUsers = [...users].sort((a, b) =>
+    (a.name || a.email).localeCompare(b.name || b.email)
+  );
   const editMode = incidentToEdit !== null;
 
   // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
@@ -173,13 +180,12 @@ export function CreateOrUpdateIncidentForm({
 
       <div className="mt-2.5">
         <Text className="mb-2">Assignee</Text>
-        {users.length > 0 ? (
+        {sortedUsers.length > 0 ? (
           <Select
-            placeholder="Who is responsible"
             value={incidentAssignee}
             onValueChange={setIncidentAssignee}
           >
-            {users.map((user) => (
+            {sortedUsers.map((user) => (
               <SelectItem key={user.email} value={user.email}>
                 {user.name || user.email}
               </SelectItem>

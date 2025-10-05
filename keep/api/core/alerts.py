@@ -267,6 +267,21 @@ def __build_query_for_filtering(
         )
 
     if fetch_incidents or force_fetch:
+        # Fingerprint with active incidents subquery, i.e  in Firing status
+        firing_subq = (
+            select(LastAlert.fingerprint)
+            .join(
+                LastAlertToIncident,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint
+            )
+            .join(
+                Incident,
+                LastAlertToIncident.incident_id == Incident.id
+            )
+            .where(Incident.status == IncidentStatus.FIRING.value)
+            .distinct()
+        ).subquery()
+
         sql_query = sql_query.outerjoin(
             LastAlertToIncident,
             and_(
@@ -278,7 +293,7 @@ def __build_query_for_filtering(
             and_(
                 LastAlertToIncident.tenant_id == Incident.tenant_id,
                 LastAlertToIncident.incident_id == Incident.id,
-                Incident.status == IncidentStatus.FIRING.value,
+                LastAlert.fingerprint.in_(select(firing_subq.c.fingerprint))
             ),
         )
 

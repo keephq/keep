@@ -1,19 +1,24 @@
 import datetime
 import os
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import freezegun
 
 import pytest
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
+from keep.api.models.db.rule import ResolveOn
 from keep.api.models.query import QueryDto
+from keep.api.routes.alerts import query_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.searchengine.searchengine import SearchEngine
+from keep.api.models.incident import IncidentDtoIn
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
@@ -1450,12 +1455,12 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
 @pytest.mark.parametrize(
     "cel_query, timeframe, limit, expected_cel",
     [
-        (None, 0.1667, 223, "(lastReceived >= '2025-06-18T11:51:20+00:00')"),
+        (None, 0.1667, 223, "(timestamp >= '2025-06-18T11:51:20+00:00')"),
         (
             "providerType != 'gcp'",
             0.1667,
             500,
-            "(lastReceived >= '2025-06-18T11:51:20+00:00') && (providerType != 'gcp')",
+            "(timestamp >= '2025-06-18T11:51:20+00:00') && (providerType != 'gcp')",
         ),
         ("providerType != 'gcp'", None, 2, "providerType != 'gcp'"),
         ("    providerType != 'gcp'    ", None, 2, "providerType != 'gcp'"),
@@ -1463,7 +1468,7 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
             "name.contains('CPU')",
             0.5,
             2,
-            "(lastReceived >= '2025-06-18T03:51:23+00:00') && (name.contains('CPU'))",
+            "(timestamp >= '2025-06-18T03:51:23+00:00') && (name.contains('CPU'))",
         ),
     ],
 )
@@ -1481,6 +1486,168 @@ def test_search_alerts_by_cel(
             limit=limit,
         ),
     )
+
+@pytest.mark.parametrize(
+    "cel_query, n_alerts",
+    [
+        ("incident.id==null", 0),
+        ("incident.id!=null", 2),
+    ],
+)
+@pytest.mark.asyncio
+async def test_search_no_incidents_scenario_1(
+    create_alert, db_session, cel_query, n_alerts
+):
+    """
+    Feature: Search incidents linked to Alerts
+    Scenario: This first scenario will have 2 alerts with the follow distribution:
+                Alert1: linked to Incident1 and Incident2
+                Alert2: linked to Incident1
+             The incident2 will be resolved.
+            As the both of them have incident1 linked and alive, if we filter
+            by alerts without incidents, incident.id==null,
+            we should get 0 results. In the same way, incident.id!=null should be 2.
+    """
+    #GIVEN Two incidents with ResolveON All
+    incident_bl = IncidentBl(
+                tenant_id=SINGLE_TENANT_UUID, session=db_session
+            )
+
+    incident_dto_1 = incident_bl.create_incident(IncidentDtoIn(
+                **{
+                    "user_generated_name": "Incident name",
+                    "user_summary": "Keep: Incident description",
+                    "status": "firing",
+                    "resolve_on": ResolveOn.ALL.value
+
+                }
+            ))
+    incident_dto_2 = incident_bl.create_incident(IncidentDtoIn(
+                **{
+                    "user_generated_name": "Incident name",
+                    "user_summary": "Keep: Incident description",
+                    "status": "firing",
+                    "resolve_on": ResolveOn.ALL.value
+
+                }
+            ))
+
+    #AND The first Firing alert linked to both incidents.
+    create_alert(
+                "alert-test-1",
+                AlertStatus("firing"),
+                datetime.datetime.utcnow(),
+                {},
+            )
+    await incident_bl.add_alerts_to_incident(
+                incident_dto_1.id, ["alert-test-1"]
+            )
+    await incident_bl.add_alerts_to_incident(
+                incident_dto_2.id, ["alert-test-1"]
+            )
+    #AND The second FIRING alert linked to the first incident.
+    create_alert(
+            "alert-test-2",
+            AlertStatus("firing"),
+            datetime.datetime.utcnow(),
+            {},
+        )
+    await incident_bl.add_alerts_to_incident(
+                incident_dto_1.id, ["alert-test-2"]
+            )
+    #AND One RESOLVED alert linked to the second incident.
+    create_alert(
+            "alert-test-1",
+            AlertStatus("resolved"),
+            datetime.datetime.utcnow(),
+            {},
+        )
+    await incident_bl.add_alerts_to_incident(
+                incident_dto_2.id, ["alert-test-1"]
+            )
+
+    auth = AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test")
+    db_session.expire_all()
+    #WHEN I search for alerts linked to incidents
+    result_query = query_alerts(
+        request=MagicMock(),
+        query=QueryDto(
+            cel=cel_query,
+        ),
+        bg_tasks=MagicMock(),
+        authenticated_entity=auth,
+    )
+    #THEN I should get only the alerts following the CEL expression
+    assert len(result_query["results"]) == n_alerts
+    assert result_query["count"] == n_alerts
+
+
+@pytest.mark.parametrize(
+    "cel_query, n_alerts",
+    [
+        ("incident.id==null", 1),
+        ("incident.id!=null", 0),
+    ],
+)
+@pytest.mark.asyncio
+async def test_search_no_incidents_scenario_2(
+    create_alert, db_session, cel_query, n_alerts
+):
+    """
+    Feature: Search incidents linked to Alerts
+    Scenario: This second scenario shows the simple behavior,
+            One alert linked to one incident, once this is resolved
+            the filter will show 1 alert if it is == null, (without incidents alive)
+            In the same way, != null will show 0 incidents.
+    """
+    #GIVEN Two incidents with ResolveON All
+    incident_bl = IncidentBl(
+                tenant_id=SINGLE_TENANT_UUID, session=db_session
+            )
+
+    incident_dto_1 = incident_bl.create_incident(IncidentDtoIn(
+                **{
+                    "user_generated_name": "Incident name",
+                    "user_summary": "Keep: Incident description",
+                    "status": "firing",
+                    "resolve_on": ResolveOn.ALL.value
+
+                }
+            ))
+    #AND The Firing alert linked to the incident.
+    create_alert(
+                "alert-test-1",
+                AlertStatus("firing"),
+                datetime.datetime.utcnow(),
+                {},
+            )
+    await incident_bl.add_alerts_to_incident(
+                incident_dto_1.id, ["alert-test-1"]
+            )
+    #AND The Resolved alert linked to the incident.
+    create_alert(
+                "alert-test-1",
+                AlertStatus("resolved"),
+                datetime.datetime.utcnow(),
+                {},
+            )
+    await incident_bl.add_alerts_to_incident(
+                incident_dto_1.id, ["alert-test-1"]
+            )
+    auth = AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test")
+    db_session.expire_all()
+    #WHEN I search for alerts linked to incidents
+    result_query = query_alerts(
+        request=MagicMock(),
+        query=QueryDto(
+            cel=cel_query,
+        ),
+        bg_tasks=MagicMock(),
+        authenticated_entity=auth,
+    )
+    #THEN I should get only the alerts followig the CEL exp
+    assert len(result_query["results"]) == n_alerts
+    assert result_query["count"] == n_alerts
 
 
 """

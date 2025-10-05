@@ -378,3 +378,56 @@ def test_oauth_proxy2(db_session, client, test_app):
         json={"email": "shahar", "role": "admin"},
     )
     assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "test_app", ["SINGLE_TENANT", "MULTI_TENANT", "NO_AUTH"], indirect=True
+)
+def test_deleted_api_key_authentication(db_session, client, test_app):
+    """Tests that deleted API keys cannot be used for authentication"""
+    import hashlib
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.tenant import TenantApiKey
+    from keep.api.core.db import get_api_key
+    
+    auth_type = os.getenv("AUTH_TYPE")
+    valid_api_key = "test_deleted_key"
+    
+    # Create API key in database directly
+    hash_api_key = hashlib.sha256(valid_api_key.encode()).hexdigest()
+    api_key_entry = TenantApiKey(
+        tenant_id=SINGLE_TENANT_UUID,
+        reference_id="test_deleted",
+        key_hash=hash_api_key,
+        created_by="test@example.com",
+        role="admin",
+        is_deleted=False
+    )
+    db_session.add(api_key_entry)
+    db_session.commit()
+    
+    # Test that non-deleted API key works
+    response = client.get("/providers", headers={"x-api-key": valid_api_key})
+    assert response.status_code == 200
+    
+    # Test get_api_key function directly - should find non-deleted key
+    found_key = get_api_key(valid_api_key)
+    assert found_key is not None
+    assert found_key.is_deleted == False
+    
+    # Mark API key as deleted
+    api_key_entry.is_deleted = True
+    db_session.commit()
+    
+    # Test that deleted API key is rejected
+    response = client.get("/providers", headers={"x-api-key": valid_api_key})
+    assert response.status_code == 401 if auth_type != "NO_AUTH" else 200
+    
+    # Test get_api_key function directly - should NOT find deleted key by default
+    found_key = get_api_key(valid_api_key)
+    assert found_key is None
+    
+    # Test get_api_key function with include_deleted=True - should find deleted key
+    found_key = get_api_key(valid_api_key, include_deleted=True)
+    assert found_key is not None
+    assert found_key.is_deleted == True

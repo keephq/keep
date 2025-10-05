@@ -453,7 +453,7 @@ export const useAlertTableCols = (
       cell: (context) => (
         <div className="flex items-center justify-center">
           <Icon
-            icon={getStatusIcon(context.getValue())}
+            icon={getStatusIcon(context.getValue(), context.row.original.isNoisy)}
             size="sm"
             color={getStatusColor(context.getValue())}
             className="!p-0 h-32px w-32px"

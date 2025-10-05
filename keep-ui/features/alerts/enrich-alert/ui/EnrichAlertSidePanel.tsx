@@ -57,7 +57,7 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
       }) || [];
     setCustomFields(preEnrichedFields);
     setPreEnrichedFields(preEnrichedFields);
-  }, [alert]);
+  }, [alert?.fingerprint]);
 
   useEffect(() => {
     const validateData = () => {
