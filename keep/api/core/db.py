@@ -4467,7 +4467,7 @@ def add_alerts_to_incident(
                         LastAlertToIncident.tenant_id == tenant_id,
                         LastAlertToIncident.incident_id == incident.id,
                     )
-                ).subquery()
+                ).scalar_subquery()
             else:
                 alerts_count = alerts_data_for_incident["count"]
 
