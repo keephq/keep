@@ -1866,3 +1866,71 @@ def test_incident_not_created_maintenance(
         tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
     )
     assert total == 0
+
+
+def test_create_incident_after_maintenance_window(
+    db_session,
+    create_alert,
+    create_window_maintenance_active,
+    finalize_window_maintenance,
+    monkeypatch,
+):
+    """
+    Feature: Creation incident when the maintenance window is over
+    Scenario: The firing alert comes in directly to a Maintenance
+                Window, once this is expired, the alert will continue
+                the natural flow and it should create the incident.
+    """
+    # GIVEN The source not allowed to create incidents
+    monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
+    importlib.reload(keep.api.consts)
+    importlib.reload(keep.api.bl.maintenance_windows_bl)
+    # AND A Maintenance Window matching by Source
+    maintenance_w = create_window_maintenance_active(
+        start=datetime.now(UTC) - timedelta(hours=3),
+        end=datetime.now(UTC) + timedelta(hours=1),
+        cel='source == "test-source"'
+    )
+    # AND A rule matching by Source
+    correlation_rule = Rule(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Rule-test-after-mw",
+        definition={
+            "sql": "((source = :source_1))",
+            "params": {"source_1": "test-source"},
+        },
+        definition_cel='source == "test-source"',
+        timeframe=600,
+        timeunit="seconds",
+        created_by=SINGLE_TENANT_EMAIL,
+        creation_time=(datetime.now(UTC) - timedelta(hours=3)).isoformat(),
+        require_approve=False,
+        resolve_on=ResolveOn.ALL.value,
+        create_on=CreateIncidentOn.ANY.value,
+    )
+    db_session.add(correlation_rule)
+    db_session.commit()
+    db_session.refresh(correlation_rule)
+    # AND An alert come in
+    create_alert(
+        "test-fingerprint",
+        AlertStatus.FIRING,
+        datetime.now(UTC) - timedelta(hours=1),
+        {
+            "severity": AlertSeverity.INFO.value,
+            "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+            "source": ["test-source"]
+        },
+        tenant_id=SINGLE_TENANT_UUID,
+    )
+    # WHEN The maintenance window is over
+    finalize_window_maintenance(maintenance_w.id)
+    # AND The recover strategy is checked
+    MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
+
+    # THEN The incident is created
+    incidents, total = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
+    )
+    assert total == 1
+    assert incidents[total-1].user_generated_name == "Rule-test-after-mw"
