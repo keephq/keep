@@ -5697,16 +5697,16 @@ def set_last_alert(
     logger.info(f"Setting last alert for `{fingerprint}`")
     with existed_or_new_session(session) as session:
         insert_update_conflict(LastAlert, session, data_to_insert = {
-            tenant_id,
-            alert.fingerprint,
-            alert.timestamp,
-            alert.timestamp,
-            alert.id,
-            alert.alert_hash,
+            "tenant_id":tenant_id,
+            "fingerprint": alert.fingerprint,
+            "timestamp": alert.timestamp,
+            "first_timestamp": alert.timestamp,
+            "alert_id": alert.id,
+            "alert_hash": alert.alert_hash,
         }, data_to_update ={
-            alert.timestamp,
-            alert.id,
-            alert.alert_hash
+            "timestamp": alert.timestamp,
+            "alert_id": alert.id,
+            "alert_hash": alert.alert_hash
         }, update_newer=True)
     logger.debug(
             f"Successfully updated lastalert for `{fingerprint}`",
