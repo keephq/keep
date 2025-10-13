@@ -211,30 +211,40 @@ class MailgunProvider(BaseProvider):
         # Use correct API endpoint based on region
         api_base = "https://api.mailgun.net" if MailgunProvider.MAILGUN_REGION.upper() == "US" else "https://api.eu.mailgun.net"
         url = f"{api_base}/v3/routes"
+        
+        # Mailgun expects form data with multiple action fields
         payload = {
             "priority": 0,
             "expression": expression,
             "description": f"Keep {self.provider_id} alerting",
-            "action": [
-                f"forward('{keep_api_url}&api_key={api_key}')",
-                "stop()",
-            ],
         }
 
         route_id = self.config.authentication.get("route_id")
         if route_id:
+            # Update existing route
             response = requests.put(
-                f"{url}/{self.config.authentication.get('route_id')}",
-                files=payload,
+                f"{url}/{route_id}",
                 auth=("api", MailgunProvider.MAILGUN_API_KEY),
-                data=payload,
+                data={
+                    **payload,
+                    "action": [
+                        f"forward('{keep_api_url}&api_key={api_key}')",
+                        "stop()",
+                    ],
+                },
             )
         else:
+            # Create new route
             response = requests.post(
                 url,
-                files=payload,
                 auth=("api", MailgunProvider.MAILGUN_API_KEY),
-                data=payload,
+                data={
+                    **payload,
+                    "action": [
+                        f"forward('{keep_api_url}&api_key={api_key}')",
+                        "stop()",
+                    ],
+                },
             )
         response.raise_for_status()
         response_json = response.json()
