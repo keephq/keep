@@ -167,7 +167,7 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
 
 def retry_on_db_error(f):
     @retry(
-        exceptions=(OperationalError, IntegrityError, StaleDataError),
+        exceptions=(OperationalError, IntegrityError, StaleDataError, NoActiveSqlTransaction),
         tries=3,
         delay=0.1,
         backoff=2,
@@ -178,7 +178,7 @@ def retry_on_db_error(f):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except (OperationalError, IntegrityError, StaleDataError) as e:
+        except (OperationalError, IntegrityError, StaleDataError, NoActiveSqlTransaction) as e:
 
             if hasattr(e, "session") and not e.session.is_active:
                 e.session.rollback()
@@ -186,6 +186,11 @@ def retry_on_db_error(f):
             if "Deadlock found" in str(e):
                 logger.warning(
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}
+                )
+                raise  # retry will catch this
+            elif "No active SQL transaction" in str(e):
+                logger.exception(
+                    "No active SQL transaction detected, retrying transaction", extra={"error": str(e)}
                 )
                 raise  # retry will catch this
             else:
@@ -5691,30 +5696,19 @@ def set_last_alert(
     fingerprint = alert.fingerprint
     logger.info(f"Setting last alert for `{fingerprint}`")
     with existed_or_new_session(session) as session:
-        try:
-            insert_update_conflict(LastAlert, session, data_to_insert = {
-                tenant_id,
-                alert.fingerprint,
-                alert.timestamp,
-                alert.timestamp,
-                alert.id,
-                alert.alert_hash,
-            }, data_to_update ={
-                alert.timestamp,
-                alert.id,
-                alert.alert_hash
-            }, update_newer=True)
-        except NoActiveSqlTransaction:
-            logger.exception(
-                f"No active sql transaction while updating lastalert for `{fingerprint}`, retry #{attempt}",
-                extra={
-                    "alert_id": alert.id,
-                    "tenant_id": tenant_id,
-                    "fingerprint": fingerprint,
-                },
-            )
-            continue
-        logger.debug(
+        insert_update_conflict(LastAlert, session, data_to_insert = {
+            tenant_id,
+            alert.fingerprint,
+            alert.timestamp,
+            alert.timestamp,
+            alert.id,
+            alert.alert_hash,
+        }, data_to_update ={
+            alert.timestamp,
+            alert.id,
+            alert.alert_hash
+        }, update_newer=True)
+    logger.debug(
             f"Successfully updated lastalert for `{fingerprint}`",
             extra={
                 "alert_id": alert.id,
