@@ -1940,7 +1940,7 @@ def get_alerts_by_fingerprint(
         query = query.order_by(Alert.timestamp.desc())
 
         if status:
-            query = query.filter(func.json_extract(Alert.event, "$.status") == status)
+            query = query.filter(get_json_extract_field(session, Alert.event, "status") == status)
 
         if limit:
             query = query.limit(limit)
