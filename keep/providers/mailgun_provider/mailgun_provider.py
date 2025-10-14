@@ -46,6 +46,17 @@ class MailgunProviderAuthConfig:
         },
         default="",
     )
+    api_region: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Mailgun API region",
+            "hint": "Select 'US' for api.mailgun.net or 'EU' for api.eu.mailgun.net (uses env MAILGUN_REGION if not set)",
+            "sensitive": False,
+            "type": "select",
+            "options": ["US", "EU"],
+        },
+        default="",
+    )
     extraction: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
@@ -208,8 +219,13 @@ class MailgunProvider(BaseProvider):
                 sender = f"{sender}>"
             expression = f'({expression} and match_header("from", "{sender}"))'
 
-        # Use correct API endpoint based on region
-        api_base = "https://api.mailgun.net" if MailgunProvider.MAILGUN_REGION.upper() == "US" else "https://api.eu.mailgun.net"
+        # Use correct API endpoint based on region (UI field takes priority, then env variable)
+        region = (
+            self.authentication_config.api_region 
+            or MailgunProvider.MAILGUN_REGION
+            or "US"
+        ).upper()
+        api_base = "https://api.mailgun.net" if region == "US" else "https://api.eu.mailgun.net"
         url = f"{api_base}/v3/routes"
         
         # Mailgun expects form data with multiple action fields
