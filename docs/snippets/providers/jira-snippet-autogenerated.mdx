@@ -15,6 +15,7 @@ Certain scopes may be required to perform specific actions or queries via the pr
 - **EDIT_ISSUES**: Edit Jira Issues  
 - **DELETE_ISSUES**: Delete Jira Issues  
 - **MODIFY_REPORTER**: Modify Jira Issue Reporter  
+- **TRANSITION_ISSUES**: Transition Jira Issues  
 
 
 
@@ -51,6 +52,7 @@ actions:
         labels: {value}  # The labels of the issue.
         components: {value}  # The components of the issue.
         custom_fields: {value}  # The custom fields of the issue.
+        transition_to: {value}  # Optional transition name (e.g., "Done", "Resolved") to apply after update/create.
 ```
 
 
