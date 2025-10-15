@@ -1,0 +1,26 @@
+workflow:
+  id: jira-transition-on-resolved
+  name: Transition Jira Ticket to Done
+  description: Close Jira ticket when alert is resolved
+  disabled: false
+  triggers:
+    - type: alert
+      cel: status == "resolved"
+  actions:
+    - name: jira-action
+      provider:
+        type: jira
+        config: "{{ providers.JiraCloud }}"
+        with:
+          issue_id: "{{ alert.ticket_id }}"
+          summary: "{{ alert.name }} - {{ alert.description }} (resolved)"
+          description: |
+            "Alert has been resolved automatically by Keep.
+
+            Resolved at: {{ alert.lastReceived }}
+
+            Original Alert Details:
+            {code:json}
+            {{ alert }}
+            {code}"
+          transition_to: Done  # Change to your workflow's status name
