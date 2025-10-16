@@ -588,26 +588,31 @@ class MailgunProvider(BaseProvider):
                 MailgunProvider._log_email_processing(event, email_type, "processing (bounce notification)")
 
             # Extract basic fields
-            source = event.get("from", "unknown@unknown.com")
-            name = event.get("subject", source)
+            email_from = event.get("from", "unknown@unknown.com")
+            name = event.get("subject", email_from)
+            
+            # Build source list: primary is "mailgun", secondary is email sender
+            source = ["mailgun"]
+            if email_from and email_from != "unknown@unknown.com":
+                source.append(email_from)
             
             # Extract message content with fallback logic
             message = MailgunProvider._extract_message_content(event, email_type)
             
             # Validate required fields with flexible handling
             if not name:
-                name = source or "Unknown Email"
+                name = email_from or "Unknown Email"
                 logger.warning(
-                    "Email has no subject, using source as name",
-                    extra={"from": source, "email_type": email_type}
+                    "Email has no subject, using sender as name",
+                    extra={"from": email_from, "email_type": email_type}
                 )
             
             if not message:
                 if handle_no_body:
-                    message = f"Email from {source} (no body content)"
+                    message = f"Email from {email_from} (no body content)"
                     logger.warning(
                         "Email has no body content, using fallback message",
-                        extra={"from": source, "subject": name, "email_type": email_type}
+                        extra={"from": email_from, "subject": name, "email_type": email_type}
                     )
                 else:
                     MailgunProvider._log_email_processing(event, email_type, "skipped (no body content)")
