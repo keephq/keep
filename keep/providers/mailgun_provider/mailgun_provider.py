@@ -484,6 +484,35 @@ class MailgunProvider(BaseProvider):
         return "info"
 
     @staticmethod
+    def _extract_status_from_email(event: dict) -> str:
+        """
+        Extract status from email content.
+        
+        Args:
+            event: Email event data
+            
+        Returns:
+            str: Status (firing, resolved, acknowledged)
+        """
+        # Get subject and body for keyword analysis
+        subject = (event.get("subject") or "").lower()
+        body = (event.get("stripped-text") or event.get("Body-plain") or "").lower()
+        combined_text = f"{subject} {body}"
+        
+        # Resolved keywords
+        resolved_keywords = ["resolved", "cleared", "recovered", "fixed", "closed", "ok now", "back to normal", "restoration"]
+        if any(keyword in combined_text for keyword in resolved_keywords):
+            return "resolved"
+        
+        # Acknowledged keywords
+        acknowledged_keywords = ["acknowledged", "ack", "investigating", "working on"]
+        if any(keyword in combined_text for keyword in acknowledged_keywords):
+            return "acknowledged"
+        
+        # Default to firing for new alerts
+        return "firing"
+
+    @staticmethod
     def _log_email_processing(event: dict, email_type: str, action: str):
         """
         Enhanced logging for email processing.
@@ -592,9 +621,9 @@ class MailgunProvider(BaseProvider):
             except Exception:
                 timestamp = datetime.datetime.now().isoformat()
             
-            # Extract severity from email content and type
+            # Extract severity and status from email content and type
             severity = MailgunProvider._extract_severity_from_email(event, email_type)
-            status = "firing"
+            status = MailgunProvider._extract_status_from_email(event)
 
             # Clean redundant fields
             event.pop("signature", None)
