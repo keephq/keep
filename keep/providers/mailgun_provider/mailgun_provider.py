@@ -436,6 +436,54 @@ class MailgunProvider(BaseProvider):
         return "No message content available"
 
     @staticmethod
+    def _extract_severity_from_email(event: dict, email_type: str) -> str:
+        """
+        Extract severity from email content and type.
+        
+        Args:
+            event: Email event data
+            email_type: Type of email (dmarc_report, spf_report, bounce, alert)
+            
+        Returns:
+            str: Severity level (critical, high, warning, low, info)
+        """
+        # Get subject and body for keyword analysis
+        subject = (event.get("subject") or "").lower()
+        body = (event.get("stripped-text") or event.get("Body-plain") or "").lower()
+        combined_text = f"{subject} {body}"
+        
+        # Critical keywords
+        critical_keywords = ["critical", "emergency", "fatal", "disaster", "down", "outage", "failed"]
+        if any(keyword in combined_text for keyword in critical_keywords):
+            return "critical"
+        
+        # High/Error keywords
+        high_keywords = ["error", "high", "urgent", "failure", "exception", "alert"]
+        if any(keyword in combined_text for keyword in high_keywords):
+            return "high"
+        
+        # Warning keywords
+        warning_keywords = ["warning", "warn", "caution", "attention", "degraded"]
+        if any(keyword in combined_text for keyword in warning_keywords):
+            return "warning"
+        
+        # Success/OK keywords (low severity)
+        success_keywords = ["success", "successful", "completed", "ok", "healthy", "recovered"]
+        if any(keyword in combined_text for keyword in success_keywords):
+            return "low"
+        
+        # Email type based severity
+        if email_type == "dmarc_report":
+            return "low"  # DMARC reports are informational
+        elif email_type == "spf_report":
+            return "warning"  # SPF failures are warnings
+        elif email_type == "bounce":
+            return "warning"  # Bounces are warnings
+        
+        # Default
+        return "info"
+
+    @staticmethod
     def _log_email_processing(event: dict, email_type: str, action: str):
         """
         Enhanced logging for email processing.
@@ -544,8 +592,8 @@ class MailgunProvider(BaseProvider):
             except Exception:
                 timestamp = datetime.datetime.now().isoformat()
             
-            # Default values
-            severity = "info"
+            # Extract severity from email content and type
+            severity = MailgunProvider._extract_severity_from_email(event, email_type)
             status = "firing"
 
             # Clean redundant fields
