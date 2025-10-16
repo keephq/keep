@@ -575,7 +575,7 @@ class MailgunProvider(BaseProvider):
             # Add email type as metadata
             setattr(alert, "email_type", email_type)
 
-            logger.info("Alert formatted", extra={"email_type": email_type, "name": name})
+            logger.info("Alert formatted", extra={"email_type": email_type, "alert_name": name})
 
             # Apply extraction rules if configured
             if provider_instance:
