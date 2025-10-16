@@ -56,20 +56,20 @@ class MailgunProviderAuthConfig:
         },
     )
     skip_dmarc_reports: bool = dataclasses.field(
-        default=True,
+        default=False,
         metadata={
             "required": False,
             "description": "Skip DMARC reports",
-            "hint": "Automatically skip DMARC aggregate reports",
+            "hint": "Enable to automatically skip DMARC aggregate reports (not recommended)",
             "type": "switch",
         },
     )
     skip_spf_reports: bool = dataclasses.field(
-        default=True,
+        default=False,
         metadata={
             "required": False,
             "description": "Skip SPF reports",
-            "hint": "Automatically skip SPF failure reports",
+            "hint": "Enable to automatically skip SPF failure reports (not recommended)",
             "type": "switch",
         },
     )
