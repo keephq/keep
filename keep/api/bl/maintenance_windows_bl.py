@@ -120,7 +120,7 @@ class MaintenanceWindowsBl:
                     "Error while evaluating maintenance window CEL expression",
                     extra={**extra, "maintenance_rule_id": maintenance_rule.id},
                 )
-            self.logger.info("Alert is not in maintenance window", extra=extra)
+        self.logger.info("Alert is not in maintenance window", extra=extra)
         return False
 
     @staticmethod
