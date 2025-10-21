@@ -1585,7 +1585,7 @@ async def test_search_no_incidents_scenario_1(
 @pytest.mark.parametrize(
     "cel_query, n_alerts",
     [
-        ("incident.is_visible==true", 1),
+        ("incident.id==null", 1),
         ("incident.id!=null", 0),
     ],
 )
