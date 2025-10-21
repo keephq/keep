@@ -13,7 +13,7 @@ from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
-from keep.api.models.db.rule import ResolveOn
+from keep.api.models.db.rule import CreateIncidentOn, ResolveOn, Rule
 from keep.api.models.query import QueryDto
 from keep.api.routes.alerts import query_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -1585,7 +1585,7 @@ async def test_search_no_incidents_scenario_1(
 @pytest.mark.parametrize(
     "cel_query, n_alerts",
     [
-        ("incident.id==null", 1),
+        ("incident.is_visible==true", 1),
         ("incident.id!=null", 0),
     ],
 )
@@ -1649,6 +1649,73 @@ async def test_search_no_incidents_scenario_2(
     assert len(result_query["results"]) == n_alerts
     assert result_query["count"] == n_alerts
 
+@pytest.mark.parametrize(
+    "cel_query, n_alerts",
+    [
+        ("incident.is_visible==false", 1),
+        ("(incident.is_visible==false || incident.id==null)", 2),
+    ],
+)
+def test_search_alert_incident_not_visible(
+    create_alert, db_session, cel_query, n_alerts
+):
+    """
+    Feature: Search incidents linked to Alerts
+    Scenario: This scenario shows the behavior when we want to retrieve
+            alerts without incident linked or with incidents not visible.
+            Having the incident creation from a correlation.
+    """
+    #GIVEN One incident created from correlation, not visible because of the threshold 2.
+    correlation_rule = Rule(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Incident no visible",
+        definition={
+            "sql": "N/A",
+            "params": {},
+        },
+        definition_cel='source == "any"',
+        timeframe=600,
+        timeunit="seconds",
+        created_by="test",
+        creation_time=datetime.datetime.utcnow(),
+        require_approve=False,
+        resolve_on=ResolveOn.ALL.value,
+        create_on=CreateIncidentOn.ANY.value,
+        threshold=2
+    )
+    db_session.add(correlation_rule)
+    db_session.commit()
+    db_session.refresh(correlation_rule)
+
+    #AND The Firing alert linked to the incident.
+    create_alert(
+                "alert-test-1",
+                AlertStatus("firing"),
+                datetime.datetime.utcnow(),
+                {'source': ["any"]},
+            )
+    #AND Another Firing alert not linked to the incident.
+    create_alert(
+                "alert-test-2",
+                AlertStatus("firing"),
+                datetime.datetime.utcnow(),
+                {'source': ["other"]},
+            )
+
+    auth = AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test")
+    db_session.expire_all()
+    #WHEN I search using the CEL expression
+    result_query = query_alerts(
+        request=MagicMock(),
+        query=QueryDto(
+            cel=cel_query,
+        ),
+        bg_tasks=MagicMock(),
+        authenticated_entity=auth,
+    )
+    #THEN I should get the alerts which match the CEL expression
+    assert len(result_query["results"]) == n_alerts
+    assert result_query["count"] == n_alerts
 
 """
 COMMENTED OUT UNTIL WE FIGURE ' something in list'
