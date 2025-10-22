@@ -37,6 +37,15 @@ class MailgunProviderAuthConfig:
         },
         default="",
     )
+    email_domain: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Custom email domain for receiving alerts",
+            "hint": "e.g., alerts.yourcompany.com (uses env MAILGUN_DOMAIN if not set)",
+            "sensitive": False,
+        },
+        default="",
+    )
     extraction: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
@@ -50,6 +59,7 @@ class MailgunProviderAuthConfig:
 
 class MailgunProvider(BaseProvider):
     MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY")
+    MAILGUN_DOMAIN = os.environ.get("MAILGUN_DOMAIN", "mails.keephq.dev")
     WEBHOOK_INSTALLATION_REQUIRED = True
     PROVIDER_CATEGORY = ["Collaboration"]
 
@@ -174,7 +184,13 @@ class MailgunProvider(BaseProvider):
         if not MailgunProvider.MAILGUN_API_KEY:
             raise Exception("MAILGUN_API_KEY is not set")
 
-        email = f"{tenant_id}-{self.provider_id}@mails.keephq.dev"
+        # Use custom domain from config, env var, or default
+        email_domain = (
+            self.authentication_config.email_domain 
+            or MailgunProvider.MAILGUN_DOMAIN
+        )
+        
+        email = f"{tenant_id}-{self.provider_id}@{email_domain}"
         expression = f'match_recipient("{email}")'
 
         if (
