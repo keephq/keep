@@ -547,7 +547,7 @@ class KeepProvider(BaseProvider):
         )
         # render alert data
         for alert_result in trigger_alerts:
-            alert_data = copy.copy(alert or {})
+            alert_data = copy.deepcopy(alert or {})
             # render alert data
             if isinstance(alert_result, dict):
                 rendered_alert_data = self.io_handler.render_context(
