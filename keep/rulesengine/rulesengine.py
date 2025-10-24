@@ -121,7 +121,7 @@ class RulesEngine:
                         creation_allowed = True
                         if hasattr(event, "previous_status") and (event.previous_status == AlertStatus.MAINTENANCE.value):
                             alerts_solved = get_alerts_by_fingerprint(self.tenant_id, event.fingerprint, status=AlertStatus.RESOLVED.value)
-                            if alerts_solved and any(event.last_received < solved_alert.event["last_received"] for solved_alert in alerts_solved):
+                            if alerts_solved and any(event.lastReceived < solved_alert.event["lastReceived"] for solved_alert in alerts_solved):
                                 creation_allowed = False
                         incident, send_created_event = self._get_or_create_incident(
                             rule=rule,
