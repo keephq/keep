@@ -8,6 +8,7 @@ from typing import Literal
 from urllib.parse import urlparse, urlsplit, urlunparse
 
 import pydantic
+import json
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -81,7 +82,7 @@ class GrafanaOncallProvider(BaseProvider):
 
 
     def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
-        
+
         super().__init__(context_manager, provider_id, config)
         KEEP_INTEGRATION_NAME = "Keep Integration"
 
@@ -93,7 +94,7 @@ class GrafanaOncallProvider(BaseProvider):
             "Authorization": f"{config.authentication['token']}",
             "Content-Type": "application/json",
         }
-        
+
         response = requests.post(
             url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
             headers=headers,
@@ -121,7 +122,7 @@ class GrafanaOncallProvider(BaseProvider):
         else:
             logger.error(f"Error installing the provider: {response.status_code}")
             raise Exception(f"Error installing the provider: {response.status_code}")
-        
+
         if "integrations/v1/" in urlsplit(existing_integration_link).path:
             self.config.authentication["oncall_integration_link"] = existing_integration_link
         else:
@@ -136,22 +137,29 @@ class GrafanaOncallProvider(BaseProvider):
         image_url: str = "",
         state: Literal["alerting", "resolved"] = "alerting",
         link_to_upstream_details: str = "",
+        payload: str | None = None
         **kwargs,
     ):
         headers = {
             "Content-Type": "application/json",
         }
-        response = requests.post(
-            url=self.config.authentication["oncall_integration_link"],
-            headers=headers,
-            json={
-                "title": title,
+
+        if payload is None:
+            payload = json.dumps({
                 "message": message,
                 "alert_uid": alert_uid,
                 "image_url": image_url,
                 "state": state,
                 "link_to_upstream_details": link_to_upstream_details,
-            },
+            })
+
+        body = json.loads(payload)
+        body['title'] = title
+
+        response = requests.post(
+            url=self.config.authentication["oncall_integration_link"],
+            headers=headers,
+            json=json.dumps(body),
         )
         response.raise_for_status()
         return response.json()
