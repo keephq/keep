@@ -46,6 +46,7 @@ import {
   TooltipPosition,
 } from "@/components/ui/ImagePreviewTooltip";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Props {
   alert: AlertDto;
@@ -84,7 +85,10 @@ export function AlertMenu({
 }: Props) {
   const api = useApi();
   const router = useRouter();
-  const { data: executions } = useWorkflowExecutions();
+  const { data: appConfig } = useConfig();
+  const { data: executions } = appConfig?.KEEP_WF_LIST_EXTENDED_INFO === true
+    ? useWorkflowExecutions()
+    : { data: [] };
   const [rowStyle] = useAlertRowStyle();
   const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,

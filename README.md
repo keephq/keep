@@ -690,7 +690,7 @@
 </tr>
 </table>
 
-### Container Orchecstration Platforms
+### Container Orchestration Platforms
 
 <table>
 <tr>
@@ -709,7 +709,7 @@
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/fluxcd-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/fluxcd-icon.png" alt="Flux CD"/><br/>
-            Flux CD
+            Flux
         </a>
     </td>
     <td align="center" width="150">

@@ -81,6 +81,13 @@ alert_field_configurations = [
         data_type=DataType.UUID,
     ),
     FieldMappingConfiguration(
+        map_from_pattern="incident.is_visible",
+        map_to=[
+            "incident.is_visible",
+        ],
+        data_type=DataType.BOOLEAN,
+    ),
+    FieldMappingConfiguration(
         map_from_pattern="incident.name",
         map_to=[
             "incident.user_generated_name",
