@@ -636,7 +636,6 @@ class ProvidersService:
                                 provisioned=True,
                                 validate_scopes=False,
                             )
-                            # Try to install webhooks for provisioned providers (mirror ENV behavior)
                             try:
                                 ProvidersService.install_webhook(
                                     tenant_id=tenant_id,
