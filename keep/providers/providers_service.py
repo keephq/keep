@@ -626,7 +626,7 @@ class ProvidersService:
                                 continue
 
                             logger.info(f"Installing provider {provider_name}")
-                            ProvidersService.install_provider(
+                            installed_provider = ProvidersService.install_provider(
                                 tenant_id=tenant_id,
                                 installed_by="system",
                                 provider_id=provider_type,
@@ -636,6 +636,18 @@ class ProvidersService:
                                 provisioned=True,
                                 validate_scopes=False,
                             )
+                            # Try to install webhooks for provisioned providers (mirror ENV behavior)
+                            try:
+                                ProvidersService.install_webhook(
+                                    tenant_id=tenant_id,
+                                    provider_type=installed_provider["type"],
+                                    provider_id=installed_provider["id"],
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    "Error installing webhook for provider from directory",
+                                    extra={"exception": e},
+                                )
                             logger.info(
                                 f"Provider {provider_name} provisioned successfully"
                             )
