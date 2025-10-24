@@ -22,9 +22,15 @@ Example directory structure:
 ```
 ### Update Provisioned Workflows
 
-On every restart, Keep reads the `KEEP_WORKFLOWS_DIRECTORY` environment variable and determines which workflows need to be added, removed, or updated.
+You can efficiently add new workflows, remove existing ones, or modify their configurations by simply updating the workflow files in the `KEEP_WORKFLOWS_DIRECTORY`. This process allows for flexible management of workflows without requiring manual intervention.
 
-This process allows for flexible management of workflows without requiring manual intervention. By simply updating the workflow files in the `KEEP_WORKFLOWS_DIRECTORY` and restarting the application, you can efficiently add new workflows, remove existing ones, or modify their configurations.
+Workflow provisioning is done on every restart. It can also be triggered without a restart via the `/workflows/provision` endpoint of the API. The user needs `write` permissions on workflows.
+
+```
+curl -XPOST -u user:password http://localhost:8080/workflows/provision
+```
+
+Keep reads the `KEEP_WORKFLOWS_DIRECTORY` environment variable and determines which workflows need to be added, removed, or updated.
 
 The high-level provisioning mechanism:
 1. Keep reads the `KEEP_WORKFLOWS_DIRECTORY` value.
