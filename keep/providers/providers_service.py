@@ -546,6 +546,12 @@ class ProvidersService:
 
             for provider_name, provider_config in env_providers.items():
                 provider_info = provider_config.get("authentication", {})
+                install_webhook_env = os.environ.get(
+                    "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "true"
+                ).lower() == "true"
+                install_webhook = provider_config.get(
+                    "install_webhook", install_webhook_env
+                )
                 logger.info(f"Provisioning provider {provider_name}")
                 if ProvidersService.is_provider_installed(tenant_id, provider_name):
                     logger.info(
@@ -575,11 +581,23 @@ class ProvidersService:
                         provisioned=True,
                         validate_scopes=False,
                     )
-                    ProvidersService.install_webhook(
-                        tenant_id=tenant_id,
-                        provider_type=installed_provider["type"],
-                        provider_id=installed_provider["id"],
-                    )
+                    if install_webhook:
+                        try:
+                            ProvidersService.install_webhook(
+                                tenant_id=tenant_id,
+                                provider_type=installed_provider["type"],
+                                provider_id=installed_provider["id"],
+                            )
+                            logger.info(f"Webhook installed for {provider_name}")
+                        except Exception as e:
+                            logger.error(
+                                "Error installing webhook for provider from env var",
+                                extra={"provider_name": provider_name, "exception": e},
+                            )
+                    else:
+                        logger.info(
+                            f"Install webhook disabled for {provider_name}; skipping."
+                        )
                     logger.info(f"Provider {provider_name} provisioned successfully")
                 except Exception as e:
                     logger.error(
@@ -601,6 +619,13 @@ class ProvidersService:
                             provider_name = provider_yaml["name"]
                             provider_type = provider_yaml["type"]
                             provider_config = provider_yaml.get("authentication", {})
+
+                            install_webhook_env = os.environ.get(
+                                "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "false"
+                            ).lower() == "true"
+                            install_webhook = provider_yaml.get(
+                                "install_webhook", install_webhook_env
+                            )
 
                             # Skip if already installed
                             if ProvidersService.is_provider_installed(
@@ -636,16 +661,22 @@ class ProvidersService:
                                 provisioned=True,
                                 validate_scopes=False,
                             )
-                            try:
-                                ProvidersService.install_webhook(
-                                    tenant_id=tenant_id,
-                                    provider_type=installed_provider["type"],
-                                    provider_id=installed_provider["id"],
-                                )
-                            except Exception as e:
-                                logger.error(
-                                    "Error installing webhook for provider from directory",
-                                    extra={"exception": e},
+                            if install_webhook:
+                                try:
+                                    ProvidersService.install_webhook(
+                                        tenant_id=tenant_id,
+                                        provider_type=installed_provider["type"],
+                                        provider_id=installed_provider["id"],
+                                    )
+                                    logger.info(f"Webhook installed for {provider_name}")
+                                except Exception as e:
+                                    logger.error(
+                                        "Error installing webhook for provider from directory",
+                                        extra={"provider_name": provider_name, "exception": e},
+                                    )
+                            else:
+                                logger.info(
+                                    f"Install webhook disabled for {provider_name}; skipping."
                                 )
                             logger.info(
                                 f"Provider {provider_name} provisioned successfully"
