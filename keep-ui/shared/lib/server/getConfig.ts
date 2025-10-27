@@ -84,5 +84,7 @@ export function getConfig(): InternalConfig {
     // Ticketing integration
     KEEP_TICKETING_ENABLED:
       process.env.KEEP_TICKETING_ENABLED?.toLowerCase() === "true",
+    KEEP_WF_LIST_EXTENDED_INFO:
+      process.env.KEEP_WF_LIST_EXTENDED_INFO?.toLowerCase() === "true",
   };
 }
