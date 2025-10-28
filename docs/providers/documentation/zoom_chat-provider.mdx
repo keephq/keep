@@ -41,6 +41,10 @@ This channel will be the recipient of the Keep notifications.
 
 Send `/inc connect <connection name>` to the channel to enable a webhook with authorization code. The app will respond with the webhook url and authorization code.
 
+<Tip>
+You should use the "Full Format" Incoming Webhook Url, which ends in `?format=full`.
+</Tip>
+
 <Frame width="100" height="200">
   <img height="10" src="/images/zoom_chat-provider5.png" />
 </Frame>
@@ -49,9 +53,9 @@ Send `/inc connect <connection name>` to the channel to enable a webhook with au
   <img height="10" src="/images/zoom_chat-provider6.png" />
 </Frame>
 
-## Enabling User JID Lookup (Optional)
+## (Optional) Enabling User JID Lookup 
 
-Messages can optionally include Zoom user JIDs, which provide a way to tag a particular Zoom user in a message. 
+Messages can optionally include Zoom user JIDs, which are used to tag a particular Zoom user in a message. 
 This is useful, for example, if a team subscribes to a chat channel but members only wish to be notified when they are explicitly tagged.
 
 ### Create a Zoom Application

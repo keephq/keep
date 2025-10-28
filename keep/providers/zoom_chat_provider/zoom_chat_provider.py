@@ -28,7 +28,7 @@ class ZoomChatProviderAuthConfig:
     webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "name": "webhook_url",
-            "description": "Zoom Incoming Webhook Url",
+            "description": "Zoom Incoming Webhook Full Format Url",
             "required": True,
             "sensitive": True,
             "validation": "https_url",
@@ -42,21 +42,24 @@ class ZoomChatProviderAuthConfig:
             "sensitive": True,
         },
     )
-    account_id: str = dataclasses.field(
+    account_id: Optional[str] = dataclasses.field(
+        default="zoom_account_id",
         metadata={
             "required": False,
             "description": "Zoom Account ID",
             "sensitive": True,
         }
     )
-    client_id: str = dataclasses.field(
+    client_id: Optional[str] = dataclasses.field(
+        default="zoom_client_id",
         metadata={
             "required": False,
             "description": "Zoom Client ID",
             "sensitive": True,
         }
     )
-    client_secret: str = dataclasses.field(
+    client_secret: Optional[str] = dataclasses.field(
+        default="zoom_client_secret",
         metadata={
             "required": False,
             "description": "Zoom Client Secret",
