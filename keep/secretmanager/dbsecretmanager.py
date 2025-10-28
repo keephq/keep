@@ -26,6 +26,8 @@ class DbSecretManager(BaseSecretManager):
                     if is_json:
                         return json.loads(secret_model.value)
                     return secret_model.value
+                else:
+                    raise KeyError(f"Secret {secret_name} not found")
             except Exception as e:    
                 self.logger.error(
                     "Failed to read secret",
