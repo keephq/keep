@@ -266,7 +266,8 @@
             "providers/documentation/youtrack-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider",
-            "providers/documentation/zoom-provider"
+            "providers/documentation/zoom-provider",
+            "providers/documentation/zoom_chat-provider"
           ]
         },
         "providers/adding-a-new-provider"
