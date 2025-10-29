@@ -201,6 +201,7 @@ def __build_base_incident_query(
     cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
     sql_filter = None
     involved_fields = []
+    is_visible_filter_present = False
 
     if cel:
         cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
@@ -219,6 +220,14 @@ def __build_base_incident_query(
                 True
                 for field in involved_fields
                 if field.field_name == "hasLinkedIncident"
+            ),
+            False,
+        )
+        is_visible_filter_present = next(
+            (
+                True
+                for field in involved_fields
+                if field.field_name == "is_visible"
             ),
             False,
         )
@@ -282,9 +291,11 @@ def __build_base_incident_query(
             additional_incident_fields, Incident.id == additional_incident_fields.c.id
         )
 
-    sql_query = sql_query.filter(Incident.tenant_id == tenant_id).filter(
-        Incident.is_visible == True
-    )
+    sql_query = sql_query.filter(Incident.tenant_id == tenant_id)
+    if not is_visible_filter_present:
+        sql_query = sql_query.filter(
+            Incident.is_visible == True
+        )
     if sql_filter:
         sql_query = sql_query.where(text(sql_filter))
 
