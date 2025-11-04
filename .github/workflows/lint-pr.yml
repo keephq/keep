@@ -1,28 +1,6 @@
 name: "Lint PR"
 
+# Workflow disabled - all validation jobs have been removed
 on:
-  pull_request_target:
-    types:
-      - opened
-      - edited
-      - synchronize
-      - reopened
-
-permissions:
-  pull-requests: write # Add explicit permissions for PR comments
-
-jobs:
-  links:
-    runs-on: ubuntu-latest
-    name: Validate PR to Issue link
-    permissions:
-      issues: read
-      pull-requests: write
-    steps:
-      - uses: nearform-actions/github-action-check-linked-issues@v1
-        id: check-linked-issues
-        with:
-          exclude-branches: "release/**, dependabot/**"
-      # OPTIONAL: Use the output from the `check-linked-issues` step
-      - name: Get the output
-        run: echo "How many linked issues? ${{ steps.check-linked-issues.outputs.linked_issues_count }}"
+  workflow_dispatch:
+    # Disabled: This workflow no longer runs automatically
