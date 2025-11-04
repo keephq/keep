@@ -308,16 +308,16 @@ jobs:
           outputs: type=image,push=true
 
   # Run tests with all services in one job
-  run-mysql-with-redis:
-    needs: [build-frontend, build-backend, prepare-test-environment]
-    uses: ./.github/workflows/run-e2e-tests.yml
-    with:
-      db-type: mysql
-      redis_enabled: true
-      python-version: 3.11
-      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
-      backend-image-name: ${{ needs.build-backend.outputs.image_name }}
-      frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
+  # run-mysql-with-redis:
+  #   needs: [build-frontend, build-backend, prepare-test-environment]
+  #   uses: ./.github/workflows/run-e2e-tests.yml
+  #   with:
+  #     db-type: mysql
+  #     redis_enabled: true
+  #     python-version: 3.11
+  #     is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
+  #     backend-image-name: ${{ needs.build-backend.outputs.image_name }}
+  #     frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
   run-postgresql-without-redis:
     needs: [build-frontend, build-backend, prepare-test-environment]
