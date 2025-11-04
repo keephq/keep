@@ -7,6 +7,7 @@ on:
       - "keep/**"
       - "keep-ui/**"
       - "tests/**"
+      - ".github/workflows/**"
 
 # Add permissions for GitHub Container Registry
 permissions:
