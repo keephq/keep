@@ -31,8 +31,10 @@ env:
   EE_ENABLED: true
   # Docker Compose project name
   COMPOSE_PROJECT_NAME: keep
-  # Check if PR is from fork (external contributor)
-  IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+  # Check if PR is from external fork (different repository)
+  # A PR is from an external fork if head and base repos are different
+  # PRs within the same fork (to main) will have same head/base repo
+  IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
 
 jobs:
   # Prepare test environment in parallel with Docker builds
@@ -297,7 +299,7 @@ jobs:
       db-type: mysql
       redis_enabled: true
       python-version: 3.11
-      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
@@ -308,7 +310,7 @@ jobs:
       db-type: postgres
       redis_enabled: false
       python-version: 3.11
-      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
@@ -319,6 +321,6 @@ jobs:
       db-type: sqlite
       redis_enabled: false
       python-version: 3.11
-      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
       backend-image-name: ${{ needs.build-backend.outputs.image_name }}
       frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
