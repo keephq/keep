@@ -4,3 +4,11 @@ name: "Lint PR"
 on:
   workflow_dispatch:
     # Disabled: This workflow no longer runs automatically
+
+jobs:
+  # Empty job to satisfy workflow schema - workflow is effectively disabled
+  disabled:
+    runs-on: ubuntu-latest
+    if: false
+    steps:
+      - run: echo "This workflow has been disabled"
