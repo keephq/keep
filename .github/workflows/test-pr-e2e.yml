@@ -8,6 +8,7 @@ on:
       - "keep/**"
       - "keep-ui/**"
       - "tests/**"
+      - ".github/workflows/**"
 
 # Add permissions for GitHub Container Registry
 permissions:
@@ -96,13 +97,20 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Set lowercase repository owner
+        id: repo-owner
+        run: |
+          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "owner=${REPO_OWNER_LOWER}" >> $GITHUB_OUTPUT
+          echo "Repository owner (lowercase): ${REPO_OWNER_LOWER}"
+      
       - name: Set image name
         id: set-image-name
         run: |
           if [[ "${{ env.IS_FORK }}" == "true" ]]; then
             echo "image_name=keep-frontend:local" >> $GITHUB_OUTPUT
           else
-            echo "image_name=ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "image_name=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Login to GitHub Container Registry
@@ -110,7 +118,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ steps.repo-owner.outputs.owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout
@@ -147,7 +155,7 @@ jobs:
         if: ${{ env.IS_FORK != 'true' }}
         continue-on-error: true
         run: |
-          BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          BRANCH_CACHE_TAG="ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
             echo "Branch cache exists: $BRANCH_CACHE_TAG"
             echo "cache_exists=true" >> $GITHUB_OUTPUT
@@ -161,7 +169,7 @@ jobs:
         run: |
           if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
             echo "FRONTEND CACHE HIT ✅"
-            echo "Cache tag: ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+            echo "Cache tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           else
             echo "FRONTEND CACHE MISS ❌"
             echo "Will attempt to use main branch cache and create a new branch cache"
@@ -176,15 +184,15 @@ jobs:
           file: ./docker/Dockerfile.ui
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/keep-frontend:${{ github.sha }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}
           # Use registry-based caching with branch-specific tags
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-main
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
           # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
@@ -199,13 +207,20 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Set lowercase repository owner
+        id: repo-owner
+        run: |
+          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "owner=${REPO_OWNER_LOWER}" >> $GITHUB_OUTPUT
+          echo "Repository owner (lowercase): ${REPO_OWNER_LOWER}"
+      
       - name: Set image name
         id: set-image-name
         run: |
           if [[ "${{ env.IS_FORK }}" == "true" ]]; then
             echo "image_name=keep-backend:local" >> $GITHUB_OUTPUT
           else
-            echo "image_name=ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "image_name=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Login to GitHub Container Registry
@@ -213,7 +228,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ steps.repo-owner.outputs.owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout
@@ -249,7 +264,7 @@ jobs:
         if: ${{ env.IS_FORK != 'true' }}
         continue-on-error: true
         run: |
-          BRANCH_CACHE_TAG="ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          BRANCH_CACHE_TAG="ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
             echo "Branch cache exists: $BRANCH_CACHE_TAG"
             echo "cache_exists=true" >> $GITHUB_OUTPUT
@@ -263,7 +278,7 @@ jobs:
         run: |
           if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
             echo "BACKEND CACHE HIT ✅"
-            echo "Cache tag: ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+            echo "Cache tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           else
             echo "BACKEND CACHE MISS ❌"
             echo "Will attempt to use main branch cache and create a new branch cache"
@@ -278,14 +293,14 @@ jobs:
           file: ./docker/Dockerfile.api
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/keep-backend:${{ github.sha }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}
           # Use registry-based caching with branch-specific tags
           cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
           cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
           # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
