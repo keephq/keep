@@ -3,6 +3,7 @@ name: Tests (E2E)
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "keep/**"
       - "keep-ui/**"
