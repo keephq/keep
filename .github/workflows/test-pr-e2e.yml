@@ -32,7 +32,8 @@ env:
   # Docker Compose project name
   COMPOSE_PROJECT_NAME: keep
   # Check if PR is from fork (external contributor)
-  IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+  # IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+  IS_FORK: true
 
 jobs:
   # Prepare test environment in parallel with Docker builds
