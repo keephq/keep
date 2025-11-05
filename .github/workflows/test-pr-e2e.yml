@@ -189,6 +189,7 @@ jobs:
         with:
           context: keep-ui
           file: ./docker/Dockerfile.ui
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}
@@ -316,6 +317,7 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile.api
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}
