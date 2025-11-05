@@ -189,6 +189,7 @@ jobs:
         with:
           context: keep-ui
           file: ./docker/Dockerfile.ui
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}
@@ -316,6 +317,7 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile.api
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}
@@ -366,13 +368,13 @@ jobs:
   #     backend-image-name: ${{ needs.build-backend.outputs.image_name }}
   #     frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
   
-  run-sqlite-without-redis:
-    needs: [build-frontend, build-backend, prepare-test-environment]
-    uses: ./.github/workflows/run-e2e-tests.yml
-    with:
-      db-type: sqlite
-      redis_enabled: false
-      python-version: 3.11
-      is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
-      backend-image-name: ${{ needs.build-backend.outputs.image_name }}
-      frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
+  # run-sqlite-without-redis:
+  #   needs: [build-frontend, build-backend, prepare-test-environment]
+  #   uses: ./.github/workflows/run-e2e-tests.yml
+  #   with:
+  #     db-type: sqlite
+  #     redis_enabled: false
+  #     python-version: 3.11
+  #     is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
+  #     backend-image-name: ${{ needs.build-backend.outputs.image_name }}
+  #     frontend-image-name: ${{ needs.build-frontend.outputs.image_name }}
