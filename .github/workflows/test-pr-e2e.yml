@@ -193,7 +193,6 @@ jobs:
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ steps.get-version.outputs.version }}
-            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:v${{ steps.get-version.outputs.version }}
           # Debug: Print what we're pushing
           metadata: |
             labels.docker.image="${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}"
@@ -321,7 +320,6 @@ jobs:
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ steps.get-version.outputs.version }}
-            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:v${{ steps.get-version.outputs.version }}
           # Debug: Print what we're pushing
           metadata: |
             labels.docker.image="${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}"
