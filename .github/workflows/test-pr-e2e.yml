@@ -97,12 +97,22 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Set lowercase repository owner
         id: repo-owner
         run: |
           REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "owner=${REPO_OWNER_LOWER}" >> $GITHUB_OUTPUT
           echo "Repository owner (lowercase): ${REPO_OWNER_LOWER}"
+
+      - name: Extract version from pyproject.toml
+        id: get-version
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
       
       - name: Set image name
         id: set-image-name
@@ -120,9 +130,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout
-        uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         id: buildx
@@ -185,6 +192,11 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ steps.get-version.outputs.version }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:v${{ steps.get-version.outputs.version }}
+          # Debug: Print what we're pushing
+          metadata: |
+            labels.docker.image="${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}"
           # Use registry-based caching with branch-specific tags
           cache-from: |
             type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
@@ -199,6 +211,13 @@ jobs:
           # Verbose output
           outputs: type=image,push=true
 
+      - name: Verify frontend image was pushed
+        if: ${{ env.IS_FORK != 'true' }}
+        run: |
+          echo "Frontend image tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository owner (lowercase): ${{ steps.repo-owner.outputs.owner }}"
+
   build-backend:
     runs-on: ubuntu-latest
     outputs:
@@ -207,12 +226,22 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Set lowercase repository owner
         id: repo-owner
         run: |
           REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "owner=${REPO_OWNER_LOWER}" >> $GITHUB_OUTPUT
           echo "Repository owner (lowercase): ${REPO_OWNER_LOWER}"
+
+      - name: Extract version from pyproject.toml
+        id: get-version
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
       
       - name: Set image name
         id: set-image-name
@@ -230,9 +259,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout
-        uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         id: buildx
@@ -294,6 +320,11 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ steps.get-version.outputs.version }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:v${{ steps.get-version.outputs.version }}
+          # Debug: Print what we're pushing
+          metadata: |
+            labels.docker.image="${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}"
           # Use registry-based caching with branch-specific tags
           cache-from: |
             type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
@@ -306,6 +337,13 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
           # Verbose output
           outputs: type=image,push=true
+
+      - name: Verify backend image was pushed
+        if: ${{ env.IS_FORK != 'true' }}
+        run: |
+          echo "Backend image tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-backend:${{ github.sha }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository owner (lowercase): ${{ steps.repo-owner.outputs.owner }}"
 
   # Run tests with all services in one job
   # run-mysql-with-redis:
