@@ -24,10 +24,10 @@ Example directory structure:
 
 You can efficiently add new workflows, remove existing ones, or modify their configurations by simply updating the workflow files in the `KEEP_WORKFLOWS_DIRECTORY`. This process allows for flexible management of workflows without requiring manual intervention.
 
-Workflow provisioning is done on every restart. It can also be triggered without a restart via the `/workflows/provision` endpoint of the API. The user needs `write` permissions on workflows.
+Workflow provisioning is done on every restart. It can also be triggered without a restart via the `/workflows/provision` endpoint of the API.
 
 ```
-curl -XPOST -u user:password http://localhost:8080/workflows/provision
+curl -XPOST http://localhost:8080/workflows/provision
 ```
 
 Keep reads the `KEEP_WORKFLOWS_DIRECTORY` environment variable and determines which workflows need to be added, removed, or updated.

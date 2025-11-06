@@ -15,6 +15,7 @@ from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import count_alerts, get_provider_distribution, get_session
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.limiter import limiter
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import Provider as ProviderDTO
@@ -66,14 +67,9 @@ def _is_localhost():
 
 
 @router.post("/provision", description="Provision providers from file or directory")
-def provision_providers(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:providers"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    logger.info("Reloading provisioned providers", extra={"tenant_id": tenant_id})
-    ProvidersService.provision_providers(tenant_id)
+def provision_providers():
+    logger.info("Reloading provisioned providers")
+    ProvidersService.provision_providers(SINGLE_TENANT_UUID)
     return {
         "provision": "done",
         "is_localhost": _is_localhost(),

@@ -33,6 +33,7 @@ from keep.api.core.db import (
     update_workflow_by_id as update_workflow_by_id_db,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.workflows import (
     get_workflow_facets,
     get_workflow_facets_data,
@@ -75,14 +76,9 @@ PLATFORM_URL = config("KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
 
 
 @router.post("/provision", description="Provision workflows from a directory")
-def provision_providers(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    logger.info("Reloading provisioned workfflows", extra={"tenant_id": tenant_id})
-    WorkflowStore.provision_workflows(tenant_id)
+def provision_providers():
+    logger.info("Reloading provisioned workfflows")
+    WorkflowStore.provision_workflows(SINGLE_TENANT_UUID)
     return {
             "provision": "done",
     }
