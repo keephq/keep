@@ -13,6 +13,8 @@ import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
 import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { EnrichAlertSidePanel } from "@/features/alerts/enrich-alert";
+import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
+import { AlertAssociateIncidentModal } from "@/features/alerts/alert-associate-to-incident";
 import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
@@ -75,6 +77,10 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const [viewEnrichAlertModal, setEnrichAlertModal] =
     useState<AlertDto | null>();
   const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
+  // hooks for alert sidebar
+  const [sidebarAlert, setSidebarAlert] = useState<AlertDto | null>();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] = useState(false);
   const { dynamicPresets: savedPresets = [], isLoading: _isPresetsLoading } =
     usePresets({
       revalidateOnFocus: false,
@@ -99,6 +105,8 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
+    const sidebarFingerprint = searchParams?.get("sidebarFingerprint");
+    
     if (fingerprint && enrich && alerts) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
@@ -120,6 +128,21 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       setViewAlertModal(null);
       setEnrichAlertModal(null);
       setIsEnrichSidebarOpen(false);
+    }
+
+    // Handle sidebar opening/closing based on URL parameter
+    if (sidebarFingerprint && alerts) {
+      const alert = alerts?.find((alert) => alert.fingerprint === sidebarFingerprint);
+      if (alert) {
+        setSidebarAlert(alert);
+        setIsSidebarOpen(true);
+      } else {
+        showErrorToast(null, "Alert fingerprint not found");
+        closeSidebar();
+      }
+    } else if (alerts) {
+      setSidebarAlert(null);
+      setIsSidebarOpen(false);
     }
   }, [searchParams, alerts]);
 
@@ -146,8 +169,20 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   const resetUrlAfterModal = useCallback(() => {
     const currentParams = new URLSearchParams(window.location.search);
     Array.from(currentParams.keys())
-      .filter((paramKey) => paramKey !== "cel")
+      .filter((paramKey) => paramKey !== "cel" && paramKey !== "sidebarFingerprint") // Keep sidebar parameter
       .forEach((paramKey) => currentParams.delete(paramKey));
+    let url = `${window.location.pathname}`;
+
+    if (currentParams.toString()) {
+      url += `?${currentParams.toString()}`;
+    }
+
+    router.replace(url);
+  }, [router]);
+
+  const closeSidebar = useCallback(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.delete("sidebarFingerprint"); // Only remove sidebar parameter
     let url = `${window.location.pathname}`;
 
     if (currentParams.toString()) {
@@ -236,6 +271,24 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
           resetUrlAfterModal();
         }}
         mutate={mutateAlerts}
+      />
+      <AlertSidebar
+        isOpen={isSidebarOpen}
+        toggle={closeSidebar}
+        alert={sidebarAlert ?? null}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+        setChangeStatusAlert={setChangeStatusAlert}
+        setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+      />
+      <AlertAssociateIncidentModal
+        isOpen={isIncidentSelectorOpen}
+        alerts={sidebarAlert ? [sidebarAlert] : []}
+        handleSuccess={() => {
+          setIsIncidentSelectorOpen(false);
+          mutateAlerts();
+        }}
+        handleClose={() => setIsIncidentSelectorOpen(false)}
       />
     </>
   );
