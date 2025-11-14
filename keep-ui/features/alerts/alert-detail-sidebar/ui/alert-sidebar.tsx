@@ -265,6 +265,33 @@ export const AlertSidebar = ({
                     </div>
                   </p>
                   )}
+                  {alert.panelUrl && (
+                  <p>
+                    <FieldHeader>Panel URL</FieldHeader>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={alert.panelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate max-w-[calc(100%-40px)] inline-block"
+                      >
+                        {alert.panelUrl}
+                      </Link>
+                      <Button
+                        icon={ClipboardDocumentIcon}
+                        size="xs"
+                        color="orange"
+                        variant="light"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCopyUrl(alert.panelUrl);
+                        }}
+                        tooltip="Copy Panel URL"
+                      />
+                    </div>
+                  </p>
+                  )}
                 </div>
                 {alert.incident_dto && (
                   <div>
