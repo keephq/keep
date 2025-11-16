@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "@/entities/alerts/model";
-import { Button, Title, Badge, Divider } from "@tremor/react";
+import { Button, Title, Divider } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { AlertTimeline } from "./alert-timeline";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
@@ -11,22 +11,23 @@ import {
   FieldHeader,
   SeverityLabel,
   UISeverity,
-  Tooltip,
   showErrorToast,
   showSuccessToast,
 } from "@/shared/ui";
-import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
-import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { Link } from "@/components/ui";
-import { DynamicImageProviderIcon } from "@/components/ui";
 import { useProviders } from "@/utils/hooks/useProviders";
 // feature not supposed to import other features, TODO: move alert-menu to entities or shared
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
-import { IncidentDto } from "@/entities/incidents/model";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import CollapsibleIncidentsList from "./alert-sidebar-incidents";
+import {
+  alertSidebarFieldsConfig,
+  getEnabledFields,
+  getCustomFields,
+  renderCustomField,
+  AlertSidebarFieldName,
+} from "../lib/alertSidebarFields";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -168,124 +169,81 @@ export const AlertSidebar = ({
             {alert && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  {alert.service && (
-                    <p>
-                      <FieldHeader>Service</FieldHeader>
-                      <Badge size="sm" color="gray">
-                        {alert.service}
-                      </Badge>
-                    </p>
-                  )}
-                  <p>
-                    <FieldHeader>Source</FieldHeader>
-                    <DynamicImageProviderIcon
-                      src={`/icons/${alert.source![0]}-icon.png`}
-                      alt={alert.source![0]}
-                      providerType={alert.source![0]}
-                      width={24}
-                      height={24}
-                      className="inline-block w-6 h-6 mr-2"
-                    />
-                    <span>{providerName}</span>
-                  </p>
-                  <p>
-                    <FieldHeader>Description</FieldHeader>
-                    <FormattedContent
-                      content={alert.description}
-                      format={alert.description_format}
-                    />
-                  </p>
-                  <p>
-                    <FieldHeader className="flex items-center gap-1">
-                      Fingerprint
-                      <Tooltip
-                        content={
-                          <>
-                            Fingerprints are unique identifiers associated with
-                            alert instances in Keep. Each provider declares the
-                            fields fingerprints are calculated based on.{" "}
-                            <Link
-                              href={`${
-                                config?.KEEP_DOCS_URL ||
-                                "https://docs.keephq.dev"
-                              }/overview/fingerprints`}
-                              className="text-white"
-                            >
-                              Read more about it here.
-                            </Link>
-                          </>
-                        }
-                        className="z-[100]"
-                      >
-                        <QuestionMarkCircleIcon className="w-4 h-4" />
-                      </Tooltip>
-                    </FieldHeader>
-                    <div className="flex items-center gap-2">
-                      <span className="truncate max-w-[calc(100%-40px)] inline-block">
-                        {alert.fingerprint}
-                      </span>
-                      <Button
-                        icon={ClipboardDocumentIcon}
-                        size="xs"
-                        color="orange"
-                        variant="light"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCopyFingerprint(alert.fingerprint);
-                        }}
-                        tooltip="Copy fingerprint"
-                      />
-                    </div>
-                  </p>
-                  {alert.url && (
-                  <p>
-                    <FieldHeader>URL</FieldHeader>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={alert.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline truncate max-w-[calc(100%-40px)] inline-block"
-                      >
-                        {alert.url}
-                      </Link>
-                      <Button
-                        icon={ClipboardDocumentIcon}
-                        size="xs"
-                        color="orange"
-                        variant="light"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCopyUrl(alert.url);
-                        }}
-                        tooltip="Copy URL"
-                      />
-                    </div>
-                  </p>
-                  )}
+                  {(() => {
+                    const configuredFields = config?.ALERT_SIDEBAR_FIELDS || [];
+                    const enabledFields = getEnabledFields(configuredFields);
+                    const customFields = getCustomFields(configuredFields);
+                    
+                    const fieldRendererProps = {
+                      alert,
+                      providerName,
+                      config,
+                      handleCopyFingerprint,
+                      handleCopyUrl,
+                    };
+
+                    const standardFields = enabledFields.map((fieldName) => {
+                      const fieldConfig = alertSidebarFieldsConfig[fieldName];
+                      
+                      // Skip special fields that are rendered outside the loop
+                      if (
+                        fieldName === "incidents" ||
+                        fieldName === "timeline" ||
+                        fieldName === "relatedServices"
+                      ) {
+                        return null;
+                      }
+
+                      if (fieldConfig.shouldRender(alert)) {
+                        return (
+                          <Fragment key={fieldName}>
+                            {fieldConfig.render(fieldRendererProps)}
+                          </Fragment>
+                        );
+                      }
+                      return null;
+                    });
+
+                    // Render custom fields (using dot notation paths)
+                    const customFieldElements = customFields.map((fieldPath) => {
+                      const rendered = renderCustomField(alert, fieldPath);
+                      return rendered ? (
+                        <Fragment key={fieldPath}>{rendered}</Fragment>
+                      ) : null;
+                    });
+
+                    return [...standardFields, ...customFieldElements];
+                  })()}
                 </div>
-                {alert.incident_dto && (
-                  <div>
-                    <FieldHeader>Incidents</FieldHeader>
-                    <CollapsibleIncidentsList incidents={alert.incident_dto} />
-                  </div>
-                )}
-                <AlertTimeline
-                  key={auditData ? auditData.length : 1}
-                  alert={alert}
-                  auditData={auditData || []}
-                  isLoading={isLoading}
-                  onRefresh={handleRefresh}
-                />
-                <Title>Related Services</Title>
-                <TopologySearchProvider>
-                  <TopologyMap
-                    providerIds={alert.providerId ? [alert.providerId] : []}
-                    services={alert.service ? [alert.service] : []}
+                {config?.ALERT_SIDEBAR_FIELDS?.includes("incidents") &&
+                  alert.incident_dto && (
+                    <div>
+                      <FieldHeader>Incidents</FieldHeader>
+                      <CollapsibleIncidentsList
+                        incidents={alert.incident_dto}
+                      />
+                    </div>
+                  )}
+                {config?.ALERT_SIDEBAR_FIELDS?.includes("timeline") && (
+                  <AlertTimeline
+                    key={auditData ? auditData.length : 1}
+                    alert={alert}
+                    auditData={auditData || []}
+                    isLoading={isLoading}
+                    onRefresh={handleRefresh}
                   />
-                </TopologySearchProvider>
+                )}
+                {config?.ALERT_SIDEBAR_FIELDS?.includes("relatedServices") && (
+                  <>
+                    <Title>Related Services</Title>
+                    <TopologySearchProvider>
+                      <TopologyMap
+                        providerIds={alert.providerId ? [alert.providerId] : []}
+                        services={alert.service ? [alert.service] : []}
+                      />
+                    </TopologySearchProvider>
+                  </>
+                )}
               </div>
             )}
           </Dialog.Panel>
