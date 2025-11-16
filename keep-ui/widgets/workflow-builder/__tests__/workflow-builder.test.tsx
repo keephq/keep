@@ -201,6 +201,16 @@ const mockConfig: InternalConfig = {
   SENTRY_DISABLED: "true",
   KEEP_WORKFLOW_DEBUG: false,
   KEEP_HIDE_SENSITIVE_FIELDS: true,
+  ALERT_SIDEBAR_FIELDS: [
+    "service",
+    "source",
+    "description",
+    "fingerprint",
+    "url",
+    "incidents",
+    "timeline",
+    "relatedServices",
+  ],
 };
 
 jest.mock("@/utils/hooks/useConfig", () => ({
