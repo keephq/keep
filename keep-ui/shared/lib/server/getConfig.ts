@@ -34,6 +34,23 @@ export function getConfig(): InternalConfig {
     API_URL_CLIENT = process.env.API_URL_CLIENT;
   }
 
+  // Parse alert sidebar fields from environment variable
+  // Default includes all standard fields
+  const defaultAlertSidebarFields = [
+    "service",
+    "source",
+    "description",
+    "message",
+    "fingerprint",
+    "url",
+    "incidents",
+    "timeline",
+    "relatedServices",
+  ];
+  const alertSidebarFields = process.env.ALERT_SIDEBAR_FIELDS
+    ? process.env.ALERT_SIDEBAR_FIELDS.split(",").map((field) => field.trim())
+    : defaultAlertSidebarFields;
+
   return {
     AUTH_TYPE: authType,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
@@ -86,5 +103,7 @@ export function getConfig(): InternalConfig {
       process.env.KEEP_TICKETING_ENABLED?.toLowerCase() === "true",
     KEEP_WF_LIST_EXTENDED_INFO:
       process.env.KEEP_WF_LIST_EXTENDED_INFO?.toLowerCase() === "true",
+    // Alert sidebar fields configuration
+    ALERT_SIDEBAR_FIELDS: alertSidebarFields,
   };
 }

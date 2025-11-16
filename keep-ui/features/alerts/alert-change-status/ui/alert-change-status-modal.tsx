@@ -14,7 +14,11 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast, Tooltip } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
-import ReactQuill from "react-quill-new";
+import dynamic from "next/dynamic";
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false,
+  loading: () => <div className="p-4 text-gray-500 italic">Loading editor...</div>
+ });
+
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-5 h-5 text-red-500 mr-2" />,
