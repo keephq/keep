@@ -7,21 +7,25 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   PauseIcon,
-  XCircleIcon,
-  QuestionMarkCircleIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast, Tooltip } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import dynamic from "next/dynamic";
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false,
+  loading: () => <div className="p-4 text-gray-500 italic">Loading editor...</div>
+ });
+
 
 const statusIcons = {
-  [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
-  [Status.Resolved]: <CheckCircleIcon className="w-4 h-4 mr-2" />,
-  [Status.Acknowledged]: <PauseIcon className="w-4 h-4 mr-2" />,
-  [Status.Suppressed]: <XCircleIcon className="w-4 h-4 mr-2" />,
-  [Status.Pending]: <QuestionMarkCircleIcon className="w-4 h-4 mr-2" />,
+  [Status.Firing]: <ExclamationCircleIcon className="w-5 h-5 text-red-500 mr-2" />,
+  [Status.Resolved]: <CheckCircleIcon className="w-5 h-5 text-green-500 mr-2" />,
+  [Status.Acknowledged]: <PauseIcon className="w-5 h-5 text-gray-500 mr-2" />,
+  [Status.Suppressed]: <CircleStackIcon className="w-5 h-5 text-gray-500 mr-2" />,
+  [Status.Pending]: <CircleStackIcon className="w-5 h-5 text-gray-500 mr-2" />,
 };
 
 interface Props {
@@ -41,10 +45,7 @@ export function AlertChangeStatusModal({
   const revalidateMultiple = useRevalidateMultiple();
   const { alertsMutator } = useAlerts();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
-
-  useEffect(() => {
-    setDisposeOnNewAlert(alert && !Array.isArray(alert) ? true : false);
-  }, [alert]);
+  const [noteContent, setNoteContent] = useState<string>("");
 
   if (!alert) return null;
 
@@ -67,6 +68,8 @@ export function AlertChangeStatusModal({
 
   const clearAndClose = () => {
     setSelectedStatus(null);
+    setNoteContent("");
+    setDisposeOnNewAlert(true);
     handleClose();
   };
 
@@ -89,6 +92,9 @@ export function AlertChangeStatusModal({
               dismissed: false,
               dismissUntil: "",
             }),
+            ...(noteContent && noteContent.trim() !== "" && {
+              note: noteContent,
+            }),
           },
           fingerprint: alert.fingerprint,
         }
@@ -103,7 +109,7 @@ export function AlertChangeStatusModal({
     }
   };
 
-    const handleChangeStatusBatch = async () => {
+  const handleChangeStatusBatch = async () => {
     let fingerprints = new Set<string>();
     if (Array.isArray(alert)) {
       alert.forEach((a) => fingerprints.add(a.fingerprint));
@@ -117,6 +123,9 @@ export function AlertChangeStatusModal({
             ...(selectedStatus !== Status.Suppressed && {
               dismissed: false,
               dismissUntil: "",
+            }),
+            ...(noteContent && noteContent.trim() !== "" && {
+              note: noteContent,
             }),
           },
           fingerprints: Array.from(fingerprints),
@@ -134,52 +143,14 @@ export function AlertChangeStatusModal({
 
   if (!Array.isArray(alert)) {
     return (
-      <Modal onClose={handleClose} isOpen={!!alert}>
-        <Title>Change Alert Status</Title>
-        <div className="flex mt-2.5">
-          <Subtitle>
-            Change status from <strong>{alert.status}</strong> to:
-        </Subtitle>
-        <Select
-          options={statusOptions}
-          value={statusOptions.find(
-            (option) => option.value === selectedStatus
-          )}
-          onChange={(option) => setSelectedStatus(option?.value || null)}
-          placeholder="Select new status"
-          className="ml-2"
-        />
-      </div>
-      <div className="flex justify-between mt-2.5">
-        <div>
-          <Subtitle>Dispose on new alert</Subtitle>
-          <span className="text-xs text-gray-500">
-            This will dispose the status when an alert with the same fingerprint
-            comes in.
-          </span>
-        </div>
-        <Switch
-          checked={disposeOnNewAlert}
-          onChange={(checked) => setDisposeOnNewAlert(checked)}
-        />
-      </div>
-      <div className="flex justify-end mt-4 gap-2">
-        <Button onClick={handleClose} color="orange" variant="secondary">
-          Cancel
-        </Button>
-        <Button onClick={handleChangeStatus} color="orange">
-          Change Status
-        </Button>
-      </div>
-    </Modal>
-  );
-  }else {
-    return (
-      <Modal onClose={handleClose} isOpen={!!alert}>
-        <Title>Change Alerts Status</Title>
-        <div className="flex mt-2.5">
-          <Subtitle>
-            Change status of {alert.length} alerts to:
+      <Modal onClose={handleClose} isOpen={!!alert} className="!max-w-none !w-auto inline-block whitespace-nowrap overflow-visible">
+        <Title className="text-lg font-semibold">Change Alert Status</Title>
+        <div className="border-t border-gray-200 my-4" />
+        <div className="flex mt-2.5 inline-flex items-center">
+          <Subtitle
+            className="flex items-center bold"
+          >
+            New status:
           </Subtitle>
           <Select
             options={statusOptions}
@@ -189,20 +160,92 @@ export function AlertChangeStatusModal({
             onChange={(option) => setSelectedStatus(option?.value || null)}
             placeholder="Select new status"
             className="ml-2"
+            styles={{
+              control: (base) => ({
+                ...base,
+                width: "max-content",
+                minWidth: "180px",
+              }),
+            }}
           />
+          <Button
+            variant={disposeOnNewAlert ? "primary" : "secondary"}
+            className="ml-4"
+            size="xs"
+            onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
+            tooltip={disposeOnNewAlert ? "Dispose the status when a new alert comes in." : "Keep the status when a new alert comes in."}
+          >
+            {disposeOnNewAlert ? "Disposing on new alerts" : "Keeping on new alerts"}
+          </Button>
         </div>
-        <div className="flex justify-between mt-2.5">
-          <div>
-            <Subtitle>Dispose on new alerts</Subtitle>
-            <span className="text-xs text-gray-500">
-              This will dispose the status when an alert with the same fingerprint
-              comes in.
-            </span>
+        <div className="mt-4">
+          <Subtitle >Add Note</Subtitle>
+          <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+            <ReactQuill
+              value={noteContent}
+              onChange={(value: string) => setNoteContent(value)}
+              theme="snow"
+              placeholder="Add the reason for status change here..."
+            />
           </div>
-          <Switch
-            checked={disposeOnNewAlert}
-            onChange={(checked) => setDisposeOnNewAlert(checked)}
+        </div>
+        <div className="flex justify-end mt-4 gap-2">
+          <Button onClick={handleClose} color="orange" variant="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleChangeStatus} color="orange">
+            Change Status
+          </Button>
+        </div>
+      </Modal>
+    );
+  } else {
+    return (
+      <Modal onClose={handleClose} isOpen={!!alert} className="!max-w-none !w-auto inline-block whitespace-nowrap overflow-visible">
+        <Title className="text-lg font-semibold">Change Alerts Status - Alert(s) selected: {Array.isArray(alert) ? alert.length : 1}</Title>
+        <div className="border-t border-gray-200 my-4" />
+        <div className="flex mt-2.5 inline-flex items-center">
+          <Subtitle
+            className="flex items-center bold"
+          >
+            New status:
+          </Subtitle>
+          <Select
+            options={statusOptions}
+            value={statusOptions.find(
+              (option) => option.value === selectedStatus
+            )}
+            onChange={(option) => setSelectedStatus(option?.value || null)}
+            placeholder="Select new status"
+            className="ml-2"
+            styles={{
+              control: (base) => ({
+                ...base,
+                width: "max-content",
+                minWidth: "180px",
+              }),
+            }}
           />
+          <Button
+            variant={disposeOnNewAlert ? "primary" : "secondary"}
+            className="ml-4"
+            size="xs"
+            onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
+            tooltip={disposeOnNewAlert ? "Dispose the status when a new alert comes in." : "Keep the status when a new alert comes in."}
+          >
+            {disposeOnNewAlert ? "Disposing on new alerts" : "Keeping on new alerts"}
+          </Button>
+        </div>
+        <div className="mt-4">
+          <Subtitle >Add Note</Subtitle>
+          <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+            <ReactQuill
+              value={noteContent}
+              onChange={(value: string) => setNoteContent(value)}
+              theme="snow"
+              placeholder="Add the reason for status change here..."
+            />
+          </div>
         </div>
         <div className="flex justify-end mt-4 gap-2">
           <Button onClick={handleClose} color="blue" variant="secondary">
