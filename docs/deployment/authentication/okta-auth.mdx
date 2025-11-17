@@ -1,0 +1,101 @@
+---
+title: "Okta Authentication"
+---
+
+This document provides information about the Okta integration in Keep.
+
+## Overview
+
+Keep supports Okta as an authentication provider, enabling:
+- Single Sign-On (SSO) via Okta
+- JWT token validation with JWKS
+- User and group management through Okta
+- Role-based access control
+- Token refresh capabilities
+
+## Environment Variables
+
+### Backend Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `"OKTA"` to enable Okta authentication | `OKTA` |
+| `OKTA_DOMAIN` | Your Okta domain | `company.okta.com` |
+| `OKTA_API_TOKEN` | Admin API token for Okta management | `00aBcD3f4GhIJkl5m6NoPQr` |
+| `OKTA_ISSUER` | The issuer URL for your Okta application | `https://company.okta.com/oauth2/default` |
+| `OKTA_CLIENT_ID` | Client ID of your Okta application | `0oa1b2c3d4e5f6g7h8i9j` |
+| `OKTA_CLIENT_SECRET` | Client Secret of your Okta application | `abcd1234efgh5678ijkl9012` |
+| `OKTA_JWKS_URL` | (Optional) JWKS URL for your Okta application | `https://company.okta.com/oauth2/default/v1/keys`
+| `OKTA_AUDIENCE` | (Optional) Audience for token validation | `api://keep` |
+| `OKTA_ADMIN_ROLE` | (Optional) Role mapped to the Keep admin role | `KeepAdmin` |
+| `OKTA_NOC_ROLE` | (Optional) Role mapped to the Keep noc role | `KeepNoc` |
+| `OKTA_WEBHOOK_ROLE` | (Optional) Role mapped to the Keep webhook role | `KeepWebhook` |
+| `OKTA_AUTO_CREATE_USER` | (Optional) Try to auto‑create users in Keep when they log in | `True` |
+
+### Frontend Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `"OKTA"` to enable Okta authentication | `OKTA` |
+| `OKTA_DOMAIN` | Your Okta domain | `company.okta.com` |
+| `OKTA_CLIENT_ID` | Client ID of your Okta application | `0oa1b2c3d4e5f6g7h8i9j` |
+| `OKTA_CLIENT_SECRET` | Client Secret of your Okta application | `abcd1234efgh5678ijkl9012` |
+| `OKTA_ISSUER` | The issuer URL for your Okta application | `https://company.okta.com/oauth2/default` |
+
+## Okta Configuration
+
+### Creating an Okta Application
+
+1. Sign in to your Okta Admin Console
+2. Navigate to **Applications** > **Applications**
+3. Click **Create App Integration**
+4. Select **OIDC - OpenID Connect** as the Sign-in method
+5. Choose **Web Application** as the Application type
+6. Click **Next**
+
+### Application Settings
+
+1. **Name**: Enter a name for your application (e.g., "Keep")
+2. **Grant type**: Select **Authorization Code**
+3. **Sign-in redirect URIs**: Enter your app's callback URL, e.g., `https://your-keep-domain.com/api/auth/callback/okta`
+4. **Sign-out redirect URIs**: Enter your app's sign-out URL, e.g., `https://your-keep-domain.com/signin`
+5. **Assignments**:
+   - **Skip group assignment for now** or assign to appropriate groups
+6. Click **Save**
+
+### Create API Token
+
+1. Navigate to **Security** > **API**
+2. Select the **Tokens** tab
+3. Click **Create Token**
+4. Name your token (e.g., "Keep Integration")
+5. Copy the generated token value – this is your `OKTA_API_TOKEN`
+
+### Configure OIDC Groups Claims 
+
+1. Open your application in the Okta console
+2. Go to the **Sign On** tab
+3. Under **OpenID Connect ID Token**, click **Edit**
+4. Set the **Groups claim filter**:
+   - Claim name: `groups`
+   - Filter: e.g., `Matches regex .*` (returns all groups assigned to the user)
+
+<Frame>
+  <img src="/images/okta.png" alt="Setting Up Okta Groups Claim"/>
+</Frame>
+
+## Roles
+
+Keep roles are implemented through Okta groups. By default, the following group mappings are configured:
+
+| Okta Group | Keep Role |
+|----------|-------------|
+| `keep_admin` | `admin` |
+| `keep_noc` | `noc` |
+| `keep_webhook` | `webhook` |
+
+You can override these defaults by setting the backend environment variables:
+
+- `OKTA_ADMIN_ROLE` – role mapped to the Keep `admin` role
+- `OKTA_NOC_ROLE` – role mapped to the Keep `noc` role
+- `OKTA_WEBHOOK_ROLE` – role mapped to the Keep `webhook` role
