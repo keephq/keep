@@ -16,6 +16,10 @@ To provision providers and deduplication rules for them, we can configure via th
 Keep does not allow to use both `KEEP_PROVIDERS` and `KEEP_PROVIDERS_DIRECTORY` environment variables at the same time.
 </Note>
 
+<Note>
+Keep can automatically install webhooks for providers that support them. This behavior depends on the configuration and the provisioning method used.
+</Note>
+
 <Tip>Please note: Deduplication rules are not mandatory for provider distribution.</Tip>
 
 ### Providers provisioning using KEEP_PROVIDERS
@@ -29,6 +33,7 @@ Providers provisioning JSON example:
       "VMAlertHost": "http://localhost",
       "VMAlertPort": 1234
     },
+    "install_webhook": true,
     "deduplication_rules": {
       "deduplication rule name example 1": {
         "description": "deduplication rule name example 1",
@@ -59,8 +64,10 @@ Providers provisioning JSON example:
 Spin up Keep with this `KEEP_PROVIDERS` value:
 ```json
 # ENV
-KEEP_PROVIDERS={"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234}},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":"4321","username":"keep","password":"1234","database":"keepdb"}}}
+KEEP_PROVIDERS={"keepVictoriaMetrics":{"type":"victoriametrics","authentication":{"VMAlertHost":"http://localhost","VMAlertPort": 1234},"install_webhook":true},"keepClickhouse1":{"type":"clickhouse","authentication":{"host":"http://localhost","port":"4321","username":"keep","password":"1234","database":"keepdb"}}}
 ```
+
+By default, when provisioning using `KEEP_PROVIDERS`, webhooks are automatically installed for providers that support them unless the `install_webhook` flag is set to `false`.
 
 ### Providers provisioning using KEEP_PROVIDERS_DIRECTORY
 
@@ -81,6 +88,7 @@ type: victoriametrics
 authentication:
   VMAlertHost: http://localhost
   VMAlertPort: 1234
+install_webhook: false
 deduplication_rules:
   deduplication_rule_name_example_1:
     description: deduplication rule name example 1
@@ -93,6 +101,8 @@ deduplication_rules:
       - name
       - lastReceived
 ```
+
+The `install_webhook` field controls whether Keep sets up webhooks automatically for that provider. By default, when provisioning using `KEEP_PROVIDERS_DIRECTORY`, webhook installation is disabled unless explicitly set to `true`.
 
 ### Supported Providers
 

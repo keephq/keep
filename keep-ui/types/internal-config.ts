@@ -40,4 +40,6 @@ export interface InternalConfig {
   // Add ticketing options to the incident view, defaults to false
   KEEP_TICKETING_ENABLED: boolean;
   KEEP_WF_LIST_EXTENDED_INFO: boolean;
+  // Alert sidebar fields configuration - comma-separated list of fields to display
+  ALERT_SIDEBAR_FIELDS: string[];
 }
