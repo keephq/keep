@@ -1,0 +1,42 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **webhook_url**: Zoom Incoming Webhook Full Format Url (required: True, sensitive: True)
+- **authorization_token**: Incoming Webhook Authorization Token (required: True, sensitive: True)
+- **account_id**: Zoom Account ID (required: False, sensitive: True)
+- **client_id**: Zoom Client ID (required: False, sensitive: True)
+- **client_secret**: Zoom Client Secret (required: False, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **user:read:user:admin**: View a Zoom user's details  
+- **user:read:list_users:admin**: List Zoom users  
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query zoom_chat
+      provider: zoom_chat
+      config: "{{ provider.my_provider_name }}"
+      with:
+        severity: {value}  # The severity of the alert.
+        title: {value}  # The title to use for the message. (optional)
+        message: {value}  # The text message to send. Supports Markdown formatting.
+        tagged_users: {value}  # A list of Zoom user email addresses to tag. (optional)
+        details_url: {value}  # A URL linking to more information. (optional)
+```
+
+
+
+
+Check the following workflow example:
+- [zoom_chat_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/zoom_chat_example.yml)

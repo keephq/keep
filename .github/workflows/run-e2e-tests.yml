@@ -63,9 +63,9 @@ jobs:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
-      # Only install dependencies if cache miss
+      # Always install dependencies to ensure venv is valid
+      # When cached, this completes quickly; when broken, this fixes it
       - name: Install dependencies using poetry
-        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root --with dev
 
       - name: Get Playwright version from poetry.lock

@@ -32,6 +32,8 @@ class DbSecretManager(BaseSecretManager):
                     extra={"error": str(e)},
                 )
                 raise
+            if not secret_model:
+                raise KeyError(f"Secret {secret_name} not found")
 
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
