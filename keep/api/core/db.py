@@ -5855,6 +5855,67 @@ def get_error_alerts(tenant_id: str, limit: int = 100) -> List[AlertRaw]:
         )
 
 
+def get_error_alerts_to_reprocess(
+    tenant_id: str, alert_id: str | None = None
+) -> List[AlertRaw]:
+    """
+    Get error alerts to reprocess.
+    
+    Args:
+        tenant_id: Tenant ID
+        alert_id: Optional specific alert ID to reprocess
+        
+    Returns:
+        List of AlertRaw objects to reprocess
+    """
+    with Session(engine) as session:
+        query = session.query(AlertRaw).filter(
+            AlertRaw.tenant_id == tenant_id,
+            AlertRaw.error == True,
+            AlertRaw.dismissed == False,
+        )
+
+        if alert_id:
+            if isinstance(alert_id, str):
+                alert_id_uuid = uuid.UUID(alert_id)
+            else:
+                alert_id_uuid = alert_id
+            query = query.filter(AlertRaw.id == alert_id_uuid)
+
+        return query.all()
+
+
+def dismiss_error_alert_by_id(tenant_id: str, alert_id: str, dismissed_by: str | None = None) -> None:
+    """
+    Dismiss a specific error alert after successful reprocessing.
+    
+    Args:
+        tenant_id: Tenant ID
+        alert_id: Alert ID to dismiss
+        dismissed_by: Optional user who dismissed the alert
+    """
+    with Session(engine) as session:
+        if isinstance(alert_id, str):
+            alert_id_uuid = uuid.UUID(alert_id)
+        else:
+            alert_id_uuid = alert_id
+            
+        stmt = (
+            update(AlertRaw)
+            .where(
+                AlertRaw.id == alert_id_uuid,
+                AlertRaw.tenant_id == tenant_id,
+            )
+            .values(
+                dismissed=True,
+                dismissed_by=dismissed_by,
+                dismissed_at=datetime.now(tz=timezone.utc),
+            )
+        )
+        session.execute(stmt)
+        session.commit()
+
+
 def dismiss_error_alerts(tenant_id: str, alert_id=None, dismissed_by=None) -> None:
     with Session(engine) as session:
         stmt = (
