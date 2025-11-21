@@ -6,7 +6,7 @@ import dataclasses
 import datetime
 import json
 from typing import Any, Dict, List, Optional
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urljoin
 
 import pydantic
 import requests
@@ -15,7 +15,6 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from keep.providers.models.provider_method import ProviderMethod
 from keep.validation.fields import HttpsUrl
 
 
@@ -187,7 +186,6 @@ class FeishuServicedeskProvider(BaseProvider):
         """Retrieve the Feishu tenant access token."""
         try:
             # Reuse the cached token if it is still valid
-            import datetime
             if self._access_token and self._token_expiry:
                 if datetime.datetime.now() < self._token_expiry:
                     return self._access_token
@@ -250,7 +248,7 @@ class FeishuServicedeskProvider(BaseProvider):
             auth_string = f"{self.authentication_config.helpdesk_id}:{self.authentication_config.helpdesk_token}"
             encoded = base64.b64encode(auth_string.encode()).decode()
             headers["X-Lark-Helpdesk-Authorization"] = encoded
-            self.logger.info(f"Using dual authentication: Bearer token + Helpdesk auth")
+            self.logger.info("Using dual authentication: Bearer token + Helpdesk auth")
         
         return headers
 
@@ -357,7 +355,7 @@ class FeishuServicedeskProvider(BaseProvider):
             # Raise for HTTP errors
             try:
                 response.raise_for_status()
-            except Exception as e:
+            except Exception:
                 self.logger.exception(
                     "Failed to create a ticket", extra={"result": result, "status": response.status_code}
                 )
@@ -563,7 +561,7 @@ class FeishuServicedeskProvider(BaseProvider):
             try:
                 result = response.json()
                 self.logger.info(f"Response: {result}")
-            except:
+            except Exception:
                 result = {"text": response.text}
             
             if response.status_code == 200:
@@ -631,7 +629,7 @@ class FeishuServicedeskProvider(BaseProvider):
             # Propagate HTTP errors
             try:
                 response.raise_for_status()
-            except Exception as e:
+            except Exception:
                 self.logger.exception(
                     "Failed to update a ticket", 
                     extra={"result": result, "status": response.status_code}
@@ -797,7 +795,7 @@ class FeishuServicedeskProvider(BaseProvider):
 
             self.logger.info(f"Fetching agents for helpdesk {helpdesk_id}...")
 
-            url = self.__get_url(f"/open-apis/helpdesk/v1/agents")
+            url = self.__get_url("/open-apis/helpdesk/v1/agents")
             params = {"helpdesk_id": helpdesk_id}
 
             response = requests.get(
@@ -1027,8 +1025,8 @@ class FeishuServicedeskProvider(BaseProvider):
         """
         try:
             self.logger.warning(
-                f"⚠️ Assign ticket API may not be available in Feishu Service Desk. "
-                f"Recommend using agent_email/agent_id in ticket creation instead."
+                "Assign ticket API may not be available in Feishu Service Desk. "
+                "Recommend using agent_email/agent_id in ticket creation instead."
             )
             self.logger.info(f"Attempting to assign ticket {ticket_id} to agent {agent_id}...")
 
