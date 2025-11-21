@@ -233,10 +233,108 @@ Disable enrichment by setting `auto_enrich: false` and providing your own `descr
   Documentation for the Lark deployment.
 </Card>
 
-## Examples
+## Workflow Examples
 
-Additional workflow samples are available in `examples/workflows/`:
+Complete workflow examples are available in the `examples/workflows/` directory:
 
-- `feishu_servicedesk_simple.yml`
-- `feishu_servicedesk_best_practice.yml`
-- `feishu_servicedesk_with_email.yml`
+### Simple Example
+
+`feishu_servicedesk_simple.yml` - Minimal configuration with auto-enrichment:
+
+```yaml
+workflow:
+  id: feishu-servicedesk-simple
+  name: Create Feishu Service Desk Ticket (Simple)
+  description: Minimal configuration example
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-feishu-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ alert.name }}"
+          user_email: "{{ alert.assignee }}"
+          agent_email: "oncall@example.com"
+      enrich_alert:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+```
+
+### Email Conversion Example
+
+`feishu_servicedesk_with_email.yml` - Using email addresses with automatic conversion:
+
+```yaml
+workflow:
+  id: feishu-servicedesk-with-email
+  name: Create Feishu Ticket with Email Conversion
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-ticket-with-email
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Critical Alert: {{ alert.name }}"
+          user_email: "reporter@example.com"
+          agent_email: "handler@example.com"
+          priority: 4
+          tags: ["{{ alert.environment }}", "{{ alert.service }}"]
+```
+
+### Best Practices Example
+
+`feishu_servicedesk_best_practice.yml` - Complete workflow with ticket creation and status updates:
+
+- Creates tickets for high-severity alerts
+- Updates ticket status when alerts are resolved
+- Supports incident-triggered ticket creation
+
+### Advanced Configuration Example
+
+`feishu_servicedesk_advanced.yml` - Advanced features including custom fields and manual description:
+
+```yaml
+workflow:
+  id: feishu-servicedesk-advanced
+  name: Feishu Service Desk Advanced Configuration
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-advanced-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Urgent Alert: {{ alert.name }}"
+          user_email: "user@example.com"
+          agent_email: "agent@example.com"
+          priority: 4
+          tags: ["production", "database"]
+          category_id: "category_123"
+          customized_fields:
+            - id: "field_12345"
+              value: "high"
+            - id: "field_67890"
+              value: "{{ alert.service }}"
+          auto_enrich: false
+          description: "Custom description override"
+```
+
+All examples are available in the `examples/workflows/` directory.
