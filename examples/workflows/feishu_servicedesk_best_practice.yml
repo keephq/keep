@@ -1,0 +1,82 @@
+workflow:
+  id: feishu-servicedesk-best-practice
+  name: Feishu Service Desk Best Practices
+  description: Complete example with ticket creation, status updates, and incident support
+  disabled: false
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-ticket-on-alert
+      if: "not '{{ alert.ticket_id }}'"
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ alert.name }}"
+          user_email: "{{ alert.assignee }}"
+          agent_email: "oncall@example.com"
+          priority: 4
+          tags: ["{{ alert.environment }}", "{{ alert.service }}", "auto-created"]
+      enrich_alert:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+
+---
+workflow:
+  id: feishu-servicedesk-update-on-resolve
+  name: Update Feishu Ticket on Alert Resolution
+  description: Automatically update ticket status when alert is resolved
+  disabled: false
+  triggers:
+    - type: alert
+      filters:
+        - key: status
+          value: resolved
+  actions:
+    - name: update-ticket-status
+      if: "'{{ alert.ticket_id }}' and '{{ alert.ticket_type }}' == 'feishu_servicedesk'"
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          ticket_id: "{{ alert.ticket_id }}"
+          status: 50
+          add_comment: "Alert automatically resolved at {{ alert.lastReceived }}"
+
+---
+workflow:
+  id: feishu-servicedesk-from-incident
+  name: Create Feishu Ticket from Incident
+  description: Create a ticket when a high-severity incident is created
+  disabled: false
+  triggers:
+    - type: incident
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-ticket-from-incident
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ incident.user_generated_name }}"
+          user_email: "{{ incident.assignee }}"
+          agent_email: "sre-team@example.com"
+          priority: 4
+          tags: ["incident", "{{ incident.severity }}"]
+      enrich_incident:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+
