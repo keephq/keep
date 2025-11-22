@@ -27,7 +27,7 @@ import {
   EmptyStateCard,
   getCommonPinningStylesAndClassNames,
 } from "@/shared/ui";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TablePagination } from "@/shared/ui";
 import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
@@ -102,12 +102,46 @@ export default function IncidentAlerts({ incident }: Props) {
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
   
   // State for AlertSidebar (opened by row click)
-  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const [sidebarAlert, setSidebarAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   
   // Add state for incident selector modal (needed by AlertSidebar)
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] = useState(false);
+  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handle sidebar opening/closing based on URL parameter
+  useEffect(() => {
+    const sidebarFingerprint = searchParams?.get("sidebarFingerprint");
+    
+    if (sidebarFingerprint && alerts?.items) {
+      const alert = alerts.items.find((alert) => alert.fingerprint === sidebarFingerprint);
+      if (alert) {
+        setSidebarAlert(alert);
+        setIsSidebarOpen(true);
+      } else {
+        setSidebarAlert(null);
+        setIsSidebarOpen(false);
+      }
+    } else {
+      setSidebarAlert(null);
+      setIsSidebarOpen(false);
+    }
+  }, [searchParams, alerts?.items]);
+
+  const closeSidebar = useCallback(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.delete("sidebarFingerprint"); // Only remove sidebar parameter
+    let url = `${window.location.pathname}`;
+
+    if (currentParams.toString()) {
+      url += `?${currentParams.toString()}`;
+    }
+
+    router.replace(url);
+  }, [router]);
 
   const extraColumns = [
     columnHelper.accessor("is_created_by_ai", {
@@ -276,12 +310,6 @@ export default function IncidentAlerts({ incident }: Props) {
     });
   }
 
-  // Handler for closing the sidebar
-  const handleSidebarClose = () => {
-    setIsSidebarOpen(false);
-    setSelectedAlert(null);
-  };
-
   return (
     <>
       <IncidentAlertsActions
@@ -330,9 +358,10 @@ export default function IncidentAlerts({ incident }: Props) {
               showSkeleton={false}
               theme={theme}
               onRowClick={(alert) => {
-                // Open the AlertSidebar when clicking on a row
-                setSelectedAlert(alert);
-                setIsSidebarOpen(true);
+                // Open the AlertSidebar when clicking on a row via URL parameter
+                const currentParams = new URLSearchParams(window.location.search);
+                currentParams.set("sidebarFingerprint", alert.fingerprint);
+                router.replace(`${window.location.pathname}?${currentParams.toString()}`);
               }}
               lastViewedAlert={null}
               presetName={"incident-alerts"}
@@ -361,8 +390,8 @@ export default function IncidentAlerts({ incident }: Props) {
       {/* AlertSidebar - opened by clicking on the alert row */}
       <AlertSidebar
         isOpen={isSidebarOpen}
-        toggle={handleSidebarClose}
-        alert={selectedAlert}
+        toggle={closeSidebar}
+        alert={sidebarAlert}
         // These optional props are passed to maintain feature parity with the main alerts table
         setRunWorkflowModalAlert={undefined}
         setDismissModalAlert={undefined}
