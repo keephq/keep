@@ -67,6 +67,8 @@ interface MenuItem {
   onClick: () => void;
   disabled?: boolean;
   show?: boolean;
+  handlesOwnUrlTransition?: boolean; // If true, don't call toggleSidebar as the item manages URL itself
+  keepsSidebarOpen?: boolean; // If true, don't close the sidebar when this action is clicked
 }
 
 // Add the tooltip type
@@ -168,8 +170,13 @@ export function AlertMenu({
   }, [tooltipPosition]);
 
   const updateUrl = useCallback(
-    (params: { newParams?: Record<string, any>; scroll?: boolean }) => {
+    (params: { newParams?: Record<string, any>; scroll?: boolean; removeParams?: string[] }) => {
       const currentParams = new URLSearchParams(window.location.search);
+
+      // Remove specified parameters first
+      if (params.removeParams) {
+        params.removeParams.forEach((paramKey) => currentParams.delete(paramKey));
+      }
 
       if (params.newParams) {
         Object.entries(params.newParams).forEach(([key, value]) =>
@@ -205,8 +212,9 @@ export function AlertMenu({
 
     updateUrl({
       newParams: { alertPayloadFingerprint: alert.fingerprint },
+      removeParams: ["sidebarFingerprint"], // Close sidebar when opening modal
     });
-  }, [alert, updateUrl]);
+  }, [alert, updateUrl, setViewedAlerts]);
 
   const actionIconButtonClassName = clsx(
     "text-gray-500 leading-none p-2 prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50",
@@ -481,7 +489,11 @@ export function AlertMenu({
         icon: ArchiveBoxIcon,
         label: "History",
         onClick: () =>
-          updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
+          updateUrl({ 
+            newParams: { fingerprint: alert.fingerprint },
+            removeParams: ["sidebarFingerprint"], // Close sidebar when opening modal
+          }),
+        handlesOwnUrlTransition: true,
       },
       {
         icon: AdjustmentsHorizontalIcon,
@@ -492,7 +504,9 @@ export function AlertMenu({
               alertPayloadFingerprint: alert.fingerprint,
               enrich: true,
             },
+            removeParams: ["sidebarFingerprint"], // Close sidebar when opening modal
           }),
+        handlesOwnUrlTransition: true,
       },
       {
         icon: UserPlusIcon,
@@ -504,6 +518,7 @@ export function AlertMenu({
         icon: EyeIcon,
         label: "View Alert",
         onClick: openAlertPayloadModal,
+        handlesOwnUrlTransition: true,
       },
       ...(provider?.methods?.map((method) => ({
         icon: (props: any) => (
@@ -534,6 +549,7 @@ export function AlertMenu({
         label: "Correlate Incident",
         onClick: () => setIsIncidentSelectorOpen?.(true),
         show: !!setIsIncidentSelectorOpen,
+        keepsSidebarOpen: true, // Keep sidebar open so user can see alert details while selecting incident
       },
     ],
     [
@@ -570,7 +586,12 @@ export function AlertMenu({
                 key={item.label + index}
                 onClick={() => {
                   item.onClick();
-                  toggleSidebar?.();
+                  // Don't call toggleSidebar if:
+                  // 1. The item handles its own URL transition (will close sidebar via URL)
+                  // 2. The item explicitly wants to keep the sidebar open
+                  if (!item.handlesOwnUrlTransition && !item.keepsSidebarOpen) {
+                    toggleSidebar?.();
+                  }
                 }}
                 disabled={item.disabled}
                 className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 rounded-tremor-default"
