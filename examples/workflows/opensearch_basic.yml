@@ -1,0 +1,32 @@
+workflow:
+  id: opensearch-create-query
+  name: OSS OpenSearch Create & Query Docs
+  description: >
+    Retrieves all the documents from index "keep",
+    and uploads a document to OSS OpenSearch in index "keep".
+  disabled: false
+
+  triggers:
+    - type: manual
+
+  steps:
+    - name: query-index
+      provider:
+        type: opensearch
+        config: "{{ providers.opensearch }}"
+        with:
+          query:
+            query:
+              match_all: {}
+          index: keep
+
+  actions:
+    - name: create-doc
+      provider:
+        type: opensearch
+        config: "{{ providers.opensearch }}"
+        with:
+          index: keep
+          document:
+            message: Keep test doc
+          doc_id: doc_1
