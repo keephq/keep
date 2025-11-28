@@ -30,3 +30,4 @@ workflow:
           document:
             message: Keep test doc
           doc_id: doc_1
+          refresh: true
