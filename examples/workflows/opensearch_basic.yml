@@ -15,10 +15,10 @@ workflow:
         type: opensearch
         config: "{{ providers.opensearch }}"
         with:
+          index: keep
           query:
             query:
               match_all: {}
-          index: keep
 
   actions:
     - name: create-doc
