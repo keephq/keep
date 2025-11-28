@@ -196,6 +196,12 @@ export default function ProvidersPage({
       searchCategories(provider)
   );
 
+  const displayableProviders = filteredProviders.filter(
+    (provider) =>
+      Object.keys(provider.config || {}).length > 0 ||
+      (provider.tags && provider.tags.includes("alert"))
+  );
+
   return (
     <>
       {isFilteringActive && (
@@ -206,13 +212,13 @@ export default function ProvidersPage({
             isLocalhost={isLocalhost}
             mutate={mutate}
           />
-          {filteredProviders.length > 0 && (
+          {displayableProviders.length > 0 && (
             <p className="text-m text-gray-500">
-              {filteredProviders.length} provider
-              {filteredProviders.length > 1 ? "s" : ""} found
+              {displayableProviders.length} provider
+              {displayableProviders.length > 1 ? "s" : ""} found
             </p>
           )}
-          {filteredProviders.length === 0 && (
+          {displayableProviders.length === 0 && (
             <p className="text-m text-gray-500">
               No providers found matching your filters.
             </p>
