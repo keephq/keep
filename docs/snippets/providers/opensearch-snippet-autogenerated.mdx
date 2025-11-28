@@ -1,0 +1,55 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **host**: OpenSearch host (required: True, sensitive: False)
+- **port**: OpenSearch port (required: True, sensitive: False)
+- **username**: OpenSearch username (required: False, sensitive: False)
+- **password**: OpenSearch password (required: False, sensitive: True)
+- **use_ssl**: Enable SSL (required: False, sensitive: False)
+- **verify_certs**: Enable SSL certificate verification (required: False, sensitive: False)
+- **ca_certs**: CA bundle path (PEM) for HTTPS connections (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **connect_to_server**: The user can connect to the server (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query opensearch
+      provider: opensearch
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}  
+        index: {value}  
+        size: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query opensearch
+      provider: opensearch
+      config: "{{ provider.my_provider_name }}"
+      with:
+        index: {value}  
+        document: {value}  
+        doc_id: {value}  
+        refresh: {value}  
+```
+
+
+
+
+Check the following workflow examples:
+- [opensearch_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opensearch_basic.yml)
+- [opensearchserverless_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/opensearchserverless_basic.yml)
