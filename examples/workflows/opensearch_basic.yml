@@ -17,8 +17,7 @@ workflow:
         with:
           index: keep
           query:
-            query:
-              match_all: {}
+            match_all: {}
 
   actions:
     - name: create-doc
