@@ -18,6 +18,7 @@ workflow:
           index: keep
           query:
             match_all: {}
+          size: 1
 
   actions:
     - name: create-doc
