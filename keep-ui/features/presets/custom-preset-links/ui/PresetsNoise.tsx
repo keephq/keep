@@ -53,6 +53,11 @@ export const PresetsNoise = ({ presets }: PresetsNoiseProps) => {
       }
 
       return shouldDoNoise;
+    },
+    {
+      refreshInterval: 5000, // Refresh every 5 seconds to check if alerts have been resolved
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
     }
   );
 
