@@ -1,4 +1,4 @@
-import { Preset } from "@/entities/presets/model";
+import { Preset, useSilencedPresets } from "@/entities/presets/model";
 import { useMemo } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
@@ -14,9 +14,11 @@ interface PresetsNoiseProps {
 
 export const PresetsNoise = ({ presets }: PresetsNoiseProps) => {
   const api = useApi();
+  const { silencedPresetIds } = useSilencedPresets();
+  
   const noisyPresets = useMemo(
-    () => presets?.filter((preset) => preset.is_noisy),
-    [presets]
+    () => presets?.filter((preset) => preset.is_noisy && !silencedPresetIds.includes(preset.id)),
+    [presets, silencedPresetIds]
   );
 
   const { data: shouldDoNoise } = useSWR(
