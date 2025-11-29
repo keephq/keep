@@ -19,6 +19,7 @@ type LinkWithIconProps = {
   isExact?: boolean;
   iconClassName?: string;
   renderBeforeCount?: () => JSX.Element | undefined;
+  onIconClick?: (e: React.MouseEvent) => void;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -35,6 +36,7 @@ export const LinkWithIcon = ({
   isExact = false,
   iconClassName,
   renderBeforeCount,
+  onIconClick,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -68,6 +70,14 @@ export const LinkWithIcon = ({
     }
   };
 
+  const handleIconClick = (e: React.MouseEvent) => {
+    if (onIconClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onIconClick(e);
+    }
+  };
+
   return (
     <div
       className={clsx(
@@ -89,7 +99,17 @@ export const LinkWithIcon = ({
         onClick={onClick}
         data-testid={`${testId}-link`}
       >
-        <Icon className={iconClasses} icon={icon} />
+        {onIconClick ? (
+          <button
+            onClick={handleIconClick}
+            className="flex items-center p-0 bg-transparent border-none cursor-pointer"
+            type="button"
+          >
+            <Icon className={iconClasses} icon={icon} />
+          </button>
+        ) : (
+          <Icon className={iconClasses} icon={icon} />
+        )}
         <span className={textClasses}>{children}</span>
       </Link>
       <div className="flex items-center">
