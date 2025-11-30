@@ -10,6 +10,9 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from copy import deepcopy
 from typing import List, Optional
 
+import requests
+import os
+
 import celpy
 from arq import ArqRedis
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -78,6 +81,7 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.api.routes.ai_enrichment_service import ai_enrichment_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -89,7 +93,6 @@ EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=5, cast=int))
 process_event_executor = ThreadPoolExecutor(
     max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
 )
-
 
 @router.post(
     "/facets/options",
