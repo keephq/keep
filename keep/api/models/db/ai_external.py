@@ -111,3 +111,55 @@ class ExternalAIConfigAndMetadata(SQLModel, table=True):
             settings=json.dumps(algorithm.config_default),
         )
         return external_ai
+
+    external_ai_anomaly_detection = ExternalAI(
+        name="Anomaly Detection",
+        description="""AI-powered anomaly detection algorithm that analyzes alert patterns  
+    to identify potential false positives and unusual behavior. Uses Isolation Forest  
+    algorithm with configurable sensitivity to minimize false positives while maintaining  
+    detection accuracy in dynamic cloud environments.""",
+        version=1,
+        api_url=None,  # Local processing
+        api_key=None,
+        config_default=json.dumps([
+            {
+                "min": 0.01,
+                "max": 0.5,
+                "value": 0.1,
+                "type": "float",
+                "name": "Sensitivity",
+                "description": "Anomaly detection sensitivity (lower = more sensitive, higher = fewer false positives)",
+            },
+            {
+                "min": 5,
+                "max": 100,
+                "value": 10,
+                "type": "int",
+                "name": "Min Samples",
+                "description": "Minimum number of historical alerts required for training",
+            },
+            {
+                "min": 1,
+                "max": 168,
+                "value": 24,
+                "type": "int",
+                "name": "Time Window (hours)",
+                "description": "Time window for historical data analysis",
+            },
+            {
+                "value": True,
+                "type": "bool",
+                "name": "Enabled",
+                "description": "Enable anomaly detection for incoming alerts",
+            },
+            {
+                "value": False,
+                "type": "bool",
+                "name": "Auto-dismiss False Positives",
+                "description": "Automatically dismiss alerts identified as false positives with high confidence",
+            },
+        ]),
+    )
+
+    # Обновите список EXTERNAL_AIS:
+    EXTERNAL_AIS = [external_ai_transformers, external_ai_anomaly_detection]
