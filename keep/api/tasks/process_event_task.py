@@ -1,4 +1,6 @@
 # builtins
+from __future__ import annotations
+
 import copy
 import datetime
 import json
@@ -7,13 +9,14 @@ import os
 import sys
 import time
 import traceback
-from typing import List
+from typing import *
 
 # third-parties
 import dateutil
 from arq import Retry
 from fastapi.datastructures import FormData
 from opentelemetry import trace
+from sqlalchemy import select
 from sqlmodel import Session
 
 # internals
@@ -31,7 +34,7 @@ from keep.api.core.db import (
     get_last_alert_hashes_by_fingerprints,
     get_session_sync,
     get_started_at_for_alerts,
-    set_last_alert,
+    set_last_alert, engine,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -43,6 +46,7 @@ from keep.api.core.metrics import (
 )
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.ai_external import ExternalAIConfigAndMetadata
 from keep.api.models.db.alert import Alert, AlertAudit, AlertRaw
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.incident import IncidentDto
@@ -55,9 +59,12 @@ from keep.api.utils.enrichment_helpers import (
     convert_db_alerts_to_dto_alerts,
     calculated_unresolved_counter,
 )
+from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.providers.anomaly_detection_provider.anomaly_detection_provider import AnomalyDetectionProvider
+from keep.api.models.db.anomaly_result import AnomalyResult
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 # Opt-outs/ins
@@ -888,3 +895,98 @@ def __save_error_alerts(
 
 async def async_process_event(*args, **kwargs):
     return process_event(*args, **kwargs)
+
+def process_anomaly_detection(
+        tenant_id: str,
+        alert: AlertDto,
+        provider_id: str = "anomaly-detection-default"
+) -> Optional[Dict[str, Any]]:
+    """
+    Process anomaly detection for a single alert.
+
+    Args:
+        tenant_id: Tenant identifier
+        alert: Alert to analyze
+        provider_id: ID of the anomaly detection provider
+
+    Returns:
+        Anomaly detection result or None if disabled/failed
+    """
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Check if anomaly detection is enabled for tenant
+        with Session(engine) as session:
+            ai_config = session.exec(
+                select(ExternalAIConfigAndMetadata).where(
+                    ExternalAIConfigAndMetadata.tenant_id == tenant_id,
+                    ExternalAIConfigAndMetadata.algorithm_id == "anomaly_detection_v1"
+                )
+            ).first()
+
+            if not ai_config:
+                return None
+
+            settings = json.loads(ai_config.settings)
+            if not settings.get("Enabled", False):
+                return None
+
+                # Get historical alerts for context
+        time_window = settings.get("time_window_hours", 24)
+        cutoff_time = datetime.now() - datetime.timedelta(hours=time_window)
+
+        with Session(engine) as session:
+            historical_alerts = session.exec(
+                select(Alert)
+                .where(
+                    Alert.tenant_id == tenant_id,
+                    Alert.timestamp >= cutoff_time,
+                    Alert.fingerprint == alert.fingerprint
+                )
+                .order_by(Alert.timestamp.desc())
+                .limit(100)
+            ).all()
+
+            # Convert to DTOs
+        historical_dtos = convert_db_alerts_to_dto_alerts(historical_alerts)
+        all_alerts = historical_dtos + [alert]
+
+        # Initialize anomaly detection provider
+        provider_config = ProviderConfig(
+            authentication=settings,
+            description="Anomaly Detection"
+        )
+
+        provider = AnomalyDetectionProvider(
+            context_manager=ContextManager(tenant_id=tenant_id),
+            provider_id=provider_id,
+            config=provider_config
+        )
+
+        # Detect anomalies
+        result = provider.detect_anomalies(all_alerts)
+
+        # Store result in database
+        with Session(engine) as session:
+            anomaly_result = AnomalyResult(
+                tenant_id=tenant_id,
+                alert_fingerprint=alert.fingerprint,
+                is_anomaly=result["is_anomaly"],
+                anomaly_score=result["anomaly_score"],
+                confidence=result["confidence"],
+                explanation=result["explanation"],
+                timestamp=datetime.now()
+            )
+            session.add(anomaly_result)
+            session.commit()
+
+        logger.info(
+            f"Anomaly detection completed for alert {alert.fingerprint}: "
+            f"anomaly={result['is_anomaly']}, score={result['anomaly_score']:.2f}"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Anomaly detection failed: {e}")
+        return None
