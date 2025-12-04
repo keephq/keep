@@ -21,7 +21,7 @@ import {
   useIncidentAlerts,
   usePollIncidentAlerts,
 } from "utils/hooks/useIncidents";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { IncidentDto, useIncidentActions } from "@/entities/incidents/model";
 import {
   EmptyStateCard,
@@ -227,8 +227,6 @@ export default function IncidentAlerts({ incident }: Props) {
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
   });
-
-  const router = useRouter();
 
   if (!isLoading && (alerts?.items ?? []).length === 0) {
     return (
