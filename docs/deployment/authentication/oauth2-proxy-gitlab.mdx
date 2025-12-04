@@ -149,9 +149,9 @@ backend:
       value: x-auth-request-groups
     - name: KEEP_OAUTH2_PROXY_AUTO_CREATE_USER
       value: true
-    - name: KEEP_OAUTH2_PROXY_ADMIN_ROLE
-      vakue: <your gitlab group that will have admin role in your keep ui>
-    - name: KEEP_OAUTH2_PROXY_NOC_ROLE
+    - name: KEEP_OAUTH2_PROXY_ADMIN_ROLES
+      value: <your gitlab group that will have admin role in your keep ui>
+    - name: KEEP_OAUTH2_PROXY_NOC_ROLES
       value: <your gitlab group that wont have access to your keep ui>
 
 frontend:
