@@ -113,6 +113,12 @@ KEEP_FORCE_CONNECTION_STRING = config(
 KEEP_DB_PRE_PING_ENABLED = config(
     "KEEP_DB_PRE_PING_ENABLED", default=False, cast=bool
 )  # pylint: disable=invalid-name
+DB_POOL_RECYCLE = config(
+    "DATABASE_POOL_RECYCLE", default=3600, cast=int
+)  # pylint: disable=invalid-name
+DB_POOL_TIMEOUT = config(
+    "DATABASE_POOL_TIMEOUT", default=30, cast=int
+)  # pylint: disable=invalid-name
 
 
 def dumps(_json) -> str:
@@ -160,6 +166,8 @@ def create_db_engine():
                 json_serializer=dumps,
                 echo=DB_ECHO,
                 pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
+                pool_recycle=DB_POOL_RECYCLE,
+                pool_timeout=DB_POOL_TIMEOUT,
             )
         # SQLite does not support pool_size
         except TypeError:
