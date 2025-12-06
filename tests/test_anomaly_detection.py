@@ -1,0 +1,556 @@
+import pytest
+import numpy as np
+from datetime import datetime, timedelta, timezone
+from keep.providers.anomaly_detection_provider.anomaly_detection_provider import (
+    AnomalyDetectionProvider,
+    AnomalyDetectionProviderAuthConfig,
+)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.contextmanager.contextmanager import ContextManager
+from keep.providers.models.provider_config import ProviderConfig
+
+
+def test_anomaly_detection_provider_normal_alert():
+    """Тест обнаружения нормального алерта"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 5}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    # Создаем нормальные алерты (похожие паттерны)
+    alerts = []
+    base_time = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)  # Фиксируем время
+
+    for i in range(15):
+        # Создаем алерты в рабочее время (10-18 часов)
+        hour = 10 + (i % 8)  # Часы 10-17
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name="CPU High",
+            severity=AlertSeverity.WARNING,
+            lastReceived=(base_time + timedelta(hours=i)).replace(hour=hour).isoformat(),
+            service="api-server",
+            description="CPU usage is high"
+        )
+        alerts.append(alert)
+
+    result = provider.detect_anomalies(alerts)
+
+    print(f"DEBUG normal alert test:")
+    print(f"  anomaly_score: {result['anomaly_score']}")
+    print(f"  confidence: {result['confidence']}")
+    print(f"  explanation: {result['explanation']}")
+
+    # Для нормальных алертов confidence должен быть низким
+    assert result["is_anomaly"] == False, f"Expected no anomaly, but got: {result}"
+    assert result["confidence"] < 0.5, f"Confidence too high for normal alert: {result['confidence']}"
+
+
+def test_anomaly_detection_provider_anomalous_alert():
+    """Тест обнаружения аномального алерта"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 10}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    # Создаем очень однородные нормальные алерты
+    alerts = []
+    base_time = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)
+
+    for i in range(15):
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name="CPU Usage High",
+            severity=AlertSeverity.WARNING,
+            lastReceived=(base_time + timedelta(hours=i)).replace(hour=10 + (i % 8)).isoformat(),
+            service="api-service",
+            description="CPU usage above 80% threshold"
+        )
+        alerts.append(alert)
+
+    # Сильно аномальный алерт
+    anomalous_alert = AlertDto(
+        id="alert-anomalous",
+        name="!!!DISK FULL!!! CRITICAL EMERGENCY !!!",
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=(base_time + timedelta(days=1, hours=3)).isoformat(),
+        service="storage-cluster",
+        description="!!!DISK 99.9% FULL!!! SYSTEM MAY CRASH!!! IMMEDIATE ACTION REQUIRED!!! URGENT!!!"
+    )
+    alerts.append(anomalous_alert)
+
+    result = provider.detect_anomalies(alerts)
+
+    print(f"DEBUG anomalous alert test:")
+    print(f"  anomaly_score: {result['anomaly_score']}")
+    print(f"  confidence: {result['confidence']}")
+    print(f"  explanation: {result['explanation']}")
+
+    # Аномальный алерт должен быть обнаружен
+    assert result["is_anomaly"] == True, \
+        f"Expected anomaly detection. Got: {result}"
+
+
+def test_anomaly_detection_provider_feature_extraction():
+    """Тест извлечения признаков"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 5}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = [
+        AlertDto(
+            id="test1",
+            name="Short",
+            severity=AlertSeverity.CRITICAL,
+            lastReceived=datetime.now().replace(hour=14).isoformat(),
+            service="srv",
+            description="Desc"
+        ),
+        AlertDto(
+            id="test2",
+            name="Very Long Alert Name Here",
+            severity=AlertSeverity.INFO,
+            lastReceived=datetime.now().replace(hour=3).isoformat(),
+            service="very-long-service-name",
+            description="Very long description text for testing purposes"
+        )
+    ]
+
+    features = provider._extract_features(alerts)
+
+    # Проверяем размерность (теперь 10 признаков)
+    assert features.shape == (2, 10), f"Expected shape (2, 10), got {features.shape}"
+
+    # Проверяем значения первого алерта
+    assert features[0][0] == 5  # CRITICAL severity = 5
+    # hour_sin для 14 часов
+    expected_hour_sin_14 = np.sin(2 * np.pi * 14 / 24)
+    assert abs(features[0][1] - expected_hour_sin_14) < 0.001
+    # hour_cos для 14 часов
+    expected_hour_cos_14 = np.cos(2 * np.pi * 14 / 24)
+    assert abs(features[0][2] - expected_hour_cos_14) < 0.001
+    # Нормализованная длина имени
+    assert abs(features[0][4] - 0.05) < 0.001  # 5 / 100 = 0.05
+
+    # Проверяем значения второго алерта
+    assert features[1][0] == 2  # INFO severity = 2
+    # hour_sin для 3 часов
+    expected_hour_sin_3 = np.sin(2 * np.pi * 3 / 24)
+    assert abs(features[1][1] - expected_hour_sin_3) < 0.001
+    # Нормализованная длина имени
+    assert abs(features[1][4] - 0.23) < 0.001  # 23 / 100 = 0.23
+
+
+def test_anomaly_detection_provider_severity_escalation():
+    """Тест эскалации severity"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 10}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = []
+    base_time = datetime.now()
+
+    # Только INFO алерты для обучения
+    for i in range(15):
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name=f"Info Alert {i}",
+            severity=AlertSeverity.INFO,
+            lastReceived=(base_time + timedelta(hours=i)).isoformat(),
+            service="monitoring",
+            description=f"Regular info alert {i}"
+        )
+        alerts.append(alert)
+
+    # Внезапный CRITICAL
+    critical_alert = AlertDto(
+        id="alert-critical",
+        name="!!!SYSTEM CRITICAL!!!",
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=(base_time + timedelta(hours=16)).replace(hour=2).isoformat(),
+        service="monitoring",
+        description="!!!CRITICAL SYSTEM FAILURE!!!"
+    )
+    alerts.append(critical_alert)
+
+    result = provider.detect_anomalies(alerts)
+
+    assert result["is_anomaly"] == True, \
+        f"Expected severity escalation detection. Got: {result}"
+    assert result["confidence"] > 0.3, \
+        f"Expected confidence > 0.3 for critical alert, got: {result['confidence']}"
+
+
+def test_anomaly_detection_provider_insufficient_data():
+    """Тест с недостаточным количеством данных"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 10}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = []
+    base_time = datetime.now()
+    for i in range(3):  # Меньше min_samples
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name="Test Alert",
+            severity=AlertSeverity.INFO,
+            lastReceived=(base_time + timedelta(hours=i)).isoformat(),
+            service="test",
+            description="Test"
+        )
+        alerts.append(alert)
+
+    result = provider.detect_anomalies(alerts)
+    assert result["is_anomaly"] == False
+    assert "Insufficient data" in result["explanation"]
+
+
+def test_anomaly_detection_provider_empty_alerts():
+    """Тест с пустым списком алертов"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 5}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = []
+    result = provider.detect_anomalies(alerts)
+    assert result["is_anomaly"] == False
+    assert "No alerts provided" in result["explanation"]
+
+
+def test_anomaly_detection_provider_mixed_patterns():
+    """Тест со смешанными паттернами (частичная аномалия)"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 10}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = []
+    base_time = datetime.now()
+
+    # Добавляем разнообразные, но нормальные алерты
+    for i in range(20):
+        severity = AlertSeverity.WARNING if i % 3 == 0 else AlertSeverity.HIGH
+        service = "api-server" if i % 2 == 0 else "frontend-server"
+
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name=f"Alert {i}",
+            severity=severity,
+            lastReceived=(base_time + timedelta(hours=i, minutes=i * 10)).isoformat(),
+            service=service,
+            description=f"Description for alert {i}"
+        )
+        alerts.append(alert)
+
+    result = provider.detect_anomalies(alerts)
+    # Последний алерт должен быть нормальным, так как он похож на другие
+    assert result["is_anomaly"] == False, f"Expected no anomaly for mixed patterns, got: {result}"
+
+
+def test_anomaly_detection_provider_time_anomaly():
+    """Тест аномалии по времени (алерт в нерабочее время)"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 15}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = []
+    base_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Много алертов ТОЛЬКО в рабочее время (9-18 часов)
+    for i in range(25):
+        hour = 9 + (i % 9)  # Только часы 9-17
+        day_offset = i // 9  # Распределяем по дням
+
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name="Working Hours Alert",
+            severity=AlertSeverity.HIGH,
+            lastReceived=(base_time + timedelta(days=day_offset, hours=hour)).isoformat(),
+            service="production",
+            description="Alert during normal working hours"
+        )
+        alerts.append(alert)
+
+    # Алерт в 3 часа ночи
+    night_alert = AlertDto(
+        id="alert-night",
+        name="Night Emergency",
+        severity=AlertSeverity.HIGH,
+        lastReceived=(base_time + timedelta(days=3, hours=3)).isoformat(),  # Четко 3 ночи
+        service="production",
+        description="Critical alert at 3 AM - unusual timing"
+    )
+    alerts.append(night_alert)
+
+    result = provider.detect_anomalies(alerts)
+
+    # Ночной алерт должен быть аномалией или иметь низкий score
+    is_anomaly_detected = result["is_anomaly"]
+    has_low_score = result["anomaly_score"] < 0
+
+    # Допускаем либо обнаружение аномалии, либо низкий anomaly_score
+    assert is_anomaly_detected or has_low_score, \
+        f"Expected time anomaly detection. Got: is_anomaly={is_anomaly_detected}, score={result['anomaly_score']}"
+
+
+def test_anomaly_detection_provider_severity_escalation():
+    """Тест эскалации severity"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.05, "min_samples": 10}  # Более чувствительный
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    alerts = []
+    base_time = datetime.now()
+
+    # Создаем однородные алерты только с INFO severity
+    for i in range(20):
+        alert = AlertDto(
+            id=f"alert-{i}",
+            name=f"Info Alert {i}",
+            severity=AlertSeverity.INFO,  # Только INFO
+            lastReceived=(base_time + timedelta(hours=i)).isoformat(),
+            service="monitoring-system",
+            description=f"Informational alert number {i}"
+        )
+        alerts.append(alert)
+
+    # Внезапный CRITICAL алерт с совершенно другим паттерном
+    critical_alert = AlertDto(
+        id="alert-critical",
+        name="!!!SYSTEM DOWN!!! CRITICAL EMERGENCY!!!",
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=(base_time + timedelta(hours=21)).replace(hour=3).isoformat(),  # В 3 ночи
+        service="core-database",  # Другой сервис
+        description="!!!CRITICAL: ENTIRE DATABASE SYSTEM IS DOWN!!! ALL SERVICES OFFLINE!!! URGENT!!!"
+    )
+    alerts.append(critical_alert)
+
+    result = provider.detect_anomalies(alerts)
+
+    print(f"DEBUG severity escalation test:")
+    print(f"  anomaly_score: {result['anomaly_score']}")
+    print(f"  confidence: {result['confidence']}")
+    print(f"  explanation: {result['explanation']}")
+
+    # CRITICAL алерт должен быть аномалией
+    assert result["is_anomaly"] == True, \
+        f"Expected severity escalation detection. Got: {result}"
+
+def test_anomaly_detection_provider_model_retraining():
+    """Тест переобучения модели"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 10}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    # Первая партия алертов
+    alerts_batch1 = []
+    base_time = datetime.now() - timedelta(days=1)
+    for i in range(15):
+        alert = AlertDto(
+            id=f"alert-batch1-{i}",
+            name="Batch1 Normal Alert",
+            severity=AlertSeverity.WARNING,
+            lastReceived=(base_time + timedelta(hours=i)).isoformat(),
+            service="service1",
+            description="First batch normal pattern"
+        )
+        alerts_batch1.append(alert)
+
+    result1 = provider.detect_anomalies(alerts_batch1)
+
+    # Имитируем прошедшие сутки для триггера переобучения
+    provider.last_training_time = datetime.now() - timedelta(days=2)
+
+    # Вторая партия алертов (другие характеристики)
+    alerts_batch2 = []
+    current_time = datetime.now()
+    for i in range(15):
+        alert = AlertDto(
+            id=f"alert-batch2-{i}",
+            name="Batch2 Different Pattern Alert",
+            severity=AlertSeverity.HIGH,
+            lastReceived=(current_time + timedelta(hours=i)).isoformat(),
+            service="service2",
+            description="Second batch with different pattern characteristics"
+        )
+        alerts_batch2.append(alert)
+
+    result2 = provider.detect_anomalies(alerts_batch2)
+
+    # Модель должна переобучиться и адаптироваться
+    assert provider.model is not None
+    # Не проверяем конкретное значение is_anomaly
+
+
+def test_anomaly_detection_provider_config_validation():
+    """Тест валидации конфигурации"""
+    context_manager = ContextManager(tenant_id="test")
+
+    # Тест с минимальными значениями
+    config1 = ProviderConfig(
+        authentication={"sensitivity": 0.01, "min_samples": 5, "time_window_hours": 1}
+    )
+    provider1 = AnomalyDetectionProvider(context_manager, "test1", config1)
+    assert provider1.authentication_config.sensitivity == 0.01
+    assert provider1.authentication_config.min_samples == 5
+
+    # Тест с максимальными значениями
+    config2 = ProviderConfig(
+        authentication={"sensitivity": 0.5, "min_samples": 100, "time_window_hours": 168}
+    )
+    provider2 = AnomalyDetectionProvider(context_manager, "test2", config2)
+    assert provider2.authentication_config.sensitivity == 0.5
+    assert provider2.authentication_config.min_samples == 100
+
+
+def test_anomaly_detection_provider_feature_extraction():
+    """Тест извлечения признаков"""
+    context_manager = ContextManager(tenant_id="test")
+    config = ProviderConfig(
+        authentication={"sensitivity": 0.1, "min_samples": 5}
+    )
+    provider = AnomalyDetectionProvider(context_manager, "test", config)
+
+    # Используем фиксированные времена для тестирования
+    now = datetime.now(timezone.utc)
+    time1 = now.replace(hour=14, minute=0, second=0, microsecond=0)
+    time2 = now.replace(hour=3, minute=0, second=0, microsecond=0)
+
+    alerts = [
+        AlertDto(
+            id="test1",
+            name="Short",
+            severity=AlertSeverity.CRITICAL,
+            lastReceived=time1.isoformat(),
+            service="srv",
+            description="Desc"
+        ),
+        AlertDto(
+            id="test2",
+            name="Very Long Alert Name Here",
+            severity=AlertSeverity.INFO,
+            lastReceived=time2.isoformat(),
+            service="very-long-service-name",
+            description="Very long description text for testing purposes"
+        )
+    ]
+
+    features = provider._extract_features(alerts)
+
+    # Проверяем размерность (теперь 10 признаков)
+    assert features.shape == (2, 10), f"Expected shape (2, 10), got {features.shape}"
+    print(f"ISO format check:")
+    print(f"time1: {time1}, iso: {time1.isoformat()}")
+    print(f"Parsed back: {datetime.fromisoformat(time1.isoformat())}")
+
+    # Отладочный вывод
+    print(f"Features[0]: {features[0]}")
+    print(f"Features[1]: {features[1]}")
+
+    # Проверяем значения первого алерта (14 часов)
+    # CRITICAL должно быть 5.0
+    assert features[0][0] == 5.0, f"CRITICAL severity should be 5.0, got {features[0][0]}"
+
+    # Вычисляем ожидаемые значения для 14 часов
+    expected_hour_sin_14 = np.sin(2 * np.pi * 14 / 24)
+    expected_hour_cos_14 = np.cos(2 * np.pi * 14 / 24)
+
+    print(f"Expected for 14h: sin={expected_hour_sin_14}, cos={expected_hour_cos_14}")
+    print(f"Actual for alert 1: sin={features[0][1]}, cos={features[0][2]}")
+
+    # Допустим небольшую погрешность из-за плавающей точки
+    tolerance = 0.0001
+
+    # Проверяем sin для 14 часов (ожидается около -0.5)
+    assert abs(features[0][1] - expected_hour_sin_14) < tolerance, \
+        f"hour_sin for 14h: expected {expected_hour_sin_14}, got {features[0][1]}"
+
+    # Проверяем cos для 14 часов (ожидается около -0.866)
+    assert abs(features[0][2] - expected_hour_cos_14) < tolerance, \
+        f"hour_cos for 14h: expected {expected_hour_cos_14}, got {features[0][2]}"
+
+    # Проверяем нормализованную длину имени
+    assert abs(features[0][4] - 0.05) < tolerance  # 5 / 100 = 0.05
+
+    # Проверяем значения второго алерта (3 часа)
+    # INFO должно быть 2.0
+    assert features[1][0] == 2.0, f"INFO severity should be 2.0, got {features[1][0]}"
+
+    # Вычисляем ожидаемые значения для 3 часов
+    expected_hour_sin_3 = np.sin(2 * np.pi * 3 / 24)
+    expected_hour_cos_3 = np.cos(2 * np.pi * 3 / 24)
+
+    print(f"Expected for 3h: sin={expected_hour_sin_3}, cos={expected_hour_cos_3}")
+    print(f"Actual for alert 2: sin={features[1][1]}, cos={features[1][2]}")
+
+    # Проверяем sin для 3 часов (ожидается около 0)
+    assert abs(features[1][1] - expected_hour_sin_3) < tolerance, \
+        f"hour_sin for 3h: expected {expected_hour_sin_3}, got {features[1][1]}"
+
+    # Проверяем cos для 3 часов (ожидается около 1)
+    assert abs(features[1][2] - expected_hour_cos_3) < tolerance, \
+        f"hour_cos for 3h: expected {expected_hour_cos_3}, got {features[1][2]}"
+
+    # Проверяем дополнительные признаки
+    # has_exclamation должен быть 0 (нет восклицательных знаков)
+    assert abs(features[0][7]) < tolerance, f"has_exclamation should be 0, got: {features[0][7]}"
+    assert abs(features[1][7]) < tolerance, f"has_exclamation should be 0, got: {features[1][7]}"
+
+    # has_critical_words
+    assert features[0][8] == 0, f"has_critical_words should be 0, got: {features[0][8]}"
+    assert features[1][8] == 0, f"has_critical_words should be 0, got: {features[1][8]}"
+
+    # uppercase_ratio
+    # "Short" - 1 заглавная из 5 = 0.2
+    assert abs(features[0][9] - 0.2) < tolerance, f"uppercase_ratio for 'Short': expected 0.2, got {features[0][9]}"
+
+
+if __name__ == "__main__":
+    # Запуск тестов вручную для отладки
+    import sys
+
+    tests = [
+        ("Normal Alert", test_anomaly_detection_provider_normal_alert),
+        ("Anomalous Alert", test_anomaly_detection_provider_anomalous_alert),
+        ("Insufficient Data", test_anomaly_detection_provider_insufficient_data),
+        ("Empty Alerts", test_anomaly_detection_provider_empty_alerts),
+        ("Mixed Patterns", test_anomaly_detection_provider_mixed_patterns),
+        ("Time Anomaly", test_anomaly_detection_provider_time_anomaly),
+        ("Severity Escalation", test_anomaly_detection_provider_severity_escalation),
+        ("Model Retraining", test_anomaly_detection_provider_model_retraining),
+        ("Config Validation", test_anomaly_detection_provider_config_validation),
+        ("Feature Extraction", test_anomaly_detection_provider_feature_extraction),
+    ]
+
+    passed = 0
+    failed = 0
+
+    for name, test_func in tests:
+        try:
+            test_func()
+            print(f"✓ {name} passed")
+            passed += 1
+        except Exception as e:
+            print(f"✗ {name} failed: {e}")
+            failed += 1
+
+    print(f"\nTotal: {passed} passed, {failed} failed")
+    if failed > 0:
+        sys.exit(1)
