@@ -161,5 +161,4 @@ class ExternalAIConfigAndMetadata(SQLModel, table=True):
         ]),
     )
 
-    # Обновите список EXTERNAL_AIS:
     EXTERNAL_AIS = [external_ai_transformers, external_ai_anomaly_detection]

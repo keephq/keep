@@ -653,6 +653,11 @@ def __handle_formatted_events(
                     "tenant_id": tenant_id,
                 },
             )
+    for enriched_event in enriched_formatted_events:
+        anomaly_result = process_anomaly_detection(tenant_id, enriched_event)
+        if anomaly_result and anomaly_result["is_anomaly"]:
+            logger.warning(f"Anomaly detected: {anomaly_result['explanation']}")
+
     return enriched_formatted_events
 
 
