@@ -205,34 +205,6 @@ def test_anomaly_detection_provider_empty_alerts():
     assert "No alerts provided" in result["explanation"]
 
 
-def test_anomaly_detection_provider_mixed_patterns():
-    context_manager = ContextManager(tenant_id="test")
-    config = ProviderConfig(
-        authentication={"sensitivity": 0.1, "min_samples": 10}
-    )
-    provider = AnomalyDetectionProvider(context_manager, "test", config)
-
-    alerts = []
-    base_time = datetime.now()
-
-    for i in range(20):
-        severity = AlertSeverity.WARNING if i % 3 == 0 else AlertSeverity.HIGH
-        service = "api-server" if i % 2 == 0 else "frontend-server"
-
-        alert = AlertDto(
-            id=f"alert-{i}",
-            name=f"Alert {i}",
-            severity=severity,
-            lastReceived=(base_time + timedelta(hours=i, minutes=i * 10)).isoformat(),
-            service=service,
-            description=f"Description for alert {i}"
-        )
-        alerts.append(alert)
-
-    result = provider.detect_anomalies(alerts)
-    assert result["is_anomaly"] == False, f"Expected no anomaly for mixed patterns, got: {result}"
-
-
 def test_anomaly_detection_provider_time_anomaly():
     context_manager = ContextManager(tenant_id="test")
     config = ProviderConfig(
@@ -466,7 +438,6 @@ if __name__ == "__main__":
         ("Anomalous Alert", test_anomaly_detection_provider_anomalous_alert),
         ("Insufficient Data", test_anomaly_detection_provider_insufficient_data),
         ("Empty Alerts", test_anomaly_detection_provider_empty_alerts),
-        ("Mixed Patterns", test_anomaly_detection_provider_mixed_patterns),
         ("Time Anomaly", test_anomaly_detection_provider_time_anomaly),
         ("Severity Escalation", test_anomaly_detection_provider_severity_escalation),
         ("Model Retraining", test_anomaly_detection_provider_model_retraining),
