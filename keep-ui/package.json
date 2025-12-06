@@ -60,19 +60,19 @@
     "lucide-react": "^0.479.0",
     "monaco-editor": "^0.52.2",
     "monaco-yaml": "^5.3.1",
-    "next": "^15.3.4",
+    "next": "15.3.6",
     "next-auth": "^5.0.0-beta.27",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",
     "pusher-js": "^8.4.0",
     "quill-mention": "^6.1.1",
-    "react": "19.0.0",
+    "react": "19.0.1",
     "react-chartjs-2": "^5.3.0",
     "react-chrono": "^2.6.1",
     "react-code-blocks": "^0.1.3",
     "react-datepicker": "^6.1.0",
     "react-day-picker": "^9.6.1",
-    "react-dom": "19.0.0",
+    "react-dom": "19.0.1",
     "react-grid-layout": "^1.4.4",
     "react-hook-form": "^7.54.2",
     "react-hotkeys-hook": "^4.5.0",
@@ -160,7 +160,7 @@
   },
   "overrides": {
     "@headlessui/react": "^2.2.0",
-    "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react": "19.0.1",
+    "react-dom": "19.0.1"
   }
 }
