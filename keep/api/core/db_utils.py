@@ -134,6 +134,10 @@ def create_db_engine():
     """
     Creates a database engine based on the environment variables.
     """
+    # Check for PostgreSQL schema configuration
+    postgres_schema = config("POSTGRES_SCHEMA", default=None)
+    connect_args = {}
+    
     if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
         engine = create_engine(
             "mysql+pymysql://",
@@ -151,6 +155,11 @@ def create_db_engine():
             json_serializer=dumps,
         )
     elif DB_CONNECTION_STRING:
+        # Add PostgreSQL schema support
+        if postgres_schema and "postgresql" in DB_CONNECTION_STRING:
+            connect_args["options"] = f"-csearch_path={postgres_schema},public"
+            logger.info(f"PostgreSQL schema configured: {postgres_schema}")
+        
         try:
             logger.info(f"Creating a connection pool with size {DB_POOL_SIZE}")
             engine = create_engine(
@@ -160,6 +169,7 @@ def create_db_engine():
                 json_serializer=dumps,
                 echo=DB_ECHO,
                 pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
+                connect_args=connect_args if connect_args else None,
             )
         # SQLite does not support pool_size
         except TypeError:
