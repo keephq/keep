@@ -96,6 +96,14 @@ def context_manager():
     return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id="1234")
 
 
+@pytest.fixture
+def tenant_id():
+    """
+    Provides the default single tenant UUID for tests.
+    """
+    return SINGLE_TENANT_UUID
+
+
 @pytest.fixture(scope="session")
 def docker_services(
     docker_compose_command,
