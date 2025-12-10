@@ -21,6 +21,10 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
 from sqlmodel import Session, SQLModel, create_engine, select
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy import case
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -198,6 +202,45 @@ def get_aggreated_field(session: Session, column_name: str, alias: str):
     else:
         return func.array_agg(column_name).label(alias)
 
+
+def insert_update_conflict(table: SQLModel, session: Session, data_to_insert: dict, data_to_update: dict, update_newer: bool):
+    """
+    Performs an upsert (insert or update on conflict) operation on the given table.
+    Args:
+        table (SQLModel): The table to perform the upsert on.
+        session (Session): The SQLModel session.
+        data_to_insert (dict): The data to insert.
+        data_to_update (dict): The data to update if a conflict occurs.
+        update_newer (bool): If True, update only if existing timestamp is older than new one.
+    """
+
+    if session.bind.dialect.name == "postgresql":
+        query = pg_insert(table).values(data_to_insert)
+        query = query.on_conflict_do_update(
+            index_elements=[col.name for col in table.__table__.primary_key.columns],
+            set_=data_to_update,
+            where=(table.timestamp < query.excluded.timestamp) if update_newer else None
+        )
+    elif session.bind.dialect.name == "mysql":
+        query = mysql_insert(table).values(data_to_insert)
+        if update_newer:
+            data_to_update = {
+                k: case((table.timestamp < query.inserted.timestamp, v), else_=getattr(table, k))
+                for k, v in data_to_update.items()
+            }
+        query = query.on_duplicate_key_update(data_to_update)
+    elif session.bind.dialect.name == "sqlite":
+        query = sqlite_insert(table).values(data_to_insert)
+        query = query.on_conflict_do_update(
+            index_elements=[col.name for col in table.__table__.primary_key.columns],
+            set_=data_to_update,
+            where=(table.timestamp < query.excluded.timestamp) if update_newer else None
+        )
+    else:
+        raise NotImplementedError(f"UPSERT not supported for {session.bind.dialect.name}")
+
+    session.exec(query)
+    session.commit()
 
 class json_table(GenericFunction):
     inherit_cache = True
