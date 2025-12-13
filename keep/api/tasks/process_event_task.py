@@ -58,6 +58,7 @@ from keep.api.utils.enrichment_helpers import (
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.api.routes.predictive_engine import PredictiveEngine
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 # Opt-outs/ins
@@ -463,14 +464,11 @@ def __handle_formatted_events(
     with tracer.start_as_current_span("process_event_predictive_analysis"):
         if KEEP_PREDICTIVE_ENABLED:
             try:
-                from keep.api.routes.predictive_engine import PredictiveEngine
-
                 predictive_engine = PredictiveEngine(
                     tenant_id=tenant_id,
                     confidence_threshold=KEEP_PREDICTIVE_CONFIDENCE_THRESHOLD
                 )
 
-                # Запускаем предиктивный анализ на обогащенных событиях
                 predictive_incidents = predictive_engine.run_predictive_rules(
                     enriched_formatted_events,
                     session=session
@@ -608,14 +606,8 @@ def __handle_formatted_events(
                 )
 
                 if KEEP_PREDICTIVE_ENABLED and 'predictive_incidents' in locals():
-                    # Преобразуем predictive_incidents в IncidentDto если нужно
                     predictive_incidents_dto = []
-                    for incident in predictive_incidents:
-                        # Здесь нужно преобразовать в IncidentDto
-                        # Это зависит от того, что возвращает PredictiveEngine
-                        pass
 
-                    # Объединяем списки инцидентов
                     if predictive_incidents_dto:
                         incidents.extend(predictive_incidents_dto)
                         logger.info(
