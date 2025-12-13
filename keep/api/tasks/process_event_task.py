@@ -58,6 +58,7 @@ from keep.api.utils.enrichment_helpers import (
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.api.routes.predictive_engine import PredictiveEngine
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 # Opt-outs/ins
@@ -463,8 +464,6 @@ def __handle_formatted_events(
     with tracer.start_as_current_span("process_event_predictive_analysis"):
         if KEEP_PREDICTIVE_ENABLED:
             try:
-                from keep.api.routes.predictive_engine import PredictiveEngine
-
                 predictive_engine = PredictiveEngine(
                     tenant_id=tenant_id,
                     confidence_threshold=KEEP_PREDICTIVE_CONFIDENCE_THRESHOLD
