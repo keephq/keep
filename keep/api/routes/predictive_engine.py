@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
+from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Alert
 from keep.api.bl.enrichments_bl import EnrichmentsBl
@@ -152,14 +153,44 @@ class PredictiveEngine:
                 "disposable_anomaly_detected": True
             }
 
-            enrichments_bl.disposable_enrich_entity(
-                fingerprint=alert.fingerprint,
-                enrichments=enrichments,
-                action_type="predictive_analysis",
-                action_callee="predictive_engine",
-                action_description=f"Predictive anomaly: {reason}",
-                audit_enabled=True
+            # Проверяем, существует ли алерт в БД
+            from keep.api.core.alerts import get_last_alert_by_fingerprint
+
+            last_alert = get_last_alert_by_fingerprint(
+                self.tenant_id, alert.fingerprint, session=session
+            )
+
+            if not last_alert:
+                # Алерт еще не сохранен в БД - используем enrich_entity с should_exist=False
+                self.logger.debug(
+                    f"Alert {alert.fingerprint} not found in DB, using enrich_entity with should_exist=False"
+                )
+
+                enrichments_bl.enrich_entity(
+                    fingerprint=alert.fingerprint,
+                    enrichments=enrichments,
+                    action_type=ActionType.GENERIC_ENRICH,
+                    action_callee="predictive_engine",
+                    action_description=f"Predictive anomaly: {reason}",
+                    should_exist=False,  # Ключевое изменение!
+                    dispose_on_new_alert=True,
+                    audit_enabled=True
+                )
+            else:
+                # Алерт уже в БД - используем disposable_enrich_entity
+                enrichments_bl.disposable_enrich_entity(
+                    fingerprint=alert.fingerprint,
+                    enrichments=enrichments,
+                    action_type=ActionType.GENERIC_ENRICH,
+                    action_callee="predictive_engine",
+                    action_description=f"Predictive anomaly: {reason}",
+                    audit_enabled=True
+                )
+
+            self.logger.debug(
+                f"Alert {alert.fingerprint} enriched with predictive data",
+                extra={"confidence": confidence, "reason": reason}
             )
 
         except Exception as e:
-            self.logger.error(f"Error enriching alert: {str(e)}")
+            self.logger.error(f"Error enriching alert {alert.fingerprint}: {str(e)}")

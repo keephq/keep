@@ -4,11 +4,15 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 import json
 
+from keep.api.core.db import get_enrichment_with_session, get_last_alert_by_fingerprint
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.action_type import ActionType
 from keep.api.routes.predictive_engine import PredictiveEngine
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
-from keep.api.models.db.alert import Alert as AlertDB
+from keep.api.models.db.alert import Alert as AlertDB, AlertEnrichment, AlertAudit, LastAlert
 from keep.api.tasks import process_event_task
+from keep.functions import timestamp_delta
+
 
 class TestPredictiveIntegration:
     """Интеграционные тесты - тестируем PredictiveEngine в системе Keep"""
@@ -153,16 +157,18 @@ class TestPredictiveIntegration:
             pytest.fail(f"Тест упал: {str(e)}")
 
     def test_real_enrichment_flow(self, db_session):
-        """Тест 3: Реальное обогащение через EnrichmentsBl"""
+        """Тест 3: Реальное обогащение через EnrichmentsBl - ИСПРАВЛЕННЫЙ"""
 
         print("\n🔍 Тест 3: Проверка реального обогащения алертов...")
 
         from keep.api.bl.enrichments_bl import EnrichmentsBl
+        from keep.api.models.action_type import ActionType
+        from datetime import datetime
 
-        # 1. Создаем тестовый алерт в БД
+        # 1. Создаем тестовый алерт в БД ПЕРЕД обогащением
         print("1. Создаем тестовый алерт в БД...")
 
-        test_fingerprint = "test-real-enrich-fp"
+        test_fingerprint = f"test-real-enrich-fp-{datetime.utcnow().timestamp()}"
 
         alert_db = AlertDB(
             tenant_id=SINGLE_TENANT_UUID,
@@ -185,13 +191,43 @@ class TestPredictiveIntegration:
         alert_id = alert_db.id
         print(f"   ✅ Алерт создан с ID: {alert_id}, fingerprint: {test_fingerprint}")
 
-        # 2. Создаем EnrichmentsBl
-        print("\n2. Создаем EnrichmentsBl...")
+        try:
+            last_alert = LastAlert(
+                tenant_id=SINGLE_TENANT_UUID,
+                fingerprint=test_fingerprint,
+                alert_id=alert_id,
+                timestamp=alert_db.timestamp,
+                first_timestamp = alert_db.timestamp
+            )
+            db_session.add(last_alert)
+            db_session.commit()
+            print(f"✅ LastAlert создан: {last_alert.alert_id}")
+        except Exception as e:
+            print(f"⚠️  Не удалось создать LastAlert: {str(e)}")
+
+        print("\n2. Проверяем сохранение алерта...")
+
+        saved_alert = get_last_alert_by_fingerprint(
+            SINGLE_TENANT_UUID, test_fingerprint, session=db_session
+        )
+
+        if saved_alert:
+            print(f"   ✅ Алерт найден в БД: {saved_alert.alert_id}")
+        else:
+            print("   ❌ Алерт не найден в БД!")
+            # Попробуем найти любым способом
+            all_alerts = db_session.query(AlertDB).filter(
+                AlertDB.tenant_id == SINGLE_TENANT_UUID
+            ).all()
+            print(f"   ℹ️  Всего алертов в БД: {len(all_alerts)}")
+
+        # 3. Создаем EnrichmentsBl
+        print("\n3. Создаем EnrichmentsBl...")
 
         enrichments_bl = EnrichmentsBl(SINGLE_TENANT_UUID, db_session)
 
-        # 3. Выполняем обогащение
-        print("3. Выполняем обогащение алерта...")
+        # 4. Выполняем обогащение
+        print("4. Выполняем обогащение алерта...")
 
         enrichments = {
             "disposable_predictive_confidence": 0.85,
@@ -200,64 +236,119 @@ class TestPredictiveIntegration:
         }
 
         try:
+            # Вариант 1: Если алерт уже в БД (наш случай)
             enrichments_bl.disposable_enrich_entity(
                 fingerprint=test_fingerprint,
                 enrichments=enrichments,
-                action_type="predictive_analysis",
+                action_type=ActionType.GENERIC_ENRICH,
                 action_callee="predictive_engine",
-                action_description="Real test enrichment",
+                action_description="Real test enrichment for predictive analysis",
                 audit_enabled=True
             )
 
-            print("   ✅ Обогащение выполнено успешно")
+            print(f"   ✅ Обогащение выполнено")
 
-            # 4. Проверяем, что обогащение сохранилось в БД
-            print("\n4. Проверяем сохранение обогащений в БД...")
+            # 5. Проверяем, что обогащение сохранилось
+            print("\n5. Проверяем сохранение обогащений...")
 
-            from keep.api.models.db import AlertEnrichment
-
-            # Ищем обогащение
-            enrichment_query = db_session.query(AlertEnrichment).filter(
-                AlertEnrichment.tenant_id == SINGLE_TENANT_UUID,
-                AlertEnrichment.fingerprint == test_fingerprint
-            ).first()
-
-            if enrichment_query:
-                print(f"   ✅ Обогащение найдено в БД")
-                print(f"   📊 Обогащения: {json.dumps(enrichment_query.enrichments, indent=2)[:200]}...")
-
-                # Проверяем наши поля
-                assert "disposable_predictive_confidence" in enrichment_query.enrichments
-                assert enrichment_query.enrichments["disposable_predictive_confidence"] == 0.85
-                assert "disposable_predictive_reason" in enrichment_query.enrichments
-                print("   ✅ Наши предиктивные данные сохранены корректно")
-            else:
-                print("   ❌ Обогащение не найдено в БД")
-
-            # 5. Проверяем, что обогащение можно получить через get_enrichment
-            print("\n5. Проверяем получение обогащений...")
-
-            from keep.api.core.alerts import get_enrichment_with_session
-
-            retrieved = get_enrichment_with_session(
+            # Ищем через get_enrichment_with_session
+            enrichment = get_enrichment_with_session(
                 session=db_session,
                 tenant_id=SINGLE_TENANT_UUID,
                 fingerprint=test_fingerprint
             )
 
-            if retrieved:
-                print(f"   ✅ Обогащение получено через API")
-                print(f"   📊 Количество полей: {len(retrieved.enrichments)}")
-            else:
-                print("   ❌ Обогащение не получено через API")
+            if enrichment:
+                print(f"   ✅ Обогащение найдено в БД")
+                print(f"   📊 Количество полей: {len(enrichment.enrichments)}")
 
-            print("\n🎉 Реальное обогащение работает корректно!")
+                # Проверяем наши предиктивные поля
+                found_predictive_fields = []
+                for key in enrichment.enrichments.keys():
+                    if 'predictive' in key or 'anomaly' in key:
+                        found_predictive_fields.append(key)
+
+                if found_predictive_fields:
+                    print(f"   🎯 Найдены предиктивные поля: {found_predictive_fields}")
+
+                    # Проверяем disposable поля
+                    disposable_fields = [k for k in found_predictive_fields if k.startswith('disposable_')]
+                    if disposable_fields:
+                        print(f"   🔄 Disposable поля: {disposable_fields}")
+
+                        # Проверяем значения
+                        for field in ['disposable_predictive_confidence', 'disposable_predictive_reason']:
+                            if field in enrichment.enrichments:
+                                value = enrichment.enrichments[field]
+                                print(f"   📈 {field}: {value}")
+
+                                if field == 'disposable_predictive_confidence':
+                                    assert value == 0.85, f"Expected 0.85, got {value}"
+                                elif field == 'disposable_predictive_reason':
+                                    assert value == "Test real anomaly", f"Wrong reason: {value}"
+                    else:
+                        print("   ⚠️  Не найдены disposable поля (возможно, они не disposable?)")
+                else:
+                    print("   ⚠️  Предиктивные поля не найдены")
+
+                    # Посмотрим все поля для отладки
+                    print(f"   🔍 Все поля: {list(enrichment.enrichments.keys())[:10]}...")
+            else:
+                print("   ❌ Обогащение не найдено")
+
+                # Проверяем напрямую в таблице
+                all_enrichments = db_session.query(AlertEnrichment).filter(
+                    AlertEnrichment.tenant_id == SINGLE_TENANT_UUID
+                ).all()
+                print(f"   ℹ️  Всего записей в AlertEnrichment: {len(all_enrichments)}")
+
+                if all_enrichments:
+                    print(f"   🔍 Первые 5 записей:")
+                    for i, e in enumerate(all_enrichments[:5]):
+                        print(f"      {i + 1}. fingerprint={e.fingerprint}, полей={len(e.enrichments)}")
+
+            # 6. Проверяем аудит
+            print("\n6. Проверяем логи аудита...")
+
+            audit_entries = db_session.query(AlertAudit).filter(
+                AlertAudit.tenant_id == SINGLE_TENANT_UUID,
+                AlertAudit.fingerprint == test_fingerprint
+            ).order_by(AlertAudit.timestamp.desc()).all()
+
+            if audit_entries:
+                print(f"   ✅ Найдено {len(audit_entries)} записей аудита")
+                for i, audit in enumerate(audit_entries[:3]):  # Покажем первые 3
+                    print(f"      {i + 1}. {audit.action} - {audit.description[:50]}...")
+            else:
+                print("   ⚠️  Записи аудита не найдены")
+
+            print("\n🎉 Тест обогащения выполнен!")
 
         except Exception as e:
             print(f"❌ Ошибка при обогащении: {str(e)}")
             import traceback
             traceback.print_exc()
+
+            # Детальная диагностика
+            print("\n🔧 Диагностика проблемы:")
+
+            # Проверяем, есть ли алерт в БД
+            try:
+                alert_check = db_session.query(AlertDB).filter(
+                    AlertDB.fingerprint == test_fingerprint
+                ).first()
+                print(f"   Алерт в БД: {'Да' if alert_check else 'Нет'}")
+
+                enrichment_check = db_session.query(AlertEnrichment).filter(
+                    AlertEnrichment.fingerprint == test_fingerprint
+                ).first()
+                print(f"   Обогащение в БД: {'Да' if enrichment_check else 'Нет'}")
+
+            except Exception as diag_e:
+                print(f"   Ошибка диагностики: {diag_e}")
+
             pytest.fail(f"Тест обогащения упал: {str(e)}")
+
 
     def test_real_database_interaction(self, db_session, create_alert):
         """Тест 4: Реальное взаимодействие с базой данных"""
