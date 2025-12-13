@@ -469,7 +469,6 @@ def __handle_formatted_events(
                     confidence_threshold=KEEP_PREDICTIVE_CONFIDENCE_THRESHOLD
                 )
 
-                # Запускаем предиктивный анализ на обогащенных событиях
                 predictive_incidents = predictive_engine.run_predictive_rules(
                     enriched_formatted_events,
                     session=session
@@ -607,14 +606,8 @@ def __handle_formatted_events(
                 )
 
                 if KEEP_PREDICTIVE_ENABLED and 'predictive_incidents' in locals():
-                    # Преобразуем predictive_incidents в IncidentDto если нужно
                     predictive_incidents_dto = []
-                    for incident in predictive_incidents:
-                        # Здесь нужно преобразовать в IncidentDto
-                        # Это зависит от того, что возвращает PredictiveEngine
-                        pass
 
-                    # Объединяем списки инцидентов
                     if predictive_incidents_dto:
                         incidents.extend(predictive_incidents_dto)
                         logger.info(
