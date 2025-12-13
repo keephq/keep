@@ -9,7 +9,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
 from keep.api.routes.predictive_engine import PredictiveEngine
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
-from keep.api.models.db.alert import Alert as AlertDB, AlertEnrichment, AlertAudit, LastAlert
+from keep.api.models.db.alert import Alert as AlertDB, AlertEnrichment, AlertAudit, LastAlert, Alert
 from keep.api.tasks import process_event_task
 from keep.functions import timestamp_delta
 
@@ -396,18 +396,40 @@ class TestPredictiveIntegration:
 
         # Шаг 1: Создаем нормальную историю
         print("1. Создаем нормальную историю (дневные алерты)...")
+        created_fingerprints = []
+
         for i in range(10):
+            fingerprint = f"normal-day-{i}"
             create_alert(
-                fingerprint=f"normal-day-{i}",
+                fingerprint=fingerprint,
                 status=AlertStatus.FIRING,
                 timestamp=datetime.utcnow().replace(hour=14, minute=i * 5) - timedelta(days=1),
                 details={
                     "name": "Normal daytime alert",
                     "severity": "info",
                     "source": ["monitoring"],
-                    "service": "web-service"
+                    "service": "web-service",
+                    "lastReceived": (datetime.utcnow().replace(hour=14, minute=i * 5) - timedelta(days=1)).isoformat()
                 }
             )
+            created_fingerprints.append(fingerprint)
+
+        print(f"   ✅ Создано {len(created_fingerprints)} алертов")
+
+        # Диагностика: проверяем, что алерты действительно создались
+        print("\n   🔍 Диагностика созданных алертов...")
+
+        alerts_in_db = db_session.query(Alert).filter(
+            Alert.tenant_id == SINGLE_TENANT_UUID
+        ).all()
+
+        print(f"   Всего алертов в БД: {len(alerts_in_db)}")
+        print(f"   Пример алерта из БД: {alerts_in_db[0].fingerprint if alerts_in_db else 'Нет алертов'}")
+
+        # Проверяем содержимое
+        if alerts_in_db:
+            sample_alert = alerts_in_db[0]
+            print(f"   Пример события: {json.dumps(sample_alert.event, indent=2)[:200]}...")
 
         # Шаг 2: Создаем аномальный ночной алерт
         print("2. Создаем аномальный ночной алерт...")
@@ -433,6 +455,8 @@ class TestPredictiveIntegration:
             fingerprint="anomaly-fp",
             **anomaly_details
         )
+
+        print(anomaly_alert.severity)
 
         # Получаем историю
         historical_data = engine._get_simple_historical_data(anomaly_alert, db_session)

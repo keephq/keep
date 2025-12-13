@@ -81,7 +81,7 @@ class PredictiveEngine:
         """Простой запрос исторических данных"""
         try:
             # За последние 24 часа
-            time_window = datetime.utcnow() - timedelta(hours=24)
+            time_window = datetime.utcnow() - timedelta(days=7)
 
             query = select(Alert).where(
                 Alert.tenant_id == self.tenant_id,
