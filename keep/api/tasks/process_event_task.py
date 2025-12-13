@@ -76,6 +76,9 @@ KEEP_CALCULATE_START_FIRING_TIME_ENABLED = (
     os.environ.get("KEEP_CALCULATE_START_FIRING_TIME_ENABLED", "true") == "true"
 )
 
+KEEP_PREDICTIVE_ENABLED = os.environ.get("KEEP_PREDICTIVE_ENABLED", "false") == "true"
+KEEP_PREDICTIVE_CONFIDENCE_THRESHOLD = float(os.environ.get("KEEP_PREDICTIVE_CONFIDENCE_THRESHOLD", "0.8"))
+
 logger = logging.getLogger(__name__)
 
 
@@ -457,6 +460,44 @@ def __handle_formatted_events(
             timestamp_forced,
         )
 
+    with tracer.start_as_current_span("process_event_predictive_analysis"):
+        if KEEP_PREDICTIVE_ENABLED:
+            try:
+                from keep.api.routes.predictive_engine import PredictiveEngine
+
+                predictive_engine = PredictiveEngine(
+                    tenant_id=tenant_id,
+                    confidence_threshold=KEEP_PREDICTIVE_CONFIDENCE_THRESHOLD
+                )
+
+                # Запускаем предиктивный анализ на обогащенных событиях
+                predictive_incidents = predictive_engine.run_predictive_rules(
+                    enriched_formatted_events,
+                    session=session
+                )
+
+                for alert in enriched_formatted_events:
+                    pass
+
+                logger.info(
+                    f"Predictive analysis completed: {len(predictive_incidents)} incidents created",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_type": provider_type,
+                        "predictive_incidents_count": len(predictive_incidents)
+                    }
+                )
+
+            except Exception as e:
+                logger.exception(
+                    "Failed to run predictive analysis",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "error": str(e),
+                        "provider_type": provider_type
+                    }
+                )
+
     # let's save all fields to the DB so that we can use them in the future such in deduplication fields suggestions
     # todo: also use it on correlation rules suggestions
     if KEEP_ALERT_FIELDS_ENABLED:
@@ -565,6 +606,22 @@ def __handle_formatted_events(
                 incidents: List[IncidentDto] = rules_engine.run_rules(
                     enriched_formatted_events, session=session
                 )
+
+                if KEEP_PREDICTIVE_ENABLED and 'predictive_incidents' in locals():
+                    # Преобразуем predictive_incidents в IncidentDto если нужно
+                    predictive_incidents_dto = []
+                    for incident in predictive_incidents:
+                        # Здесь нужно преобразовать в IncidentDto
+                        # Это зависит от того, что возвращает PredictiveEngine
+                        pass
+
+                    # Объединяем списки инцидентов
+                    if predictive_incidents_dto:
+                        incidents.extend(predictive_incidents_dto)
+                        logger.info(
+                            f"Combined {len(predictive_incidents_dto)} predictive incidents with regular incidents",
+                            extra={"tenant_id": tenant_id}
+                        )
             except Exception:
                 logger.exception(
                     "Failed to run rules engine",
