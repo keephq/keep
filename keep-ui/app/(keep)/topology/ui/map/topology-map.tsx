@@ -152,7 +152,7 @@ export function TopologyMap({
   const [nodes, setNodes] = useState<TopologyNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
-  const reactFlowInstanceRef = useRef<ReactFlowInstance<TopologyNode, Edge>>();
+  const reactFlowInstanceRef = useRef<ReactFlowInstance<TopologyNode, Edge> | null>(null);
 
   const highlightNodes = useCallback((nodeIds: string[]) => {
     setNodes((nds) =>

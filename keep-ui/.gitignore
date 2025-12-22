@@ -49,3 +49,6 @@ app/topology/mock-topology-data.tsx
 
 # Monaco workers (generated at build time for turbopack dev)
 public/monaco-workers/
+
+# TypeScript build info
+tsconfig.tsbuildinfo

@@ -1,4 +1,4 @@
-import { AnchorHTMLAttributes, ReactNode, useState } from "react";
+import React, { AnchorHTMLAttributes, ReactNode, useState } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
 import { Badge, Icon } from "@tremor/react";
@@ -18,7 +18,7 @@ type LinkWithIconProps = {
   testId?: string;
   isExact?: boolean;
   iconClassName?: string;
-  renderBeforeCount?: () => JSX.Element | undefined;
+  renderBeforeCount?: () => React.JSX.Element | undefined;
   onIconClick?: (e: React.MouseEvent) => void;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
