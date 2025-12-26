@@ -86,7 +86,7 @@ export function useTimeframeState({
   defaultTimeframe,
 }: typeof defaultOptions) {
   const searchParams = useSearchParams();
-  const defaultTimeframeRef = useRef<TimeFrameV2>();
+  const defaultTimeframeRef = useRef<TimeFrameV2 | undefined>(undefined);
   defaultTimeframeRef.current =
     defaultTimeframe || defaultOptions.defaultTimeframe;
 

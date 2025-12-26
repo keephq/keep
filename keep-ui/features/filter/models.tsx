@@ -1,12 +1,14 @@
+import React from "react";
+
 export type FacetState = Record<string, any | null>;
 
 export interface FacetConfig {
   canHitEmptyState?: boolean;
   checkedByDefaultOptionValues?: string[];
-  renderOptionIcon?: (facetOption: FacetOptionDto) => JSX.Element | undefined;
+  renderOptionIcon?: (facetOption: FacetOptionDto) => React.JSX.Element | undefined;
   renderOptionLabel?: (
     facetOption: FacetOptionDto
-  ) => JSX.Element | string | undefined;
+  ) => React.JSX.Element | string | undefined;
   sortCallback?: (facetOption: FacetOptionDto) => number;
 }
 
