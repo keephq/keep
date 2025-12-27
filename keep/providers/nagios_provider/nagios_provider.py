@@ -119,7 +119,7 @@ define command {
     def validate_scopes(self):
         self.logger.info("Validating Nagios provider scopes")
         try:
-            # nagios core uses CGI for json api
+        # nagios core uses CGI for json api - old school but works
             resp = requests.get(
                 url=f"{self.authentication_config.host_url}/nagios/cgi-bin/statusjson.cgi?query=hostlist",
                 auth=(
@@ -156,6 +156,7 @@ define command {
             resp.raise_for_status()
 
             data = resp.json()
+            # print(data)  # DEBUG
             servicelist = data.get("data", {}).get("servicelist", {})
 
             alerts = []
@@ -184,7 +185,7 @@ define command {
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
-        # try different field names that nagios might send
+        # try different field names that nagios might send (it's a mess)
         host = event.get("host_name") or event.get("HOSTNAME", "unknown")
         svc = event.get("service_desc") or event.get("SERVICEDESC", "")
         state = event.get("state") or event.get("SERVICESTATE") or event.get("HOSTSTATE", "UNKNOWN")
