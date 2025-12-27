@@ -21,6 +21,14 @@ Configuration UI:
   <img height="10" src="/images/ai-correlation-1.png" />
 </Frame>
 
+## Optimization Parameters
+
+The AI correlation engine can be configured to optimize for different goals:
+
+-   **Quality**: Prioritizes higher accuracy in correlating alerts and incidents. This might involve longer training times and higher correlation thresholds.
+-   **Speed**: Prioritizes faster model training and inference. This might result in slightly lower accuracy but quicker processing of alerts.
+-   **Resource**: Prioritizes minimizing computational resources (e.g., CPU, memory). This might lead to trade-offs in both speed and quality but is ideal for environments with limited resources.
+
 Incident with alerts correlated by AI:
 <Frame width="100" height="200">
   <img height="10" src="/images/ai-correlation-2.png" />

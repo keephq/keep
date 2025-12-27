@@ -87,6 +87,7 @@ class ExternalAIConfigAndMetadataDto(BaseModel):
     settings_proposed_by_algorithm: list[Any] | Json[Any] | None
     feedback_logs: str | None
     algorithm: ExternalAIDto
+    optimization_target: str
 
     @classmethod
     def from_orm(cls, _object: ExternalAIConfigAndMetadata) -> "ExternalAIConfigAndMetadataDto":
@@ -97,5 +98,6 @@ class ExternalAIConfigAndMetadataDto(BaseModel):
             settings=_object.settings,
             settings_proposed_by_algorithm=_object.settings_proposed_by_algorithm,
             feedback_logs=_object.feedback_logs,
-            algorithm=ExternalAIDto.from_orm(_object.algorithm)
+            algorithm=ExternalAIDto.from_orm(_object.algorithm),
+            optimization_target=_object.optimization_target,
         )

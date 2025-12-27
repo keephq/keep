@@ -31,6 +31,7 @@ export interface AIConfig {
   settings_proposed_by_algorithm: AlgorithmSetting[];
   feedback_logs: string;
   algorithm: Algorithm;
+  optimization_target: string;
 }
 
 export interface AIStats {

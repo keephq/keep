@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Title } from "@tremor/react";
+import { Card, Title, Select, SelectItem } from "@tremor/react";
 import { useAIStats, useAIActions } from "utils/hooks/useAI";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -145,6 +145,27 @@ export function AIPlugins() {
                   <p className="text-sm">
                     {algorithm_config.algorithm.description}
                   </p>
+                  <div className="flex flex-col my-4">
+                    <label htmlFor={`optimization-target-${index}`} className="text-sm font-medium mb-2">
+                      Optimize for:
+                    </label>
+                    <Select
+                      id={`optimization-target-${index}`}
+                      value={algorithm_config.optimization_target}
+                      onValueChange={(newValue) => {
+                        algorithm_config.optimization_target = newValue;
+                        handleUpdateAISettings(
+                          algorithm_config.algorithm_id,
+                          algorithm_config
+                        );
+                      }}
+                      className="max-w-xs"
+                    >
+                      <SelectItem value="quality">Quality</SelectItem>
+                      <SelectItem value="speed">Speed</SelectItem>
+                      <SelectItem value="resource">Resource</SelectItem>
+                    </Select>
+                  </div>
                   <div className="flex flex-row">
                     <div className="my-4 p-2 border-y border-gray-200 flex flex-col gap-4">
                       {algorithm_config.settings.map((setting) => (

@@ -96,6 +96,7 @@ class ExternalAIConfigAndMetadata(SQLModel, table=True):
         sa_column=Column(JSON),
     )
     feedback_logs: str = Field(sa_column=Column(Text))
+    optimization_target: str = Field(default="quality", nullable=False)
 
     @property
     def algorithm(self) -> ExternalAI:
@@ -109,5 +110,6 @@ class ExternalAIConfigAndMetadata(SQLModel, table=True):
             algorithm_id=algorithm.unique_id,
             tenant_id=tenant_id,
             settings=json.dumps(algorithm.config_default),
+            optimization_target="quality",
         )
         return external_ai

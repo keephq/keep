@@ -5508,29 +5508,81 @@ def get_or_create_external_ai_settings(
         ]
 
 
+def _adjust_settings_for_optimization_target(
+    settings: list[dict], optimization_target: str
+) -> list[dict]:
+    """
+    Adjusts external AI settings based on the chosen optimization target.
+
+    Args:
+        settings (list[dict]): The current list of settings for the external AI.
+        optimization_target (str): The desired optimization target ("quality", "speed", "resource").
+
+    Returns:
+        list[dict]: The adjusted list of settings.
+    """
+    adjusted_settings = settings
+    # Define optimization profiles
+    optimization_profiles = {
+        "quality": {
+            "Model Accuracy Threshold": {"value": 0.95},
+            "Correlation Threshold": {"value": 0.95},
+            "Train Epochs": {"value": 5},
+        },
+        "speed": {
+            "Model Accuracy Threshold": {"value": 0.7},
+            "Correlation Threshold": {"value": 0.7},
+            "Train Epochs": {"value": 1},
+        },
+        "resource": {
+            "Model Accuracy Threshold": {"value": 0.6},
+            "Correlation Threshold": {"value": 0.6},
+            "Train Epochs": {"value": 1},
+            "Create New Incidents": {"value": False},
+        },
+    }
+
+    profile = optimization_profiles.get(optimization_target)
+    if profile:
+        for setting in adjusted_settings:
+            setting_name = setting.get("name")
+            if setting_name in profile:
+                setting["value"] = profile[setting_name]["value"]
+    return adjusted_settings
+
+
 def update_extrnal_ai_settings(
-    tenant_id: str, ai_settings: ExternalAIConfigAndMetadata
+    tenant_id: str, ai_settings_dto: ExternalAIConfigAndMetadataDto
 ) -> ExternalAIConfigAndMetadataDto:
     with Session(engine) as session:
         setting = (
             session.query(ExternalAIConfigAndMetadata)
             .filter(
                 ExternalAIConfigAndMetadata.tenant_id == tenant_id,
-                ExternalAIConfigAndMetadata.id == ai_settings.id,
+                ExternalAIConfigAndMetadata.id == ai_settings_dto.id,
             )
             .first()
         )
-        setting.settings = json.dumps(ai_settings.settings)
-        setting.feedback_logs = ai_settings.feedback_logs
-        if ai_settings.settings_proposed_by_algorithm is not None:
+        if not setting:
+            raise ValueError("External AI setting not found")
+
+        # Apply optimization target to settings before saving
+        adjusted_settings = _adjust_settings_for_optimization_target(
+            ai_settings_dto.settings, ai_settings_dto.optimization_target
+        )
+        setting.settings = json.dumps(adjusted_settings)
+        setting.feedback_logs = ai_settings_dto.feedback_logs
+        setting.optimization_target = ai_settings_dto.optimization_target
+        if ai_settings_dto.settings_proposed_by_algorithm is not None:
             setting.settings_proposed_by_algorithm = json.dumps(
-                ai_settings.settings_proposed_by_algorithm
+                ai_settings_dto.settings_proposed_by_algorithm
             )
         else:
             setting.settings_proposed_by_algorithm = None
         session.add(setting)
         session.commit()
-    return setting
+        session.refresh(setting) # Refresh to get the latest state including adjusted settings
+    return ExternalAIConfigAndMetadataDto.from_orm(setting)
 
 
 def get_table_class(table_name: str) -> Type[SQLModel]:
