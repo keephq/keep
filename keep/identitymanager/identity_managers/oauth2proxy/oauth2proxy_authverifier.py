@@ -30,11 +30,16 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         self.auto_create_user = config(
             "KEEP_OAUTH2_PROXY_AUTO_CREATE_USER", default=True
         )
-        self.role_mappings = {
-            config("KEEP_OAUTH2_PROXY_ADMIN_ROLE", default=""): "admin",
-            config("KEEP_OAUTH2_PROXY_NOC_ROLE", default=""): "noc",
-            config("KEEP_OAUTH2_PROXY_WEBHOOK_ROLE", default=""): "webhook",
-        }
+        self.role_mappings = {}
+        for env_var, target_role in [
+            ("KEEP_OAUTH2_PROXY_ADMIN_ROLES", "admin"),
+            ("KEEP_OAUTH2_PROXY_NOC_ROLES", "noc"),
+            ("KEEP_OAUTH2_PROXY_WEBHOOK_ROLES", "webhook"),
+        ]:
+            roles_str = config(env_var, default="")
+            roles = [role.strip() for role in roles_str.split(",") if role.strip()]
+            for role in roles:
+                self.role_mappings[role] = target_role
         self.logger.info("Oauth2proxy Auth Verifier initialized")
 
     def authenticate(

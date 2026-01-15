@@ -230,6 +230,10 @@ class ArgocdProvider(BaseTopologyProvider):
 
             for node in nodes:
                 if node["kind"] == "Application":
+                    uid = node.get("uid")
+                    if not uid:
+                        self.logger.warning("Skipping node with missing 'uid': %s", node)
+                        continue                    
                     service_topology[metadata["uid"]].dependencies[
                         node["uid"]
                     ] = "unknown"
