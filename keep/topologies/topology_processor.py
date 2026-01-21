@@ -377,3 +377,7 @@ class TopologyProcessor:
             # Trigger the workflow event
             RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "created")
             self.logger.info(f"Created new incident for application {application.name}")
+
+            RulesEngine.send_workflow_event(
+                tenant_id, session, incident_dto, "alert_association_changed"
+            )
