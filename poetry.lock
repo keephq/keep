@@ -5860,18 +5860,21 @@ test = ["websockets"]
 
 [[package]]
 name = "wheel"
-version = "0.45.1"
-description = "A built-package format for Python"
+version = "0.46.2"
+description = "Command line tool for manipulating wheel files"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"},
-    {file = "wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729"},
+    {file = "wheel-0.46.2-py3-none-any.whl", hash = "sha256:33ae60725d69eaa249bc1982e739943c23b34b58d51f1cb6253453773aca6e65"},
+    {file = "wheel-0.46.2.tar.gz", hash = "sha256:3d79e48fde9847618a5a181f3cc35764c349c752e2fe911e65fa17faab9809b0"},
 ]
 
+[package.dependencies]
+packaging = ">=24.0"
+
 [package.extras]
-test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
+test = ["pytest (>=6.0.0)", "setuptools (>=77)"]
 
 [[package]]
 name = "wrapt"
