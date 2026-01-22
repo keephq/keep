@@ -55,7 +55,7 @@
     "chart.js": "^4.4.8",
     "date-fns": "^4.1.0",
     "https-proxy-agent": "^7.0.6",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.479.0",
     "monaco-editor": "^0.52.2",
