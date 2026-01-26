@@ -24,7 +24,7 @@ export function useSignOut() {
     }
 
     // For OAUTH2PROXY auth, redirect to oauth2-proxy's sign_out endpoint
-    // This properly clears the oauth2-proxy session and redirects to the IdP logout
+    // This properly clears the oauth2-proxy session
     if (configData?.AUTH_TYPE === AuthType.OAUTH2PROXY) {
       window.location.href = "/oauth2/sign_out";
       return;
