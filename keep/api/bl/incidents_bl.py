@@ -458,8 +458,21 @@ class IncidentBl:
             for attempt in range(max_retries):
                 try:
                     incident.status = IncidentStatus.RESOLVED.value
+                    incident.end_time = datetime.now(tz=timezone.utc)
                     self.session.add(incident)
                     self.session.commit()
+                    
+                    # Trigger workflows on auto-resolved incident
+                    self.logger.info(
+                        "Incident auto-resolved, triggering workflows",
+                        extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
+                    )
+                    incident_dto = IncidentDto.from_db_incident(incident)
+                    self.send_workflow_event(incident_dto, "updated")
+                    
+                    # Update client
+                    self.update_client_on_incident_change(incident_id)
+                    
                     break
                 except StaleDataError as ex:
                     if "expected to update" in ex.args[0]:
