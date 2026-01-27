@@ -1,0 +1,65 @@
+---
+title: "OpenSearch"
+sidebarTitle: "OpenSearch Provider"
+description: "OpenSearch provider enables Keep to query and write to self-managed OpenSearch clusters."
+---
+
+## Overview
+
+The OpenSearch provider connects Keep to a self-managed OpenSearch cluster. You can run queries, index documents, and surface alerts from OpenSearch monitors into Keep.
+
+### Key Features
+- Query indices with the OpenSearch Query DSL.
+- Index documents (with optional document IDs and refresh policy).
+- TLS and basic authentication support; custom CA bundle (`ca_certs`) for private PKI.
+
+## Prerequisites
+- An accessible OpenSearch endpoint (host and port).
+- If authentication is enabled, a user with query/write permissions to the target indices.
+- For HTTPS with private CAs, a PEM bundle path for certificate verification.
+
+## Authentication Configuration
+- **host** (Required): OpenSearch host (e.g., `opensearch.example.com` or `http://localhost`)
+- **port** (Required): OpenSearch port (default `9200`)
+- **username/password** (Optional): Set when using Basic auth (both must be provided together)
+- **use_ssl** (Optional): Enable HTTPS (default: true)
+- **verify_certs** (Optional): Verify server certificates (default: true)
+- **ca_certs** (Optional): PEM bundle path for custom CAs when using HTTPS
+
+## Querying OpenSearch
+Use the `_query` action to search an index.
+
+- **index**: Target index name.
+- **query**: OpenSearch query DSL object (stringified JSON also supported).
+- **size** (optional): Limit the number of returned documents.
+
+Example:
+```json
+{
+  "index": "keep"
+  "query": { "match_all": {} },
+  "size": 1
+}
+```
+
+## Writing to OpenSearch
+Use the `_notify` action to index documents.
+
+- **index**: Target index name.
+- **document**: JSON object (or stringified JSON) to index.
+- **doc_id** (optional): Explicit document ID.
+- **refresh** (optional): Refresh policy (`true`, `false`, or `"wait_for"`).
+
+Example:
+```json
+{
+  "index": "keep",
+  "document": { "message": "Keep test doc" },
+  "doc_id": "doc_1",
+  "refresh": true
+}
+```
+
+## Useful Links
+- [OpenSearch Query DSL](https://opensearch.org/docs/latest/query-dsl/index/)
+- [Index API](https://opensearch.org/docs/latest/api-reference/document-apis/index-document/)
