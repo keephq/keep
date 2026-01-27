@@ -104,6 +104,12 @@ DB_POOL_SIZE = config(
 DB_MAX_OVERFLOW = config(
     "DATABASE_MAX_OVERFLOW", default=10, cast=int
 )  # pylint: disable=invalid-name
+DB_POOL_RECYCLE = config(
+    "DATABASE_POOL_RECYCLE", default=3600, cast=int
+)  # pylint: disable=invalid-name
+DB_POOL_TIMEOUT = config(
+    "DATABASE_POOL_TIMEOUT", default=30, cast=int
+)  # pylint: disable=invalid-name
 DB_ECHO = config(
     "DATABASE_ECHO", default=False, cast=bool
 )  # pylint: disable=invalid-name
@@ -142,6 +148,8 @@ def create_db_engine():
             json_serializer=dumps,
             pool_size=DB_POOL_SIZE,
             max_overflow=DB_MAX_OVERFLOW,
+            pool_recycle=DB_POOL_RECYCLE,
+            pool_timeout=DB_POOL_TIMEOUT,
         )
     elif DB_CONNECTION_STRING == "impersonate":
         engine = create_engine(
@@ -157,6 +165,8 @@ def create_db_engine():
                 DB_CONNECTION_STRING,
                 pool_size=DB_POOL_SIZE,
                 max_overflow=DB_MAX_OVERFLOW,
+                pool_recycle=DB_POOL_RECYCLE,
+                pool_timeout=DB_POOL_TIMEOUT,
                 json_serializer=dumps,
                 echo=DB_ECHO,
                 pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,

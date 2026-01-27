@@ -20,7 +20,7 @@ from dateutil.parser import parse
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from psycopg2.errors import NoActiveSqlTransaction
+from psycopg.errors import NoActiveSqlTransaction
 from retry import retry
 from sqlalchemy import (
     String,
@@ -2710,6 +2710,7 @@ def create_deduplication_event(
         )
         session.add(deduplication_event)
         session.commit()
+        session.refresh(deduplication_event)
         logger.debug(
             "Deduplication event added",
             extra={
