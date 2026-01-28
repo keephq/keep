@@ -1,23 +1,12 @@
 """
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
-
-Supports:
-- Topology pulling from CMDB
-- Ticket creation and updates
-- Pulling incidents as Keep alerts
-- Pulling incidents as Keep incidents (with activity / comments / work notes)
-
-ServiceNow REST API references:
-    Table API: /api/now/table/{tableName}
-    Journal (activity): /api/now/table/sys_journal_field
 """
 
-import dataclasses
 import datetime
 import hashlib
 import json
 import os
-import typing
+import dataclasses
 import uuid
 
 import pydantic
@@ -99,12 +88,9 @@ class ServicenowProviderAuthConfig:
 
 
 class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
-    """Manage ServiceNow tickets and pull incidents."""
+    """Manage ServiceNow tickets and pull incident activity."""
 
-    PROVIDER_DISPLAY_NAME = "Service Now"
     PROVIDER_CATEGORY = ["Ticketing", "Incident Management"]
-    PROVIDER_TAGS = ["ticketing", "alert", "incident"]
-
     PROVIDER_SCOPES = [
         ProviderScope(
             name="itil",
@@ -112,77 +98,48 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             documentation_url="https://docs.servicenow.com/bundle/sandiego-platform-administration/page/administer/roles/reference/r_BaseSystemRoles.html",
             mandatory=True,
             alias="Read from datahase",
-        ),
+        )
     ]
+    PROVIDER_TAGS = ["ticketing", "incident"]
+    PROVIDER_DISPLAY_NAME = "Service Now"
 
-    FINGERPRINT_FIELDS = ["incident_id"]
-
-    # ── ServiceNow incident state → Keep AlertStatus ──────────────────
-    # Standard OOTB states: 1=New, 2=InProgress, 3=OnHold, 6=Resolved, 7=Closed, 8=Canceled
-    STATUS_MAP: dict[int, AlertStatus] = {
-        1: AlertStatus.FIRING,        # New
-        2: AlertStatus.FIRING,        # In Progress
-        3: AlertStatus.ACKNOWLEDGED,  # On Hold
-        6: AlertStatus.RESOLVED,      # Resolved
-        7: AlertStatus.RESOLVED,      # Closed
-        8: AlertStatus.SUPPRESSED,    # Canceled
+    # ServiceNow incident states → Keep AlertStatus
+    ALERT_STATUS_MAP = {
+        "1": AlertStatus.FIRING,       # New
+        "2": AlertStatus.ACKNOWLEDGED,  # In Progress
+        "3": AlertStatus.SUPPRESSED,    # On Hold
+        "6": AlertStatus.RESOLVED,      # Resolved
+        "7": AlertStatus.RESOLVED,      # Closed
+        "8": AlertStatus.RESOLVED,      # Canceled
     }
 
-    INCIDENT_STATUS_MAP: dict[int, IncidentStatus] = {
-        1: IncidentStatus.FIRING,        # New
-        2: IncidentStatus.FIRING,        # In Progress
-        3: IncidentStatus.ACKNOWLEDGED,  # On Hold
-        6: IncidentStatus.RESOLVED,      # Resolved
-        7: IncidentStatus.RESOLVED,      # Closed
-        8: IncidentStatus.RESOLVED,      # Canceled
+    # ServiceNow incident states → Keep IncidentStatus
+    INCIDENT_STATUS_MAP = {
+        "1": IncidentStatus.FIRING,        # New
+        "2": IncidentStatus.ACKNOWLEDGED,  # In Progress
+        "3": IncidentStatus.ACKNOWLEDGED,  # On Hold
+        "6": IncidentStatus.RESOLVED,      # Resolved
+        "7": IncidentStatus.RESOLVED,      # Closed
+        "8": IncidentStatus.RESOLVED,      # Canceled
     }
 
-    # ── ServiceNow priority → Keep AlertSeverity ──────────────────────
-    # 1=Critical, 2=High, 3=Moderate, 4=Low, 5=Planning
-    SEVERITY_MAP: dict[int, AlertSeverity] = {
-        1: AlertSeverity.CRITICAL,
-        2: AlertSeverity.HIGH,
-        3: AlertSeverity.WARNING,
-        4: AlertSeverity.LOW,
-        5: AlertSeverity.INFO,
+    # ServiceNow priority → Keep AlertSeverity
+    ALERT_SEVERITY_MAP = {
+        "1": AlertSeverity.CRITICAL,  # Critical
+        "2": AlertSeverity.HIGH,      # High
+        "3": AlertSeverity.WARNING,   # Moderate
+        "4": AlertSeverity.LOW,       # Low
+        "5": AlertSeverity.INFO,      # Planning
     }
 
-    INCIDENT_SEVERITY_MAP: dict[int, IncidentSeverity] = {
-        1: IncidentSeverity.CRITICAL,
-        2: IncidentSeverity.HIGH,
-        3: IncidentSeverity.WARNING,
-        4: IncidentSeverity.LOW,
-        5: IncidentSeverity.INFO,
+    # ServiceNow priority → Keep IncidentSeverity
+    INCIDENT_SEVERITY_MAP = {
+        "1": IncidentSeverity.CRITICAL,  # Critical
+        "2": IncidentSeverity.HIGH,      # High
+        "3": IncidentSeverity.WARNING,   # Moderate
+        "4": IncidentSeverity.LOW,       # Low
+        "5": IncidentSeverity.INFO,      # Planning
     }
-
-    # Fields to retrieve from the incident table
-    INCIDENT_FIELDS = [
-        "sys_id",
-        "number",
-        "short_description",
-        "description",
-        "state",
-        "priority",
-        "severity",
-        "impact",
-        "urgency",
-        "category",
-        "subcategory",
-        "assignment_group",
-        "assigned_to",
-        "caller_id",
-        "opened_by",
-        "opened_at",
-        "closed_at",
-        "resolved_at",
-        "sys_updated_on",
-        "sys_created_on",
-        "close_code",
-        "close_notes",
-        "cmdb_ci",
-        "business_service",
-        "contact_type",
-    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -225,67 +182,6 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
                     f"Failed to get OAuth access token from ServiceNow: {response.status_code}, {response.text}."
                     " Please check your ServiceNow logs, information about this error should be there."
                 )
-
-    # ── Helpers ───────────────────────────────────────────────────────
-
-    def _get_auth(self):
-        """Return auth tuple or None when using OAuth tokens."""
-        if self._access_token:
-            return None
-        return (
-            self.authentication_config.username,
-            self.authentication_config.password,
-        )
-
-    def _get_headers(self) -> dict:
-        """Build common request headers."""
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        if self._access_token:
-            headers["Authorization"] = f"Bearer {self._access_token}"
-        return headers
-
-    @staticmethod
-    def _get_incident_id(incident_number: str) -> uuid.UUID:
-        """Create a deterministic UUID from a ServiceNow incident number."""
-        md5 = hashlib.md5()
-        md5.update(incident_number.encode("utf-8"))
-        return uuid.UUID(md5.hexdigest())
-
-    @staticmethod
-    def _parse_snow_datetime(value: str | None) -> datetime.datetime | None:
-        """Parse a ServiceNow datetime string (YYYY-MM-DD HH:MM:SS) into a datetime."""
-        if not value:
-            return None
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"):
-            try:
-                return datetime.datetime.strptime(value, fmt).replace(
-                    tzinfo=datetime.timezone.utc
-                )
-            except ValueError:
-                continue
-        return None
-
-    @staticmethod
-    def _safe_int(value, default: int = 0) -> int:
-        """Safely convert a value to int."""
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-
-    @staticmethod
-    def _display_value(field) -> str:
-        """Extract display value from a ServiceNow field that may be a dict or string."""
-        if isinstance(field, dict):
-            return field.get("display_value", field.get("value", ""))
-        return str(field) if field else ""
-
-    # ── Config / scopes ──────────────────────────────────────────────
-
-    def validate_config(self):
-        self.authentication_config = ServicenowProviderAuthConfig(
-            **self.config.authentication
-        )
 
     def validate_scopes(self):
         """
@@ -358,11 +254,26 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             }
         return scopes
 
-    def dispose(self):
-        """No need to dispose of anything, so just do nothing."""
-        pass
+    def validate_config(self):
+        self.authentication_config = ServicenowProviderAuthConfig(
+            **self.config.authentication
+        )
 
-    # ── Core API helpers ─────────────────────────────────────────────
+    def _get_headers(self):
+        """Get common request headers."""
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        return headers
+
+    def _get_auth(self):
+        """Get auth tuple for requests (None if using OAuth token)."""
+        if self._access_token:
+            return None
+        return (
+            self.authentication_config.username,
+            self.authentication_config.password,
+        )
 
     def _query(
         self,
@@ -389,6 +300,11 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         params = {"sysparm_offset": sysparm_offset, "sysparm_limit": sysparm_limit}
 
+        # Add any extra query params
+        for key, value in kwargs.items():
+            if key.startswith("sysparm_"):
+                params[key] = value
+
         response = requests.get(
             request_url,
             headers=headers,
@@ -407,45 +323,45 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         return response.json().get("result", [])
 
-    def _query_incidents(
+    def _get_paginated_results(
         self,
-        sysparm_limit: int = 100,
-        sysparm_offset: int = 0,
+        table_name: str,
         sysparm_query: str = "",
+        sysparm_fields: str = "",
+        sysparm_limit: int = 100,
+        max_pages: int = 10,
     ) -> list[dict]:
         """
-        Pull incidents from the ServiceNow incident table.
+        Get paginated results from a ServiceNow table.
 
         Args:
-            sysparm_limit: Max records to return.
-            sysparm_offset: Pagination offset.
-            sysparm_query: Encoded query string (e.g. "state!=7^state!=8" for non-closed).
+            table_name: The name of the ServiceNow table.
+            sysparm_query: The query string for filtering.
+            sysparm_fields: Comma-separated list of fields to return.
+            sysparm_limit: Number of records per page.
+            max_pages: Maximum number of pages to retrieve.
 
         Returns:
-            A list of incident records.
+            A list of result dictionaries.
         """
-        url = f"{self.authentication_config.service_now_base_url}/api/now/table/incident"
-        headers = self._get_headers()
-        auth = self._get_auth()
+        all_results = []
+        offset = 0
 
-        params = {
-            "sysparm_limit": sysparm_limit,
-            "sysparm_offset": sysparm_offset,
-            "sysparm_fields": ",".join(self.INCIDENT_FIELDS),
-            "sysparm_display_value": "all",  # Get both value and display_value
-        }
-        if sysparm_query:
-            params["sysparm_query"] = sysparm_query
+        for page in range(max_pages):
+            params = {
+                "sysparm_limit": sysparm_limit,
+                "sysparm_offset": offset,
+            }
+            if sysparm_query:
+                params["sysparm_query"] = sysparm_query
+            if sysparm_fields:
+                params["sysparm_fields"] = sysparm_fields
 
-        all_records: list[dict] = []
-        offset = sysparm_offset
-
-        while True:
-            params["sysparm_offset"] = offset
+            request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
             response = requests.get(
-                url,
-                headers=headers,
-                auth=auth,
+                request_url,
+                headers=self._get_headers(),
+                auth=self._get_auth(),
                 params=params,
                 verify=False,
                 timeout=30,
@@ -453,7 +369,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
 
             if not response.ok:
                 self.logger.error(
-                    "Failed to query incidents",
+                    f"Failed to query {table_name} at offset {offset}",
                     extra={
                         "status_code": response.status_code,
                         "response": response.text,
@@ -465,344 +381,218 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             if not results:
                 break
 
-            all_records.extend(results)
+            all_results.extend(results)
+            self.logger.info(
+                f"Fetched page {page + 1} from {table_name}",
+                extra={"count": len(results), "total_so_far": len(all_results)},
+            )
 
-            # If we got fewer records than the limit, we've reached the end
             if len(results) < sysparm_limit:
                 break
 
             offset += sysparm_limit
 
-        return all_records
+        return all_results
 
-    def _query_incident_activity(
-        self, incident_sys_ids: list[str]
-    ) -> dict[str, list[dict]]:
-        """
-        Pull activity (comments and work notes) for a list of incidents from
-        the sys_journal_field table.
-
-        Args:
-            incident_sys_ids: List of incident sys_id values.
-
-        Returns:
-            A dict mapping sys_id → list of journal entries.
-        """
-        if not incident_sys_ids:
-            return {}
-
-        url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_journal_field"
-        headers = self._get_headers()
-        auth = self._get_auth()
-
-        # Build encoded query: name=incident^element_idIN<comma-separated ids>
-        ids_csv = ",".join(incident_sys_ids)
-        sysparm_query = f"name=incident^element_idIN{ids_csv}^ORDERBYDESCsys_created_on"
-
-        params = {
-            "sysparm_query": sysparm_query,
-            "sysparm_fields": "sys_id,element_id,element,value,sys_created_on,sys_created_by,name",
-            "sysparm_limit": 500,
-        }
-
-        response = requests.get(
-            url,
-            headers=headers,
-            auth=auth,
-            params=params,
-            verify=False,
-            timeout=30,
-        )
-
-        activity_map: dict[str, list[dict]] = {sid: [] for sid in incident_sys_ids}
-
-        if not response.ok:
-            self.logger.warning(
-                "Failed to query incident activity from sys_journal_field",
-                extra={
-                    "status_code": response.status_code,
-                    "response": response.text,
-                },
-            )
-            return activity_map
-
-        for entry in response.json().get("result", []):
-            element_id = entry.get("element_id")
-            if element_id in activity_map:
-                activity_map[element_id].append(
-                    {
-                        "type": entry.get("element", ""),  # "comments" or "work_notes"
-                        "value": entry.get("value", ""),
-                        "created_on": entry.get("sys_created_on", ""),
-                        "created_by": entry.get("sys_created_by", ""),
-                    }
-                )
-
-        return activity_map
-
-    # ── Pull alerts (incidents as alerts) ────────────────────────────
+    # ---- Alert pulling (incidents as alerts) ----
 
     def _get_alerts(self) -> list[AlertDto]:
         """
-        Pull incidents from ServiceNow and return them as Keep AlertDto objects.
-
-        This queries all non-closed, non-canceled incidents by default,
-        maps their state/priority to Keep's AlertStatus/AlertSeverity, and
-        enriches each alert with recent activity (comments + work notes).
+        Pull ServiceNow incidents as Keep alerts.
+        Each ServiceNow incident is mapped to an AlertDto.
         """
-        alerts: list[AlertDto] = []
+        self.logger.info("Pulling incidents as alerts from ServiceNow")
 
-        try:
-            self.logger.info("Pulling incidents from ServiceNow as alerts")
+        incidents = self._get_paginated_results(
+            table_name="incident",
+            sysparm_query="ORDERBYDESCsys_updated_on",
+            sysparm_fields=(
+                "sys_id,number,short_description,description,state,priority,"
+                "severity,urgency,impact,assigned_to,assignment_group,"
+                "opened_at,closed_at,resolved_at,sys_updated_on,sys_created_on,"
+                "category,subcategory,cmdb_ci,caller_id,close_code,close_notes"
+            ),
+        )
 
-            # Pull active + recently-resolved incidents
-            raw_incidents = self._query_incidents(
-                sysparm_query="ORDERBYDESCsys_updated_on",
-                sysparm_limit=100,
-            )
+        self.logger.info(
+            "Fetched incidents from ServiceNow",
+            extra={"count": len(incidents)},
+        )
 
-            if not raw_incidents:
-                self.logger.info("No incidents found in ServiceNow")
-                return alerts
+        alerts = []
+        for incident in incidents:
+            try:
+                alert = self._format_incident_as_alert(incident)
+                alerts.append(alert)
+            except Exception:
+                self.logger.exception(
+                    "Failed to format incident as alert",
+                    extra={"incident_number": incident.get("number")},
+                )
 
-            # Gather sys_ids to fetch activity in bulk
-            sys_ids = [
-                inc.get("sys_id", {}).get("value", inc.get("sys_id", ""))
-                if isinstance(inc.get("sys_id"), dict)
-                else inc.get("sys_id", "")
-                for inc in raw_incidents
-            ]
-            activity_map = self._query_incident_activity(sys_ids)
-
-            for incident in raw_incidents:
-                try:
-                    sys_id = self._display_value(incident.get("sys_id"))
-                    alert = self._format_alert(
-                        incident,
-                        provider_instance=self,
-                        activity=activity_map.get(sys_id, []),
-                    )
-                    alerts.append(alert)
-                except Exception as e:
-                    self.logger.warning(
-                        "Failed to format ServiceNow incident as alert: %s",
-                        e,
-                        extra={"incident": incident.get("number", "unknown")},
-                    )
-
-            self.logger.info(
-                "Collected %d alerts from ServiceNow",
-                len(alerts),
-            )
-        except Exception as e:
-            self.logger.error("Error pulling alerts from ServiceNow: %s", e)
-
+        self.logger.info(
+            "Completed pulling alerts from ServiceNow",
+            extra={"alert_count": len(alerts)},
+        )
         return alerts
 
-    @staticmethod
-    def _format_alert(
-        event: dict,
-        provider_instance: "ServicenowProvider" = None,
-        activity: list[dict] | None = None,
-    ) -> AlertDto:
-        """
-        Format a ServiceNow incident record into a Keep AlertDto.
+    def _format_incident_as_alert(self, incident: dict) -> AlertDto:
+        """Convert a ServiceNow incident record to a Keep AlertDto."""
+        incident_number = incident.get("number", "")
+        state = str(incident.get("state", "1"))
+        priority = str(incident.get("priority", "4"))
+        sys_id = incident.get("sys_id", "")
 
-        Args:
-            event: A ServiceNow incident record (with display_value/value).
-            provider_instance: The provider instance (used for building URLs).
-            activity: List of journal entries for this incident.
-
-        Returns:
-            An AlertDto representing the ServiceNow incident.
-        """
-        # Helper to extract value from {value, display_value} dicts
-        def _val(field_name: str, use_display: bool = False) -> str:
-            raw = event.get(field_name, "")
-            if isinstance(raw, dict):
-                return raw.get("display_value" if use_display else "value", "")
-            return str(raw) if raw else ""
-
-        sys_id = _val("sys_id")
-        number = _val("number")
-        state = ServicenowProvider._safe_int(_val("state"))
-        priority = ServicenowProvider._safe_int(_val("priority"))
-
-        status = ServicenowProvider.STATUS_MAP.get(state, AlertStatus.FIRING)
-        severity = ServicenowProvider.SEVERITY_MAP.get(priority, AlertSeverity.INFO)
+        status = self.ALERT_STATUS_MAP.get(state, AlertStatus.FIRING)
+        severity = self.ALERT_SEVERITY_MAP.get(priority, AlertSeverity.INFO)
 
         # Parse timestamps
-        opened_at = _val("opened_at")
-        updated_on = _val("sys_updated_on")
-        last_received = updated_on or opened_at or datetime.datetime.now(
-            datetime.timezone.utc
-        ).isoformat()
+        last_received = incident.get("sys_updated_on") or incident.get("sys_created_on") or ""
+        opened_at = incident.get("opened_at", "")
 
-        # Build description from short_description + description
-        short_desc = _val("short_description")
-        long_desc = _val("description")
-        description = short_desc
-        if long_desc and long_desc != short_desc:
-            description = f"{short_desc}\n\n{long_desc}"
+        # Build URL to incident in ServiceNow
+        url = (
+            f"{self.authentication_config.service_now_base_url}"
+            f"/nav_to.do?uri=incident.do%3Fsys_id%3D{sys_id}"
+        )
 
-        # Build URL to the incident in ServiceNow
-        url = None
-        if provider_instance:
-            base = str(
-                provider_instance.authentication_config.service_now_base_url
-            ).rstrip("/")
-            url = f"{base}/nav_to.do?uri=incident.do?sys_id={sys_id}"
+        # Build description with activity context
+        description = incident.get("description", "") or incident.get("short_description", "")
 
-        # Build activity/enrichment summary
-        enrichments: dict = {}
-        if activity:
-            comments = [
-                a for a in activity if a.get("type") == "comments"
-            ]
-            work_notes = [
-                a for a in activity if a.get("type") == "work_notes"
-            ]
-            enrichments["comments_count"] = len(comments)
-            enrichments["work_notes_count"] = len(work_notes)
-            enrichments["recent_activity"] = activity[:10]  # Last 10 entries
-            if comments:
-                enrichments["last_comment"] = comments[0].get("value", "")
-                enrichments["last_comment_by"] = comments[0].get("created_by", "")
-                enrichments["last_comment_at"] = comments[0].get("created_on", "")
-            if work_notes:
-                enrichments["last_work_note"] = work_notes[0].get("value", "")
-                enrichments["last_work_note_by"] = work_notes[0].get("created_by", "")
-                enrichments["last_work_note_at"] = work_notes[0].get("created_on", "")
+        # Get assigned_to - it may be a string or a dict with a 'display_value'
+        assigned_to = incident.get("assigned_to", "")
+        if isinstance(assigned_to, dict):
+            assigned_to = assigned_to.get("display_value", assigned_to.get("value", ""))
+
+        # Extract labels
+        labels = {
+            "category": incident.get("category", ""),
+            "subcategory": incident.get("subcategory", ""),
+            "urgency": incident.get("urgency", ""),
+            "impact": incident.get("impact", ""),
+            "priority": priority,
+            "state": state,
+        }
+
+        # Add assignment group info
+        assignment_group = incident.get("assignment_group", "")
+        if isinstance(assignment_group, dict):
+            assignment_group = assignment_group.get(
+                "display_value", assignment_group.get("value", "")
+            )
+        labels["assignment_group"] = assignment_group
+
+        # Add CI information
+        cmdb_ci = incident.get("cmdb_ci", "")
+        if isinstance(cmdb_ci, dict):
+            cmdb_ci = cmdb_ci.get("display_value", cmdb_ci.get("value", ""))
+        service = cmdb_ci if cmdb_ci else None
+
+        fingerprint = f"servicenow-{incident_number}"
 
         return AlertDto(
             id=sys_id,
-            name=f"[{number}] {short_desc}" if number else short_desc,
+            name=f"ServiceNow Incident {incident_number}",
             status=status,
             severity=severity,
             lastReceived=last_received,
-            firingStartTime=opened_at or None,
-            description=description,
+            firingStartTime=opened_at if opened_at else None,
             source=["servicenow"],
+            message=incident.get("short_description", ""),
+            description=description,
             url=url,
-            fingerprint=number or sys_id,
-            # ServiceNow-specific fields
-            incident_id=number,
-            incident_sys_id=sys_id,
-            incident_state=state,
-            incident_state_display=_val("state", use_display=True),
-            priority=priority,
-            priority_display=_val("priority", use_display=True),
-            impact=_val("impact", use_display=True),
-            urgency=_val("urgency", use_display=True),
-            category=_val("category", use_display=True),
-            subcategory=_val("subcategory", use_display=True),
-            assignment_group=_val("assignment_group", use_display=True),
-            assigned_to=_val("assigned_to", use_display=True),
-            caller=_val("caller_id", use_display=True),
-            opened_by=_val("opened_by", use_display=True),
-            close_code=_val("close_code"),
-            close_notes=_val("close_notes"),
-            cmdb_ci=_val("cmdb_ci", use_display=True),
-            business_service=_val("business_service", use_display=True),
-            contact_type=_val("contact_type"),
-            # Enrichments from activity
-            **enrichments,
+            fingerprint=fingerprint,
+            service=service,
+            assignee=assigned_to if assigned_to else None,
+            labels=labels,
         )
 
-    # ── Pull incidents ───────────────────────────────────────────────
+    # ---- Incident pulling ----
+
+    @staticmethod
+    def _get_incident_id(incident_number: str) -> uuid.UUID:
+        """Create a deterministic UUID from a ServiceNow incident number."""
+        md5 = hashlib.md5()
+        md5.update(incident_number.encode("utf-8"))
+        return uuid.UUID(md5.hexdigest())
 
     def _get_incidents(self) -> list[IncidentDto]:
         """
-        Pull incidents from ServiceNow and return them as Keep IncidentDto objects.
-        Each incident includes its alerts (the incident itself as an AlertDto)
-        and activity enrichment data.
+        Pull ServiceNow incidents as Keep IncidentDtos.
+        Also pulls associated activity (comments and work notes).
         """
-        incidents: list[IncidentDto] = []
+        self.logger.info("Pulling incidents from ServiceNow")
 
-        try:
-            self.logger.info("Pulling incidents from ServiceNow")
+        incidents = self._get_paginated_results(
+            table_name="incident",
+            sysparm_query="ORDERBYDESCsys_updated_on",
+            sysparm_fields=(
+                "sys_id,number,short_description,description,state,priority,"
+                "severity,urgency,impact,assigned_to,assignment_group,"
+                "opened_at,closed_at,resolved_at,sys_updated_on,sys_created_on,"
+                "category,subcategory,cmdb_ci,caller_id,close_code,close_notes,"
+                "comments_and_work_notes"
+            ),
+        )
 
-            raw_incidents = self._query_incidents(
-                sysparm_query="ORDERBYDESCsys_updated_on",
-                sysparm_limit=100,
-            )
+        self.logger.info(
+            "Fetched incidents from ServiceNow",
+            extra={"count": len(incidents)},
+        )
 
-            if not raw_incidents:
-                self.logger.info("No incidents found in ServiceNow")
-                return incidents
-
-            # Fetch activity for all incidents in bulk
-            sys_ids = [
-                self._display_value(inc.get("sys_id"))
-                for inc in raw_incidents
-            ]
-            activity_map = self._query_incident_activity(sys_ids)
-
-            for raw_incident in raw_incidents:
-                try:
-                    incident = self._format_incident(
-                        {"event": raw_incident},
-                        provider_instance=self,
-                        activity=activity_map,
-                    )
-                    if incident:
-                        # Attach the incident's own alert representation
-                        sys_id = self._display_value(raw_incident.get("sys_id"))
-                        alert = self._format_alert(
-                            raw_incident,
-                            provider_instance=self,
-                            activity=activity_map.get(sys_id, []),
+        incident_dtos = []
+        for incident in incidents:
+            try:
+                incident_dto = self._format_incident(
+                    {"event": incident}
+                )
+                if incident_dto:
+                    # Fetch activity (comments/work notes) for this incident
+                    try:
+                        activity_alerts = self._get_incident_activity(
+                            incident.get("sys_id", "")
                         )
-                        incident._alerts = [alert]
-                        incidents.append(incident)
-                except Exception as e:
-                    self.logger.warning(
-                        "Failed to format ServiceNow incident: %s",
-                        e,
-                        extra={"incident": raw_incident.get("number", "unknown")},
-                    )
+                        incident_dto._alerts = activity_alerts
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to fetch activity for incident",
+                            extra={
+                                "incident_number": incident.get("number"),
+                                "provider_id": self.provider_id,
+                            },
+                        )
+                    incident_dtos.append(incident_dto)
+            except Exception:
+                self.logger.exception(
+                    "Failed to format incident",
+                    extra={"incident_number": incident.get("number")},
+                )
 
-            self.logger.info(
-                "Collected %d incidents from ServiceNow",
-                len(incidents),
-            )
-        except Exception as e:
-            self.logger.error("Error pulling incidents from ServiceNow: %s", e)
-
-        return incidents
+        self.logger.info(
+            "Completed pulling incidents from ServiceNow",
+            extra={"incident_count": len(incident_dtos)},
+        )
+        return incident_dtos
 
     @staticmethod
     def _format_incident(
-        event: dict,
-        provider_instance: "ServicenowProvider" = None,
-        activity: dict[str, list[dict]] | None = None,
-    ) -> IncidentDto | None:
+        event: dict, provider_instance: "ServicenowProvider" = None
+    ) -> IncidentDto | list[IncidentDto]:
         """
-        Format a ServiceNow incident record into a Keep IncidentDto.
-
-        Args:
-            event: A dict with key "event" containing the raw incident record.
-            provider_instance: The provider instance.
-            activity: A dict mapping sys_id → list of journal entries.
-
-        Returns:
-            An IncidentDto, or None if the record can't be formatted.
+        Format a ServiceNow incident event into an IncidentDto.
+        The event dict should have the structure: {"event": <incident_record>}
         """
-        raw = event.get("event", event)
+        incident = event.get("event", event)
 
-        def _val(field_name: str, use_display: bool = False) -> str:
-            field = raw.get(field_name, "")
-            if isinstance(field, dict):
-                return field.get("display_value" if use_display else "value", "")
-            return str(field) if field else ""
+        incident_number = incident.get("number", "")
+        if not incident_number:
+            return []
 
-        sys_id = _val("sys_id")
-        number = _val("number")
-        if not number:
-            return None
+        incident_id = ServicenowProvider._get_incident_id(incident_number)
+        sys_id = incident.get("sys_id", "")
 
-        state = ServicenowProvider._safe_int(_val("state"))
-        priority = ServicenowProvider._safe_int(_val("priority"))
+        state = str(incident.get("state", "1"))
+        priority = str(incident.get("priority", "4"))
 
         status = ServicenowProvider.INCIDENT_STATUS_MAP.get(
             state, IncidentStatus.FIRING
@@ -811,57 +601,232 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             priority, IncidentSeverity.INFO
         )
 
-        # Timestamps
-        opened_at = ServicenowProvider._parse_snow_datetime(_val("opened_at"))
-        resolved_at = ServicenowProvider._parse_snow_datetime(_val("resolved_at"))
-        closed_at = ServicenowProvider._parse_snow_datetime(_val("closed_at"))
-        created_on = ServicenowProvider._parse_snow_datetime(_val("sys_created_on"))
-        updated_on = ServicenowProvider._parse_snow_datetime(_val("sys_updated_on"))
+        # Parse timestamps
+        created_at = incident.get("sys_created_on") or incident.get("opened_at")
+        if created_at:
+            try:
+                created_at = datetime.datetime.strptime(
+                    created_at, "%Y-%m-%d %H:%M:%S"
+                )
+            except (ValueError, TypeError):
+                created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+        else:
+            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
 
-        incident_id = ServicenowProvider._get_incident_id(number)
+        last_seen = incident.get("sys_updated_on")
+        if last_seen:
+            try:
+                last_seen = datetime.datetime.strptime(
+                    last_seen, "%Y-%m-%d %H:%M:%S"
+                )
+            except (ValueError, TypeError):
+                last_seen = None
 
-        service = _val("business_service", use_display=True) or _val(
-            "cmdb_ci", use_display=True
-        )
-        services = [service] if service else []
+        end_time = incident.get("resolved_at") or incident.get("closed_at")
+        if end_time:
+            try:
+                end_time = datetime.datetime.strptime(
+                    end_time, "%Y-%m-%d %H:%M:%S"
+                )
+            except (ValueError, TypeError):
+                end_time = None
 
-        assignee = _val("assigned_to", use_display=True) or None
+        # Extract service info from CI
+        cmdb_ci = incident.get("cmdb_ci", "")
+        if isinstance(cmdb_ci, dict):
+            cmdb_ci = cmdb_ci.get("display_value", cmdb_ci.get("value", ""))
+        services = [cmdb_ci] if cmdb_ci else []
 
-        short_desc = _val("short_description")
-
-        # Build enrichments from activity
-        enrichments: dict = {}
-        if activity:
-            incident_activity = activity.get(sys_id, [])
-            if incident_activity:
-                comments = [a for a in incident_activity if a.get("type") == "comments"]
-                work_notes = [
-                    a for a in incident_activity if a.get("type") == "work_notes"
-                ]
-                enrichments["comments_count"] = len(comments)
-                enrichments["work_notes_count"] = len(work_notes)
-                enrichments["recent_activity"] = incident_activity[:10]
+        # Build user-generated name
+        short_desc = incident.get("short_description", "Unknown")
+        user_generated_name = f"SN-{incident_number}: {short_desc}"
 
         return IncidentDto(
             id=incident_id,
-            user_generated_name=f"SNOW-{number}: {short_desc}",
+            user_generated_name=user_generated_name,
+            user_summary=incident.get("description", ""),
             status=status,
             severity=severity,
-            creation_time=created_on or opened_at,
-            start_time=opened_at,
-            end_time=closed_at or resolved_at,
-            last_seen_time=updated_on,
+            creation_time=created_at,
+            start_time=created_at,
+            last_seen_time=last_seen,
+            end_time=end_time,
             alert_sources=["servicenow"],
-            alerts_count=1,
+            alerts_count=0,
             services=services,
-            assignee=assignee,
             is_predicted=False,
             is_candidate=False,
-            fingerprint=number,
-            enrichments=enrichments,
+            fingerprint=f"{sys_id}" if sys_id else incident_number,
+            assignee=_extract_display_value(incident.get("assigned_to")),
         )
 
-    # ── Topology ─────────────────────────────────────────────────────
+    # ---- Activity / Journal Entries ----
+
+    def _get_incident_activity(self, incident_sys_id: str) -> list[AlertDto]:
+        """
+        Pull journal entries (comments and work notes) for a specific ServiceNow incident.
+        Returns them as AlertDto objects so they can be associated as incident alerts.
+
+        Uses the sys_journal_field table to get work notes and comments.
+        """
+        if not incident_sys_id:
+            return []
+
+        self.logger.info(
+            "Fetching activity for incident",
+            extra={"incident_sys_id": incident_sys_id},
+        )
+
+        # Query journal entries for this incident
+        # element_id is the sys_id of the incident
+        # element is the field name: 'comments' for additional comments, 'work_notes' for work notes
+        journal_entries = self._get_paginated_results(
+            table_name="sys_journal_field",
+            sysparm_query=(
+                f"element_id={incident_sys_id}"
+                "^element=comments^ORelement=work_notes"
+                "^ORDERBYDESCsys_created_on"
+            ),
+            sysparm_fields=(
+                "sys_id,element_id,element,value,sys_created_on,"
+                "sys_created_by,name"
+            ),
+            sysparm_limit=50,
+            max_pages=2,
+        )
+
+        self.logger.info(
+            "Fetched journal entries",
+            extra={
+                "incident_sys_id": incident_sys_id,
+                "entry_count": len(journal_entries),
+            },
+        )
+
+        activity_alerts = []
+        for entry in journal_entries:
+            try:
+                alert = self._format_journal_entry_as_alert(
+                    entry, incident_sys_id
+                )
+                activity_alerts.append(alert)
+            except Exception:
+                self.logger.exception(
+                    "Failed to format journal entry",
+                    extra={"entry_sys_id": entry.get("sys_id")},
+                )
+
+        return activity_alerts
+
+    def _format_journal_entry_as_alert(
+        self, entry: dict, incident_sys_id: str
+    ) -> AlertDto:
+        """Convert a ServiceNow journal field entry to an AlertDto."""
+        entry_sys_id = entry.get("sys_id", "")
+        element = entry.get("element", "")
+        value = entry.get("value", "")
+        created_on = entry.get("sys_created_on", "")
+        created_by = entry.get("sys_created_by", "")
+
+        # Determine if this is a comment or work note
+        entry_type = "Work Note" if element == "work_notes" else "Comment"
+
+        # Build a descriptive alert
+        name = f"ServiceNow {entry_type} on {incident_sys_id}"
+        message = f"[{entry_type}] by {created_by}: {value[:200]}" if value else f"[{entry_type}] by {created_by}"
+
+        fingerprint = f"servicenow-journal-{entry_sys_id}"
+
+        return AlertDto(
+            id=entry_sys_id,
+            name=name,
+            status=AlertStatus.FIRING,
+            severity=AlertSeverity.INFO,
+            lastReceived=created_on,
+            source=["servicenow"],
+            message=message,
+            description=value,
+            fingerprint=fingerprint,
+            labels={
+                "entry_type": entry_type,
+                "element": element,
+                "created_by": created_by,
+                "incident_sys_id": incident_sys_id,
+            },
+        )
+
+    def _add_comment(self, incident_sys_id: str, comment: str) -> dict:
+        """
+        Add a comment (additional comment / customer-visible) to a ServiceNow incident.
+
+        Args:
+            incident_sys_id: The sys_id of the incident.
+            comment: The comment text to add.
+
+        Returns:
+            The response result dict.
+        """
+        return self._add_journal_entry(incident_sys_id, "comments", comment)
+
+    def _add_work_note(self, incident_sys_id: str, work_note: str) -> dict:
+        """
+        Add a work note (internal) to a ServiceNow incident.
+
+        Args:
+            incident_sys_id: The sys_id of the incident.
+            work_note: The work note text to add.
+
+        Returns:
+            The response result dict.
+        """
+        return self._add_journal_entry(incident_sys_id, "work_notes", work_note)
+
+    def _add_journal_entry(
+        self, incident_sys_id: str, field: str, value: str
+    ) -> dict:
+        """
+        Add a journal entry (comment or work note) to a ServiceNow incident.
+
+        Args:
+            incident_sys_id: The sys_id of the incident.
+            field: Either 'comments' or 'work_notes'.
+            value: The text content.
+
+        Returns:
+            The response result dict.
+        """
+        url = (
+            f"{self.authentication_config.service_now_base_url}"
+            f"/api/now/table/incident/{incident_sys_id}"
+        )
+
+        payload = {field: value}
+        response = requests.patch(
+            url,
+            headers=self._get_headers(),
+            auth=self._get_auth(),
+            data=json.dumps(payload),
+            verify=False,
+            timeout=10,
+        )
+
+        if not response.ok:
+            self.logger.error(
+                f"Failed to add {field} to incident",
+                extra={
+                    "incident_sys_id": incident_sys_id,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise ProviderException(
+                f"Failed to add {field} to incident {incident_sys_id}: "
+                f"{response.status_code} - {response.text}"
+            )
+
+        return response.json().get("result", {})
+
+    # ---- Topology pulling (existing functionality) ----
 
     def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         # TODO: in scale, we'll need to use pagination around here
@@ -1025,11 +990,16 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         )
         return topology, {}
 
-    # ── Notify (ticket creation / update) ────────────────────────────
-
-    def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
+    def dispose(self):
         """
-        Create a ticket in ServiceNow.
+        No need to dispose of anything, so just do nothing.
+        """
+        pass
+
+    def _notify(self, table_name: str = None, payload: dict = {}, **kwargs: dict):
+        """
+        Create a ticket or add activity to a ServiceNow incident.
+
         Args:
             table_name (str): The name of the table to create the ticket in.
             payload (dict): The ticket payload.
@@ -1038,6 +1008,16 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         """
         headers = self._get_headers()
         auth = self._get_auth()
+
+        # Handle adding comments/work notes
+        if kwargs.get("comment") and kwargs.get("incident_sys_id"):
+            return self._add_comment(
+                kwargs["incident_sys_id"], kwargs["comment"]
+            )
+        if kwargs.get("work_note") and kwargs.get("incident_sys_id"):
+            return self._add_work_note(
+                kwargs["incident_sys_id"], kwargs["work_note"]
+            )
 
         # otherwise, create the ticket
         if not table_name:
@@ -1109,6 +1089,16 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         else:
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
             response.raise_for_status()
+
+
+def _extract_display_value(field_value) -> str | None:
+    """Helper to extract a display value from a ServiceNow field that
+    may be a string, a dict with 'display_value'/'value', or empty."""
+    if not field_value:
+        return None
+    if isinstance(field_value, dict):
+        return field_value.get("display_value", field_value.get("value", ""))
+    return str(field_value) if field_value else None
 
 
 if __name__ == "__main__":
