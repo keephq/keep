@@ -1,5 +1,5 @@
 import { CSSProperties, useCallback } from "react";
-import { usePresets } from "@/entities/presets/model/usePresets";
+import { usePresets, useSilencedPresets } from "@/entities/presets/model";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon, Subtitle } from "@tremor/react";
@@ -16,6 +16,7 @@ import {
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { AiOutlineSound } from "react-icons/ai";
+import { AiFillSound } from "react-icons/ai";
 // import css
 import "./CustomPresetAlertLink.css";
 import clsx from "clsx";
@@ -41,6 +42,7 @@ export const AlertPresetLink = ({
 }: AlertPresetLinkProps) => {
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
+  const { isPresetSilenced, togglePresetSilence } = useSilencedPresets();
 
   const { totalCount } = usePresetAlertsCount(
     preset.options.find((option) => option.label === "CEL")?.value || "",
@@ -59,13 +61,20 @@ export const AlertPresetLink = ({
     cursor: isDragging ? "grabbing" : "grab",
   };
 
+  const isNoisy = preset.should_do_noise_now || preset.is_noisy;
+  const isSilenced = isPresetSilenced(preset.id);
+
   const getIcon = () => {
-    if (preset.should_do_noise_now) {
-      return AiOutlineSound;
-    } else if (preset.is_noisy) {
-      return AiOutlineSound;
+    if (isNoisy) {
+      return isSilenced ? AiOutlineSound : AiFillSound;
     } else {
       return AiOutlineSwap;
+    }
+  };
+
+  const handleIconClick = (e: React.MouseEvent) => {
+    if (isNoisy) {
+      togglePresetSilence(preset.id);
     }
   };
 
@@ -92,6 +101,11 @@ export const AlertPresetLink = ({
         isExact={true}
         testId="preset"
         renderBeforeCount={renderBeforeCount}
+        onIconClick={isNoisy ? handleIconClick : undefined}
+        iconClassName={clsx({
+          "cursor-pointer": isNoisy,
+          "opacity-50": isSilenced,
+        })}
         className={clsx(
           "flex items-center space-x-2 p-1 text-slate-400 font-medium rounded-lg",
           {

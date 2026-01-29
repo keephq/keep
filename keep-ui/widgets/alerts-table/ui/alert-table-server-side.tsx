@@ -173,7 +173,7 @@ export function AlertTableServerSide({
     useBackend: !isStaticPreset && !!presetId,
   });
   
-  const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const a11yContainerRef = useRef<HTMLDivElement | null>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
   const { theme } = useAlertTableTheme();
