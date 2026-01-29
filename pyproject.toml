@@ -6,7 +6,11 @@ authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
 
 [tool.poetry.dependencies]
+pysnmp-lextudio = "5.0.34"
+pyasn1 = "0.4.8"
+pyasn1-modules = "0.2.8"
 python = ">=3.11,<3.14"
+pyOpenSSL = ">=23.2.0"
 click = "^8.1.3"
 pyyaml = "^6.0"
 requests = "^2.32.4"

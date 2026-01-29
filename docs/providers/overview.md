@@ -106,6 +106,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [Site24x7](/providers/documentation/site24x7-provider)
 - [Slack](/providers/documentation/slack-provider)
 - [SMTP](/providers/documentation/smtp-provider)
+- [SNMP](/providers/documentation/snmp-provider)
 - [Snowflake](/providers/documentation/snowflake-provider)
 - [Splunk](/providers/documentation/splunk-provider)
 - [Squadcast](/providers/documentation/squadcast-provider)
