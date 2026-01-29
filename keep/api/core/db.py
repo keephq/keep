@@ -17,7 +17,6 @@ from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union, Opti
 from uuid import UUID, uuid4
 
 from dateutil.parser import parse
-from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
