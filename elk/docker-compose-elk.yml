@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   keep-backend-elk:
     extends:
@@ -15,75 +17,88 @@ services:
       service: keep-websocket-server-common
 
   elastic:
-   image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-   labels:
-     co.elastic.logs/module: elasticsearch
-   volumes:
-     - elastic_data:/usr/share/elasticsearch/data
-   ports:
-     - "9200:9200"
-   environment:
-     - node.name=elastic
-     - cluster.name=keep-elk
-     - discovery.type=single-node
-     - ELASTIC_PASSWORD=elastic
-     - bootstrap.memory_lock=true
-     - xpack.security.enabled=false
-     - xpack.security.enrollment.enabled=false
-     - xpack.security.transport.ssl.enabled=false
-     - xpack.license.self_generated.type=basic
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    labels:
+      co.elastic.logs/module: elasticsearch
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    environment:
+      - node.name=elastic
+      - cluster.name=keep-elk
+      - discovery.type=single-node
+
+      # Dev-only: disable security so Kibana/Filebeat/Logstash don't need creds
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+
+      # Optional but recommended for smaller machines
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
 
   kibana:
-     depends_on:
-       - elastic
-     image: docker.elastic.co/kibana/kibana:8.17.0
-     labels:
-       co.elastic.logs/module: kibana
-     volumes:
-       - kibana_data:/usr/share/kibana/data
-     ports:
-       - 5601:5601
-     environment:
-       - SERVERNAME=kibana
-       - ELASTICSEARCH_HOSTS=http://elastic:9200
-       - ELASTICSEARCH_USERNAME=kibana_system
-       - ELASTICSEARCH_PASSWORD=kibana
-       - XPACK_APM_SERVICEMAPENABLED="true"
-       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
-
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:8.17.0
-    container_name: filebeat
-    user: root
+    depends_on:
+      - elastic
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    labels:
+      co.elastic.logs/module: kibana
     volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - kibana_data:/usr/share/kibana/data
+    ports:
+      - "5601:5601"
     environment:
-      - LOGSTASH_HOST=logstash01
-    command: [ "--strict.perms=false" ]  # Disable strict permissions to avoid permission errors
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS=http://elastic:9200
+
+      # If you enable certain Kibana features, it wants an encryption key.
+      # Set a default so it doesn't crash when the env var isn't present.
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+
+      # Keep as string
+      - XPACK_APM_SERVICEMAPENABLED=true
 
   logstash:
     depends_on:
       - elastic
-      - kibana
     image: docker.elastic.co/logstash/logstash:8.17.0
     labels:
       co.elastic.logs/module: logstash
     user: root
     ports:
-      - "5001:5000"
-      - "5044:5044"
-      - "9600:9600"
+      - "5044:5044"   # beats input
+      - "9600:9600"   # logstash monitoring API
     volumes:
       - logstash_data:/usr/share/logstash/data
       - "./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"
     environment:
       - xpack.monitoring.enabled=false
-      - ELASTIC_USER=elastic
-      - ELASTIC_PASSWORD=elastic
       - ELASTIC_HOSTS=http://elastic:9200
 
+      # These are ignored when ES security is disabled, but harmless to keep.
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=elastic
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.17.0
+    container_name: filebeat
+    user: root
+    depends_on:
+      - logstash
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    environment:
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5044
+    command: [ "--strict.perms=false" ]
 
 volumes:
   elastic_data:
