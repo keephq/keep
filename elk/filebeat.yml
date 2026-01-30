@@ -1,22 +1,39 @@
+# filebeat.yml
+# Option Alpha: Stable Docker container log shipping -> Logstash
+# - Reads Docker json-file logs from /var/lib/docker/containers
+# - Enriches events with Docker metadata (container name, labels, etc.)
+# - Keeps ONLY logs from the keep-backend-elk service (with a container-name fallback)
+# - Ships to Logstash (host/port configurable via env vars)
+
 filebeat.inputs:
-  - type: container
+  - type: filestream
+    id: docker-containers
+    enabled: true
     paths:
       - /var/lib/docker/containers/*/*.log
-    stream: stdout  # Only capture stdout
-    json.keys_under_root: true  # Parse JSON-formatted logs automatically
-    json.add_error_key: true  # Add error field if JSON parsing fails
-    processors:
-      - decode_json_fields:
-          fields: [ "message" ]  # Try to decode the `message` field as JSON
-          target: ""           # Merge decoded fields at the root level
-          overwrite_keys: true # Overwrite existing keys if present
-      - add_docker_metadata:  # Enrich logs with Docker metadata
-          host: "unix:///var/run/docker.sock"
-      - drop_event:
-          when.not.contains.container.labels:
-            com_docker_compose_service: "keep-backend-elk"
+
+processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+
+  # Keep ONLY keep-backend-elk logs.
+  # Primary match: docker compose service label
+  # Fallback match: container name contains keep-backend-elk
+  - drop_event:
+      when:
+        not:
+          or:
+            - equals:
+                docker.container.labels.com_docker_compose_service: "keep-backend-elk"
+            - contains:
+                docker.container.name: "keep-backend-elk"
 
 output.logstash:
-  hosts: ["logstash:5044"]  # Replace with your Logstash host and port
+  hosts: ["${LOGSTASH_HOST:logstash}:${LOGSTASH_PORT:5044}"]
 
-logging.level: info  # Set Filebeat logging level
+# Logging for Filebeat itself
+logging.level: info
+logging.to_files: false
+
+# Optional: reduce noise from internal metrics
+monitoring.enabled: false
