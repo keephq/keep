@@ -1,20 +1,45 @@
 import hashlib
+from typing import Optional
 
 
-def get_facet_key(facet_property_path: str, filter_cel, facet_cel: str) -> str:
+def _normalize_cel(cel: Optional[str]) -> str:
     """
-    Generates a unique key for the facet based on its property path and CEL expression.
-
-    Args:
-        facet_property_path (str): The property path of the facet.
-        facet_cel (str): The CEL expression associated with the facet.
-
-    Returns:
-        str: A unique key for the facet.
+    Normalize CEL expressions for stable hashing.
+    This avoids hash differences due to trivial whitespace.
     """
-    filter_cel = filter_cel or ""
-    facet_cel = facet_cel or ""
-    return (
-        facet_property_path
-        + hashlib.sha1((filter_cel + facet_cel).encode("utf-8")).hexdigest()
+    if not cel:
+        return ""
+    # Collapse whitespace and strip
+    return " ".join(cel.split())
+
+
+def get_facet_key(
+    facet_property_path: str,
+    filter_cel: Optional[str],
+    facet_cel: Optional[str],
+) -> str:
+    """
+    Generates a stable, unique key for a facet based on:
+    - property path
+    - global filter CEL
+    - facet-specific CEL
+
+    The key is deterministic and collision-resistant.
+    """
+
+    filter_cel_norm = _normalize_cel(filter_cel)
+    facet_cel_norm = _normalize_cel(facet_cel)
+
+    # Structured, unambiguous payload
+    payload = "\x1f".join(
+        [
+            f"prop:{facet_property_path}",
+            f"filter:{filter_cel_norm}",
+            f"facet:{facet_cel_norm}",
+        ]
     )
+
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    # Human-readable + hash
+    return f"{facet_property_path}:{digest}"
