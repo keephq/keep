@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
@@ -41,21 +42,55 @@ from keep.api.utils.pagination import IncidentsPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
+logger = logging.getLogger(__name__)
+
 MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
-    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5)
+    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", "5")
 )
 
-ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
-if ee_enabled:
-    path_with_ee = (
-        str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
-    )
+# Normalize env parsing
+EE_ENABLED = os.environ.get("EE_ENABLED", "false").strip().lower() == "true"
+REDIS_ENABLED = os.environ.get("REDIS", "false").strip().lower() == "true"
+
+if EE_ENABLED:
+    path_with_ee = str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     sys.path.insert(0, path_with_ee)
+    # EE may define this, keeping placeholder if needed.
+    ALGORITHM_VERBOSE_NAME = os.environ.get("ALGORITHM_VERBOSE_NAME")
 else:
-    ALGORITHM_VERBOSE_NAME = NotImplemented
+    # Correct fallback: NotImplemented is NOT a normal sentinel.
+    ALGORITHM_VERBOSE_NAME = None
+
+
+def _ensure_uuid(value: UUID | str, field_name: str = "id") -> UUID:
+    if isinstance(value, UUID):
+        return value
+    try:
+        return UUID(str(value))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name}") from e
+
+
+@contextmanager
+def _commit_or_rollback(session: Session, logger_: logging.Logger, ctx: str):
+    """
+    Ensures rollback on exception; commits are left to the caller explicitly.
+    Use when you want a safe boundary around multiple writes.
+    """
+    try:
+        yield
+    except Exception:
+        logger_.exception("DB operation failed: %s", ctx)
+        session.rollback()
+        raise
 
 
 class IncidentBl:
+    """
+    Session ownership:
+    - This class does NOT close the session. Caller owns it.
+    - This class WILL rollback on failed operations where it controls the transaction boundary.
+    """
 
     def __init__(
         self,
@@ -69,60 +104,132 @@ class IncidentBl:
         self.session = session
         self.pusher_client = pusher_client
         self.logger = logging.getLogger(__name__)
-        self.ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
-        self.redis = os.environ.get("REDIS", "false") == "true"
+        self.ee_enabled = EE_ENABLED
+        self.redis = REDIS_ENABLED
+
+    # ---------------------------
+    # Core helpers (side effects)
+    # ---------------------------
+
+    def __update_elastic(self, alert_fingerprints: List[str]) -> None:
+        """
+        Elasticsearch update is a side effect.
+        It must not break the main DB operation once the DB is committed.
+        """
+        try:
+            elastic_client = ElasticClient(self.tenant_id)
+            if not getattr(elastic_client, "enabled", False):
+                return
+
+            db_alerts = get_all_alerts_by_fingerprints(
+                tenant_id=self.tenant_id,
+                fingerprints=alert_fingerprints,
+                session=self.session,
+            )
+            db_alerts = enrich_alerts_with_incidents(
+                self.tenant_id, db_alerts, session=self.session
+            )
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+                db_alerts, with_incidents=True
+            )
+            elastic_client.index_alerts(alerts=enriched_alerts_dto)
+        except Exception:
+            self.logger.exception(
+                "Failed to push alerts to Elasticsearch (side effect)",
+                extra={"tenant_id": self.tenant_id, "fingerprints": alert_fingerprints},
+            )
+
+    def update_client_on_incident_change(self, incident_id: Optional[UUID] = None) -> None:
+        """
+        Pusher is a side effect. Never raise.
+        """
+        if self.pusher_client is None:
+            return
+        try:
+            self.pusher_client.trigger(
+                f"private-{self.tenant_id}",
+                "incident-change",
+                {"incident_id": str(incident_id) if incident_id else None},
+            )
+        except Exception:
+            self.logger.exception(
+                "Failed to push incident change to client (side effect)",
+                extra={"incident_id": str(incident_id) if incident_id else None, "tenant_id": self.tenant_id},
+            )
+
+    def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
+        """
+        Workflows are side effects. Never raise.
+        """
+        try:
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_incident(self.tenant_id, incident_dto, action)
+        except Exception:
+            self.logger.exception(
+                "Failed to run workflows based on incident (side effect)",
+                extra={"incident_id": str(incident_dto.id), "tenant_id": self.tenant_id, "action": action},
+            )
+
+    def __postprocess_alerts_change(self, incident: Incident, alert_fingerprints: List[str]) -> None:
+        self.__update_elastic(alert_fingerprints)
+        self.update_client_on_incident_change(incident.id)
+        incident_dto = IncidentDto.from_db_incident(incident)
+        self.send_workflow_event(incident_dto, "updated")
+
+    def __postprocess_incident_change(self, incident: Incident) -> IncidentDto:
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        incident_dto = IncidentDto.from_db_incident(incident)
+        self.update_client_on_incident_change(incident.id)
+        self.send_workflow_event(incident_dto, "updated")
+        return incident_dto
+
+    # ---------------------------
+    # CRUD
+    # ---------------------------
 
     def create_incident(
         self,
-        incident_dto: [IncidentDtoIn | IncidentDto],
+        incident_dto: IncidentDtoIn | IncidentDto,
         generated_from_ai: bool = False,
     ) -> IncidentDto:
-        """
-        Creates a new incident.
-
-        Args:
-            incident_dto (IncidentDtoIn | IncidentDto): The data transfer object containing the details of the incident to be created.
-            generated_from_ai (bool, optional): Indicates if the incident was generated by Keep's AI. Defaults to False.
-
-        Returns:
-            IncidentDto: The newly created incident object, containing details of the incident.
-        """
         self.logger.info(
             "Creating incident",
-            extra={"incident_dto": incident_dto.dict(), "tenant_id": self.tenant_id},
+            extra={"tenant_id": self.tenant_id},
         )
-        incident = create_incident_from_dto(
-            self.tenant_id,
-            incident_dto,
-            generated_from_ai=generated_from_ai,
-            session=self.session,
-        )
-        self.logger.info(
-            "Incident created",
-            extra={"incident_id": incident.id, "tenant_id": self.tenant_id},
-        )
-        new_incident_dto = IncidentDto.from_db_incident(incident)
-        self.logger.info(
-            "Incident DTO created",
-            extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
-        )
+
+        with _commit_or_rollback(self.session, self.logger, "create_incident"):
+            incident = create_incident_from_dto(
+                self.tenant_id,
+                incident_dto,
+                generated_from_ai=generated_from_ai,
+                session=self.session,
+            )
+            self.session.commit()
+
+        incident_dto_out = IncidentDto.from_db_incident(incident)
+
+        # Side effects after commit
         self.update_client_on_incident_change()
-        self.logger.info(
-            "Client updated on incident change",
-            extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
-        )
-        self.send_workflow_event(new_incident_dto, "created")
-        self.logger.info(
-            "Workflows run on incident",
-            extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
-        )
-        return new_incident_dto
+        self.send_workflow_event(incident_dto_out, "created")
+
+        return incident_dto_out
 
     def sync_add_alerts_to_incident(self, *args, **kwargs) -> None:
         """
-        Synchronous wrapper for the async add_alerts_to_incident method.
+        Safe sync wrapper for async method.
+
+        If you're already inside an event loop, we schedule it instead of crashing.
         """
-        asyncio.run(self.add_alerts_to_incident(*args, **kwargs))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop: safe to run
+            asyncio.run(self.add_alerts_to_incident(*args, **kwargs))
+            return
+
+        # Running loop exists: schedule task.
+        loop.create_task(self.add_alerts_to_incident(*args, **kwargs))
 
     async def add_alerts_to_incident(
         self,
@@ -131,103 +238,49 @@ class IncidentBl:
         is_created_by_ai: bool = False,
         override_count: bool = False,
     ) -> None:
+        incident_id = _ensure_uuid(incident_id, "incident_id")
+
         self.logger.info(
             "Adding alerts to incident",
-            extra={
-                "incident_id": incident_id,
-                "alert_fingerprints": alert_fingerprints,
-            },
+            extra={"tenant_id": self.tenant_id, "incident_id": str(incident_id)},
         )
-        incident = get_incident_by_id(
-            tenant_id=self.tenant_id, incident_id=incident_id, session=self.session
-        )
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
 
-        add_alerts_to_incident(
-            self.tenant_id,
-            incident,
-            alert_fingerprints,
-            is_created_by_ai,
-            session=self.session,
-            override_count=override_count,
-        )
-        self.logger.info(
-            "Alerts added to incident",
-            extra={
-                "incident_id": incident_id,
-                "alert_fingerprints": alert_fingerprints,
-            },
-        )
+        with _commit_or_rollback(self.session, self.logger, "add_alerts_to_incident"):
+            incident = get_incident_by_id(
+                tenant_id=self.tenant_id,
+                incident_id=incident_id,
+                session=self.session,
+            )
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            add_alerts_to_incident(
+                self.tenant_id,
+                incident,
+                alert_fingerprints,
+                is_created_by_ai,
+                session=self.session,
+                override_count=override_count,
+            )
+
+            # Make transaction boundary explicit
+            self.session.commit()
+
+        # Side effects after commit
         self.__postprocess_alerts_change(incident, alert_fingerprints)
+
+        # Summary generation is “nice to have”, not “bring down the service”.
         await self.__generate_summary(incident_id, incident)
-        self.logger.info(
-            "Summary generated",
-            extra={
-                "incident_id": incident_id,
-                "alert_fingerprints": alert_fingerprints,
-            },
-        )
 
-    def __update_elastic(self, alert_fingerprints: List[str]):
+    async def __generate_summary(self, incident_id: UUID, incident: Incident) -> None:
         try:
-            elastic_client = ElasticClient(self.tenant_id)
-            if elastic_client.enabled:
-                db_alerts = get_all_alerts_by_fingerprints(
-                    tenant_id=self.tenant_id,
-                    fingerprints=alert_fingerprints,
-                    session=self.session,
-                )
-                db_alerts = enrich_alerts_with_incidents(
-                    self.tenant_id, db_alerts, session=self.session
-                )
-                enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
-                    db_alerts, with_incidents=True
-                )
-                elastic_client.index_alerts(alerts=enriched_alerts_dto)
-        except Exception:
-            self.logger.exception("Failed to push alert to elasticsearch")
-            raise
-
-    def update_client_on_incident_change(self, incident_id: Optional[UUID] = None):
-        if self.pusher_client is not None:
-            self.logger.info(
-                "Pushing incident change to client",
-                extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
-            )
-            try:
-                self.pusher_client.trigger(
-                    f"private-{self.tenant_id}",
-                    "incident-change",
-                    {"incident_id": str(incident_id) if incident_id else None},
-                )
-                self.logger.info(
-                    "Incident change pushed to client",
-                    extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
-                )
-            except Exception:
-                self.logger.exception(
-                    "Failed to push incident change to client",
-                    extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
-                )
-
-    def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
-        try:
-            workflow_manager = WorkflowManager.get_instance()
-            workflow_manager.insert_incident(self.tenant_id, incident_dto, action)
-        except Exception:
-            self.logger.exception(
-                "Failed to run workflows based on incident",
-                extra={"incident_id": incident_dto.id, "tenant_id": self.tenant_id},
-            )
-
-    async def __generate_summary(self, incident_id: UUID, incident: Incident):
-        try:
+            # CRITICAL FIX: pass session
             fingerprints_count = get_incident_unique_fingerprint_count(
-                self.tenant_id, incident_id
+                self.tenant_id, incident_id, session=self.session
             )
+
             if (
-                ee_enabled
+                self.ee_enabled
                 and self.redis
                 and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION
                 and not incident.user_summary
@@ -239,57 +292,60 @@ class IncidentBl:
                     incident_id=incident_id,
                 )
                 self.logger.info(
-                    f"Summary generation for incident {incident_id} scheduled, job: {job}",
-                    extra={
-                        "tenant_id": self.tenant_id,
-                        "incident_id": incident_id,
-                    },
+                    "Summary generation scheduled",
+                    extra={"tenant_id": self.tenant_id, "incident_id": str(incident_id), "job": str(job)},
                 )
         except Exception:
             self.logger.exception(
-                "Failed to generate summary for incident",
-                extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
+                "Failed to generate summary for incident (side effect)",
+                extra={"tenant_id": self.tenant_id, "incident_id": str(incident_id)},
             )
 
-    def delete_alerts_from_incident(
-        self, incident_id: UUID, alert_fingerprints: List[str]
-    ) -> None:
-        self.logger.info(
-            "Fetching incident",
-            extra={
-                "incident_id": incident_id,
-                "tenant_id": self.tenant_id,
-            },
-        )
-        incident = get_incident_by_id(tenant_id=self.tenant_id, incident_id=incident_id)
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
+    def delete_alerts_from_incident(self, incident_id: UUID, alert_fingerprints: List[str]) -> None:
+        incident_id = _ensure_uuid(incident_id, "incident_id")
 
-        remove_alerts_to_incident_by_incident_id(
-            self.tenant_id, incident_id, alert_fingerprints
-        )
+        with _commit_or_rollback(self.session, self.logger, "delete_alerts_from_incident"):
+            incident = get_incident_by_id(
+                tenant_id=self.tenant_id,
+                incident_id=incident_id,
+                session=self.session,
+            )
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            remove_alerts_to_incident_by_incident_id(
+                self.tenant_id,
+                incident_id,
+                alert_fingerprints,
+                session=self.session,
+            )
+            self.session.commit()
+
         self.__postprocess_alerts_change(incident, alert_fingerprints)
 
     def delete_incident(self, incident_id: UUID) -> None:
-        self.logger.info(
-            "Fetching incident",
-            extra={
-                "incident_id": incident_id,
-                "tenant_id": self.tenant_id,
-            },
-        )
+        incident_id = _ensure_uuid(incident_id, "incident_id")
 
-        incident = get_incident_by_id(tenant_id=self.tenant_id, incident_id=incident_id)
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
+        with _commit_or_rollback(self.session, self.logger, "delete_incident"):
+            incident = get_incident_by_id(
+                tenant_id=self.tenant_id,
+                incident_id=incident_id,
+                session=self.session,
+            )
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
 
-        incident_dto = IncidentDto.from_db_incident(incident)
+            incident_dto = IncidentDto.from_db_incident(incident)
 
-        deleted = delete_incident_by_id(
-            tenant_id=self.tenant_id, incident_id=incident_id
-        )
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Incident not found")
+            deleted = delete_incident_by_id(
+                tenant_id=self.tenant_id,
+                incident_id=incident_id,
+                session=self.session,
+            )
+            if not deleted:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            self.session.commit()
 
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto, "deleted")
@@ -304,45 +360,21 @@ class IncidentBl:
         updated_incident_dto: IncidentDtoIn,
         generated_by_ai: bool,
     ) -> IncidentDto:
-        self.logger.info(
-            "Fetching incident",
-            extra={
-                "incident_id": incident_id,
-                "tenant_id": self.tenant_id,
-            },
-        )
-        incident = update_incident_from_dto_by_id(
-            self.tenant_id, incident_id, updated_incident_dto, generated_by_ai
-        )
+        incident_id = _ensure_uuid(incident_id, "incident_id")
+
+        with _commit_or_rollback(self.session, self.logger, "update_incident"):
+            incident = update_incident_from_dto_by_id(
+                self.tenant_id,
+                incident_id,
+                updated_incident_dto,
+                generated_by_ai,
+                session=self.session,
+            )
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
+            self.session.commit()
+
         return self.__postprocess_incident_change(incident)
-
-    def __postprocess_alerts_change(self, incident, alert_fingerprints):
-
-        self.__update_elastic(alert_fingerprints)
-        self.logger.info(
-            "Alerts pushed to elastic",
-            extra={
-                "incident_id": incident.id,
-                "alert_fingerprints": alert_fingerprints,
-            },
-        )
-        self.update_client_on_incident_change(incident.id)
-        self.logger.info(
-            "Client updated on incident change",
-            extra={
-                "incident_id": incident.id,
-                "alert_fingerprints": alert_fingerprints,
-            },
-        )
-        incident_dto = IncidentDto.from_db_incident(incident)
-        self.send_workflow_event(incident_dto, "updated")
-        self.logger.info(
-            "Workflows run on incident",
-            extra={
-                "incident_id": incident.id,
-                "alert_fingerprints": alert_fingerprints,
-            },
-        )
 
     def update_severity(
         self,
@@ -350,47 +382,37 @@ class IncidentBl:
         severity: IncidentSeverity,
         comment: Optional[str] = None,
     ) -> IncidentDto:
-        self.logger.info(
-            "Fetching incident",
-            extra={
-                "incident_id": incident_id,
-                "tenant_id": self.tenant_id,
-            },
-        )
-        incident = update_incident_severity(
-            self.tenant_id,
-            incident_id,
-            severity,
-        )
+        incident_id = _ensure_uuid(incident_id, "incident_id")
 
-        if comment:
-            add_audit(
+        with _commit_or_rollback(self.session, self.logger, "update_severity"):
+            incident = update_incident_severity(
                 self.tenant_id,
-                str(incident_id),
-                self.user,
-                ActionType.INCIDENT_COMMENT,
-                comment,
+                incident_id,
+                severity,
+                session=self.session,
             )
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            if comment:
+                add_audit(
+                    self.tenant_id,
+                    str(incident_id),
+                    self.user,
+                    ActionType.INCIDENT_COMMENT,
+                    comment,
+                    session=self.session,
+                    commit=False,
+                )
+
+            self.session.add(incident)
+            self.session.commit()
 
         return self.__postprocess_incident_change(incident)
 
-    def __postprocess_incident_change(self, incident):
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
-
-        new_incident_dto = IncidentDto.from_db_incident(incident)
-
-        self.update_client_on_incident_change(incident.id)
-        self.logger.info(
-            "Client updated on incident change",
-            extra={"incident_id": incident.id},
-        )
-        self.send_workflow_event(new_incident_dto, "updated")
-        self.logger.info(
-            "Workflows run on incident",
-            extra={"incident_id": incident.id},
-        )
-        return new_incident_dto
+    # ---------------------------
+    # Query
+    # ---------------------------
 
     @staticmethod
     def query_incidents(
@@ -421,55 +443,70 @@ class IncidentBl:
             cel=cel,
             allowed_incident_ids=allowed_incident_ids,
         )
-        incidents_dto = []
-        for incident in incidents:
-            incidents_dto.append(IncidentDto.from_db_incident(incident))
+
+        incidents_dto = [IncidentDto.from_db_incident(i) for i in incidents]
 
         return IncidentsPaginatedResultsDto(
             limit=limit, offset=offset, count=total_count, items=incidents_dto
         )
 
-    def resolve_incident_if_require(
-        self, incident: Incident, max_retries=3
-    ) -> Incident:
+    # ---------------------------
+    # Resolution logic
+    # ---------------------------
 
-        should_resolve = False
-
-        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
-            incident=incident, session=self.session
-        ):
-            should_resolve = True
-
-        elif (
-            incident.resolve_on == ResolveOn.FIRST.value
-            and is_first_incident_alert_resolved(incident, session=self.session)
-        ):
-            should_resolve = True
-
-        elif (
-            incident.resolve_on == ResolveOn.LAST.value
-            and is_last_incident_alert_resolved(incident, session=self.session)
-        ):
-            should_resolve = True
-
+    def resolve_incident_if_require(self, incident: Incident, max_retries: int = 3) -> Incident:
+        """
+        Attempts to resolve the incident if resolution criteria are met.
+        Includes:
+        - retry on StaleDataError phantom update
+        - re-check condition right before commit (TOCTOU mitigation)
+        """
         incident_id = incident.id
 
-        if should_resolve:
-            for attempt in range(max_retries):
-                try:
-                    incident.status = IncidentStatus.RESOLVED.value
-                    self.session.add(incident)
-                    self.session.commit()
-                    break
-                except StaleDataError as ex:
-                    if "expected to update" in ex.args[0]:
-                        self.logger.info(
-                            f"Phantom read detected while updating incident `{incident_id}`, retry #{attempt}"
-                        )
-                        self.session.rollback()
-                        continue
+        def _should_resolve() -> bool:
+            if incident.resolve_on == ResolveOn.ALL.value:
+                return is_all_alerts_resolved(incident=incident, session=self.session)
+            if incident.resolve_on == ResolveOn.FIRST.value:
+                return is_first_incident_alert_resolved(incident, session=self.session)
+            if incident.resolve_on == ResolveOn.LAST.value:
+                return is_last_incident_alert_resolved(incident, session=self.session)
+            return False
 
-        return incident
+        if not _should_resolve():
+            return incident
+
+        for attempt in range(max_retries):
+            try:
+                # Re-check right before write (helps TOCTOU)
+                if not _should_resolve():
+                    return incident
+
+                incident.status = IncidentStatus.RESOLVED.value
+                self.session.add(incident)
+                self.session.commit()
+                return incident
+
+            except StaleDataError as ex:
+                msg = ex.args[0] if ex.args else ""
+                self.session.rollback()
+
+                if "expected to update" in str(msg):
+                    self.logger.info(
+                        "Phantom read detected while updating incident, retrying",
+                        extra={"tenant_id": self.tenant_id, "incident_id": str(incident_id), "attempt": attempt + 1},
+                    )
+                    if attempt == max_retries - 1:
+                        raise
+                    continue
+
+                # Unexpected stale error: re-raise
+                raise
+
+            except Exception:
+                self.session.rollback()
+                raise
+
+        return incident  # defensive; should not hit
 
     def change_status(
         self,
@@ -477,72 +514,74 @@ class IncidentBl:
         new_status: IncidentStatus,
         change_by: AuthenticatedEntity,
     ) -> IncidentDto:
+        incident_id_uuid = _ensure_uuid(incident_id, "incident_id")
 
-        self.logger.info(
-            "Fetching incident",
-            extra={
-                "incident_id": incident_id,
-                "tenant_id": self.tenant_id,
-            },
-        )
+        with_alerts = new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]
 
-        with_alerts = new_status in [
-            IncidentStatus.RESOLVED,
-            IncidentStatus.ACKNOWLEDGED,
-        ]
-        incident = get_incident_by_id(
-            self.tenant_id, incident_id, with_alerts=with_alerts, session=self.session
-        )
-
-        if not incident:
-            raise HTTPException(status_code=404, detail="Incident not found")
-
-        if new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
-            enrichments = {"status": new_status.value}
-            fingerprints = [alert.fingerprint for alert in incident.alerts]
-            enrichments_bl = EnrichmentsBl(self.tenant_id, db=self.session)
-            (
-                action_type,
-                action_description,
-                should_run_workflow,
-                should_check_incidents_resolution,
-            ) = enrichments_bl.get_enrichment_metadata(enrichments, change_by)
-            enrichments_bl.batch_enrich(
-                fingerprints,
-                enrichments,
-                action_type,
-                change_by.email,
-                action_description,
-                dispose_on_new_alert=True,
+        with _commit_or_rollback(self.session, self.logger, "change_status"):
+            incident = get_incident_by_id(
+                self.tenant_id,
+                incident_id_uuid,
+                with_alerts=with_alerts,
+                session=self.session,
             )
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
 
-        if new_status == IncidentStatus.RESOLVED:
-            end_time = datetime.now(tz=timezone.utc)
-            incident.end_time = end_time
+            # Apply enrichment to underlying alerts if needed
+            if new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
+                enrichments = {"status": new_status.value}
+                fingerprints = [alert.fingerprint for alert in (incident.alerts or [])]
 
-        if incident.assignee != change_by.email:
-            incident.assignee = change_by.email
+                enrichments_bl = EnrichmentsBl(self.tenant_id, db=self.session)
+                (
+                    action_type,
+                    action_description,
+                    _should_run_workflow,
+                    _should_check_incidents_resolution,
+                ) = enrichments_bl.get_enrichment_metadata(enrichments, change_by)
+
+                enrichments_bl.batch_enrich(
+                    fingerprints,
+                    enrichments,
+                    action_type,
+                    change_by.email,
+                    action_description,
+                    dispose_on_new_alert=True,
+                )
+
+            if new_status == IncidentStatus.RESOLVED:
+                incident.end_time = datetime.now(tz=timezone.utc)
+
+            # Assignment audit: keep it conditional, but handle None cleanly
+            current_assignee = incident.assignee
+            new_assignee = change_by.email
+
+            if current_assignee != new_assignee and new_assignee:
+                incident.assignee = new_assignee
+                add_audit(
+                    self.tenant_id,
+                    str(incident_id_uuid),
+                    new_assignee,
+                    ActionType.INCIDENT_ASSIGN,
+                    f"Incident self-assigned to {new_assignee}",
+                    session=self.session,
+                    commit=False,
+                )
+
             add_audit(
                 self.tenant_id,
-                str(incident_id),
+                str(incident_id_uuid),
                 change_by.email,
-                ActionType.INCIDENT_ASSIGN,
-                f"Incident self-assigned to {change_by.email}",
+                ActionType.INCIDENT_STATUS_CHANGE,
+                f"Incident status changed from {incident.status} to {new_status.value}",
                 session=self.session,
                 commit=False,
             )
 
-        add_audit(
-            self.tenant_id,
-            str(incident_id),
-            change_by.email,
-            ActionType.INCIDENT_STATUS_CHANGE,
-            f"Incident status changed from {incident.status} to {new_status.value}",
-            session=self.session,
-            commit=False,
-        )
-        incident.status = new_status.value
-        self.session.add(incident)
-        self.session.commit()
+            incident.status = new_status.value
+            self.session.add(incident)
+            self.session.commit()
 
+        # Side effects after commit
         return self.__postprocess_incident_change(incident)
