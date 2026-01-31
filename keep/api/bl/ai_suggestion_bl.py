@@ -1,12 +1,16 @@
+import asyncio
 import hashlib
 import json
 import logging
+import os
 import uuid
-from typing import Dict, List, Optional, Set, Tuple
+from contextlib import AbstractContextManager
+from typing import Any, Dict, List, Optional, Set, Tuple
 from uuid import UUID
 
 from fastapi import HTTPException
 from openai import OpenAI, OpenAIError
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from keep.api.bl.incidents_bl import IncidentBl
@@ -23,37 +27,55 @@ from keep.api.models.incident import (
 )
 
 
-class AISuggestionBl:
+class AISuggestionBl(AbstractContextManager):
+    """
+    Business logic for AI suggestions and incident clustering.
+
+    IMPORTANT:
+    - If this class creates its own Session, it owns it and will close it.
+    - Suggestion caching requires a DB unique constraint on (tenant_id, suggestion_input_hash).
+    """
+
+    DEFAULT_ALERT_LIMIT = int(os.getenv("KEEP_AI_ALERT_LIMIT", "50"))
+
     def __init__(self, tenant_id: str, session: Session | None = None) -> None:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.session = session if session else get_session_sync()
 
-        # Todo: interface it with any model
-        #       https://github.com/keephq/keep/issues/2373
-        # Todo: per-tenant keys
-        #       https://github.com/keephq/keep/issues/2365
-        # Todo: also goes with settings page
-        #       https://github.com/keephq/keep/issues/2365
+        self._owns_session = session is None
+        self.session: Session = session if session is not None else get_session_sync()
+
         try:
             self._client = OpenAI()
         except OpenAIError as e:
-            # if its api key error, we should raise 400
-            self.logger.error(f"Failed to initialize OpenAI client: {e}")
+            # Most common cause: missing/invalid key
+            self.logger.error("Failed to initialize OpenAI client: %s", str(e))
             raise HTTPException(
-                status_code=400, detail="AI service is not enabled for the client."
-            )
+                status_code=400,
+                detail="AI service is not enabled for this tenant/client.",
+            ) from e
 
-    def get_suggestion_by_input(self, suggestion_input: Dict) -> Optional[AISuggestion]:
-        """
-        Retrieve an AI suggestion by its input.
+    # ---------- session lifecycle ----------
 
-        Args:
-        - suggestion_input (Dict): The input of the suggestion.
+    def close(self) -> None:
+        if self._owns_session:
+            try:
+                self.session.close()
+            except Exception:
+                self.logger.exception("Failed closing owned DB session")
 
-        Returns:
-        - Optional[AISuggestion]: The suggestion object if found, otherwise None.
-        """
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+        return False
+
+    # ---------- helpers ----------
+
+    @staticmethod
+    def hash_suggestion_input(suggestion_input: Dict[str, Any]) -> str:
+        json_input = json.dumps(suggestion_input, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(json_input.encode("utf-8")).hexdigest()
+
+    def get_suggestion_by_input(self, suggestion_input: Dict[str, Any]) -> Optional[AISuggestion]:
         suggestion_input_hash = self.hash_suggestion_input(suggestion_input)
         return (
             self.session.query(AISuggestion)
@@ -64,76 +86,51 @@ class AISuggestionBl:
             .first()
         )
 
-    def hash_suggestion_input(self, suggestion_input: Dict) -> str:
-        """
-        Hash the suggestion input to allow for duplicate suggestions with the same input.
-
-        Args:
-        - suggestion_input (Dict): The input of the suggestion.
-
-        Returns:
-        - str: The hash of the suggestion input.
-        """
-
-        json_input = json.dumps(suggestion_input, sort_keys=True)
-        return hashlib.sha256(json_input.encode()).hexdigest()
+    # ---------- DB writes (sync) ----------
 
     def add_suggestion(
         self,
         user_id: str,
-        suggestion_input: Dict,
+        suggestion_input: Dict[str, Any],
         suggestion_type: AISuggestionType,
-        suggestion_content: Dict,
+        suggestion_content: Dict[str, Any],
         model: str,
     ) -> AISuggestion:
         """
-        Add a new AI suggestion to the database.
-
-        Args:
-        - suggestion_type (AISuggestionType): The type of suggestion.
-        - suggestion_content (Dict): The content of the suggestion.
-        - model (str): The model used for the suggestion.
-
-        Returns:
-        - AISuggestion: The created suggestion object.
+        Insert suggestion. Requires unique constraint on (tenant_id, suggestion_input_hash).
         """
-        self.logger.info(
-            "Adding new AI suggestion",
-            extra={
-                "tenant_id": self.tenant_id,
-                "suggestion_type": suggestion_type,
-            },
+        suggestion_input_hash = self.hash_suggestion_input(suggestion_input)
+
+        suggestion = AISuggestion(
+            tenant_id=self.tenant_id,
+            user_id=user_id,
+            suggestion_input=suggestion_input,
+            suggestion_input_hash=suggestion_input_hash,
+            suggestion_type=suggestion_type,
+            suggestion_content=suggestion_content,
+            model=model,
         )
 
         try:
-            suggestion_input_hash = self.hash_suggestion_input(suggestion_input)
-            suggestion = AISuggestion(
-                tenant_id=self.tenant_id,
-                user_id=user_id,
-                suggestion_input=suggestion_input,
-                suggestion_input_hash=suggestion_input_hash,
-                suggestion_type=suggestion_type,
-                suggestion_content=suggestion_content,
-                model=model,
-            )
             self.session.add(suggestion)
             self.session.commit()
-            self.logger.info(
-                "AI suggestion added successfully",
-                extra={
-                    "tenant_id": self.tenant_id,
-                    "suggestion_id": suggestion.id,
-                },
-            )
+            self.session.refresh(suggestion)
             return suggestion
-        except Exception as e:
-            self.logger.error(
-                "Failed to add AI suggestion",
-                extra={
-                    "tenant_id": self.tenant_id,
-                    "error": str(e),
-                },
+        except IntegrityError:
+            # Another request inserted the same hash concurrently
+            self.session.rollback()
+            existing = (
+                self.session.query(AISuggestion)
+                .filter(
+                    AISuggestion.tenant_id == self.tenant_id,
+                    AISuggestion.suggestion_input_hash == suggestion_input_hash,
+                )
+                .first()
             )
+            if existing:
+                return existing
+            raise
+        except Exception:
             self.session.rollback()
             raise
 
@@ -141,137 +138,69 @@ class AISuggestionBl:
         self,
         suggestion_id: UUID,
         user_id: str,
-        feedback_content: str,
+        feedback_content: Any,
         rating: Optional[int] = None,
         comment: Optional[str] = None,
     ) -> AIFeedback:
-        """
-        Add AI feedback to the database.
-
-        Args:
-        - suggestion_id (UUID): The ID of the suggestion being feedback on.
-        - user_id (str): The ID of the user providing feedback.
-        - feedback_content (str): The feedback content.
-        - rating (Optional[int]): The user's rating of the AI suggestion.
-        - comment (Optional[str]): Any additional comments from the user.
-
-        Returns:
-        - AIFeedback: The created feedback object.
-        """
-        self.logger.info(
-            "Saving AI feedback",
-            extra={
-                "tenant_id": self.tenant_id,
-                "suggestion_id": suggestion_id,
-            },
+        feedback = AIFeedback(
+            suggestion_id=suggestion_id,
+            user_id=user_id,
+            feedback_content=feedback_content,
+            rating=rating,
+            comment=comment,
         )
-
         try:
-            feedback = AIFeedback(
-                suggestion_id=suggestion_id,
-                user_id=user_id,
-                feedback_content=feedback_content,
-                rating=rating,
-                comment=comment,
-            )
             self.session.add(feedback)
-            self.session.commit()
-            self.logger.info(
-                "AI feedback saved successfully",
-                extra={
-                    "tenant_id": self.tenant_id,
-                    "feedback_id": feedback.id,
-                },
-            )
+            self.session.flush()  # do not commit here; caller decides transaction scope
             return feedback
-        except Exception as e:
-            self.logger.error(
-                "Failed to save AI feedback",
-                extra={
-                    "tenant_id": self.tenant_id,
-                    "error": str(e),
-                },
-            )
+        except Exception:
             self.session.rollback()
             raise
 
-    def get_feedback(
-        self, suggestion_type: AISuggestionType | None = None
-    ) -> List[AIFeedback]:
-        """
-        Retrieve AI feedback from the database.
-
-        Args:
-        - suggestion_type (AISuggestionType | None): Optional filter for suggestion type.
-
-        Returns:
-        - List[AIFeedback]: List of feedback objects.
-        """
-        query = (
-            self.session.query(AIFeedback)
-            .join(AISuggestion)
-            .filter(AISuggestion.tenant_id == self.tenant_id)
-        )
-
-        if suggestion_type:
-            query = query.filter(AISuggestion.suggestion_type == suggestion_type)
-
-        feedback_list = query.all()
-
-        self.logger.info(
-            "Retrieved AI feedback",
-            extra={
-                "tenant_id": self.tenant_id,
-                "feedback_count": len(feedback_list),
-                "suggestion_type": suggestion_type,
-            },
-        )
-
-        return feedback_list
+    # ---------- public API ----------
 
     def suggest_incidents(
         self,
         alerts_dto: List[AlertDto],
         topology_data: List[TopologyServiceDtoOut],
         user_id: str,
+        alert_limit: Optional[int] = None,
     ) -> IncidentsClusteringSuggestion:
-        """Create incident suggestions using AI."""
-        if len(alerts_dto) > 50:
-            raise HTTPException(status_code=400, detail="Too many alerts to process")
-
-        # Check for existing suggestion
-        alerts_fingerprints = [alert.fingerprint for alert in alerts_dto]
-        suggestion_input = {"alerts_fingerprints": alerts_fingerprints}
-        existing_suggestion = self.get_suggestion_by_input(suggestion_input)
-
-        if existing_suggestion:
-            self.logger.info("Retrieving existing suggestion from DB")
-            incident_clustering = IncidentClustering.parse_obj(
-                existing_suggestion.suggestion_content
+        """
+        Create incident suggestions using AI or return cached suggestion.
+        """
+        limit = alert_limit if alert_limit is not None else self.DEFAULT_ALERT_LIMIT
+        if len(alerts_dto) > limit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Too many alerts to process (max {limit}).",
             )
-            processed_incidents = self._process_incidents(
-                incident_clustering.incidents, alerts_dto
-            )
+
+        alerts_fingerprints = [a.fingerprint for a in alerts_dto]
+        suggestion_input: Dict[str, Any] = {"alerts_fingerprints": alerts_fingerprints}
+
+        cached = self.get_suggestion_by_input(suggestion_input)
+        if cached:
+            self.logger.info("Returning cached AI suggestion", extra={"tenant_id": self.tenant_id})
+            incident_clustering = IncidentClustering.parse_obj(cached.suggestion_content)
+            processed = self._process_incidents(incident_clustering.incidents, alerts_dto)
             return IncidentsClusteringSuggestion(
-                incident_suggestion=processed_incidents,
-                suggestion_id=str(existing_suggestion.id),
+                incident_suggestion=processed,
+                suggestion_id=str(cached.id),
             )
 
+        # Not cached: compute via AI
         try:
-            # Prepare prompts
-            system_prompt, user_prompt = self._prepare_prompts(
-                alerts_dto, topology_data
-            )
-
-            # Get completion from OpenAI
+            system_prompt, user_prompt = self._prepare_prompts(alerts_dto, topology_data)
             completion = self._get_ai_completion(system_prompt, user_prompt)
 
-            # Parse and process response
-            incident_clustering = IncidentClustering.parse_raw(
-                completion.choices[0].message.content
-            )
+            content = completion.choices[0].message.content
+            if not content:
+                raise ValueError("AI returned empty response content")
 
-            # Save suggestion
+            incident_clustering = IncidentClustering.parse_raw(content)
+
+            # Save suggestion (race-safe via unique constraint + IntegrityError handling)
             suggestion = self.add_suggestion(
                 user_id=user_id,
                 suggestion_input=suggestion_input,
@@ -280,83 +209,160 @@ class AISuggestionBl:
                 model=OPENAI_MODEL_NAME,
             )
 
-            # Process incidents
-            processed_incidents = self._process_incidents(
-                incident_clustering.incidents, alerts_dto
-            )
+            processed = self._process_incidents(incident_clustering.incidents, alerts_dto)
+
+            if not processed:
+                # Not fatal, but worth signaling
+                self.logger.warning(
+                    "AI returned no valid incidents after processing",
+                    extra={"tenant_id": self.tenant_id, "suggestion_id": str(suggestion.id)},
+                )
 
             return IncidentsClusteringSuggestion(
-                incident_suggestion=processed_incidents,
+                incident_suggestion=processed,
                 suggestion_id=str(suggestion.id),
             )
 
+        except OpenAIError as e:
+            self.logger.error("OpenAI API error: %s", str(e))
+            raise HTTPException(status_code=503, detail="AI service is unavailable.") from e
+        except (ValueError, json.JSONDecodeError) as e:
+            self.logger.error("Invalid AI response format: %s", str(e))
+            raise HTTPException(status_code=500, detail="Invalid AI response format.") from e
+        except HTTPException:
+            raise
         except Exception as e:
-            self.logger.error(f"AI incident creation failed: {e}")
-            raise HTTPException(status_code=500, detail="AI service is unavailable.")
+            self.logger.exception("AI incident creation failed unexpectedly: %s", str(e))
+            raise HTTPException(status_code=500, detail="AI service is unavailable.") from e
 
     async def commit_incidents(
         self,
         suggestion_id: UUID,
-        incidents_with_feedback: List[Dict],
+        incidents_with_feedback: List[Dict[str, Any]],
         user_id: str,
         incident_bl: IncidentBl,
     ) -> List[IncidentDto]:
-        """Commit incidents with user feedback."""
-        committed_incidents = []
+        """
+        Commit incidents with user feedback as a single unit of work.
 
-        # Add feedback to the database
-        changes = {
-            incident_commit["incident"]["id"]: incident_commit["changes"]
-            for incident_commit in incidents_with_feedback
-        }
-        self.add_feedback(
-            suggestion_id=suggestion_id,
-            user_id=user_id,
-            feedback_content=changes,
-        )
+        Strategy:
+        - Run sync DB work in a thread pool so we don't block the event loop.
+        - Wrap feedback creation + incident creation in a transaction.
+        - If any accepted incident fails, rollback everything (no partial state).
+        """
+        if not incidents_with_feedback:
+            return []
 
-        for incident_with_feedback in incidents_with_feedback:
-            if not incident_with_feedback["accepted"]:
-                self.logger.info(
-                    f"Incident {incident_with_feedback['incident']['name']} rejected by user, skipping creation"
-                )
-                continue
+        loop = asyncio.get_running_loop()
+
+        def _sync_unit_of_work() -> List[IncidentDto]:
+            committed: List[IncidentDto] = []
 
             try:
-                # Create the incident
-                incident_dto = IncidentDto.parse_obj(incident_with_feedback["incident"])
-                created_incident = incident_bl.create_incident(
-                    incident_dto, generated_from_ai=True
+                # Begin transactional scope.
+                # For SQLAlchemy/SQLModel sessions, commit/rollback controls the transaction.
+                changes = {
+                    ic["incident"].get("id"): ic.get("changes")
+                    for ic in incidents_with_feedback
+                    if ic.get("incident")
+                }
+
+                # Feedback should not commit alone; flush only.
+                self.add_feedback(
+                    suggestion_id=suggestion_id,
+                    user_id=user_id,
+                    feedback_content=changes,
                 )
 
-                # Add alerts to the created incident
-                alert_ids = [
-                    alert["fingerprint"]
-                    for alert in incident_with_feedback["incident"]["alerts"]
-                ]
-                await incident_bl.add_alerts_to_incident(created_incident.id, alert_ids)
+                # Create accepted incidents only
+                for item in incidents_with_feedback:
+                    if not item.get("accepted"):
+                        continue
 
-                committed_incidents.append(created_incident)
-                self.logger.info(
-                    f"Incident {incident_with_feedback['incident']['name']} created successfully"
-                )
+                    incident_payload = item.get("incident")
+                    if not incident_payload:
+                        raise ValueError("Missing incident payload in commit request")
 
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to create incident {incident_with_feedback['incident']['name']}: {str(e)}"
-                )
+                    incident_dto = IncidentDto.parse_obj(incident_payload)
 
-        return committed_incidents
+                    created = incident_bl.create_incident(incident_dto, generated_from_ai=True)
+                    committed.append(created)
+
+                # Commit DB work (feedback + incidents)
+                self.session.commit()
+                return committed
+
+            except Exception:
+                self.session.rollback()
+                raise
+
+        # Run sync DB creation work off the event loop
+        try:
+            created_incidents: List[IncidentDto] = await loop.run_in_executor(None, _sync_unit_of_work)
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.exception("Failed committing incidents: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to commit incidents.") from e
+
+        # Now attach alerts (async) to each created incident
+        # Use consistent identifier type. Here we use fingerprints everywhere.
+        # If your incident_bl expects DB IDs instead, change this in ONE place, not two.
+        try:
+            # Map incident id -> alert fingerprints from payload
+            for item in incidents_with_feedback:
+                if not item.get("accepted"):
+                    continue
+                incident_payload = item.get("incident") or {}
+                incident_name = incident_payload.get("name")
+
+                # Find corresponding created incident by name or by payload id (preferred if stable)
+                # If payload includes 'id' that matches created_incident.id, use it.
+                # Otherwise fallback to name match.
+                payload_id = incident_payload.get("id")
+
+                target = None
+                if payload_id:
+                    # created_incident.id may be UUID; normalize to string compare
+                    for ci in created_incidents:
+                        if str(ci.id) == str(payload_id):
+                            target = ci
+                            break
+
+                if target is None and incident_name:
+                    for ci in created_incidents:
+                        if getattr(ci, "name", None) == incident_name:
+                            target = ci
+                            break
+
+                if target is None:
+                    raise ValueError("Could not map committed incident to payload for alert attachment")
+
+                alerts_list = incident_payload.get("alerts") or []
+                alert_fingerprints = [a.get("fingerprint") for a in alerts_list if isinstance(a, dict)]
+                alert_fingerprints = [fp for fp in alert_fingerprints if fp]
+
+                await incident_bl.add_alerts_to_incident(target.id, alert_fingerprints)
+
+        except Exception as e:
+            # At this point incidents exist; alert attachment failed.
+            # Depending on desired behavior, you could:
+            # - return incidents anyway (with a warning)
+            # - or raise and let the caller handle remediation
+            self.logger.exception("Failed attaching alerts to incidents: %s", str(e))
+            raise HTTPException(status_code=500, detail="Incidents created, but failed attaching alerts.") from e
+
+        return created_incidents
+
+    # ---------- AI prompt + response ----------
 
     def _prepare_prompts(
-        self, alerts_dto: List[AlertDto], topology_data: List[TopologyServiceDtoOut]
+        self,
+        alerts_dto: List[AlertDto],
+        topology_data: List[TopologyServiceDtoOut],
     ) -> Tuple[str, str]:
-        """Prepare system and user prompts for AI."""
         alert_descriptions = "\n".join(
-            [
-                f"Alert {idx+1}: {json.dumps(alert.dict())}"
-                for idx, alert in enumerate(alerts_dto)
-            ]
+            [f"Alert {idx+1}: {json.dumps(alert.dict())}" for idx, alert in enumerate(alerts_dto)]
         )
 
         topology_text = "\n".join(
@@ -367,42 +373,25 @@ class AISuggestionBl:
         )
 
         system_prompt = """
-        You are an advanced AI system specializing in IT operations and incident management.
-        Your task is to analyze the provided IT operations alerts and topology data, and cluster them into meaningful incidents.
-        Consider factors such as:
-        1. Alert description and content
-        2. Potential temporal proximity
-        3. Affected systems or services
-        4. Type of IT issue (e.g., performance degradation, service outage, resource utilization)
-        5. Potential root causes
-        6. Relationships and dependencies between services in the topology data
+You are an AI system specializing in IT operations and incident management.
+Cluster the provided alerts into incidents using alert content and topology dependencies.
 
-        Group related alerts into distinct incidents and provide a detailed analysis for each incident.
-        For each incident:
-        1. Assess its severity
-        2. Recommend initial actions for the IT operations team
-        3. Provide a confidence score (0.0 to 1.0) for the incident clustering
-        4. Explain how the confidence score was calculated, considering factors like alert similarity, topology relationships, and the strength of the correlation between alerts
-
-        Use the topology data to improve your incident clustering by considering service dependencies and relationships.
-        """
+Return JSON matching the provided schema. Alert indices are 1-based.
+"""
 
         user_prompt = f"""
-        Analyze the following IT operations alerts and topology data, then group the alerts into incidents:
+Analyze the following IT operations alerts and topology data, then group the alerts into incidents.
 
-        Alerts:
-        {alert_descriptions}
+Alerts:
+{alert_descriptions}
 
-        Topology data:
-        {topology_text}
+Topology data:
+{topology_text}
+"""
 
-        Provide your analysis and clustering in the specified JSON format.
-        """
-
-        return system_prompt, user_prompt
+        return system_prompt.strip(), user_prompt.strip()
 
     def _get_ai_completion(self, system_prompt: str, user_prompt: str):
-        """Get completion from OpenAI."""
         return self._client.chat.completions.create(
             model=OPENAI_MODEL_NAME,
             messages=[
@@ -430,13 +419,7 @@ class AISuggestionBl:
                                         "reasoning": {"type": "string"},
                                         "severity": {
                                             "type": "string",
-                                            "enum": [
-                                                "critical",
-                                                "high",
-                                                "warning",
-                                                "info",
-                                                "low",
-                                            ],
+                                            "enum": ["critical", "high", "warning", "info", "low"],
                                         },
                                         "recommended_actions": {
                                             "type": "array",
@@ -464,25 +447,60 @@ class AISuggestionBl:
             temperature=0.2,
         )
 
+    # ---------- incident processing ----------
+
     def _process_incidents(
-        self, incidents: List[IncidentCandidate], alerts_dto: List[AlertDto]
+        self,
+        incidents: List[IncidentCandidate],
+        alerts_dto: List[AlertDto],
     ) -> List[IncidentDto]:
-        """Process incidents and create DTOs."""
-        processed_incidents = []
+        processed: List[IncidentDto] = []
+        n_alerts = len(alerts_dto)
+
         for incident in incidents:
+            # Validate indices and de-duplicate
+            valid_indices: List[int] = []
+            for idx in incident.alerts:
+                if not isinstance(idx, int):
+                    self.logger.warning("Non-integer alert index from AI: %r", idx)
+                    continue
+                if idx < 1 or idx > n_alerts:
+                    self.logger.warning(
+                        "Invalid alert index from AI: %s (valid range 1..%s)",
+                        idx,
+                        n_alerts,
+                    )
+                    continue
+                valid_indices.append(idx)
+
+            valid_indices = sorted(set(valid_indices))
+            if not valid_indices:
+                # Skip empty incidents (AI hallucinated indices or got filtered)
+                self.logger.info("Skipping incident with no valid alert indices: %s", incident.incident_name)
+                continue
+
+            incident_alerts = [alerts_dto[i - 1] for i in valid_indices]
+
             alert_sources: Set[str] = set()
             alert_services: Set[str] = set()
-            for alert_index in incident.alerts:
-                alert = alerts_dto[alert_index - 1]
-                if alert.source:
-                    alert_sources.add(alert.source[0])
-                if alert.service:
-                    alert_services.add(alert.service)
 
-            incident_alerts = [alerts_dto[i - 1] for i in incident.alerts]
-            start_time = min(alert.lastReceived for alert in incident_alerts)
-            last_seen_time = max(alert.lastReceived for alert in incident_alerts)
+            for a in incident_alerts:
+                # source can be None, list, str... be defensive
+                src = getattr(a, "source", None)
+                if isinstance(src, list) and src:
+                    alert_sources.add(str(src[0]))
+                elif isinstance(src, str) and src:
+                    alert_sources.add(src)
 
+                svc = getattr(a, "service", None)
+                if isinstance(svc, str) and svc:
+                    alert_services.add(svc)
+
+            start_time = min(a.lastReceived for a in incident_alerts)
+            last_seen_time = max(a.lastReceived for a in incident_alerts)
+
+            # IMPORTANT: avoid storing full alert objects unless you really need it.
+            # If API expects it, keep it; otherwise prefer IDs/fingerprints.
             incident_dto = IncidentDto(
                 id=uuid.uuid4(),
                 name=incident.incident_name,
@@ -492,15 +510,20 @@ class AISuggestionBl:
                 confidence_score=incident.confidence_score,
                 confidence_explanation=incident.confidence_explanation,
                 severity=incident.severity,
-                alert_ids=[alerts_dto[i - 1].id for i in incident.alerts],
+                # Choose ONE identifier strategy:
+                # - IDs: [a.id ...]
+                # - fingerprints: [a.fingerprint ...]
+                alert_ids=[a.fingerprint for a in incident_alerts],
                 recommended_actions=incident.recommended_actions,
                 is_predicted=True,
                 is_candidate=True,
                 is_visible=True,
-                alerts_count=len(incident.alerts),
+                alerts_count=len(valid_indices),
                 alert_sources=list(alert_sources),
+                # Keep alerts only if needed by API response contract
                 alerts=incident_alerts,
                 services=list(alert_services),
             )
-            processed_incidents.append(incident_dto)
-        return processed_incidents
+            processed.append(incident_dto)
+
+        return processed
