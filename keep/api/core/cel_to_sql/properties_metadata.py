@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import fnmatch
 import re
+from typing import Optional, Union, List, Dict, Tuple
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 
@@ -10,20 +13,18 @@ class SimpleFieldMapping:
 
 
 class JsonFieldMapping:
-
     def __init__(self, json_prop: str, prop_in_json: list[str]):
         self.json_prop = json_prop
         self.prop_in_json = prop_in_json
 
 
 class PropertyMetadataInfo:
-
     def __init__(
         self,
         field_name: str,
-        field_mappings: list[SimpleFieldMapping | JsonFieldMapping],
-        enum_values: list[str],
-        data_type: DataType = None,
+        field_mappings: list[Union[SimpleFieldMapping, JsonFieldMapping]],
+        enum_values: Optional[list[str]] = None,
+        data_type: Optional[DataType] = None,
     ):
         self.field_name = field_name
         self.field_mappings = field_mappings
@@ -32,13 +33,12 @@ class PropertyMetadataInfo:
 
 
 class FieldMappingConfiguration:
-
     def __init__(
         self,
         map_from_pattern: str,
-        map_to: list[str] | str,
-        data_type: DataType = None,
-        enum_values: list[str] = None,
+        map_to: Union[list[str], str],
+        data_type: Optional[DataType] = None,
+        enum_values: Optional[list[str]] = None,
     ):
         self.map_from_pattern = map_from_pattern
         self.enum_values = enum_values
@@ -47,205 +47,144 @@ class FieldMappingConfiguration:
 
 
 def remap_fields_configurations(
-    mapping_rules: dict[str, str], field_configurations: list[FieldMappingConfiguration]
+    mapping_rules: dict[str, str],
+    field_configurations: list[FieldMappingConfiguration],
 ) -> list[FieldMappingConfiguration]:
-    """
-    Remaps the 'map_to' fields in the given field configurations based on the provided mapping rules.
-
-    Args:
-        mapping_rules (dict[str, str]): A dictionary where keys are the patterns to be replaced and values are the new patterns.
-        field_configurations (list[FieldMappingConfiguration]): A list of FieldMappingConfiguration objects to be remapped.
-
-    Returns:
-        list[FieldMappingConfiguration]: A new list of FieldMappingConfiguration objects with updated 'map_to' fields.
-    """
+    # Copy configurations (shallow copy of values, not shared objects)
     result: list[FieldMappingConfiguration] = [
         FieldMappingConfiguration(
             map_from_pattern=item.map_from_pattern,
-            map_to=item.map_to,
+            map_to=list(item.map_to),
             enum_values=item.enum_values,
             data_type=item.data_type,
         )
         for item in field_configurations
     ]
 
-    for map_from, map_to in mapping_rules.items():
-        for field_config in result:
-            field_config.map_to = [
-                item.replace(map_from, map_to) for item in field_config.map_to
-            ]
+    for src, dst in mapping_rules.items():
+        for cfg in result:
+            cfg.map_to = [t.replace(src, dst) for t in cfg.map_to]
 
     return result
 
 
 class PropertiesMetadata:
     """
-    A class to handle metadata properties and mappings for given property paths.
-    Attributes:
-        known_fields_mapping (dict): A dictionary containing known field mappings.
-        known_fields_wildcards (dict): A dictionary containing wildcard patterns from known field mappings.
-    Methods:
-        __init__(known_fields_mapping: dict):
-            Initializes the PropertiesMetadata with known field mappings.
-        get_property_metadata(prop_path: str):
-            Retrieves the metadata for a given property path.
-            If the property path matches a known field or a wildcard pattern, it returns the corresponding mappings.
-            Supports JSON type mappings and simple field mappings.
+    Maps CEL property paths to one or more DB field mappings.
+    Supports:
+      - direct mappings
+      - wildcard patterns (fnmatch)
+      - JSON mappings in the form JSON(column).path.*
     """
+
+    _json_prefix_re = re.compile(r"^JSON\(([^)]+)\)(?:\.(.*))?$")
+
     def __init__(self, fields_mapping_configurations: list[FieldMappingConfiguration]):
-        self.wildcard_configurations: dict[FieldMappingConfiguration] = {}
-        self.known_configurations: dict[FieldMappingConfiguration] = {}
-        for field_mapping in fields_mapping_configurations:
-            new_field_mapping_config = FieldMappingConfiguration(
-                map_from_pattern=self.__get_property_path_str(
-                    self.__extract_fields(field_mapping.map_from_pattern)
-                ),
-                map_to=field_mapping.map_to,
-                data_type=field_mapping.data_type,
-                enum_values=field_mapping.enum_values,
+        self.wildcard_configurations: dict[str, FieldMappingConfiguration] = {}
+        self.known_configurations: dict[str, FieldMappingConfiguration] = {}
+
+        for cfg in fields_mapping_configurations:
+            normalized_from = self.__get_property_path_str(
+                self.__extract_fields(cfg.map_from_pattern)
+            )
+            normalized_cfg = FieldMappingConfiguration(
+                map_from_pattern=normalized_from,
+                map_to=list(cfg.map_to),
+                data_type=cfg.data_type,
+                enum_values=cfg.enum_values,
             )
 
-            if '*' in field_mapping.map_from_pattern:
-                self.wildcard_configurations[
-                    new_field_mapping_config.map_from_pattern
-                ] = new_field_mapping_config
-                continue
+            if "*" in cfg.map_from_pattern:
+                self.wildcard_configurations[normalized_from] = normalized_cfg
+            else:
+                self.known_configurations[normalized_from] = normalized_cfg
 
-            self.known_configurations[new_field_mapping_config.map_from_pattern] = (
-                new_field_mapping_config
-            )
-
-    def get_property_metadata_for_str(self, prop_path_str: str) -> PropertyMetadataInfo:
+    def get_property_metadata_for_str(self, prop_path_str: str) -> Optional[PropertyMetadataInfo]:
         return self.get_property_metadata(self.__extract_fields(prop_path_str))
 
-    def get_property_metadata(self, prop_path: list[str]) -> PropertyMetadataInfo:
+    def get_property_metadata(self, prop_path: list[str]) -> Optional[PropertyMetadataInfo]:
         prop_path_str = self.__get_property_path_str(prop_path)
-        field_mapping_config, mapping_key = self.__find_mapping_configuration(
-            prop_path_str
-        )
+        cfg, mapping_key = self.__find_mapping_configuration(prop_path_str)
 
-        if not field_mapping_config:
+        if not cfg:
             return None
 
-        field_mappings = []
-
-        map_to: list[str] = (
-            field_mapping_config.map_to
-            if isinstance(field_mapping_config.map_to, list)
-            else [field_mapping_config.map_to]
-        )
-        template_prop = None
-
+        # Determine wildcard captured value (single '*' support)
+        wildcard_value: Optional[str] = None
         if "*" in mapping_key:
-            # if mapping_key is a wildcard pattern (alert.*), extract the template prop (alert)
-            regex_pattern = re.escape(mapping_key).replace(r"\*", r"(.*)")
-            regex = re.compile(f"^{regex_pattern}$")
-            match = regex.match(prop_path_str)
-            template_prop = match.group(1)
-        else:
-            # otherwise, the template prop is the prop_path itself
-            template_prop = prop_path_str
+            wildcard_value = self.__extract_wildcard_value(mapping_key, prop_path_str)
 
-        for item in map_to:
-            match = re.match(r"JSON\(([^)]+)\)", item)
+        field_mappings: list[Union[SimpleFieldMapping, JsonFieldMapping]] = []
+        for target in cfg.map_to:
+            json_match = self._json_prefix_re.match(target)
+            if json_match:
+                json_col = json_match.group(1)
+                json_path_str = json_match.group(2) or ""   # everything after JSON(col).
 
-            # If first element is a JSON mapping (JSON(event).tagsContainer.*)
-            # we extract JSON column (event) and replace * with prop_in_json
-            if match:
-                json_prop = match.group(1)
-                splitted = item.replace(f"JSON({json_prop})", "").split(".")
-                prop_in_json_list = [spl for spl in splitted]
-                if "*" in splitted:
-                    prop_in_json_list[splitted.index("*")] = template_prop
-                else:
-                    prop_in_json_list.append(template_prop)
+                json_tokens = self.__extract_fields(json_path_str) if json_path_str else []
 
-                field_mappings.append(
-                    JsonFieldMapping(
-                        json_prop=json_prop,
-                        prop_in_json=self.__extract_fields(
-                            ".".join(prop_in_json_list[1:])
-                        ),  # skip JSON column and take the rest
-                    )
-                )
-                continue
+                # Replace '*' token if present, else append wildcard_value if we have one
+                if "*" in json_tokens and wildcard_value is not None:
+                    json_tokens = [wildcard_value if t == "*" else t for t in json_tokens]
+                elif wildcard_value is not None:
+                    # If mapping is like JSON(event).labels (no '*'), treat wildcard as leaf
+                    json_tokens.append(wildcard_value)
 
-            splitted = item.split(".")
-            field_mappings.append(SimpleFieldMapping(item))
+                # If no wildcard in mapping key, use full prop path string as a leaf only if mapping uses '*'
+                # (keeps behavior sane and avoids injecting full CEL path into JSON unless explicitly asked)
+                if "*" not in mapping_key and "*" in target:
+                    # Example: mapping_key = alert.labels, target = JSON(event).labels.*
+                    # Use the last segment of prop_path as leaf
+                    json_tokens = [t if t != "*" else prop_path[-1] for t in json_tokens]
+
+                field_mappings.append(JsonFieldMapping(json_prop=json_col, prop_in_json=json_tokens))
+            else:
+                field_mappings.append(SimpleFieldMapping(target))
 
         return PropertyMetadataInfo(
             field_name=prop_path_str,
             field_mappings=field_mappings,
-            enum_values=field_mapping_config.enum_values,
-            data_type=field_mapping_config.data_type,
+            enum_values=cfg.enum_values,
+            data_type=cfg.data_type,
         )
 
-    def __extract_fields(self, property_path_str):
+    def __extract_wildcard_value(self, pattern: str, value: str) -> Optional[str]:
+        # Convert fnmatch-style pattern to safe regex capture for single '*'
+        # Use non-greedy capture so it doesn’t swallow everything.
+        regex_pattern = re.escape(pattern).replace(r"\*", r"(.*?)")
+        m = re.match(f"^{regex_pattern}$", value)
+        if not m:
+            return None
+        return m.group(1)
+
+    def __extract_fields(self, property_path_str: str) -> list[str]:
         """
-        Extracts fields from a property path string.
-
-        This method takes a property path string and extracts individual fields
-        from it. The property path string can contain fields separated by dots
-        or enclosed in square brackets.
-
-        Args:
-            property_path_str (str): The property path string to extract fields from.
-
-        Returns:
-            list: A list of extracted fields as strings.
+        Extracts tokens from:
+          a.b.c
+          a[b].c
+          a.[weird.key].c
         """
+        if property_path_str is None or property_path_str == "":
+            return []
         pattern = re.compile(r"\[([^\[\]]+)\]|([^.]+)")
         matches = pattern.findall(property_path_str)
-        return [m[0] or m[1] for m in matches]
+        return [m[0] or m[1] for m in matches if (m[0] or m[1])]
 
     def __get_property_path_str(self, prop_path: list[str]) -> str:
-        """
-        Converts a list of property path components into a single string,
-        ensuring that components with special characters are enclosed in square brackets.
-
-        Args:
-            prop_path (list[str]): A list of strings representing the property path components.
-
-        Returns:
-            str: A single string representing the property path, with special characters handled appropriately.
-        """
         result = []
-
         for item in prop_path:
             if re.search(r"[^a-zA-Z0-9*]", item):
                 result.append(f"[{item}]")
             else:
                 result.append(item)
-
         return ".".join(result)
 
-    def __find_mapping_configuration(self, prop_path_str: str):
-        """
-        Find the mapping configuration for a given property path.
-
-        This method searches for a direct mapping configuration in the known configurations.
-        If no direct mapping is found, it checks for wildcard patterns in the wildcard configurations.
-
-        Args:
-            prop_path (str): The property path to find the mapping configuration for.
-
-        Returns:
-            tuple: A tuple containing the FieldMappingConfiguration and the mapping key.
-                   If no configuration is found, both elements of the tuple will be None.
-        """
-        field_mapping_config: FieldMappingConfiguration = None
-        mapping_key = None
-
+    def __find_mapping_configuration(self, prop_path_str: str) -> tuple[Optional[FieldMappingConfiguration], Optional[str]]:
         if prop_path_str in self.known_configurations:
-            field_mapping_config = self.known_configurations[prop_path_str]
-            mapping_key = prop_path_str
+            return self.known_configurations[prop_path_str], prop_path_str
 
-        # If no direct mapping is found, check for wildcard patterns in known fields
-        if not field_mapping_config:
-            for pattern, field_mapping_config_from_dict in self.wildcard_configurations.items():
-                if fnmatch.fnmatch(prop_path_str, pattern):
-                    field_mapping_config = field_mapping_config_from_dict
-                    mapping_key = pattern
-                    break
+        for pattern, cfg in self.wildcard_configurations.items():
+            if fnmatch.fnmatch(prop_path_str, pattern):
+                return cfg, pattern
 
-        return field_mapping_config, mapping_key
+        return None, None
