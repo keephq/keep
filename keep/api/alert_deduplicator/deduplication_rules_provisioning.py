@@ -1,6 +1,9 @@
 import json
 import logging
+import os
 import re
+from copy import deepcopy
+from typing import Any, Mapping
 
 import keep.api.core.db as db
 from keep.api.core.config import config
@@ -8,194 +11,170 @@ from keep.providers.providers_factory import ProvidersFactory
 
 logger = logging.getLogger(__name__)
 
+ENV_VAR_DEDUP_RULES = "KEEP_DEDUPLICATION_RULES"
 
-def provision_deduplication_rules(deduplication_rules: dict[str, any], tenant_id: str):
+_PATH_RE = re.compile(r"^(\/|\.\/|\.\.\/).*\.json$", re.IGNORECASE)
+
+
+def provision_deduplication_rules(deduplication_rules: Mapping[str, dict[str, Any]], tenant_id: str) -> None:
     """
     Provisions deduplication rules for a given tenant.
 
     Args:
-        deduplication_rules (dict[str, any]): A dictionary where the keys are rule names and the values are
-        DeduplicationRuleRequestDto objects.
-        tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
+        deduplication_rules: dict mapping rule_name -> rule config dict
+        tenant_id: tenant id
     """
-    enrich_with_providers_info(deduplication_rules, tenant_id)
+    # Work on a copy so callers don't get surprise mutations.
+    rules = deepcopy(dict(deduplication_rules))
 
-    all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
-    provisioned_deduplication_rules = [
-        rule for rule in all_deduplication_rules_from_db if rule.is_provisioned
-    ]
-    provisioned_deduplication_rules_from_db_dict = {
-        rule.name: rule for rule in provisioned_deduplication_rules
-    }
+    # Enrich + validate EVERYTHING before we touch the DB.
+    rules = enrich_with_providers_info(rules, tenant_id)
+
+    all_rules_from_db = db.get_all_deduplication_rules(tenant_id)
+    provisioned_rules = [r for r in all_rules_from_db if r.is_provisioned]
+    provisioned_by_name = {r.name: r for r in provisioned_rules}
+
     actor = "system"
 
-    # delete rules that are not in the env
-    for provisioned_deduplication_rule in provisioned_deduplication_rules:
-        if str(provisioned_deduplication_rule.name) not in deduplication_rules:
-            logger.info(
-                "Deduplication rule with name '%s' is not in the env, deleting from DB",
-                provisioned_deduplication_rule.name,
-            )
-            db.delete_deduplication_rule(
-                rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id
-            )
+    # Compute changes first (fail-fast strategy).
+    desired_names = set(rules.keys())
+    existing_names = set(provisioned_by_name.keys())
 
-    for (
-        deduplication_rule_name,
-        deduplication_rule_to_provision,
-    ) in deduplication_rules.items():
-        if deduplication_rule_name in provisioned_deduplication_rules_from_db_dict:
-            logger.info(
-                "Deduplication rule with name '%s' already exists, updating in DB",
-                deduplication_rule_name,
-            )
-            db.update_deduplication_rule(
-                tenant_id=tenant_id,
-                rule_id=str(
-                    provisioned_deduplication_rules_from_db_dict.get(
-                        deduplication_rule_name
-                    ).id
-                ),
-                name=deduplication_rule_name,
-                description=deduplication_rule_to_provision.get("description", ""),
-                provider_id=deduplication_rule_to_provision.get("provider_id"),
-                provider_type=deduplication_rule_to_provision["provider_type"],
-                last_updated_by=actor,
-                enabled=True,
-                fingerprint_fields=deduplication_rule_to_provision.get(
-                    "fingerprint_fields", []
-                ),
-                full_deduplication=deduplication_rule_to_provision.get(
-                    "full_deduplication", False
-                ),
-                ignore_fields=deduplication_rule_to_provision.get("ignore_fields")
-                or [],
-                priority=0,
-            )
-            continue
+    to_delete = existing_names - desired_names
+    to_upsert = desired_names  # update if exists else create
 
-        logger.info(
-            "Deduplication rule with name '%s' does not exist, creating in DB",
-            deduplication_rule_name,
-        )
-        db.create_deduplication_rule(
-            tenant_id=tenant_id,
-            name=deduplication_rule_name,
-            description=deduplication_rule_to_provision.get("description", ""),
-            provider_id=deduplication_rule_to_provision.get("provider_id"),
-            provider_type=deduplication_rule_to_provision["provider_type"],
-            created_by=actor,
-            enabled=True,
-            fingerprint_fields=deduplication_rule_to_provision.get(
-                "fingerprint_fields", []
-            ),
-            full_deduplication=deduplication_rule_to_provision.get(
-                "full_deduplication", False
-            ),
-            ignore_fields=deduplication_rule_to_provision.get("ignore_fields") or [],
-            priority=0,
-            is_provisioned=True,
-        )
+    # If your db layer supports transactions, use it.
+    # If not, this still avoids failing after deletes by doing validation/enrichment first.
+    try:
+        # Delete rules not in env
+        for name in to_delete:
+            rule_obj = provisioned_by_name[name]
+            logger.info("Deduplication rule '%s' missing from env, deleting from DB", name)
+            db.delete_deduplication_rule(rule_id=str(rule_obj.id), tenant_id=tenant_id)
+
+        # Upsert desired rules
+        for name in to_upsert:
+            payload = rules[name]
+            provider_type = payload.get("provider_type")
+            if not provider_type:
+                raise ValueError(f"Rule '{name}' is missing provider_type after enrichment")
+
+            if name in provisioned_by_name:
+                logger.info("Deduplication rule '%s' exists, updating in DB", name)
+                db.update_deduplication_rule(
+                    tenant_id=tenant_id,
+                    rule_id=str(provisioned_by_name[name].id),
+                    name=name,
+                    description=payload.get("description", ""),
+                    provider_id=payload.get("provider_id"),
+                    provider_type=provider_type,
+                    last_updated_by=actor,
+                    enabled=True,
+                    fingerprint_fields=payload.get("fingerprint_fields", []) or [],
+                    full_deduplication=payload.get("full_deduplication", False),
+                    ignore_fields=payload.get("ignore_fields") or [],
+                    priority=int(payload.get("priority", 0) or 0),
+                )
+            else:
+                logger.info("Deduplication rule '%s' does not exist, creating in DB", name)
+                db.create_deduplication_rule(
+                    tenant_id=tenant_id,
+                    name=name,
+                    description=payload.get("description", ""),
+                    provider_id=payload.get("provider_id"),
+                    provider_type=provider_type,
+                    created_by=actor,
+                    enabled=True,
+                    fingerprint_fields=payload.get("fingerprint_fields", []) or [],
+                    full_deduplication=payload.get("full_deduplication", False),
+                    ignore_fields=payload.get("ignore_fields") or [],
+                    priority=int(payload.get("priority", 0) or 0),
+                    is_provisioned=True,
+                )
+
+    except Exception:
+        logger.exception("Failed provisioning deduplication rules for tenant_id=%s", tenant_id)
+        raise
 
 
-def provision_deduplication_rules_from_env(tenant_id: str):
-    """
-    Provisions deduplication rules from environment variables for a given tenant.
-    This function reads deduplication rules from environment variables, validates them,
-    and then provisions them into the database. It handles the following:
-    - Deletes deduplication rules from the database that are not present in the environment variables.
-    - Updates existing deduplication rules in the database if they are present in the environment variables.
-    - Creates new deduplication rules in the database if they are not already present.
-    Args:
-        tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
-    Raises:
-        ValueError: If the deduplication rules from the environment variables are invalid.
-    """
+def provision_deduplication_rules_from_env(tenant_id: str) -> None:
+    rules = get_deduplication_rules_to_provision()
 
-    deduplication_rules_from_env_dict = get_deduplication_rules_to_provision()
-
-    if not deduplication_rules_from_env_dict:
+    if not rules:
         logger.info("No deduplication rules found in env. Nothing to provision.")
         return
 
-    provision_deduplication_rules(deduplication_rules_from_env_dict, tenant_id)
+    provision_deduplication_rules(rules, tenant_id)
 
 
-def enrich_with_providers_info(deduplication_rules: dict[str, any], tenant_id: str):
+def enrich_with_providers_info(deduplication_rules: dict[str, dict[str, Any]], tenant_id: str) -> dict[str, dict[str, Any]]:
     """
-    Enriches passed deduplication rules with provider ID and type information.
-
-    Args:
-        deduplication_rules (dict[str, any]): A list of deduplication rules to be enriched.
-        tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
+    Returns a NEW dict with provider_id/provider_type filled from installed providers.
+    Raises ValueError if a referenced provider_name is not installed.
     """
+    installed = ProvidersFactory.get_installed_providers(tenant_id)
+    installed_by_name = {p.details.get("name"): p for p in installed}
 
-    installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
-    installed_providers_dict = {
-        provider.details.get("name"): provider for provider in installed_providers
-    }
+    enriched: dict[str, dict[str, Any]] = {}
 
     for rule_name, rule in deduplication_rules.items():
-        logger.info(f"Enriching deduplication rule: {rule_name}")
-        provider = installed_providers_dict.get(rule.get("provider_name"))
-        rule["provider_id"] = provider.id
-        rule["provider_type"] = provider.type
+        provider_name = rule.get("provider_name")
+        if not provider_name:
+            raise ValueError(f"Rule '{rule_name}' missing provider_name")
+
+        provider = installed_by_name.get(provider_name)
+        if not provider:
+            raise ValueError(f"Provider '{provider_name}' not installed for rule '{rule_name}'")
+
+        r = dict(rule)  # shallow copy is enough after deepcopy upstream
+        r["provider_id"] = provider.id
+        # Single source of truth: provider.type from installed provider
+        r["provider_type"] = provider.type
+        enriched[rule_name] = r
+
+    return enriched
 
 
-def get_deduplication_rules_to_provision() -> dict[str, dict]:
+def get_deduplication_rules_to_provision() -> dict[str, dict[str, Any]] | None:
     """
-    Reads deduplication rules from an environment variable and returns them as a dictionary.
-    The function checks if the environment variable `KEEP_DEDUPLICATION_RULES` contains a path to a JSON file
-    or a JSON string. If it is a path, it reads the file and parses the JSON content. If it is a JSON string,
-    it parses the string directly.
-    Returns:
-        dict[str, DeduplicationRuleRequestDto]: A dictionary where the keys are rule names and the values are
-        DeduplicationRuleRequestDto objects.
-    Raises:
-        Exception: If there is an error parsing the JSON content from the file or the environment variable.
+    Reads deduplication rules from ENV_VAR_DEDUP_RULES.
+    Value can be:
+      - a JSON string
+      - a relative/absolute path to a .json file
+    Returns dict: rule_name -> rule_config
     """
-
-    env_var_key = "KEEP_PROVIDERS"
-    deduplication_rules_from_env_var = config(key=env_var_key, default=None)
-
-    if not deduplication_rules_from_env_var:
+    raw = config(key=ENV_VAR_DEDUP_RULES, default=None)
+    if not raw:
         return None
 
-    # check if env var is absolute or relative path to a deduplication rules json file
-    if re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
-        deduplication_rules_from_env_var
-    ):
-        with open(
-            file=deduplication_rules_from_env_var, mode="r", encoding="utf8"
-        ) as file:
-            try:
-                deduplication_rules_from_env_json: dict = json.loads(file.read())
-            except json.JSONDecodeError as e:
-                raise Exception(
-                    f"Error parsing deduplication rules from file {deduplication_rules_from_env_var}: {e}"
-                ) from e
+    raw = str(raw).strip()
+    if not raw:
+        return None
+
+    # Load JSON either from file path or from string
+    if _PATH_RE.match(raw):
+        if not os.path.exists(raw):
+            raise FileNotFoundError(f"Deduplication rules file not found: {raw}")
+        with open(raw, "r", encoding="utf8") as f:
+            deduplication_rules_from_env_json = json.loads(f.read())
     else:
-        try:
-            deduplication_rules_from_env_json = json.loads(
-                deduplication_rules_from_env_var
-            )
-        except json.JSONDecodeError as e:
-            raise Exception(
-                f"Error parsing deduplication rules from env var {env_var_key}: {e}"
-            ) from e
+        deduplication_rules_from_env_json = json.loads(raw)
 
-    deduplication_rules_dict: dict[str, dict] = {}
+    deduplication_rules_dict: dict[str, dict[str, Any]] = {}
 
-    for provider_name, provider_config in deduplication_rules_from_env_json.items():
-        for rule_name, rule_config in provider_config.get(
-            "deduplication_rules", {}
-        ).items():
-            rule_config["name"] = rule_name
-            rule_config["provider_name"] = provider_name
-            rule_config["provider_type"] = provider_config.get("type")
-            deduplication_rules_dict[rule_name] = rule_config
+    for provider_name, provider_config in (deduplication_rules_from_env_json or {}).items():
+        rules = (provider_config or {}).get("deduplication_rules", {}) or {}
+        for rule_name, rule_config in rules.items():
+            if rule_name in deduplication_rules_dict:
+                raise ValueError(
+                    f"Duplicate deduplication rule name '{rule_name}' across providers "
+                    f"(latest provider: '{provider_name}')"
+                )
 
-    if not deduplication_rules_dict:
-        return None
+            rc = dict(rule_config or {})
+            rc["name"] = rule_name
+            rc["provider_name"] = provider_name
+            # Don't set provider_type here. Enrichment will set it from installed provider metadata.
+            deduplication_rules_dict[rule_name] = rc
 
-    return deduplication_rules_dict
+    return deduplication_rules_dict or None
