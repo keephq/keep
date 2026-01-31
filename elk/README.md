@@ -1,6 +1,11 @@
-# ELK-stack integration
+# ELK Stack Integration (Development)
 
-This directory contains the configuration files and Docker services needed to run Keep with a filebeat container. Useful if you want to test integration of Keep backend logs with Logstash and Kibana.
+This directory provides a **development-only ELK harness** for running Keep services with Filebeat, Logstash, and Kibana.
+
+It allows you to collect **Keep backend container logs**, forward them through Logstash, store them in Elasticsearch, and explore them in Kibana.  
+This setup is intended for **local development, debugging, and validation only** and is not suitable for production use.
+
+---
 
 ## Directory Structure
 
@@ -12,15 +17,41 @@ proxy/
 └── README.md                # This files
 ```
 
+---
+
 ## Components
 
-The setup consists of several services:
+The stack consists of the following services:
 
-- **Filebeat**: Filebeat container to push keep-backend logs to logstash 
-- **Keep Frontend**: The Keep UI service configured to use the proxy
-- **Keep Backend**: The Keep API service
-- **Keep WebSocket**: The WebSocket server for real-time updates
+- **Keep Backend**  
+  The Keep API service. Logs from this container are collected by Filebeat.
 
+- **Keep WebSocket Server**  
+  WebSocket server for real-time updates.
+
+- **Filebeat**  
+  Collects Docker container logs and ships them to Logstash.  
+  Configured to filter logs so only the `keep-backend-elk` service is forwarded.
+
+- **Logstash**  
+  Receives logs from Filebeat, performs safe conditional parsing, and forwards events to Elasticsearch.
+
+- **Elasticsearch**  
+  Stores backend logs in time-based indices.
+
+- **Kibana**  
+  Web UI for querying and visualizing logs stored in Elasticsearch.
+
+---
+
+## Configuration
+
+### Environment Variables
+
+Create a local `.env` file from the provided example:
+
+```bash
+cp .env.example .env
 ## Configuration
 
 ### Environment Variables
