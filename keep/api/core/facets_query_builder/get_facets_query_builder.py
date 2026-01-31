@@ -14,27 +14,22 @@ from keep.api.core.facets_query_builder.sqlite import SqliteFacetsHandler
 def get_facets_query_builder(
     properties_metadata: PropertiesMetadata,
 ) -> BaseFacetsQueryBuilder:
-    return get_facets_query_builder_for_dialect(
-        engine.dialect.name, properties_metadata
-    )
+    return get_facets_query_builder_for_dialect(engine.dialect.name, properties_metadata)
 
 
 def get_facets_query_builder_for_dialect(
     dialect_name: str,
     properties_metadata: PropertiesMetadata,
 ) -> BaseFacetsQueryBuilder:
-    if dialect_name == "sqlite":
-        return SqliteFacetsHandler(
-            properties_metadata, get_cel_to_sql_provider(properties_metadata)
-        )
-    elif dialect_name == "mysql":
-        return MySqlFacetsQueryBuilder(
-            properties_metadata, get_cel_to_sql_provider(properties_metadata)
-        )
-    elif dialect_name == "postgresql":
-        return PostgreSqlFacetsQueryBuilder(
-            properties_metadata, get_cel_to_sql_provider(properties_metadata)
-        )
+    provider = get_cel_to_sql_provider(properties_metadata)  # verify this is dialect-aware
 
-    else:
-        raise ValueError(f"Unsupported dialect: {engine.dialect.name}")
+    if dialect_name == "sqlite":
+        return SqliteFacetsHandler(properties_metadata, provider)
+
+    if dialect_name in ("mysql", "mariadb"):
+        return MySqlFacetsQueryBuilder(properties_metadata, provider)
+
+    if dialect_name == "postgresql":
+        return PostgreSqlFacetsQueryBuilder(properties_metadata, provider)
+
+    raise ValueError(f"Unsupported dialect: {dialect_name}")
