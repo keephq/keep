@@ -5,13 +5,13 @@ import pathlib
 import sys
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Set
 from uuid import UUID
 
 from fastapi import HTTPException
 from pusher import Pusher
 from sqlalchemy.orm.exc import StaleDataError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
@@ -55,7 +55,6 @@ REDIS_ENABLED = os.environ.get("REDIS", "false").strip().lower() == "true"
 if EE_ENABLED:
     path_with_ee = str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     sys.path.insert(0, path_with_ee)
-    # EE may define this, keeping placeholder if needed.
     ALGORITHM_VERBOSE_NAME = os.environ.get("ALGORITHM_VERBOSE_NAME")
 else:
     # Correct fallback: NotImplemented is NOT a normal sentinel.
@@ -74,8 +73,7 @@ def _ensure_uuid(value: UUID | str, field_name: str = "id") -> UUID:
 @contextmanager
 def _commit_or_rollback(session: Session, logger_: logging.Logger, ctx: str):
     """
-    Ensures rollback on exception; commits are left to the caller explicitly.
-    Use when you want a safe boundary around multiple writes.
+    Ensures rollback on exception; commits are explicit.
     """
     try:
         yield
@@ -90,7 +88,12 @@ class IncidentBl:
     Session ownership:
     - This class does NOT close the session. Caller owns it.
     - This class WILL rollback on failed operations where it controls the transaction boundary.
+
+    Workflow recursion guard:
+    - Prevents internal workflow-triggered cascades from looping forever.
     """
+
+    _workflow_guard: Set[str] = set()
 
     def __init__(
         self,
@@ -154,21 +157,37 @@ class IncidentBl:
         except Exception:
             self.logger.exception(
                 "Failed to push incident change to client (side effect)",
-                extra={"incident_id": str(incident_id) if incident_id else None, "tenant_id": self.tenant_id},
+                extra={
+                    "tenant_id": self.tenant_id,
+                    "incident_id": str(incident_id) if incident_id else None,
+                },
             )
 
     def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
         """
         Workflows are side effects. Never raise.
+        Includes recursion guard to prevent cascade loops.
         """
+        guard_key = f"{self.tenant_id}:{incident_dto.id}:{action}"
+        if guard_key in self._workflow_guard:
+            self.logger.warning(
+                "Workflow recursion guard blocked duplicate workflow event",
+                extra={"tenant_id": self.tenant_id, "incident_id": str(incident_dto.id), "action": action},
+            )
+            return
+
+        self._workflow_guard.add(guard_key)
         try:
             workflow_manager = WorkflowManager.get_instance()
             workflow_manager.insert_incident(self.tenant_id, incident_dto, action)
         except Exception:
             self.logger.exception(
                 "Failed to run workflows based on incident (side effect)",
-                extra={"incident_id": str(incident_dto.id), "tenant_id": self.tenant_id, "action": action},
+                extra={"tenant_id": self.tenant_id, "incident_id": str(incident_dto.id), "action": action},
             )
+        finally:
+            # Always remove guard so next legitimate event can pass later
+            self._workflow_guard.discard(guard_key)
 
     def __postprocess_alerts_change(self, incident: Incident, alert_fingerprints: List[str]) -> None:
         self.__update_elastic(alert_fingerprints)
@@ -193,10 +212,7 @@ class IncidentBl:
         incident_dto: IncidentDtoIn | IncidentDto,
         generated_from_ai: bool = False,
     ) -> IncidentDto:
-        self.logger.info(
-            "Creating incident",
-            extra={"tenant_id": self.tenant_id},
-        )
+        self.logger.info("Creating incident", extra={"tenant_id": self.tenant_id})
 
         with _commit_or_rollback(self.session, self.logger, "create_incident"):
             incident = create_incident_from_dto(
@@ -208,27 +224,20 @@ class IncidentBl:
             self.session.commit()
 
         incident_dto_out = IncidentDto.from_db_incident(incident)
-
-        # Side effects after commit
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto_out, "created")
-
         return incident_dto_out
 
     def sync_add_alerts_to_incident(self, *args, **kwargs) -> None:
         """
         Safe sync wrapper for async method.
-
-        If you're already inside an event loop, we schedule it instead of crashing.
+        If inside an event loop, schedule it.
         """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            # No running loop: safe to run
             asyncio.run(self.add_alerts_to_incident(*args, **kwargs))
             return
-
-        # Running loop exists: schedule task.
         loop.create_task(self.add_alerts_to_incident(*args, **kwargs))
 
     async def add_alerts_to_incident(
@@ -239,7 +248,6 @@ class IncidentBl:
         override_count: bool = False,
     ) -> None:
         incident_id = _ensure_uuid(incident_id, "incident_id")
-
         self.logger.info(
             "Adding alerts to incident",
             extra={"tenant_id": self.tenant_id, "incident_id": str(incident_id)},
@@ -263,18 +271,14 @@ class IncidentBl:
                 override_count=override_count,
             )
 
-            # Make transaction boundary explicit
+            # Explicit boundary
             self.session.commit()
 
-        # Side effects after commit
         self.__postprocess_alerts_change(incident, alert_fingerprints)
-
-        # Summary generation is “nice to have”, not “bring down the service”.
         await self.__generate_summary(incident_id, incident)
 
     async def __generate_summary(self, incident_id: UUID, incident: Incident) -> None:
         try:
-            # CRITICAL FIX: pass session
             fingerprints_count = get_incident_unique_fingerprint_count(
                 self.tenant_id, incident_id, session=self.session
             )
@@ -349,10 +353,6 @@ class IncidentBl:
 
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto, "deleted")
-
-    def bulk_delete_incidents(self, incident_ids: List[UUID]) -> None:
-        for incident_id in incident_ids:
-            self.delete_incident(incident_id)
 
     def update_incident(
         self,
@@ -445,7 +445,6 @@ class IncidentBl:
         )
 
         incidents_dto = [IncidentDto.from_db_incident(i) for i in incidents]
-
         return IncidentsPaginatedResultsDto(
             limit=limit, offset=offset, count=total_count, items=incidents_dto
         )
@@ -454,37 +453,52 @@ class IncidentBl:
     # Resolution logic
     # ---------------------------
 
+    def _lock_incident_row(self, incident_id: UUID) -> Optional[Incident]:
+        """
+        Optional TOCTOU mitigation: row lock.
+        Uses SELECT ... FOR UPDATE if the backend supports it.
+        """
+        try:
+            stmt = select(Incident).where(Incident.id == incident_id).with_for_update()
+            return self.session.exec(stmt).first()
+        except Exception:
+            # If dialect doesn't support it or model differs, fail gracefully.
+            return None
+
     def resolve_incident_if_require(self, incident: Incident, max_retries: int = 3) -> Incident:
         """
-        Attempts to resolve the incident if resolution criteria are met.
+        Attempts to resolve incident if criteria met.
         Includes:
         - retry on StaleDataError phantom update
         - re-check condition right before commit (TOCTOU mitigation)
+        - optional row locking
         """
         incident_id = incident.id
 
-        def _should_resolve() -> bool:
-            if incident.resolve_on == ResolveOn.ALL.value:
-                return is_all_alerts_resolved(incident=incident, session=self.session)
-            if incident.resolve_on == ResolveOn.FIRST.value:
-                return is_first_incident_alert_resolved(incident, session=self.session)
-            if incident.resolve_on == ResolveOn.LAST.value:
-                return is_last_incident_alert_resolved(incident, session=self.session)
+        def _should_resolve(obj: Incident) -> bool:
+            if obj.resolve_on == ResolveOn.ALL.value:
+                return is_all_alerts_resolved(incident=obj, session=self.session)
+            if obj.resolve_on == ResolveOn.FIRST.value:
+                return is_first_incident_alert_resolved(obj, session=self.session)
+            if obj.resolve_on == ResolveOn.LAST.value:
+                return is_last_incident_alert_resolved(obj, session=self.session)
             return False
 
-        if not _should_resolve():
+        if not _should_resolve(incident):
             return incident
 
         for attempt in range(max_retries):
             try:
-                # Re-check right before write (helps TOCTOU)
-                if not _should_resolve():
-                    return incident
+                locked = self._lock_incident_row(incident_id) or incident
 
-                incident.status = IncidentStatus.RESOLVED.value
-                self.session.add(incident)
+                if not _should_resolve(locked):
+                    return locked
+
+                locked.status = IncidentStatus.RESOLVED.value
+                locked.end_time = locked.end_time or datetime.now(tz=timezone.utc)
+                self.session.add(locked)
                 self.session.commit()
-                return incident
+                return locked
 
             except StaleDataError as ex:
                 msg = ex.args[0] if ex.args else ""
@@ -492,21 +506,19 @@ class IncidentBl:
 
                 if "expected to update" in str(msg):
                     self.logger.info(
-                        "Phantom read detected while updating incident, retrying",
+                        "Phantom read detected while resolving incident, retrying",
                         extra={"tenant_id": self.tenant_id, "incident_id": str(incident_id), "attempt": attempt + 1},
                     )
                     if attempt == max_retries - 1:
                         raise
                     continue
-
-                # Unexpected stale error: re-raise
                 raise
 
             except Exception:
                 self.session.rollback()
                 raise
 
-        return incident  # defensive; should not hit
+        return incident
 
     def change_status(
         self,
@@ -515,7 +527,6 @@ class IncidentBl:
         change_by: AuthenticatedEntity,
     ) -> IncidentDto:
         incident_id_uuid = _ensure_uuid(incident_id, "incident_id")
-
         with_alerts = new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]
 
         with _commit_or_rollback(self.session, self.logger, "change_status"):
@@ -528,19 +539,14 @@ class IncidentBl:
             if not incident:
                 raise HTTPException(status_code=404, detail="Incident not found")
 
-            # Apply enrichment to underlying alerts if needed
             if new_status in [IncidentStatus.RESOLVED, IncidentStatus.ACKNOWLEDGED]:
                 enrichments = {"status": new_status.value}
-                fingerprints = [alert.fingerprint for alert in (incident.alerts or [])]
+                fingerprints = [a.fingerprint for a in (incident.alerts or [])]
 
                 enrichments_bl = EnrichmentsBl(self.tenant_id, db=self.session)
-                (
-                    action_type,
-                    action_description,
-                    _should_run_workflow,
-                    _should_check_incidents_resolution,
-                ) = enrichments_bl.get_enrichment_metadata(enrichments, change_by)
-
+                action_type, action_description, *_ = enrichments_bl.get_enrichment_metadata(
+                    enrichments, change_by
+                )
                 enrichments_bl.batch_enrich(
                     fingerprints,
                     enrichments,
@@ -553,7 +559,6 @@ class IncidentBl:
             if new_status == IncidentStatus.RESOLVED:
                 incident.end_time = datetime.now(tz=timezone.utc)
 
-            # Assignment audit: keep it conditional, but handle None cleanly
             current_assignee = incident.assignee
             new_assignee = change_by.email
 
@@ -583,5 +588,4 @@ class IncidentBl:
             self.session.add(incident)
             self.session.commit()
 
-        # Side effects after commit
         return self.__postprocess_incident_change(incident)
