@@ -1,11 +1,11 @@
 import logging
 import re
-from typing import Any
-import celpy.celparser
-import lark
+from datetime import datetime
+from typing import Any, List, Optional, cast
+
 import celpy
-from typing import List, cast
-from dateutil.parser import parse
+import lark
+from dateutil.parser import parse as dt_parse  # fallback only
 
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
@@ -20,356 +20,278 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     UnaryNodeOperator,
 )
 
-# Matches such strings:
-# '2025-03-23T15:42:00'
-# '2025-03-23T15:42:00Z'
-# '2025-03-23T15:42:00.123Z'
-# '2025-03-23T15:42:00+02:00'
-# '2025-03-23T15:42:00.456-05:30'
-iso_regex = re.compile(
-    r"^(\d{4})-(\d{2})-(\d{2})"  # Date: YYYY-MM-DD
-    r"T"  # T separator
-    r"(\d{2}):(\d{2}):(\d{2})"  # Time: hh:mm:ss
-    r"(?:\.(\d+))?"  # Optional fractional seconds
-    r"(?:Z|[+-]\d{2}:\d{2})?$"  # Optional timezone (Z or ±hh:mm)
-)
-
-# Matches such strings:
-# '2025-03-23 15:42:00'
-# '1999-01-01 00:00:00'
-# '2025-01-20'
-datetime_regex = re.compile(
-    r"^(\d{4})-(\d{2})-(\d{2})"  # Date: YYYY-MM-DD
-    r"(?:\s(\d{2}):(\d{2}):(\d{2}))?$"  # Optional time: HH:MM:SS
-)
-
 logger = logging.getLogger(__name__)
 
+iso_regex = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})"
+    r"T"
+    r"(\d{2}):(\d{2}):(\d{2})"
+    r"(?:\.(\d+))?"
+    r"(?:Z|[+-]\d{2}:\d{2})?$"
+)
+
+datetime_regex = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})"
+    r"(?:\s(\d{2}):(\d{2}):(\d{2}))?$"
+)
+
+_METHOD_TO_OP: dict[str, ComparisonNodeOperator] = {
+    "contains": ComparisonNodeOperator.CONTAINS,
+    "startswith": ComparisonNodeOperator.STARTS_WITH,
+    "endswith": ComparisonNodeOperator.ENDS_WITH,
+}
+
+
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
-    """Dump a CEL AST creating a close approximation to the original source."""
+    """Convert CEL -> internal AST nodes (Node graph)."""
+
+    MAX_STACK_DEPTH = 10_000  # prevents weird DoS via huge pushes
 
     @classmethod
-    def convert_to_ast(cls_, cel: str) -> Node:
-        d = cls_()
+    def convert_to_ast(cls, cel: str) -> Node:
+        inst = cls()
         try:
-            celpy_ast = d.celpy_env.compile(cel)
-            d.visit(celpy_ast)
-            return d.stack[0]
-        except Exception as e:
-            logger.warning('Error converting "%s" CEL to AST. Error: %s', cel, e)
-            raise e
+            celpy_ast = inst.celpy_env.compile(cel)
+            inst.visit(celpy_ast)
+            if len(inst.stack) != 1 or not isinstance(inst.stack[0], Node):
+                raise ValueError(
+                    f"CEL AST conversion ended in invalid stack state: "
+                    f"size={len(inst.stack)}, top_type={type(inst.stack[0]).__name__ if inst.stack else None}"
+                )
+            return cast(Node, inst.stack[0])
+        except Exception:
+            logger.exception('Error converting CEL to AST: "%s"', cel)
+            raise
 
     def __init__(self) -> None:
         self.celpy_env = celpy.Environment()
-        self.stack: List[Any] = []
-        self.member_access_stack: List[str] = []
+        self.stack: List[Any] = []  # contains Node or list[Node]
+        self.member_access_stack: List[PropertyAccessNode] = []
 
+    # ---------- stack helpers ----------
+    def _push(self, item: Any) -> None:
+        self.stack.append(item)
+        if len(self.stack) > self.MAX_STACK_DEPTH:
+            raise ValueError(f"CEL AST stack overflow (>{self.MAX_STACK_DEPTH})")
+
+    def _pop(self) -> Any:
+        if not self.stack:
+            raise ValueError("CEL AST stack underflow (pop on empty stack)")
+        return self.stack.pop()
+
+    def _pop_node(self) -> Node:
+        val = self._pop()
+        if not isinstance(val, Node):
+            raise ValueError(f"Expected Node on stack, got {type(val).__name__}: {val!r}")
+        return val
+
+    def _pop_node_list(self) -> List[Node]:
+        val = self._pop()
+        if val is None:
+            return []
+        if isinstance(val, list) and all(isinstance(x, Node) for x in val):
+            return cast(List[Node], val)
+        raise ValueError(f"Expected list[Node] on stack, got {type(val).__name__}: {val!r}")
+
+    # ---------- grammar visitors ----------
     def expr(self, tree: lark.Tree) -> None:
+        # Ternary operator appears here. If you don’t support it downstream, fail loudly.
         if len(tree.children) == 1:
             return
-        else:
-            right = self.stack.pop()
-            left = self.stack.pop()
-            cond = self.stack.pop()
-            self.stack.append(
-                f"{cond} ? {left} : {right}"
-            )
+        raise NotImplementedError("Ternary (cond ? a : b) is not supported by this SQL converter")
 
     def conditionalor(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
             return
-        else:
-            right = self.stack.pop()
-            left = self.stack.pop()
-            self.stack.append(
-                LogicalNode(left=left, operator=LogicalNodeOperator.OR, right=right)
-            )
+        right = self._pop_node()
+        left = self._pop_node()
+        self._push(LogicalNode(left=left, operator=LogicalNodeOperator.OR, right=right))
 
     def conditionaland(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
             return
-        else:
-            right = self.stack.pop()
-            left = self.stack.pop()
-            self.stack.append(
-                LogicalNode(left=left, operator=LogicalNodeOperator.AND, right=right)
-            )
+        right = self._pop_node()
+        left = self._pop_node()
+        self._push(LogicalNode(left=left, operator=LogicalNodeOperator.AND, right=right))
 
     def relation(self, tree: lark.Tree) -> None:
-        # self.member_access_stack.clear()
-
         if len(tree.children) == 1:
             return
-        else:
-            second_operand = self.stack.pop()
-            comparison_node: ComparisonNode = self.stack.pop()
-            comparison_node.second_operand = second_operand
-            self.stack.append(comparison_node)
+        second = self._pop_node()
+        comp = self._pop()
+        if not isinstance(comp, ComparisonNode):
+            raise ValueError(f"Expected ComparisonNode before relation RHS, got {type(comp).__name__}")
+        comp.second_operand = second
+        self._push(comp)
 
     def relation_lt(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.LT,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.LT, second_operand=None))
 
     def relation_le(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.LE,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.LE, second_operand=None))
 
     def relation_gt(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.GT,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.GT, second_operand=None))
 
     def relation_ge(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.GE,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.GE, second_operand=None))
 
     def relation_eq(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.EQ,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.EQ, second_operand=None))
 
     def relation_ne(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.NE,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.NE, second_operand=None))
 
     def relation_in(self, tree: lark.Tree) -> None:
-        self.stack.append(
-            ComparisonNode(
-                first_operand=self.stack.pop(),
-                operator=ComparisonNodeOperator.IN,
-                second_operand=None,
-            )
-        )
+        self._push(ComparisonNode(first_operand=self._pop_node(), operator=ComparisonNodeOperator.IN, second_operand=None))
 
+    # Arithmetic: reject until you implement ArithmeticNode in your AST + SQL builder
     def addition(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
             return
-        else:
-            right = self.stack.pop()
-            left: dict = self.stack.pop()
-            left['right'] = right
-            self.stack.append(left)
-
-    def addition_add(self, tree: lark.Tree) -> None:
-        left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'ADD'
-        })
-
-    def addition_sub(self, tree: lark.Tree) -> None:
-        left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'SUB'
-        })
+        raise NotImplementedError("Arithmetic (+/-) not supported by SQL converter")
 
     def multiplication(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
             return
-        else:
-            right = self.stack.pop()
-            left: dict = self.stack.pop()
-            left['right'] = right
-            self.stack.append(left)
-
-    def multiplication_mul(self, tree: lark.Tree) -> None:
-        left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'MUL'
-        })
-
-    def multiplication_div(self, tree: lark.Tree) -> None:
-        left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'DIV'
-        })
-
-    def multiplication_mod(self, tree: lark.Tree) -> None:
-        left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'MOD'
-        })
+        raise NotImplementedError("Arithmetic (*//%) not supported by SQL converter")
 
     def unary(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
             return
-        else:
-            operand = self.stack.pop()
-            unaryNode: UnaryNode = self.stack.pop()
-            unaryNode.operand = operand
-            self.stack.append(unaryNode)
+        operand = self._pop_node()
+        un = self._pop()
+        if not isinstance(un, UnaryNode):
+            raise ValueError(f"Expected UnaryNode frame, got {type(un).__name__}")
+        un.operand = operand
+        self._push(un)
 
     def unary_not(self, tree: lark.Tree) -> None:
-        self.stack.append(UnaryNode(operator=UnaryNodeOperator.NOT, operand=None))
+        self._push(UnaryNode(operator=UnaryNodeOperator.NOT, operand=None))
 
     def unary_neg(self, tree: lark.Tree) -> None:
-        self.stack.append(UnaryNode(operator=UnaryNodeOperator.NEG, operand=None))
-
-    def member_dot(self, tree: lark.Tree) -> None:
-        right = cast(lark.Token, tree.children[1]).value
-
-        if self.member_access_stack:
-            property_member: PropertyAccessNode = self.member_access_stack.pop()
-            new_property_access_node = PropertyAccessNode(
-                path=property_member.path + [right]
-            )
-            self.stack.pop()
-            self.stack.append(new_property_access_node)
-            self.member_access_stack.append(new_property_access_node)
-
-    def member_dot_arg(self, tree: lark.Tree) -> None:
-        if len(tree.children) == 3:
-            exprlist = self.stack.pop()
-        else:
-            exprlist = []
-        right = cast(lark.Token, tree.children[1]).value
-        if self.member_access_stack:
-            if right.lower() in [
-                ComparisonNodeOperator.CONTAINS.value.lower(),
-                ComparisonNodeOperator.STARTS_WITH.value.lower(),
-                ComparisonNodeOperator.ENDS_WITH.value.lower(),
-            ]:
-                self.stack.append(
-                    ComparisonNode(
-                        first_operand=self.stack.pop(),
-                        operator=right,
-                        second_operand=exprlist[0],
-                    )
-                )
-                return
-
-            raise NotImplementedError(f"Method '{right}' not implemented")
-
-        else:
-            raise ValueError("No member access stack")
-
-    def member_index(self, tree: lark.Tree) -> None:
-        right = self.stack.pop()
-        left = self.stack.pop()
-
-        if isinstance(right, ConstantNode):
-            right = right.value
-
-        prop_access_node: PropertyAccessNode = left
-        new_property_access_node = PropertyAccessNode(
-            path=prop_access_node.path + [str(right)]
-        )
-        self.stack.append(new_property_access_node)
-        self.member_access_stack.append(new_property_access_node)
-
-    def member_object(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Member object not implemented")
-
-    def dot_ident_arg(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Dot ident arg not implemented")
-
-    def dot_ident(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Dot ident not implemented")
-
-    def ident_arg(self, tree: lark.Tree) -> None:
-        token_value = tree.children[0].value
-
-        if token_value == UnaryNodeOperator.HAS.value:
-            self.stack.append(
-                UnaryNode(operator=UnaryNodeOperator.HAS, operand=self.stack.pop()[0])
-            )
-            return
-
-        raise NotImplementedError(
-            "Ident arg not implemented for token_value:" + token_value
-        )
+        raise NotImplementedError("Unary negation (-x) not supported by SQL converter")
 
     def ident(self, tree: lark.Tree) -> None:
-        property_member = PropertyAccessNode(
-            path=[cast(lark.Token, tree.children[0]).value]
-        )
+        name = cast(lark.Token, tree.children[0]).value
+        node = PropertyAccessNode(path=[name])
         self.member_access_stack.clear()
-        self.stack.append(property_member)
-        self.member_access_stack.append(property_member)
+        self._push(node)
+        self.member_access_stack.append(node)
+
+    def member_dot(self, tree: lark.Tree) -> None:
+        # left.right chaining
+        right = cast(lark.Token, tree.children[1]).value
+        if not self.member_access_stack:
+            raise ValueError("member_dot without active base identifier")
+
+        base = self.member_access_stack.pop()
+        new_node = PropertyAccessNode(path=base.path + [right])
+
+        # replace top of main stack with new_node (validated)
+        top = self._pop_node()
+        if not isinstance(top, PropertyAccessNode):
+            raise ValueError(f"Expected PropertyAccessNode on stack for member access, got {type(top).__name__}")
+        self._push(new_node)
+        self.member_access_stack.append(new_node)
+
+    def member_index(self, tree: lark.Tree) -> None:
+        idx = self._pop()
+        base = self._pop_node()
+        if isinstance(idx, ConstantNode):
+            idx = idx.value
+        if not isinstance(base, PropertyAccessNode):
+            raise ValueError(f"Indexing only supported on PropertyAccessNode, got {type(base).__name__}")
+        new_node = PropertyAccessNode(path=base.path + [str(idx)])
+        self._push(new_node)
+        self.member_access_stack.append(new_node)
+
+    def member_dot_arg(self, tree: lark.Tree) -> None:
+        # method calls like alert.name.contains("x")
+        args = self._pop_node_list() if len(tree.children) == 3 else []
+        method = cast(lark.Token, tree.children[1]).value
+        method_key = method.lower()
+
+        if not self.member_access_stack:
+            raise ValueError("Method call without member base")
+
+        op = _METHOD_TO_OP.get(method_key)
+        if op is None:
+            raise NotImplementedError(f"Method '{method}' not implemented")
+
+        if len(args) != 1 or not isinstance(args[0], ConstantNode):
+            raise ValueError(f"{method} expects exactly 1 constant argument")
+
+        first_operand = self._pop_node()
+        self._push(ComparisonNode(first_operand=first_operand, operator=op, second_operand=args[0]))
+
+    def ident_arg(self, tree: lark.Tree) -> None:
+        token_value = cast(lark.Token, tree.children[0]).value
+        if token_value == UnaryNodeOperator.HAS.value:
+            # celpy tends to provide args as exprlist or direct node depending on grammar path.
+            operand = self._pop_node()
+            self._push(UnaryNode(operator=UnaryNodeOperator.HAS, operand=operand))
+            return
+        raise NotImplementedError(f"ident_arg not implemented for: {token_value}")
 
     def paren_expr(self, tree: lark.Tree) -> None:
-        if not self.stack:
-            raise ValueError("Cannot handle parenthesis expression without stack")
-
-        self.stack.append(ParenthesisNode(expression=self.stack.pop()))
-
-    def list_lit(self, tree: lark.Tree) -> None:
-        if self.stack:
-            left = self.stack.pop()
-            self.stack.append([item for item in reversed(left)])
-
-    def map_lit(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Map literal not implemented")
+        self._push(ParenthesisNode(expression=self._pop_node()))
 
     def exprlist(self, tree: lark.Tree) -> None:
-        list_items = list(self.stack.pop() for _ in tree.children)
-        self.stack.append(list_items)
+        # items were pushed in order; popping reverses them, so reverse back
+        items: List[Node] = []
+        for _ in tree.children:
+            items.append(self._pop_node())
+        items.reverse()
+        self._push(items)
 
-    def fieldinits(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Fieldinits not implemented")
-
-    def mapinits(self, tree: lark.Tree) -> None:
-        raise NotImplementedError("Mapinits not implemented")
+    def list_lit(self, tree: lark.Tree) -> None:
+        # list literal: exprlist already returns items in correct order
+        return
 
     def literal(self, tree: lark.Tree) -> None:
-        if tree.children:
-            value = cast(lark.Token, tree.children[0]).value
-            constant_node = self.to_constant_node(value)
-            self.stack.append(constant_node)
+        if not tree.children:
+            return
+        raw = cast(lark.Token, tree.children[0]).value
+        self._push(self.to_constant_node(raw))
 
+    # ---------- literal conversion ----------
     def to_constant_node(self, value: str) -> ConstantNode:
-        if value in ['null', 'NULL']:
-            value = None
-        elif (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-            value = value[1:-1]
+        if value in ("null", "NULL"):
+            return ConstantNode(value=None)
 
-            if not self.is_number(value) and self.is_date(value):
-                value = parse(value)
-            else:
-                # this code is to handle the case when string literal contains escaped single/double quotes
-                value = re.sub(r'\\(["\'])', r"\1", value)
-        elif value == 'true' or value == 'false':
-            value = value == 'true'
-        elif '.' in value and self.is_float(value):
-            value = float(value)
-        elif self.is_number(value):
-            value = int(value)
-        else:
-            raise ValueError(f"Unknown literal type: {value}")
+        if value in ("true", "false"):
+            return ConstantNode(value=(value == "true"))
 
-        return ConstantNode(value=value)
+        # quoted string
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            s = value[1:-1]
+            # unescape \" or \' inside
+            s = re.sub(r'\\(["\'])', r"\1", s)
+            # datetime detection
+            if not self.is_number(s) and self.is_date(s):
+                dt = self._parse_datetime_fast(s)
+                return ConstantNode(value=dt)
+            return ConstantNode(value=s)
+
+        # numbers
+        if "." in value and self.is_float(value):
+            return ConstantNode(value=float(value))
+        if self.is_number(value):
+            return ConstantNode(value=int(value))
+
+        raise ValueError(f"Unknown literal type: {value!r}")
+
+    def _parse_datetime_fast(self, s: str) -> datetime:
+        # Fast path for ISO strings; supports trailing Z
+        try:
+            if s.endswith("Z"):
+                s2 = s[:-1] + "+00:00"
+                return datetime.fromisoformat(s2)
+            return datetime.fromisoformat(s)
+        except Exception:
+            # fallback
+            return dt_parse(s)
 
     def is_number(self, value: str) -> bool:
         try:
@@ -386,4 +308,4 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             return False
 
     def is_date(self, value: str) -> bool:
-        return iso_regex.match(value) or datetime_regex.match(value)
+        return bool(iso_regex.match(value) or datetime_regex.match(value))
