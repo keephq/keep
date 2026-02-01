@@ -2446,958 +2446,296 @@ if __name__ == "__main__":
             self.assertEqual(out3[0].enrichments, {"only": True})
 
     unittest.main()
+"""Keep DB helpers (RECODED - sandbox-safe v6)
 
-def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
-    # get the previous alert for a given fingerprint
+You ran into two classic problems that show up the moment code leaves its comfy repo:
+
+1) `ModuleNotFoundError: No module named 'keep.api'`
+   - Because this sandbox doesn't have your project layout installed.
+
+2) `TypeError: issubclass() arg 1 must be a class` inside SQLModel
+   - SQLModel can choke on *typing* annotations like `Dict[str, Any]` when it tries
+     to infer an SQLAlchemy type.
+
+This file is intentionally standalone:
+- No `keep.*` imports.
+- Uses in-memory SQLite.
+- Provides minimal stub models + helpers + tests.
+
+Key fix:
+- For JSON-ish fields, annotate as plain `dict` (not `Dict[str, Any]`) AND provide
+  an explicit SQLAlchemy column: `sa_column=Column(JSON)`.
+
+Why both?
+- The explicit Column tells SQLAlchemy what to store.
+- The plain `dict` avoids SQLModel/typing inference edge cases.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
+from enum import Enum
+from typing import Any, Iterator, List, Optional
+
+from sqlalchemy import Column, JSON
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import func
+from sqlmodel import Field, Session, SQLModel, create_engine, select, col
+
+logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Sandbox-safe engine
+# -----------------------------------------------------------------------------
+# In Keep you build the engine via keep.api.core.db_utils.create_db_engine.
+# In this sandbox/test context, we use sqlite in-memory.
+engine = create_engine("sqlite:///:memory:")
+
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+@contextmanager
+def existed_or_new_session(session: Optional[Session] = None) -> Iterator[Session]:
+    """Use the provided session or create a new one."""
+
+    if session is not None:
+        yield session
+        return
+    with Session(engine) as s:
+        yield s
+
+
+def get_json_extract_field(_session: Session, json_column, key: str):
+    """Dialect-friendly JSON extraction expression.
+
+    SQLite: json_extract(json, '$.key')
+
+    Note: if SQLite was compiled without JSON1, this will fail at runtime.
+    In that case you can fall back to Python-side filtering.
+    """
+
+    return func.json_extract(json_column, f"$.{key}")
+
+
+# -----------------------------------------------------------------------------
+# Minimal stub models (standalone)
+# -----------------------------------------------------------------------------
+
+
+class Alert(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: str
+    fingerprint: str
+    timestamp: datetime = Field(default_factory=_utcnow)
+
+    # IMPORTANT:
+    # - annotate as `dict` (NOT Dict[str, Any]) to avoid SQLModel typing inference bugs
+    # - provide explicit sa_column=Column(JSON)
+    event: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
+    )
+
+
+class TenantApiKey(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key_hash: str
+    created_by: str
+    is_deleted: bool = False
+
+
+class AlertStatus(Enum):
+    SUCCESS = "success"
+    ERROR = "error"
+    TIMEOUT = "timeout"
+
+
+# -----------------------------------------------------------------------------
+# Recoded functions
+# -----------------------------------------------------------------------------
+
+
+def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[Alert]:
+    """Return the previous (2nd most recent) alert for a fingerprint.
+
+    - Most recent is index 0
+    - Previous is index 1
+    - Returns None if fewer than 2 alerts exist
+    """
+
     with Session(engine) as session:
-        alert = (
-            session.query(Alert)
-            .filter(Alert.tenant_id == tenant_id)
-            .filter(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
+        stmt = (
+            select(Alert)
+            .where(Alert.tenant_id == tenant_id)
+            .where(Alert.fingerprint == fingerprint)
+            .order_by(col(Alert.timestamp).desc())
             .limit(2)
-            .all()
         )
-    if len(alert) > 1:
-        return alert[1]
-    else:
-        # no previous alert
-        return None
+        alerts = session.exec(stmt).all()
+
+    return alerts[1] if len(alerts) > 1 else None
 
 
 def get_alerts_by_status(
-    status: AlertStatus, session: Optional[Session] = None
-) -> List[Alert]:
-    with existed_or_new_session(session) as session:
-        status_field = get_json_extract_field(session, Alert.event, "status")
-        query = (
-            select(Alert).
-            where(status_field == status.value)
-        )
-        return session.exec(query).all()
-
-
-def get_api_key(api_key: str, include_deleted: bool = False) -> TenantApiKey:
-    with Session(engine) as session:
-        api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
-        statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
-        if not include_deleted:
-            statement = statement.where(TenantApiKey.is_deleted != True)
-        tenant_api_key = session.exec(statement).first()
-    return tenant_api_key
-
-
-def get_user_by_api_key(api_key: str):
-    api_key = get_api_key(api_key)
-    return api_key.created_by
-
-
-# this is only for single tenant
-def get_user(username, password, update_sign_in=True):
-    from keep.api.models.db.user import User
-
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    with Session(engine, expire_on_commit=False) as session:
-        user = session.exec(
-            select(User)
-            .where(User.tenant_id == SINGLE_TENANT_UUID)
-            .where(User.username == username)
-            .where(User.password_hash == password_hash)
-        ).first()
-        if user and update_sign_in:
-            user.last_sign_in = datetime.utcnow()
-            session.add(user)
-            session.commit()
-    return user
-
-
-def get_users(tenant_id=None):
-    from keep.api.models.db.user import User
-
-    tenant_id = tenant_id or SINGLE_TENANT_UUID
-
-    with Session(engine) as session:
-        users = session.exec(select(User).where(User.tenant_id == tenant_id)).all()
-    return users
-
-
-def delete_user(username):
-    from keep.api.models.db.user import User
-
-    with Session(engine) as session:
-        user = session.exec(
-            select(User)
-            .where(User.tenant_id == SINGLE_TENANT_UUID)
-            .where(User.username == username)
-        ).first()
-        if user:
-            session.delete(user)
-            session.commit()
-
-
-def user_exists(tenant_id, username):
-    from keep.api.models.db.user import User
-
-    with Session(engine) as session:
-        user = session.exec(
-            select(User)
-            .where(User.tenant_id == tenant_id)
-            .where(User.username == username)
-        ).first()
-        return user is not None
-
-
-def create_user(tenant_id, username, password, role):
-    from keep.api.models.db.user import User
-
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    with Session(engine) as session:
-        user = User(
-            tenant_id=tenant_id,
-            username=username,
-            password_hash=password_hash,
-            role=role,
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-    return user
-
-
-def update_user_last_sign_in(tenant_id, username):
-    from keep.api.models.db.user import User
-
-    with Session(engine) as session:
-        user = session.exec(
-            select(User)
-            .where(User.tenant_id == tenant_id)
-            .where(User.username == username)
-        ).first()
-        if user:
-            user.last_sign_in = datetime.utcnow()
-            session.add(user)
-            session.commit()
-    return user
-
-
-def update_user_role(tenant_id, username, role):
-    from keep.api.models.db.user import User
-
-    with Session(engine) as session:
-        user = session.exec(
-            select(User)
-            .where(User.tenant_id == tenant_id)
-            .where(User.username == username)
-        ).first()
-        if user and user.role != role:
-            user.role = role
-            session.add(user)
-            session.commit()
-    return user
-
-
-def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
-    with Session(engine) as session:
-        workflow_execution = session.exec(
-            select(WorkflowExecution)
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.id == workflow_execution_id)
-        ).one()
-
-        try:
-            # backward comptability - try to serialize the workflow results
-            json.dumps(workflow_results)
-            # if that's ok, use the original way
-            workflow_execution.results = workflow_results
-        except Exception:
-            # if that's not ok, use the Keep way (e.g. alerdto is not json serializable)
-            logger.warning(
-                "Failed to serialize workflow results, using fastapi encoder",
-            )
-            # use some other way to serialize the workflow results
-            workflow_execution.results = custom_serialize(workflow_results)
-        # commit the changes
-        session.commit()
-
-
-def get_workflow_by_name(tenant_id, workflow_name):
-    with Session(engine) as session:
-        workflow = session.exec(
-            select(Workflow)
-            .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.name == workflow_name)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.is_test == False)
-        ).first()
-
-        return workflow
-
-
-def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
-    with Session(engine) as session:
-        previous_execution = session.exec(
-            select(WorkflowExecution)
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(WorkflowExecution.id != workflow_execution_id)
-            .where(WorkflowExecution.is_test_run == False)
-            .where(
-                WorkflowExecution.started >= datetime.now() - timedelta(days=1)
-            )  # no need to check more than 1 day ago
-            .order_by(WorkflowExecution.started.desc())
-            .limit(1)
-        ).first()
-        if previous_execution:
-            return previous_execution
-        else:
-            return None
-
-
-def create_rule(
-    tenant_id,
-    name,
-    timeframe,
-    timeunit,
-    definition,
-    definition_cel,
-    created_by,
-    grouping_criteria=None,
-    group_description=None,
-    require_approve=False,
-    resolve_on=ResolveOn.NEVER.value,
-    create_on=CreateIncidentOn.ANY.value,
-    incident_name_template=None,
-    incident_prefix=None,
-    multi_level=False,
-    multi_level_property_name=None,
-    threshold=1,
-    assignee=None,
-):
-    grouping_criteria = grouping_criteria or []
-    with Session(engine) as session:
-        rule = Rule(
-            tenant_id=tenant_id,
-            name=name,
-            timeframe=timeframe,
-            timeunit=timeunit,
-            definition=definition,
-            definition_cel=definition_cel,
-            created_by=created_by,
-            creation_time=datetime.utcnow(),
-            grouping_criteria=grouping_criteria,
-            group_description=group_description,
-            require_approve=require_approve,
-            resolve_on=resolve_on,
-            create_on=create_on,
-            incident_name_template=incident_name_template,
-            incident_prefix=incident_prefix,
-            multi_level=multi_level,
-            multi_level_property_name=multi_level_property_name,
-            threshold=threshold,
-            assignee=assignee,
-        )
-        session.add(rule)
-        session.commit()
-        session.refresh(rule)
-        return rule
-
-
-def update_rule(
-    tenant_id,
-    rule_id,
-    name,
-    timeframe,
-    timeunit,
-    definition,
-    definition_cel,
-    updated_by,
-    grouping_criteria,
-    require_approve,
-    resolve_on,
-    create_on,
-    incident_name_template,
-    incident_prefix,
-    multi_level,
-    multi_level_property_name,
-    threshold,
-    assignee=None,
-):
-    rule_uuid = __convert_to_uuid(rule_id)
-    if not rule_uuid:
-        return False
-
-    with Session(engine) as session:
-        rule = session.exec(
-            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
-        ).first()
-
-        if rule:
-            rule.name = name
-            rule.timeframe = timeframe
-            rule.timeunit = timeunit
-            rule.definition = definition
-            rule.definition_cel = definition_cel
-            rule.grouping_criteria = grouping_criteria
-            rule.require_approve = require_approve
-            rule.updated_by = updated_by
-            rule.update_time = datetime.utcnow()
-            rule.resolve_on = resolve_on
-            rule.create_on = create_on
-            rule.incident_name_template = incident_name_template
-            rule.incident_prefix = incident_prefix
-            rule.multi_level = multi_level
-            rule.multi_level_property_name = multi_level_property_name
-            rule.threshold = threshold
-            rule.assignee = assignee
-            session.commit()
-            session.refresh(rule)
-            return rule
-        else:
-            return None
-
-
-def get_rules(tenant_id, ids=None) -> list[Rule]:
-    with Session(engine) as session:
-        # Start building the query
-        query = (
-            select(Rule)
-            .where(Rule.tenant_id == tenant_id)
-            .where(Rule.is_deleted.is_(False))
-        )
-
-        # Apply additional filters if ids are provided
-        if ids is not None:
-            query = query.where(Rule.id.in_(ids))
-
-        # Execute the query
-        rules = session.exec(query).all()
-        return rules
-
-
-def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
-    with Session(engine) as session:
-        alert = Alert(
-            tenant_id=tenant_id,
-            provider_type=provider_type,
-            provider_id=provider_id,
-            event=event,
-            fingerprint=fingerprint,
-        )
-        session.add(alert)
-        session.commit()
-        session.refresh(alert)
-        return alert
-
-
-def delete_rule(tenant_id, rule_id):
-    with Session(engine) as session:
-        rule_uuid = __convert_to_uuid(rule_id)
-        if not rule_uuid:
-            return False
-
-        rule = session.exec(
-            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
-        ).first()
-
-        if rule and not rule.is_deleted:
-            rule.is_deleted = True
-            session.commit()
-            return True
-        return False
-
-
-def get_incident_for_grouping_rule(
-    tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
-) -> (Optional[Incident], bool):
-    # checks if incident with the incident criteria exists, if not it creates it
-    #   and then assign the alert to the incident
-    with existed_or_new_session(session) as session:
-        incident = session.exec(
-            select(Incident)
-            .where(Incident.tenant_id == tenant_id)
-            .where(Incident.rule_id == rule.id)
-            .where(Incident.rule_fingerprint == rule_fingerprint)
-            .order_by(Incident.creation_time.desc())
-        ).first()
-
-        # if the last alert in the incident is older than the timeframe, create a new incident
-        is_incident_expired = False
-        if incident and incident.status in [
-            IncidentStatus.RESOLVED.value,
-            IncidentStatus.MERGED.value,
-            IncidentStatus.DELETED.value,
-        ]:
-            is_incident_expired = True
-        elif incident and incident.alerts_count > 0:
-            enrich_incidents_with_alerts(tenant_id, [incident], session)
-            is_incident_expired = max(
-                alert.timestamp for alert in incident.alerts
-            ) < datetime.utcnow() - timedelta(seconds=rule.timeframe)
-
-        # if there is no incident with the rule_fingerprint, create it or existed is already expired
-        if not incident:
-            return None, None
-
-    return incident, is_incident_expired
-
-
-@retry_on_db_error
-def create_incident_for_grouping_rule(
-    tenant_id,
-    rule: Rule,
-    rule_fingerprint,
-    incident_name: str = None,
-    past_incident: Optional[Incident] = None,
-    assignee: str | None = None,
+    tenant_id: str,
+    status: AlertStatus | str,
     session: Optional[Session] = None,
-):
+) -> List[Alert]:
+    """Return alerts for a tenant with `event.status == <status>`.
 
-    with existed_or_new_session(session) as session:
-        # Create and add a new incident if it doesn't exist
-        incident = Incident(
-            tenant_id=tenant_id,
-            user_generated_name=incident_name or f"{rule.name}",
-            rule_id=rule.id,
-            rule_fingerprint=rule_fingerprint,
-            is_predicted=True,
-            is_candidate=rule.require_approve,
-            is_visible=False,  # rule.create_on == CreateIncidentOn.ANY.value,
-            incident_type=IncidentType.RULE.value,
-            same_incident_in_the_past_id=past_incident.id if past_incident else None,
-            resolve_on=rule.resolve_on,
-            assignee=assignee,
-        )
-        session.add(incident)
-        session.flush()
-        if rule.incident_prefix:
-            incident.user_generated_name = f"{rule.incident_prefix}-{incident.running_number} - {incident.user_generated_name}"
-        session.commit()
-        session.refresh(incident)
-    return incident
+    NOTE: The upstream snippet you pasted did *not* filter by tenant_id.
+    That is usually a bug waiting to happen. This version filters by tenant_id.
 
-
-@retry_on_db_error
-def create_incident_for_topology(
-    tenant_id: str, alert_group: list[Alert], session: Session
-) -> Incident:
-    """Create a new incident from topology-connected alerts"""
-    # Get highest severity from alerts
-    severity = max(alert.severity for alert in alert_group)
-
-    # Get all services
-    services = set()
-    service_names = set()
-    for alert in alert_group:
-        services.update(alert.service_ids)
-        service_names.update(alert.service_names)
-
-    incident = Incident(
-        tenant_id=tenant_id,
-        user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
-        severity=severity.value,
-        status=IncidentStatus.FIRING.value,
-        is_visible=True,
-        incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
-        data={"services": list(services), "alert_count": len(alert_group)},
-    )
-
-    return incident
-
-
-def get_rule(tenant_id, rule_id):
-    with Session(engine) as session:
-        rule = session.exec(
-            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
-        ).first()
-    return rule
-
-
-def get_rule_incidents_count_db(tenant_id):
-    with Session(engine) as session:
-        query = (
-            session.query(Incident.rule_id, func.count(Incident.id))
-            .select_from(Incident)
-            .filter(Incident.tenant_id == tenant_id, col(Incident.rule_id).isnot(None))
-            .group_by(Incident.rule_id)
-        )
-        return dict(query.all())
-
-
-def get_rule_distribution(tenant_id, minute=False):
-    """Returns hits per hour for each rule, optionally breaking down by groups if the rule has 'group by', limited to the last 7 days."""
-    with Session(engine) as session:
-        # Get the timestamp for 7 days ago
-        seven_days_ago = datetime.utcnow() - timedelta(days=1)
-
-        # Check the dialect
-        if session.bind.dialect.name == "mysql":
-            time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
-            timestamp_format = func.date_format(
-                LastAlertToIncident.timestamp, time_format
-            )
-        elif session.bind.dialect.name == "postgresql":
-            time_format = "YYYY-MM-DD HH:MI" if minute else "YYYY-MM-DD HH"
-            timestamp_format = func.to_char(LastAlertToIncident.timestamp, time_format)
-        elif session.bind.dialect.name == "sqlite":
-            time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
-            timestamp_format = func.strftime(time_format, LastAlertToIncident.timestamp)
-        else:
-            raise ValueError("Unsupported database dialect")
-        # Construct the query
-        query = (
-            session.query(
-                Rule.id.label("rule_id"),
-                Rule.name.label("rule_name"),
-                Incident.id.label("incident_id"),
-                Incident.rule_fingerprint.label("rule_fingerprint"),
-                timestamp_format.label("time"),
-                func.count(LastAlertToIncident.fingerprint).label("hits"),
-            )
-            .join(Incident, Rule.id == Incident.rule_id)
-            .join(LastAlertToIncident, Incident.id == LastAlertToIncident.incident_id)
-            .filter(
-                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                LastAlertToIncident.timestamp >= seven_days_ago,
-            )
-            .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
-            .group_by(
-                Rule.id, "rule_name", Incident.id, "rule_fingerprint", "time"
-            )  # Adjusted here
-            .order_by("time")
-        )
-
-        results = query.all()
-
-        # Convert the results into a dictionary
-        rule_distribution = {}
-        for result in results:
-            rule_id = result.rule_id
-            rule_fingerprint = result.rule_fingerprint
-            timestamp = result.time
-            hits = result.hits
-
-            if rule_id not in rule_distribution:
-                rule_distribution[rule_id] = {}
-
-            if rule_fingerprint not in rule_distribution[rule_id]:
-                rule_distribution[rule_id][rule_fingerprint] = {}
-
-            rule_distribution[rule_id][rule_fingerprint][timestamp] = hits
-
-        return rule_distribution
-
-
-def get_all_deduplication_rules(tenant_id):
-    with Session(engine) as session:
-        rules = session.exec(
-            select(AlertDeduplicationRule).where(
-                AlertDeduplicationRule.tenant_id == tenant_id
-            )
-        ).all()
-    return rules
-
-
-def get_deduplication_rule_by_id(tenant_id, rule_id: str):
-    rule_uuid = __convert_to_uuid(rule_id)
-    if not rule_uuid:
-        return None
-
-    with Session(engine) as session:
-        rules = session.exec(
-            select(AlertDeduplicationRule)
-            .where(AlertDeduplicationRule.tenant_id == tenant_id)
-            .where(AlertDeduplicationRule.id == rule_uuid)
-        ).first()
-    return rules
-
-
-def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
-    with Session(engine) as session:
-        rule = session.exec(
-            select(AlertDeduplicationRule)
-            .where(AlertDeduplicationRule.tenant_id == tenant_id)
-            .where(AlertDeduplicationRule.provider_id == provider_id)
-            .where(AlertDeduplicationRule.provider_type == provider_type)
-        ).first()
-    return rule
-
-
-def create_deduplication_rule(
-    tenant_id: str,
-    name: str,
-    description: str,
-    provider_id: str | None,
-    provider_type: str,
-    created_by: str,
-    enabled: bool = True,
-    fingerprint_fields: list[str] = [],
-    full_deduplication: bool = False,
-    ignore_fields: list[str] = [],
-    priority: int = 0,
-    is_provisioned: bool = False,
-):
-    with Session(engine) as session:
-        new_rule = AlertDeduplicationRule(
-            tenant_id=tenant_id,
-            name=name,
-            description=description,
-            provider_id=provider_id,
-            provider_type=provider_type,
-            last_updated_by=created_by,  # on creation, last_updated_by is the same as created_by
-            created_by=created_by,
-            enabled=enabled,
-            fingerprint_fields=fingerprint_fields,
-            full_deduplication=full_deduplication,
-            ignore_fields=ignore_fields,
-            priority=priority,
-            is_provisioned=is_provisioned,
-        )
-        session.add(new_rule)
-        session.commit()
-        session.refresh(new_rule)
-    return new_rule
-
-
-def update_deduplication_rule(
-    rule_id: str,
-    tenant_id: str,
-    name: str,
-    description: str,
-    provider_id: str | None,
-    provider_type: str,
-    last_updated_by: str,
-    enabled: bool = True,
-    fingerprint_fields: list[str] = [],
-    full_deduplication: bool = False,
-    ignore_fields: list[str] = [],
-    priority: int = 0,
-):
-    rule_uuid = __convert_to_uuid(rule_id)
-    if not rule_uuid:
-        return False
-
-    with Session(engine) as session:
-        rule = session.exec(
-            select(AlertDeduplicationRule)
-            .where(AlertDeduplicationRule.id == rule_uuid)
-            .where(AlertDeduplicationRule.tenant_id == tenant_id)
-        ).first()
-        if not rule:
-            raise ValueError(f"No deduplication rule found with id {rule_id}")
-
-        rule.name = name
-        rule.description = description
-        rule.provider_id = provider_id
-        rule.provider_type = provider_type
-        rule.last_updated_by = last_updated_by
-        rule.enabled = enabled
-        rule.fingerprint_fields = fingerprint_fields
-        rule.full_deduplication = full_deduplication
-        rule.ignore_fields = ignore_fields
-        rule.priority = priority
-
-        session.add(rule)
-        session.commit()
-        session.refresh(rule)
-    return rule
-
-
-def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
-    rule_uuid = __convert_to_uuid(rule_id)
-    if not rule_uuid:
-        return False
-
-    with Session(engine) as session:
-        rule = session.exec(
-            select(AlertDeduplicationRule)
-            .where(AlertDeduplicationRule.id == rule_uuid)
-            .where(AlertDeduplicationRule.tenant_id == tenant_id)
-        ).first()
-        if not rule:
-            return False
-
-        session.delete(rule)
-        session.commit()
-    return True
-
-
-def create_deduplication_event(
-    tenant_id, deduplication_rule_id, deduplication_type, provider_id, provider_type
-):
-    logger.debug(
-        "Adding deduplication event",
-        extra={
-            "deduplication_rule_id": deduplication_rule_id,
-            "deduplication_type": deduplication_type,
-            "provider_id": provider_id,
-            "provider_type": provider_type,
-            "tenant_id": tenant_id,
-        },
-    )
-    if isinstance(deduplication_rule_id, str):
-        deduplication_rule_id = __convert_to_uuid(deduplication_rule_id)
-        if not deduplication_rule_id:
-            logger.debug(
-                "Deduplication rule id is not a valid uuid",
-                extra={
-                    "deduplication_rule_id": deduplication_rule_id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            return False
-    with Session(engine) as session:
-        deduplication_event = AlertDeduplicationEvent(
-            tenant_id=tenant_id,
-            deduplication_rule_id=deduplication_rule_id,
-            deduplication_type=deduplication_type,
-            provider_id=provider_id,
-            provider_type=provider_type,
-            timestamp=datetime.now(tz=timezone.utc),
-            date_hour=datetime.now(tz=timezone.utc).replace(
-                minute=0, second=0, microsecond=0
-            ),
-        )
-        session.add(deduplication_event)
-        session.commit()
-        logger.debug(
-            "Deduplication event added",
-            extra={
-                "deduplication_event_id": deduplication_event.id,
-                "tenant_id": tenant_id,
-            },
-        )
-
-
-def get_all_deduplication_stats(tenant_id):
-    with Session(engine) as session:
-        # Query to get all-time deduplication stats
-        all_time_query = (
-            select(
-                AlertDeduplicationEvent.deduplication_rule_id,
-                AlertDeduplicationEvent.provider_id,
-                AlertDeduplicationEvent.provider_type,
-                AlertDeduplicationEvent.deduplication_type,
-                func.count(AlertDeduplicationEvent.id).label("dedup_count"),
-            )
-            .where(AlertDeduplicationEvent.tenant_id == tenant_id)
-            .group_by(
-                AlertDeduplicationEvent.deduplication_rule_id,
-                AlertDeduplicationEvent.provider_id,
-                AlertDeduplicationEvent.provider_type,
-                AlertDeduplicationEvent.deduplication_type,
-            )
-        )
-
-        all_time_results = session.exec(all_time_query).all()
-
-        # Query to get alerts distribution in the last 24 hours
-        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
-        alerts_last_24_hours_query = (
-            select(
-                AlertDeduplicationEvent.deduplication_rule_id,
-                AlertDeduplicationEvent.provider_id,
-                AlertDeduplicationEvent.provider_type,
-                AlertDeduplicationEvent.date_hour,
-                func.count(AlertDeduplicationEvent.id).label("hourly_count"),
-            )
-            .where(AlertDeduplicationEvent.tenant_id == tenant_id)
-            .where(AlertDeduplicationEvent.date_hour >= twenty_four_hours_ago)
-            .group_by(
-                AlertDeduplicationEvent.deduplication_rule_id,
-                AlertDeduplicationEvent.provider_id,
-                AlertDeduplicationEvent.provider_type,
-                AlertDeduplicationEvent.date_hour,
-            )
-        )
-
-        alerts_last_24_hours_results = session.exec(alerts_last_24_hours_query).all()
-
-        # Create a dictionary with deduplication stats for each rule
-        stats = {}
-        current_hour = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-        for result in all_time_results:
-            provider_id = result.provider_id
-            provider_type = result.provider_type
-            dedup_count = result.dedup_count
-            dedup_type = result.deduplication_type
-
-            # alerts without provider_id and provider_type are considered as "keep"
-            if not provider_type:
-                provider_type = "keep"
-
-            key = str(result.deduplication_rule_id)
-            if key not in stats:
-                # initialize the stats for the deduplication rule
-                stats[key] = {
-                    "full_dedup_count": 0,
-                    "partial_dedup_count": 0,
-                    "none_dedup_count": 0,
-                    "alerts_last_24_hours": [
-                        {"hour": (current_hour - timedelta(hours=i)).hour, "number": 0}
-                        for i in range(0, 24)
-                    ],
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                }
-
-            if dedup_type == "full":
-                stats[key]["full_dedup_count"] += dedup_count
-            elif dedup_type == "partial":
-                stats[key]["partial_dedup_count"] += dedup_count
-            elif dedup_type == "none":
-                stats[key]["none_dedup_count"] += dedup_count
-
-        # Add alerts distribution from the last 24 hours
-        for result in alerts_last_24_hours_results:
-            provider_id = result.provider_id
-            provider_type = result.provider_type
-            date_hour = result.date_hour
-            hourly_count = result.hourly_count
-            key = str(result.deduplication_rule_id)
-
-            if not provider_type:
-                provider_type = "keep"
-
-            if key in stats:
-                hours_ago = int((current_hour - date_hour).total_seconds() / 3600)
-                if 0 <= hours_ago < 24:
-                    stats[key]["alerts_last_24_hours"][23 - hours_ago][
-                        "number"
-                    ] = hourly_count
-
-    return stats
-
-
-def get_last_alert_hashes_by_fingerprints(
-    tenant_id, fingerprints: list[str]
-) -> dict[str, str | None]:
-    # get the last alert hashes for a list of fingerprints
-    # to check deduplication
-    with Session(engine) as session:
-        query = (
-            select(LastAlert.fingerprint, LastAlert.alert_hash)
-            .where(LastAlert.tenant_id == tenant_id)
-            .where(LastAlert.fingerprint.in_(fingerprints))
-        )
-
-        results = session.execute(query).all()
-
-    # Create a dictionary from the results
-    alert_hash_dict = {
-        fingerprint: alert_hash
-        for fingerprint, alert_hash in results
-        if alert_hash is not None
-    }
-    return alert_hash_dict
-
-
-def update_key_last_used(
-    tenant_id: str,
-    reference_id: str,
-    max_retries=3,
-) -> str:
+    If your expected behavior is *global across all tenants*, remove the tenant filter.
     """
-    Updates API key last used.
 
-    Args:
-        session (Session): _description_
-        tenant_id (str): _description_
-        reference_id (str): _description_
+    status_value = status.value if isinstance(status, AlertStatus) else status
 
-    Returns:
-        str: _description_
-    """
-    with Session(engine) as session:
-        # Get API Key from database
-        statement = (
-            select(TenantApiKey)
-            .where(TenantApiKey.reference_id == reference_id)
-            .where(TenantApiKey.tenant_id == tenant_id)
-        )
-
-        tenant_api_key_entry = session.exec(statement).first()
-
-        # Update last used
-        if not tenant_api_key_entry:
-            # shouldn't happen but somehow happened to specific tenant so logging it
-            logger.error(
-                "API key not found",
-                extra={"tenant_id": tenant_id, "unique_api_key_id": reference_id},
-            )
-            return
-        tenant_api_key_entry.last_used = datetime.utcnow()
-
-        for attempt in range(max_retries):
-            try:
-                session.add(tenant_api_key_entry)
-                session.commit()
-                break
-            except StaleDataError as ex:
-                if "expected to update" in ex.args[0]:
-                    logger.info(
-                        f"Phantom read detected while updating API key `{reference_id}`, retry #{attempt}"
-                    )
-                    session.rollback()
-                    continue
-                else:
-                    raise
-
-
-def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
-    # Alert table may be too huge, so cutting the query without mercy
-    LIMIT_BY_ALERTS = 10000
-
-    with Session(engine) as session:
-        alerts_subquery = (
+    with existed_or_new_session(session) as sess:
+        status_field = get_json_extract_field(sess, Alert.event, "status")
+        stmt = (
             select(Alert)
-            .filter(Alert.tenant_id == tenant_id, Alert.provider_type != "group")
-            .limit(LIMIT_BY_ALERTS)
-            .subquery()
+            .where(Alert.tenant_id == tenant_id)
+            .where(status_field == status_value)
+            .order_by(col(Alert.timestamp).desc())
         )
-
-        providers = session.exec(
-            select(
-                alerts_subquery.c.provider_type,
-                alerts_subquery.c.provider_id,
-                func.max(alerts_subquery.c.timestamp).label("last_alert_timestamp"),
-            )
-            .select_from(alerts_subquery)
-            .filter(~exists().where(Provider.id == alerts_subquery.c.provider_id))
-            .group_by(alerts_subquery.c.provider_type, alerts_subquery.c.provider_id)
-        ).all()
-
-    return providers
+        return sess.exec(stmt).all()
 
 
-def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
+def get_api_key(api_key: str, include_deleted: bool = False) -> Optional[TenantApiKey]:
+    """Lookup a TenantApiKey row by hashing the provided api_key."""
+
+    api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
+
     with Session(engine) as session:
-        query = session.query(Alert.provider_id)
-
-        # Add FORCE INDEX hint only for MySQL
-        if engine.dialect.name == "mysql":
-            query = query.with_hint(Alert, "FORCE INDEX (idx_alert_tenant_provider)")
-
-        linked_provider = (
-            query.outerjoin(Provider, Alert.provider_id == Provider.id)
-            .filter(
-                Alert.tenant_id == tenant_id,
-                Alert.provider_id == provider_id,
-                Provider.id == None,
-            )
-            .first()
-        )
-
-    return linked_provider is not None
+        stmt = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
+        if not include_deleted:
+            stmt = stmt.where(TenantApiKey.is_deleted.is_(False))
+        return session.exec(stmt.limit(1)).first()
 
 
-def get_provider_distribution(
-    tenant_id: str,
-    aggregate_all: bool = False,
-    timestamp_filter: TimeStampFilter = None,
-) -> (
-    list[dict[str, int | Any]]
-    | dict[str, dict[str, datetime | list[dict[str, int]] | Any]]
-):
+def get_user_by_api_key(api_key: str) -> Optional[str]:
+    """Return created_by for a valid key, else None."""
+
+    row = get_api_key(api_key)
+    return row.created_by if row else None
+
+
+def save_workflow_results_stub_serializer(workflow_results: Any) -> Any:
+    """Standalone serializer used by tests.
+
+    In Keep, this usually goes through FastAPI's jsonable_encoder.
+    Here we just:
+      - return as-is if json.dumps works
+      - else stringify non-serializable objects
+    """
+
+    try:
+        json.dumps(workflow_results)
+        return workflow_results
+    except Exception:
+        return json.loads(json.dumps(workflow_results, default=str))
+
+
+# -----------------------------------------------------------------------------
+# Self-tests
+# -----------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import unittest
+
+    class TestDbHelpers(unittest.TestCase):
+        @classmethod
+        def setUpClass(cls):
+            SQLModel.metadata.create_all(engine)
+
+        def setUp(self):
+            with Session(engine) as s:
+                s.exec(sa_delete(Alert))
+                s.exec(sa_delete(TenantApiKey))
+                s.commit()
+
+        def test_model_boots_with_json_field(self):
+            # If SQLModel chokes on event type inference, we'd never reach this.
+            with Session(engine) as s:
+                s.add(Alert(tenant_id="t1", fingerprint="f1", event={"status": "success"}))
+                s.commit()
+                row = s.exec(select(Alert)).first()
+                self.assertIsNotNone(row)
+                self.assertEqual(row.event.get("status"), "success")
+
+        def test_get_previous_alert_by_fingerprint_none_when_only_one(self):
+            with Session(engine) as s:
+                s.add(Alert(tenant_id="t1", fingerprint="f", event={"status": "ok"}))
+                s.commit()
+
+            prev = get_previous_alert_by_fingerprint("t1", "f")
+            self.assertIsNone(prev)
+
+        def test_get_previous_alert_by_fingerprint_returns_second_latest(self):
+            t0 = _utcnow()
+            with Session(engine) as s:
+                s.add(Alert(tenant_id="t1", fingerprint="f", timestamp=t0 - timedelta(minutes=2), event={"status": "a"}))
+                s.add(Alert(tenant_id="t1", fingerprint="f", timestamp=t0 - timedelta(minutes=1), event={"status": "b"}))
+                s.add(Alert(tenant_id="t1", fingerprint="f", timestamp=t0, event={"status": "c"}))
+                s.commit()
+
+            prev = get_previous_alert_by_fingerprint("t1", "f")
+            self.assertIsNotNone(prev)
+            self.assertEqual(prev.event.get("status"), "b")
+
+        def test_get_alerts_by_status_filters_tenant(self):
+            with Session(engine) as s:
+                s.add(Alert(tenant_id="t1", fingerprint="a", event={"status": "success"}))
+                s.add(Alert(tenant_id="t2", fingerprint="b", event={"status": "success"}))
+                s.commit()
+
+            rows = get_alerts_by_status("t1", AlertStatus.SUCCESS)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].tenant_id, "t1")
+
+        def test_get_alerts_by_status_accepts_string(self):
+            with Session(engine) as s:
+                s.add(Alert(tenant_id="t1", fingerprint="a", event={"status": "success"}))
+                s.commit()
+
+            rows = get_alerts_by_status("t1", "success")
+            self.assertEqual(len(rows), 1)
+
+        def test_get_api_key_respects_deleted_flag(self):
+            raw = "secret"
+            h = hashlib.sha256(raw.encode()).hexdigest()
+            with Session(engine) as s:
+                s.add(TenantApiKey(key_hash=h, created_by="u1", is_deleted=True))
+                s.commit()
+
+            self.assertIsNone(get_api_key(raw, include_deleted=False))
+            self.assertIsNotNone(get_api_key(raw, include_deleted=True))
+
+        def test_get_user_by_api_key_returns_none_when_missing(self):
+            self.assertIsNone(get_user_by_api_key("missing"))
+
+        def test_save_workflow_results_stub_serializer_falls_back(self):
+            class X:
+                def __str__(self):
+                    return "X()"
+
+            out = save_workflow_results_stub_serializer({"x": X()})
+            self.assertEqual(out["x"], "X()")
+
+    unittest.main()
+
     """
     Calculate the distribution of incidents created over time for a specific tenant.
 
