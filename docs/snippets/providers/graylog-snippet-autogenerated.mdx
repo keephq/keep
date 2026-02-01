@@ -1,0 +1,74 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **graylog_user_name**: Username (required: True, sensitive: False)
+- **graylog_access_token**: Graylog Access Token (required: True, sensitive: True)
+- **deployment_url**: Deployment Url (required: True, sensitive: False)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated. (mandatory) 
+- **authorized**: Mandatory for querying incidents and managing resources, ensures the user has `Admin` privileges. (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query graylog
+      provider: graylog
+      config: "{{ provider.my_provider_name }}"
+      with:
+        events_search_parameters: {value}  
+```
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **search** Search using elastic query language in Graylog (action, scopes: authorized)
+
+    - `query`: The query string to search for.
+    - `query_type`: The type of query to use. Default is "elastic".
+    - `timerange_seconds`: The time range in seconds. Default is 300 seconds.
+    - `timerange_type`: The type of time range. Default is "relative".
+    - `page`: Page number, starting from 0.
+    - `per_page`: Number of results per page.
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+
+To send alerts from Graylog to Keep, Use the following webhook url to configure Graylog send alerts to Keep:
+
+1. In Graylog, from the Topbar, go to `Alerts` > `Notifications`.
+2. Click "Create Notification".
+3. In the New Notification form, configure:
+
+**Note**: For Graylog v4.x please set the **URL** to `KEEP_BACKEND_URL/alerts/event/graylog?api_key={api_key}`.
+
+- **Display Name**: keep-graylog-webhook-integration
+- **Title**: keep-graylog-webhook-integration
+- **Notification Type**: Custom HTTP Notification
+- **URL**: KEEP_BACKEND_URL/alerts/event/graylog  # Whitelist this URL
+- **Headers**: X-API-KEY:{api_key}
+4. Erase the Body Template.
+5. Click on "Create Notification".
+6. Go the the `Event Definitions` tab, and select the Event Definition that will trigger the alert you want to send to Keep and click on More > Edit.
+7. Go to "Notifications" tab.
+8. Click on "Add Notification" and select the "keep-graylog-webhook-integration" that you created in step 3.
+9. Click on "Add Notification".
+10. Click `Next` > `Update` event definition
+

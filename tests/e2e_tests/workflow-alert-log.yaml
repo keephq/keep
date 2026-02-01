@@ -1,0 +1,13 @@
+workflow:
+  id: log-every-alert
+  name: Log every alert
+  description: Simple workflow demonstrating logging every alert
+  triggers:
+    - type: manual
+    - type: alert
+  actions:
+    - name: log-alert
+      provider:
+        type: console
+        with:
+          message: "Alert name: {{alert.name}} - {{alert.message}}"

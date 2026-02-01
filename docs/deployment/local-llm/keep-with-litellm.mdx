@@ -1,0 +1,65 @@
+---
+title: "Running Keep with LiteLLM"
+---
+
+<Info>
+  This guide is for users who want to run Keep with locally hosted LLM models.
+  If you encounter any issues, please talk to us at our (Slack
+  community)[https://slack.keephq.dev].
+</Info>
+
+## Overview
+
+This guide will help you set up Keep with LiteLLM, a versatile tool that supports over 100 LLM providers. LiteLLM acts as a proxy that adheres to OpenAI standards, allowing seamless integration with Keep. By following this guide, you can easily configure Keep to work with various LLM providers using LiteLLM.
+
+### Motivation
+
+Incorporating LiteLLM with Keep allows organizations to run local models in on-premises and air-gapped environments. This setup is particularly beneficial for leveraging AIOps capabilities while ensuring that sensitive data does not leave the premises. By using LiteLLM as a proxy, you can seamlessly integrate with Keep and access a wide range of LLM providers without compromising data security. This approach is ideal for organizations that prioritize data privacy and need to comply with strict regulatory requirements.
+
+## Prerequisites
+
+### Running LiteLLM locally
+
+1. Ensure you have Python and pip installed on your system.
+2. Install LiteLLM by running the following command:
+
+```bash
+pip install litellm
+```
+
+3. Start LiteLLM with your desired model. For example, to use the HuggingFace model:
+
+```bash
+litellm --model huggingface/bigcode/starcoder
+```
+
+This will start the proxy server on `http://0.0.0.0:4000`.
+
+### Running LiteLLM with Docker
+
+To run LiteLLM using Docker, you can use the following command:
+
+```bash
+docker run -p 4000:4000 litellm/litellm --model huggingface/bigcode/starcoder
+```
+
+This command will start the LiteLLM proxy in a Docker container, exposing it on port 4000.
+
+## Configuration
+
+|           Env var           |                   Purpose                   | Required | Default Value |               Valid options               |
+| :-------------------------: | :-----------------------------------------: | :------: | :-----------: | :---------------------------------------: |
+| **OPEN_AI_ORGANIZATION_ID** | Organization ID for OpenAI/LiteLLM services |   Yes    |     None      |       Valid organization ID string        |
+|     **OPEN_AI_API_KEY**     |     API key for OpenAI/LiteLLM services     |   Yes    |     None      |           Valid API key string            |
+|     **OPENAI_BASE_URL**     |       Base URL for the LiteLLM proxy        |   Yes    |     None      | Valid URL (e.g., "http://localhost:4000") |
+
+<Note>
+  These environment variables should be set on both Keep **frontend** and
+  **backend**.
+</Note>
+
+## Additional Resources
+
+- [LiteLLM Documentation](https://docs.litellm.ai/)
+
+By following these steps, you can leverage the power of multiple LLM providers with Keep, using LiteLLM as a flexible and powerful proxy.

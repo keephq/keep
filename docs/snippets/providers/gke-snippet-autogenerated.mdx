@@ -1,0 +1,62 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **service_account_json**: The service account JSON with container.viewer role (required: True, sensitive: True)
+- **cluster_name**: The name of the cluster (required: True, sensitive: False)
+- **region**: The GKE cluster region (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **roles/container.viewer**: Read access to GKE resources (mandatory) 
+- **pods:delete**: Required to delete/restart pods  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **deployments:scale**: Required to scale deployments  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **pods:list**: Required to list pods  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **pods:get**: Required to get pod details  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+- **pods:logs**: Required to get pod logs  ([Documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/))
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query gke
+      provider: gke
+      config: "{{ provider.my_provider_name }}"
+      with:
+        command_type: {value}  # Type of query to execute
+        # Additional arguments will be passed to the query method
+```
+
+
+
+
+
+Check the following workflow example:
+- [gke.yml](https://github.com/keephq/keep/blob/main/examples/workflows/gke.yml)
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **get_pods** List all pods in a namespace or across all namespaces (view, scopes: pods:list, pods:get)
+
+- **get_pvc** List all PVCs in a namespace or across all namespaces (view, scopes: pods:list)
+
+- **get_node_pressure** Get pressure metrics for all nodes (view, scopes: pods:list)
+
+- **exec_command** Execute a command in a pod (action, scopes: pods:exec)
+
+- **restart_pod** Restart a pod by deleting it (action, scopes: pods:delete)
+
+- **get_deployment** Get deployment information (view, scopes: pods:list)
+
+- **scale_deployment** Scale a deployment to specified replicas (action, scopes: deployments:scale)
+
+- **get_pod_logs** Get logs from a pod (view, scopes: pods:logs)
+

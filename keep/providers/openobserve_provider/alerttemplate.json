@@ -1,0 +1,15 @@
+{
+    "org_name": "{org_name}",
+    "stream_type": "{stream_type}",
+    "stream_name": "{stream_name}",
+    "alert_name": "{alert_name}",
+    "alert_type": "{alert_type}",
+    "alert_period": "{alert_period}",
+    "alert_operator": "{alert_operator}",
+    "alert_threshold": "{alert_threshold}",
+    "alert_count": "{alert_count}",
+    "alert_agg_value": "{alert_agg_value}",
+    "alert_start_time": "{alert_start_time}",
+    "alert_end_time": "{alert_end_time}",
+    "alert_url": "{alert_url}"
+}

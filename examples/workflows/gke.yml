@@ -1,0 +1,21 @@
+workflow:
+  id: gke-pod-status-monitor
+  name: GKE Pod Status Monitor
+  description: Monitors and displays status information for all pods in a Google Kubernetes Engine cluster, including pod names, namespaces, and phases.
+  triggers:
+    - type: manual
+  steps:
+    # get all pods
+    - name: get-pods
+      provider:
+        type: gke
+        config: "{{ providers.GKE }}"
+        with:
+          command_type: get_pods
+  actions:
+    - name: echo-pod-status
+      foreach: "{{ steps.get-pods.results }}"
+      provider:
+        type: console
+        with:
+          message: "Pod name: {{ foreach.value.metadata.name }} || Namespace: {{ foreach.value.metadata.namespace }} || Status: {{ foreach.value.status.phase }}"

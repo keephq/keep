@@ -1,0 +1,21 @@
+workflow:
+  id: eks-pod-status-monitor
+  name: EKS Pod Status Monitor
+  description: Monitors and reports the status of all pods in an EKS cluster, including their names, namespaces, and current phases.
+  triggers:
+    - type: manual
+  steps:
+    # get all pods
+    - name: get-pods
+      provider:
+        type: eks
+        config: "{{ providers.eks }}"
+        with:
+          command_type: get_pods
+  actions:
+    - name: echo-pod-status
+      foreach: "{{ steps.get-pods.results }}"
+      provider:
+        type: console
+        with:
+          message: "Pod name: {{ foreach.value.metadata.name }} || Namespace: {{ foreach.value.metadata.namespace }} || Status: {{ foreach.value.status.phase }}"

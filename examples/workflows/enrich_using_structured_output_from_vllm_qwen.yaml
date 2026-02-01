@@ -1,0 +1,44 @@
+workflow:
+  id: vllm-qwen-alert-enrichment
+  name: vLLM Qwen Alert Enrichment
+  description: Enriches Prometheus alerts using vLLM-hosted Qwen model to automatically determine environment type and impacted customer details.
+
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: prometheus
+
+  steps:
+    - name: get-enrichments
+      provider:
+        config: "{{ providers.my_vllm }}"
+        type: vllm
+        with:
+          prompt: "You received such an alert {{alert}}, generate missing fields."
+          model: "Qwen/Qwen1.5-1.8B-Chat" # This model supports structured output
+          structured_output_format: # We limit what model could return
+            type: object
+            properties:
+              environment:
+                type: string
+                enum:
+                  - production
+                  - debug
+                  - pre-prod
+              impacted_customer_name:
+                type: string
+            required:
+              - environment
+              - impacted_customer_name
+
+  actions:
+    - name: enrich-alert
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: environment
+              value: "{{ steps.get-enrichments.results.response.environment }}"
+            - key: impacted_customer_name
+              value: "{{ steps.get-enrichments.results.response.impacted_customer_name }}"

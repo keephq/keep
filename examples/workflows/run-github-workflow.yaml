@@ -1,0 +1,19 @@
+workflow:
+  id: run-github-workflow
+  name: Run GitHub Workflow
+  description: Triggers GitHub Actions workflows with customizable inputs for automated documentation testing.
+  triggers:
+    - type: manual
+  actions:
+    - name: run-gh-action
+      provider:
+        config: "{{ providers.github }}"
+        type: github
+        with:
+          run_action: true
+          repo_owner: keephq
+          repo_name: keep
+          workflow: test-docs.yml
+          inputs:
+            input1: value1
+            input2: value2

@@ -1,0 +1,17 @@
+name: Add bugs to project board
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  add-to-project:
+    name: Add bug to project board
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'Bug'
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/keephq/projects/11
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}

@@ -1,0 +1,34 @@
+# Use the Phase Two Keycloak image as the base
+FROM quay.io/phasetwo/phasetwo-keycloak:latest
+
+# Set the working directory
+WORKDIR /opt/keycloak
+
+# Copy the realm data
+COPY keep-realm.json /opt/keycloak/data/import/keep-realm.json
+
+# Copy the custom theme
+COPY themes/keep.jar /opt/keycloak/providers/keep.jar
+
+# Copy the last login event listener
+COPY event_listeners/last-login-event-listener-0.0.1-SNAPSHOT.jar /opt/keycloak/providers/keycloak-event-listener.jar
+
+COPY javascript_providers/keep-abac-policy.jar /opt/keycloak/providers/keep-abac-policy.jar
+
+# Copy the custom entrypoint script and ensure it's executable
+COPY --chmod=755 keycloak_entrypoint.sh /opt/keycloak/keycloak_entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/opt/keycloak/keycloak_entrypoint.sh"]
+
+# Expose the default Keycloak port
+EXPOSE 8080
+
+# Set environment variables
+ENV KEEP_REALM=keep \
+    KEEP_ADMIN_USER=keep_admin \
+    KEEP_ADMIN_PASSWORD=keep_admin \
+    KEEP_TENANT_ID=keep \
+    KEEP_AUTH_REDICERT_URL=http://localhost:3000/* \
+    KEEP_CLIENT_ID=keep \
+    KEEP_KEYCLOAK_SECRET=keep-keycloak-secret

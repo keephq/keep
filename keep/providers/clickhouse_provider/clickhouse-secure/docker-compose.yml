@@ -1,0 +1,13 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123" # HTTPS port
+      - "9440:9440" # Native SSL port
+    volumes:
+      - ./certs:/certs
+      - ./users.xml:/etc/clickhouse-server/users.xml:ro
+      - ./config.xml:/etc/clickhouse-server/config.xml:ro
+    environment:
+      - CLICKHOUSE_USER=secure_user
+      - CLICKHOUSE_PASSWORD=strong_password

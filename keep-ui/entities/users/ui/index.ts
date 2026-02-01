@@ -1,0 +1,1 @@
+export { UserStatefulAvatar } from "./UserStatefulAvatar";

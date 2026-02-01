@@ -1,0 +1,26 @@
+version: '2'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9093"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    links:
+      - zookeeper
+
+  kafkacat:
+    image: edenhill/kafkacat:1.6.0
+    depends_on:
+      - kafka
+    entrypoint: /bin/sh -c "apk add --no-cache curl && tail -f /dev/null"

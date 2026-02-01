@@ -1,0 +1,1 @@
+export { SeverityBorderIcon } from "./SeverityBorderIcon";

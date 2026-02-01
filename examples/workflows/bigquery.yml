@@ -1,0 +1,21 @@
+workflow:
+  id: bigquery-data-freshness-monitor
+  name: BigQuery Data Freshness Monitor
+  description: Monitors data freshness in BigQuery tables by checking time differences and querying public datasets for validation.
+  triggers:
+    - type: manual
+  steps:
+    - name: get-max-datetime
+      provider:
+        type: bigquery
+        config: "{{ providers.bigquery-prod }}"
+        with:
+          # Get max(datetime) from the random table
+          query: "SELECT MAX(created_date) as date FROM `bigquery-public-data.austin_311.311_service_requests` LIMIT 1"
+    - name: runbook-step1-bigquery-sql
+      provider:
+        type: bigquery
+        config: "{{ providers.bigquery }}"
+        with:
+          # Get max(datetime) from the random table
+          query: "SELECT * FROM `bigquery-public-data.austin_bikeshare.bikeshare_stations` LIMIT 10"

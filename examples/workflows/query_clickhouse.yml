@@ -1,0 +1,33 @@
+workflow:
+  id: clickhouse-error-monitor
+  name: ClickHouse Error Monitor
+  description: Monitors ClickHouse logs for errors and sends notifications through both Ntfy and Slack channels.
+  triggers:
+    - type: manual
+
+steps:
+  - name: clickhouse-step
+    provider:
+      config: "{{ providers.clickhouse }}"
+      type: clickhouse
+      with:
+        query: SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1;
+        single_row: "True"
+
+actions:
+  - name: ntfy-action
+    if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
+    provider:
+      config: "{{ providers.ntfy }}"
+      type: ntfy
+      with:
+        message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"
+        topic: clickhouse
+
+  - name: slack-action
+    if: "'{{ steps.clickhouse-step.results.level }}' == 'ERROR'"
+    provider:
+      config: "{{ providers.slack }}"
+      type: slack
+      with:
+        message: "Error in clickhouse logs_table: {{ steps.clickhouse-step.results.level }}"

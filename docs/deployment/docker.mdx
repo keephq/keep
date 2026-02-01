@@ -1,0 +1,66 @@
+---
+title: "Docker"
+sidebarTitle: "Docker"
+---
+
+### Spin up Keep with docker-compose latest images
+The easiest way to start keep is is with docker-compose:
+```shell
+curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
+```
+
+```bash start.sh
+#!/bin/bash
+# Keep install script for docker compose
+
+echo "Creating state directory."
+mkdir -p state
+test -e state
+echo "Changing directory ownership to non-privileged user."
+chown -R 999:999 state || echo "Unable to change directory ownership, changing permissions instead." && chmod -R 0777 state
+which curl &> /dev/null || echo "curl not installed"
+curl https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml --output docker-compose.yml
+curl https://raw.githubusercontent.com/keephq/keep/main/docker-compose.common.yml --output docker-compose.common.yml
+
+docker compose up -d
+```
+
+The docker-compose.yml contains 3 services:
+- [keep-backend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-api?project=keephq) - a fastapi service that as the API server.
+- [keep-frontend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-ui?project=keephq) - a nextjs app that serves as Keep UI interface.
+- [keep-websocket-server](https://docs.soketi.app/getting-started/installation/docker) - Soketi (a pusher compatible websocket server) for real time alerting.
+
+### Reinstall Keep with the option to refresh from scratch
+
+`Caution:` This usage context will refresh from the beginning and Keep's data and settings will be erased. Even other containers on this host are also erased. So please consider when using the steps below.
+
+For cases where you need to test many different options or simply want to reinstall Keep from scratch using docker compose without spending a lot of time, that is, without repeating the steps of installing docker, downloading the installer.. .. run the commands according to the previous instructions.
+
+Follow these steps
+
+#### Step1: Stop, Clear container, network, volume, image.
+In the directory containing the docker compose file you downloaded, say `/root/`
+
+```
+docker-compose down
+
+docker-compose down --rmi all
+
+docker-compose down -v
+
+docker system prune -a --volumes
+```
+
+#### Step2: Clear Config db, config file in state folder. 
+
+```
+rm -rf state/*
+
+```
+
+#### Step 3: Run again
+
+```
+docker compose up -d
+```
+

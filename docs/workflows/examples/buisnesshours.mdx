@@ -1,0 +1,36 @@
+---
+title: "Executing Actions During Business Hours"
+---
+
+<Info>
+
+Link to the [workflow](https://github.com/keephq/keep/blob/main/examples/workflows/businesshours.yml).
+
+</Info>
+
+This workflow demonstrates how to take actions only during specified business hours.
+
+
+Explanation:
+- Trigger: Activated by an alert or manually.
+- Action: Check if the current time falls within business hours in the `America/New_York` timezone. If yes, enrich the alert with a `businesshours` field set to `true`.
+
+
+```yaml
+workflow:
+  id: businesshours
+  description: demonstrate how to do smth only when it's business hours
+  triggers:
+    - type: alert
+    - type: manual
+  actions:
+    - name: dismiss-alert
+      if: "keep.is_business_hours(timezone='America/New_York')"
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: businesshours
+              value: "true"
+
+```

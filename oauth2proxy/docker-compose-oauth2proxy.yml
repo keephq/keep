@@ -1,0 +1,102 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - oauth2-proxy
+      - keep-frontend
+      - keep-backend
+      - keep-websocket-server
+    networks:
+      - keep-network
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy
+    ports:
+      - "4180:4180"
+    environment:
+      - OAUTH2_PROXY_CLIENT_ID=
+      - OAUTH2_PROXY_CLIENT_SECRET=
+      - OAUTH2_PROXY_COOKIE_SECRET=0123456789abcdef0123456789abcdef
+      - OAUTH2_PROXY_COOKIE_SECURE=false
+      - OAUTH2_PROXY_EMAIL_DOMAINS=*
+      - OAUTH2_PROXY_PROVIDER=oidc
+      - OAUTH2_PROXY_OIDC_ISSUER_URL=https://auth.keephq.dev/
+      - OAUTH2_PROXY_REDIRECT_URL=http://localhost:4180/oauth2/callback
+      - OAUTH2_PROXY_SCOPE=openid email profile groups
+      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+      - OAUTH2_PROXY_UPSTREAMS=http://keep-frontend:3000
+      - OAUTH2_PROXY_PASS_ACCESS_TOKEN=true
+      - OAUTH2_PROXY_PASS_USER_HEADERS=true
+      - OAUTH2_PROXY_SET_XAUTHREQUEST=true
+      - OAUTH2_PROXY_WHITELIST_DOMAINS=localhost:8000
+      - OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER=true
+      - OAUTH2_PROXY_SSL_INSECURE_SKIP_VERIFY=true
+    networks:
+      - keep-network
+
+  keep-frontend:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui:0.36.10-console
+    environment:
+      - AUTH_TYPE=OAUTH2PROXY
+      - NEXTAUTH_SECRET=blabla
+      # nginx is running on port 8000
+      - NEXTAUTH_URL=http://localhost:8000
+      - KEEP_OAUTH2_PROXY_USER_HEADER=x-auth-request-email
+      - KEEP_OAUTH2_PROXY_ROLE_HEADER=X-Forwarded-Groups
+      - KEEP_OAUTH2_PROXY_AUTO_CREATE_USER=false
+      - API_URL=http://keep-backend:8080
+      - API_URL_CLIENT=/v2
+      - PUSHER_HOST=/websocket
+      - VERCEL=1
+      - ENV=production
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+    networks:
+      - keep-network
+
+  keep-backend:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api:0.36.10
+    environment:
+      - AUTH_TYPE=OAUTH2PROXY
+      - KEEP_OAUTH2_PROXY_USER_HEADER=x-auth-request-email
+      - KEEP_OAUTH2_PROXY_ROLE_HEADER=X-Forwarded-Groups
+      - KEEP_OAUTH2_PROXY_AUTO_CREATE_USER=false
+      - PORT=8080
+      - PUSHER_APP_ID=1
+      - PUSHER_HOST=keep-websocket-server
+      - PUSHER_PORT=6001
+      - SECRET_MANAGER_TYPE=FILE
+      - SECRET_MANAGER_DIRECTORY=/state
+      - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False
+    volumes:
+      - ./state:/state
+      - /tmp/prometheus:/tmp/prometheus
+    networks:
+      - keep-network
+
+  keep-websocket-server:
+    image: quay.io/soketi/soketi:1.4-16-debian
+    ports:
+      - "6001:6001"
+    environment:
+      - SOKETI_HOST=0.0.0.0
+      - SOKETI_DEBUG=1
+      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
+      - SOKETI_DEFAULT_APP_ID=1
+      - SOKETI_DEFAULT_APP_KEY=keepappkey
+      - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+    networks:
+      - keep-network
+
+networks:
+  keep-network:
+    driver: bridge
+    name: keep-network

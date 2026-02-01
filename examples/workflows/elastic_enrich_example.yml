@@ -1,0 +1,82 @@
+# if no acknowledgement has been recieved (updated in index) for x (from config index) time, i want to escalate it to next level of people
+workflow:
+  id: alert-acknowledgment-escalator
+  name: Alert Acknowledgment Escalator
+  description: Monitors unacknowledged alerts in Elasticsearch and automatically escalates them based on configured thresholds. Integrates with people and configuration indices for smart escalation routing.
+  triggers:
+    # run every minute
+    - type: interval
+      value: 1m
+  steps:
+    # first, query the ack index to check if there are any alerts that have not been acknowledged
+    - name: query-ack-index
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: your_ack_index
+          query: |
+            {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "acknowledged": false
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+    - name: query-config-index
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: your_config_index
+          query: |
+            {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "config": true
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+    - name: query-people-index
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: your_people_index
+          query: |
+            {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "people": true
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+  # now, we have the results from the ack index, config index, and people index
+  actions:
+    - name: escalate-if-needed
+      # if there are any alerts that have not been acknowledged
+      if: "{{ query-ack-index.hits.total.value }} > 0"
+      provider:
+        type: slack # or email or whatever you want
+        config: " {{ providers.slack }} "
+        with:
+          message: |
+            "A unacknowledged alert has been found: {{ query-ack-index.hits.hits }} {{ query-config-index.hits.hits }} {{ query-people-index.hits.hits }}"

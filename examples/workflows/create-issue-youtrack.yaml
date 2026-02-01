@@ -1,0 +1,19 @@
+workflow:
+  id: youtrack-issue-creator
+  name: YouTrack Issue Creator
+  description: Creates standardized issues in YouTrack with predefined templates and fields.
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: youtrack-action
+      provider:
+        type: youtrack
+        config: "{{ providers.YouTrack }}"
+        with:
+          description: Users face random logout issues when logged in through Google OAuth
+          summary: Login fails with session error

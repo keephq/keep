@@ -1,0 +1,63 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **service_now_base_url**: The base URL of the ServiceNow instance (required: True, sensitive: False)
+- **username**: The username of the ServiceNow user (required: True, sensitive: False)
+- **password**: The password of the ServiceNow user (required: True, sensitive: True)
+- **client_id**: The client ID to use OAuth 2.0 based authentication (required: False, sensitive: False)
+- **client_secret**: The client secret to use OAuth 2.0 based authentication (required: False, sensitive: True)
+- **ticket_creation_url**: URL for creating new tickets (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **itil**: The user can read/write tickets from the table (mandatory) ([Documentation](https://docs.servicenow.com/bundle/sandiego-platform-administration/page/administer/roles/reference/r_BaseSystemRoles.html))
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query servicenow
+      provider: servicenow
+      config: "{{ provider.my_provider_name }}"
+      with:
+        table_name: {value}  # The name of the table to query.
+        incident_id: {value}  # The incident ID to query.
+        sysparm_limit: {value}  # The maximum number of records to return.
+        sysparm_offset: {value}  # The offset to start from.
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query servicenow
+      provider: servicenow
+      config: "{{ provider.my_provider_name }}"
+      with:
+        table_name: {value}  # The name of the table to create the ticket in.
+        payload: {value}  # The ticket payload.
+        ticket_id: {value}  # The ticket ID (optional to update a ticket).
+        fingerprint: {value}  # The fingerprint of the ticket (optional to update a ticket).
+```
+
+
+
+
+Check the following workflow examples:
+- [blogpost.yml](https://github.com/keephq/keep/blob/main/examples/workflows/blogpost.yml)
+- [clickhouse_multiquery.yml](https://github.com/keephq/keep/blob/main/examples/workflows/clickhouse_multiquery.yml)
+- [create_service_now_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_service_now_ticket_upon_alerts.yml)
+- [update_service_now_tickets_status.yml](https://github.com/keephq/keep/blob/main/examples/workflows/update_service_now_tickets_status.yml)
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).

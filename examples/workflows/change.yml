@@ -1,0 +1,14 @@
+workflow:
+  id: alert-status-change-monitor
+  name: Alert Status Change Monitor
+  description: Triggers workflow actions specifically when an alert's status field changes, useful for status-based notifications.
+  triggers:
+    - type: alert
+      only_on_change:
+        - status
+  actions:
+    - name: echo-test
+      provider:
+        type: console
+        with:
+          message: "Hello world"

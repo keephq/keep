@@ -1,0 +1,110 @@
+---
+title: "Deduplication"
+---
+
+Alert deduplication is a crucial feature in Keep that helps reduce noise and streamline incident management by grouping similar alerts together. This process ensures that your team isn't overwhelmed by a flood of notifications for what is essentially the same issue, allowing for more efficient and focused incident response.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/deduplication.png" />
+</Frame>
+
+
+## Glossary
+
+- **Deduplication Rule**: A set of criteria used to determine if alerts should be grouped together.
+- **Partial Deduplication**: Correlates instances of alerts into single alerts, considering the case of the same alert with different statuses (e.g., firing and resolved). This is the default mode where specified fields are used to identify and group related alerts.
+- **Fingerprint Fields**: Specific alert attributes used to identify similar alerts.
+- **Full Deduplication**: A mode where alerts are considered identical if all fields match exactly (except those explicitly ignored). This helps avoid system overload by discarding duplicate alerts.
+- **Ignore Fields**: In full deduplication mode, these are fields that are not considered when comparing alerts.
+
+## Deduplication Types
+
+### Partial Deduplication
+Partial deduplication allows you to specify certain fields (fingerprint fields) that are used to identify similar alerts. Alerts with matching values in these specified fields are considered duplicates and are grouped together. This method is flexible and allows for fine-tuned control over how alerts are deduplicated.
+
+Every provider integrated with Keep comes with pre-built partial deduplication rule tailored to that provider's specific alert format and common use cases.
+The default fingerprint fields defined using `FINGERPRINT_FIELDS` attributes in the provider code (e.g. [datadog provider](https://github.com/keephq/keep/blob/main/keep/providers/datadog_provider/datadog_provider.py#L188) or [gcp monitoring provider](https://github.com/keephq/keep/blob/main/keep/providers/gcpmonitoring_provider/gcpmonitoring_provider.py#L52)).
+
+### Full Deduplication
+When full deduplication is enabled, Keep will also discard exact same events (excluding ignore fields). This mode considers all fields of an alert when determining duplicates, except for explicitly ignored fields.
+
+By default, exact similar events excluding lastReceived time are fully deduplicated and discarded. This helps prevent system overload from repeated identical alerts.
+
+## Real Examples of Alerts and Results
+
+### Example 1: Partial Deduplication
+
+**Rule** - Deduplicate based on 'service' and 'error_message' fields.
+
+```json
+# alert 1
+{
+    "service": "payment",
+    "error_message": "Database connection failed",
+    "severity": "high",
+    "lastReceived": "2023-05-01T10:00:00Z"
+}
+# alert 2
+{
+    "service": "payment",
+    "error_message": "Database connection failed",
+    "severity": "critical",
+    "lastReceived": "2023-05-01T10:05:00Z"
+}
+# alert 3
+{
+    "service": "auth",
+    "error_message": "Invalid token",
+    "severity": "medium",
+    "lastReceived": "2023-05-01T10:10:00Z"
+}
+```
+
+**Result**:
+- Alerts 1 and 2 are deduplicated into a single alert, fields are updated.
+- Alert 3 remains separate as it has a different service and error message.
+
+### Example 2: Full Deduplication
+
+**Rule**: Full deduplication with 'timestamp' as an ignore field
+
+**Incoming Alerts**:
+
+```json
+
+# alert 1
+{
+    service: "api",
+    error: "Rate limit exceeded",
+    user_id: "12345",
+    lastReceived: "2023-05-02T14:00:00Z"
+}
+# alert 2 (discarded as its identical)
+{
+    service: "api",
+    error: "Rate limit exceeded",
+    user_id: "12345",
+    lastReceived: "2023-05-02T14:01:00Z"
+}
+# alert 3
+{
+    service: "api",
+    error: "Rate limit exceeded",
+    user_id: "67890",
+    lastReceived: "2023-05-02T14:02:00Z"
+}
+```
+
+**Result**:
+- Alerts 1 and 2 are deduplicated as they are identical except for the ignored timestamp field.
+- Alert 3 remains separate due to the different user_id.
+
+## How It Works
+
+Keep's deduplication process follows these steps:
+
+1. **Alert Ingestion**: Every alert received by Keep is first ingested into the system.
+
+2. **Enrichment**: After ingestion, each alert undergoes an enrichment process. This step adds additional context or information to the alert, enhancing its value and usefulness.
+
+3. **Deduplication**: Following enrichment, Keep's alert deduplicator comes into play. It applies the defined deduplication rules to the enriched alerts.

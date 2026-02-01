@@ -1,0 +1,40 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: New Relic User key. To receive webhooks, use `User key` of an admin account (required: True, sensitive: True)
+- **account_id**: New Relic account ID (required: True, sensitive: False)
+- **new_relic_api_url**: New Relic API URL (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **ai.issues:read**: Required to read issues and related information (mandatory) ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.destinations:read**: Required to read whether keep webhooks are registered  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.destinations:write**: Required to register keep webhooks  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.channels:read**: Required to know informations about notification channels.  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+- **ai.channels:write**: Required to create notification channel  ([Documentation](https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/))
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query newrelic
+      provider: newrelic
+      config: "{{ provider.my_provider_name }}"
+      with:
+        nrql: {value}
+        query: {value}  # query to execute
+```
+
+
+
+
+
+Check the following workflow example:
+- [complex-conditions-cel.yml](https://github.com/keephq/keep/blob/main/examples/workflows/complex-conditions-cel.yml)

@@ -1,0 +1,75 @@
+---
+sidebarTitle: "keep mappings create"
+---
+
+Create a mapping rule.
+
+## Usage
+
+```
+Usage: keep mappings create [OPTIONS]
+```
+
+## Options
+
+* `name`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--name <mapping-name>`
+
+  The name of the mapping.
+
+* `description`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--description <mapping-description>`
+
+  The description of the mapping.
+
+* `file`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--file <mapping-file>`
+
+  The mapping file. Must be a CSV file.
+
+* `matchers`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--matchers <mapping-matchers>`
+
+  The matchers of the mapping, as a comma-separated list of strings.
+
+* `priority`
+  * Type: INTEGER RANGE
+  * Default: `0`
+  * Usage: `--priority <priority>`
+
+  The priority of the mapping, higher priority means this rule will execute first. `0<=x<=100`.
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+## CLI Help
+
+```
+Usage: keep mappings create [OPTIONS]
+
+  Create a mapping rule.
+
+Options:
+  -n, --name TEXT               The name of the mapping.  [required]
+  -d, --description TEXT        The description of the mapping.
+  -f, --file PATH               The mapping file. Must be a CSV file.
+                                [required]
+  -m, --matchers TEXT           The matchers of the mapping, as a comma-
+                                separated list of strings.  [required]
+  -p, --priority INTEGER RANGE  The priority of the mapping, higher priority
+                                means this rule will execute first.
+                                [0<=x<=100]
+  --help                        Show this message and exit.
+```

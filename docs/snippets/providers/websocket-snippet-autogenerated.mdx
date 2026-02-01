@@ -1,0 +1,25 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query websocket
+      provider: websocket
+      config: "{{ provider.my_provider_name }}"
+      with:
+        socket_url: {value}  # The websocket URL to query.
+        timeout: {value}  # Connection Timeout. Defaults to None.
+        data: {value}  # Data to send through the websocket. Defaults to None.
+```
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

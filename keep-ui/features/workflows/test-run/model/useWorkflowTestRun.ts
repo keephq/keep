@@ -1,0 +1,48 @@
+import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/extractWorkflowYamlDependencies";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { useCallback, useRef } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { WorkflowRunPayload } from "../../manual-run-workflow/model/types";
+
+export const useWorkflowTestRun = () => {
+  const currentRequestId = useRef<string | null>(null);
+  const api = useApi();
+
+  const testRunWorkflow = useCallback(
+    async (yamlString: string, payload: WorkflowRunPayload) => {
+      if (currentRequestId.current) {
+        showErrorToast(new Error("Workflow is already running"));
+        return;
+      }
+      const requestId = uuidv4();
+      currentRequestId.current = requestId;
+      const dependencies = extractWorkflowYamlDependencies(yamlString);
+      if (dependencies.alert.length > 0 || dependencies.incident.length > 0) {
+        // TODO: validate payload
+      }
+      try {
+        const response = await api.post<{
+          workflow_execution_id: string;
+        }>(`/workflows/test`, {
+          workflow_raw: yamlString,
+          ...payload,
+        });
+        if (currentRequestId.current !== requestId) {
+          return;
+        }
+        return response;
+      } catch (error) {
+        throw error;
+      } finally {
+        if (currentRequestId.current !== requestId) {
+          return;
+        }
+        currentRequestId.current = null;
+      }
+    },
+    [api]
+  );
+
+  return testRunWorkflow;
+};
