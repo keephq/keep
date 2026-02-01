@@ -13,7 +13,7 @@ export const ProvidersSearch: FC = () => {
 
   return (
     <TextInput
-      id="search-providers"
+      autoFocus id="search-providers"
       icon={MagnifyingGlassIcon}
       placeholder="Filter providers..."
       className="w-full"
