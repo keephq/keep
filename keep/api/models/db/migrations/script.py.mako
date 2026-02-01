@@ -5,10 +5,10 @@ Revises: ${down_revision | comma,n}
 Create Date: ${create_date}
 
 """
+from __future__ import annotations
+
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel
-import sqlalchemy_utils
 
 ${imports if imports else ""}
 
@@ -20,8 +20,16 @@ depends_on = ${repr(depends_on)}
 
 
 def upgrade() -> None:
-    ${upgrades if upgrades else "pass"}
+% if upgrades:
+${upgrades}
+% else:
+    pass
+% endif
 
 
 def downgrade() -> None:
-    ${downgrades if downgrades else "pass"}
+% if downgrades:
+${downgrades}
+% else:
+    pass
+% endif
