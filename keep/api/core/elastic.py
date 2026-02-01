@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Any, Optional
 
 from elasticsearch import ApiError, BadRequestError, Elasticsearch
 from elasticsearch.helpers import BulkIndexError, bulk
@@ -13,272 +14,304 @@ from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assig
 
 
 class ElasticClient:
-
     def __init__(
         self,
-        tenant_id,
-        api_key=None,
-        hosts: list[str] = None,
-        basic_auth=None,
-        **kwargs,
+        tenant_id: str,
+        api_key: Optional[str] = None,
+        hosts: Optional[list[str]] = None,
+        basic_auth: Optional[tuple[Optional[str], Optional[str]]] = None,
+        **kwargs: Any,
     ):
         self.tenant_id = tenant_id
         self.tenant_configuration = TenantConfiguration()
         self.logger = logging.getLogger(__name__)
 
-        enabled = os.environ.get("ELASTIC_ENABLED", "false").lower() == "true"
-
-        # if its a single tenant deployment or elastic is disabled, return
-        if tenant_id == SINGLE_TENANT_UUID:
-            self.enabled = enabled
-        # if its a multi tenant deployment and elastic is on, check if its enabled for the tenant
-        elif not enabled:
-            self.enabled = False
-        # else, pre tenant configuration
-        else:
-            # if elastic is disabled for the tenant, return
-            if not self.tenant_configuration.get_configuration(
-                tenant_id, "search_mode"
-            ):
-                self.enabled = False
-                self.logger.debug(f"Elastic is disabled for tenant {tenant_id}")
-                return
-            else:
-                self.enabled = True
-
-        # if elastic is disabled, return
+        self.enabled = self._is_enabled_for_tenant(tenant_id)
         if not self.enabled:
+            self._client = None
             return
 
-        self.refresh_strategy = os.environ.get("ELASTIC_REFRESH_STRATEGY", "true")
+        self.refresh_strategy = self._parse_refresh_strategy(
+            os.environ.get("ELASTIC_REFRESH_STRATEGY", "true")
+        )
+
         self.api_key = api_key or os.environ.get("ELASTIC_API_KEY")
-        self.hosts = hosts or os.environ.get("ELASTIC_HOSTS").split(",")
-        self.verify_certs = (
-            os.environ.get("ELASTIC_VERIFY_CERTS", "true").lower() == "true"
-        )
 
-        basic_auth = basic_auth or (
-            os.environ.get("ELASTIC_USER"),
-            os.environ.get("ELASTIC_PASSWORD"),
-        )
-        if not (self.api_key or basic_auth) or not self.hosts:
-            raise ValueError(
-                "No Elastic configuration found although Elastic is enabled"
-            )
+        # Hosts: explicit param wins, else env, else error
+        self.hosts = hosts or self._parse_hosts(os.environ.get("ELASTIC_HOSTS"))
+        if not self.hosts:
+            raise ValueError("Elastic is enabled but ELASTIC_HOSTS is missing/empty")
 
-        # single tenant id should have an index suffix
-        if tenant_id == SINGLE_TENANT_UUID and not os.environ.get(
-            "ELASTIC_INDEX_SUFFIX"
-        ):
-            raise ValueError(
-                "No Elastic index suffix found although Elastic is enabled for single tenant"
-            )
+        self.verify_certs = os.environ.get("ELASTIC_VERIFY_CERTS", "true").strip().lower() == "true"
 
-        if any(basic_auth):
+        # Auth: explicit basic_auth wins, else env, else api_key
+        env_user = os.environ.get("ELASTIC_USER")
+        env_pass = os.environ.get("ELASTIC_PASSWORD")
+        basic_auth = basic_auth or (env_user, env_pass)
+
+        basic_user, basic_pass = basic_auth
+        basic_auth_present = bool(basic_user) and bool(basic_pass)
+        api_key_present = bool(self.api_key)
+
+        if not basic_auth_present and not api_key_present:
+            raise ValueError("Elastic is enabled but no auth provided (ELASTIC_API_KEY or ELASTIC_USER/ELASTIC_PASSWORD)")
+
+        # Single-tenant requires a suffix
+        if tenant_id == SINGLE_TENANT_UUID and not os.environ.get("ELASTIC_INDEX_SUFFIX"):
+            raise ValueError("Elastic enabled for single tenant but ELASTIC_INDEX_SUFFIX is missing")
+
+        if basic_auth_present:
             self.logger.debug("Using basic auth for Elastic")
             self._client = Elasticsearch(
-                basic_auth=basic_auth,
                 hosts=self.hosts,
+                basic_auth=(basic_user, basic_pass),
                 verify_certs=self.verify_certs,
                 **kwargs,
             )
         else:
             self.logger.debug("Using API key for Elastic")
             self._client = Elasticsearch(
-                api_key=self.api_key,
                 hosts=self.hosts,
+                api_key=self.api_key,
                 verify_certs=self.verify_certs,
                 **kwargs,
             )
 
+    def _is_enabled_for_tenant(self, tenant_id: str) -> bool:
+        enabled_globally = os.environ.get("ELASTIC_ENABLED", "false").strip().lower() == "true"
+        if not enabled_globally:
+            return False
+
+        # Single tenant: global switch controls it
+        if tenant_id == SINGLE_TENANT_UUID:
+            return True
+
+        # Multi tenant: must also be enabled per tenant
+        try:
+            search_mode = self.tenant_configuration.get_configuration(tenant_id, "search_mode")
+        except Exception:
+            self.logger.exception("Failed reading tenant configuration for Elastic", extra={"tenant_id": tenant_id})
+            return False
+
+        # Treat specific values as enabled. Adjust to match your real config.
+        if isinstance(search_mode, str):
+            return search_mode.strip().lower() in {"elastic", "elasticsearch", "search"}
+        return bool(search_mode)
+
+    def _parse_hosts(self, raw: Optional[str]) -> list[str]:
+        if not raw:
+            return []
+        hosts = [h.strip() for h in raw.split(",") if h.strip()]
+        return hosts
+
+    def _parse_refresh_strategy(self, raw: Any) -> Any:
+        # Elasticsearch refresh accepts True/False or "wait_for"
+        if isinstance(raw, bool):
+            return raw
+        val = str(raw).strip().lower()
+        if val in {"true", "1", "yes", "on"}:
+            return True
+        if val in {"false", "0", "no", "off"}:
+            return False
+        if val == "wait_for":
+            return "wait_for"
+        # default safe behavior
+        self.logger.warning("Invalid ELASTIC_REFRESH_STRATEGY=%r, defaulting to True", raw)
+        return True
+
     @property
-    def alerts_index(self):
+    def alerts_index(self) -> str:
         if self.tenant_id == SINGLE_TENANT_UUID:
             suffix = os.environ.get("ELASTIC_INDEX_SUFFIX")
             return f"keep-alerts-{suffix}"
-        else:
-            return f"keep-alerts-{self.tenant_id}"
+        return f"keep-alerts-{self.tenant_id}"
 
-    def _construct_alert_dto_from_results(self, results):
-        if not results:
+    def _construct_alert_dto_from_results(self, results: dict) -> list[AlertDto]:
+        hits = (results or {}).get("hits", {}).get("hits", [])
+        if not hits:
             return []
-        alert_dtos = []
 
-        fingerprints = [
-            result["_source"]["fingerprint"] for result in results["hits"]["hits"]
-        ]
-        enrichments = get_enrichments(self.tenant_id, fingerprints)
-        enrichments_by_fingerprint = {
-            enrichment.alert_fingerprint: enrichment.enrichments
-            for enrichment in enrichments
+        fingerprints: list[str] = []
+        sources: list[dict] = []
+        for hit in hits:
+            src = hit.get("_source") or {}
+            fp = src.get("fingerprint")
+            if fp:
+                fingerprints.append(fp)
+            sources.append(src)
+
+        enrichments = get_enrichments(self.tenant_id, fingerprints) if fingerprints else []
+        enrichments_by_fp = {
+            enrichment.alert_fingerprint: enrichment.enrichments for enrichment in enrichments
         }
-        for result in results["hits"]["hits"]:
-            alert = result["_source"]
-            alert_dto = AlertDto(**alert)
-            if alert_dto.fingerprint in enrichments_by_fingerprint:
-                parse_and_enrich_deleted_and_assignees(
-                    alert_dto, enrichments_by_fingerprint[alert_dto.fingerprint]
-                )
+
+        alert_dtos: list[AlertDto] = []
+        for src in sources:
+            try:
+                alert_dto = AlertDto(**src)
+            except Exception:
+                self.logger.exception("Failed constructing AlertDto from ES _source", extra={"tenant_id": self.tenant_id})
+                continue
+
+            enr = enrichments_by_fp.get(alert_dto.fingerprint)
+            if enr:
+                parse_and_enrich_deleted_and_assignees(alert_dto, enr)
+
             alert_dtos.append(alert_dto)
+
         return alert_dtos
 
-    def run_query(self, query: str, limit: int = 1000):
-        if not self.enabled:
-            return
+    def run_query(self, query: str, limit: int = 1000) -> dict:
+        if not self.enabled or not self._client:
+            return {}
 
-        # preprocess severity
         query = preprocess_cel_expression(query)
 
         try:
-            # TODO - handle source (array)
-            # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
-            results = self._client.sql.query(
+            return self._client.sql.query(
                 body={
                     "query": query,
                     "field_multi_value_leniency": True,
                     "fetch_size": limit,
                 }
             )
-            return results
         except BadRequestError as e:
-            # means no index. if no alert was indexed, the index is not exist
             if "Unknown index" in str(e):
-                self.logger.warning("Index does not exist yet.")
-                return []
-            else:
-                self.logger.exception(
-                    f"Failed to run query in Elastic: {e}",
-                    extra={
-                        "tenant_id": self.tenant_id,
-                    },
-                )
-                raise Exception(f"Failed to run query in Elastic: {e}")
+                self.logger.warning("Elastic index does not exist yet", extra={"tenant_id": self.tenant_id})
+                return {"hits": {"hits": []}}
+            self.logger.exception("Elastic SQL query failed", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to run query in Elastic") from e
         except Exception as e:
-            self.logger.exception(
-                f"Failed to run query in Elastic: {e}",
-                extra={
-                    "tenant_id": self.tenant_id,
-                },
-            )
-            raise Exception(f"Failed to run query in Elastic: {e}")
+            self.logger.exception("Elastic SQL query failed", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to run query in Elastic") from e
 
     def search_alerts(self, query: str, limit: int) -> list[AlertDto]:
-        if not self.enabled:
+        if not self.enabled or not self._client:
             return []
 
+        query = preprocess_cel_expression(query)
+
         try:
-            # Shahar: due to limitation in Elasticsearch array fields, we translate the SQL to DSL
-            #         this is not 100% efficient since there are two requests (translate + query) instead of one but this could be improved with
-            #         either:
-            #           1. get the ES query from the client (react query builder support it)
-            #           2. use the translate when keeping the preset in the db since its not change (only for presets, not general queryes)
-            #           3. wait for ES to support array fields in SQL
-            # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
-            # preprocess severity
-            query = preprocess_cel_expression(query)
-            dsl_query = self._client.sql.translate(
-                body={"query": query, "fetch_size": limit}
-            )
-            # get all fields
+            dsl_query = self._client.sql.translate(body={"query": query, "fetch_size": limit})
             dsl_query = dict(dsl_query)
             dsl_query["_source"] = True
             dsl_query["fields"] = ["*"]
 
-            raw_alerts = self._client.search(index=self.alerts_index, body=dsl_query)
-            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
+            raw = self._client.search(index=self.alerts_index, body=dsl_query)
+            return self._construct_alert_dto_from_results(raw)
 
-            return alerts_dtos
         except BadRequestError as e:
-            # means no index. if no alert was indexed, the index is not exist
             if "Unknown index" in str(e):
-                self.logger.warning("Index does not exist yet.")
+                self.logger.warning("Elastic index does not exist yet", extra={"tenant_id": self.tenant_id})
                 return []
-            else:
-                self.logger.error(f"Failed to run query in Elastic: {e}")
-                raise Exception(f"Failed to run query in Elastic: {e}")
+            self.logger.exception("Failed searching alerts in Elastic", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to search alerts in Elastic") from e
         except Exception as e:
-            self.logger.error(f"Failed to search alerts in Elastic: {e}")
-            raise Exception(f"Failed to search alerts in Elastic: {e}")
+            self.logger.exception("Failed searching alerts in Elastic", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to search alerts in Elastic") from e
 
-    def index_alert(self, alert: AlertDto):
-        if not self.enabled:
+    def _severity_to_order(self, severity: Any) -> int:
+        # Accept enum/string/int. Default to lowest order if unknown.
+        try:
+            if isinstance(severity, int):
+                return severity
+            if hasattr(severity, "value"):
+                severity = severity.value
+            return AlertSeverity(str(severity).strip().lower()).order
+        except Exception:
+            return AlertSeverity.low.order
+
+    def index_alert(self, alert: AlertDto) -> None:
+        if not self.enabled or not self._client:
             return
 
         try:
-            # query
-            alert_dict = alert.dict()
-            alert_dict["dismissed"] = bool(alert_dict["dismissed"])
-            # change severity to number so we can sort by it
-            alert_dict["severity"] = AlertSeverity(alert.severity.lower()).order
+            doc = alert.dict()
+            doc["dismissed"] = bool(doc.get("dismissed"))
+            doc["severity"] = self._severity_to_order(doc.get("severity"))
+
             self._client.index(
                 index=self.alerts_index,
-                body=alert_dict,
-                id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
+                id=alert.fingerprint,
+                document=doc,  # modern client supports `document`
                 refresh=self.refresh_strategy,
             )
-        # TODO: retry/pubsub
         except ApiError as e:
-            self.logger.error(f"Failed to index alert to Elastic: {e} {e.errors}")
-            raise Exception(f"Failed to index alert to Elastic: {e} {e.errors}")
+            self.logger.exception("Failed to index alert to Elastic", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to index alert to Elastic") from e
         except Exception as e:
-            self.logger.error(f"Failed to index alert to Elastic: {e}")
-            raise Exception(f"Failed to index alert to Elastic: {e}")
+            self.logger.exception("Failed to index alert to Elastic", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to index alert to Elastic") from e
 
-    def index_alerts(self, alerts: list[AlertDto]):
-        if not self.enabled:
+    def index_alerts(self, alerts: list[AlertDto]) -> None:
+        if not self.enabled or not self._client or not alerts:
             return
 
-        actions = []
+        actions: list[dict] = []
         for alert in alerts:
-            if hasattr(alert, "incident_dto"):
-                alert.incident_dto = [incident.json() for incident in alert.incident_dto]
+            src = alert.dict()
 
-            action = {
-                "_index": self.alerts_index,
-                "_id": alert.fingerprint,  # use fingerprint as the document ID
-                "_source": alert.dict(),
-            }
-            # change severity to number so we can sort by it
-            action["_source"]["severity"] = AlertSeverity(
-                action["_source"]["severity"].lower()
-            ).order
-            actions.append(action)
+            # Don’t mutate DTOs. Normalize in the dict.
+            if "incident_dto" in src and isinstance(src["incident_dto"], list):
+                # If these are objects with .json(), convert safely
+                converted = []
+                for item in src["incident_dto"]:
+                    try:
+                        converted.append(item.json() if hasattr(item, "json") else item)
+                    except Exception:
+                        converted.append(str(item))
+                src["incident_dto"] = converted
+
+            src["severity"] = self._severity_to_order(src.get("severity"))
+
+            actions.append(
+                {
+                    "_index": self.alerts_index,
+                    "_id": src.get("fingerprint"),
+                    "_source": src,
+                }
+            )
 
         try:
             success, failed = bulk(self._client, actions, refresh=self.refresh_strategy)
             self.logger.info(
-                f"Successfully indexed {success} alerts. Failed to index {failed} alerts."
+                "Bulk indexed alerts",
+                extra={"tenant_id": self.tenant_id, "success": success, "failed": failed},
             )
         except BulkIndexError as e:
-            self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
-            raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
+            self.logger.exception("Bulk index failed", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to bulk index alerts to Elastic") from e
         except ApiError as e:
-            self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
-            raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
+            self.logger.exception("Bulk index API error", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to bulk index alerts to Elastic") from e
         except Exception as e:
-            self.logger.exception(f"Failed to index alerts to Elastic: {e}")
-            raise Exception(f"Failed to index alerts to Elastic: {e}")
+            self.logger.exception("Bulk index unexpected error", extra={"tenant_id": self.tenant_id})
+            raise RuntimeError("Failed to bulk index alerts to Elastic") from e
 
-    def enrich_alert(self, alert_fingerprint: str, alert_enrichments: dict):
-        if not self.enabled:
+    def enrich_alert(self, alert_fingerprint: str, alert_enrichments: dict) -> None:
+        if not self.enabled or not self._client:
             return
 
-        self.logger.debug(f"Enriching alert {alert_fingerprint}")
-        # get the alert, enrich it and index it
-        alert = self._client.get(index=self.alerts_index, id=alert_fingerprint)
-        if not alert:
-            self.logger.error(f"Alert with fingerprint {alert_fingerprint} not found")
+        try:
+            res = self._client.get(index=self.alerts_index, id=alert_fingerprint)
+        except ApiError as e:
+            self.logger.warning("Failed to fetch alert for enrichment", extra={"tenant_id": self.tenant_id})
             return
 
-        # enrich the alert
-        alert["_source"].update(alert_enrichments)
-        enriched_alert = AlertDto(**alert["_source"])
-        # index the enriched alert
-        self.index_alert(enriched_alert)
-        self.logger.debug(f"Alert {alert_fingerprint} enriched and indexed")
-
-    def drop_index(self):
-        if not self.enabled:
+        src = (res or {}).get("_source")
+        if not src:
+            self.logger.error("Alert not found for enrichment", extra={"tenant_id": self.tenant_id, "fp": alert_fingerprint})
             return
 
-        self._client.indices.delete(index=self.alerts_index)
+        src.update(alert_enrichments)
+        enriched = AlertDto(**src)
+        self.index_alert(enriched)
+
+    def drop_index(self) -> None:
+        if not self.enabled or not self._client:
+            return
+        try:
+            self._client.indices.delete(index=self.alerts_index)
+        except ApiError as e:
+            # Ignore "index not found" style errors
+            self.logger.warning("Failed deleting index (may not exist)", extra={"tenant_id": self.tenant_id})
