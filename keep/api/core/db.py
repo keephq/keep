@@ -4969,3 +4969,20 @@ class TestDbUtils(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+def get_tenant_configuration(tenant_id: str) -> dict | None:
+    """
+    Fetch a single tenant configuration from the DB.
+
+    Return:
+      suggests returning a dict shaped exactly like the per-tenant values
+      inside get_tenants_configurations().
+    """
+    # Example pseudo-logic:
+    # session = get_session()
+    # row = session.exec(select(TenantConfig).where(TenantConfig.tenant_id == tenant_id)).first()
+    # if not row:
+    #     return None
+    # return row.configuration_dict  # must match your existing in-memory shape
+
+    raise NotImplementedError
