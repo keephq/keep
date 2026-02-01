@@ -8,39 +8,61 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
-from sqlalchemy.exc import OperationalError
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.core.db import engine
 from keep.api.core.facets_query_builder.get_facets_query_builder import (
     get_facets_query_builder,
 )
 from keep.api.core.facets_query_builder.utils import get_facet_key
-from keep.api.core.db import engine
 from keep.api.models.db.facet import Facet, FacetType
-from keep.api.models.facet import (
-    CreateFacetDto,
-    FacetDto,
-    FacetOptionDto,
-    FacetOptionsQueryDto,
-)
+from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
 
 logger = logging.getLogger(__name__)
 
 OPTIONS_PER_FACET = 50
 
 
-def _to_uuid(value: str) -> UUID:
+def _to_uuid(value: Any) -> UUID:
+    """
+    Convert value into UUID or raise ValueError with a clean message.
+    """
+    if isinstance(value, UUID):
+        return value
     try:
-        return value if isinstance(value, UUID) else UUID(str(value))
+        return UUID(str(value))
     except Exception as e:
         raise ValueError(f"Invalid UUID: {value}") from e
+
+
+def _safe_json(obj: Any) -> str:
+    """
+    Never let logging crash the request.
+    """
+    try:
+        return json.dumps(obj, default=str)
+    except Exception:
+        return str(obj)
+
+
+def _normalize_bool(value: Any) -> Any:
+    """
+    Normalize common DB-returned boolean representations.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y", "t"}
+    return value
 
 
 def map_facet_option_value(value: Any, data_type: DataType) -> Any:
@@ -50,7 +72,6 @@ def map_facet_option_value(value: Any, data_type: DataType) -> Any:
     if value is None:
         return None
 
-    # Many SQL dialects return everything as str for JSON extracts.
     if data_type == DataType.INTEGER:
         try:
             return int(value)
@@ -64,15 +85,37 @@ def map_facet_option_value(value: Any, data_type: DataType) -> Any:
             return value
 
     if data_type == DataType.BOOLEAN:
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.strip().lower() in {"true", "1", "yes", "y"}
-        return value
+        return _normalize_bool(value)
 
     return value
+
+
+def _extract_builder_row(row: Any) -> Optional[Tuple[str, Any, Optional[int]]]:
+    """
+    Builder row may be:
+      - object with attrs: facet_id/facet_key, facet_value, matches_count
+      - tuple/list: (key, value, count) or (key, value, count, ...)
+    Returns: (key, value, count) where key is the facet-key used by builder.
+    """
+    # Attribute-based shape
+    key = getattr(row, "facet_id", None)  # some builders call it facet_id
+    if key is None:
+        key = getattr(row, "facet_key", None)  # some builders call it facet_key
+
+    value = getattr(row, "facet_value", None)
+    count = getattr(row, "matches_count", None)
+
+    if key is not None:
+        return str(key), value, count
+
+    # Tuple/list shape
+    if isinstance(row, (tuple, list)) and len(row) >= 2:
+        key = row[0]
+        value = row[1]
+        count = row[2] if len(row) >= 3 else None
+        return str(key), value, count
+
+    return None
 
 
 def get_facet_options(
@@ -85,22 +128,21 @@ def get_facet_options(
     """
     Returns dict: {facet_id: [FacetOptionDto...]} for each requested facet.
     """
-    invalid_facets: List[FacetDto] = []
-    valid_facets: List[FacetDto] = []
+    # Initialize all facets as empty by default
+    result: Dict[str, List[FacetOptionDto]] = {f.id: [] for f in facets}
 
+    # Partition facets into valid/invalid based on metadata existence
+    valid_facets: List[FacetDto] = []
     for facet in facets:
         if properties_metadata.get_property_metadata_for_str(facet.property_path):
             valid_facets.append(facet)
-        else:
-            invalid_facets.append(facet)
-
-    result: Dict[str, List[FacetOptionDto]] = {f.id: [] for f in facets}
 
     if not valid_facets:
         return result
 
-    with Session(engine) as session:
-        try:
+    # Execute builder query
+    try:
+        with Session(engine) as session:
             db_query = get_facets_query_builder(properties_metadata).build_facets_data_query(
                 base_query_factory=base_query_factory,
                 entity_id_column=entity_id_column,
@@ -108,47 +150,36 @@ def get_facet_options(
                 facet_options_query=facet_options_query,
             )
             rows = session.exec(db_query).all()
-        except OperationalError as e:
-            logger.warning(
-                "Failed to execute query for facet options. facet_options_query=%s error=%s",
-                json.dumps(facet_options_query.dict()),
-                str(e),
-            )
-            return result
+    except SQLAlchemyError as e:
+        logger.warning(
+            "Failed to execute facet options query. facet_options_query=%s error=%s",
+            _safe_json(getattr(facet_options_query, "dict", lambda: facet_options_query)()),
+            str(e),
+        )
+        return result
 
-    # Group rows by facet key (not necessarily facet.id).
-    grouped: Dict[str, list] = {}
+    # Group rows by the key emitted by builder (facet_key), not by facet.id.
+    grouped: Dict[str, List[Tuple[Any, Optional[int]]]] = {}
     for row in rows:
-        # Expected row shape from builder: (facet_key, facet_value, matches_count) or
-        # an object with those attributes. Make it tolerant.
-        facet_id = getattr(row, "facet_id", None)
-        facet_value = getattr(row, "facet_value", None)
-        matches_count = getattr(row, "matches_count", None)
-
-        if facet_id is None and isinstance(row, (tuple, list)) and len(row) >= 3:
-            facet_id, facet_value, matches_count = row[0], row[1], row[2]
-
-        if facet_id is None:
+        extracted = _extract_builder_row(row)
+        if not extracted:
             continue
+        key, value, count = extracted
 
-        grouped.setdefault(facet_id, [])
-
-        # SQLite option limit guard (subquery LIMIT limitations)
-        if engine.dialect.name == "sqlite" and len(grouped[facet_id]) >= OPTIONS_PER_FACET:
+        grouped.setdefault(key, [])
+        if engine.dialect.name == "sqlite" and len(grouped[key]) >= OPTIONS_PER_FACET:
             continue
+        grouped[key].append((value, count))
 
-        grouped[facet_id].append((facet_id, facet_value, matches_count))
-
-    # Build final options list per facet
+    # Build result per facet using computed facet_key
     for facet in facets:
-        property_meta = properties_metadata.get_property_metadata_for_str(facet.property_path)
-        if property_meta is None:
+        prop_meta = properties_metadata.get_property_metadata_for_str(facet.property_path)
+        if prop_meta is None:
             result[facet.id] = []
             continue
 
-        # Key used by query-builder can differ from facet.id, so compute it.
         facet_query = None
-        if facet_options_query and facet_options_query.facet_queries:
+        if facet_options_query and getattr(facet_options_query, "facet_queries", None):
             facet_query = facet_options_query.facet_queries.get(facet.id)
 
         facet_key = get_facet_key(
@@ -163,16 +194,16 @@ def get_facet_options(
             options = [
                 FacetOptionDto(
                     display_name=str(val),
-                    value=map_facet_option_value(val, property_meta.data_type),
+                    value=map_facet_option_value(val, prop_meta.data_type),
                     matches_count=0 if cnt is None else cnt,
                 )
-                for (_fid, val, cnt) in grouped[facet_key]
+                for (val, cnt) in grouped[facet_key]
             ]
 
-        # If enum values exist, ensure all enum values are present with 0 matches.
-        if property_meta.enum_values:
+        # Ensure enum values appear, even if no matches
+        if prop_meta.enum_values:
             existing_values = {o.value for o in options}
-            for enum_val in property_meta.enum_values:
+            for enum_val in prop_meta.enum_values:
                 if enum_val not in existing_values:
                     options.append(
                         FacetOptionDto(
@@ -182,17 +213,25 @@ def get_facet_options(
                         )
                     )
 
-            # Keep enum-defined ordering, unknowns go last.
-            enum_index = {v: i for i, v in enumerate(property_meta.enum_values)}
+            # Stable enum ordering; unknown values go last
+            enum_index = {v: i for i, v in enumerate(prop_meta.enum_values)}
             options.sort(key=lambda o: enum_index.get(o.value, 10_000))
 
         result[facet.id] = options
 
-    # Invalid facets return empty list already via initialization.
-    for bad in invalid_facets:
-        result[bad.id] = []
-
     return result
+
+
+def _facet_type_for_db() -> Any:
+    """
+    Normalize FacetType storage.
+    If the model expects a string, use `.value`.
+    If it expects Enum, passing the enum is fine.
+    We can't reliably introspect SQLModel field type here without importing internals,
+    so we pick the safest behavior: prefer `.value` if it exists.
+    """
+    # FacetType likely an Enum with .value; use that unless you KNOW column is Enum.
+    return FacetType.str.value if hasattr(FacetType.str, "value") else FacetType.str
 
 
 def create_facet(tenant_id: str, entity_type: str, facet: CreateFacetDto) -> FacetDto:
@@ -201,13 +240,13 @@ def create_facet(tenant_id: str, entity_type: str, facet: CreateFacetDto) -> Fac
     """
     with Session(engine) as session:
         facet_db = Facet(
-            id=_to_uuid(str(uuid4())),
+            id=_to_uuid(uuid4()),
             tenant_id=tenant_id,
             name=facet.name,
-            description=facet.description,
+            description=getattr(facet, "description", None),
             entity_type=entity_type,
             property_path=facet.property_path,
-            type=FacetType.str,  # store enum, not .value strings unless model expects string
+            type=_facet_type_for_db(),
             user_id="system",
         )
         session.add(facet_db)
@@ -218,7 +257,7 @@ def create_facet(tenant_id: str, entity_type: str, facet: CreateFacetDto) -> Fac
             id=str(facet_db.id),
             property_path=facet_db.property_path,
             name=facet_db.name,
-            description=facet_db.description,
+            description=getattr(facet_db, "description", None),
             is_static=False,
             is_lazy=True,
             type=facet_db.type,
@@ -232,7 +271,7 @@ def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
     facet_uuid = _to_uuid(facet_id)
 
     with Session(engine) as session:
-        facet = session.exec(
+        facet_db = session.exec(
             select(Facet).where(
                 Facet.tenant_id == tenant_id,
                 Facet.entity_type == entity_type,
@@ -240,10 +279,10 @@ def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
             )
         ).first()
 
-        if not facet:
+        if not facet_db:
             return False
 
-        session.delete(facet)
+        session.delete(facet_db)
         session.commit()
         return True
 
@@ -268,7 +307,7 @@ def get_facets(
         if facet_uuids:
             query = query.where(Facet.id.in_(facet_uuids))
 
-        facets = session.exec(query).all()
+        rows = session.exec(query).all()
 
         return [
             FacetDto(
@@ -280,5 +319,5 @@ def get_facets(
                 is_lazy=True,
                 type=f.type,
             )
-            for f in facets
+            for f in rows
         ]
