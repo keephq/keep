@@ -1,13 +1,9 @@
-"""
-Keep main database module.
-
-This module contains the CRUD database functions for Keep.
-"""
+from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import TypedDict, Tuple
+from typing import TypedDict, Tuple, Optional, Any
 
-from sqlalchemy import and_, case, desc, func, literal_column, select, text
+from sqlalchemy import and_, case, desc, func, select, text
 from sqlmodel import Session
 
 from keep.api.core.cel_to_sql.properties_metadata import (
@@ -25,57 +21,60 @@ from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 
-workflow_field_configurations = [
-    FieldMappingConfiguration(
-        map_from_pattern="name",
-        map_to="workflow.name",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="description",
-        map_to="workflow.description",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="started", map_to="started", data_type=DataType.DATETIME
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="last_execution_status",
-        map_to="status",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="last_execution_time",
-        map_to="execution_time",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="disabled",
-        map_to="workflow.is_disabled",
-        data_type=DataType.BOOLEAN,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="last_updated",
-        map_to="workflow.last_updated",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="created_at",
-        map_to="workflow.creation_time",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="created_by",
-        map_to="workflow.created_by",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="updated_by",
-        map_to="workflow.updated_by",
-        data_type=DataType.STRING,
-    ),
-]
 
+# -----------------------
+# Constants / Guardrails
+# -----------------------
+
+DEFAULT_LIMIT = 20
+MAX_LIMIT = 200
+
+DEFAULT_FETCH_LAST_EXECUTIONS = 15
+MAX_FETCH_LAST_EXECUTIONS = 100
+
+DEFAULT_LOOKBACK_DAYS = 30
+
+ALLOWED_SORT_FIELDS = {
+    "started",
+    "execution_time",
+    "status",
+    "last_updated",
+    "created_at",
+    "name",
+}
+ALLOWED_SORT_DIR = {"asc", "desc"}
+
+
+def _clamp_int(v: Optional[int], default: int, min_v: int, max_v: int) -> int:
+    if v is None:
+        return default
+    try:
+        v = int(v)
+    except Exception:
+        return default
+    if v < min_v:
+        return min_v
+    if v > max_v:
+        return max_v
+    return v
+
+
+# -----------------------
+# Metadata
+# -----------------------
+
+workflow_field_configurations = [
+    FieldMappingConfiguration(map_from_pattern="name", map_to="workflow.name", data_type=DataType.STRING),
+    FieldMappingConfiguration(map_from_pattern="description", map_to="workflow.description", data_type=DataType.STRING),
+    FieldMappingConfiguration(map_from_pattern="started", map_to="started", data_type=DataType.DATETIME),
+    FieldMappingConfiguration(map_from_pattern="last_execution_status", map_to="status", data_type=DataType.STRING),
+    FieldMappingConfiguration(map_from_pattern="last_execution_time", map_to="execution_time", data_type=DataType.DATETIME),
+    FieldMappingConfiguration(map_from_pattern="disabled", map_to="workflow.is_disabled", data_type=DataType.BOOLEAN),
+    FieldMappingConfiguration(map_from_pattern="last_updated", map_to="workflow.last_updated", data_type=DataType.DATETIME),
+    FieldMappingConfiguration(map_from_pattern="created_at", map_to="workflow.creation_time", data_type=DataType.DATETIME),
+    FieldMappingConfiguration(map_from_pattern="created_by", map_to="workflow.created_by", data_type=DataType.STRING),
+    FieldMappingConfiguration(map_from_pattern="updated_by", map_to="workflow.updated_by", data_type=DataType.STRING),
+]
 
 properties_metadata = PropertiesMetadata(workflow_field_configurations)
 
@@ -92,7 +91,7 @@ static_facets = [
         property_path="disabled",
         name="Enabling status",
         is_static=True,
-        type=FacetType.str,
+        type=FacetType.bool,  # FIX: was str
     ),
     FacetDto(
         id="77325333-7710-4904-bf06-6c3d58aa5787",
@@ -105,8 +104,36 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_workflow_executions_query(tenant_id: str):
-    query = (
+# -----------------------
+# Result types
+# -----------------------
+
+class ExecutionSummary(TypedDict):
+    id: str
+    started: datetime
+    execution_time: Optional[datetime]
+    status: Optional[str]
+
+
+class WorkflowWithLastExecutions(TypedDict):
+    workflow: Workflow
+    workflow_last_run_started: Optional[datetime]
+    workflow_last_run_time: Optional[datetime]
+    workflow_last_run_status: Optional[str]
+    workflow_last_executions: list[ExecutionSummary]
+
+
+# -----------------------
+# Query builders
+# -----------------------
+
+def _build_workflow_executions_cte(
+    tenant_id: str,
+    lookback_days: int = DEFAULT_LOOKBACK_DAYS,
+):
+    since = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+
+    return (
         select(
             WorkflowExecution.workflow_id,
             WorkflowExecution.id.label("execution_id"),
@@ -121,93 +148,82 @@ def __build_workflow_executions_query(tenant_id: str):
             .label("row_num"),
         )
         .where(WorkflowExecution.tenant_id == tenant_id)
-        .where(WorkflowExecution.is_test_run == False)
-        .where(
-            WorkflowExecution.started
-            >= datetime.now(tz=timezone.utc) - timedelta(days=30)
-        )
+        .where(WorkflowExecution.is_test_run.is_(False))
+        .where(WorkflowExecution.started >= since)
+        .cte("workflow_executions")
     )
-
-    return query
 
 
 def build_workflow_executions_query(
     tenant_id: str, workflow_ids: list[str], limit_per_workflow: int
 ):
-    query = __build_workflow_executions_query(tenant_id).cte(
-        "workflow_executions_query"
-    )
+    limit_per_workflow = _clamp_int(limit_per_workflow, DEFAULT_FETCH_LAST_EXECUTIONS, 1, MAX_FETCH_LAST_EXECUTIONS)
+    executions = _build_workflow_executions_cte(tenant_id)
 
-    filtered_query = (
+    return (
         select(
-            query.c.workflow_id,
-            query.c.execution_id,
-            query.c.started,
-            query.c.execution_time,
-            query.c.status,
+            executions.c.workflow_id,
+            executions.c.execution_id,
+            executions.c.started,
+            executions.c.execution_time,
+            executions.c.status,
         )
-        .select_from(query)
-        .where(query.c.workflow_id.in_(workflow_ids))
-        .where(query.c.row_num <= limit_per_workflow)
+        .where(executions.c.workflow_id.in_(workflow_ids))
+        .where(executions.c.row_num <= limit_per_workflow)
     )
 
-    return filtered_query
 
-
-def __build_base_query(
+def _build_base_query(
     tenant_id: str,
+    executions_cte=None,
     fetch_last_executions: int = 1,
-    select_statements=None,
-    latest_executions_subquery_cte=None,
 ):
-    if latest_executions_subquery_cte is None:
-        latest_executions_subquery_cte = __build_workflow_executions_query(
-            tenant_id
-        ).cte("latest_executions_subquery")
+    if executions_cte is None:
+        executions_cte = _build_workflow_executions_cte(tenant_id)
 
-    if select_statements is None:
-        select_statements = [
+    fetch_last_executions = _clamp_int(fetch_last_executions, 1, 1, MAX_FETCH_LAST_EXECUTIONS)
+
+    # explicit, non-ambiguous column references
+    last_status = case(
+        (executions_cte.c.status.isnot(None), executions_cte.c.status),
+        else_="",
+    ).label("filter_last_execution_status")
+
+    return (
+        select(
             Workflow,
             Workflow.id.label("entity_id"),
-            # here it creates aliases for table columns that will be used in filtering and faceting
-            case(
-                (
-                    literal_column("status").isnot(None),
-                    literal_column("status"),
-                ),
-                else_="",
-            ).label("filter_last_execution_status"),
-        ]
-
-    workflows_with_last_executions_query = (
-        select(*select_statements)
+            executions_cte.c.started.label("started"),
+            executions_cte.c.execution_time.label("execution_time"),
+            executions_cte.c.status.label("status"),
+            executions_cte.c.execution_id.label("execution_id"),
+            last_status,
+        )
         .select_from(Workflow)
         .outerjoin(
-            latest_executions_subquery_cte,
+            executions_cte,
             and_(
-                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
+                Workflow.id == executions_cte.c.workflow_id,
+                executions_cte.c.row_num <= fetch_last_executions,
             ),
         )
         .where(Workflow.tenant_id == tenant_id)
-        .where(Workflow.is_deleted == False)
-        .where(Workflow.is_test == False)
+        .where(Workflow.is_deleted.is_(False))
+        .where(Workflow.is_test.is_(False))
     )
-
-    return workflows_with_last_executions_query
 
 
 def build_workflows_total_count_query(tenant_id: str, cel: str):
-    query = __build_base_query(
-        tenant_id=tenant_id, select_statements=[func.count(func.distinct(Workflow.id))]
-    )
+    base = _build_base_query(tenant_id=tenant_id)
+    query = select(func.count(func.distinct(Workflow.id))).select_from(base.subquery())
 
     if cel:
-        cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter_str))
-
-    query = query.distinct()
+        cel_to_sql = get_cel_to_sql_provider(properties_metadata)
+        sql_filter_str = cel_to_sql.convert_to_sql_str(cel)
+        # Guardrail: reject obviously unsafe output
+        if ";" in sql_filter_str or "--" in sql_filter_str:
+            raise ValueError("Unsafe CEL SQL filter output")
+        query = query.where(text(sql_filter_str))
 
     return query
 
@@ -215,48 +231,50 @@ def build_workflows_total_count_query(tenant_id: str, cel: str):
 def build_workflows_query(
     tenant_id: str,
     cel: str,
-    limit: int,
-    offset: int,
-    sort_by: str,
-    sort_dir: str,
-    fetch_last_executions: int = 15,
+    limit: Optional[int],
+    offset: Optional[int],
+    sort_by: Optional[str],
+    sort_dir: Optional[str],
+    fetch_last_executions: int = DEFAULT_FETCH_LAST_EXECUTIONS,
 ):
-    limit = limit if limit is not None else 20
-    offset = offset if offset is not None else 0
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    query = __build_base_query(
+    limit = _clamp_int(limit, DEFAULT_LIMIT, 1, MAX_LIMIT)
+    offset = _clamp_int(offset, 0, 0, 10_000_000)
+    fetch_last_executions = _clamp_int(fetch_last_executions, DEFAULT_FETCH_LAST_EXECUTIONS, 1, MAX_FETCH_LAST_EXECUTIONS)
+
+    executions_cte = _build_workflow_executions_cte(tenant_id)
+    query = _build_base_query(
         tenant_id=tenant_id,
-        fetch_last_executions=fetch_last_executions,
-        select_statements=[
-            Workflow,
-            literal_column("started").label("started"),
-            literal_column("execution_time").label("execution_time"),
-            literal_column("status").label("status"),
-            literal_column("execution_id").label("execution_id"),
-        ],
+        executions_cte=executions_cte,
+        fetch_last_executions=1,
     )
 
-    if not sort_by:
+    # sort allow-list
+    sort_by = (sort_by or "started").strip()
+    sort_dir = (sort_dir or "desc").strip().lower()
+    if sort_by not in ALLOWED_SORT_FIELDS:
         sort_by = "started"
+    if sort_dir not in ALLOWED_SORT_DIR:
         sort_dir = "desc"
 
-    order_by_exp = cel_to_sql_instance.get_order_by_expression([(sort_by, sort_dir)])
+    cel_to_sql = get_cel_to_sql_provider(properties_metadata)
+    order_by_exp = cel_to_sql.get_order_by_expression([(sort_by, sort_dir)])
+    if ";" in order_by_exp or "--" in order_by_exp:
+        raise ValueError("Unsafe ORDER BY output")
+
     query = query.order_by(text(order_by_exp)).limit(limit).offset(offset)
 
     if cel:
-        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter_str))
+        sql_filter_str = cel_to_sql.convert_to_sql_str(cel)
+        if ";" in sql_filter_str or "--" in sql_filter_str:
+            raise ValueError("Unsafe CEL SQL filter output")
+        query = query.where(text(sql_filter_str))
 
     return query
 
 
-class WorkflowWithLastExecutions(TypedDict):
-    workflow: Workflow
-    workflow_last_run_started: datetime
-    workflow_last_run_time: datetime
-    workflow_last_run_status: str
-    workflow_last_executions: list[WorkflowExecution]
-
+# -----------------------
+# Public API
+# -----------------------
 
 def get_workflows_with_last_executions_v2(
     tenant_id: str,
@@ -265,18 +283,15 @@ def get_workflows_with_last_executions_v2(
     offset: int,
     sort_by: str,
     sort_dir: str,
-    fetch_last_executions: int = 15,
+    fetch_last_executions: int = DEFAULT_FETCH_LAST_EXECUTIONS,
     session: Session = None,
 ) -> Tuple[list[WorkflowWithLastExecutions], int]:
     with existed_or_new_session(session) as session:
-        total_count_query = build_workflows_total_count_query(
-            tenant_id=tenant_id, cel=cel
-        )
-
+        total_count_query = build_workflows_total_count_query(tenant_id=tenant_id, cel=cel)
         count = session.exec(total_count_query).one()[0]
 
         if count == 0:
-            return [], count
+            return [], 0
 
         workflows_query = build_workflows_query(
             tenant_id=tenant_id,
@@ -288,28 +303,19 @@ def get_workflows_with_last_executions_v2(
             fetch_last_executions=1,
         )
 
-        query_result = session.exec(workflows_query).all()
-        workflow_ids = [workflow.id for workflow, *_ in query_result]
+        rows = session.exec(workflows_query).all()
+        workflow_ids = [workflow.id for workflow, *_ in rows]
 
-        workflow_executions_query = build_workflow_executions_query(
+        executions_query = build_workflow_executions_query(
             tenant_id=tenant_id,
             workflow_ids=workflow_ids,
             limit_per_workflow=fetch_last_executions,
         )
+        exec_rows = session.exec(executions_query).all()
 
-        workflow_executions_query_result = session.exec(workflow_executions_query).all()
-
-        execution_dict = {}
-        for (
-            workflow_id,
-            execution_id,
-            started,
-            execution_time,
-            status,
-        ) in workflow_executions_query_result:
-            if workflow_id not in execution_dict:
-                execution_dict[workflow_id] = []
-            execution_dict[workflow_id].append(
+        execution_dict: dict[str, list[ExecutionSummary]] = {}
+        for workflow_id, execution_id, started, execution_time, status in exec_rows:
+            execution_dict.setdefault(workflow_id, []).append(
                 {
                     "id": execution_id,
                     "started": started,
@@ -318,9 +324,8 @@ def get_workflows_with_last_executions_v2(
                 }
             )
 
-        result = []
-        for workflow, started, execution_time, status, execution_id in query_result:
-            # workaround for filter. In query status is empty string if it is NULL in DB
+        result: list[WorkflowWithLastExecutions] = []
+        for workflow, started, execution_time, status, execution_id, *_ in rows:
             status = None if status == "" else status
             result.append(
                 {
@@ -332,70 +337,4 @@ def get_workflows_with_last_executions_v2(
                 }
             )
 
-    return result, count
-
-
-def get_workflow_facets(
-    tenant_id: str, facet_ids_to_load: list[str] = None
-) -> list[FacetDto]:
-    not_static_facet_ids = []
-    facets = []
-
-    if not facet_ids_to_load:
-        return static_facets + get_facets(tenant_id, "workflow")
-
-    if facet_ids_to_load:
-        for facet_id in facet_ids_to_load:
-            if facet_id not in static_facets_dict:
-                not_static_facet_ids.append(facet_id)
-                continue
-
-            facets.append(static_facets_dict[facet_id])
-
-    if not_static_facet_ids:
-        facets += get_facets(tenant_id, "workflow", not_static_facet_ids)
-
-    return facets
-
-
-def get_workflow_facets_data(
-    tenant_id: str,
-    facet_options_query: FacetOptionsQueryDto,
-) -> dict[str, list[FacetOptionDto]]:
-    if facet_options_query and facet_options_query.facet_queries:
-        facets = get_workflow_facets(
-            tenant_id, facet_options_query.facet_queries.keys()
-        )
-    else:
-        facets = static_facets
-
-    latest_executions_subquery_cte = __build_workflow_executions_query(tenant_id).cte(
-        "latest_executions_subquery"
-    )
-
-    def base_query_factory(
-        facet_property_path: str,
-        involved_fields: PropertyMetadataInfo,
-        select_statement,
-    ):
-        return __build_base_query(
-            tenant_id=tenant_id,
-            select_statements=select_statement,
-            latest_executions_subquery_cte=latest_executions_subquery_cte,
-        )
-
-    return get_facet_options(
-        base_query_factory=base_query_factory,
-        entity_id_column=Workflow.id,
-        facets=facets,
-        facet_options_query=facet_options_query,
-        properties_metadata=properties_metadata,
-    )
-
-
-def get_workflow_potential_facet_fields(tenant_id: str) -> list[str]:
-    return [
-        field_configuration.map_from_pattern
-        for field_configuration in workflow_field_configurations
-        if "*" not in field_configuration.map_from_pattern
-    ]
+        return result, count
