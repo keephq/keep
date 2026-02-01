@@ -7,5 +7,5 @@ export type ProxyFetchFn = (
 
 // This function will be imported dynamically only in Node.js environment
 export const createProxyFetch = async (): Promise<ProxyFetchFn | undefined> => {
-  return undefined;
+  return undefined; 
 };
