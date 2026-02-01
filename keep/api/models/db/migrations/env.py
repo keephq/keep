@@ -1,133 +1,151 @@
-import asyncio
 import os
+import logging
 from logging.config import fileConfig
+from typing import Optional
 
 from alembic import context
 from alembic.script import ScriptDirectory
-from sqlalchemy.future import Connection
+from alembic.runtime.migration import MigrationContext
+
 from sqlmodel import SQLModel
 
 import keep.api.logging
 from keep.api.core.db_utils import create_db_engine
-from keep.api.models.db.action import *
-from keep.api.models.db.ai_suggestion import *
-from keep.api.models.db.alert import *
-from keep.api.models.db.dashboard import *
-from keep.api.models.db.extraction import *
-from keep.api.models.db.facet import *
-from keep.api.models.db.maintenance_window import *
-from keep.api.models.db.mapping import *
-from keep.api.models.db.preset import *
-from keep.api.models.db.provider import *
-from keep.api.models.db.secret import *
-from keep.api.models.db.rule import *
-from keep.api.models.db.statistics import *
-from keep.api.models.db.tenant import *
-from keep.api.models.db.topology import *
-from keep.api.models.db.user import *
-from keep.api.models.db.workflow import *
+
+# Import models so SQLModel.metadata gets populated.
+# Avoid star-imports. Import the modules for side-effect registration.
+from keep.api.models.db import (  # noqa: F401
+    action,
+    ai_suggestion,
+    alert,
+    dashboard,
+    extraction,
+    facet,
+    maintenance_window,
+    mapping,
+    preset,
+    provider,
+    secret,
+    rule,
+    statistics,
+    tenant,
+    topology,
+    user,
+    workflow,
+)
+
+logger = logging.getLogger("alembic.env")
 
 target_metadata = SQLModel.metadata
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    # backup the current config
-    logging_config = config.get_section("loggers")
-    fileConfig(config.config_file_name)
+def _is_sqlite(engine) -> bool:
+    try:
+        return engine.dialect.name.lower() == "sqlite"
+    except Exception:
+        return False
 
 
-async def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
+def _get_db_revision(connection) -> Optional[str]:
     """
-    connectable = create_db_engine()
+    Return the current DB revision (as stored in alembic_version), or None if not present.
+    """
+    try:
+        mctx = MigrationContext.configure(connection)
+        return mctx.get_current_revision()
+    except Exception:
+        logger.exception("Failed to read current DB revision.")
+        return None
+
+
+def list_migrations(engine) -> None:
+    """
+    Print useful migration debugging info:
+    - DB current revision
+    - Script head(s)
+    - Full revision history (local scripts)
+    """
+    pid = os.getpid()
+    script_directory = ScriptDirectory.from_config(config)
+
+    try:
+        with engine.connect() as connection:
+            db_rev = _get_db_revision(connection)
+
+        heads = script_directory.get_heads()
+        logger.warning("[%s] DB revision: %s", pid, db_rev)
+        logger.warning("[%s] Script heads: %s", pid, ", ".join(heads) if heads else "NONE")
+
+        logger.warning("[%s] Available migrations (newest -> oldest):", pid)
+        for rev in script_directory.walk_revisions():
+            # walk_revisions yields newest->oldest by default
+            doc = (rev.doc or "").strip()
+            logger.warning("  - %s  %s", rev.revision, doc)
+
+    except Exception:
+        logger.exception("Failed to list migrations.")
+
+
+def run_migrations_offline() -> None:
+    """
+    Run migrations in OFFLINE mode.
+    Generates SQL without needing a live DB connection.
+    """
+    engine = create_db_engine()
+    url = str(engine.url)
+
+    # Configure Alembic context for offline SQL generation.
     context.configure(
-        url=str(connectable.url),
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
+        compare_type=True,
+        compare_server_default=True,
+        render_as_batch=_is_sqlite(engine),
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-def do_run_migrations(connection: Connection) -> None:
+def run_migrations_online() -> None:
     """
-    Run actual sync migrations.
-
-    :param connection: connection to the database.
+    Run migrations in ONLINE mode with a real DB connection.
     """
-    context.configure(
-        connection=connection, target_metadata=target_metadata, render_as_batch=True
-    )
+    engine = create_db_engine()
+    batch = _is_sqlite(engine)
 
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-async def run_migrations_online() -> None:
-    """
-    Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-    """
-    connectable = create_db_engine()
     try:
-        do_run_migrations(connectable.connect())
-    except Exception as e:
-        # print all migrations so we will know what failed
-        list_migrations(connectable)
-        raise e
+        with engine.connect() as connection:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                compare_type=True,
+                compare_server_default=True,
+                render_as_batch=batch,
+            )
 
+            with context.begin_transaction():
+                context.run_migrations()
 
-def list_migrations(connectable):
-    """
-    List all migrations and their status for debugging.
-    """
-    try:
-        # Get the script directory from the alembic context
-        script_directory = ScriptDirectory.from_config(config)
-        current_rev = script_directory.get_current_head()
-        # List all available migrations
-        pid = os.getpid()
-        print(f"[{pid}] Available migrations:")
+    except Exception:
+        # Dump useful info before re-raising
         try:
-            for script in script_directory.walk_revisions():
-                status = (
-                    "PENDING"
-                    if current_rev and script.revision > current_rev
-                    else "APPLIED"
-                )
-                print(f"  - {script.revision}: {script.doc} ({status})")
-        except Exception as exc:
-            logger.exception(f"Failed to list migrations: {exc}")
-    except Exception as exc:
-        logger.exception(f"Failed to process migration information: {exc}")
+            list_migrations(engine)
+        finally:
+            raise
 
 
-loop = asyncio.get_event_loop()
+# Configure logging from alembic.ini (if present)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
 if context.is_offline_mode():
-    task = run_migrations_offline()
+    run_migrations_offline()
 else:
-    task = run_migrations_online()
+    run_migrations_online()
 
-loop.run_until_complete(task)
-# SHAHAR: set back the logs to the default after alembic is done
+# Reset logs back to the app defaults after Alembic is done
 keep.api.logging.setup_logging()
