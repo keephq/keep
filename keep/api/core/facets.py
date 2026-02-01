@@ -1,21 +1,25 @@
 import json
 import logging
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional
+from uuid import UUID, uuid4
+
 from sqlalchemy import select
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import SQLAlchemyError
+from sqlmodel import Session
+
 from keep.api.core.cel_to_sql.ast_nodes import DataType
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.facets_query_builder.get_facets_query_builder import (
     get_facets_query_builder,
 )
 from keep.api.core.facets_query_builder.utils import get_facet_key
-from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
-from uuid import UUID, uuid4
-
-# from pydantic import BaseModel
-from sqlmodel import Session
-
 from keep.api.core.db import engine
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.models.facet import (
+    CreateFacetDto,
+    FacetDto,
+    FacetOptionDto,
+    FacetOptionsQueryDto,
+)
 from keep.api.models.db.facet import Facet, FacetType
 
 logger = logging.getLogger(__name__)
@@ -23,187 +27,174 @@ logger = logging.getLogger(__name__)
 OPTIONS_PER_FACET = 50
 
 
-def build_facet_selects(
-    properties_metadata: PropertiesMetadata, facets: list[FacetDto]
-):
-    return None
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y", "on"}
+    return False
 
 
-def map_facet_option_value(value, data_type: DataType):
+def map_facet_option_value(value: Any, data_type: DataType) -> Any:
     """
-    Maps the value to the appropriate data type.
-    Args:
-        value: The value to be mapped.
-        data_type: The data type to map the value to.
-    Returns:
-        The mapped value.
+    Maps a facet option value to the property data type, best-effort.
     """
-    if data_type == DataType.INTEGER:
-        try:
+    if value is None:
+        return None
+
+    try:
+        if data_type == DataType.INTEGER:
             return int(value)
-        except ValueError:
-            return value
-    elif data_type == DataType.FLOAT:
-        try:
+        if data_type == DataType.FLOAT:
             return float(value)
-        except ValueError:
-            return value
-    elif data_type == DataType.BOOLEAN:
-        return value in ["true", "1"]
-    else:
+        if data_type == DataType.BOOLEAN:
+            return _coerce_bool(value)
+        return value
+    except (ValueError, TypeError):
+        # If conversion fails, keep original
         return value
 
 
 def get_facet_options(
-    base_query_factory: lambda facet_property_path, select_statement: Any,
-    entity_id_column: any,
-    facets: list[FacetDto],
+    base_query_factory: Callable[[str, Any], Any],
+    entity_id_column: Any,
+    facets: List[FacetDto],
     facet_options_query: FacetOptionsQueryDto,
     properties_metadata: PropertiesMetadata,
-) -> dict[str, list[FacetOptionDto]]:
+) -> Dict[str, List[FacetOptionDto]]:
     """
-    Generates facet options based on the provided query and metadata.
-    Args:
-        base_query: The base SQL query to be used for fetching data.
-        cel (str): The CEL (Common Expression Language) string for filtering.
-        facets (list[FacetDto]): A list of facet definitions.
-        properties_metadata (PropertiesMetadata): Metadata about the properties.
-    Returns:
-        dict[str, list[FacetOptionDto]]: A dictionary where keys are facet IDs and values are lists of FacetOptionDto objects.
+    Returns available facet options per facet id.
     """
 
-    invalid_facets = []
-    valid_facets = []
+    valid_facets: List[FacetDto] = []
+    invalid_facets: List[FacetDto] = []
 
     for facet in facets:
         if properties_metadata.get_property_metadata_for_str(facet.property_path):
             valid_facets.append(facet)
-            continue
+        else:
+            invalid_facets.append(facet)
 
-        invalid_facets.append(facet)
+    result: Dict[str, List[FacetOptionDto]] = {f.id: [] for f in facets}
 
-    result_dict: dict[str, list[FacetOptionDto]] = {}
-
-    if valid_facets:
-        with Session(engine) as session:
-            try:
-                db_query = get_facets_query_builder(
-                    properties_metadata
-                ).build_facets_data_query(
-                    base_query_factory=base_query_factory,
-                    entity_id_column=entity_id_column,
-                    facets=valid_facets,
-                    facet_options_query=facet_options_query,
-                )
-
-                data = session.exec(db_query).all()
-            except OperationalError as e:
-                logger.warning(
-                    f"""Failed to execute query for facet options.
-                    Facet options: {json.dumps(facet_options_query.dict())}
-                    Error: {e}
-                    """
-                )
-                return {facet.id: [] for facet in facets}
-
-            grouped_by_id_dict = {}
-
-            for facet_data in data:
-                if facet_data.facet_id not in grouped_by_id_dict:
-                    grouped_by_id_dict[facet_data.facet_id] = []
-
-                # This is to limit the number of options per facet
-                # It's done mostly for sqlite, because in sqlite we can't use limit in the subquery
-                if (
-                    engine.dialect.name == "sqlite"
-                    and len(grouped_by_id_dict[facet_data.facet_id])
-                    >= OPTIONS_PER_FACET
-                ):
-                    continue
-
-                grouped_by_id_dict[facet_data.facet_id].append(facet_data)
-
-            for facet in facets:
-                facet_key = get_facet_key(
-                    facet.property_path,
-                    facet_options_query.cel,
-                    facet_options_query.facet_queries[facet.id],
-                )
-                property_mapping = properties_metadata.get_property_metadata_for_str(
-                    facet.property_path
-                )
-                result_dict.setdefault(facet.id, [])
-
-                if facet_key in grouped_by_id_dict:
-                    result_dict[facet.id] = [
-                        FacetOptionDto(
-                            display_name=str(facet_value),
-                            value=map_facet_option_value(
-                                facet_value, property_mapping.data_type
-                            ),
-                            matches_count=0 if matches_count is None else matches_count,
-                        )
-                        for facet_id, facet_value, matches_count in grouped_by_id_dict[
-                            facet_key
-                        ]
-                    ]
-
-                if property_mapping is None:
-                    result_dict[facet.id] = []
-                    continue
-
-                if property_mapping.enum_values:
-                    if facet.id in result_dict:
-                        values_with_zero_matches = [
-                            enum_value
-                            for enum_value in property_mapping.enum_values
-                            if enum_value
-                            not in [
-                                facet_option.value
-                                for facet_option in result_dict[facet.id]
-                            ]
-                        ]
-                    else:
-                        result_dict.setdefault(facet.id, [])
-                        values_with_zero_matches = property_mapping.enum_values
-
-                    for enum_value in values_with_zero_matches:
-                        result_dict[facet.id].append(
-                            FacetOptionDto(
-                                display_name=enum_value,
-                                value=enum_value,
-                                matches_count=0,
-                            )
-                        )
-                    result_dict[facet.id] = sorted(
-                        result_dict[facet.id],
-                        key=lambda facet_option: (
-                            property_mapping.enum_values.index(facet_option.value)
-                            if facet_option.value in property_mapping.enum_values
-                            else -100  # put unknown values at the end
-                        ),
-                        reverse=True,
-                    )
-
-    for invalid_facet in invalid_facets:
-        result_dict[invalid_facet.id] = []
-
-    return result_dict
-
-
-def create_facet(tenant_id: str, entity_type, facet: CreateFacetDto) -> FacetDto:
-    """
-    Creates a new facet for a given tenant and returns the created facet's details.
-    Args:
-        tenant_id (str): The ID of the tenant for whom the facet is being created.
-        facet (CreateFacetDto): The data transfer object containing the details of the facet to be created.
-    Returns:
-        FacetDto: The data transfer object containing the details of the created facet.
-    """
+    if not valid_facets:
+        return result
 
     with Session(engine) as session:
+        try:
+            db_query = get_facets_query_builder(properties_metadata).build_facets_data_query(
+                base_query_factory=base_query_factory,
+                entity_id_column=entity_id_column,
+                facets=valid_facets,
+                facet_options_query=facet_options_query,
+            )
+            rows = session.exec(db_query).all()
+        except SQLAlchemyError as e:
+            # Safe logging: facet_options_query might contain non-serializable stuff
+            try:
+                payload = json.dumps(facet_options_query.dict())
+            except Exception:
+                payload = "<unserializable facet_options_query>"
+            logger.warning(
+                "Failed to execute facet options query. payload=%s error=%s",
+                payload,
+                repr(e),
+                exc_info=True,
+            )
+            return result
+
+    # Group rows by the *same key* we later use to read them:
+    # facet_key = get_facet_key(property_path, cel, facet_query)
+    grouped: Dict[str, List[Any]] = {}
+
+    for row in rows:
+        # We assume the query builder returns something with these fields.
+        # If it returns tuples, this still works if we index, but prefer named attrs.
+        facet_key = getattr(row, "facet_key", None)
+        if facet_key is None:
+            # Fall back: if builder returned facet_id, we can still group by that,
+            # but then lookup must match. We prefer facet_key for correctness.
+            facet_key = getattr(row, "facet_id", None)
+
+        if facet_key is None:
+            continue
+
+        grouped.setdefault(facet_key, [])
+
+        # SQLite limitation workaround
+        if engine.dialect.name == "sqlite" and len(grouped[facet_key]) >= OPTIONS_PER_FACET:
+            continue
+
+        grouped[facet_key].append(row)
+
+    # Build result per facet
+    for facet in facets:
+        prop_meta = properties_metadata.get_property_metadata_for_str(facet.property_path)
+        if prop_meta is None:
+            result[facet.id] = []
+            continue
+
+        facet_query = None
+        try:
+            # facet_queries might be missing keys; do not crash
+            facet_query = facet_options_query.facet_queries.get(facet.id)
+        except Exception:
+            facet_query = None
+
+        facet_key = get_facet_key(
+            facet.property_path,
+            facet_options_query.cel,
+            facet_query,
+        )
+
+        options: List[FacetOptionDto] = []
+
+        if facet_key in grouped:
+            for r in grouped[facet_key]:
+                # Support either tuple rows or named attributes
+                if isinstance(r, tuple) and len(r) >= 3:
+                    _, facet_value, matches_count = r[:3]
+                else:
+                    facet_value = getattr(r, "facet_value", None)
+                    matches_count = getattr(r, "matches_count", None)
+
+                options.append(
+                    FacetOptionDto(
+                        display_name=str(facet_value),
+                        value=map_facet_option_value(facet_value, prop_meta.data_type),
+                        matches_count=0 if matches_count is None else matches_count,
+                    )
+                )
+
+        # If enum-backed, append zero-match options not present
+        if prop_meta.enum_values:
+            present_values = {o.value for o in options}
+            for enum_value in prop_meta.enum_values:
+                if enum_value not in present_values:
+                    options.append(
+                        FacetOptionDto(
+                            display_name=str(enum_value),
+                            value=enum_value,
+                            matches_count=0,
+                        )
+                    )
+
+            # Preserve enum order: first value in enum_values appears first
+            enum_order = {v: i for i, v in enumerate(prop_meta.enum_values)}
+            options.sort(key=lambda o: enum_order.get(o.value, 10**9))
+
+        result[facet.id] = options
+
+    # invalid facets already empty
+    return result
+
+
+def create_facet(tenant_id: str, entity_type: str, facet: CreateFacetDto) -> FacetDto:
+    with Session(engine) as session:
         facet_db = Facet(
-            id=str(uuid4()),
+            id=uuid4(),  # keep it UUID if DB expects UUID
             tenant_id=tenant_id,
             name=facet.name,
             description=facet.description,
@@ -214,6 +205,8 @@ def create_facet(tenant_id: str, entity_type, facet: CreateFacetDto) -> FacetDto
         )
         session.add(facet_db)
         session.commit()
+        session.refresh(facet_db)
+
         return FacetDto(
             id=str(facet_db.id),
             property_path=facet_db.property_path,
@@ -223,72 +216,53 @@ def create_facet(tenant_id: str, entity_type, facet: CreateFacetDto) -> FacetDto
             is_lazy=True,
             type=facet_db.type,
         )
-    return None
 
 
 def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
-    """
-    Deletes a facet from the database for a given tenant.
-
-    Args:
-        tenant_id (str): The ID of the tenant.
-        facet_id (str): The ID of the facet to be deleted.
-
-    Returns:
-        bool: True if the facet was successfully deleted, False otherwise.
-    """
+    facet_uuid = UUID(facet_id)
     with Session(engine) as session:
         facet = session.exec(
-            select(Facet)
-            .where(Facet.tenant_id == tenant_id)
-            .where(Facet.id == UUID(facet_id))
-            .where(Facet.entity_type == entity_type)
-        ).first()[0] # result returned as tuple
-        if facet:
-            session.delete(facet)
-            session.commit()
-            return True
-        return False
+            select(Facet).where(
+                Facet.tenant_id == tenant_id,
+                Facet.entity_type == entity_type,
+                Facet.id == facet_uuid,
+            )
+        ).first()
+
+        if not facet:
+            return False
+
+        session.delete(facet)
+        session.commit()
+        return True
 
 
 def get_facets(
-    tenant_id: str, entity_type: str, facet_ids_to_load: list[str] = None
-) -> list[FacetDto]:
-    """
-    Retrieve a list of facet DTOs for a given tenant and entity type.
-
-    Args:
-        tenant_id (str): The ID of the tenant.
-        entity_type (str): The type of the entity.
-        facet_ids_to_load (list[str], optional): A list of facet IDs to load. Defaults to None.
-
-    Returns:
-        list[FacetDto]: A list of FacetDto objects representing the facets.
-    """
+    tenant_id: str,
+    entity_type: str,
+    facet_ids_to_load: Optional[List[str]] = None,
+) -> List[FacetDto]:
     with Session(engine) as session:
         query = select(Facet).where(
             Facet.tenant_id == tenant_id,
-            Facet.entity_type == entity_type
+            Facet.entity_type == entity_type,
         )
 
         if facet_ids_to_load:
-            query = query.filter(Facet.id.in_([UUID(id) for id in facet_ids_to_load]))
+            facet_uuids = [UUID(x) for x in facet_ids_to_load]
+            query = query.where(Facet.id.in_(facet_uuids))
 
         facets_from_db = session.exec(query).all()
 
-        facet_dtos = []
-
-        for facet in facets_from_db:
-            facet = facet[0] # because each row is returned as a tuple
-            facet_dtos.append(
-                FacetDto(
-                    id=str(facet.id),
-                    property_path=facet.property_path,
-                    name=facet.name,
-                    is_static=False,
-                    is_lazy=True,
-                    type=FacetType.str,
-                )
+        return [
+            FacetDto(
+                id=str(f.id),
+                property_path=f.property_path,
+                name=f.name,
+                description=getattr(f, "description", None),
+                is_static=False,
+                is_lazy=True,
+                type=f.type,
             )
-
-        return facet_dtos
+            for f in facets_from_db
+        ]
