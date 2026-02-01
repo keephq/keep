@@ -1,114 +1,96 @@
-"""
-Keep main database module.
+"""Keep main database module (RECODED - chunk 1)
 
-This module contains the CRUD database functions for Keep.
+Scope of this chunk:
+- Foundations: env load, engine + instrumentation, session helpers
+- Safe time + uuid helpers
+- retry_on_db_error decorator
+- WorkflowExecution CRUD: create_workflow_execution, get_last_completed_execution
+- Scheduler helpers: get_timeouted_workflow_executions, get_workflows_that_should_run
+- Workflow update/versioning: update_workflow_by_id, update_workflow_with_values
+- Rule lookups: get_mapping_rule_by_id, get_extraction_rule_by_id
+
+Key invariants:
+- UTC-aware datetimes only
+- SQLModel-style querying via session.exec(select(...)) for new code
+- Correct boolean/NULL comparisons using .is_(...) and .is_not(...)
+- No logger.exception("msg", e) misuse; no print()
+
+NOTE:
+- This chunk assumes models like Workflow, WorkflowVersion, WorkflowExecution,
+  WorkflowToAlertExecution, WorkflowToIncidentExecution, MappingRule, ExtractionRule
+  exist and are imported elsewhere in the module.
+- `engine` is created once at import time to match upstream behavior.
 """
 
-import hashlib
-import json
+from __future__ import annotations
+
 import logging
-import random
-import uuid
-from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union, Optional
+from typing import Iterator, Optional
 from uuid import UUID, uuid4
 
-from dateutil.parser import parse
-from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from psycopg2.errors import NoActiveSqlTransaction
 from retry import retry
-from sqlalchemy import (
-    String,
-    and_,
-    case,
-    cast,
-    desc,
-    func,
-    literal,
-    null,
-    select,
-    union,
-    update,
-)
-from sqlalchemy.dialects.mysql import insert as mysql_insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import foreign, joinedload, subqueryload
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.sql import exists, expression
-from sqlalchemy.sql.functions import count
-from sqlmodel import Session, SQLModel, col, or_, select, text
-from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import update
+from sqlmodel import Session, select, col
 
-from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
-from keep.api.core.db_utils import (
-    create_db_engine,
-    custom_serialize,
-    get_json_extract_field,
-    get_or_create,
-)
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
-
-# This import is required to create the tables
-from keep.api.models.action_type import ActionType
-from keep.api.models.ai_external import (
-    ExternalAIConfigAndMetadata,
-    ExternalAIConfigAndMetadataDto,
-)
-from keep.api.models.alert import AlertStatus
-from keep.api.models.db.action import Action
-from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.enrichment_event import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.incident import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.provider_image import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.system import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.incident import IncidentDto, IncidentDtoIn, IncidentSorting
-from keep.api.models.time_stamp import TimeStampFilter
+from keep.api.core.db_utils import create_db_engine
 
 logger = logging.getLogger(__name__)
 
 
-# this is a workaround for gunicorn to load the env vars
-# because somehow in gunicorn it doesn't load the .env file
+# -----------------------------------------------------------------------------
+# Env loading (gunicorn workaround)
+# -----------------------------------------------------------------------------
 load_dotenv(find_dotenv())
 
 
+# -----------------------------------------------------------------------------
+# Engine + instrumentation
+# -----------------------------------------------------------------------------
 engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
-ALLOWED_INCIDENT_FILTERS = [
-    "status",
-    "severity",
-    "sources",
-    "affected_services",
-    "assignee",
-]
+# -----------------------------------------------------------------------------
+# Constants
+# -----------------------------------------------------------------------------
 KEEP_AUDIT_EVENTS_ENABLED = config("KEEP_AUDIT_EVENTS_ENABLED", cast=bool, default=True)
-
 INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
 WORKFLOWS_TIMEOUT = timedelta(minutes=120)
 
 
-def dispose_session():
+# -----------------------------------------------------------------------------
+# Foundations
+# -----------------------------------------------------------------------------
+
+def _utcnow() -> datetime:
+    """UTC-aware now."""
+    return datetime.now(timezone.utc)
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """Normalize a datetime to UTC-aware."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _safe_uuid(value: str) -> UUID:
+    try:
+        return UUID(value)
+    except Exception as exc:
+        raise ValueError(f"Invalid UUID: {value}") from exc
+
+
+def dispose_session() -> None:
+    """Dispose DB connections (no-op for sqlite pool semantics in this project)."""
     logger.info("Disposing engine pool")
     if engine.dialect.name != "sqlite":
         engine.dispose(close=False)
@@ -119,52 +101,42 @@ def dispose_session():
 
 @contextmanager
 def existed_or_new_session(session: Optional[Session] = None) -> Iterator[Session]:
+    """Use provided session or create a new one.
+
+    If an exception occurs, attach the provided session on the exception object
+    (so upstream retry/rollback logic can react).
+    """
     try:
-        if session:
+        if session is not None:
             yield session
         else:
-            with Session(engine) as session:
-                yield session
+            with Session(engine) as s:
+                yield s
     except Exception as e:
-        e.session = session
-        raise e
-
-
-def get_session() -> Session:
-    """
-    Creates a database session.
-
-    Yields:
-        Session: A database session
-    """
-    from opentelemetry import trace  # pylint: disable=import-outside-toplevel
-
-    tracer = trace.get_tracer(__name__)
-    with tracer.start_as_current_span("get_session"):
-        with Session(engine) as session:
-            yield session
+        setattr(e, "session", session)
+        raise
 
 
 def get_session_sync() -> Session:
-    """
-    Creates a database session.
-
-    Returns:
-        Session: A database session
-    """
+    """Return a synchronous Session instance."""
     return Session(engine)
 
 
-def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
-    try:
-        return UUID(value)
-    except ValueError:
-        if should_raise:
-            raise ValueError(f"Invalid UUID: {value}")
-        return None
+# -----------------------------------------------------------------------------
+# Retry wrapper
+# -----------------------------------------------------------------------------
 
+def retry_on_db_error(func):
+    """Retry wrapper for transient DB errors.
 
-def retry_on_db_error(f):
+    Retries on:
+    - OperationalError (connection blips, deadlocks)
+    - IntegrityError (race conditions on unique constraints)
+    - StaleDataError (optimistic concurrency)
+
+    Deadlock detection is string-based (kept for compatibility).
+    """
+
     @retry(
         exceptions=(OperationalError, IntegrityError, StaleDataError),
         tries=3,
@@ -173,28 +145,35 @@ def retry_on_db_error(f):
         jitter=(0, 0.1),
         logger=logger,
     )
-    @wraps(f)
+    @wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            return f(*args, **kwargs)
+            return func(*args, **kwargs)
         except (OperationalError, IntegrityError, StaleDataError) as e:
+            sess = getattr(e, "session", None)
+            if sess is not None and hasattr(sess, "is_active") and not sess.is_active:
+                try:
+                    sess.rollback()
+                except Exception:
+                    # If rollback fails, we still re-raise
+                    logger.exception("Rollback failed during retry handling")
 
-            if hasattr(e, "session") and not e.session.is_active:
-                e.session.rollback()
+            if "Deadlock found" in str(e) or "deadlock" in str(e).lower():
+                logger.warning("Deadlock detected; retrying", extra={"error": str(e)})
+                raise
 
-            if "Deadlock found" in str(e):
-                logger.warning(
-                    "Deadlock detected, retrying transaction", extra={"error": str(e)}
-                )
-                raise  # retry will catch this
-            else:
-                logger.exception(
-                    f"Error while executing transaction during {f.__name__}",
-                )
-            raise  # if it's not a deadlock, let it propagate
+            logger.exception(
+                "DB error while executing %s",
+                getattr(func, "__name__", "<callable>"),
+            )
+            raise
 
     return wrapper
 
+
+# -----------------------------------------------------------------------------
+# Workflow Execution
+# -----------------------------------------------------------------------------
 
 def create_workflow_execution(
     workflow_id: str,
@@ -202,26 +181,28 @@ def create_workflow_execution(
     tenant_id: str,
     triggered_by: str,
     execution_number: int = 1,
-    event_id: str = None,
-    fingerprint: str = None,
-    execution_id: str = None,
+    event_id: Optional[str] = None,
+    fingerprint: Optional[str] = None,
+    execution_id: Optional[str] = None,
     event_type: str = "alert",
     test_run: bool = False,
 ) -> str:
+    """Create a new workflow execution.
+
+    Uses a DB uniqueness constraint on (workflow_id, execution_number) as a lock.
+    """
     with Session(engine) as session:
         try:
-            workflow_execution_id = execution_id or (
-                str(uuid4()) if not test_run else "test_" + str(uuid4())
-            )
-            if len(triggered_by) > 255:
-                triggered_by = triggered_by[:255]
+            we_id = execution_id or (f"test_{uuid4()}" if test_run else str(uuid4()))
+            trig = (triggered_by or "")[:255]
+
             workflow_execution = WorkflowExecution(
-                id=workflow_execution_id,
+                id=we_id,
                 workflow_id=workflow_id,
                 workflow_revision=workflow_revision,
                 tenant_id=tenant_id,
-                started=datetime.now(tz=timezone.utc),
-                triggered_by=triggered_by,
+                started=_utcnow(),
+                triggered_by=trig,
                 execution_number=execution_number,
                 status="in_progress",
                 error=None,
@@ -229,318 +210,353 @@ def create_workflow_execution(
                 results={},
                 is_test_run=test_run,
             )
+
             session.add(workflow_execution)
-            # Ensure the object has an id
-            session.flush()
-            execution_id = workflow_execution.id
+            session.flush()  # make sure ID exists
+
             if KEEP_AUDIT_EVENTS_ENABLED:
                 if fingerprint and event_type == "alert":
-                    workflow_to_alert_execution = WorkflowToAlertExecution(
-                        workflow_execution_id=execution_id,
-                        alert_fingerprint=fingerprint,
-                        event_id=event_id,
+                    session.add(
+                        WorkflowToAlertExecution(
+                            workflow_execution_id=workflow_execution.id,
+                            alert_fingerprint=fingerprint,
+                            event_id=event_id,
+                        )
                     )
-                    session.add(workflow_to_alert_execution)
                 elif event_type == "incident":
-                    workflow_to_incident_execution = WorkflowToIncidentExecution(
-                        workflow_execution_id=execution_id,
-                        alert_fingerprint=fingerprint,
-                        incident_id=event_id,
+                    session.add(
+                        WorkflowToIncidentExecution(
+                            workflow_execution_id=workflow_execution.id,
+                            alert_fingerprint=fingerprint,
+                            incident_id=event_id,
+                        )
                     )
-                    session.add(workflow_to_incident_execution)
 
             session.commit()
-            return execution_id
+            return workflow_execution.id
+
         except IntegrityError:
             session.rollback()
             logger.debug(
-                f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
+                "Failed to create execution for workflow %s; constraint met",
+                workflow_id,
             )
             raise
 
 
-def get_mapping_rule_by_id(
-    tenant_id: str, rule_id: str, session: Optional[Session] = None
-) -> MappingRule | None:
-    with existed_or_new_session(session) as session:
-        query = select(MappingRule).where(
-            MappingRule.tenant_id == tenant_id, MappingRule.id == rule_id
-        )
-        return session.exec(query).first()
-
-
-def get_extraction_rule_by_id(
-    tenant_id: str, rule_id: str, session: Optional[Session] = None
-) -> ExtractionRule | None:
-    with existed_or_new_session(session) as session:
-        query = select(ExtractionRule).where(
-            ExtractionRule.tenant_id == tenant_id, ExtractionRule.id == rule_id
-        )
-        return session.exec(query).first()
-
-
-def get_last_completed_execution(
-    session: Session, workflow_id: str
-) -> WorkflowExecution:
-    return session.exec(
+def get_last_completed_execution(session: Session, workflow_id: str) -> Optional[WorkflowExecution]:
+    """Return most recent terminal execution for a workflow."""
+    stmt = (
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
-        .where(WorkflowExecution.is_test_run == False)
+        .where(WorkflowExecution.is_test_run.is_(False))
         .where(
             (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
             | (WorkflowExecution.status == "providers_not_configured")
         )
-        .order_by(WorkflowExecution.execution_number.desc())
+        .order_by(col(WorkflowExecution.execution_number).desc())
         .limit(1)
-    ).first()
+    )
+    return session.exec(stmt).first()
 
 
-def get_timeouted_workflow_exections():
+# -----------------------------------------------------------------------------
+# Rules lookups
+# -----------------------------------------------------------------------------
+
+def get_mapping_rule_by_id(
+    tenant_id: str,
+    rule_id: str,
+    session: Optional[Session] = None,
+) -> Optional[MappingRule]:
+    with existed_or_new_session(session) as sess:
+        stmt = select(MappingRule).where(
+            MappingRule.tenant_id == tenant_id,
+            MappingRule.id == rule_id,
+        )
+        return sess.exec(stmt).first()
+
+
+def get_extraction_rule_by_id(
+    tenant_id: str,
+    rule_id: str,
+    session: Optional[Session] = None,
+) -> Optional[ExtractionRule]:
+    with existed_or_new_session(session) as sess:
+        stmt = select(ExtractionRule).where(
+            ExtractionRule.tenant_id == tenant_id,
+            ExtractionRule.id == rule_id,
+        )
+        return sess.exec(stmt).first()
+
+
+# -----------------------------------------------------------------------------
+# Scheduler helpers
+# -----------------------------------------------------------------------------
+
+def get_timeouted_workflow_executions() -> list[WorkflowExecution]:
+    """Executions stuck in_progress longer than WORKFLOWS_TIMEOUT."""
     with Session(engine) as session:
-        logger.debug("Checking for timeouted workflows")
-        timeouted_workflows = []
+        cutoff = _utcnow() - WORKFLOWS_TIMEOUT
+        logger.debug("Checking for timeouted workflows", extra={"cutoff": cutoff.isoformat()})
+
         try:
-            result = session.exec(
+            stmt = (
                 select(WorkflowExecution)
-                .filter(WorkflowExecution.status == "in_progress")
-                .filter(
-                    WorkflowExecution.started <= datetime.utcnow() - WORKFLOWS_TIMEOUT
-                )
+                .where(WorkflowExecution.status == "in_progress")
+                .where(col(WorkflowExecution.started) <= cutoff)
             )
-            timeouted_workflows = result.all()
-        except Exception as e:
-            logger.exception("Failed to get timeouted workflows: ", e)
+            rows = session.exec(stmt).all()
+            logger.debug("Found %d timeouted workflows", len(rows))
+            return rows
+        except Exception:
+            logger.exception("Failed to get timeouted workflows")
+            return []
 
-        logger.debug(f"Found {len(timeouted_workflows)} timeouted workflows")
-        return timeouted_workflows
 
+def get_workflows_that_should_run() -> list[dict[str, str]]:
+    """Return a list of workflows that should run now.
 
-def get_workflows_that_should_run():
+    Uses uniqueness constraint on (workflow_id, execution_number) as a distributed lock.
+    """
+
     with Session(engine) as session:
         logger.debug("Checking for workflows that should run")
-        workflows_with_interval = []
+
         try:
-            result = session.exec(
+            stmt = (
                 select(Workflow)
-                .filter(Workflow.is_deleted == False)
-                .filter(Workflow.is_disabled == False)
-                .filter(Workflow.interval != None)
-                .filter(Workflow.interval > 0)
+                .where(Workflow.is_deleted.is_(False))
+                .where(Workflow.is_disabled.is_(False))
+                .where(Workflow.interval.is_not(None))
+                .where(Workflow.interval > 0)
             )
-            workflows_with_interval = result.all() if result else []
+            workflows = session.exec(stmt).all()
         except Exception:
             logger.exception("Failed to get workflows with interval")
+            return []
 
-        logger.debug(f"Found {len(workflows_with_interval)} workflows with interval")
-        workflows_to_run = []
-        # for each workflow:
-        for workflow in workflows_with_interval:
-            current_time = datetime.utcnow()
-            last_execution = get_last_completed_execution(session, workflow.id)
-            # if there no last execution, that's the first time we run the workflow
-            if not last_execution:
+        logger.debug("Found %d workflows with interval", len(workflows))
+
+        now = _utcnow()
+        to_run: list[dict[str, str]] = []
+
+        for wf in workflows:
+            # Make sure started comparisons are UTC-aware
+            last = get_last_completed_execution(session, wf.id)
+
+            if not last:
+                # first run
                 try:
-                    # try to get the lock
-                    workflow_execution_id = create_workflow_execution(
-                        workflow.id, workflow.revision, workflow.tenant_id, "scheduler"
-                    )
-                    # we succeed to get the lock on this execution number :)
-                    # let's run it
-                    workflows_to_run.append(
-                        {
-                            "tenant_id": workflow.tenant_id,
-                            "workflow_id": workflow.id,
-                            "workflow_execution_id": workflow_execution_id,
-                        }
-                    )
-                # some other thread/instance has already started to work on it
-                except IntegrityError:
-                    continue
-            # else, if the last execution was more than interval seconds ago, we need to run it
-            elif (
-                last_execution.started + timedelta(seconds=workflow.interval)
-                <= current_time
-            ):
-                try:
-                    # try to get the lock with execution_number + 1
-                    workflow_execution_id = create_workflow_execution(
-                        workflow.id,
-                        workflow.revision,
-                        workflow.tenant_id,
+                    weid = create_workflow_execution(
+                        wf.id,
+                        wf.revision,
+                        wf.tenant_id,
                         "scheduler",
-                        last_execution.execution_number + 1,
                     )
-                    # we succeed to get the lock on this execution number :)
-                    # let's run it
-                    workflows_to_run.append(
+                    to_run.append(
                         {
-                            "tenant_id": workflow.tenant_id,
-                            "workflow_id": workflow.id,
-                            "workflow_execution_id": workflow_execution_id,
+                            "tenant_id": wf.tenant_id,
+                            "workflow_id": wf.id,
+                            "workflow_execution_id": weid,
                         }
                     )
-                    # continue to the next one
-                    continue
-                # some other thread/instance has already started to work on it
                 except IntegrityError:
-                    # we need to verify the locking is still valid and not timeouted
-                    session.rollback()
-                    pass
-                # get the ongoing execution
-                ongoing_execution = session.exec(
-                    select(WorkflowExecution)
-                    .where(WorkflowExecution.workflow_id == workflow.id)
-                    .where(
-                        WorkflowExecution.execution_number
-                        == last_execution.execution_number + 1
+                    continue
+                continue
+
+            last_started = _as_utc(last.started)
+            interval_deadline = last_started + timedelta(seconds=int(wf.interval))
+
+            if interval_deadline > now:
+                # not due yet
+                continue
+
+            next_exec_num = int(last.execution_number) + 1
+
+            # Try to acquire lock by creating execution
+            try:
+                weid = create_workflow_execution(
+                    wf.id,
+                    wf.revision,
+                    wf.tenant_id,
+                    "scheduler",
+                    execution_number=next_exec_num,
+                )
+                to_run.append(
+                    {
+                        "tenant_id": wf.tenant_id,
+                        "workflow_id": wf.id,
+                        "workflow_execution_id": weid,
+                    }
+                )
+                continue
+
+            except IntegrityError:
+                # someone else locked it; verify whether the lock is stale
+                session.rollback()
+
+            ongoing = session.exec(
+                select(WorkflowExecution)
+                .where(WorkflowExecution.workflow_id == wf.id)
+                .where(WorkflowExecution.execution_number == next_exec_num)
+                .limit(1)
+            ).first()
+
+            if not ongoing:
+                logger.error(
+                    "Lock existed but execution row missing",
+                    extra={"workflow_id": wf.id, "execution_number": next_exec_num},
+                )
+                continue
+
+            if ongoing.status != "in_progress":
+                # someone ran it and finished
+                continue
+
+            ongoing_started = _as_utc(ongoing.started)
+            if ongoing_started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT <= now:
+                # stale execution; mark timeout and relaunch
+                ongoing.status = "timeout"
+                session.add(ongoing)
+                session.commit()
+
+                try:
+                    weid = create_workflow_execution(
+                        wf.id,
+                        wf.revision,
+                        wf.tenant_id,
+                        "scheduler",
+                        execution_number=next_exec_num + 1,
                     )
-                    .limit(1)
-                ).first()
-                # this is a WTF exception since if this (workflow_id, execution_number) does not exist,
-                # we would be able to acquire the lock
-                if not ongoing_execution:
-                    logger.error(
-                        f"WTF: ongoing execution not found {workflow.id} {last_execution.execution_number + 1}"
+                except IntegrityError:
+                    logger.debug(
+                        "Failed to create relaunch execution for workflow %s; constraint met",
+                        wf.id,
                     )
                     continue
-                # if this completed, error, than that's ok - the service who locked the execution is done
-                elif ongoing_execution.status != "in_progress":
-                    continue
-                # if the ongoing execution runs more than timeout minutes, relaunch it
-                elif (
-                    ongoing_execution.started + INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT
-                    <= current_time
-                ):
-                    ongoing_execution.status = "timeout"
-                    session.commit()
-                    # re-create the execution and try to get the lock
-                    try:
-                        workflow_execution_id = create_workflow_execution(
-                            workflow.id,
-                            workflow.revision,
-                            workflow.tenant_id,
-                            "scheduler",
-                            ongoing_execution.execution_number + 1,
-                        )
-                    # some other thread/instance has already started to work on it and that's ok
-                    except IntegrityError:
-                        logger.debug(
-                            f"Failed to create a new execution for workflow {workflow.id} [timeout]. Constraint is met."
-                        )
-                        continue
-                    # managed to acquire the (workflow_id, execution_number) lock
-                    workflows_to_run.append(
-                        {
-                            "tenant_id": workflow.tenant_id,
-                            "workflow_id": workflow.id,
-                            "workflow_execution_id": workflow_execution_id,
-                        }
-                    )
-            else:
-                logger.debug(
-                    f"Workflow {workflow.id} is already running by someone else"
+
+                to_run.append(
+                    {
+                        "tenant_id": wf.tenant_id,
+                        "workflow_id": wf.id,
+                        "workflow_execution_id": weid,
+                    }
                 )
 
-        return workflows_to_run
+        return to_run
 
+
+# -----------------------------------------------------------------------------
+# Workflow update/versioning
+# -----------------------------------------------------------------------------
 
 def update_workflow_by_id(
     id: str,
     name: str,
     tenant_id: str,
-    description: str | None,
-    interval: int,
+    description: Optional[str],
+    interval: Optional[int],
     workflow_raw: str,
     is_disabled: bool,
     updated_by: str,
+    *,
     provisioned: bool = False,
-    provisioned_file: str | None = None,
+    provisioned_file: Optional[str] = None,
 ):
+    """Update workflow by id (or by name if provisioned)."""
+
     with Session(engine, expire_on_commit=False) as session:
-        if provisioned:
-            # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
-            existing_workflow = get_workflow_by_name(tenant_id, name)
-        else:
-            # otherwise, we want certainty, so just lookup by id
-            existing_workflow = get_workflow_by_id(tenant_id, id)
-        if not existing_workflow:
+        existing = (
+            get_workflow_by_name(tenant_id, name)
+            if provisioned
+            else get_workflow_by_id(tenant_id, id)
+        )
+
+        if not existing:
             raise ValueError("Workflow not found")
+
         return update_workflow_with_values(
-            existing_workflow,
+            existing,
             name=name,
             description=description,
             interval=interval,
             workflow_raw=workflow_raw,
             is_disabled=is_disabled,
+            updated_by=updated_by,
             provisioned=provisioned,
             provisioned_file=provisioned_file,
-            updated_by=updated_by,
             session=session,
         )
 
 
 def update_workflow_with_values(
     existing_workflow: Workflow,
+    *,
     name: str,
-    description: str | None,
-    interval: int | None,
+    description: Optional[str],
+    interval: Optional[int],
     workflow_raw: str,
     is_disabled: bool,
     updated_by: str,
     provisioned: bool = False,
-    provisioned_file: str | None = None,
-    session: Session | None = None,
-):
-    # In case the workflow name changed to empty string, keep the old name
-    name = name or existing_workflow.name
-    with existed_or_new_session(session) as session:
-        # Get the latest revision number for this workflow
-        latest_version = session.exec(
+    provisioned_file: Optional[str] = None,
+    session: Optional[Session] = None,
+) -> Workflow:
+    """Create a new WorkflowVersion and update Workflow to point to it."""
+
+    # keep old name if caller passed empty string
+    new_name = name or existing_workflow.name
+    now = _utcnow()
+
+    with existed_or_new_session(session) as sess:
+        latest = sess.exec(
             select(WorkflowVersion)
             .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
             .order_by(col(WorkflowVersion.revision).desc())
             .limit(1)
         ).first()
 
-        next_revision = (latest_version.revision if latest_version else 0) + 1
+        next_revision = (int(latest.revision) if latest else 0) + 1
 
-        # Update all existing versions to not be current
-        session.exec(
+        # mark older versions not current
+        sess.exec(
             update(WorkflowVersion)
             .where(col(WorkflowVersion.workflow_id) == existing_workflow.id)
-            .values(is_current=False)  # type: ignore[attr-defined]
+            .values(is_current=False)
         )
 
-        # creating a new version
+        # create new version
         version = WorkflowVersion(
             workflow_id=existing_workflow.id,
             revision=next_revision,
             workflow_raw=workflow_raw,
             updated_by=updated_by,
             comment=f"Updated by {updated_by}",
-            # TODO: check if valid
             is_valid=True,
             is_current=True,
-            updated_at=datetime.now(),
+            updated_at=now,
         )
-        session.add(version)
+        sess.add(version)
 
-        existing_workflow.name = name
+        # update workflow
+        existing_workflow.name = new_name
         existing_workflow.description = description
         existing_workflow.updated_by = updated_by
         existing_workflow.interval = interval
         existing_workflow.workflow_raw = workflow_raw
         existing_workflow.revision = next_revision
-        existing_workflow.last_updated = datetime.now()
+        existing_workflow.last_updated = now
         existing_workflow.is_deleted = False
         existing_workflow.is_disabled = is_disabled
         existing_workflow.provisioned = provisioned
         existing_workflow.provisioned_file = provisioned_file
-        session.add(existing_workflow)
-        session.commit()
-        return existing_workflow
 
+        sess.add(existing_workflow)
+        sess.commit()
+        sess.refresh(existing_workflow)
+        return existing_workflow
 
 def is_equal_workflow_dicts(a: dict, b: dict):
     return (
