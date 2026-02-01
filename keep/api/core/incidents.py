@@ -1,663 +1,284 @@
+"""
+Facet utilities:
+- CRUD for Facet records
+- Generating facet option lists via query-builder
+"""
+
+from __future__ import annotations
+
+import json
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Iterable, List, Optional
+from uuid import UUID, uuid4
 
-from sqlalchemy import String, and_, case, cast, func, select
-from sqlmodel import Session, col, text
-from sqlalchemy.orm import foreign, aliased
+from sqlalchemy.exc import OperationalError
+from sqlalchemy import select
+from sqlmodel import Session
 
-from keep.api.core.alerts import get_alert_potential_facet_fields
-from keep.api.core.cel_to_sql.properties_mapper import (
-    PropertiesMappingException,
-)
-from keep.api.core.cel_to_sql.properties_metadata import (
-    FieldMappingConfiguration,
-    PropertiesMetadata,
-    PropertyMetadataInfo,
-)
-from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
-from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
-    get_cel_to_sql_provider,
-)
-from keep.api.core.db import engine, enrich_incidents_with_alerts
-from keep.api.core.facets import get_facet_options, get_facets
-from keep.api.models.db.alert import (
-    Alert,
-    AlertEnrichment,
-    Incident,
-    LastAlert,
-    LastAlertToIncident,
-)
-from keep.api.models.db.facet import FacetType
-from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
-from keep.api.models.incident import IncidentSorting
-from keep.api.models.query import SortOptionsDto
 from keep.api.core.cel_to_sql.ast_nodes import DataType
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
+from keep.api.core.facets_query_builder.get_facets_query_builder import (
+    get_facets_query_builder,
+)
+from keep.api.core.facets_query_builder.utils import get_facet_key
+from keep.api.core.db import engine
+from keep.api.models.db.facet import Facet, FacetType
+from keep.api.models.facet import (
+    CreateFacetDto,
+    FacetDto,
+    FacetOptionDto,
+    FacetOptionsQueryDto,
+)
 
 logger = logging.getLogger(__name__)
 
-incident_field_configurations = [
-    FieldMappingConfiguration(
-        map_from_pattern="id", map_to=["incident.id"], data_type=DataType.UUID
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="name",
-        map_to=["incident.user_generated_name", "incident.ai_generated_name"],
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="summary",
-        map_to=["incident.user_summary", "incident.generated_summary"],
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="assignee",
-        map_to="incident.assignee",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="severity",
-        map_to="incident.severity",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="status",
-        map_to=["JSON(incidentenrichment.enrichments).*", "incident.status"],
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="creation_time",
-        map_to="incident.creation_time",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="start_time",
-        map_to="incident.start_time",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="end_time",
-        map_to="incident.end_time",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="last_seen_time",
-        map_to="incident.last_seen_time",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="is_predicted",
-        map_to="incident.is_predicted",
-        data_type=DataType.BOOLEAN,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="is_candidate",
-        map_to="incident.is_candidate",
-        data_type=DataType.BOOLEAN,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="is_visible",
-        map_to="incident.is_visible",
-        data_type=DataType.BOOLEAN,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="alerts_count",
-        map_to="incident.alerts_count",
-        data_type=DataType.INTEGER,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="merged_at",
-        map_to="incident.merged_at",
-        data_type=DataType.DATETIME,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="merged_by",
-        map_to="incident.merged_by",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="hasLinkedIncident",
-        map_to="addional_incident_fields.incident_has_linked_incident",
-        data_type=DataType.BOOLEAN,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="alert.providerType",
-        map_to="alert.provider_type",
-        data_type=DataType.STRING,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="sources", map_to="incident.sources", data_type=DataType.ARRAY
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="affectedServices",
-        map_to="incident.affected_services",
-        data_type=DataType.ARRAY,
-    ),
-    FieldMappingConfiguration(
-        map_from_pattern="alert.*",
-        map_to=["JSON(alertenrichment.enrichments).*", "JSON(alert.event).*"],
-    ),
-]
-
-properties_metadata = PropertiesMetadata(incident_field_configurations)
-
-incident_enrichment = aliased(AlertEnrichment, name="incidentenrichment")
-static_facets = [
-    FacetDto(
-        id="1e7b1d6e-1c2b-4f8e-9f8e-1c2b4f8e9f8e",
-        property_path="status",
-        name="Status",
-        is_static=True,
-        type=FacetType.str,
-    ),
-    FacetDto(
-        id="2e7b1d6e-2c2b-4f8e-9f8e-2c2b4f8e9f8e",
-        property_path="severity",
-        name="Severity",
-        is_static=True,
-        type=FacetType.str,
-    ),
-    FacetDto(
-        id="3e7b1d6e-3c2b-4f8e-9f8e-3c2b4f8e9f8e",
-        property_path="assignee",
-        name="Assignee",
-        is_static=True,
-        type=FacetType.str,
-    ),
-    FacetDto(
-        id="5e7b1d6e-5c2b-4f8e-9f8e-5c2b4f8e9f8e",
-        property_path="sources",
-        name="Source",
-        is_static=True,
-        type=FacetType.str,
-    ),
-    FacetDto(
-        id="4e7b1d6e-4c2b-4f8e-9f8e-4c2b4f8e9f8e",
-        property_path="affectedServices",
-        name="Service",
-        is_static=True,
-        type=FacetType.str,
-    ),
-    FacetDto(
-        id="5e247d67-ad9a-4f32-b8d1-8bdf4191d93f",
-        property_path="hasLinkedIncident",
-        name="Linked incident",
-        is_static=True,
-        type=FacetType.str,
-    ),
-]
-static_facets_dict = {facet.id: facet for facet in static_facets}
+OPTIONS_PER_FACET = 50
 
 
-def __build_base_incident_query(
-    tenant_id: str,
-    select_args: list,
-    cel=None,
-    force_fetch_alerts=False,
-    force_fetch_has_linked_incident=False,
-):
-    fetch_alerts = False
-    fetch_has_linked_incident = False
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    sql_filter = None
-    involved_fields = []
-    is_visible_filter_present = False
-
-    if cel:
-        cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
-        sql_filter = cel_to_sql_result.sql
-        involved_fields = cel_to_sql_result.involved_fields
-        fetch_alerts = next(
-            (
-                True
-                for field in involved_fields
-                if field.field_name.startswith("alert.")
-            ),
-            False,
-        )
-        fetch_has_linked_incident = next(
-            (
-                True
-                for field in involved_fields
-                if field.field_name == "hasLinkedIncident"
-            ),
-            False,
-        )
-        is_visible_filter_present = next(
-            (
-                True
-                for field in involved_fields
-                if field.field_name == "is_visible"
-            ),
-            False,
-        )
-
-    sql_query = select(*select_args).select_from(Incident)
-
-    if fetch_alerts or force_fetch_alerts:
-        sql_query = (
-            sql_query.outerjoin(
-                LastAlertToIncident,
-                and_(
-                    LastAlertToIncident.incident_id == Incident.id,
-                    LastAlertToIncident.tenant_id == tenant_id,
-                ),
-            )
-            .outerjoin(
-                LastAlert,
-                and_(
-                    LastAlert.tenant_id == tenant_id,
-                    LastAlert.fingerprint == LastAlertToIncident.fingerprint,
-                ),
-            )
-            .outerjoin(
-                Alert,
-                and_(LastAlert.alert_id == Alert.id, LastAlert.tenant_id == tenant_id),
-            )
-            .outerjoin(
-                AlertEnrichment,
-                and_(
-                    AlertEnrichment.alert_fingerprint == Alert.fingerprint,
-                    AlertEnrichment.tenant_id == tenant_id,
-                ),
-            )
-        )
-
-    sql_query = sql_query.outerjoin(
-        incident_enrichment,
-        and_(
-            Incident.tenant_id == incident_enrichment.tenant_id,
-            cast(col(Incident.id), String)
-            == foreign(incident_enrichment.alert_fingerprint),
-        ),
-    )
-
-    if fetch_has_linked_incident or force_fetch_has_linked_incident:
-        additional_incident_fields = (
-            select(
-                Incident.id,
-                case(
-                    (
-                        Incident.same_incident_in_the_past_id.isnot(None),
-                        True,
-                    ),
-                    else_=False,
-                ).label("incident_has_linked_incident"),
-            )
-            .select_from(Incident)
-            .subquery("addional_incident_fields")
-        )
-        sql_query = sql_query.join(
-            additional_incident_fields, Incident.id == additional_incident_fields.c.id
-        )
-
-    sql_query = sql_query.filter(Incident.tenant_id == tenant_id)
-    if not is_visible_filter_present:
-        sql_query = sql_query.filter(
-            Incident.is_visible == True
-        )
-    if sql_filter:
-        sql_query = sql_query.where(text(sql_filter))
-
-    return {
-        "query": sql_query,
-        "involved_fields": involved_fields,
-        "fetch_alerts": fetch_alerts,
-    }
+def _to_uuid(value: str) -> UUID:
+    try:
+        return value if isinstance(value, UUID) else UUID(str(value))
+    except Exception as e:
+        raise ValueError(f"Invalid UUID: {value}") from e
 
 
-def __build_last_incidents_total_count_query(
-    tenant_id: str,
-    timeframe: int = None,
-    upper_timestamp: datetime = None,
-    lower_timestamp: datetime = None,
-    is_candidate: bool = False,
-    is_predicted: bool = None,
-    cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None,
-):
+def map_facet_option_value(value: Any, data_type: DataType) -> Any:
     """
-    Builds a SQL query to retrieve the last incidents based on various filters and sorting options.
-
-    Args:
-        dialect (str): The SQL dialect to use.
-        tenant_id (str): The tenant ID to filter incidents.
-        limit (int, optional): The maximum number of incidents to return. Defaults to 25.
-        offset (int, optional): The number of incidents to skip before starting to return results. Defaults to 0.
-        timeframe (int, optional): The number of days to look back from the current date for incidents. Defaults to None.
-        upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
-        lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
-        is_candidate (bool, optional): Filter for confirmed incidents. Defaults to False.
-        sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
-        is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
-        cel (str, optional): The CEL (Common Expression Language) string to convert to SQL. Defaults to None.
-        allowed_incident_ids (Optional[List[str]], optional): List of allowed incident IDs to filter. Defaults to None.
-
-    Returns:
-        sqlalchemy.sql.selectable.Select: The constructed SQL query.
+    Maps string-ish option values into the correct type based on field metadata.
     """
-    fetch_alerts = cel and "alert." in cel
+    if value is None:
+        return None
 
-    count_funct = (
-        func.count(func.distinct(Incident.id)) if fetch_alerts else func.count(1)
-    )
+    # Many SQL dialects return everything as str for JSON extracts.
+    if data_type == DataType.INTEGER:
+        try:
+            return int(value)
+        except Exception:
+            return value
 
-    query = __build_base_incident_query(
-        tenant_id=tenant_id,
-        cel=cel,
-        select_args=[count_funct],
-    )["query"]
+    if data_type == DataType.FLOAT:
+        try:
+            return float(value)
+        except Exception:
+            return value
 
-    query = query.filter(Incident.is_candidate == is_candidate)
+    if data_type == DataType.BOOLEAN:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes", "y"}
+        return value
 
-    if allowed_incident_ids:
-        query = query.filter(Incident.id.in_(allowed_incident_ids))
-
-    if is_predicted is not None:
-        query = query.filter(Incident.is_predicted == is_predicted)
-
-    if timeframe:
-        query = query.filter(
-            Incident.start_time
-            >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
-        )
-
-    if upper_timestamp and lower_timestamp:
-        query = query.filter(
-            col(Incident.last_seen_time).between(lower_timestamp, upper_timestamp)
-        )
-    elif upper_timestamp:
-        query = query.filter(Incident.last_seen_time <= upper_timestamp)
-    elif lower_timestamp:
-        query = query.filter(Incident.last_seen_time >= lower_timestamp)
-
-    return query
+    return value
 
 
-def __build_last_incidents_query(
-    tenant_id: str,
-    limit: int = 25,
-    offset: int = 0,
-    timeframe: int = None,
-    upper_timestamp: datetime = None,
-    lower_timestamp: datetime = None,
-    is_candidate: bool = False,
-    sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
-    is_predicted: bool = None,
-    cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None,
-):
+def get_facet_options(
+    base_query_factory: Callable[[str, Any, Any], Any],
+    entity_id_column: Any,
+    facets: List[FacetDto],
+    facet_options_query: FacetOptionsQueryDto,
+    properties_metadata: PropertiesMetadata,
+) -> Dict[str, List[FacetOptionDto]]:
     """
-    Builds a SQL query to retrieve the last incidents based on various filters and sorting options.
-
-    Args:
-        dialect (str): The SQL dialect to use.
-        tenant_id (str): The tenant ID to filter incidents.
-        limit (int, optional): The maximum number of incidents to return. Defaults to 25.
-        offset (int, optional): The number of incidents to skip before starting to return results. Defaults to 0.
-        timeframe (int, optional): The number of days to look back from the current date for incidents. Defaults to None.
-        upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
-        lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
-        is_candidate (bool, optional): Filter for confirmed incidents. Defaults to False.
-        sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
-        is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
-        cel (str, optional): The CEL (Common Expression Language) string to convert to SQL. Defaults to None.
-        allowed_incident_ids (Optional[List[str]], optional): List of allowed incident IDs to filter. Defaults to None.
-
-    Returns:
-        sqlalchemy.sql.selectable.Select: The constructed SQL query.
+    Returns dict: {facet_id: [FacetOptionDto...]} for each requested facet.
     """
-    sort_dir = "DESC" if "-" in sorting.value else "ASC"
-    sort_by = sorting.value.replace("-", "")
-    sort_options: list[SortOptionsDto] = [
-        SortOptionsDto(sort_by=sort_by, sort_dir=sort_dir)
-    ]
-    cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-    sort_by_exp = cel_to_sql_instance.get_order_by_expression(
-        [(sort_option.sort_by, sort_option.sort_dir) for sort_option in sort_options]
-    )
-    distinct_columns = [
-        text(cel_to_sql_instance.get_field_expression(sort_option.sort_by))
-        for sort_option in sort_options
-    ]
+    invalid_facets: List[FacetDto] = []
+    valid_facets: List[FacetDto] = []
 
-    built_query_result = __build_base_incident_query(
-        tenant_id=tenant_id,
-        cel=cel,
-        select_args=[Incident, incident_enrichment],
-    )
-    sql_query = built_query_result["query"]
-    fetch_alerts = built_query_result["fetch_alerts"]
-    sql_query = sql_query.order_by(text(sort_by_exp))
+    for facet in facets:
+        if properties_metadata.get_property_metadata_for_str(facet.property_path):
+            valid_facets.append(facet)
+        else:
+            invalid_facets.append(facet)
 
-    sql_query = sql_query.filter(Incident.is_candidate == is_candidate)
+    result: Dict[str, List[FacetOptionDto]] = {f.id: [] for f in facets}
 
-    if allowed_incident_ids:
-        sql_query = sql_query.filter(Incident.id.in_(allowed_incident_ids))
-
-    if is_predicted is not None:
-        sql_query = sql_query.filter(Incident.is_predicted == is_predicted)
-
-    if timeframe:
-        sql_query = sql_query.filter(
-            Incident.start_time
-            >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
-        )
-
-    if upper_timestamp and lower_timestamp:
-        sql_query = sql_query.filter(
-            col(Incident.last_seen_time).between(lower_timestamp, upper_timestamp)
-        )
-    elif upper_timestamp:
-        sql_query = sql_query.filter(Incident.last_seen_time <= upper_timestamp)
-    elif lower_timestamp:
-        sql_query = sql_query.filter(Incident.last_seen_time >= lower_timestamp)
-
-    if fetch_alerts:
-        sql_query = sql_query.distinct(*(distinct_columns + [Incident.id]))
-
-    # Order by start_time in descending order and limit the results
-    sql_query = sql_query.limit(limit).offset(offset)
-    return sql_query
-
-
-def get_last_incidents_by_cel(
-    tenant_id: str,
-    limit: int = 25,
-    offset: int = 0,
-    timeframe: int = None,
-    upper_timestamp: datetime = None,
-    lower_timestamp: datetime = None,
-    is_candidate: bool = False,
-    sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
-    with_alerts: bool = False,
-    is_predicted: bool = None,
-    cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None,
-) -> Tuple[list[Incident], int]:
-    """
-    Retrieve the last incidents for a given tenant based on various filters and criteria.
-    Args:
-        tenant_id (str): The ID of the tenant.
-        limit (int, optional): The maximum number of incidents to return. Defaults to 25.
-        offset (int, optional): The number of incidents to skip before starting to collect the result set. Defaults to 0.
-        timeframe (int, optional): The timeframe in which to look for incidents. Defaults to None.
-        upper_timestamp (datetime, optional): The upper bound timestamp for filtering incidents. Defaults to None.
-        lower_timestamp (datetime, optional): The lower bound timestamp for filtering incidents. Defaults to None.
-        is_candidate (bool, optional): Filter for confirmed incidents. Defaults to False.
-        sorting (Optional[IncidentSorting], optional): The sorting criteria for the incidents. Defaults to IncidentSorting.creation_time.
-        with_alerts (bool, optional): Whether to include alerts in the incidents. Defaults to False.
-        is_predicted (bool, optional): Filter for predicted incidents. Defaults to None.
-        cel (str, optional): The CEL (Common Event Language) filter. Defaults to None.
-        allowed_incident_ids (Optional[List[str]], optional): A list of allowed incident IDs to filter by. Defaults to None.
-    Returns:
-        Tuple[list[Incident], int]: A tuple containing a list of incidents and the total count of incidents.
-    """
+    if not valid_facets:
+        return result
 
     with Session(engine) as session:
         try:
-            total_count_query = __build_last_incidents_total_count_query(
-                tenant_id=tenant_id,
-                timeframe=timeframe,
-                upper_timestamp=upper_timestamp,
-                lower_timestamp=lower_timestamp,
-                is_candidate=is_candidate,
-                is_predicted=is_predicted,
-                cel=cel,
-                allowed_incident_ids=allowed_incident_ids,
+            db_query = get_facets_query_builder(properties_metadata).build_facets_data_query(
+                base_query_factory=base_query_factory,
+                entity_id_column=entity_id_column,
+                facets=valid_facets,
+                facet_options_query=facet_options_query,
             )
-            sql_query = __build_last_incidents_query(
-                tenant_id=tenant_id,
-                limit=limit,
-                offset=offset,
-                timeframe=timeframe,
-                upper_timestamp=upper_timestamp,
-                lower_timestamp=lower_timestamp,
-                is_candidate=is_candidate,
-                sorting=sorting,
-                is_predicted=is_predicted,
-                cel=cel,
-                allowed_incident_ids=allowed_incident_ids,
+            rows = session.exec(db_query).all()
+        except OperationalError as e:
+            logger.warning(
+                "Failed to execute query for facet options. facet_options_query=%s error=%s",
+                json.dumps(facet_options_query.dict()),
+                str(e),
             )
-        except CelToSqlException as e:
-            if isinstance(e.__cause__, PropertiesMappingException):
-                # if there is an error in mapping properties, return empty list
-                logger.error(f"Error mapping properties: {str(e)}")
-                return [], 0
-            raise e
+            return result
 
-        total_count = session.exec(total_count_query).one()[0]
-        all_records = session.exec(sql_query).all()
+    # Group rows by facet key (not necessarily facet.id).
+    grouped: Dict[str, list] = {}
+    for row in rows:
+        # Expected row shape from builder: (facet_key, facet_value, matches_count) or
+        # an object with those attributes. Make it tolerant.
+        facet_id = getattr(row, "facet_id", None)
+        facet_value = getattr(row, "facet_value", None)
+        matches_count = getattr(row, "matches_count", None)
 
-        incidents = []
+        if facet_id is None and isinstance(row, (tuple, list)) and len(row) >= 3:
+            facet_id, facet_value, matches_count = row[0], row[1], row[2]
 
-        for row in all_records:
-            dict_row = row._asdict()
-            incident = dict_row.get("Incident")
-            enrichment = dict_row.get("incidentenrichment")
+        if facet_id is None:
+            continue
 
-            if enrichment:
-                incident.set_enrichments(enrichment.enrichments)
-            incidents.append(incident)
+        grouped.setdefault(facet_id, [])
 
-        if with_alerts:
-            enrich_incidents_with_alerts(tenant_id, incidents, session)
+        # SQLite option limit guard (subquery LIMIT limitations)
+        if engine.dialect.name == "sqlite" and len(grouped[facet_id]) >= OPTIONS_PER_FACET:
+            continue
 
-    return incidents, total_count
+        grouped[facet_id].append((facet_id, facet_value, matches_count))
 
+    # Build final options list per facet
+    for facet in facets:
+        property_meta = properties_metadata.get_property_metadata_for_str(facet.property_path)
+        if property_meta is None:
+            result[facet.id] = []
+            continue
 
-def get_incident_facets_data(
-    tenant_id: str,
-    allowed_incident_ids: list[str],
-    facet_options_query: FacetOptionsQueryDto,
-) -> dict[str, list[FacetOptionDto]]:
-    """
-    Retrieves incident facets data for a given tenant.
-    Args:
-        tenant_id (str): The ID of the tenant.
-        facets_to_load (list[str]): A list of facets to load.
-        allowed_incident_ids (list[str]): A list of allowed incident IDs.
-        cel (str, optional): A CEL expression to filter the incidents. Defaults to None.
-    Returns:
-        dict[str, list[FacetOptionDto]]: A dictionary where the keys are facet ids and the values are lists of FacetOptionDto objects.
-    """
-    if facet_options_query and facet_options_query.facet_queries:
-        facets = get_incident_facets(
-            tenant_id, facet_options_query.facet_queries.keys()
+        # Key used by query-builder can differ from facet.id, so compute it.
+        facet_query = None
+        if facet_options_query and facet_options_query.facet_queries:
+            facet_query = facet_options_query.facet_queries.get(facet.id)
+
+        facet_key = get_facet_key(
+            facet.property_path,
+            getattr(facet_options_query, "cel", None),
+            facet_query,
         )
-    else:
-        facets = static_facets
 
-    def base_query_factory(
-        facet_property_path: str,
-        involved_fields: PropertyMetadataInfo,
-        select_statement,
-    ):
-        force_fetch_alerts = "alert" in facet_property_path or next(
-            (True for item in involved_fields if "alert" in item.field_name), False
-        )
-        force_fetch_has_linked_incident = (
-            "hasLinkedIncident" in facet_property_path
-            or next(
-                (
-                    True
-                    for item in involved_fields
-                    if "hasLinkedIncident" in item.field_name
-                ),
-                False,
-            )
-        )
-        base_query = __build_base_incident_query(
-            tenant_id,
-            select_statement,
-            force_fetch_alerts=force_fetch_alerts,
-            force_fetch_has_linked_incident=force_fetch_has_linked_incident,
-        )["query"]
-        if allowed_incident_ids:
-            base_query = base_query.filter(Incident.id.in_(allowed_incident_ids))
-        return base_query
+        options: List[FacetOptionDto] = []
 
-    return get_facet_options(
-        base_query_factory=base_query_factory,
-        entity_id_column=Incident.id,
-        facets=facets,
-        facet_options_query=facet_options_query,
-        properties_metadata=properties_metadata,
-    )
+        if facet_key in grouped:
+            options = [
+                FacetOptionDto(
+                    display_name=str(val),
+                    value=map_facet_option_value(val, property_meta.data_type),
+                    matches_count=0 if cnt is None else cnt,
+                )
+                for (_fid, val, cnt) in grouped[facet_key]
+            ]
 
+        # If enum values exist, ensure all enum values are present with 0 matches.
+        if property_meta.enum_values:
+            existing_values = {o.value for o in options}
+            for enum_val in property_meta.enum_values:
+                if enum_val not in existing_values:
+                    options.append(
+                        FacetOptionDto(
+                            display_name=str(enum_val),
+                            value=enum_val,
+                            matches_count=0,
+                        )
+                    )
 
-def get_incident_facets(
-    tenant_id: str, facet_ids_to_load: list[str] = None
-) -> list[FacetDto]:
-    """
-    Retrieve incident facets for a given tenant.
+            # Keep enum-defined ordering, unknowns go last.
+            enum_index = {v: i for i, v in enumerate(property_meta.enum_values)}
+            options.sort(key=lambda o: enum_index.get(o.value, 10_000))
 
-    This function returns a list of facets associated with incidents for a specified tenant.
-    If no specific facet IDs are provided, it returns a combination of static facets and
-    dynamically loaded facets for the tenant. If specific facet IDs are provided, it returns
-    the corresponding facets, loading them dynamically if they are not static.
+        result[facet.id] = options
 
-    Args:
-        tenant_id (str): The ID of the tenant for which to retrieve incident facets.
-        facet_ids_to_load (list[str], optional): A list of facet IDs to load. If not provided,
-            all static facets and dynamically loaded facets for the tenant will be returned.
+    # Invalid facets return empty list already via initialization.
+    for bad in invalid_facets:
+        result[bad.id] = []
 
-    Returns:
-        list[FacetDto]: A list of FacetDto objects representing the incident facets for the tenant.
-    """
-    not_static_facet_ids = []
-    facets = []
-
-    if not facet_ids_to_load:
-        return static_facets + get_facets(tenant_id, "incident")
-
-    if facet_ids_to_load:
-        for facet_id in facet_ids_to_load:
-            if facet_id not in static_facets_dict:
-                not_static_facet_ids.append(facet_id)
-                continue
-
-            facets.append(static_facets_dict[facet_id])
-
-    if not_static_facet_ids:
-        facets += get_facets(tenant_id, "incident", not_static_facet_ids)
-
-    return facets
-
-
-def get_incident_potential_facet_fields(tenant_id: str) -> list[str]:
-    alert_fields = [
-        f"alert.{item}" for item in get_alert_potential_facet_fields(tenant_id)
-    ]
-    incident_fields = [
-        item.map_from_pattern
-        for item in incident_field_configurations
-        if not item.map_from_pattern.startswith("alert.*")
-    ]
-    seen = set()
-    result = []
-    for item in incident_fields + alert_fields:
-        if item not in seen:
-            seen.add(item)
-            result.append(item)
     return result
+
+
+def create_facet(tenant_id: str, entity_type: str, facet: CreateFacetDto) -> FacetDto:
+    """
+    Create a new facet and return FacetDto.
+    """
+    with Session(engine) as session:
+        facet_db = Facet(
+            id=_to_uuid(str(uuid4())),
+            tenant_id=tenant_id,
+            name=facet.name,
+            description=facet.description,
+            entity_type=entity_type,
+            property_path=facet.property_path,
+            type=FacetType.str,  # store enum, not .value strings unless model expects string
+            user_id="system",
+        )
+        session.add(facet_db)
+        session.commit()
+        session.refresh(facet_db)
+
+        return FacetDto(
+            id=str(facet_db.id),
+            property_path=facet_db.property_path,
+            name=facet_db.name,
+            description=facet_db.description,
+            is_static=False,
+            is_lazy=True,
+            type=facet_db.type,
+        )
+
+
+def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
+    """
+    Delete a facet, return True if deleted.
+    """
+    facet_uuid = _to_uuid(facet_id)
+
+    with Session(engine) as session:
+        facet = session.exec(
+            select(Facet).where(
+                Facet.tenant_id == tenant_id,
+                Facet.entity_type == entity_type,
+                Facet.id == facet_uuid,
+            )
+        ).first()
+
+        if not facet:
+            return False
+
+        session.delete(facet)
+        session.commit()
+        return True
+
+
+def get_facets(
+    tenant_id: str,
+    entity_type: str,
+    facet_ids_to_load: Optional[List[str]] = None,
+) -> List[FacetDto]:
+    """
+    Fetch facets for tenant/entity. Optionally filter by facet ids.
+    """
+    facet_uuids: Optional[List[UUID]] = None
+    if facet_ids_to_load:
+        facet_uuids = [_to_uuid(x) for x in facet_ids_to_load]
+
+    with Session(engine) as session:
+        query = select(Facet).where(
+            Facet.tenant_id == tenant_id,
+            Facet.entity_type == entity_type,
+        )
+        if facet_uuids:
+            query = query.where(Facet.id.in_(facet_uuids))
+
+        facets = session.exec(query).all()
+
+        return [
+            FacetDto(
+                id=str(f.id),
+                property_path=f.property_path,
+                name=f.name,
+                description=getattr(f, "description", None),
+                is_static=False,
+                is_lazy=True,
+                type=f.type,
+            )
+            for f in facets
+        ]
