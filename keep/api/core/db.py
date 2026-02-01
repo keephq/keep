@@ -557,21 +557,72 @@ def update_workflow_with_values(
         sess.commit()
         sess.refresh(existing_workflow)
         return existing_workflow
+"""Keep main database module (RECODED - chunk 2)
 
-def is_equal_workflow_dicts(a: dict, b: dict):
-    return (
-        a.get("workflow_raw") == b.get("workflow_raw")
-        and a.get("tenant_id") == b.get("tenant_id")
-        and a.get("is_test") == b.get("is_test")
-        and a.get("is_deleted") == b.get("is_deleted")
-        and a.get("is_disabled") == b.get("is_disabled")
-        and a.get("name") == b.get("name")
-        and a.get("description") == b.get("description")
-        and a.get("interval") == b.get("interval")
-        and a.get("provisioned") == b.get("provisioned")
-        and a.get("provisioned_file") == b.get("provisioned_file")
-    )
+Recoded functions in this chunk (verbatim scope requested):
+- is_equal_workflow_dicts
+- add_or_update_workflow
+- get_or_create_dummy_workflow
+- get_workflow_to_alert_execution_by_workflow_execution_id
+- get_last_workflow_workflow_to_alert_executions
+- get_last_workflow_execution_by_workflow_id
 
+Key upgrades vs original:
+- UTC-only datetime handling (no naive datetime.now()/utcnow() mixed into aware columns)
+- Stable workflow equality via explicit key whitelist
+- SQLModel/SQLAlchemy consistency: prefer `select()` + `session.exec()` over `session.query()`
+- Safer refresh/commit behavior for get_or_create
+- Configurable lookback windows with sane defaults
+
+Assumptions (provided elsewhere in module):
+- engine, logger
+- existed_or_new_session
+- get_workflow_by_name, get_workflow_by_id, update_workflow_with_values
+- get_or_create, get_dummy_workflow_id
+- _utcnow() -> aware UTC datetime
+- Models: Workflow, WorkflowVersion, WorkflowExecution, WorkflowToAlertExecution
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+from typing import Any, Optional
+
+from sqlalchemy import and_, func
+from sqlmodel import Session, col, select
+
+
+# -----------------------------------------------------------------------------
+# Workflow equality
+# -----------------------------------------------------------------------------
+
+_WORKFLOW_COMPARE_KEYS: tuple[str, ...] = (
+    "workflow_raw",
+    "tenant_id",
+    "is_test",
+    "is_deleted",
+    "is_disabled",
+    "name",
+    "description",
+    "interval",
+    "provisioned",
+    "provisioned_file",
+)
+
+
+def _normalized_workflow_dict(d: dict[str, Any]) -> dict[str, Any]:
+    """Return only fields we actually care about when deciding whether to update."""
+    return {k: d.get(k) for k in _WORKFLOW_COMPARE_KEYS}
+
+
+def is_equal_workflow_dicts(a: dict, b: dict) -> bool:
+    """Compare workflow dicts deterministically (only keys that matter)."""
+    return _normalized_workflow_dict(a) == _normalized_workflow_dict(b)
+
+
+# -----------------------------------------------------------------------------
+# Workflow upsert
+# -----------------------------------------------------------------------------
 
 def add_or_update_workflow(
     id: str,
@@ -589,36 +640,51 @@ def add_or_update_workflow(
     is_test: bool = False,
     lookup_by_name: bool = False,
 ) -> Workflow:
+    """Create or update a workflow.
+
+    Notes:
+    - If provisioned or lookup_by_name: resolve by (tenant_id, name) to avoid duplicates
+      on backend restarts.
+    - Otherwise: resolve by (tenant_id, id).
+    - If desired properties match current properties and force_update=False: no-op.
+    - Else: bump revision using update_workflow_with_values (which creates WorkflowVersion).
+    """
+
     with Session(engine, expire_on_commit=False) as session:
         if provisioned or lookup_by_name:
-            # if workflow is provisioned, we lookup by name to not duplicate workflows on each backend restart
             existing_workflow = get_workflow_by_name(tenant_id, name)
         else:
-            # otherwise, we want certainty, so just lookup by id
             existing_workflow = get_workflow_by_id(tenant_id, id)
 
+        desired = dict(
+            tenant_id=tenant_id,
+            name=name,
+            description=description,
+            interval=interval,
+            workflow_raw=workflow_raw,
+            is_disabled=is_disabled,
+            is_test=is_test,
+            is_deleted=False,
+            provisioned=provisioned,
+            provisioned_file=provisioned_file,
+        )
+
         if existing_workflow:
-            existing_workflow_dict = existing_workflow.model_dump()
-            workflow_dict = dict(
-                tenant_id=tenant_id,
-                name=name,
-                description=description,
-                interval=interval,
-                workflow_raw=workflow_raw,
-                is_disabled=is_disabled,
-                is_test=is_test,
-                is_deleted=False,
-                provisioned=provisioned,
-                provisioned_file=provisioned_file,
+            # Compare only relevant keys, not the entire model dump.
+            existing_dict = (
+                existing_workflow.model_dump()
+                if hasattr(existing_workflow, "model_dump")
+                else {}
             )
-            if (
-                is_equal_workflow_dicts(existing_workflow_dict, workflow_dict)
-                and not force_update
-            ):
+
+            if is_equal_workflow_dicts(existing_dict, desired) and not force_update:
                 logger.info(
-                    f"Workflow {id} already exists with the same workflow properties, skipping update"
+                    "Workflow %s already exists with the same workflow properties, skipping update",
+                    id,
+                    extra={"tenant_id": tenant_id, "workflow_id": existing_workflow.id},
                 )
                 return existing_workflow
+
             return update_workflow_with_values(
                 existing_workflow,
                 name=name,
@@ -632,45 +698,53 @@ def add_or_update_workflow(
                 session=session,
             )
 
-        else:
-            now = datetime.now(tz=timezone.utc)
-            # Create a new workflow
-            workflow = Workflow(
-                id=id,
-                revision=1,
-                name=name,
-                tenant_id=tenant_id,
-                description=description,
-                created_by=created_by,
-                updated_by=updated_by,
-                last_updated=now,
-                interval=interval,
-                is_disabled=is_disabled,
-                workflow_raw=workflow_raw,
-                provisioned=provisioned,
-                provisioned_file=provisioned_file,
-                is_test=is_test,
-            )
-            version = WorkflowVersion(
-                workflow_id=workflow.id,
-                revision=1,
-                workflow_raw=workflow_raw,
-                updated_by=updated_by,
-                comment=f"Created by {created_by}",
-                is_valid=True,
-                is_current=True,
-                updated_at=now,
-            )
-            session.add(workflow)
-            session.add(version)
-            session.commit()
-            return workflow
+        # Create new
+        now = _utcnow()
+        workflow = Workflow(
+            id=id,
+            revision=1,
+            name=name,
+            tenant_id=tenant_id,
+            description=description,
+            created_by=created_by,
+            updated_by=updated_by,
+            last_updated=now,
+            interval=interval,
+            is_disabled=is_disabled,
+            workflow_raw=workflow_raw,
+            provisioned=provisioned,
+            provisioned_file=provisioned_file,
+            is_test=is_test,
+        )
+
+        version = WorkflowVersion(
+            workflow_id=workflow.id,
+            revision=1,
+            workflow_raw=workflow_raw,
+            updated_by=updated_by,
+            comment=f"Created by {created_by}",
+            is_valid=True,
+            is_current=True,
+            updated_at=now,
+        )
+
+        session.add(workflow)
+        session.add(version)
+        session.commit()
+        session.refresh(workflow)
+        return workflow
 
 
-def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None):
-    with existed_or_new_session(session) as session:
+# -----------------------------------------------------------------------------
+# Dummy workflow
+# -----------------------------------------------------------------------------
+
+def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None) -> Workflow:
+    """Create or fetch the dummy workflow used for test runs."""
+
+    with existed_or_new_session(session) as sess:
         workflow, created = get_or_create(
-            session,
+            sess,
             Workflow,
             tenant_id=tenant_id,
             id=get_dummy_workflow_id(tenant_id),
@@ -681,67 +755,71 @@ def get_or_create_dummy_workflow(tenant_id: str, session: Session | None = None)
             is_disabled=False,
             is_test=True,
         )
+
+        # Ensure the object is persisted and in sync.
         if created:
-            # For new instances, make sure they're committed and refreshed from the database
-            session.commit()
-            session.refresh(workflow)
-        elif workflow:
-            # For existing instances, refresh to get the current state
-            session.refresh(workflow)
+            sess.commit()
+
+        # Refresh may fail if the instance is detached in some edge cases; fall back to re-fetch.
+        try:
+            sess.refresh(workflow)
+        except Exception:
+            workflow = sess.exec(
+                select(Workflow)
+                .where(Workflow.tenant_id == tenant_id)
+                .where(Workflow.id == get_dummy_workflow_id(tenant_id))
+                .limit(1)
+            ).first()
+
         return workflow
 
 
+# -----------------------------------------------------------------------------
+# WorkflowToAlertExecution lookups
+# -----------------------------------------------------------------------------
+
 def get_workflow_to_alert_execution_by_workflow_execution_id(
     workflow_execution_id: str,
-) -> WorkflowToAlertExecution:
-    """
-    Get the WorkflowToAlertExecution entry for a given workflow execution ID.
+) -> Optional[WorkflowToAlertExecution]:
+    """Get the WorkflowToAlertExecution entry for a given workflow execution ID."""
 
-    Args:
-        workflow_execution_id (str): The workflow execution ID to filter the workflow execution by.
-
-    Returns:
-        WorkflowToAlertExecution: The WorkflowToAlertExecution object.
-    """
     with Session(engine) as session:
-        return (
-            session.query(WorkflowToAlertExecution)
-            .filter_by(workflow_execution_id=workflow_execution_id)
-            .first()
+        stmt = (
+            select(WorkflowToAlertExecution)
+            .where(WorkflowToAlertExecution.workflow_execution_id == workflow_execution_id)
+            .limit(1)
         )
+        return session.exec(stmt).first()
 
 
 def get_last_workflow_workflow_to_alert_executions(
-    session: Session, tenant_id: str
+    session: Session,
+    tenant_id: str,
+    *,
+    days: int = 7,
+    limit: int = 1000,
 ) -> list[WorkflowToAlertExecution]:
-    """
-    Get the latest workflow executions for each alert fingerprint.
+    """Get the latest workflow executions for each alert fingerprint."""
 
-    Args:
-        session (Session): The database session.
-        tenant_id (str): The tenant_id to filter the workflow executions by.
+    cutoff = _utcnow() - timedelta(days=days)
 
-    Returns:
-        list[WorkflowToAlertExecution]: A list of WorkflowToAlertExecution objects.
-    """
-    # Subquery to find the max started timestamp for each alert_fingerprint
     max_started_subquery = (
-        session.query(
-            WorkflowToAlertExecution.alert_fingerprint,
+        select(
+            WorkflowToAlertExecution.alert_fingerprint.label("alert_fingerprint"),
             func.max(WorkflowExecution.started).label("max_started"),
         )
         .join(
             WorkflowExecution,
             WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
         )
-        .filter(WorkflowExecution.tenant_id == tenant_id)
-        .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+        .where(WorkflowExecution.tenant_id == tenant_id)
+        .where(col(WorkflowExecution.started) >= cutoff)
         .group_by(WorkflowToAlertExecution.alert_fingerprint)
-    ).subquery("max_started_subquery")
+        .subquery("max_started_subquery")
+    )
 
-    # Query to find WorkflowToAlertExecution entries that match the max started timestamp
-    latest_workflow_to_alert_executions: list[WorkflowToAlertExecution] = (
-        session.query(WorkflowToAlertExecution)
+    stmt = (
+        select(WorkflowToAlertExecution)
         .join(
             WorkflowExecution,
             WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
@@ -754,36 +832,46 @@ def get_last_workflow_workflow_to_alert_executions(
                 WorkflowExecution.started == max_started_subquery.c.max_started,
             ),
         )
-        .filter(WorkflowExecution.tenant_id == tenant_id)
-        .limit(1000)
-        .all()
+        .where(WorkflowExecution.tenant_id == tenant_id)
+        .limit(limit)
     )
-    return latest_workflow_to_alert_executions
 
+    return session.exec(stmt).all()
+
+
+# -----------------------------------------------------------------------------
+# Last workflow execution
+# -----------------------------------------------------------------------------
 
 def get_last_workflow_execution_by_workflow_id(
     tenant_id: str,
     workflow_id: str,
     status: str | None = None,
     exclude_ids: list[str] | None = None,
+    *,
+    lookback_days: int = 1,
 ) -> Optional[WorkflowExecution]:
+    """Return the latest execution for a workflow within a recent lookback window."""
+
     with Session(engine) as session:
-        query = (
+        cutoff = _utcnow() - timedelta(days=lookback_days)
+
+        stmt = (
             select(WorkflowExecution)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
+            .where(col(WorkflowExecution.started) >= cutoff)
             .order_by(col(WorkflowExecution.started).desc())
         )
 
         if status:
-            query = query.where(WorkflowExecution.status == status)
+            stmt = stmt.where(WorkflowExecution.status == status)
 
         if exclude_ids:
-            query = query.where(col(WorkflowExecution.id).notin_(exclude_ids))
+            stmt = stmt.where(col(WorkflowExecution.id).notin_(exclude_ids))
 
-        workflow_execution = session.exec(query).first()
-    return workflow_execution
+        return session.exec(stmt.limit(1)).first()
+
 
 
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
