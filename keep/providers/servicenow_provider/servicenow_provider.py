@@ -548,6 +548,207 @@ class ServicenowProvider(BaseTopologyProvider):
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
             resp.raise_for_status()
 
+    def _get_incident_activities(self, incident_id: str) -> list[dict]:
+        """
+        Get activities (work notes, comments) from a ServiceNow incident.
+        
+        Args:
+            incident_id (str): The ServiceNow incident sys_id or number
+            
+        Returns:
+            list[dict]: List of activity entries with author, timestamp, and content
+        """
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        auth = (
+            (
+                self.authentication_config.username,
+                self.authentication_config.password,
+            )
+            if not self._access_token
+            else None
+        )
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+
+        # Query sys_journal_field table for work notes and comments
+        # This is where ServiceNow stores journal entries
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_journal_field"
+        
+        # Build query to get entries for this incident
+        # element_id is the sys_id of the incident
+        params = {
+            "sysparm_query": f"element_id={incident_id}^ORname=incident^element={incident_id}^ORDERBYsys_created_on",
+            "sysparm_fields": "sys_id,sys_created_on,sys_created_by,element,value,field_label",
+            "sysparm_limit": 100,
+        }
+        
+        response = requests.get(
+            url,
+            auth=auth,
+            headers=headers,
+            params=params,
+            verify=False,
+            timeout=10,
+        )
+        
+        if not response.ok:
+            self.logger.error(
+                "Failed to get incident activities",
+                extra={
+                    "incident_id": incident_id,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            return []
+        
+        activities = []
+        for entry in response.json().get("result", []):
+            activities.append({
+                "id": entry.get("sys_id"),
+                "timestamp": entry.get("sys_created_on"),
+                "author": entry.get("sys_created_by"),
+                "content": entry.get("value"),
+                "type": entry.get("field_label", "Work notes"),
+            })
+        
+        self.logger.info(
+            "Retrieved incident activities",
+            extra={"incident_id": incident_id, "count": len(activities)},
+        )
+        return activities
+
+    def _add_incident_activity(
+        self, 
+        incident_id: str, 
+        content: str, 
+        activity_type: str = "work_notes"
+    ) -> dict:
+        """
+        Add an activity (work note or comment) to a ServiceNow incident.
+        
+        Args:
+            incident_id (str): The ServiceNow incident sys_id
+            content (str): The activity content to add
+            activity_type (str): Either "work_notes" or "comments"
+            
+        Returns:
+            dict: The created activity details
+        """
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        auth = (
+            (
+                self.authentication_config.username,
+                self.authentication_config.password,
+            )
+            if not self._access_token
+            else None
+        )
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+
+        # Map activity type to ServiceNow field
+        field_name = "work_notes" if activity_type == "work_notes" else "comments"
+        
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/incident/{incident_id}"
+        
+        # ServiceNow requires work notes to be added via update
+        payload = {
+            field_name: content,
+        }
+        
+        response = requests.patch(
+            url,
+            auth=auth,
+            headers=headers,
+            data=json.dumps(payload),
+            verify=False,
+            timeout=10,
+        )
+        
+        if not response.ok:
+            self.logger.error(
+                "Failed to add incident activity",
+                extra={
+                    "incident_id": incident_id,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            response.raise_for_status()
+        
+        result = response.json().get("result", {})
+        self.logger.info(
+            "Added incident activity",
+            extra={
+                "incident_id": incident_id,
+                "activity_type": activity_type,
+                "activity_id": result.get("sys_id"),
+            },
+        )
+        return result
+
+    def sync_incident_activities(
+        self, 
+        incident_id: str, 
+        keep_activities: list[dict] = None
+    ) -> tuple[list[dict], list[dict]]:
+        """
+        Sync activities between ServiceNow and Keep.
+        Pulls activities from ServiceNow and optionally pushes Keep activities to ServiceNow.
+        
+        Args:
+            incident_id (str): The ServiceNow incident ID
+            keep_activities (list[dict], optional): Activities from Keep to push to ServiceNow
+            
+        Returns:
+            tuple[list[dict], list[dict]]: (servicenow_activities, synced_activities)
+        """
+        self.logger.info(
+            "Starting incident activity sync",
+            extra={"incident_id": incident_id, "keep_activities_count": len(keep_activities) if keep_activities else 0},
+        )
+        
+        # Pull activities from ServiceNow
+        sn_activities = self._get_incident_activities(incident_id)
+        
+        # Push Keep activities to ServiceNow if provided
+        synced_activities = []
+        if keep_activities:
+            for activity in keep_activities:
+                try:
+                    result = self._add_incident_activity(
+                        incident_id=incident_id,
+                        content=activity.get("content", ""),
+                        activity_type=activity.get("type", "work_notes"),
+                    )
+                    synced_activities.append({
+                        "keep_activity": activity,
+                        "servicenow_result": result,
+                        "status": "success",
+                    })
+                except Exception as e:
+                    self.logger.error(
+                        "Failed to sync activity to ServiceNow",
+                        extra={"activity": activity, "error": str(e)},
+                    )
+                    synced_activities.append({
+                        "keep_activity": activity,
+                        "status": "failed",
+                        "error": str(e),
+                    })
+        
+        self.logger.info(
+            "Incident activity sync completed",
+            extra={
+                "incident_id": incident_id,
+                "servicenow_activities_count": len(sn_activities),
+                "synced_activities_count": len(synced_activities),
+            },
+        )
+        
+        return sn_activities, synced_activities
+
 
 if __name__ == "__main__":
     # Output debug messages
