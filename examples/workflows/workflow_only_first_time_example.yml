@@ -1,0 +1,19 @@
+workflow:
+  id: first-alert-notifier
+  name: First Alert Notifier
+  description: Sends Slack notifications only for the first occurrence of an alert within a 24-hour window.
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: "server-is-down"
+  actions:
+    - name: send-slack-message
+      if: "keep.is_first_time('{{ alert.fingerprint }}', '24h')"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: |
+            "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+            Alert details: {{ alert }}"

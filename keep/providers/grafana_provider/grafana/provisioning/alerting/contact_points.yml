@@ -1,0 +1,9 @@
+apiVersion: 1
+contactPoints:
+  - name: "api-notifications" # This name is what policies refer to
+    receivers:
+      - uid: "api-notifications" # This is internal uid
+        type: "webhook"
+        settings:
+          url: "https://3c56569dbd81.ngrok.app/alerts/event/grafana?api_key=1234567890"
+          httpMethod: "POST"

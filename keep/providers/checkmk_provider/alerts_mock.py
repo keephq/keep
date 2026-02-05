@@ -1,0 +1,23 @@
+ALERTS = {
+  "id": "18",
+  "summary": "CheckMK server1 - DOWN -> UP",
+  "host": "server1",
+  "alias": "server1",
+  "address": "10.10.0.185",
+  "event": "DOWN -> UP",
+  "output": "Packet received via smart PING",
+  "long_output": "",
+  "status": "UP",
+  "severity": "OK",
+  "url": "/check_mk/index.py?start_url=view.py?view_name%3Dhoststatus%26host%3Dserver1%26site%3Dcmk",
+  "check_command": "check-mk-host-smart",
+  "site": "cmk",
+  "what": "HOST",
+  "notification_type": "RECOVERY",
+  "contact_name": "agent_registration",
+  "contact_email": "",
+  "contact_pager": "",
+  "date": "2024-10-26",
+  "long_date_time": "Sat Oct 26 23:20:39 UTC 2024",
+  "short_date_time": "2024-10-26 23:20:39"
+}

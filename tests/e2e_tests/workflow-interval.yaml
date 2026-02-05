@@ -1,0 +1,16 @@
+workflow:
+  id: 55376468-2db7-4bf2-b2e6-77fa352c7450
+  name: Interval workflow
+  description: Interval workflow
+  disabled: false
+  triggers:
+    - type: interval
+      value: "2"
+  steps:
+    - name: console-step
+      provider:
+        type: console
+        config: "{{ providers.default-console }}"
+        with:
+          message: Hello World!!!!
+  actions: []

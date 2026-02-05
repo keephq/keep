@@ -1,0 +1,70 @@
+name: Test docs
+on:
+  push:
+    paths:
+      - 'keep/providers/**'
+      - 'docs/**'
+      - 'examples/**'
+  pull_request:
+    paths:
+      - 'keep/providers/**'
+      - 'docs/**'
+      - 'examples/**'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}-${{ github.job }}
+  cancel-in-progress: true
+env:
+  PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+
+jobs:
+  tests-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v4.2.0
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --no-root --with dev
+  
+      - name: Validate docs/providers/overview.mdx
+        run: |
+          cd scripts;
+          poetry run python ./docs_get_providers_list.py --validate    
+
+      - name: Validate snippets for providers
+        run: |
+          poetry run python ./scripts/docs_render_provider_snippets.py --validate  
+
+      - name: Validate broken links and navigation
+        run: |
+          npm i -g mintlify;
+          
+          cd docs && mintlify broken-links;
+          cd ../scripts;
+          ./docs_validate_navigation.sh;
+
+          # Todo: validate if openapi schema is matching with the code
+  

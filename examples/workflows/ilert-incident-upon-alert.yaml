@@ -1,0 +1,25 @@
+workflow:
+  id: ilert-incident-creator
+  name: iLert Incident Creator
+  description: Creates structured incidents in iLert from Keep alerts, including service impact assessment and investigation status tracking.
+  triggers:
+    - filters:
+        - key: source
+          value: keep
+      type: alert
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: ilert-action
+      provider:
+        config: "{{ providers.ilert-default }}"
+        type: ilert
+        with:
+          affectedServices:
+            - impact: OPERATIONAL
+              service:
+                id: 339743
+          message: A mock incident created with Keep!
+          status: INVESTIGATING
+          summary: Keep Incident {{ alert.name }}

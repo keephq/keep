@@ -1,0 +1,86 @@
+---
+title: "Installation"
+---
+<Info>Missing an installation? submit a <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=use_case.md&title=">new installation</a>  request and we will add it as soon as we can.</Info>
+
+<Info>
+We recommend to install Keep CLI with Python version 3.11 for optimal compatibility and performance.
+This choice ensures seamless integration with all dependencies, including pyarrow, which currently does not support Python 3.12
+</Info>
+
+<Tip>Need Keep CLI on other versions? Feel free to contact us! </Tip>
+
+## Clone and install (Option 1)
+
+### Install
+First, clone Keep repository:
+
+```shell
+git clone https://github.com/keephq/keep.git && cd keep
+```
+
+Install Keep CLI with `pip`:
+
+```shell
+# MacOS if python or pip not present:
+# brew install python@3.11
+# brew install postgresql
+pip3.11 install .
+```
+or with `poetry`:
+
+```shell
+poetry install
+```
+
+From now on, Keep should be installed locally and accessible from your CLI, test it by executing:
+
+```
+keep version
+```
+
+### Configuration
+
+To get API key, check Keep UI -> your username (bottom left) -> Settings -> API Keys
+```
+keep config new --url http://backend.my_keep.my_awesome_org.com:backend_port --api-key your_personal_api_key
+```
+
+### Test
+
+Now, 
+```
+keep workflow apply -f examples/workflows/query_clickhouse.yml
+```
+
+Congrats 🥳 Check your UI for the new workflow uploaded from the YAML file.
+
+
+## Docker image (Option 2)
+### Install
+
+```
+docker run -v ${PWD}:/app -v ~/.keep.yaml:/root/.keep.yaml -it us-central1-docker.pkg.dev/keephq/keep/keep-cli keep config new --url http://backend.my_keep.my_awesome_org.com:backend_port --api-key your_personal_api_key
+```
+
+### Test
+```
+docker run -v ${PWD}:/app -v ~/.keep.yaml:/root/.keep.yaml -it us-central1-docker.pkg.dev/keephq/keep/keep-cli workflow apply -f examples/workflows/query_clickhouse.yml
+```
+
+
+## Enable Auto Completion
+Keep's CLI supports shell auto-completion, which can make your life a whole lot easier 😌
+If you're using zsh
+
+```shell title=~/.zshrc
+eval "$(_KEEP_COMPLETE=zsh_source keep)"
+```
+
+If you're using bash
+
+```bash title=~/.bashrc
+eval "$(_KEEP_COMPLETE=bash_source keep)"
+```
+
+<Info>Using eval means that the command is invoked and evaluated every time a shell is started, which can delay shell responsiveness. To speed it up, write the generated script to a file, then source that.</Info>

@@ -1,0 +1,9 @@
+{
+  "policies": [
+    {
+      "name": "Keep ABAC Policy",
+      "fileName": "keep-abac-policy.js",
+      "description": "Keep ABAC Policy"
+    }
+  ]
+}

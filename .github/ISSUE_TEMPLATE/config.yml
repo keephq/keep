@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+
+contact_links:
+  - name: Support
+    url: https://github.com/keephq/keep/discussions
+    about: Get help! Ask questions, get support, and share ideas.
+
+  - name: Chat
+    url: https://slack.keephq.dev
+    about: Engage with the Keep team and other community members over Slack.
+
+  - name: Twitter
+    url: https://twitter.com/keepalerting
+    about: Follow us and stay up to date with Keep.

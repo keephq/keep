@@ -1,0 +1,27 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query bash
+      provider: bash
+      config: "{{ provider.my_provider_name }}"
+      with:
+        timeout: {value}
+        command: {value}
+        shell: {value}
+```
+
+
+
+
+
+Check the following workflow example:
+- [bash_example.yml](https://github.com/keephq/keep/blob/main/examples/workflows/bash_example.yml)

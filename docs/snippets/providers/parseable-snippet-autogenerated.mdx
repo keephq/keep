@@ -1,0 +1,52 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **parseable_server**: Parseable Frontend URL (required: True, sensitive: False)
+- **username**: Parseable username (required: True, sensitive: False)
+- **password**: Parseable password (required: True, sensitive: True)
+
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
+
+## Connecting via Webhook (omnidirectional)
+
+This is an example of how to configure an alert to be sent to Keep using Parseable's webhook feature. Post this to https://YOUR_PARSEABLE_SERVER/api/v1/logstream/YOUR_STREAM_NAME/alert
+
+```
+{{
+    "version": "v1",
+    "alerts": [
+        {{
+            "name": "Alert: Server side error",
+            "message": "server reporting status as 500",
+            "rule": {{
+                "type": "column",
+                "config": {{
+                    "column": "status",
+                    "operator": "=",
+                    "value": 500,
+                    "repeats": 2
+                }}
+            }},
+            "targets": [
+                {{
+                    "type": "webhook",
+                    "endpoint": "KEEP_BACKEND_URL/alerts/event/parseable",
+                    "skip_tls_check": true,
+                    "repeat": {{
+                        "interval": "10s",
+                        "times": 5
+                    }},
+                    "headers": {{"X-API-KEY": "{api_key}"}}
+                }}
+            ]
+        }}
+    ]
+}}
+```

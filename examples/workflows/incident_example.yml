@@ -1,0 +1,16 @@
+workflow:
+  id: incident-echo-monitor
+  name: Incident Echo Monitor
+  description: Monitors incident updates and creations, providing basic console logging for incident tracking and debugging.
+  triggers:
+    - type: incident
+      events:
+        - updated
+        - created
+
+  actions:
+    - name: just-echo
+      provider:
+        type: console
+        with:
+          message: "Hey there! I am an incident!"

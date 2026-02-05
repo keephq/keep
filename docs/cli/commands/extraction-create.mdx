@@ -1,0 +1,93 @@
+---
+sidebarTitle: "keep extraction create"
+---
+
+Create a extraction rule.
+
+## Usage
+
+```
+Usage: keep extraction create [OPTIONS]
+```
+
+## Options
+
+* `name`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--name <extraction-name>`
+
+  The name of the extraction.
+
+* `description`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--description <extraction-description>`
+
+  The description of the extraction.
+
+* `priority`
+  * Type: INTEGER RANGE
+  * Default: `0`
+  * Usage: `--priority <priority>`
+
+  The priority of the extraction, higher priority means this rule will execute first. `0<=x<=100`.
+
+* `pre`
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--pre <pre>`
+
+  Whether this rule should be applied before or after the alert is standardized
+
+* `attribute`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--attribute <extraction-attribute>`
+
+  Event attribute name to extract from.
+
+* `regex`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--attribute <regex-regex>`
+
+  The regex rule to extract by. Regex format should be like python regex pattern for group matching.
+
+* `condition`
+  * Type: STRING
+  * Default: ``
+  * Usage: `--condition <condition-attribute>`
+
+  CEL based condition.
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+## CLI Help
+
+```
+Usage: cli.py extraction create [OPTIONS]
+
+  Create a extraction rule.
+
+Options:
+  -n, --name TEXT               The name of the extraction.  [required]
+  -d, --description TEXT        The description of the extraction.
+  -p, --priority INTEGER RANGE  The priority of the extraction, higher
+                                priority means this rule will execute first.
+                                [0<=x<=100]
+  --pre BOOLEAN                 Whether this rule should be applied before or
+                                after the alert is standardized.
+  -a, --attribute TEXT          Event attribute name to extract from.
+                                [required]
+  -r, --regex TEXT              The regex rule to extract by. Regex format
+                                should be like python regex pattern for group
+                                matching.  [required]
+  -c, --condition TEXT          CEL based condition.  [required]
+  --help                        Show this message and exit.
+```

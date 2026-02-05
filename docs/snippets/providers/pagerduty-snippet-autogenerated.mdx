@@ -1,0 +1,70 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **routing_key**: Routing Key (an integration or ruleset key) (required: False, sensitive: False)
+- **api_key**: Api Key (a user or team API key) (required: False, sensitive: True)
+- **oauth_data**: For oauth flow (required: False, sensitive: True)
+- **service_id**: Service Id (if provided, keep will only operate on this service) (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **incidents_read**: Read incidents data. (mandatory) 
+- **incidents_write**: Write incidents.  
+- **webhook_subscriptions_read**: Read webhook data.  
+- **webhook_subscriptions_write**: Write webhooks.  
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query pagerduty
+      provider: pagerduty
+      config: "{{ provider.my_provider_name }}"
+      with:
+        incident_id: {value}  
+        incident_key: {value}  
+```
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query pagerduty
+      provider: pagerduty
+      config: "{{ provider.my_provider_name }}"
+      with:
+        title: {value}  # Title of the alert or incident
+        dedup: {value}  # String used to deduplicate alerts for events API, max 255 chars
+        service_id: {value}  # ID of the service for incidents
+        routing_key: {value}  # API routing_key (optional), if not specified, fallbacks to the one provided in provider
+        requester: {value}  # Email of the user requesting the incident creation
+        incident_id: {value}  # Key to identify the incident. UUID generated if not provided
+        event_type: {value}  # Event type for events API (trigger/acknowledge/resolve)
+        severity: {value}  # Severity for events API (critical/error/warning/info)
+        source: {value}  # Source field for events API
+        priority: {value}  # Priority reference ID for incidents
+        status: {value}  # Status for incident updates (resolved/acknowledged)
+        resolution: {value}  # Resolution note for resolved incidents
+        body: {value}  # Body of the incident as per https://developer.pagerduty.com/api-reference/a7d81b0e9200f-create-an-incident#request-body
+        kwargs: {value}  # Additional event/incident fields
+```
+
+
+
+
+Check the following workflow examples:
+- [ifelse.yml](https://github.com/keephq/keep/blob/main/examples/workflows/ifelse.yml)
+- [pagerduty.yml](https://github.com/keephq/keep/blob/main/examples/workflows/pagerduty.yml)
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).

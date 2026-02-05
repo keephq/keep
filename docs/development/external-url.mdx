@@ -1,0 +1,26 @@
+---
+title: "Keep with an external URL"
+sidebarTitle: "Keep with an external URL"
+---
+
+## Introduction
+Several features in Keep necessitate an external URL that is accessible from the internet. This is particularly crucial for functionalities like Webhook Integration when installing providers. Keep uses its API URL to establish itself as a webhook connector during this process.
+
+When an alert is triggered, the corresponding Provider attempts to activate the webhook, delivering the alert payload. Consequently, the webhook must be accessible over the internet for this process to work effectively.
+
+## Utilizing NGROK for External Accessibility
+
+
+Keep supports the use of NGROK to create an accessible external URL. By starting Keep with the environment variable USE_NGROK=true, Keep will automatically initiate an NGROK tunnel and utilize this URL for webhook installations.
+
+<Note>
+  While `USE_NGROK` is convenient for development or testing, it's important to note that each restart of Keep results in a new NGROK URL. This change in the URL means that providers configured with the old URL will no longer be able to communicate with Keep.
+
+
+  For production environments, it's advisable to either:
+  - Expose Keep with a permanent, internet-accessible URL.
+  - Set up a static NGROK tunnel.
+
+  Subsequently, configure Keep to use this stable URL by setting the KEEP_API_URL environment variable.
+
+</Note>

@@ -1,0 +1,406 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Keep",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#FA9E34",
+    "light": "#FA9E34",
+    "dark": "#FF9F36"
+  },
+  "topbarCtaButton": {
+    "type": "github",
+    "url": "https://github.com/keephq/keep"
+  },
+  "topbarLinks": [
+    {
+      "name": "Platform",
+      "url": "https://platform.keephq.dev/"
+    }
+  ],
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_mYqciA4RO5g48K6KnmZtftn5xQa5625Aao7vsVC0gJ9"
+    }
+  },
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": [
+        "overview/introduction",
+        "overview/playground",
+        "overview/usecases",
+        {
+          "group": "Key Concepts",
+          "pages": [
+            "overview/glossary",
+            "overview/cel",
+            "overview/fingerprints",
+            "overview/alertseverityandstatus",
+            "overview/howdoeskeepgetmyalerts",
+            "overview/comparisons"
+          ]
+        },
+        "overview/support",
+        "overview/faq"
+      ]
+    },
+    {
+      "group": "AIOps",
+      "pages": [
+        {
+          "group": "AI",
+          "pages": [
+            "overview/ai-incident-assistant",
+            "overview/ai-workflow-assistant",
+            "overview/ai-semi-automatic-correlation",
+            "overview/ai-in-workflows",
+            "overview/ai-correlation"
+          ]
+        },
+        {
+          "group": "Non-AI Correlation",
+          "pages": [
+            "overview/correlation-rules",
+            "overview/correlation-topology"
+          ]
+        },
+        "overview/deduplication",
+        "overview/enrichment/extraction",
+        "overview/enrichment/mapping",
+        "overview/maintenance-windows",
+        "overview/servicetopology",
+        "overview/workflow-automation"
+      ]
+    },
+    {
+      "group": "Alerts",
+      "pages": [
+        "alerts/overview",
+        "alerts/table",
+        "alerts/actionmenu",
+        "alerts/sidebar",
+        "alerts/presets",
+        "alerts/sound"
+      ]
+    },
+    {
+      "group": "Incidents",
+      "pages": ["incidents/overview", "incidents/facets"]
+    },
+    {
+      "group": "Workflow Automation",
+      "pages": [
+        "workflows/overview",
+        {
+          "group": "Syntax",
+          "pages": [
+            "workflows/syntax/triggers",
+            "workflows/syntax/permissions",
+            "workflows/syntax/steps-and-actions",
+            "workflows/syntax/conditions",
+            "workflows/syntax/functions",
+            "workflows/syntax/context",
+            "workflows/syntax/providers",
+            "workflows/syntax/foreach",
+            "workflows/syntax/enrichment"
+          ]
+        },
+        {
+          "group": "Examples",
+          "pages": [
+            "workflows/examples/autosupress",
+            "workflows/examples/buisnesshours",
+            "workflows/examples/create-servicenow-tickets",
+            "workflows/examples/highsev",
+            "workflows/examples/update-servicenow-tickets"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Alert Evaluation Engine",
+      "pages": [
+        "alertevaluation/overview",
+        {
+          "group": "Examples",
+          "pages": [
+            "alertevaluation/examples/victoriametricssingle",
+            "alertevaluation/examples/victoriametricsmulti"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Providers",
+      "pages": [
+        "providers/overview",
+        "providers/linked-providers",
+        "providers/provider-methods",
+        {
+          "group": "Supported Providers",
+          "pages": [
+            "providers/documentation/airflow-provider",
+            "providers/documentation/aks-provider",
+            "providers/documentation/amazonsqs-provider",
+            "providers/documentation/anthropic-provider",
+            "providers/documentation/appdynamics-provider",
+            "providers/documentation/asana-provider",
+            "providers/documentation/s3-provider",
+            "providers/documentation/argocd-provider",
+            "providers/documentation/auth0-provider",
+            "providers/documentation/axiom-provider",
+            "providers/documentation/azuremonitoring-provider",
+            "providers/documentation/bash-provider",
+            "providers/documentation/bigquery-provider",
+            "providers/documentation/centreon-provider",
+            "providers/documentation/checkmk-provider",
+            "providers/documentation/checkly-provider",
+            "providers/documentation/cilium-provider",
+            "providers/documentation/clickhouse-provider",
+            "providers/documentation/cloudwatch-provider",
+            "providers/documentation/console-provider",
+            "providers/documentation/coralogix-provider",
+            "providers/documentation/dash0-provider",
+            "providers/documentation/databend-provider",
+            "providers/documentation/datadog-provider",
+            "providers/documentation/deepseek-provider",
+            "providers/documentation/discord-provider",
+            "providers/documentation/dynatrace-provider",
+            "providers/documentation/eks-provider",
+            "providers/documentation/elastic-provider",
+            "providers/documentation/flashduty-provider",
+            "providers/documentation/fluxcd-provider",
+            "providers/documentation/gcpmonitoring-provider",
+            "providers/documentation/gemini-provider",
+            "providers/documentation/github-provider",
+            "providers/documentation/github_workflows_provider",
+            "providers/documentation/gitlab-provider",
+            "providers/documentation/gitlabpipelines-provider",
+            "providers/documentation/gke-provider",
+            "providers/documentation/google_chat-provider",
+            "providers/documentation/grafana-provider",
+            "providers/documentation/grafana_incident-provider",
+            "providers/documentation/grafana_loki-provider",
+            "providers/documentation/grafana_oncall-provider",
+            "providers/documentation/graylog-provider",
+            "providers/documentation/grok-provider",
+            "providers/documentation/http-provider",
+            "providers/documentation/icinga2-provider",
+            "providers/documentation/ilert-provider",
+            "providers/documentation/incidentio-provider",
+            "providers/documentation/incidentmanager-provider",
+            "providers/documentation/jira-on-prem-provider",
+            "providers/documentation/jira-provider",
+            "providers/documentation/kafka-provider",
+            "providers/documentation/keep-provider",
+            "providers/documentation/kibana-provider",
+            "providers/documentation/kubernetes-provider",
+            "providers/documentation/libre_nms-provider",
+            "providers/documentation/linear_provider",
+            "providers/documentation/linearb-provider",
+            "providers/documentation/litellm-provider",
+            "providers/documentation/llamacpp-provider",
+            "providers/documentation/mailgun-provider",
+            "providers/documentation/mattermost-provider",
+            "providers/documentation/microsoft-planner-provider",
+            "providers/documentation/mock-provider",
+            "providers/documentation/monday-provider",
+            "providers/documentation/mongodb-provider",
+            "providers/documentation/mysql-provider",
+            "providers/documentation/netbox-provider",
+            "providers/documentation/netdata-provider",
+            "providers/documentation/new-relic-provider",
+            "providers/documentation/ntfy-provider",
+            "providers/documentation/ollama-provider",
+            "providers/documentation/openai-provider",
+            "providers/documentation/openobserve-provider",
+            "providers/documentation/opensearchserverless-provider",
+            "providers/documentation/openshift-provider",
+            "providers/documentation/opsgenie-provider",
+            "providers/documentation/pagerduty-provider",
+            "providers/documentation/pagertree-provider",
+            "providers/documentation/parseable-provider",
+            "providers/documentation/pingdom-provider",
+            "providers/documentation/posthog-provider",
+            "providers/documentation/planner-provider",
+            "providers/documentation/postgresql-provider",
+            "providers/documentation/prometheus-provider",
+            "providers/documentation/pushover-provider",
+            "providers/documentation/python-provider",
+            "providers/documentation/quickchart-provider",
+            "providers/documentation/redmine-provider",
+            "providers/documentation/resend-provider",
+            "providers/documentation/rollbar-provider",
+            "providers/documentation/sendgrid-provider",
+            "providers/documentation/sentry-provider",
+            "providers/documentation/service-now-provider",
+            "providers/documentation/signalfx-provider",
+            "providers/documentation/signl4-provider",
+            "providers/documentation/site24x7-provider",
+            "providers/documentation/slack-provider",
+            "providers/documentation/smtp-provider",
+            "providers/documentation/snowflake-provider",
+            "providers/documentation/splunk-provider",
+            "providers/documentation/squadcast-provider",
+            "providers/documentation/ssh-provider",
+            "providers/documentation/statuscake-provider",
+            "providers/documentation/sumologic-provider",
+            "providers/documentation/teams-provider",
+            "providers/documentation/telegram-provider",
+            "providers/documentation/template",
+            "providers/documentation/thousandeyes-provider",
+            "providers/documentation/trello-provider",
+            "providers/documentation/twilio-provider",
+            "providers/documentation/uptimekuma-provider",
+            "providers/documentation/victorialogs-provider",
+            "providers/documentation/victoriametrics-provider",
+            "providers/documentation/vllm-provider",
+            "providers/documentation/wazuh-provider",
+            "providers/documentation/webhook-provider",
+            "providers/documentation/websocket-provider",
+            "providers/documentation/youtrack-provider",
+            "providers/documentation/zabbix-provider",
+            "providers/documentation/zenduty-provider",
+            "providers/documentation/zoom-provider",
+            "providers/documentation/zoom_chat-provider"
+          ]
+        },
+        "providers/adding-a-new-provider"
+      ]
+    },
+    {
+      "group": "Deployment",
+      "pages": [
+        "deployment/configuration",
+        "deployment/monitoring",
+        {
+          "group": "Authentication",
+          "pages": [
+            "deployment/authentication/overview",
+            "deployment/authentication/no-auth",
+            "deployment/authentication/db-auth",
+            "deployment/authentication/auth0-auth",
+            "deployment/authentication/azuread-auth",
+            "deployment/authentication/keycloak-auth",
+            "deployment/authentication/oauth2proxy-auth",
+            "deployment/authentication/oauth2-proxy-gitlab",
+            "deployment/authentication/onelogin-auth"
+          ]
+        },
+        {
+          "group": "Provision",
+          "pages": [
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow",
+            "deployment/provision/dashboard"
+          ]
+        },
+        "deployment/secret-store",
+        {
+          "group": "Deploy On",
+          "pages": [
+            "deployment/docker",
+            {
+              "group": "Kubernetes",
+              "pages": [
+                "deployment/kubernetes/overview",
+                "deployment/kubernetes/installation",
+                "deployment/kubernetes/architecture",
+                "deployment/kubernetes/openshift"
+              ]
+            },
+            "deployment/openshift",
+            "deployment/ecs"
+          ]
+        },
+        {
+          "group": "Local LLM",
+          "pages": ["deployment/local-llm/keep-with-litellm"]
+        },
+        "deployment/stress-testing"
+      ]
+    },
+    {
+      "group": "Development",
+      "pages": ["development/getting-started", "development/external-url"]
+    },
+    {
+      "group": "Keep CLI",
+      "pages": [
+        "cli/overview",
+        "cli/installation",
+        "cli/github-actions",
+        {
+          "group": "Commands",
+          "pages": [
+            {
+              "group": "keep alert",
+              "pages": [
+                "cli/commands/cli-alert",
+                "cli/commands/alert-enrich",
+                "cli/commands/alert-get",
+                "cli/commands/alert-list"
+              ]
+            },
+            {
+              "group": "keep provider",
+              "pages": [
+                "cli/commands/cli-provider",
+                "cli/commands/provider-connect",
+                "cli/commands/provider-delete",
+                "cli/commands/provider-list"
+              ]
+            },
+            {
+              "group": "keep workflow",
+              "pages": [
+                "cli/commands/cli-workflow",
+                "cli/commands/workflow-apply",
+                "cli/commands/workflow-list",
+                "cli/commands/workflow-run",
+                "cli/commands/workflow-runs",
+                {
+                  "group": "keep workflow runs",
+                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
+                }
+              ]
+            },
+            {
+              "group": "keep mappings",
+              "pages": [
+                "cli/commands/mappings-list",
+                "cli/commands/mappings-create",
+                "cli/commands/mappings-delete"
+              ]
+            },
+            {
+              "group": "keep extractions",
+              "pages": [
+                "cli/commands/extraction-create",
+                "cli/commands/extraction-delete",
+                "cli/commands/extractions-list"
+              ]
+            },
+            "cli/commands/cli",
+            "cli/commands/cli-api",
+            "cli/commands/cli-config-new",
+            "cli/commands/cli-config-show",
+            "cli/commands/cli-run",
+            "cli/commands/cli-config",
+            "cli/commands/cli-version",
+            "cli/commands/cli-whoami"
+          ]
+        }
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/keephq/keep"
+  }
+}

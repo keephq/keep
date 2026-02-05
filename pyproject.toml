@@ -1,0 +1,192 @@
+[tool.poetry]
+name = "keep"
+version = "0.48.1"
+description = "Alerting. for developers, by developers."
+authors = ["Keep Alerting LTD"]
+packages = [{include = "keep"}]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+click = "^8.1.3"
+pyyaml = "^6.0"
+requests = "^2.32.4"
+paramiko = "^3.4.0"
+elasticsearch = "^8.6.1"
+chevron = "^0.14.0"
+python-dotenv = "^0.21.1"
+pygithub = "^1.57"
+sentry-sdk = "^1.15.0"
+pydantic = "^1.10.4"
+mysql-connector-python = "^9.1.0"
+logmine = "^0.4.1"
+astunparse = "^1.6.3"
+python-json-logger = "^2.0.6"
+boto3 = "^1.26.72"
+validators = "0.34.0"
+python-telegram-bot = "^20.1"
+fastapi = "^0.115.6"
+uvicorn = "0.32.1"
+opsgenie-sdk = "^2.1.5"
+starlette-context = "^0.3.6"
+datadog-api-client = "^2.12.0"
+sqlmodel = "^0.0.22"
+cloud-sql-python-connector = "1.12.0"
+pymysql = "^1.1.1"
+google-cloud-secret-manager = "^2.16.1"
+sqlalchemy = "^2.0.14"
+snowflake-connector-python = "3.13.1"
+openai = "1.37.1"
+opentelemetry-sdk = "1.29.0"
+opentelemetry-instrumentation-fastapi = "0.50b0"
+opentelemetry-instrumentation-logging = "0.50b0"
+opentelemetry-propagator-gcp = "^1.5.0"
+pyngrok = "^7.0.2"
+google-cloud-bigquery = "^3.11.0"
+websocket-client = "^1.6.0"
+posthog = "^3.0.1"
+google-cloud-storage = "^2.10.0"
+auth0-python = "^4.4.1"
+asyncio = "^3.4.3"
+python-multipart = "^0.0.18"
+kubernetes = "^27.2.0"
+opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
+opentelemetry-instrumentation-sqlalchemy = "0.50b0"
+opentelemetry-instrumentation-requests = "0.50b0"
+asteval = "1.0.6"
+google-cloud-container = "^2.32.0"
+pympler = "^1.0.1"
+prettytable = "^3.9.0"
+kafka-python = "^2.0.2"
+opentelemetry-exporter-otlp-proto-http = "^1.20.0"
+twilio = "^8.10.0"
+azure-identity = "^1.16.1"
+azure-mgmt-containerservice = "^27.0.0"
+opentelemetry-exporter-gcp-trace = "^1.6.0"
+pusher = "^3.3.2"
+sendgrid = "^6.10.0"
+gunicorn = "^23.0.0"
+cel-python = "^0.1.5"
+pymongo = "^4.6.3"
+google-cloud-trace = "1.15.0"
+hvac = "^2.1.0"
+python-keycloak = "4.2.3"
+sqlalchemy-utils = "^0.41.1"
+splunk-sdk = "^2.1.0"
+openshift-client = "^2.0.4"
+uptime-kuma-api = "^1.2.1"
+packaging = "^24.0"
+arq = "0.26.3"
+alembic = "^1.13.2"
+quickchart-io = "^2.0.0"
+google-auth = "2.34.0"
+clickhouse-driver = "^0.2.9"
+google-cloud-logging = "^3.11.3"
+json5 = "^0.9.28"
+psycopg-binary = "^3.2.3"
+psycopg = "^3.2.3"
+prometheus-client = "^0.21.1"
+psycopg2-binary = "^2.9.10"
+urllib3 = "<2.7.0"
+
+prometheus-fastapi-instrumentator = "^7.0.0"
+slowapi = "^0.1.9"
+uvloop = "^0.21.0"
+httptools = "^0.6.4"
+anthropic = "^0.44.0"
+google-generativeai = "^0.8.4"
+retry2 = "^0.9.5"
+requests-aws4auth = "^1.3.1"
+awscli = "^1.40.8"
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.0.4"
+pre-commit-hooks = "^4.4.0"
+yamllint = "^1.29.0"
+black = "^24.3.0"
+isort = "^5.12.0"
+autopep8 = "^2.0.1"
+flake8 = "^6.0.0"
+coverage = "^7.2.2"
+ruff = "^0.11.4"
+playwright = "^1.44.0"
+pytest = "^8.2.0"
+pytest-xdist = "^3.6.1"
+pytest-mock = "^3.11.1"
+pytest-docker = "^3.1.1"
+pytest-asyncio = "^0.25.0"
+pytest-timeout = "^2.3.1"
+docstring-parser = "^0.16"
+
+freezegun = "^1.5.1"
+jinja2 = "^3.1.6"
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+keep = "keep.cli.cli:cli"
+
+[tool.ruff.lint]
+ignore = ["F405", "F811", "E712", "E711", "F403"]
+
+[tool.semantic_release]
+assets = []
+commit_message = "{version}\n\n Released new version of the Keep"
+commit_parser = "angular"
+logging_use_named_masks = false
+major_on_zero = true
+allow_zero_version = true
+tag_format = "v{version}"
+version_toml = [
+    "pyproject.toml:tool.poetry.version",
+]
+
+[tool.semantic_release.branches.main]
+match = "(main|master)"
+prerelease_token = "rc"
+prerelease = false
+
+[tool.semantic_release.changelog]
+template_dir = "templates"
+changelog_file = "CHANGELOG.md"
+exclude_commit_patterns = []
+
+[tool.semantic_release.changelog.environment]
+block_start_string = "{%"
+block_end_string = "%}"
+variable_start_string = "{{"
+variable_end_string = "}}"
+comment_start_string = "{#"
+comment_end_string = "#}"
+trim_blocks = false
+lstrip_blocks = false
+newline_sequence = "\n"
+keep_trailing_newline = false
+extensions = []
+autoescape = true
+
+[tool.semantic_release.commit_author]
+env = "GIT_COMMIT_AUTHOR"
+default = "semantic-release <semantic-release>"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "style", "refactor", "test"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+default_bump_level = 0
+
+[tool.semantic_release.remote]
+name = "origin"
+type = "github"
+ignore_token_for_push = false
+
+[tool.semantic_release.remote.token]
+env = "GH_TOKEN"
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]

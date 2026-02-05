@@ -1,0 +1,34 @@
+workflow:
+  id: prometheus-grafana-servicenow-integration
+  name: Prometheus/Grafana ServiceNow Integration
+  description: Creates ServiceNow tickets for Prometheus and Grafana alerts with rich context and alert enrichment.
+  triggers:
+    - type: alert
+      # create ticket for grafana/prometheus alerts
+      filters:
+        - key: source
+          value: r"(grafana|prometheus)"
+  actions:
+    - name: create-service-now-ticket
+      # if the ticket id is not present in the alert, create a ticket
+      if: "not '{{ alert.ticket_id }}' and {{ alert.annotations.ticket_type }}"
+      provider:
+        type: servicenow
+        config: " {{ providers.servicenow }} "
+        with:
+          table_name: "{{ alert.annotations.ticket_type }}"
+          payload:
+            short_description: "{{ alert.name }} - {{ alert.description }} [created by Keep][fingerprint: {{alert.fingerprint}}]"
+            description: "{{ alert.description }}"
+          # enrich the alert with the ticket number and other details returned from servicenow
+          enrich_alert:
+            - key: ticket_type
+              value: servicenow
+            - key: ticket_id
+              value: results.sys_id
+            - key: ticket_url
+              value: results.link
+            - key: ticket_status
+              value: results.stage
+            - key: table_name
+              value: "{{ alert.annotations.ticket_type }}"

@@ -1,0 +1,58 @@
+name: Keep Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: main
+
+      - name: Release Keep
+        id: release-step
+        uses: python-semantic-release/python-semantic-release@v9.8.7
+        with:
+          git_committer_name: Keep Release Bot
+          git_committer_email: no-reply@keephq.dev
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          push: false
+          tag: true
+          commit: true
+
+      - name: Open PR for release branch
+        id: pr-step
+        uses: peter-evans/create-pull-request@v6.1.0
+        with:
+          committer: Keep Release Bot <no-reply@keephq.dev>
+          title: "Release - ${{ steps.release-step.outputs.version }}"
+          branch: release/${{ steps.release-step.outputs.version }}
+          body: "This PR contains the latest release changes."
+          draft: false
+          base: main
+
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.pr-step.outputs.pull-request-number }}
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: "v${{ steps.release-step.outputs.version }}"
+        run: |
+          gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="v${{ steps.release-step.outputs.version }}" \
+              --target="release/${{ steps.release-step.outputs.version }}" \
+              --generate-notes

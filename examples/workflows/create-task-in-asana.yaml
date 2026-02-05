@@ -1,0 +1,22 @@
+workflow:
+  id: create-task-in-asana
+  name: Create task in asana
+  description: asana
+  disabled: false
+  triggers:
+    - type: manual
+  consts: {}
+  owners: []
+  services: []
+  steps: []
+  actions:
+    - name: asana-action
+      provider:
+        type: asana
+        config: "{{ providers.asana }}"
+        with:
+          name: This is a test task from Keep
+          projects:
+            - "1209746642330536"
+          assignee: "1209746640089515"
+          due_at: "2025-09-15 02:06:58.147000+00:00"

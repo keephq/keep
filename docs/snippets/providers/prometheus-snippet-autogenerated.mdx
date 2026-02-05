@@ -1,0 +1,65 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **url**: Prometheus server URL (required: True, sensitive: False)
+- **username**: Prometheus username (required: False, sensitive: False)
+- **password**: Prometheus password (required: False, sensitive: True)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **connectivity**: Connectivity Test (mandatory)
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query prometheus
+      provider: prometheus
+      config: "{{ provider.my_provider_name }}"
+      with:
+        query: {value}
+```
+
+
+
+
+
+Check the following workflow examples:
+- [create_service_now_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_service_now_ticket_upon_alerts.yml)
+- [enrich_using_structured_output_from_deepseek.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_deepseek.yaml)
+- [enrich_using_structured_output_from_openai.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_openai.yaml)
+- [enrich_using_structured_output_from_vllm_qwen.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_vllm_qwen.yaml)
+- [http_enrich.yml](https://github.com/keephq/keep/blob/main/examples/workflows/http_enrich.yml)
+- [multi-condition-cel.yml](https://github.com/keephq/keep/blob/main/examples/workflows/multi-condition-cel.yml)
+
+## Connecting via Webhook (omnidirectional)
+
+This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:
+
+```
+route:
+  receiver: "keep"
+  group_by: ['alertname']
+  group_wait:      15s
+  group_interval:  15s
+  repeat_interval: 1m
+  continue: true
+
+receivers:
+- name: "keep"
+  webhook_configs:
+  - url: 'KEEP_BACKEND_URL/alerts/event/prometheus'
+    send_resolved: true
+    http_config:
+      basic_auth:
+        username: api_key
+        password: {api_key}
+```

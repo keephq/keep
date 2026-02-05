@@ -1,0 +1,79 @@
+---
+title: "Providers"
+---
+
+Providers are a fundamental part of workflows in Keep. They enable workflows to interact with external systems, fetch data, and perform actions. Each provider is designed to handle specific integrations such as Datadog, Slack, ServiceNow, or custom-built APIs.
+
+## Key Features of Providers
+
+- **Extensibility:** Providers can be easily extended to support new systems or custom use cases.
+  <tip>
+  You can explore and contribute to the existing providers or create your own in the [Keep Providers Code Directory on GitHub](https://github.com/keephq/keep/providers).
+  </tip>
+
+- **Parameterization:** Parameters under the `with` section are passed directly to the provider. This allows you to configure provider-specific settings for each step or action.
+
+- **Provisioning:** Providers can be provisioned via CI/CD pipelines or through the Keep UI, providing flexibility for both automated and manual setups.
+
+---
+
+## Defining a Provider
+
+To define a provider, include its configuration under the `providers` section of your workflow file. Here's an example:
+
+```yaml
+providers:
+  slack:
+    description: "Slack provider for sending messages"
+    authentication:
+      webhook_url: "{{ env.SLACK_WEBHOOK_URL }}"
+```
+
+## Using a Provider in a Workflow
+
+Once a provider is defined, it can be used in workflow steps or actions by specifying its type and configuration.
+
+For example:
+
+```yaml
+actions:
+  - name: trigger-slack
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      with:
+        channel: "#alerts"
+        message: "Alert triggered: {{ alert.name }}"
+
+```
+
+- The `config` field links the action to the provider.
+- The `with` section includes parameters that are passed to the provider.
+
+## Examples
+
+### Fetching Data with a Provider
+
+```yaml
+steps:
+  - name: get-alerts
+    provider:
+      type: datadog
+      config: "{{ providers.datadog }}"
+      with:
+        query: "avg:cpu.usage{*}"
+        timeframe: "1h"
+```
+
+### Sending Notifications with a Provider
+```yaml
+actions:
+  - name: notify-slack
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      with:
+        channel: "#alerts"
+        message: "Critical alert: {{ alert.name }}"
+
+```

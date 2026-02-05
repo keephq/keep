@@ -1,0 +1,42 @@
+---
+title: "Common Expression Language (CEL)"
+---
+
+<Tip>
+It worth reading [CEL official docs](https://cel.dev) to learn about the language and its syntax.
+</Tip>
+
+Keep utilizes **CEL (Common Expression Language)** as a powerful and flexible tool to evaluate and filter alerts against predefined rules. CEL enables users to write precise expressions that define conditions under which alerts are processed, displayed, or acted upon. This capability enhances alert management by allowing granular control over visibility and response to incoming alerts.
+
+## How Keep Uses CEL
+
+### Alert Filtering
+Alerts are dynamically evaluated against CEL expressions to determine which alerts meet the specified criteria. This real-time filtering ensures only the most relevant alerts are surfaced.
+
+### Rule Evaluation
+CEL expressions can be embedded in rules to enforce specific actions, such as escalating an alert or triggering a workflow.
+
+### Presets
+Users can save frequently used CEL expressions as presets for quick and consistent application across different alert views or teams.
+
+
+## Examples
+
+### Filter Alerts from a Specific Service
+
+```cel
+service.contains("database")
+```
+
+### Combine Multiple Conditions
+
+```cel
+severity == "critical" && source == "prometheus"
+```
+
+
+### Exclude Specific Alerts
+
+```cel
+!(service == "auth" && severity == "low")
+```

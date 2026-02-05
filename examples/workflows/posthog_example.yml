@@ -1,0 +1,47 @@
+workflow:
+  id: posthog-domain-tracker
+  name: PostHog Domain Tracker
+  description: Tracks domains from PostHog session recordings over the last 24 hours and sends a summary to Slack.
+  triggers:
+    - type: manual
+    - type: interval
+      value: 86400 # Run daily (in seconds)
+  steps:
+    - name: get-posthog-domains
+      provider:
+        config: "{{ providers.posthog }}"
+        type: posthog
+        with:
+          query_type: session_recording_domains
+          hours: 24
+          limit: 500
+  actions:
+    - name: send-to-slack
+      provider:
+        config: "{{ providers.slack }}"
+        type: slack
+        with:
+          blocks:
+            - type: header
+              text:
+                type: plain_text
+                text: "PostHog Session Recording Domains (Last 24 Hours)"
+                emoji: true
+            - type: section
+              text:
+                type: mrkdwn
+                text: "Found *{{ steps.get-posthog-domains.results.unique_domains_count }}* unique domains across *{{ steps.get-posthog-domains.results.total_domains_found }}* occurrences"
+            - type: divider
+            - type: section
+              text:
+                type: mrkdwn
+                text: "Domains:*"
+            - type: section
+              text:
+                type: mrkdwn
+                text: "{{#steps.get-posthog-domains.results.unique_domains}}
+
+                  • *{{ . }}*
+
+                  {{/steps.get-posthog-domains.results.unique_domains}}"
+            - type: divider

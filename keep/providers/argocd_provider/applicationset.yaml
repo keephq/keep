@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: list-applicationset
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - cluster: https://kubernetes.default.svc
+            namespace: app1
+            name: app1
+            path: app1-config
+          - cluster: https://kubernetes.default.svc
+            namespace: app2
+            name: app2
+            path: app2-config
+  template:
+    metadata:
+      name: '{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/your-org/your-repo
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: '{{cluster}}'
+        namespace: '{{namespace}}'

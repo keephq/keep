@@ -1,0 +1,213 @@
+---
+title: "Steps and Actions"
+---
+
+Steps and actions are the building blocks of workflows in Keep Workflow Engine. While they share a similar structure and syntax, the **difference between steps and actions is mostly semantic**:
+
+- **Steps**: Focused on querying data or triggering fetch-like operations from providers (e.g., querying databases, fetching logs, or retrieving information).
+- **Actions**: Geared toward notifying or triggering outcomes, such as sending notifications, updating tickets, or invoking external services.
+
+Together, steps and actions allow workflows to both gather the necessary data and act upon it.
+
+---
+
+## General Structure
+
+Both steps and actions are defined using a similar schema:
+
+### Steps
+
+Used for querying or fetching data.
+
+Step uses the `_query` method of each provider.
+
+```yaml
+steps:
+  - name: <step-name>
+    provider:
+      type: <provider-type>
+      config: <provider-config>
+      with:
+        <provider-specific-parameters>
+```
+
+### Actions
+
+Used for notifications or triggering effects.
+
+Action uses the `_notify` method of each provider.
+
+```yaml
+
+actions:
+  - name: <action-name>
+    provider:
+      type: <provider-type>
+      config: <provider-config>
+      with:
+        <provider-specific-parameters>
+```
+
+
+## Examples
+
+
+### Fetch data from a MySQL database
+
+```yaml
+
+steps:
+  - name: get-user-data
+    provider:
+      type: mysql
+      config: "{{ providers.mysql-prod }}"
+      with:
+        query: "SELECT * FROM users WHERE id = 1"
+        single_row: true
+```
+
+
+### Retrieve logs from Datadog
+
+```yaml
+steps:
+  - name: get-service-logs
+    provider:
+      type: datadog
+      config: "{{ providers.datadog }}"
+      with:
+        query: "service:keep and @error"
+        timeframe: "1h"
+```
+
+### Query Kubernetes for running pods
+
+```yaml
+
+steps:
+  - name: get-pods
+    provider:
+      type: k8s
+      config: "{{ providers.k8s-cluster }}"
+      with:
+        command_type: get_pods
+```
+
+### Send an email
+
+```yaml
+actions:
+  - name: send-email
+    provider:
+      type: email
+      config: "{{ providers.email }}"
+      with:
+        to: "user@example.com"
+        subject: "Account Updated"
+        body: "Your account details have been updated."
+```
+
+### Send a Slack Message
+
+```yaml
+actions:
+  - name: notify-slack
+    provider:
+      type: slack
+      config: "{{ providers.slack-demo }}"
+      with:
+        message: "Critical alert received!"
+
+```
+
+### Create a ticket in ServiceNow
+
+```yaml
+actions:
+  - name: create-servicenow-ticket
+    provider:
+      type: servicenow
+      config: "{{ providers.servicenow }}"
+      with:
+        table_name: INCIDENT
+        payload:
+          short_description: "New incident created by Keep"
+          description: "Please investigate the issue."
+```
+
+## Combining Steps and Actions
+
+A workflow typically combines steps (for querying data) with actions (for notifications or outcomes).
+
+Here's few examples:
+
+### Query and Notify
+
+```yaml
+workflow:
+  id: query-and-notify
+  description: "Query a database and notify via Slack"
+  steps:
+    - name: get-user-data
+      provider:
+        type: mysql
+        config: "{{ providers.mysql-prod }}"
+        with:
+          query: "SELECT email FROM users WHERE id = 1"
+          single_row: true
+
+  actions:
+    - name: send-notification
+      provider:
+        type: slack
+        config: "{{ providers.slack-demo }}"
+        with:
+          message: "User email: {{ steps.get-user-data.results.email }}"
+```
+
+### Alert and Incident Management
+
+```yaml
+workflow:
+  id: alert-management
+  description: "Handle alerts and create incidents"
+  steps:
+    - name: get-alert-details
+      provider:
+        type: datadog
+        config: "{{ providers.datadog }}"
+        with:
+          query: "service:keep and @alert"
+          timeframe: "1h"
+
+  actions:
+    - name: create-incident
+      provider:
+        type: servicenow
+        config: "{{ providers.servicenow }}"
+        with:
+          table_name: INCIDENT
+          payload:
+            short_description: "Alert from Datadog: {{ steps.get-alert-details.results.alert_name }}"
+            description: "Details: {{ steps.get-alert-details.results.alert_description }}"
+```
+
+## Error Handling and Retries
+
+Both steps and actions support error handling to ensure workflows can recover from failures.
+
+
+```yaml
+
+steps:
+  - name: fetch-data
+    provider:
+      type: http
+      with:
+        url: "https://api.example.com/data"
+    on-failure:
+      retry:
+        count: 3
+        # Retry every 5 seconds
+        interval: 5
+```

@@ -1,0 +1,26 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+
+To send alerts from Azure Monitor to Keep, Use the following webhook url to configure Azure Monitor send alerts to Keep:
+
+1. In Azure Monitor, create a new Action Group.
+2. In the Action Group, add a new action of type "Webhook".
+3. In the Webhook action, configure the webhook with the following settings.
+- **Name**: keep-azuremonitoring-webhook-integration
+- **URL**: Your Keep Backend URL
+4. Save the Action Group.
+5. In the Alert Rule, configure the Action Group to use the Action Group created in step 1.
+6. Save the Alert Rule.
+7. Test the Alert Rule to ensure that the alerts are being sent to Keep.
+
