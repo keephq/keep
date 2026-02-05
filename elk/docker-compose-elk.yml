@@ -9,11 +9,6 @@ services:
     volumes:
       - ./state:/state
 
-  keep-websocket-server:
-    extends:
-      file: ../docker-compose.common.yml
-      service: keep-websocket-server-common
-
   elastic:
    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
    labels:

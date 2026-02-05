@@ -134,24 +134,18 @@ Keep is highly configurable through environment variables. This allows you to cu
 |         **CLOUD_TRACE_ENABLED**         |     Enables Google Cloud Trace exporter     |    No    |    "false"    |     "true" or "false"     |
 |         **METRIC_OTEL_ENABLED**         |        Enables OpenTelemetry metrics        |    No    |      ""       |     "true" or "false"     |
 
-### WebSocket Server (Pusher/Soketi)
+### Real-time updates (SSE)
 
 <Info>
-  WebSocket server configuration controls real-time communication capabilities
-  in Keep. These settings are important for enabling features that require
-  instant updates and notifications.
+  Keep uses Server-Sent Events (SSE) for real-time updates (alerts, incidents,
+  presets, topology). The SSE endpoint is served by the backend at `/sse/events`.
+  No separate WebSocket server is required. When **AUTH_TYPE** is noauth, the
+  SSE endpoint accepts unauthenticated connections and uses the default tenant.
 </Info>
 
-|        Env var        |              Purpose              |       Required        | Default Value |        Valid options         |
-| :-------------------: | :-------------------------------: | :-------------------: | :-----------: | :--------------------------: |
-|  **PUSHER_DISABLED**  |    Disables Pusher integration    |          No           |    "false"    |      "true" or "false"       |
-|    **PUSHER_HOST**    |   Hostname of the Pusher server   |          No           |     None      | Valid hostname or IP address |
-|    **PUSHER_PORT**    |     Port of the Pusher server     |          No           |     None      |    Any valid port number     |
-|   **PUSHER_APP_ID**   |       Pusher application ID       | Yes (if using Pusher) |     None      |     Valid Pusher App ID      |
-|  **PUSHER_APP_KEY**   |      Pusher application key       | Yes (if using Pusher) |     None      |     Valid Pusher App Key     |
-| **PUSHER_APP_SECRET** |     Pusher application secret     | Yes (if using Pusher) |     None      |   Valid Pusher App Secret    |
-|  **PUSHER_USE_SSL**   | Enables SSL for Pusher connection |          No           |     False     |     Boolean (True/False)     |
-|  **PUSHER_CLUSTER**   |          Pusher cluster           |          No           |     None      |  Valid Pusher cluster name   |
+|        Env var        |              Purpose              | Required | Default Value |   Valid options   |
+| :-------------------: | :-------------------------------: | :------: | :-----------: | :---------------: |
+|  **PUSHER_DISABLED**  | Disables real-time SSE updates    |    No    |    "false"    | "true" or "false" |
 
 ### OpenAI
 
@@ -356,19 +350,14 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 | **POSTHOG_KEY**  | PostHog API key for frontend analytics |    No    |     None      | Valid PostHog API key |
 | **POSTHOG_HOST** |  PostHog Host for frontend analytics   |    No    |     None      |  Valid PostHog Host   |
 
-### Pusher
+### Real-time (SSE) – frontend
 
 <Info>
-  Pusher configuration is essential for enabling real-time updates and
-  communication in Keep's frontend. These settings allow the frontend to
-  establish a WebSocket connection with the Pusher server, facilitating instant
-  updates and notifications.
+  The frontend uses Server-Sent Events (SSE) for real-time updates. The backend
+  serves the SSE stream at `/sse/events`. Set **PUSHER_DISABLED** to "true" to
+  disable real-time updates in the UI.
 </Info>
 
-|       Env var       |            Purpose            |        Required         | Default Value |        Valid options         |
-| :-----------------: | :---------------------------: | :---------------------: | :-----------: | :--------------------------: |
-| **PUSHER_DISABLED** |  Disables Pusher integration  |           No            |    "false"    |      "true" or "false"       |
-|   **PUSHER_HOST**   | Hostname of the Pusher server |           No            |  "localhost"  | Valid hostname or IP address |
-|   **PUSHER_PORT**   |   Port of the Pusher server   |           No            |     6001      |      Valid port number       |
-| **PUSHER_APP_KEY**  |    Pusher application key     | Yes (if Pusher enabled) | "keepappkey"  |     Valid Pusher App Key     |
-| **PUSHER_CLUSTER**  |        Pusher cluster         |           No            |     None      |  Valid Pusher cluster name   |
+|       Env var       |            Purpose            | Required | Default Value |   Valid options   |
+| :-----------------: | :---------------------------: | :------: | :-----------: | :---------------: |
+| **PUSHER_DISABLED** | Disables real-time SSE updates |    No    |    "false"    | "true" or "false" |

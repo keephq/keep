@@ -1,11 +1,12 @@
 import logging
 import os
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.datastructures import FormData
-from pusher import Pusher
 
-from keep.api.core.config import config
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.identitymanager.rbac import Admin as AdminRole
 
 logger = logging.getLogger(__name__)
 
@@ -14,13 +15,40 @@ logger = logging.getLogger(__name__)
 SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
 
-PUSHER_ROOT_CA = config("PUSHER_ROOT_CA", default=None)
 
-if PUSHER_ROOT_CA:
-    logger.warning("Patching PUSHER root certificate")
-    from pusher import requests as pusher_requests
-
-    pusher_requests.CERT_PATH = PUSHER_ROOT_CA
+def get_sse_authenticated_entity(request: Request) -> AuthenticatedEntity:
+    """
+    Optional auth for SSE: when AUTH_TYPE is noauth and no credentials are
+    provided, return default entity (SINGLE_TENANT_UUID). Otherwise verify
+    via the normal pusher-scope verifier.
+    """
+    auth_type = os.environ.get("AUTH_TYPE", "noauth").lower()
+    auth_header = request.headers.get("Authorization") or ""
+    token_from_header = auth_header.strip().replace("Bearer ", "", 1) if auth_header else ""
+    token_from_query = request.query_params.get("token") or ""
+    token = token_from_query or token_from_header or None
+    api_key = request.headers.get("X-API-KEY")
+    has_creds = bool(token or api_key)
+    if auth_type == "noauth" and not has_creds:
+        return AuthenticatedEntity(
+            tenant_id=SINGLE_TENANT_UUID,
+            email=SINGLE_TENANT_EMAIL,
+            role=AdminRole.get_name(),
+        )
+    verifier = IdentityManagerFactory.get_auth_verifier(["read:pusher"])
+    try:
+        entity = verifier.authenticate(request, api_key, None, token, None)
+        if isinstance(entity, AuthenticatedEntity):
+            verifier.authorize(entity)
+            return entity
+        return entity
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("SSE auth failed")
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
 
 
 async def extract_generic_body(request: Request) -> dict | bytes | FormData:
@@ -47,37 +75,3 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
         except Exception:
             logger.debug("Failed to parse body as json, returning raw body")
             return await request.body()
-
-
-def get_pusher_client() -> Pusher | None:
-    logger.debug("Getting pusher client")
-    pusher_disabled = os.environ.get("PUSHER_DISABLED", "false") == "true"
-    pusher_host = os.environ.get("PUSHER_HOST")
-    pusher_app_id = os.environ.get("PUSHER_APP_ID")
-    pusher_app_key = os.environ.get("PUSHER_APP_KEY")
-    pusher_app_secret = os.environ.get("PUSHER_APP_SECRET")
-    if (
-        pusher_disabled
-        or pusher_app_id is None
-        or pusher_app_key is None
-        or pusher_app_secret is None
-    ):
-        logger.debug("Pusher is disabled or missing environment variables")
-        return None
-
-    # TODO: defaults on open source no docker
-    pusher = Pusher(
-        host=pusher_host,
-        port=(
-            int(os.environ.get("PUSHER_PORT"))
-            if os.environ.get("PUSHER_PORT")
-            else None
-        ),
-        app_id=pusher_app_id,
-        key=pusher_app_key,
-        secret=pusher_app_secret,
-        ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
-        cluster=os.environ.get("PUSHER_CLUSTER"),
-    )
-    logging.debug("Pusher client initialized")
-    return pusher

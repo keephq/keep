@@ -18,7 +18,7 @@ from keep.api.core.db import (
     recover_prev_alert_status,
     set_maintenance_windows_trace,
 )
-from keep.api.core.dependencies import get_pusher_client
+from keep.api.sse import notify_sse
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert, AlertAudit
@@ -277,13 +277,8 @@ class MaintenanceWindowsBl:
                         )
                     pusher_cache = get_notification_cache()
                     if incidents and pusher_cache.should_notify(tenant, "incident-change"):
-                        pusher_client = get_pusher_client()
                         try:
-                            pusher_client.trigger(
-                                f"private-{tenant}",
-                                "incident-change",
-                                {},
-                            )
+                            notify_sse(tenant, "incident-change", {})
                         except Exception:
                             logger.exception("Failed to tell the client to pull incidents")
 
@@ -302,18 +297,18 @@ class MaintenanceWindowsBl:
                         presets_do_update.append(preset_dto)
                     if pusher_cache.should_notify(tenant, "poll-presets"):
                         try:
-                            pusher_client.trigger(
-                                f"private-{tenant}",
+                            notify_sse(
+                                tenant,
                                 "poll-presets",
                                 json.dumps(
                                     [p.name.lower() for p in presets_do_update], default=str
                                 ),
                             )
                         except Exception:
-                            logger.exception("Failed to send presets via pusher")
+                            logger.exception("Failed to send presets via SSE")
                 except Exception:
                     logger.exception(
-                        "Failed to send presets via pusher",
+                        "Failed to send presets via SSE",
                         extra={
                             "provider_type": alert_dto.providerType,
                             "provider_id": alert_dto.providerId,

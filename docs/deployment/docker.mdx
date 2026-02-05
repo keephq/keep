@@ -25,10 +25,9 @@ curl https://raw.githubusercontent.com/keephq/keep/main/docker-compose.common.ym
 docker compose up -d
 ```
 
-The docker-compose.yml contains 3 services:
-- [keep-backend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-api?project=keephq) - a fastapi service that as the API server.
-- [keep-frontend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-ui?project=keephq) - a nextjs app that serves as Keep UI interface.
-- [keep-websocket-server](https://docs.soketi.app/getting-started/installation/docker) - Soketi (a pusher compatible websocket server) for real time alerting.
+The docker-compose.yml contains 2 services:
+- [keep-backend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-api?project=keephq) - a FastAPI service that serves the API and real-time SSE updates.
+- [keep-frontend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-ui?project=keephq) - a Next.js app that serves the Keep UI interface.
 
 ### Reinstall Keep with the option to refresh from scratch
 

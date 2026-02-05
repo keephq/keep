@@ -8,7 +8,6 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException
-from pusher import Pusher
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import Session
 
@@ -31,6 +30,7 @@ from keep.api.core.db import (
     update_incident_severity,
 )
 from keep.api.core.elastic import ElasticClient
+from keep.api.sse import notify_sse
 from keep.api.core.incidents import get_last_incidents_by_cel
 from keep.api.models.action_type import ActionType
 from keep.api.models.db.incident import Incident, IncidentSeverity, IncidentStatus
@@ -61,13 +61,14 @@ class IncidentBl:
         self,
         tenant_id: str,
         session: Session,
-        pusher_client: Optional[Pusher] = None,
+        pusher_client: Optional[object] = None,
         user: str = None,
     ):
         self.tenant_id = tenant_id
         self.user = user
         self.session = session
-        self.pusher_client = pusher_client
+        # pusher_client kept for API compatibility but unused; real-time uses SSE
+        self._pusher_client = pusher_client
         self.logger = logging.getLogger(__name__)
         self.ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
         self.redis = os.environ.get("REDIS", "false") == "true"
@@ -190,26 +191,25 @@ class IncidentBl:
             raise
 
     def update_client_on_incident_change(self, incident_id: Optional[UUID] = None):
-        if self.pusher_client is not None:
+        self.logger.info(
+            "Pushing incident change to client",
+            extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
+        )
+        try:
+            notify_sse(
+                self.tenant_id,
+                "incident-change",
+                {"incident_id": str(incident_id) if incident_id else None},
+            )
             self.logger.info(
-                "Pushing incident change to client",
+                "Incident change pushed to client",
                 extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
             )
-            try:
-                self.pusher_client.trigger(
-                    f"private-{self.tenant_id}",
-                    "incident-change",
-                    {"incident_id": str(incident_id) if incident_id else None},
-                )
-                self.logger.info(
-                    "Incident change pushed to client",
-                    extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
-                )
-            except Exception:
-                self.logger.exception(
-                    "Failed to push incident change to client",
-                    extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
-                )
+        except Exception:
+            self.logger.exception(
+                "Failed to push incident change to client",
+                extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
+            )
 
     def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
         try:

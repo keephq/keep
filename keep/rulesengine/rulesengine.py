@@ -22,7 +22,6 @@ from keep.api.core.db import (
 )
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import is_all_alerts_in_status
-from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import Rule
@@ -752,8 +751,7 @@ class RulesEngine:
     ):
         logger = logging.getLogger(__name__)
         logger.info(f"Sending workflow event {action} for incident {incident_dto.id}")
-        pusher_client = get_pusher_client()
-        incident_bl = IncidentBl(tenant_id, session, pusher_client)
+        incident_bl = IncidentBl(tenant_id, session, None)
 
         incident_bl.send_workflow_event(incident_dto, action)
         incident_bl.update_client_on_incident_change(incident_dto.id)

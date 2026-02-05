@@ -9,7 +9,6 @@ services:
       - oauth2-proxy
       - keep-frontend
       - keep-backend
-      - keep-websocket-server
     networks:
       - keep-network
 
@@ -50,7 +49,6 @@ services:
       - KEEP_OAUTH2_PROXY_AUTO_CREATE_USER=false
       - API_URL=http://keep-backend:8080
       - API_URL_CLIENT=/v2
-      - PUSHER_HOST=/websocket
       - VERCEL=1
       - ENV=production
       - NODE_ENV=production
@@ -70,29 +68,12 @@ services:
       - KEEP_OAUTH2_PROXY_ROLE_HEADER=X-Forwarded-Groups
       - KEEP_OAUTH2_PROXY_AUTO_CREATE_USER=false
       - PORT=8080
-      - PUSHER_APP_ID=1
-      - PUSHER_HOST=keep-websocket-server
-      - PUSHER_PORT=6001
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False
     volumes:
       - ./state:/state
       - /tmp/prometheus:/tmp/prometheus
-    networks:
-      - keep-network
-
-  keep-websocket-server:
-    image: quay.io/soketi/soketi:1.4-16-debian
-    ports:
-      - "6001:6001"
-    environment:
-      - SOKETI_HOST=0.0.0.0
-      - SOKETI_DEBUG=1
-      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
-      - SOKETI_DEFAULT_APP_ID=1
-      - SOKETI_DEFAULT_APP_KEY=keepappkey
-      - SOKETI_DEFAULT_APP_SECRET=keepappsecret
     networks:
       - keep-network
 

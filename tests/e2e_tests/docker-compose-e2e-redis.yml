@@ -30,11 +30,6 @@ services:
     depends_on:
       - keep-redis
 
-  keep-websocket-server:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-websocket-server-common
-
   keep-redis:
     image: redis/redis-stack
     ports:

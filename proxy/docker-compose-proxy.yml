@@ -73,13 +73,6 @@ services:
       - proxy-net
       - internal
 
-  keep-websocket-server:
-    extends:
-      file: ../docker-compose.common.yml
-      service: keep-websocket-server-common
-    networks:
-      - internal
-
 networks:
   proxy-net:
     driver: bridge

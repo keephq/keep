@@ -1,4 +1,4 @@
-import { useWebsocket } from "./usePusher";
+import { useSSE } from "./useSSE";
 import { useCallback, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { AIConfig, AILogs, AIStats } from "@/app/(keep)/ai/model";
@@ -19,7 +19,7 @@ export const useAIStats = (
 };
 
 export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
-  const { bind, unbind } = useWebsocket();
+  const { bind, unbind } = useSSE();
   const handleIncoming = useCallback(
     (data: AILogs) => {
       mutateAILogs(data);

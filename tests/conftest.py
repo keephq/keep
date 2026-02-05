@@ -41,12 +41,23 @@ load_dotenv(find_dotenv())
 
 
 class PusherMock:
+    """Deprecated: use SSENotifierMock and patch notify_sse."""
 
     def __init__(self):
         self.triggers = []
 
     def trigger(self, channel, event_name, data):
         self.triggers.append((channel, event_name, data))
+
+
+class SSENotifierMock:
+    """Mock for notify_sse(tenant_id, event_name, data). Records calls for assertions."""
+
+    def __init__(self):
+        self.triggers = []  # list of (tenant_id, event_name, data)
+
+    def __call__(self, tenant_id, event_name, data):
+        self.triggers.append((tenant_id, event_name, data))
 
 
 class WorkflowManagerMock:

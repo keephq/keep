@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useWebsocket } from "@/utils/hooks/usePusher";
+import { useSSE } from "@/utils/hooks/useSSE";
 import { Observable } from "rxjs";
 import { v4 as generateGuid } from "uuid";
 
 export const useAlertPolling = (isEnabled: boolean) => {
-  const { bind, unbind } = useWebsocket();
+  const { bind, unbind } = useSSE();
   const [pollAlerts, setPollAlerts] = useState<string | null>(null);
 
   console.log("useAlertPolling: Initializing");

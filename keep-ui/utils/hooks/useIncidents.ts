@@ -6,7 +6,7 @@ import {
 } from "@/entities/incidents/model";
 import { PaginatedWorkflowExecutionDto } from "@/shared/api/workflow-executions";
 import useSWR, { SWRConfiguration } from "swr";
-import { useWebsocket } from "./usePusher";
+import { useSSE } from "./useSSE";
 import { use, useCallback, useEffect, useState } from "react";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -204,7 +204,7 @@ export const useIncidentWorkflowExecutions = (
 };
 
 export const usePollIncidentComments = (incidentId: string) => {
-  const { bind, unbind } = useWebsocket();
+  const { bind, unbind } = useSSE();
   const { useAlertAudit } = useAlerts();
   const { mutate: mutateIncidentActivity } = useAlertAudit(incidentId);
   const handleIncoming = useCallback(
@@ -222,7 +222,7 @@ export const usePollIncidentComments = (incidentId: string) => {
 };
 
 export const usePollIncidentAlerts = (incidentId: string) => {
-  const { bind, unbind } = useWebsocket();
+  const { bind, unbind } = useSSE();
   const { mutate } = useIncidentAlerts(incidentId);
   const handleIncoming = useCallback(
     (data: IncidentUpdatePayload) => {
@@ -239,7 +239,7 @@ export const usePollIncidentAlerts = (incidentId: string) => {
 };
 
 export const usePollIncidents = (mutateIncidents: any, paused: boolean = false) => {
-  const { bind, unbind } = useWebsocket();
+  const { bind, unbind } = useSSE();
   const [incidentChangeToken, setIncidentChangeToken] = useState<
     string | undefined
   >(undefined);

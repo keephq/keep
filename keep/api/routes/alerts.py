@@ -14,7 +14,6 @@ import celpy
 from arq import ArqRedis
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
-from pusher import Pusher
 from sqlalchemy_utils import UUIDType
 from sqlmodel import Session
 
@@ -46,8 +45,9 @@ from keep.api.core.db import (
     get_session,
     is_all_alerts_resolved,
 )
-from keep.api.core.dependencies import extract_generic_body, get_pusher_client
+from keep.api.core.dependencies import extract_generic_body
 from keep.api.core.elastic import ElasticClient
+from keep.api.sse import notify_sse
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import (
@@ -943,20 +943,14 @@ def batch_enrich_alerts(
             logger.exception("Failed to push alerts to elasticsearch")
             pass
 
-        # use pusher to push the enriched alert to the client
-        pusher_client = get_pusher_client()
-        if pusher_client:
+        # Notify client to poll alerts via SSE
+        try:
             logger.info("Telling client to poll alerts")
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "poll-alerts",
-                    "{}",
-                )
-                logger.info("Told client to poll alerts")
-            except Exception:
-                logger.exception("Failed to tell client to poll alerts")
-                pass
+            notify_sse(tenant_id, "poll-alerts", "{}")
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
+            pass
 
         logger.info(
             "Alerts batch enriched successfully",
@@ -1092,20 +1086,14 @@ def _enrich_alert(
         except Exception:
             logger.exception("Failed to push alert to elasticsearch")
             pass
-        # use pusher to push the enriched alert to the client
-        pusher_client = get_pusher_client()
-        if pusher_client:
+        # Notify client to poll alerts via SSE
+        try:
             logger.info("Telling client to poll alerts")
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "poll-alerts",
-                    "{}",
-                )
-                logger.info("Told client to poll alerts")
-            except Exception:
-                logger.exception("Failed to tell client to poll alerts")
-                pass
+            notify_sse(tenant_id, "poll-alerts", "{}")
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
+            pass
         logger.info(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
@@ -1133,7 +1121,6 @@ def _enrich_alert(
 )
 def unenrich_alert(
     enrich_data: UnEnrichAlertRequestBody,
-    pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
@@ -1210,19 +1197,14 @@ def unenrich_alert(
         except Exception:
             logger.exception("Failed to push alert to elasticsearch")
             pass
-        # use pusher to push the enriched alert to the client
-        if pusher_client:
+        # Notify client to poll alerts via SSE
+        try:
             logger.info("Telling client to poll alerts")
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "poll-alerts",
-                    "{}",
-                )
-                logger.info("Told client to poll alerts")
-            except Exception:
-                logger.exception("Failed to tell client to poll alerts")
-                pass
+            notify_sse(tenant_id, "poll-alerts", "{}")
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
+            pass
         logger.info(
             "Alert un-enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},

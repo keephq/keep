@@ -64,7 +64,6 @@
     "next-auth": "^5.0.0-beta.27",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",
-    "pusher-js": "^8.4.0",
     "quill-mention": "^6.1.1",
     "react": "19.0.0",
     "react-chartjs-2": "^5.3.0",
