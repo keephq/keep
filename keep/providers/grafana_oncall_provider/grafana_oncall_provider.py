@@ -1,9 +1,10 @@
-"""
-Grafana Provider is a class that allows to ingest/digest data from Grafana.
-"""
+\"\"\"
+Grafana OnCall Provider with custom JSON support.
+\"\"\"
 
 import dataclasses
 import logging
+import json
 from typing import Literal
 from urllib.parse import urlparse, urlsplit, urlunparse
 
@@ -20,54 +21,49 @@ logger = logging.getLogger(__name__)
 
 @pydantic.dataclasses.dataclass
 class GrafanaOncallProviderAuthConfig:
-    """
+    \"\"\"
     Grafana authentication configuration.
-    """
+    \"\"\"
 
     token: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "Token",
-            "hint": "Grafana OnCall API Token",
+            \"required\": True,
+            \"description\": \"Token\",
+            \"hint\": \"Grafana OnCall API Token\",
         },
     )
     host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "Grafana OnCall Host",
-            "hint": "E.g. https://oncall-prod-us-central-0.grafana.net/oncall/ or http://localhost:8000/",
-            "validation": "any_http_url",
+            \"required\": True,
+            \"description\": \"Grafana OnCall Host\",
+            \"hint\": \"E.g. https://oncall-prod-us-central-0.grafana.net/oncall/ or http://localhost:8000/\",
+            \"validation\": \"any_http_url\",
         },
     )
 
 
 class GrafanaOncallProvider(BaseProvider):
-    """
+    \"\"\"
     Create incidents with Grafana OnCall.
-    """
+    \"\"\"
 
-    PROVIDER_DISPLAY_NAME = "Grafana OnCall"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_DISPLAY_NAME = \"Grafana OnCall\"
+    PROVIDER_CATEGORY = [\"Incident Management\"]
 
-    API_URI = "api/v1"
-    provider_description = "Grafana OnCall is an oncall management solution."
-
-    def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-    ):
-        super().__init__(context_manager, provider_id, config)
+    API_URI = \"api/v1\"
+    provider_description = \"Grafana OnCall is an oncall management solution.\"
 
     def dispose(self):
-        """
+        \"\"\"
         Dispose the provider.
-        """
+        \"\"\"
         pass
 
     def validate_config(self):
-        """
+        \"\"\"
         Validates required configuration for Grafana provider.
 
-        """
+        \"\"\"
         self.authentication_config = GrafanaOncallProviderAuthConfig(
             **self.config.authentication
         )
@@ -83,81 +79,98 @@ class GrafanaOncallProvider(BaseProvider):
     def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
         
         super().__init__(context_manager, provider_id, config)
-        KEEP_INTEGRATION_NAME = "Keep Integration"
+        KEEP_INTEGRATION_NAME = \"Keep Integration\"
 
-        if self.config.authentication.get("oncall_integration_link") is not None:
+        if self.config.authentication.get(\"oncall_integration_link\") is not None:
             return None
 
         # Create Grafana OnCall integration if the integration link is not saved
         headers = {
-            "Authorization": f"{config.authentication['token']}",
-            "Content-Type": "application/json",
+            \"Authorization\": f\"{config.authentication['token']}\",
+            \"Content-Type\": \"application/json\",
         }
         
         response = requests.post(
-            url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
+            url=self.clean_url(f\"{config.authentication['host']}/{self.API_URI}/integrations/\"),
             headers=headers,
             json={
-                "name": KEEP_INTEGRATION_NAME,
-                "type":"webhook"
+                \"name\": KEEP_INTEGRATION_NAME,
+                \"type\":\"webhook\"
             },
         )
         existing_integration_link = None
         if response.status_code == 400:
             # If integration already exists, get the link
-            if response.json().get("detail") == "An integration with this name already exists for this team":
+            if response.json().get(\"detail\") == \"An integration with this name already exists for this team\":
                 response = requests.get(
-                    url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
+                    url=self.clean_url(f\"{config.authentication['host']}/{self.API_URI}/integrations/\"),
                     headers=headers,
                 )
                 response.raise_for_status()
                 for integration in response.json()['results']:
-                    if integration.get("name") == KEEP_INTEGRATION_NAME:
-                        existing_integration_link = integration.get("link")
+                    if integration.get(\"name\") == KEEP_INTEGRATION_NAME:
+                        existing_integration_link = integration.get(\"link\")
                         break
         elif response.status_code in [200, 201]:
             response_json = response.json()
-            existing_integration_link = response_json.get("link")
+            existing_integration_link = response_json.get(\"link\")
         else:
-            logger.error(f"Error installing the provider: {response.status_code}")
-            raise Exception(f"Error installing the provider: {response.status_code}")
+            logger.error(f\"Error installing the provider: {response.status_code}\")
+            raise Exception(f\"Error installing the provider: {response.status_code}\")
         
-        if "integrations/v1/" in urlsplit(existing_integration_link).path:
-            self.config.authentication["oncall_integration_link"] = existing_integration_link
+        if existing_integration_link and \"integrations/v1/\" in urlsplit(existing_integration_link).path:
+            self.config.authentication[\"oncall_integration_link\"] = existing_integration_link
         else:
-            Exception("Error creating the integration link, the URL is not OnCall formatted.")
+            logger.warning(\"Error creating the integration link, the URL is not OnCall formatted or not found.\")
 
 
     def _notify(
         self,
-        title: str,
+        title: str | None = None,
         alert_uid: str | None = None,
-        message: str = "",
-        image_url: str = "",
-        state: Literal["alerting", "resolved"] = "alerting",
-        link_to_upstream_details: str = "",
+        message: str = \"\",
+        image_url: str = \"\",
+        state: Literal[\"alerting\", \"resolved\"] = \"alerting\",
+        link_to_upstream_details: str = \"\",
+        payload: dict | str | None = None,
         **kwargs,
     ):
         headers = {
-            "Content-Type": "application/json",
+            \"Content-Type\": \"application/json\",
         }
+        
+        # Use custom payload if provided
+        if payload:
+            if isinstance(payload, str):
+                try:
+                    payload_json = json.loads(payload)
+                except Exception:
+                    raise Exception(\"Provided payload is not a valid JSON string\")
+            else:
+                payload_json = payload
+        else:
+            # Fallback to standard payload
+            if not title:
+                raise Exception(\"Title is required if no custom payload is provided\")
+            payload_json = {
+                \"title\": title,
+                \"message\": message,
+                \"alert_uid\": alert_uid,
+                \"image_url\": image_url,
+                \"state\": state,
+                \"link_to_upstream_details\": link_to_upstream_details,
+            }
+
         response = requests.post(
-            url=self.config.authentication["oncall_integration_link"],
+            url=self.config.authentication[\"oncall_integration_link\"],
             headers=headers,
-            json={
-                "title": title,
-                "message": message,
-                "alert_uid": alert_uid,
-                "image_url": image_url,
-                "state": state,
-                "link_to_upstream_details": link_to_upstream_details,
-            },
+            json=payload_json,
         )
         response.raise_for_status()
         return response.json()
 
 
-if __name__ == "__main__":
+if __name__ == \"__main__\":
     # Output debug messages
     import logging
 
@@ -166,20 +179,20 @@ if __name__ == "__main__":
     # Load environment variables
     import os
 
-    host = os.environ.get("GRAFANA_ON_CALL_HOST")
-    token = os.environ.get("GRAFANA_ON_CALL_TOKEN")
+    host = os.environ.get(\"GRAFANA_ON_CALL_HOST\")
+    token = os.environ.get(\"GRAFANA_ON_CALL_TOKEN\")
     context_manager = ContextManager(
-        tenant_id="singletenant",
-        workflow_id="test",
+        tenant_id=\"singletenant\",
+        workflow_id=\"test\",
     )
     config = {
-        "authentication": {"host": host, "token": token},
+        \"authentication\": {\"host\": host, \"token\": token},
     }
     provider: GrafanaOncallProvider = ProvidersFactory.get_provider(
         context_manager,
-        provider_id="grafana-oncall-keephq",
-        provider_type="oncall",
+        provider_id=\"grafana-oncall-keephq\",
+        provider_type=\"oncall\",
         provider_config=config,
     )
-    alert = provider.notify("Test Alert")
+    alert = provider.notify(title=\"Test Alert\")
     print(alert)
