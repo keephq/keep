@@ -116,7 +116,32 @@ class IncidentBl:
             "Workflows run on incident",
             extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
         )
+        # Pull activity if provider supports it
+        self._pull_incident_activity(incident)
         return new_incident_dto
+
+    def _pull_incident_activity(self, incident: Incident):
+        from keep.providers.base.base_provider import BaseIncidentProvider
+        from keep.providers.providers_factory import ProvidersFactory
+        
+        for source in incident.sources or []:
+            try:
+                provider = ProvidersFactory.get_installed_provider(self.tenant_id, source, source)
+                if isinstance(provider, BaseIncidentProvider):
+                    activities = provider.get_incident_activity(incident.fingerprint)
+                    for activity in activities:
+                        add_audit(
+                            self.tenant_id,
+                            str(incident.id),
+                            activity["user_id"],
+                            activity["action"],
+                            activity["description"],
+                            session=self.session,
+                            commit=False
+                        )
+                    self.session.commit()
+            except Exception:
+                self.logger.debug(f"Provider {source} does not support activity pulling or failed")
 
     def sync_add_alerts_to_incident(self, *args, **kwargs) -> None:
         """
@@ -344,6 +369,63 @@ class IncidentBl:
             },
         )
 
+    def add_comment(
+        self,
+        incident_id: UUID,
+        comment: str,
+        user_id: str,
+        tagged_users: List[str] = None,
+    ) -> AlertAudit:
+        """
+        Adds a comment to an incident and optionally to the provider.
+        """
+        incident = get_incident_by_id(
+            self.tenant_id, incident_id, session=self.session
+        )
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+        # Add comment locally
+        from keep.api.models.db.alert import CommentMention
+        
+        audit = add_audit(
+            self.tenant_id,
+            str(incident_id),
+            user_id,
+            ActionType.INCIDENT_COMMENT,
+            comment,
+            session=self.session,
+            commit=False,
+        )
+
+        if tagged_users:
+            for tagged_user in tagged_users:
+                mention = CommentMention(
+                    comment_id=audit.id,
+                    mentioned_user_id=tagged_user,
+                    tenant_id=self.tenant_id,
+                )
+                self.session.add(mention)
+
+        self.session.commit()
+        self.session.refresh(audit)
+
+        # Sync with provider
+        from keep.providers.base.base_provider import BaseIncidentProvider
+        from keep.providers.providers_factory import ProvidersFactory
+
+        for source in incident.sources or []:
+            try:
+                # Use source as both provider_id and provider_type for now as a heuristic
+                # In real scenario, we might need a better mapping
+                provider = ProvidersFactory.get_installed_provider(self.tenant_id, source, source)
+                if isinstance(provider, BaseIncidentProvider):
+                    provider.comment_incident(incident.fingerprint, comment)
+            except Exception:
+                self.logger.debug(f"Failed to push comment to provider {source}")
+
+        return audit
+
     def update_severity(
         self,
         incident_id: UUID,
@@ -377,6 +459,9 @@ class IncidentBl:
     def __postprocess_incident_change(self, incident):
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
+
+        # Pull activity if provider supports it
+        self._pull_incident_activity(incident)
 
         new_incident_dto = IncidentDto.from_db_incident(incident)
 

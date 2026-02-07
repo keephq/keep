@@ -873,6 +873,9 @@ class BaseIncidentProvider(BaseProvider):
     def get_incidents(self) -> list[IncidentDto]:
         return self._get_incidents()
 
+    def get_incident_activity(self, incident_id: str) -> list[dict]:
+        raise NotImplementedError("get_incident_activity() not implemented")
+
     @staticmethod
     def _format_incident(
         event: dict, provider_instance: "BaseProvider" = None

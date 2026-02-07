@@ -5,6 +5,7 @@ ServicenowProvider is a class that implements the BaseProvider interface for Ser
 import os
 import dataclasses
 import json
+from datetime import datetime
 
 import pydantic
 import requests
@@ -244,14 +245,11 @@ class ServicenowProvider(BaseTopologyProvider):
         if incident_id:
             request_url = f"{request_url}/{incident_id}"
 
-        params = {"sysparm_offset": 0, "sysparm_limit": 100}
-        # Add pagination parameters if not already set
-        if sysparm_limit:
-            params["sysparm_limit"] = (
-                sysparm_limit  # Limit number of records per request
-            )
-        if sysparm_offset:
-            params["sysparm_offset"] = 0  # Start from beginning
+        params = {"sysparm_offset": sysparm_offset, "sysparm_limit": sysparm_limit}
+        
+        # Add additional query parameters if provided
+        if "sysparm_query" in kwargs:
+            params["sysparm_query"] = kwargs["sysparm_query"]
 
         response = requests.get(
             request_url,
@@ -547,6 +545,82 @@ class ServicenowProvider(BaseTopologyProvider):
         else:
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
             resp.raise_for_status()
+
+    def _get_incidents(self) -> list[IncidentDto]:
+        """
+        Get all incidents from ServiceNow.
+        """
+        incidents = self._query(table_name="incident")
+        incident_dtos = []
+        for incident in incidents:
+            from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
+            
+            status = IncidentStatus.FIRING # default
+            if incident.get("state") == "6": # Resolved
+                status = IncidentStatus.RESOLVED
+            elif incident.get("state") == "7": # Closed
+                status = IncidentStatus.RESOLVED
+            
+            severity = IncidentSeverity.INFO
+            if incident.get("severity") == "1":
+                severity = IncidentSeverity.CRITICAL
+            elif incident.get("severity") == "2":
+                severity = IncidentSeverity.HIGH
+            
+            incident_dto = IncidentDto(
+                id=self._get_incident_id(incident.get("sys_id")),
+                incident_id=incident.get("number"),
+                title=incident.get("short_description"),
+                description=incident.get("description"),
+                status=status,
+                severity=severity,
+                creation_time=datetime.strptime(incident.get("sys_created_on"), "%Y-%m-%d %H:%M:%S") if incident.get("sys_created_on") else datetime.utcnow(),
+                alert_sources=["servicenow"],
+                services=[incident.get("cmdb_ci", "unknown")],
+                fingerprint=incident.get("sys_id"),
+                is_predicted=False,
+                is_candidate=False,
+                alerts_count=0 # ServiceNow incidents aren't groups of alerts in the same way Keep's are
+            )
+            incident_dtos.append(incident_dto)
+        return incident_dtos
+
+    @staticmethod
+    def _get_incident_id(incident_id: str) -> str:
+        import hashlib
+        import uuid
+        md5 = hashlib.md5()
+        md5.update(incident_id.encode("utf-8"))
+        return uuid.UUID(md5.hexdigest())
+
+    def get_incident_activity(self, incident_id: str):
+        """
+        Get the activity of an incident from ServiceNow.
+        """
+        # Element ID is the incident's sys_id
+        # Table name is 'incident'
+        query = f"element_id={incident_id}^name=incident"
+        activity = self._query(table_name="sys_journal_field", sysparm_query=query)
+        
+        # Format the activity into AlertAudit equivalent dicts
+        formatted_activity = []
+        for entry in activity:
+            from keep.api.models.action_type import ActionType
+            action = ActionType.INCIDENT_COMMENT if entry.get("element") == "comments" else ActionType.INCIDENT_WORK_NOTE
+            formatted_activity.append({
+                "timestamp": entry.get("sys_created_on"),
+                "user_id": entry.get("sys_created_by"),
+                "action": action,
+                "description": entry.get("value"),
+            })
+        return formatted_activity
+
+    def comment_incident(self, incident_id: str, comment: str):
+        """
+        Add a comment to an incident in ServiceNow.
+        """
+        payload = {"comments": comment}
+        return self._notify(table_name="incident", payload=payload, ticket_id=incident_id, fingerprint=incident_id)
 
 
 if __name__ == "__main__":

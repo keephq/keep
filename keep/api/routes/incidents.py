@@ -902,42 +902,21 @@ def add_comment(
     pusher_client: Pusher = Depends(get_pusher_client),
     session: Session = Depends(get_session),
 ) -> AlertAudit:
-    extra = {
-        "tenant_id": authenticated_entity.tenant_id,
-        "commenter": authenticated_entity.email,
-        "comment": change.comment,
-        "incident_id": str(incident_id),
-        "tagged_users": change.tagged_users,
-    }
-    logger.info("Adding comment to incident", extra=extra)
-    comment = add_audit(
-        authenticated_entity.tenant_id,
-        str(incident_id),
-        authenticated_entity.email,
-        ActionType.INCIDENT_COMMENT,
-        change.comment,
-        session=session,
-        commit=False,
+    tenant_id = authenticated_entity.tenant_id
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    
+    comment = incident_bl.add_comment(
+        incident_id=incident_id,
+        comment=change.comment,
+        user_id=authenticated_entity.email,
+        tagged_users=change.tagged_users
     )
-
-    if change.tagged_users:
-        for user_email in change.tagged_users:
-            mention = CommentMention(
-                comment_id=comment.id,
-                mentioned_user_id=user_email,
-                tenant_id=authenticated_entity.tenant_id,
-            )
-            session.add(mention)
-
-    session.commit()
-    session.refresh(comment)
 
     if pusher_client:
         pusher_client.trigger(
-            f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
+            f"private-{tenant_id}", "incident-comment", {}
         )
 
-    logger.info("Added comment to incident", extra=extra)
     return comment
 
 
