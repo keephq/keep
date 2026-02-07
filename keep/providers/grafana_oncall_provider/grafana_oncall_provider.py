@@ -1,9 +1,10 @@
-"""
-Grafana Provider is a class that allows to ingest/digest data from Grafana.
-"""
+\"\"\"
+Grafana OnCall Provider with custom JSON support.
+\"\"\"
 
 import dataclasses
 import logging
+import json
 from typing import Literal
 from urllib.parse import urlparse, urlsplit, urlunparse
 
@@ -20,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 @pydantic.dataclasses.dataclass
 class GrafanaOncallProviderAuthConfig:
-    """
+    \"\"\"
     Grafana authentication configuration.
-    """
+    \"\"\"
 
     token: str = dataclasses.field(
         metadata={
@@ -42,9 +43,9 @@ class GrafanaOncallProviderAuthConfig:
 
 
 class GrafanaOncallProvider(BaseProvider):
-    """
+    \"\"\"
     Create incidents with Grafana OnCall.
-    """
+    \"\"\"
 
     PROVIDER_DISPLAY_NAME = "Grafana OnCall"
     PROVIDER_CATEGORY = ["Incident Management"]
@@ -52,22 +53,17 @@ class GrafanaOncallProvider(BaseProvider):
     API_URI = "api/v1"
     provider_description = "Grafana OnCall is an oncall management solution."
 
-    def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-    ):
-        super().__init__(context_manager, provider_id, config)
-
     def dispose(self):
-        """
+        \"\"\"
         Dispose the provider.
-        """
+        \"\"\"
         pass
 
     def validate_config(self):
-        """
+        \"\"\"
         Validates required configuration for Grafana provider.
 
-        """
+        \"\"\"
         self.authentication_config = GrafanaOncallProviderAuthConfig(
             **self.config.authentication
         )
@@ -111,7 +107,7 @@ class GrafanaOncallProvider(BaseProvider):
                     headers=headers,
                 )
                 response.raise_for_status()
-                for integration in response.json()['results']:
+                for integration in response.json()['results']:\
                     if integration.get("name") == KEEP_INTEGRATION_NAME:
                         existing_integration_link = integration.get("link")
                         break
@@ -122,36 +118,53 @@ class GrafanaOncallProvider(BaseProvider):
             logger.error(f"Error installing the provider: {response.status_code}")
             raise Exception(f"Error installing the provider: {response.status_code}")
         
-        if "integrations/v1/" in urlsplit(existing_integration_link).path:
+        if existing_integration_link and "integrations/v1/" in urlsplit(existing_integration_link).path:
             self.config.authentication["oncall_integration_link"] = existing_integration_link
         else:
-            Exception("Error creating the integration link, the URL is not OnCall formatted.")
+            logger.warning("Error creating the integration link, the URL is not OnCall formatted or not found.")
 
 
     def _notify(
         self,
-        title: str,
+        title: str | None = None,
         alert_uid: str | None = None,
         message: str = "",
         image_url: str = "",
         state: Literal["alerting", "resolved"] = "alerting",
         link_to_upstream_details: str = "",
+        payload: dict | str | None = None,
         **kwargs,
     ):
         headers = {
             "Content-Type": "application/json",
         }
-        response = requests.post(
-            url=self.config.authentication["oncall_integration_link"],
-            headers=headers,
-            json={
+        
+        # Use custom payload if provided
+        if payload:
+            if isinstance(payload, str):
+                try:
+                    payload_json = json.loads(payload)
+                except Exception:
+                    raise Exception("Provided payload is not a valid JSON string")
+            else:
+                payload_json = payload
+        else:
+            # Fallback to standard payload
+            if not title:
+                raise Exception("Title is required if no custom payload is provided")
+            payload_json = {
                 "title": title,
                 "message": message,
                 "alert_uid": alert_uid,
                 "image_url": image_url,
                 "state": state,
                 "link_to_upstream_details": link_to_upstream_details,
-            },
+            }
+
+        response = requests.post(
+            url=self.config.authentication["oncall_integration_link"],
+            headers=headers,
+            json=payload_json,
         )
         response.raise_for_status()
         return response.json()
@@ -181,5 +194,5 @@ if __name__ == "__main__":
         provider_type="oncall",
         provider_config=config,
     )
-    alert = provider.notify("Test Alert")
+    alert = provider.notify(title="Test Alert")
     print(alert)
