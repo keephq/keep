@@ -1,1 +1,1 @@
-from .solarwinds_provider import SolarwindsProvider
+from .solarwinds_provider import SolarwindsProvider as SolarwindsProvider
