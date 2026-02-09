@@ -1,1 +1,1 @@
-from .nagios_provider import NagiosProvider
+from .nagios_provider import NagiosProvider as NagiosProvider
