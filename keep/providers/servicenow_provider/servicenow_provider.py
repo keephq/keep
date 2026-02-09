@@ -6,7 +6,6 @@ import os
 import dataclasses
 import json
 from datetime import datetime
-from typing import Optional
 
 import pydantic
 import requests
