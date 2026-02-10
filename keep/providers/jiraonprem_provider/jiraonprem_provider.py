@@ -304,8 +304,10 @@ class JiraonpremProvider(BaseProvider):
                 "description": description,
                 "project": {"key": project_key},
                 "issuetype": {"name": issue_type},
-                "priority": {"name": priority},
             }
+
+            if priority:
+                fields["priority"] = {"name": priority}
 
             if labels:
                 fields["labels"] = labels
