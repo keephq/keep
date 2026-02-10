@@ -488,7 +488,7 @@ def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
     else:
         raise ValueError("Invalid time unit. Use 'm', 'h', 'd', or 'w'.")
 
-    current_time = datetime.datetime.utcnow()
+    current_time = datetime.datetime.now(tz=datetime.timezone.utc)
     if current_time - prevAlert.timestamp > time_delta:
         return True
     else:

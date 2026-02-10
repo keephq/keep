@@ -236,7 +236,7 @@ class IncidentDto(IncidentDtoIn):
             assignee=self.assignee,
             severity=self.severity.order,
             status=self.status.value,
-            creation_time=self.creation_time or datetime.datetime.utcnow(),
+            creation_time=self.creation_time or datetime.datetime.now(tz=datetime.timezone.utc),
             start_time=self.start_time,
             end_time=self.end_time,
             last_seen_time=self.last_seen_time,

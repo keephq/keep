@@ -228,7 +228,7 @@ class SignalfxProvider(BaseProvider):
         message = event.pop("messageBody", "")
         description = event.pop("description", "")
         name = event.pop("messageTitle", "")
-        lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
+        lastReceived = event.pop("timestamp", datetime.datetime.now(tz=datetime.timezone.utc).isoformat())
         inputs: dict = event.pop("inputs", {})
         new_inputs = []
         for key, value in inputs.items():
