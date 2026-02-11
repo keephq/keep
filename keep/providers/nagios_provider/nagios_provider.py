@@ -196,3 +196,4 @@ class NagiosProvider(BaseProvider):
 if __name__ == "__main__":
     # Test logic
     pass
+
