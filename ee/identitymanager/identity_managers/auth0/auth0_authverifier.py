@@ -1,16 +1,55 @@
+import logging
 import os
 
 import jwt
+import requests
 from fastapi import HTTPException
 
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.rbac import Admin as AdminRole
 
+logger = logging.getLogger(__name__)
+
+
+def _discover_jwks_uri(auth_domain: str) -> str:
+    """Discover the JWKS URI via the OpenID Connect Discovery endpoint.
+
+    Per the OpenID Connect Discovery 1.0 specification
+    (https://openid.net/specs/openid-connect-discovery-1_0.html#rfc.section.3),
+    the ``jwks_uri`` should be obtained from the provider's discovery document
+    at ``{issuer}/.well-known/openid-configuration``.
+
+    Falls back to the Auth0-style ``/.well-known/jwks.json`` path when the
+    discovery document is unavailable or does not contain ``jwks_uri``.
+    """
+    discovery_url = f"https://{auth_domain}/.well-known/openid-configuration"
+    try:
+        resp = requests.get(discovery_url, timeout=10)
+        resp.raise_for_status()
+        discovered_uri = resp.json().get("jwks_uri")
+        if discovered_uri:
+            return discovered_uri
+        logger.warning(
+            "OpenID discovery document at %s did not contain jwks_uri, "
+            "falling back to /.well-known/jwks.json",
+            discovery_url,
+        )
+    except Exception:
+        logger.warning(
+            "Failed to fetch OpenID discovery document from %s, "
+            "falling back to /.well-known/jwks.json",
+            discovery_url,
+            exc_info=True,
+        )
+    # Fallback: Auth0's conventional JWKS endpoint
+    return f"https://{auth_domain}/.well-known/jwks.json"
+
+
 # Note: cache_keys is set to True to avoid fetching the jwks keys on every request
 auth_domain = os.environ.get("AUTH0_DOMAIN")
 if auth_domain:
-    jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
+    jwks_uri = _discover_jwks_uri(auth_domain)
     jwks_client = jwt.PyJWKClient(
         jwks_uri, cache_keys=True, headers={"User-Agent": "keep-api"}
     )
@@ -29,7 +68,7 @@ class Auth0AuthVerifier(AuthVerifierBase):
         self.auth_domain = os.environ.get("AUTH0_DOMAIN")
         if not self.auth_domain:
             raise Exception("Missing AUTH0_DOMAIN environment variable")
-        self.jwks_uri = f"https://{self.auth_domain}/.well-known/jwks.json"
+        self.jwks_uri = _discover_jwks_uri(self.auth_domain)
         # Note: cache_keys is set to True to avoid fetching the jwks keys on every request
         #       but it currently caches only per-route. After moving this auth verifier to be a singleton, we can cache it globally
         self.issuer = f"https://{self.auth_domain}/"
