@@ -17,7 +17,6 @@ from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union, Opti
 from uuid import UUID, uuid4
 
 from dateutil.parser import parse
-from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from psycopg2.errors import NoActiveSqlTransaction
@@ -53,6 +52,7 @@ from keep.api.core.db_utils import (
     custom_serialize,
     get_json_extract_field,
     get_or_create,
+    insert_update_conflict,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
@@ -166,7 +166,7 @@ def __convert_to_uuid(value: str, should_raise: bool = False) -> UUID | None:
 
 def retry_on_db_error(f):
     @retry(
-        exceptions=(OperationalError, IntegrityError, StaleDataError),
+        exceptions=(OperationalError, IntegrityError, StaleDataError, NoActiveSqlTransaction),
         tries=3,
         delay=0.1,
         backoff=2,
@@ -177,7 +177,7 @@ def retry_on_db_error(f):
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except (OperationalError, IntegrityError, StaleDataError) as e:
+        except (OperationalError, IntegrityError, StaleDataError, NoActiveSqlTransaction) as e:
 
             if hasattr(e, "session") and not e.session.is_active:
                 e.session.rollback()
@@ -185,6 +185,11 @@ def retry_on_db_error(f):
             if "Deadlock found" in str(e):
                 logger.warning(
                     "Deadlock detected, retrying transaction", extra={"error": str(e)}
+                )
+                raise  # retry will catch this
+            elif "No active SQL transaction" in str(e):
+                logger.exception(
+                    "No active SQL transaction detected, retrying transaction", extra={"error": str(e)}
                 )
                 raise  # retry will catch this
             else:
@@ -5683,99 +5688,33 @@ def get_last_alert_by_fingerprint(
             query = query.with_for_update()
         return session.exec(query).first()
 
-
+@retry_on_db_error
 def set_last_alert(
-    tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
+    tenant_id: str, alert: Alert, session: Optional[Session] = None
 ) -> None:
     fingerprint = alert.fingerprint
     logger.info(f"Setting last alert for `{fingerprint}`")
     with existed_or_new_session(session) as session:
-        for attempt in range(max_retries):
-            logger.info(
-                f"Attempt {attempt} to set last alert for `{fingerprint}`",
-                extra={
-                    "alert_id": alert.id,
-                    "tenant_id": tenant_id,
-                    "fingerprint": fingerprint,
-                },
-            )
-            try:
-                last_alert = get_last_alert_by_fingerprint(
-                    tenant_id, fingerprint, session, for_update=True
-                )
-
-                # To prevent rare, but possible race condition
-                # For example if older alert failed to process
-                # and retried after new one
-                if last_alert and last_alert.timestamp.replace(
-                    tzinfo=tz.UTC
-                ) < alert.timestamp.replace(tzinfo=tz.UTC):
-
-                    logger.info(
-                        f"Update last alert for `{fingerprint}`: {last_alert.alert_id} -> {alert.id}",
-                        extra={
-                            "alert_id": alert.id,
-                            "tenant_id": tenant_id,
-                            "fingerprint": fingerprint,
-                        },
-                    )
-                    last_alert.timestamp = alert.timestamp
-                    last_alert.alert_id = alert.id
-                    last_alert.alert_hash = alert.alert_hash
-                    session.add(last_alert)
-
-                elif not last_alert:
-                    logger.info(f"No last alert for `{fingerprint}`, creating new")
-                    last_alert = LastAlert(
-                        tenant_id=tenant_id,
-                        fingerprint=alert.fingerprint,
-                        timestamp=alert.timestamp,
-                        first_timestamp=alert.timestamp,
-                        alert_id=alert.id,
-                        alert_hash=alert.alert_hash,
-                    )
-
-                session.add(last_alert)
-                session.commit()
-                break
-            except OperationalError as ex:
-                if "no such savepoint" in ex.args[0]:
-                    logger.info(
-                        f"No such savepoint while updating lastalert for `{fingerprint}`, retry #{attempt}"
-                    )
-                    session.rollback()
-                    if attempt >= max_retries:
-                        raise ex
-                    continue
-
-                if "Deadlock found" in ex.args[0]:
-                    logger.info(
-                        f"Deadlock found while updating lastalert for `{fingerprint}`, retry #{attempt}"
-                    )
-                    session.rollback()
-                    if attempt >= max_retries:
-                        raise ex
-                    continue
-            except NoActiveSqlTransaction:
-                logger.exception(
-                    f"No active sql transaction while updating lastalert for `{fingerprint}`, retry #{attempt}",
-                    extra={
-                        "alert_id": alert.id,
-                        "tenant_id": tenant_id,
-                        "fingerprint": fingerprint,
-                    },
-                )
-                continue
-            logger.debug(
-                f"Successfully updated lastalert for `{fingerprint}`",
-                extra={
-                    "alert_id": alert.id,
-                    "tenant_id": tenant_id,
-                    "fingerprint": fingerprint,
-                },
-            )
-            # break the retry loop
-            break
+        insert_update_conflict(LastAlert, session, data_to_insert = {
+            "tenant_id":tenant_id,
+            "fingerprint": alert.fingerprint,
+            "timestamp": alert.timestamp,
+            "first_timestamp": alert.timestamp,
+            "alert_id": alert.id,
+            "alert_hash": alert.alert_hash,
+        }, data_to_update ={
+            "timestamp": alert.timestamp,
+            "alert_id": alert.id,
+            "alert_hash": alert.alert_hash
+        }, update_newer=True)
+    logger.debug(
+            f"Successfully updated lastalert for `{fingerprint}`",
+            extra={
+                "alert_id": alert.id,
+                "tenant_id": tenant_id,
+                "fingerprint": fingerprint,
+            },
+        )
 
 def set_maintenance_windows_trace(alert: Alert, maintenance_w: MaintenanceWindowRule,  session: Optional[Session] = None):
     mw_id = str(maintenance_w.id)
