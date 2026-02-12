@@ -4,7 +4,14 @@ from arq import Retry
 from sqlmodel import Session
 
 from keep.api.bl.incidents_bl import IncidentBl
-from keep.api.core.db import engine, get_incident_by_fingerprint, get_incident_by_id
+from keep.api.core.db import (
+    add_audit,
+    engine,
+    get_incident_by_fingerprint,
+    get_incident_by_id,
+    get_alert_audit,
+)
+from keep.api.models.action_type import ActionType
 from keep.api.models.incident import IncidentDto
 from keep.api.tasks.process_event_task import process_event
 
@@ -90,6 +97,30 @@ def process_incident(
                         f"Created incident: {incident.id}",
                         extra={**extra, "fingerprint": incident.fingerprint},
                     )
+
+                # Sync activities (comments/work notes)
+                activities = getattr(incident, "activities", [])
+                if activities:
+                    logger.info(
+                        f"Syncing {len(activities)} activities for incident {incident_from_db.id}",
+                        extra=extra,
+                    )
+                    existing_audits = get_alert_audit(
+                        tenant_id, str(incident_from_db.id)
+                    )
+                    # Basic deduplication based on description (comment text)
+                    existing_descriptions = {a.description for a in existing_audits}
+                    for activity in activities:
+                        description = f"[{activity.get('type')}] {activity.get('text')}"
+                        if description not in existing_descriptions:
+                            add_audit(
+                                tenant_id=tenant_id,
+                                fingerprint=str(incident_from_db.id),
+                                user_id=activity.get("author") or "servicenow",
+                                action=ActionType.INCIDENT_COMMENT,
+                                description=description,
+                                session=session,
+                            )
 
                 try:
                     if incident.alerts:

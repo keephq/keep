@@ -2,18 +2,26 @@
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
 """
 
-import os
 import dataclasses
+import datetime
 import json
+import os
+import uuid
 
 import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
 
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
 from keep.api.models.db.topology import TopologyServiceInDto
+from keep.api.models.incident import IncidentDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import (
+    BaseIncidentProvider,
+    BaseTopologyProvider,
+)
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import HttpsUrl
 
@@ -78,7 +86,7 @@ class ServicenowProviderAuthConfig:
     )
 
 
-class ServicenowProvider(BaseTopologyProvider):
+class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
     """Manage ServiceNow tickets."""
 
     PROVIDER_CATEGORY = ["Ticketing"]
@@ -93,6 +101,25 @@ class ServicenowProvider(BaseTopologyProvider):
     ]
     PROVIDER_TAGS = ["ticketing"]
     PROVIDER_DISPLAY_NAME = "Service Now"
+
+    # Default mapping for ServiceNow states to Keep states
+    # https://docs.servicenow.com/bundle/vancouver-it-service-management/page/product/incident-management/concept/c_IncidentStateModel.html
+    INCIDENT_STATUS_MAP = {
+        "1": IncidentStatus.FIRING,  # New
+        "2": IncidentStatus.FIRING,  # In Progress
+        "3": IncidentStatus.ACKNOWLEDGED,  # On Hold
+        "6": IncidentStatus.RESOLVED,  # Resolved
+        "7": IncidentStatus.RESOLVED,  # Closed
+        "8": IncidentStatus.DELETED,  # Canceled
+    }
+
+    INCIDENT_SEVERITIES_MAP = {
+        "1": IncidentSeverity.CRITICAL,
+        "2": IncidentSeverity.HIGH,
+        "3": IncidentSeverity.WARNING,
+        "4": IncidentSeverity.INFO,
+        "5": IncidentSeverity.LOW,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -218,6 +245,7 @@ class ServicenowProvider(BaseTopologyProvider):
         incident_id: str = None,
         sysparm_limit: int = 100,
         sysparm_offset: int = 0,
+        sysparm_query: str = None,
         **kwargs: dict,
     ):
         """
@@ -227,6 +255,7 @@ class ServicenowProvider(BaseTopologyProvider):
             incident_id (str): The incident ID to query.
             sysparm_limit (int): The maximum number of records to return.
             sysparm_offset (int): The offset to start from.
+            sysparm_query (str): The query to filter records.
         """
         request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -244,14 +273,9 @@ class ServicenowProvider(BaseTopologyProvider):
         if incident_id:
             request_url = f"{request_url}/{incident_id}"
 
-        params = {"sysparm_offset": 0, "sysparm_limit": 100}
-        # Add pagination parameters if not already set
-        if sysparm_limit:
-            params["sysparm_limit"] = (
-                sysparm_limit  # Limit number of records per request
-            )
-        if sysparm_offset:
-            params["sysparm_offset"] = 0  # Start from beginning
+        params = {"sysparm_offset": sysparm_offset, "sysparm_limit": sysparm_limit}
+        if sysparm_query:
+            params["sysparm_query"] = sysparm_query
 
         response = requests.get(
             request_url,
@@ -450,7 +474,7 @@ class ServicenowProvider(BaseTopologyProvider):
 
     def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
         """
-        Create a ticket in ServiceNow.
+        Create or update a ticket in ServiceNow.
         Args:
             table_name (str): The name of the table to create the ticket in.
             payload (dict): The ticket payload.
@@ -468,18 +492,17 @@ class ServicenowProvider(BaseTopologyProvider):
         )
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
-        # otherwise, create the ticket
+            
         if not table_name:
             raise ProviderException("Table name is required")
 
-        # TODO - this could be separated into a ServicenowUpdateProvider once we support
-        if "ticket_id" in kwargs:
-            ticket_id = kwargs.pop("ticket_id")
-            fingerprint = kwargs.pop("fingerprint")
-            return self._notify_update(table_name, ticket_id, fingerprint)
-
         # In ServiceNow tables are lower case
         table_name = table_name.lower()
+
+        # Update logic
+        ticket_id = kwargs.get("ticket_id") or payload.get("sys_id")
+        if ticket_id:
+            return self._notify_update(table_name, ticket_id, payload)
 
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         # HTTP request
@@ -489,6 +512,7 @@ class ServicenowProvider(BaseTopologyProvider):
             headers=headers,
             data=json.dumps(payload),
             verify=False,
+            timeout=10,
         )
 
         if response.status_code == 201:  # HTTP status code for "Created"
@@ -510,7 +534,10 @@ class ServicenowProvider(BaseTopologyProvider):
             self.logger.info(f"Failed to create ticket: {response.text}")
             response.raise_for_status()
 
-    def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
+    def _notify_update(self, table_name: str, ticket_id: str, payload: dict):
+        """
+        Update a ticket in ServiceNow using PATCH.
+        """
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -518,35 +545,157 @@ class ServicenowProvider(BaseTopologyProvider):
                 self.authentication_config.username,
                 self.authentication_config.password,
             )
-            if self._access_token
+            if not self._access_token
             else None
         )
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
 
-        response = requests.get(
+        response = requests.patch(
             url,
             auth=auth,
             headers=headers,
+            data=json.dumps(payload),
             verify=False,
+            timeout=10,
         )
-        if response.status_code == 200:
-            resp = response.text
-            # if the instance is down due to hibranate you'll get 200 instead of 201
-            if "Want to find out why instances hibernate?" in resp:
-                raise ProviderException(
-                    "ServiceNow instance is down, you need to restart the instance."
-                )
-            # else, we are ok
-            else:
-                resp = json.loads(resp)
+        
+        if response.ok:
+            resp = response.json()
             self.logger.info("Updated ticket", extra={"resp": resp})
-            resp = resp.get("result")
-            resp["fingerprint"] = fingerprint
-            return resp
+            result = resp.get("result")
+            result["link"] = (
+                f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
+            )
+            return result
         else:
-            self.logger.info("Failed to update ticket", extra={"resp": response.text})
-            resp.raise_for_status()
+            self.logger.error("Failed to update ticket", extra={"resp": response.text})
+            response.raise_for_status()
+
+    def add_incident_comment(self, incident_id: str, comment: str, is_internal: bool = False):
+        """
+        Add a comment or work note to an incident.
+        """
+        field = "work_notes" if is_internal else "comments"
+        payload = {field: comment}
+        return self._notify(table_name="incident", payload=payload, ticket_id=incident_id)
+
+    def _get_incidents(self) -> list[IncidentDto]:
+        """
+        Fetch incidents from ServiceNow.
+        """
+        self.logger.info("Fetching incidents from ServiceNow")
+        
+        # Fetch active incidents
+        # We can also add more filters here via config if needed
+        incidents_data = self._query(table_name="incident", sysparm_query="active=true")
+        
+        if not incidents_data:
+            return []
+            
+        # Fetch journal entries for these incidents
+        sys_ids = [incident.get("sys_id") for incident in incidents_data]
+        journal_entries = self._get_journal_entries(sys_ids)
+        
+        incidents = []
+        for data in incidents_data:
+            incident_dto = self._format_incident(data, self)
+            if incident_dto:
+                # Attach activities (comments/work_notes)
+                incident_sys_id = data.get("sys_id")
+                activities = journal_entries.get(incident_sys_id, [])
+                # Attach to extra fields as Keep doesn't have activities in DTO yet
+                incident_dto.activities = activities
+                incidents.append(incident_dto)
+                
+        self.logger.info(f"Fetched {len(incidents)} incidents from ServiceNow")
+        return incidents
+
+    @staticmethod
+    def _format_incident(
+        data: dict, provider_instance: "ServicenowProvider" = None
+    ) -> IncidentDto:
+        """
+        Format ServiceNow incident data into IncidentDto.
+        """
+        if not data:
+            return None
+            
+        sys_id = data.get("sys_id")
+        number = data.get("number")
+        
+        # Map status
+        state = data.get("state")
+        status = ServicenowProvider.INCIDENT_STATUS_MAP.get(state, IncidentStatus.FIRING)
+        
+        # Map severity
+        # ServiceNow has 'severity', 'urgency', 'priority'
+        # Usually priority is used, but the issue mentioned severity
+        sn_severity = data.get("severity", "3")
+        severity = ServicenowProvider.INCIDENT_SEVERITIES_MAP.get(sn_severity, IncidentSeverity.INFO)
+        
+        # Creation time
+        created_on = data.get("sys_created_on")
+        if created_on:
+            try:
+                # ServiceNow format: YYYY-MM-DD HH:MM:SS
+                creation_time = datetime.datetime.strptime(created_on, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                creation_time = datetime.datetime.utcnow()
+        else:
+            creation_time = datetime.datetime.utcnow()
+            
+        # Assignee
+        assigned_to = data.get("assigned_to")
+        assignee = None
+        if isinstance(assigned_to, dict):
+            assignee = assigned_to.get("display_value") or assigned_to.get("value")
+        elif assigned_to:
+            assignee = assigned_to
+
+        return IncidentDto(
+            id=uuid.uuid5(uuid.NAMESPACE_DNS, f"servicenow-{sys_id}"), # Deterministic UUID
+            user_generated_name=f"{number}: {data.get('short_description')}",
+            user_summary=data.get("description") or data.get("short_description"),
+            status=status,
+            severity=severity,
+            creation_time=creation_time,
+            assignee=assignee,
+            alert_sources=["servicenow"],
+            services=[], # Can be populated from cmdb if needed
+            is_predicted=False,
+            is_candidate=False,
+            fingerprint=sys_id,
+        )
+
+    def _get_journal_entries(self, element_ids: list[str]) -> dict[str, list[dict]]:
+        """
+        Fetch journal entries (comments/work notes) for given sys_ids.
+        """
+        if not element_ids:
+            return {}
+            
+        # ServiceNow sysparm_query supports IN operator
+        query = f"element_idIN{','.join(element_ids)}"
+        entries_data = self._query(table_name="sys_journal_field", sysparm_query=query)
+        
+        journal_map = {}
+        for entry in entries_data:
+            element_id = entry.get("element_id")
+            if element_id not in journal_map:
+                journal_map[element_id] = []
+            
+            # Format entry to a standard Keep activity format
+            activity = {
+                "id": entry.get("sys_id"),
+                "text": entry.get("value"),
+                "author": entry.get("sys_created_by"),
+                "timestamp": entry.get("sys_created_on"),
+                "type": entry.get("element"), # 'comments' or 'work_notes'
+            }
+            journal_map[element_id].append(activity)
+            
+        return journal_map
 
 
 if __name__ == "__main__":
@@ -562,12 +711,9 @@ if __name__ == "__main__":
     import os
     from unittest.mock import patch
 
-    service_now_base_url = os.environ.get("SERVICENOW_BASE_URL", "https://meow.me")
+    service_now_base_url = os.environ.get("SERVICENOW_BASE_URL", "https://dev12345.service-now.com")
     service_now_username = os.environ.get("SERVICENOW_USERNAME", "admin")
     service_now_password = os.environ.get("SERVICENOW_PASSWORD", "admin")
-    mock_real_requests_with_json_data = (
-        os.environ.get("MOCK_REAL_REQUESTS_WITH_JSON_DATA", "true").lower() == "true"
-    )
 
     # Initalize the provider and provider config
     config = ProviderConfig(
@@ -583,39 +729,23 @@ if __name__ == "__main__":
     )
 
     def mock_get(*args, **kwargs):
-        """
-        Mock topology responses using json files.
-        """
-
         class MockResponse:
-            def __init__(self):
+            def __init__(self, json_data):
                 self.ok = True
                 self.status_code = 200
-                self.url = args[0]
-
+                self.json_data = json_data
             def json(self):
-                if "cmdb_ci" in self.url:
-                    with open(
-                        os.path.join(os.path.dirname(__file__), "cmdb_ci.json")
-                    ) as f:
-                        return json.load(f)
-                elif "cmdb_rel_type" in self.url:
-                    with open(
-                        os.path.join(os.path.dirname(__file__), "cmdb_rel_type.json")
-                    ) as f:
-                        return json.load(f)
-                elif "cmdb_rel_ci" in self.url:
-                    with open(
-                        os.path.join(os.path.dirname(__file__), "cmdb_rel_ci.json")
-                    ) as f:
-                        return json.load(f)
-                return {}
+                return self.json_data
+        
+        url = args[0]
+        if "incident" in url:
+            return MockResponse({"result": [{"sys_id": "123", "number": "INC123", "short_description": "Test", "state": "1", "sys_created_on": "2024-01-01 10:00:00"}]})
+        elif "sys_journal_field" in url:
+            return MockResponse({"result": [{"element_id": "123", "value": "Test comment", "sys_created_by": "admin", "sys_created_on": "2024-01-01 10:05:00", "element": "comments"}]})
+        return MockResponse({"result": []})
 
-        return MockResponse()
-
-    if mock_real_requests_with_json_data:
-        with patch("requests.get", side_effect=mock_get):
-            r = provider.pull_topology()
-    else:
-        r = provider.pull_topology()
-    print(r)
+    with patch("requests.get", side_effect=mock_get):
+        incidents = provider.get_incidents()
+        print(f"Pulled {len(incidents)} incidents")
+        for inc in incidents:
+            print(f"Incident: {inc.fingerprint}, Activities: {inc.activities}")
