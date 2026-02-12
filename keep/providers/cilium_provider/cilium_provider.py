@@ -54,6 +54,10 @@ class CiliumProvider(BaseTopologyProvider):
             return label.split("=")[1]
         elif label.startswith("k8s:app.kubernetes.io/name="):
             return label.split("=")[1]
+        elif label.startswith("k8s:io.kubernetes.container.name="):
+            return label.split("=")[1]
+        elif label.startswith("k8s:io.cilium.k8s.policy.service-name="):
+            return label.split("=")[1]
 
         return None
 
