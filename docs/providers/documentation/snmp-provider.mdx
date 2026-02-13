@@ -1,0 +1,127 @@
+---
+title: "SNMP"
+sidebarTitle: "SNMP Provider"
+description: "SNMP Provider allows receiving SNMP traps as alerts in Keep"
+---
+
+import ReactPlayer from "react-player";
+
+<Tip>
+SNMP (Simple Network Management Protocol) traps are notifications sent by network devices when specific events occur. This provider enables Keep to receive these traps as alerts.
+</Tip>
+
+## Overview
+
+The SNMP Provider receives SNMP traps forwarded from an SNMP trap receiver (like snmptrapd) and converts them into Keep alerts. This enables monitoring of network devices, servers, and any equipment that sends SNMP traps.
+
+## Connecting SNMP to Keep
+
+### Option 1: Using snmptrapd (Recommended)
+
+1. Install net-snmp on your trap receiver:
+   ```bash
+   # Debian/Ubuntu
+   apt install snmpd snmptrapd
+   
+   # RHEL/CentOS
+   yum install net-snmp net-snmp-utils
+   ```
+
+2. Configure `/etc/snmp/snmptrapd.conf`:
+   ```
+   authCommunity log,execute,net public
+   traphandle default /usr/local/bin/keep-snmp-forwarder.sh
+   ```
+
+3. Create the forwarder script `/usr/local/bin/keep-snmp-forwarder.sh`:
+   ```bash
+   #!/bin/bash
+   KEEP_WEBHOOK_URL="https://your-keep-instance/alerts/event/snmp"
+   API_KEY="your-api-key"
+
+   # Read trap data from stdin
+   read host
+   read ip
+   vars=""
+   while read oid val; do
+       vars="$vars\"$oid\": \"$val\","
+   done
+
+   # Send to Keep
+   curl -X POST "$KEEP_WEBHOOK_URL" \
+     -H "Content-Type: application/json" \
+     -H "x-api-key: $API_KEY" \
+     -d "{\"host\": \"$host\", \"source_ip\": \"$ip\", \"variables\": {${vars%,}}}"
+   ```
+
+4. Make executable and restart:
+   ```bash
+   chmod +x /usr/local/bin/keep-snmp-forwarder.sh
+   systemctl restart snmptrapd
+   ```
+
+### Option 2: Direct JSON Webhook
+
+Send SNMP trap data directly as JSON:
+
+```bash
+curl -X POST "https://your-keep-instance/alerts/event/snmp" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "host": "router1.example.com",
+    "source_ip": "192.168.1.1",
+    "trap_oid": "1.3.6.1.6.3.1.1.5.4",
+    "enterprise": "1.3.6.1.4.1.9",
+    "severity": "warning",
+    "message": "Interface Gi0/1 went down",
+    "variables": {
+      "1.3.6.1.2.1.2.2.1.1": "1",
+      "1.3.6.1.2.1.2.2.1.2": "GigabitEthernet0/1"
+    }
+  }'
+```
+
+## Webhook Payload Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `host` | string | Yes | Hostname or IP of the device sending the trap |
+| `source_ip` | string | No | Source IP address |
+| `trap_oid` | string | No | The trap OID (e.g., `1.3.6.1.6.3.1.1.5.3` for linkDown) |
+| `enterprise` | string | No | Enterprise OID |
+| `generic_trap` | integer | No | Generic trap type (0-6) |
+| `specific_trap` | integer | No | Specific trap number |
+| `severity` | string | No | Severity level: `critical`, `major`, `minor`, `warning`, `info` |
+| `message` | string | No | Human-readable message |
+| `variables` | object | No | Key-value pairs of SNMP variable bindings |
+| `community` | string | No | SNMP community string |
+| `version` | string | No | SNMP version (v1, v2c, v3) |
+
+## Severity Mapping
+
+### By Generic Trap Type
+
+| Generic Trap | Severity |
+|-------------|----------|
+| 0 (coldStart) | Info |
+| 1 (warmStart) | Info |
+| 2 (linkDown) | Critical |
+| 3 (linkUp) | Info |
+| 4 (authenticationFailure) | Warning |
+| 5 (egpNeighborLoss) | Warning |
+| 6 (enterpriseSpecific) | Info |
+
+### By Trap OID
+
+| OID | Name | Severity | Status |
+|-----|------|----------|--------|
+| 1.3.6.1.6.3.1.1.5.3 | linkDown | Critical | Firing |
+| 1.3.6.1.6.3.1.1.5.4 | linkUp | Info | Resolved |
+| 1.3.6.1.6.3.1.1.5.5 | authenticationFailure | Warning | Firing |
+
+## Useful Links
+
+- [Net-SNMP Documentation](http://www.net-snmp.org/docs/)
+- [SNMP Trap OID Reference](https://oidref.com/1.3.6.1.6.3.1.1.5)
+- [RFC 1157 - SNMP](https://www.rfc-editor.org/rfc/rfc1157)
