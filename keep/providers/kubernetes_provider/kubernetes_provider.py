@@ -19,7 +19,7 @@ class KubernetesProviderAuthConfig:
         metadata={
             "name": "api_server",
             "description": "The kubernetes api server url",
-            "required": True,
+            "required": False,
             "sensitive": False,
             "validation": "any_http_url",
         },
@@ -29,7 +29,7 @@ class KubernetesProviderAuthConfig:
         metadata={
             "name": "token",
             "description": "Bearer token to access kubernetes",
-            "required": True,
+            "required": False,
             "sensitive": True,
         },
     )
@@ -82,16 +82,29 @@ class KubernetesProvider(BaseProvider):
     def __create_k8s_client(self):
         """
         Create a Kubernetes client.
+        Supports:
+        1. API server and token
+        2. In-cluster configuration (fallback)
         """
-        client_configuration = client.Configuration()
-
-        client_configuration.host = self.authentication_config.api_server
-        client_configuration.verify_ssl = not self.authentication_config.insecure
-        client_configuration.api_key = {
-            "authorization": "Bearer " + self.authentication_config.token
-        }
-
-        return client.ApiClient(client_configuration)
+        if self.authentication_config.api_server and self.authentication_config.token:
+            client_configuration = client.Configuration()
+            client_configuration.host = str(self.authentication_config.api_server)
+            client_configuration.verify_ssl = not self.authentication_config.insecure
+            client_configuration.api_key = {
+                "authorization": "Bearer " + self.authentication_config.token
+            }
+            return client.ApiClient(client_configuration)
+        else:
+            try:
+                config.load_incluster_config()
+                return client.ApiClient()
+            except config.ConfigException:
+                self.logger.error(
+                    "Failed to load Kubernetes configuration (no API server/token and not in-cluster)"
+                )
+                raise Exception(
+                    "Kubernetes authentication failed: Provide api_server/token or run in-cluster"
+                )
 
     def validate_scopes(self):
         """
