@@ -8,6 +8,7 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.db.topology import (
     TopologyApplicationDtoIn,
     TopologyService,
+    TopologyServiceApplication,
     TopologyServiceDependency,
     TopologyServiceDtoIn,
     TopologyServiceInDto,
@@ -42,21 +43,40 @@ def process_topology(
             extra=extra,
         )
 
-        # delete dependencies
-        session.query(TopologyServiceDependency).filter(
-            TopologyServiceDependency.service.has(
-                and_(
-                    TopologyService.source_provider_id == provider_id,
-                    TopologyService.tenant_id == tenant_id,
-                )
+        # Get the IDs of services that will be deleted so we can clean up
+        # related records first
+        service_ids_to_delete = [
+            service_id
+            for (service_id,) in session.query(TopologyService.id)
+            .filter(
+                TopologyService.source_provider_id == provider_id,
+                TopologyService.tenant_id == tenant_id,
             )
-        ).delete(synchronize_session=False)
+            .all()
+        ]
 
-        # delete services
-        session.query(TopologyService).filter(
-            TopologyService.source_provider_id == provider_id,
-            TopologyService.tenant_id == tenant_id,
-        ).delete()
+        if service_ids_to_delete:
+            # delete service-application associations (no CASCADE on this FK)
+            session.query(TopologyServiceApplication).filter(
+                TopologyServiceApplication.service_id.in_(service_ids_to_delete)
+            ).delete(synchronize_session=False)
+
+            # delete dependencies
+            session.query(TopologyServiceDependency).filter(
+                TopologyServiceDependency.service_id.in_(service_ids_to_delete)
+            ).delete(synchronize_session=False)
+
+            # Also delete dependencies where these services are the target
+            session.query(TopologyServiceDependency).filter(
+                TopologyServiceDependency.depends_on_service_id.in_(
+                    service_ids_to_delete
+                )
+            ).delete(synchronize_session=False)
+
+            # delete services
+            session.query(TopologyService).filter(
+                TopologyService.id.in_(service_ids_to_delete)
+            ).delete(synchronize_session=False)
 
         session.commit()
         logger.info(
