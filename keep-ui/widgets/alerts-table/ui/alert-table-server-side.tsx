@@ -35,7 +35,6 @@ import {
   evalWithContext,
 } from "@/features/presets/presets-manager";
 import { severityMapping } from "@/entities/alerts/model";
-import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import {
@@ -232,10 +231,11 @@ export function AlertTableServerSide({
     [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange]
   );
 
-  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
     useState<boolean>(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const leftPinnedColumns = noisyAlertsEnabled
     ? ["severity", "checkbox", "status", "source", "noise"]
@@ -328,8 +328,11 @@ export function AlertTableServerSide({
     });
 
     setLastViewedAlert(alert.fingerprint);
-    setSelectedAlert(alert);
-    setIsSidebarOpen(true);
+    
+    // Open sidebar via URL parameter
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set("sidebarFingerprint", alert.fingerprint);
+    router.replace(`${window.location.pathname}?${currentParams.toString()}`);
   };
 
   const facetsConfig: FacetsConfig = useMemo(() => {
@@ -416,10 +419,7 @@ export function AlertTableServerSide({
 
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
-  const router = useRouter();
-  const pathname = usePathname();
   // handle "create incident with AI from last 25 alerts" if ?createIncidentsFromLastAlerts=25
-  const searchParams = useSearchParams();
   useEffect(() => {
     if (alerts.length === 0 && selectedAlertsFingerprints.length) {
       return;
@@ -754,25 +754,6 @@ export function AlertTableServerSide({
         </div>
       </div>
 
-      <AlertSidebar
-        isOpen={isSidebarOpen}
-        toggle={() => setIsSidebarOpen(false)}
-        alert={selectedAlert}
-        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-        setDismissModalAlert={setDismissModalAlert}
-        setChangeStatusAlert={setChangeStatusAlert}
-        setIsIncidentSelectorOpen={() => {
-          if (selectedAlert) {
-            table
-              .getRowModel()
-              .rows.find(
-                (row) => row.original.fingerprint === selectedAlert.fingerprint
-              )
-              ?.toggleSelected();
-            setIsIncidentSelectorOpen(true);
-          }
-        }}
-      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import IncidentAlerts from '../incident-alerts';
 import type { 
   IncidentDto, 
@@ -24,6 +24,7 @@ import { useConfig } from '@/utils/hooks/useConfig';
 // Mock the dependencies
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(),
 }));
 
 jest.mock('@/utils/hooks/useIncidents', () => ({
@@ -218,6 +219,11 @@ describe('IncidentAlerts', () => {
     // Setup default mock returns
     (useRouter as jest.Mock).mockReturnValue({
       push: jest.fn(),
+      replace: jest.fn(),
+    });
+
+    (useSearchParams as jest.Mock).mockReturnValue({
+      get: jest.fn(() => null),
     });
 
     (useIncidentAlerts as jest.Mock).mockReturnValue({
@@ -261,6 +267,12 @@ describe('IncidentAlerts', () => {
   // - Row clicks open AlertSidebar
 
   it('opens AlertSidebar when clicking on alert row', async () => {
+    const mockReplace = jest.fn();
+    (useRouter as jest.Mock).mockReturnValue({
+      push: jest.fn(),
+      replace: mockReplace,
+    });
+
     render(<IncidentAlerts incident={mockIncident} />);
 
     // Click on the first alert row
@@ -269,10 +281,11 @@ describe('IncidentAlerts', () => {
       fireEvent.click(alertRow);
     }
 
-    // Check if AlertSidebar is opened
+    // Verify that the URL was updated with the sidebarFingerprint parameter
     await waitFor(() => {
-      expect(screen.getByTestId('alert-sidebar')).toBeInTheDocument();
-      expect(screen.getByTestId('alert-sidebar-content')).toHaveTextContent('Test Alert 1');
+      expect(mockReplace).toHaveBeenCalled();
+      const callArg = mockReplace.mock.calls[0][0];
+      expect(callArg).toContain('sidebarFingerprint=alert-1');
     });
   });
 
