@@ -1,0 +1,12 @@
+{
+  "title": "feat: add MongoDB Atlas provider for cloud alerts",
+  "body": "This PR adds a new provider for MongoDB Atlas that pulls cloud alerts (alerts from projects/groups) into Keep. 
+
+Implementation details:
+- New `MongoatlasProvider` class.
+- Supports Public API Key, Private API Key, and Group ID.
+- Maps Atlas severities (INFORMATIONAL, WARNING, CRITICAL) to Keep severities.
+- Uses HTTP Digest Auth for Atlas API.",
+  "head": "nylyy0325:feat/mongo-atlas-provider",
+  "base": "main"
+}

@@ -1,0 +1,11 @@
+{
+  "body": "This PR adds a new provider for MongoDB Atlas that pulls cloud alerts (alerts from projects/groups) into Keep.
+
+Closes #1839
+
+Implementation details:
+- New `MongoatlasProvider` class.
+- Supports Public API Key, Private API Key, and Group ID.
+- Maps Atlas severities (INFORMATIONAL, WARNING, CRITICAL) to Keep severities.
+- Uses HTTP Digest Auth for Atlas API."
+}

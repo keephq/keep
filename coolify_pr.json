@@ -1,0 +1,12 @@
+{
+  "title": "feat: add OpenReplay as a one-click service template",
+  "body": "This PR adds OpenReplay as a one-click service template to Coolify. 
+
+Closes #8232
+
+Implementation details:
+- Created `templates/compose/openreplay.yaml` with necessary metadata.
+- Configured basic single-service deployment using official OpenReplay images.",
+  "head": "nylyy0325:feat/add-openreplay-service",
+  "base": "v4.x"
+}
