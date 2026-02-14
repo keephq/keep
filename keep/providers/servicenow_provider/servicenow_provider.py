@@ -9,11 +9,14 @@ import json
 import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
+from dateutil.parser import parse
 
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.api.models.db.incident import IncidentStatus
+from keep.api.models.incident import IncidentDto
+from keep.providers.base.base_provider import BaseTopologyProvider, BaseIncidentProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import HttpsUrl
 
@@ -78,7 +81,7 @@ class ServicenowProviderAuthConfig:
     )
 
 
-class ServicenowProvider(BaseTopologyProvider):
+class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
     """Manage ServiceNow tickets."""
 
     PROVIDER_CATEGORY = ["Ticketing"]
@@ -218,6 +221,8 @@ class ServicenowProvider(BaseTopologyProvider):
         incident_id: str = None,
         sysparm_limit: int = 100,
         sysparm_offset: int = 0,
+        sysparm_query: str = None,
+        sysparm_display_value: bool = True,
         **kwargs: dict,
     ):
         """
@@ -227,31 +232,31 @@ class ServicenowProvider(BaseTopologyProvider):
             incident_id (str): The incident ID to query.
             sysparm_limit (int): The maximum number of records to return.
             sysparm_offset (int): The offset to start from.
+            sysparm_query (str): The query to filter results.
+            sysparm_display_value (bool): Whether to return display values.
         """
         request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        auth = (
-            (
+        auth = None
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        else:
+            auth = (
                 self.authentication_config.username,
                 self.authentication_config.password,
             )
-            if not self._access_token
-            else None
-        )
-        if self._access_token:
-            headers["Authorization"] = f"Bearer {self._access_token}"
 
         if incident_id:
             request_url = f"{request_url}/{incident_id}"
 
-        params = {"sysparm_offset": 0, "sysparm_limit": 100}
-        # Add pagination parameters if not already set
-        if sysparm_limit:
-            params["sysparm_limit"] = (
-                sysparm_limit  # Limit number of records per request
-            )
-        if sysparm_offset:
-            params["sysparm_offset"] = 0  # Start from beginning
+        params = {
+            "sysparm_limit": sysparm_limit,
+            "sysparm_offset": sysparm_offset,
+            "sysparm_display_value": str(sysparm_display_value).lower(),
+        }
+
+        if sysparm_query:
+            params["sysparm_query"] = sysparm_query
 
         response = requests.get(
             request_url,
@@ -262,14 +267,162 @@ class ServicenowProvider(BaseTopologyProvider):
             timeout=10,
         )
 
-        if not response.ok:
+        try:
+            response_json = response.json()
+        except Exception:
             self.logger.error(
-                f"Failed to query {table_name}",
+                f"Failed to parse JSON response from {table_name}",
                 extra={"status_code": response.status_code, "response": response.text},
             )
             return []
 
-        return response.json().get("result", [])
+        return response_json.get("result", [])
+
+    def _get_incidents(self) -> list[IncidentDto]:
+        """
+        Get incidents from ServiceNow.
+        """
+        # ServiceNow sys_updated_on format is YYYY-MM-DD HH:MM:SS
+        # Use sysparm_display_value=false for consistent UTC/internal format
+        query = "active=true"
+        # Use delta-polling based on last_pull_time
+        if self.config.last_pull_time:
+            query += f"^sys_updated_on>{self.config.last_pull_time.strftime('%Y-%m-%d %H:%M:%S')}"
+
+        incidents_data = []
+        offset = 0
+        limit = 100
+        
+        while True:
+            batch = self._query(
+                "incident", 
+                sysparm_query=query, 
+                sysparm_limit=limit, 
+                sysparm_offset=offset,
+                sysparm_display_value=False
+            )
+            if not batch:
+                break
+            incidents_data.extend(batch)
+            if len(batch) < limit:
+                break
+            offset += limit
+
+        # Batch fetch activity stream for all incidents to avoid N+1 query problem
+        sys_ids = [incident.get("sys_id") for incident in incidents_data]
+        activity_map = self._get_batch_activity_stream(sys_ids)
+
+        incidents = []
+        for incident_data in incidents_data:
+            formatted_incident = self._format_incident(
+                incident_data, 
+                activity_stream=activity_map.get(incident_data.get("sys_id"), [])
+            )
+            incidents.append(formatted_incident)
+        return incidents
+
+    @staticmethod
+    def _format_incident(
+        incident_data: dict, activity_stream: list[dict] = None
+    ) -> IncidentDto:
+        """
+        Format a ServiceNow incident into a Keep IncidentDto.
+        """
+        # Map ServiceNow states to Keep IncidentStatus
+        # ServiceNow states: 1: New, 2: In Progress, 3: On Hold, 6: Resolved, 7: Closed, 8: Canceled
+        sn_state = str(incident_data.get("state"))
+        if sn_state in ["1", "2", "3"]:
+            status = IncidentStatus.FIRING
+        elif sn_state in ["6", "7"]:
+            status = IncidentStatus.RESOLVED
+        else:
+            # Handle state 8 (Canceled) and others as resolved to avoid zombie alerts
+            status = IncidentStatus.RESOLVED
+
+        # Map ServiceNow urgency/priority to Keep IncidentSeverity (simplified)
+        # Priority: 1: Critical, 2: High, 3: Moderate, 4: Low, 5: Planning
+        sn_priority = str(incident_data.get("priority"))
+        from keep.api.models.db.incident import IncidentSeverity
+
+        if sn_priority == "1":
+            severity = IncidentSeverity.CRITICAL
+        elif sn_priority == "2":
+            severity = IncidentSeverity.HIGH
+        elif sn_priority == "3":
+            severity = IncidentSeverity.WARNING
+        else:
+            severity = IncidentSeverity.INFO
+
+        # Create the IncidentDto
+        incident_dto = IncidentDto(
+            id=incident_data.get("sys_id"),
+            user_generated_name=incident_data.get("number"),
+            user_summary=incident_data.get("short_description"),
+            status=status,
+            severity=severity,
+            assignee=incident_data.get("assigned_to"),
+            creation_time=parse(incident_data.get("sys_created_on"))
+            if incident_data.get("sys_created_on")
+            else None,
+            start_time=parse(incident_data.get("sys_created_on"))
+            if incident_data.get("sys_created_on")
+            else None,
+            last_seen_time=parse(incident_data.get("sys_updated_on"))
+            if incident_data.get("sys_updated_on")
+            else None,
+            alerts_count=0,  # Will be populated by the rules engine
+            alert_sources=["servicenow"],
+            services=[incident_data.get("cmdb_ci")]
+            if incident_data.get("cmdb_ci")
+            else [],
+            is_predicted=False,
+            is_candidate=False,
+            fingerprint=incident_data.get("sys_id"),
+        )
+
+        if activity_stream:
+            incident_dto.enrichments["activity_stream"] = activity_stream
+
+        return incident_dto
+
+    def _get_batch_activity_stream(self, incident_sys_ids: list[str]) -> dict[str, list[dict]]:
+        """
+        Query the sys_journal_field table in batch to pull work_notes and comments.
+        """
+        if not incident_sys_ids:
+            return {}
+
+        # Batch query using IN operator
+        sys_id_query = ",".join(incident_sys_ids)
+        query = f"element_idIN{sys_id_query}^elementINcomments,work_notes"
+        
+        journal_entries = self._query(
+            "sys_journal_field", 
+            sysparm_query=query, 
+            sysparm_limit=1000, 
+            sysparm_display_value=False
+        )
+
+        activity_map = {}
+        for entry in journal_entries:
+            incident_id = entry.get("element_id")
+            if incident_id not in activity_map:
+                activity_map[incident_id] = []
+            
+            activity_map[incident_id].append(
+                {
+                    "type": entry.get("element"),
+                    "value": entry.get("value"),
+                    "created_by": entry.get("sys_created_by"),
+                    "created_on": entry.get("sys_created_on"),
+                }
+            )
+        
+        # Sort each incident's stream by creation date
+        for stream in activity_map.values():
+            stream.sort(key=lambda x: x.get("created_on", ""))
+            
+        return activity_map
 
     def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         # TODO: in scale, we'll need to use pagination around here
@@ -295,7 +448,7 @@ class ServicenowProvider(BaseTopologyProvider):
             "sys_id",
             "ip_address",
             "mac_address",
-            "owned_by.name"
+            "owned_by.name",
             "manufacturer.name",  # Retrieve the name of the manufacturer
             "short_description",
             "environment",
@@ -458,16 +611,14 @@ class ServicenowProvider(BaseTopologyProvider):
             fingerprint (str): The fingerprint of the ticket (optional to update a ticket).
         """
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        auth = (
-            (
+        auth = None
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        else:
+            auth = (
                 self.authentication_config.username,
                 self.authentication_config.password,
             )
-            if not self._access_token
-            else None
-        )
-        if self._access_token:
-            headers["Authorization"] = f"Bearer {self._access_token}"
         # otherwise, create the ticket
         if not table_name:
             raise ProviderException("Table name is required")
@@ -513,16 +664,14 @@ class ServicenowProvider(BaseTopologyProvider):
     def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        auth = (
-            (
+        auth = None
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        else:
+            auth = (
                 self.authentication_config.username,
                 self.authentication_config.password,
             )
-            if self._access_token
-            else None
-        )
-        if self._access_token:
-            headers["Authorization"] = f"Bearer {self._access_token}"
 
         response = requests.get(
             url,
@@ -546,7 +695,7 @@ class ServicenowProvider(BaseTopologyProvider):
             return resp
         else:
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
-            resp.raise_for_status()
+            response.raise_for_status()
 
 
 if __name__ == "__main__":
