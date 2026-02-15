@@ -4,8 +4,11 @@ ServicenowProvider is a class that implements the BaseProvider interface for Ser
 
 import os
 import dataclasses
+import hashlib
 import json
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
+from typing import Optional
 
 import pydantic
 import requests
@@ -96,43 +99,53 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
     ]
     PROVIDER_TAGS = ["ticketing", "incident"]
     PROVIDER_DISPLAY_NAME = "Service Now"
-    
-    # Mapping ServiceNow incident states to Keep incident statuses
-    STATUS_MAP = {
-        "1": IncidentStatus.FIRING,  # New
-        "2": IncidentStatus.FIRING,  # In Progress
+    FINGERPRINT_FIELDS = ["number"]
+
+    # ServiceNow incident state mapping
+    # https://docs.servicenow.com/bundle/sandiego-it-service-management/page/product/incident-management/reference/r_IncidentStates.html
+    INCIDENT_STATUS_MAP = {
+        "1": IncidentStatus.FIRING,       # New
+        "2": IncidentStatus.ACKNOWLEDGED,  # In Progress
         "3": IncidentStatus.ACKNOWLEDGED,  # On Hold
-        "6": IncidentStatus.RESOLVED,  # Resolved
-        "7": IncidentStatus.RESOLVED,  # Closed
-        "8": IncidentStatus.RESOLVED,  # Canceled
+        "6": IncidentStatus.RESOLVED,      # Resolved
+        "7": IncidentStatus.RESOLVED,      # Closed
+        "8": IncidentStatus.RESOLVED,      # Canceled
     }
-    
-    # Mapping ServiceNow severity to Keep severity
-    SEVERITY_MAP = {
-        "1": IncidentSeverity.CRITICAL,  # Critical
-        "2": IncidentSeverity.HIGH,      # High
-        "3": IncidentSeverity.WARNING,   # Moderate
-        "4": IncidentSeverity.INFO,      # Low
-        "5": IncidentSeverity.INFO,      # Planning
+
+    # ServiceNow impact to severity mapping
+    INCIDENT_SEVERITY_MAP = {
+        "1": IncidentSeverity.CRITICAL,  # High
+        "2": IncidentSeverity.WARNING,   # Medium
+        "3": IncidentSeverity.LOW,       # Low
     }
-    
+
     PROVIDER_METHODS = [
         ProviderMethod(
-            name="sync_incident_activities",
+            name="Get Incidents",
+            func_name="get_incidents",
+            scopes=["itil"],
+            description="Fetch all incidents from ServiceNow",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Get Incident Activities",
+            func_name="get_incident_activities",
+            scopes=["itil"],
+            description="Get work notes and comments from a ServiceNow incident",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Add Incident Activity",
+            func_name="add_incident_activity",
+            scopes=["itil"],
+            description="Add a work note or comment to a ServiceNow incident",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Sync Incident Activities",
             func_name="sync_incident_activities",
-            description="Sync activities between ServiceNow and Keep incidents",
-            type="action",
-        ),
-        ProviderMethod(
-            name="pull_servicenow_activities",
-            func_name="_get_incident_activities",
-            description="Pull activities from a ServiceNow incident",
-            type="action",
-        ),
-        ProviderMethod(
-            name="push_activity_to_servicenow",
-            func_name="_add_incident_activity",
-            description="Add an activity to a ServiceNow incident",
+            scopes=["itil"],
+            description="Sync activities between ServiceNow and Keep incidents bidirectionally",
             type="action",
         ),
     ]
@@ -255,20 +268,62 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             **self.config.authentication
         )
 
-    def _get_auth_and_headers(self):
-        """Get authentication and headers for ServiceNow API requests."""
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        auth = (
-            (
-                self.authentication_config.username,
-                self.authentication_config.password,
-            )
-            if not self._access_token
-            else None
+    def _get_auth(self):
+        """Get authentication tuple or None if using OAuth."""
+        if self._access_token:
+            return None
+        return (
+            self.authentication_config.username,
+            self.authentication_config.password,
         )
+
+    def _get_headers(self):
+        """Get request headers including auth token if available."""
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
+        return headers
+
+    def _get_auth_and_headers(self):
+        """Get authentication and headers for ServiceNow API requests."""
+        headers = self._get_headers()
+        auth = self._get_auth()
         return auth, headers
+
+    def get_incidents(self) -> list[IncidentDto]:
+        """
+        Public method to get incidents from ServiceNow.
+        
+        Returns:
+            list[IncidentDto]: List of incidents from ServiceNow
+        """
+        return self._get_incidents()
+
+    def get_incident_activities(self, incident_id: str) -> list[dict]:
+        """
+        Public method to get activities from a ServiceNow incident.
+        
+        Args:
+            incident_id (str): The ServiceNow incident sys_id or number
+            
+        Returns:
+            list[dict]: List of activity entries
+        """
+        return self._get_incident_activities(incident_id)
+
+    def add_incident_activity(self, incident_id: str, content: str, activity_type: str = "work_notes") -> dict:
+        """
+        Public method to add an activity to a ServiceNow incident.
+        
+        Args:
+            incident_id (str): The ServiceNow incident sys_id
+            content (str): The activity content
+            activity_type (str): Either "work_notes" or "comments"
+            
+        Returns:
+            dict: The created activity details
+        """
+        return self._add_incident_activity(incident_id, content, activity_type)
 
     def _get_incidents(self) -> list[IncidentDto]:
         """
@@ -352,11 +407,11 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         
         # Map ServiceNow state to Keep status
         state = sn_incident.get("state", "1")
-        status = ServicenowProvider.STATUS_MAP.get(state, IncidentStatus.FIRING)
+        status = ServicenowProvider.INCIDENT_STATUS_MAP.get(state, IncidentStatus.FIRING)
         
         # Map priority/impact to severity
         impact = sn_incident.get("impact", "3")
-        severity = ServicenowProvider.SEVERITY_MAP.get(impact, IncidentSeverity.INFO)
+        severity = ServicenowProvider.INCIDENT_SEVERITY_MAP.get(impact, IncidentSeverity.INFO)
         
         # Generate a UUID from the sys_id
         import hashlib
