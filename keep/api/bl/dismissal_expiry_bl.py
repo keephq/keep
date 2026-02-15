@@ -136,8 +136,10 @@ class DismissalExpiryBl:
         """
         logger.info("Starting dismissal expiry check")
         
+        created_session = False
         if session is None:
             session = get_session_sync()
+            created_session = True
             
         try:
             # Find enrichments with expired dismissedUntil
@@ -331,4 +333,6 @@ class DismissalExpiryBl:
             session.rollback()
             raise
         finally:
+            if created_session:
+                session.close()
             logger.info("Dismissal expiry check completed")
