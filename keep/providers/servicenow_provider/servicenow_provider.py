@@ -403,6 +403,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             alert_sources=["servicenow"],
             services=["servicenow"],
             fingerprint=sn_incident.get("number", sn_incident.get("sys_id")),
+            alerts_count=0,
         )
         
         # Store ServiceNow-specific data for later use (activity sync, etc.)
