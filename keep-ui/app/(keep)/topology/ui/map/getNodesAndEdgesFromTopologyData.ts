@@ -64,12 +64,17 @@ export function getNodesAndEdgesFromTopologyData(
       const dependencyService = topologyData.find(
         (s) => s.id === dependency.serviceId
       );
+      // If the dependency service is not in the current topology data, skip it
+      // This happens when the topology data is filtered (e.g. in the alert sidebar)
+      if (!dependencyService) {
+        return;
+      }
       const edgeId = dependency.id.toString();
       if (!edgeMap.has(edgeId)) {
         edgeMap.set(edgeId, {
           id: edgeId.toString(),
           source: service.id.toString(),
-          target: dependencyService?.id.toString() ?? "",
+          target: dependencyService.id.toString(),
           label: dependency.protocol === "unknown" ? "" : dependency.protocol,
           animated: false,
           labelBgPadding: edgeLabelBgPaddingNoHover,
