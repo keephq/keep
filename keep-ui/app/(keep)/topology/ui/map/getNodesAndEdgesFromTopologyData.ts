@@ -64,8 +64,6 @@ export function getNodesAndEdgesFromTopologyData(
       const dependencyService = topologyData.find(
         (s) => s.id === dependency.serviceId
       );
-      // If the dependency service is not in the current topology data, skip it
-      // This happens when the topology data is filtered (e.g. in the alert sidebar)
       if (!dependencyService) {
         return;
       }

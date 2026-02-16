@@ -57,7 +57,9 @@ export const getLayoutedWorkflowElements = (
 
   // Add edges to dagre graph
   edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
+    if (dagreGraph.hasNode(edge.source) && dagreGraph.hasNode(edge.target)) {
+      dagreGraph.setEdge(edge.source, edge.target);
+    }
   });
 
   // Run the layout
