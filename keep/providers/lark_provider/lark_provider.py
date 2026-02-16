@@ -3,6 +3,7 @@ LarkProvider is a class that allows to ingest/digest data from Lark/Feishu helpd
 """
 
 import dataclasses
+import time
 from typing import Optional
 
 import pydantic
@@ -12,6 +13,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_scope import ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -69,12 +71,45 @@ class LarkProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Lark/Feishu"
     PROVIDER_CATEGORY = ["Ticketing"]
+    PROVIDER_TAGS = ["ticketing"]
+    FINGERPRINT_FIELDS = ["ticket_id"]
+
+    # Lark tokens expire after 2 hours; refresh after 110 minutes to be safe
+    _TOKEN_TTL_SECONDS = 110 * 60
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="helpdesk:ticket:read",
+            description="Read helpdesk tickets.",
+            mandatory=True,
+            alias="Helpdesk Ticket Read",
+        ),
+        ProviderScope(
+            name="helpdesk:ticket:write",
+            description="Create helpdesk tickets.",
+            mandatory=False,
+            alias="Helpdesk Ticket Write",
+        ),
+    ]
+
+    # Map Lark ticket priority (1=urgent … 4=low) to Keep severity
+    PRIORITY_SEVERITY_MAP = {
+        1: AlertSeverity.CRITICAL,
+        2: AlertSeverity.HIGH,
+        3: AlertSeverity.WARNING,
+        4: AlertSeverity.LOW,
+        "urgent": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "medium": AlertSeverity.WARNING,
+        "low": AlertSeverity.LOW,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self._tenant_access_token = None
+        self._token_obtained_at = 0
 
     def dispose(self):
         """
@@ -93,8 +128,12 @@ class LarkProvider(BaseProvider):
     def _get_tenant_access_token(self) -> str:
         """
         Obtain a tenant_access_token from Lark Open API.
+        Tokens are cached and refreshed before expiry (~2h TTL).
         """
-        if self._tenant_access_token:
+        if (
+            self._tenant_access_token
+            and (time.time() - self._token_obtained_at) < self._TOKEN_TTL_SECONDS
+        ):
             return self._tenant_access_token
 
         response = requests.post(
@@ -109,6 +148,7 @@ class LarkProvider(BaseProvider):
         if data.get("code") != 0:
             raise Exception(f"Failed to get tenant access token: {data.get('msg')}")
         self._tenant_access_token = data["tenant_access_token"]
+        self._token_obtained_at = time.time()
         return self._tenant_access_token
 
     def _get_auth_headers(self) -> dict:
@@ -189,11 +229,17 @@ class LarkProvider(BaseProvider):
         else:
             alert_status = AlertStatus.FIRING
 
+        # Map ticket priority to severity
+        priority = ticket.get("priority", ticket.get("ticket_type", {}).get("priority"))
+        if isinstance(priority, str):
+            priority = priority.lower()
+        severity = LarkProvider.PRIORITY_SEVERITY_MAP.get(priority, AlertSeverity.INFO)
+
         alert = AlertDto(
             id=f"lark-{ticket_id}" if ticket_id else "lark-unknown",
             name=summary,
             description=description,
-            severity=AlertSeverity.INFO,
+            severity=severity,
             status=alert_status,
             source=["lark"],
             ticket_id=ticket_id,
