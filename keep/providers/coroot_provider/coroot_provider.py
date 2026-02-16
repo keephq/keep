@@ -12,6 +12,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_scope import ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -59,6 +60,17 @@ class CorootProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Coroot"
     PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_TAGS = ["alert"]
+    FINGERPRINT_FIELDS = ["id"]
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="authenticated",
+            description="Read applications and alerts from Coroot.",
+            mandatory=False,
+            alias="Authenticated",
+        ),
+    ]
 
     STATUS_SEVERITY_MAP = {
         "CRITICAL": AlertSeverity.CRITICAL,
