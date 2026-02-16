@@ -1,0 +1,202 @@
+---
+title: "SNMP"
+sidebarTitle: "SNMP Provider"
+description: "SNMP provider allows ingesting SNMP traps and events into Keep as alerts."
+---
+
+## Overview
+
+The SNMP provider receives SNMP trap notifications forwarded from an `snmptrapd` daemon via HTTP webhook. When a network device sends an SNMP trap (link down, authentication failure, device restart, etc.), the trap receiver forwards it to Keep's webhook endpoint, where it is parsed and converted into a Keep alert.
+
+This provider does **not** run an SNMP trap listener itself. Instead, it relies on a standard `snmptrapd` instance configured to forward traps as JSON over HTTP.
+
+## Authentication
+
+The SNMP provider has one optional authentication parameter:
+
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `community_string` | Expected SNMP community string. If set, traps with a different community string can be filtered. | No | Empty (accept all) |
+
+## How It Works
+
+1. Network devices send SNMP traps to your `snmptrapd` instance (UDP port 162)
+2. `snmptrapd` is configured to forward traps as JSON via HTTP POST to Keep's webhook endpoint
+3. Keep receives the POST, calls `parse_event_raw_body()` to parse the JSON
+4. Keep calls `_format_alert()` to convert the trap into an `AlertDto`
+5. The alert appears in Keep's UI with severity, status, and trap details
+
+## Setup
+
+### Step 1: Install the SNMP Provider in Keep
+
+1. Go to **Settings** > **Providers** in Keep
+2. Click **Add Provider**
+3. Select **SNMP**
+4. Optionally enter a community string for filtering
+5. Click **Connect**
+6. Copy the webhook URL shown (e.g., `https://your-keep-instance/api/alerts/event/snmp`)
+
+### Step 2: Configure snmptrapd
+
+Install `snmptrapd` if not already present:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install snmptrapd
+
+# RHEL/CentOS
+sudo yum install net-snmp
+```
+
+Create a forwarding script at `/usr/local/bin/keep-snmp-forward.sh`:
+
+```bash
+#!/bin/bash
+# Forward SNMP traps to Keep webhook endpoint
+# Called by snmptrapd via traphandle
+
+KEEP_WEBHOOK_URL="${KEEP_WEBHOOK_URL:-http://localhost:8080/api/alerts/event/snmp}"
+KEEP_API_KEY="${KEEP_API_KEY:-your-api-key}"
+
+# Read trap data from stdin (snmptrapd format)
+HOSTNAME=""
+IPADDRESS=""
+VARBINDS="[]"
+TRAP_OID=""
+
+read HOSTNAME
+read IPADDRESS
+
+# Parse varbind lines
+VARBIND_ARRAY="["
+FIRST=true
+while IFS= read -r line; do
+    OID=$(echo "$line" | cut -d' ' -f1)
+    TYPE=$(echo "$line" | cut -d' ' -f2)
+    VALUE=$(echo "$line" | cut -d' ' -f3-)
+
+    if [ "$OID" = "SNMPv2-MIB::snmpTrapOID.0" ] || [ "$OID" = "1.3.6.1.6.3.1.1.4.1.0" ]; then
+        TRAP_OID="$VALUE"
+        continue
+    fi
+
+    if [ "$FIRST" = true ]; then
+        FIRST=false
+    else
+        VARBIND_ARRAY="$VARBIND_ARRAY,"
+    fi
+    VARBIND_ARRAY="$VARBIND_ARRAY{\"oid\":\"$OID\",\"type\":\"$TYPE\",\"value\":\"$VALUE\"}"
+done
+VARBIND_ARRAY="$VARBIND_ARRAY]"
+
+# Build JSON payload
+PAYLOAD=$(cat <<EOF
+{
+    "version": "2c",
+    "source_ip": "$IPADDRESS",
+    "trap_oid": "$TRAP_OID",
+    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "varbinds": $VARBIND_ARRAY
+}
+EOF
+)
+
+# Send to Keep
+curl -s -X POST "$KEEP_WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -H "X-API-KEY: $KEEP_API_KEY" \
+    -d "$PAYLOAD"
+```
+
+Make it executable:
+
+```bash
+chmod +x /usr/local/bin/keep-snmp-forward.sh
+```
+
+Configure `/etc/snmp/snmptrapd.conf`:
+
+```
+# Accept traps from any community
+authCommunity log,execute public
+authCommunity log,execute private
+
+# Forward all traps to Keep
+traphandle default /usr/local/bin/keep-snmp-forward.sh
+```
+
+Restart snmptrapd:
+
+```bash
+sudo systemctl restart snmptrapd
+```
+
+### Step 3: Test
+
+Send a test trap:
+
+```bash
+# Send a linkDown trap
+snmptrap -v 2c -c public localhost '' \
+    1.3.6.1.6.3.1.1.5.3 \
+    1.3.6.1.2.1.2.2.1.1.2 i 2
+
+# Or send directly via curl
+curl -X POST "http://localhost:8080/api/alerts/event/snmp" \
+    -H "Content-Type: application/json" \
+    -H "X-API-KEY: your-api-key" \
+    -d '{
+        "version": "2c",
+        "community": "public",
+        "source_ip": "192.168.1.1",
+        "trap_oid": "1.3.6.1.6.3.1.1.5.3",
+        "timestamp": "2026-02-15T12:00:00Z",
+        "varbinds": [
+            {"oid": "1.3.6.1.2.1.2.2.1.1.2", "type": "Integer", "value": "2"}
+        ]
+    }'
+```
+
+## Webhook Payload Format
+
+The provider expects JSON payloads with the following structure:
+
+```json
+{
+    "version": "2c",
+    "community": "public",
+    "source_ip": "192.168.1.1",
+    "source_port": 162,
+    "trap_oid": "1.3.6.1.6.3.1.1.5.3",
+    "enterprise": "1.3.6.1.4.1.8072",
+    "agent_address": "192.168.1.1",
+    "generic_trap": 2,
+    "specific_trap": 0,
+    "timestamp": "2026-02-15T12:00:00Z",
+    "varbinds": [
+        {
+            "oid": "1.3.6.1.2.1.1.3.0",
+            "type": "TimeTicks",
+            "value": "12345"
+        }
+    ]
+}
+```
+
+All fields are optional except `trap_oid` or `generic_trap` (at least one is needed to identify the trap type).
+
+## Severity Mapping
+
+| Trap | OID | Severity | Status |
+|------|-----|----------|--------|
+| coldStart | 1.3.6.1.6.3.1.1.5.1 | INFO | FIRING |
+| warmStart | 1.3.6.1.6.3.1.1.5.2 | INFO | FIRING |
+| linkDown | 1.3.6.1.6.3.1.1.5.3 | CRITICAL | FIRING |
+| linkUp | 1.3.6.1.6.3.1.1.5.4 | INFO | RESOLVED |
+| authenticationFailure | 1.3.6.1.6.3.1.1.5.5 | WARNING | FIRING |
+| Enterprise-specific | varies | WARNING | FIRING |
+
+## Deduplication
+
+Alerts are deduplicated using a fingerprint generated from the source IP and trap OID. This means repeated traps of the same type from the same device will be grouped together. A `linkUp` trap from the same device will resolve a previous `linkDown` alert.
