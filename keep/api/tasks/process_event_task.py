@@ -712,6 +712,12 @@ def process_event(
 
                 if isinstance(event, list):
                     event_list = []
+                    # For pulled alerts (already AlertDto), apply custom dedup
+                    # rule fingerprint if configured.
+                    # Fixes #5370: providers like Prometheus ignoring custom
+                    # fingerprint_fields for deduplication.
+                    _custom_dedup_rule = None
+                    _custom_dedup_checked = False
                     for event_item in event:
                         if not isinstance(event_item, AlertDto):
                             event_list.append(
@@ -723,6 +729,26 @@ def process_event(
                                 )
                             )
                         else:
+                            if not _custom_dedup_checked:
+                                from keep.api.core.db import (
+                                    get_custom_deduplication_rule,
+                                )
+                                _custom_dedup_rule = get_custom_deduplication_rule(
+                                    tenant_id=tenant_id,
+                                    provider_id=provider_id,
+                                    provider_type=provider_type,
+                                )
+                                _custom_dedup_checked = True
+                            if (
+                                _custom_dedup_rule
+                                and _custom_dedup_rule.fingerprint_fields
+                            ):
+                                event_item.fingerprint = (
+                                    provider_class.get_alert_fingerprint(
+                                        event_item,
+                                        _custom_dedup_rule.fingerprint_fields,
+                                    )
+                                )
                             event_list.append(event_item)
                     event = event_list
                 else:
