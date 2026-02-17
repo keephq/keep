@@ -159,6 +159,131 @@ class TestSolarwindsFormatAlert(unittest.TestCase):
         self.assertEqual(alert.environment, "production")
 
 
+class TestSolarwindsPullAlerts(unittest.TestCase):
+    """Test _get_alerts and _parse_swis_alert (pull path via SWIS API)."""
+
+    def _make_provider(self):
+        """Create a SolarwindsProvider with mocked dependencies."""
+        context_manager = MagicMock()
+        context_manager.tenant_id = "test-tenant"
+        provider_config = MagicMock()
+        provider_config.authentication = {
+            "host_url": "https://solarwinds.example.com:17778",
+            "username": "admin",
+            "password": "secret",
+        }
+        provider = SolarwindsProvider(
+            context_manager=context_manager,
+            provider_id="solarwinds-test",
+            config=provider_config,
+        )
+        return provider
+
+    def test_parse_swis_alert(self):
+        """_parse_swis_alert converts a SWIS row dict into an AlertDto."""
+        provider = self._make_provider()
+        row = {
+            "AlertActiveID": 42,
+            "AlertObjectID": 7,
+            "TriggeredDateTime": "2024-06-01T12:00:00Z",
+            "TriggeredMessage": "CPU > 95%",
+            "Acknowledged": False,
+            "AcknowledgedBy": None,
+            "AcknowledgedDateTime": None,
+            "AlertName": "High CPU",
+            "AlertDescription": "CPU usage is critical",
+            "Severity": 2,
+            "ObjectType": "Node",
+            "EntityUri": "/Orion/Nodes/1",
+            "EntityType": "Orion.Nodes",
+            "RelatedNodeCaption": "web-01",
+        }
+        alert = provider._parse_swis_alert(row)
+        self.assertIsInstance(alert, AlertDto)
+        self.assertEqual(alert.id, "42")
+        self.assertEqual(alert.name, "High CPU")
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
+        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.service, "web-01")
+        self.assertIn("2024-06-01", alert.lastReceived)
+
+    def test_parse_swis_alert_acknowledged(self):
+        provider = self._make_provider()
+        row = {
+            "AlertActiveID": 99,
+            "Acknowledged": True,
+            "AcknowledgedBy": "admin",
+            "AlertName": "Disk Full",
+            "Severity": 1,
+        }
+        alert = provider._parse_swis_alert(row)
+        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED)
+        self.assertEqual(alert.severity, AlertSeverity.WARNING)
+
+    def test_parse_swis_alert_severity_3_is_high(self):
+        """Severity 3 (Serious) must map to HIGH, not LOW."""
+        provider = self._make_provider()
+        row = {"AlertActiveID": 50, "AlertName": "Serious Alert", "Severity": 3}
+        alert = provider._parse_swis_alert(row)
+        self.assertEqual(alert.severity, AlertSeverity.HIGH)
+
+    @patch.object(SolarwindsProvider, "_swis_query")
+    def test_get_alerts_returns_parsed_alerts(self, mock_query):
+        """_get_alerts queries SWIS and returns a list of AlertDto."""
+        mock_query.return_value = {
+            "results": [
+                {
+                    "AlertActiveID": 1,
+                    "AlertObjectID": 10,
+                    "TriggeredDateTime": "2024-03-01T08:00:00Z",
+                    "TriggeredMessage": "Node unreachable",
+                    "Acknowledged": False,
+                    "AcknowledgedBy": None,
+                    "AcknowledgedDateTime": None,
+                    "AlertName": "Node Down",
+                    "AlertDescription": "Node is down",
+                    "Severity": 2,
+                    "ObjectType": "Node",
+                    "EntityUri": "/Orion/Nodes/5",
+                    "EntityType": "Orion.Nodes",
+                    "RelatedNodeCaption": "db-server-01",
+                },
+                {
+                    "AlertActiveID": 2,
+                    "AlertObjectID": 11,
+                    "TriggeredDateTime": "2024-03-01T09:00:00Z",
+                    "TriggeredMessage": "High memory",
+                    "Acknowledged": True,
+                    "AcknowledgedBy": "ops",
+                    "AcknowledgedDateTime": "2024-03-01T09:05:00Z",
+                    "AlertName": "Memory Warning",
+                    "AlertDescription": "Memory above threshold",
+                    "Severity": 1,
+                    "ObjectType": "Node",
+                    "EntityUri": "/Orion/Nodes/6",
+                    "EntityType": "Orion.Nodes",
+                    "RelatedNodeCaption": "app-server-02",
+                },
+            ]
+        }
+        provider = self._make_provider()
+        alerts = provider._get_alerts()
+        self.assertEqual(len(alerts), 2)
+        self.assertEqual(alerts[0].name, "Node Down")
+        self.assertEqual(alerts[0].severity, AlertSeverity.CRITICAL)
+        self.assertEqual(alerts[0].status, AlertStatus.FIRING)
+        self.assertEqual(alerts[1].name, "Memory Warning")
+        self.assertEqual(alerts[1].status, AlertStatus.ACKNOWLEDGED)
+        mock_query.assert_called_once()
+
+    @patch.object(SolarwindsProvider, "_swis_query")
+    def test_get_alerts_handles_empty_results(self, mock_query):
+        mock_query.return_value = {"results": []}
+        provider = self._make_provider()
+        alerts = provider._get_alerts()
+        self.assertEqual(alerts, [])
+
+
 class TestSolarwindsProviderParseDateTime(unittest.TestCase):
     def test_iso_with_z(self):
         result = SolarwindsProvider._parse_datetime("2024-01-15T10:30:00Z")

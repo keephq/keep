@@ -80,16 +80,16 @@ To send alerts from SolarWinds Orion to Keep:
 7. Configure the body with the following JSON template:
 ```json
 {{
-    "AlertActiveID": "${{N=Alerting;M=AlertActiveID}",
-    "AlertName": "${{N=Alerting;M=AlertName}",
-    "AlertDescription": "${{N=Alerting;M=AlertDescription}",
-    "AlertMessage": "${{N=Alerting;M=AlertMessage}",
-    "Severity": "${{N=Alerting;M=Severity}",
-    "Acknowledged": "${{N=Alerting;M=Acknowledged}",
-    "ObjectType": "${{N=Alerting;M=ObjectType}",
-    "TriggeredDateTime": "${{N=Alerting;M=AlertTriggerTime}",
-    "NodeName": "${{N=SwisEntity;M=Caption}",
-    "EntityType": "${{N=Alerting;M=EntityType}",
+    "AlertActiveID": "${{N=Alerting;M=AlertActiveID}}",
+    "AlertName": "${{N=Alerting;M=AlertName}}",
+    "AlertDescription": "${{N=Alerting;M=AlertDescription}}",
+    "AlertMessage": "${{N=Alerting;M=AlertMessage}}",
+    "Severity": "${{N=Alerting;M=Severity}}",
+    "Acknowledged": "${{N=Alerting;M=Acknowledged}}",
+    "ObjectType": "${{N=Alerting;M=ObjectType}}",
+    "TriggeredDateTime": "${{N=Alerting;M=AlertTriggerTime}}",
+    "NodeName": "${{N=SwisEntity;M=Caption}}",
+    "EntityType": "${{N=Alerting;M=EntityType}}",
     "status": "firing"
 }}
 ```
@@ -116,7 +116,7 @@ To send alerts from SolarWinds Orion to Keep:
         0: AlertSeverity.INFO,        # Informational
         1: AlertSeverity.WARNING,     # Warning
         2: AlertSeverity.CRITICAL,    # Critical
-        3: AlertSeverity.LOW,         # Notice
+        3: AlertSeverity.HIGH,        # Serious
     }
 
     SEVERITY_STR_MAP = {
