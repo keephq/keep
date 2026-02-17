@@ -7,11 +7,14 @@ import base64
 import dataclasses
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Optional
 
 import pydantic
 import requests
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request as GoogleAuthRequest
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -107,58 +110,28 @@ To send Pub/Sub messages to Keep:
             scopes["pubsub_pull"] = str(e)
         return scopes
 
+    # Cached credentials object (handles token refresh internally)
+    _credentials: Optional[service_account.Credentials] = None
+    _credentials_json_hash: Optional[str] = None
+
     def _get_access_token(self) -> str:
-        """Get an access token using service account credentials via OAuth2."""
-        import time
-        import hashlib
-        import hmac
+        """Get an access token using google-auth with built-in caching/refresh."""
+        creds_json = self.authentication_config.credentials_json
 
-        credentials = json.loads(self.authentication_config.credentials_json)
+        # Re-create credentials if config changed
+        if self._credentials is None or self._credentials_json_hash != creds_json:
+            info = json.loads(creds_json)
+            self._credentials = service_account.Credentials.from_service_account_info(
+                info,
+                scopes=["https://www.googleapis.com/auth/pubsub"],
+            )
+            self._credentials_json_hash = creds_json
 
-        # Use the token endpoint from the credentials
-        token_uri = credentials.get(
-            "token_uri", "https://oauth2.googleapis.com/token"
-        )
+        # Refresh only when expired (google-auth handles TTL internally)
+        if not self._credentials.valid:
+            self._credentials.refresh(GoogleAuthRequest())
 
-        # Build JWT for service account
-        now = int(time.time())
-        header = base64.urlsafe_b64encode(
-            json.dumps({"alg": "RS256", "typ": "JWT"}).encode()
-        ).rstrip(b"=")
-
-        claim_set = {
-            "iss": credentials["client_email"],
-            "scope": "https://www.googleapis.com/auth/pubsub",
-            "aud": token_uri,
-            "exp": now + 3600,
-            "iat": now,
-        }
-        payload = base64.urlsafe_b64encode(
-            json.dumps(claim_set).encode()
-        ).rstrip(b"=")
-
-        # Sign with RSA private key
-        from cryptography.hazmat.primitives import hashes, serialization
-        from cryptography.hazmat.primitives.asymmetric import padding
-
-        private_key = serialization.load_pem_private_key(
-            credentials["private_key"].encode(), password=None
-        )
-        signing_input = header + b"." + payload
-        signature = private_key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
-        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=")
-
-        jwt_token = (signing_input + b"." + signature_b64).decode()
-
-        response = requests.post(
-            token_uri,
-            data={
-                "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-                "assertion": jwt_token,
-            },
-        )
-        response.raise_for_status()
-        return response.json()["access_token"]
+        return self._credentials.token
 
     def _query(self, **kwargs) -> list[AlertDto]:
         """Pull messages from the Pub/Sub subscription."""
