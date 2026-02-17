@@ -353,9 +353,6 @@ CONFIG = {
             "()": DevTerminalFormatter,
             "format": "%(asctime)s - %(thread)s %(otelTraceID)s %(threadName)s %(levelname)s - %(message)s",
         },
-        "uvicorn_access": {  # Add new formatter for uvicorn.access
-            "format": "%(asctime)s - %(otelTraceID)s - %(threadName)s - %(message)s"
-        },
     },
     "handlers": {
         "default": {
@@ -376,7 +373,9 @@ CONFIG = {
         },
         "uvicorn_access": {  # Add new handler for uvicorn.access
             "class": "logging.StreamHandler",
-            "formatter": "uvicorn_access",
+            "formatter": (
+                "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else "dev_terminal"
+            ),
         },
     },
     "filters": {  # Add filters section
