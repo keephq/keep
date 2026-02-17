@@ -1,0 +1,118 @@
+ALERTS = {
+    "NodeDown": {
+        "payload": {
+            "AlertActiveID": "1001",
+            "AlertName": "Node Down",
+            "AlertDescription": "A node in the network is not responding",
+            "AlertMessage": "Node web-server-01 is down and not responding to requests",
+            "Severity": 2,
+            "Acknowledged": False,
+            "TriggeredDateTime": "2024-01-15T10:30:00Z",
+            "EntityType": "Orion.Nodes",
+            "ObjectType": "Node",
+            "NodeName": "web-server-01",
+            "status": "firing",
+        },
+        "parameters": {
+            "NodeName": [
+                "web-server-01",
+                "db-server-02",
+                "app-server-03",
+                "cache-server-01",
+            ],
+            "AlertActiveID": ["1001", "1002", "1003", "1004"],
+        },
+    },
+    "HighCPUUtilization": {
+        "payload": {
+            "AlertActiveID": "2001",
+            "AlertName": "High CPU Utilization",
+            "AlertDescription": "CPU utilization has exceeded the configured threshold",
+            "AlertMessage": "CPU on db-server-02 is above 95%",
+            "Severity": 1,
+            "Acknowledged": False,
+            "TriggeredDateTime": "2024-01-15T11:00:00Z",
+            "EntityType": "Orion.Nodes",
+            "ObjectType": "Node",
+            "NodeName": "db-server-02",
+            "status": "firing",
+        },
+        "parameters": {
+            "NodeName": [
+                "web-server-01",
+                "db-server-02",
+                "app-server-03",
+            ],
+            "AlertActiveID": ["2001", "2002", "2003"],
+        },
+    },
+    "InterfaceDown": {
+        "payload": {
+            "AlertActiveID": "3001",
+            "AlertName": "Interface Down",
+            "AlertDescription": "A network interface is no longer operational",
+            "AlertMessage": "Interface GigabitEthernet0/1 on switch-core-01 is down",
+            "Severity": 2,
+            "Acknowledged": False,
+            "TriggeredDateTime": "2024-01-15T12:15:00Z",
+            "EntityType": "Orion.NPM.Interfaces",
+            "ObjectType": "Interface",
+            "NodeName": "switch-core-01",
+            "status": "firing",
+        },
+        "parameters": {
+            "NodeName": [
+                "switch-core-01",
+                "router-edge-01",
+                "firewall-01",
+            ],
+            "AlertActiveID": ["3001", "3002", "3003"],
+        },
+    },
+    "VolumeSpaceLow": {
+        "payload": {
+            "AlertActiveID": "4001",
+            "AlertName": "Volume Space Running Low",
+            "AlertDescription": "Disk volume is running low on available space",
+            "AlertMessage": "Volume /dev/sda1 on file-server-01 is above 90% capacity",
+            "Severity": 1,
+            "Acknowledged": False,
+            "TriggeredDateTime": "2024-01-15T09:45:00Z",
+            "EntityType": "Orion.Volumes",
+            "ObjectType": "Volume",
+            "NodeName": "file-server-01",
+            "status": "firing",
+        },
+        "parameters": {
+            "NodeName": [
+                "file-server-01",
+                "db-server-02",
+                "app-server-03",
+            ],
+            "AlertActiveID": ["4001", "4002", "4003"],
+        },
+    },
+    "HighMemoryUtilization": {
+        "payload": {
+            "AlertActiveID": "5001",
+            "AlertName": "High Memory Utilization",
+            "AlertDescription": "Memory utilization has exceeded the configured threshold",
+            "AlertMessage": "Memory on cache-server-01 is above 95%",
+            "Severity": 1,
+            "Acknowledged": False,
+            "TriggeredDateTime": "2024-01-15T14:20:00Z",
+            "EntityType": "Orion.Nodes",
+            "ObjectType": "Node",
+            "NodeName": "cache-server-01",
+            "status": "firing",
+        },
+        "parameters": {
+            "NodeName": [
+                "web-server-01",
+                "db-server-02",
+                "cache-server-01",
+            ],
+            "AlertActiveID": ["5001", "5002", "5003"],
+        },
+    },
+}
