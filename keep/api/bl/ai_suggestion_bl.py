@@ -36,7 +36,7 @@ class AISuggestionBl:
         # Todo: also goes with settings page
         #       https://github.com/keephq/keep/issues/2365
         try:
-            self._client = OpenAI()
+            self._client = OpenAI(timeout=120.0)
         except OpenAIError as e:
             # if its api key error, we should raise 400
             self.logger.error(f"Failed to initialize OpenAI client: {e}")
@@ -352,19 +352,35 @@ class AISuggestionBl:
         self, alerts_dto: List[AlertDto], topology_data: List[TopologyServiceDtoOut]
     ) -> Tuple[str, str]:
         """Prepare system and user prompts for AI."""
-        alert_descriptions = "\n".join(
-            [
-                f"Alert {idx+1}: {json.dumps(alert.dict())}"
-                for idx, alert in enumerate(alerts_dto)
-            ]
-        )
+        # Minify alert data to keep prompt size manageable and focus on clustering relevant info
+        minified_alerts = []
+        for idx, alert in enumerate(alerts_dto):
+            minified_alert = {
+                "idx": idx + 1,
+                "name": alert.name,
+                "description": alert.description,
+                "message": alert.message,
+                "severity": str(alert.severity),
+                "status": str(alert.status),
+                "service": alert.service,
+                "source": alert.source[0] if alert.source else None,
+                "labels": alert.labels,
+            }
+            minified_alerts.append(minified_alert)
 
-        topology_text = "\n".join(
-            [
-                f"Topology {idx+1}: {json.dumps(topology.dict(), default=str)}"
-                for idx, topology in enumerate(topology_data)
-            ]
-        )
+        alert_descriptions = json.dumps(minified_alerts, default=str)
+
+        # Minify topology data
+        minified_topology = []
+        for topology in topology_data:
+            minified_topo = {
+                "service": topology.service,
+                "display_name": topology.display_name,
+                "dependencies": [dep.serviceName for dep in topology.dependencies],
+            }
+            minified_topology.append(minified_topo)
+
+        topology_text = json.dumps(minified_topology, default=str)
 
         system_prompt = """
         You are an advanced AI system specializing in IT operations and incident management.
@@ -403,66 +419,88 @@ class AISuggestionBl:
 
     def _get_ai_completion(self, system_prompt: str, user_prompt: str):
         """Get completion from OpenAI."""
-        return self._client.chat.completions.create(
-            model=OPENAI_MODEL_NAME,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "incident_clustering",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "incidents": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "incident_name": {"type": "string"},
-                                        "alerts": {
-                                            "type": "array",
-                                            "items": {"type": "integer"},
-                                            "description": "List of alert numbers (1-based index)",
+        try:
+            return self._client.chat.completions.create(
+                model=OPENAI_MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "incident_clustering",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "incidents": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "incident_name": {"type": "string"},
+                                            "alerts": {
+                                                "type": "array",
+                                                "items": {"type": "integer"},
+                                                "description": "List of alert numbers (1-based index)",
+                                            },
+                                            "reasoning": {"type": "string"},
+                                            "severity": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "critical",
+                                                    "high",
+                                                    "warning",
+                                                    "info",
+                                                    "low",
+                                                ],
+                                            },
+                                            "recommended_actions": {
+                                                "type": "array",
+                                                "items": {"type": "string"},
+                                            },
+                                            "confidence_score": {"type": "number"},
+                                            "confidence_explanation": {
+                                                "type": "string"
+                                            },
                                         },
-                                        "reasoning": {"type": "string"},
-                                        "severity": {
-                                            "type": "string",
-                                            "enum": [
-                                                "critical",
-                                                "high",
-                                                "warning",
-                                                "info",
-                                                "low",
-                                            ],
-                                        },
-                                        "recommended_actions": {
-                                            "type": "array",
-                                            "items": {"type": "string"},
-                                        },
-                                        "confidence_score": {"type": "number"},
-                                        "confidence_explanation": {"type": "string"},
+                                        "required": [
+                                            "incident_name",
+                                            "alerts",
+                                            "reasoning",
+                                            "severity",
+                                            "recommended_actions",
+                                            "confidence_score",
+                                            "confidence_explanation",
+                                        ],
                                     },
-                                    "required": [
-                                        "incident_name",
-                                        "alerts",
-                                        "reasoning",
-                                        "severity",
-                                        "recommended_actions",
-                                        "confidence_score",
-                                        "confidence_explanation",
-                                    ],
-                                },
-                            }
+                                }
+                            },
+                            "required": ["incidents"],
                         },
-                        "required": ["incidents"],
                     },
                 },
-            },
-            temperature=0.2,
-        )
+                temperature=0.2,
+            )
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to get AI completion with json_schema, falling back to json_object: {e}"
+            )
+            # Fallback to json_object for providers that don't support json_schema (like older LiteLLM versions or local models)
+            # We add a reminder to the prompt to follow the schema
+            return self._client.chat.completions.create(
+                model=OPENAI_MODEL_NAME,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                        + "\n\nReturn the output as a JSON object matching the requested schema.",
+                    },
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
 
     def _process_incidents(
         self, incidents: List[IncidentCandidate], alerts_dto: List[AlertDto]
