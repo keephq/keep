@@ -301,6 +301,13 @@ class RulesEngine:
                 # update the incident name template
                 # note that it will be commited later, when the incident is commited
                 incident_name = re.sub(pattern, var_to_replace, incident_name)
+            # Re-apply the incident prefix after template regeneration.
+            # The template generates a plain name without the prefix, which
+            # would otherwise overwrite the prefixed name set during creation
+            # or the earlier prefix check.
+            # See: https://github.com/keephq/keep/issues/5450
+            if rule.incident_prefix and rule.incident_prefix not in incident_name:
+                incident_name = f"{rule.incident_prefix}-{existed_incident.running_number} - {incident_name}"
             # we are done
             if existed_incident.user_generated_name != incident_name:
                 existed_incident.user_generated_name = incident_name
