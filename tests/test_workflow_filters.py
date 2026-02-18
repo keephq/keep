@@ -1150,3 +1150,4 @@ triggers:
     assert all(a.severity == "critical" for a in triggered_alerts)
     assert not any(a.id == "alert-3" for a in triggered_alerts)
     assert not any(a.id == "alert-4" for a in triggered_alerts)
+
