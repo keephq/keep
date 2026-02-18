@@ -8,9 +8,31 @@ import { Severity as IncidentSeverity } from '@/entities/incidents/model/models'
 import type { AlertDto } from '@/entities/alerts/model/types';
 import { Status as AlertStatus, Severity as AlertSeverity } from '@/entities/alerts/model/types';
 
+let mockSearchParamsState: Record<string, string | null> = {};
+
 // Mock all external dependencies
 jest.mock('next/navigation', () => ({
-  useRouter: jest.fn(() => ({ push: jest.fn() })),
+  useRouter: jest.fn(() => ({ 
+    push: jest.fn(),
+    replace: jest.fn((url: string) => {
+      try {
+        const urlObj = new URL(url, 'http://localhost');
+        const params = new URLSearchParams(urlObj.search);
+        mockSearchParamsState = {
+          sidebarFingerprint: params.get('sidebarFingerprint'),
+        };
+      } catch (e) {
+        const searchPart = url.split('?')[1] || '';
+        const params = new URLSearchParams(searchPart);
+        mockSearchParamsState = {
+          sidebarFingerprint: params.get('sidebarFingerprint'),
+        };
+      }
+    }),
+  })),
+  useSearchParams: jest.fn(() => ({
+    get: jest.fn((key: string) => mockSearchParamsState[key] || null),
+  })),
 }));
 
 jest.mock('@/utils/hooks/useIncidents', () => ({
@@ -281,6 +303,8 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
       alert: null,
     };
 
+    mockSearchParamsState = {};
+
     // Mock successful data fetching
     useIncidentAlerts.mockReturnValue({
       data: mockIncidentAlerts,
@@ -303,11 +327,16 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   });
 
   it('should open AlertSidebar when clicking on alert row', async () => {
-    render(<IncidentAlerts incident={mockIncident} />);
+    const { rerender } = render(<IncidentAlerts incident={mockIncident} />);
+    expect(screen.queryByTestId('alert-sidebar')).not.toBeInTheDocument();
 
     // Click on the first alert row
     const alertRow = screen.getByTestId('alert-row-alert-1');
     fireEvent.click(alertRow);
+
+    mockSearchParamsState.sidebarFingerprint = 'alert-1';
+
+    rerender(<IncidentAlerts incident={mockIncident} />);
 
     // Verify AlertSidebar is opened with correct alert
     await waitFor(() => {
@@ -323,12 +352,16 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   });
 
   it('should open AlertSidebar when clicking view details button', async () => {
-    render(<IncidentAlerts incident={mockIncident} />);
+    const { rerender } = render(<IncidentAlerts incident={mockIncident} />);
 
     // Note: The view button actually opens ViewAlertModal, not AlertSidebar
     // Let's click directly on the row to test AlertSidebar
     const alertRow = screen.getByTestId('alert-row-alert-2');
     fireEvent.click(alertRow);
+
+    mockSearchParamsState.sidebarFingerprint = 'alert-2';
+
+    rerender(<IncidentAlerts incident={mockIncident} />);
 
     // Verify AlertSidebar is opened with correct alert
     await waitFor(() => {
@@ -344,11 +377,9 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   });
 
   it('should close AlertSidebar when clicking close button', async () => {
-    render(<IncidentAlerts incident={mockIncident} />);
-
-    // Open the sidebar first
-    const alertRow = screen.getByTestId('alert-row-alert-1');
-    fireEvent.click(alertRow);
+    mockSearchParamsState.sidebarFingerprint = 'alert-1';
+    
+    const { rerender } = render(<IncidentAlerts incident={mockIncident} />);
 
     // Verify sidebar is open
     await waitFor(() => {
@@ -358,6 +389,10 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     // Close the sidebar
     const closeButton = screen.getByTestId('close-sidebar');
     fireEvent.click(closeButton);
+
+    mockSearchParamsState.sidebarFingerprint = null;
+
+    rerender(<IncidentAlerts incident={mockIncident} />);
 
     // Verify sidebar is closed
     await waitFor(() => {
@@ -369,11 +404,9 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   });
 
   it('should close AlertSidebar when clicking outside without errors', async () => {
-    render(<IncidentAlerts incident={mockIncident} />);
-
-    // Open the sidebar first
-    const alertRow = screen.getByTestId('alert-row-alert-1');
-    fireEvent.click(alertRow);
+    mockSearchParamsState.sidebarFingerprint = 'alert-1';
+    
+    const { rerender } = render(<IncidentAlerts incident={mockIncident} />);
 
     // Verify sidebar is open
     await waitFor(() => {
@@ -383,6 +416,10 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     // Close the sidebar (simulating clicking outside by using the close button)
     const closeButton = screen.getByTestId('close-sidebar');
     fireEvent.click(closeButton);
+
+    mockSearchParamsState.sidebarFingerprint = null;
+
+    rerender(<IncidentAlerts incident={mockIncident} />);
 
     // Verify sidebar closes without errors
     await waitFor(() => {
@@ -398,10 +435,9 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   });
 
   it('should switch between different alerts in sidebar', async () => {
-    render(<IncidentAlerts incident={mockIncident} />);
-
-    // Open sidebar for first alert
-    fireEvent.click(screen.getByTestId('alert-row-alert-1'));
+    mockSearchParamsState.sidebarFingerprint = 'alert-1';
+    
+    const { rerender } = render(<IncidentAlerts incident={mockIncident} />);
     
     await waitFor(() => {
       const sidebarContent = screen.getByTestId('alert-sidebar-content');
@@ -409,8 +445,13 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     });
     expect(alertSidebarState.alert?.name).toBe('Test Alert 1');
 
-    // Click on second alert row to switch
-    fireEvent.click(screen.getByTestId('alert-row-alert-2'));
+    // Switch to second alert by clicking on its row
+    const alertRow2 = screen.getByTestId('alert-row-alert-2');
+    fireEvent.click(alertRow2);
+
+    mockSearchParamsState.sidebarFingerprint = 'alert-2';
+
+    rerender(<IncidentAlerts incident={mockIncident} />);
 
     await waitFor(() => {
       const sidebarContent = screen.getByTestId('alert-sidebar-content');
@@ -477,7 +518,7 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
       mutate: jest.fn(),
     });
 
-    render(<IncidentAlerts incident={mockIncident} />);
+    const { rerender } = render(<IncidentAlerts incident={mockIncident} />);
 
     // First, open ViewAlertModal with view button
     const viewButtons = screen.getAllByLabelText('View Alert Details');
@@ -491,6 +532,10 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     const alertRows = screen.getAllByTestId(/^alert-row-/);
     const firstAlertRow = alertRows[0];
     fireEvent.click(firstAlertRow);
+
+    mockSearchParamsState.sidebarFingerprint = 'alert-1';
+
+    rerender(<IncidentAlerts incident={mockIncident} />);
 
     // Both should be open now
     await waitFor(() => {
