@@ -1,0 +1,208 @@
+variables:
+  # Docker Registry Configuration
+  # Set this to your JFrog Artifactory Docker registry path
+  # Example: mycompany.jfrog.io/docker-local/keep
+  IMAGE_REGISTRY_PATH: "your-registry.jfrog.io/docker-repo/keep"
+  
+  # Docker Registry Credentials (for pushing images)
+  DOCKER_REGISTRY_USER: "${CI_REGISTRY_USER}"
+  DOCKER_REGISTRY_PASSWORD: "${CI_REGISTRY_PASSWORD}"
+  
+  # Helm Chart Repository Configuration
+  # Set this to your Helm chart Git repository URL
+  # Example: https://gitlab.com/your-org/helm-charts.git
+  CHART_REPO_URL: "https://gitlab.com/your-org/helm-charts.git"
+  CHART_REPO_BRANCH: "main"
+  
+  # Git Token for updating chart repository (set in GitLab CI/CD Variables)
+  # CHART_REPO_TOKEN: set this as a protected/masked variable
+  
+  # Kaniko Configuration
+  KANIKO_IMAGE: "${KANIKO_IMAGE:-gcr.io/kaniko-project/executor:v1.23.2-debug}"
+  
+  # Image Configuration
+  IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"
+  
+  # Build Arguments
+  GIT_COMMIT_HASH: "${CI_COMMIT_SHA}"
+  KEEP_VERSION: "${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA}}"
+
+stages:
+  - build
+  - deploy
+
+# Template for Kaniko builds
+.kaniko_build:
+  stage: build
+  image:
+    name: ${KANIKO_IMAGE}
+    entrypoint: [""]
+  before_script:
+    - echo "Building ${IMAGE_NAME} with tag ${IMAGE_TAG}"
+    - echo "Target registry: ${IMAGE_REGISTRY_PATH}"
+    - mkdir -p /kaniko/.docker
+    # Extract registry domain from IMAGE_REGISTRY_PATH
+    - export DOCKER_REGISTRY=$(echo "${IMAGE_REGISTRY_PATH}" | cut -d'/' -f1)
+    # Configure Docker registry authentication for pushing
+    - |
+      if [ -z "${DOCKER_REGISTRY_PASSWORD}" ]; then
+        echo "Error: DOCKER_REGISTRY_PASSWORD is not set"
+        exit 1
+      fi
+      echo "{\"auths\":{\"${DOCKER_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${DOCKER_REGISTRY_USER}" "${DOCKER_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  script:
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}" \
+        --dockerfile "${DOCKERFILE_PATH}" \
+        --destination "${IMAGE_REGISTRY_PATH}/${IMAGE_NAME}:${IMAGE_TAG}" \
+        --destination "${IMAGE_REGISTRY_PATH}/${IMAGE_NAME}:latest" \
+        --cache=true \
+        --cache-ttl=168h \
+        --build-arg GIT_COMMIT_HASH="${GIT_COMMIT_HASH}" \
+        --build-arg KEEP_VERSION="${KEEP_VERSION}" \
+        ${EXTRA_BUILD_ARGS}
+  tags:
+    - docker
+
+# Build Keep API
+build:api:
+  extends: .kaniko_build
+  variables:
+    IMAGE_NAME: "keep-api"
+    DOCKERFILE_PATH: "${CI_PROJECT_DIR}/docker/Dockerfile.api"
+    EXTRA_BUILD_ARGS: ""
+  only:
+    changes:
+      - docker/Dockerfile.api
+      - keep/**/*
+      - ee/**/*
+      - pyproject.toml
+      - poetry.lock
+      - .gitlab-ci.yml
+    refs:
+      - main
+      - develop
+      - tags
+      - merge_requests
+
+# Build Keep Event Handler (same as API but separate image)
+build:event-handler:
+  extends: .kaniko_build
+  variables:
+    IMAGE_NAME: "keep-event-handler"
+    DOCKERFILE_PATH: "${CI_PROJECT_DIR}/docker/Dockerfile.api"
+    EXTRA_BUILD_ARGS: ""
+  only:
+    changes:
+      - docker/Dockerfile.api
+      - keep/**/*
+      - ee/**/*
+      - pyproject.toml
+      - poetry.lock
+      - .gitlab-ci.yml
+    refs:
+      - main
+      - develop
+      - tags
+      - merge_requests
+
+# Build Keep UI
+build:ui:
+  extends: .kaniko_build
+  variables:
+    IMAGE_NAME: "keep-ui"
+    DOCKERFILE_PATH: "${CI_PROJECT_DIR}/docker/Dockerfile.ui"
+    EXTRA_BUILD_ARGS: "--build-arg KEEP_INCLUDE_SOURCES=${KEEP_INCLUDE_SOURCES:-false}"
+  script:
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/keep-ui" \
+        --dockerfile "${DOCKERFILE_PATH}" \
+        --destination "${IMAGE_REGISTRY_PATH}/${IMAGE_NAME}:${IMAGE_TAG}" \
+        --destination "${IMAGE_REGISTRY_PATH}/${IMAGE_NAME}:latest" \
+        --cache=true \
+        --cache-ttl=168h \
+        --build-arg GIT_COMMIT_HASH="${GIT_COMMIT_HASH}" \
+        --build-arg KEEP_VERSION="${KEEP_VERSION}" \
+        ${EXTRA_BUILD_ARGS}
+  only:
+    changes:
+      - docker/Dockerfile.ui
+      - keep-ui/**/*
+      - .gitlab-ci.yml
+    refs:
+      - main
+      - develop
+      - tags
+      - merge_requests
+
+# Template for updating Helm chart repository
+.update_chart:
+  stage: deploy
+  image: alpine/git:latest
+  before_script:
+    - apk add --no-cache yq
+    - git config --global user.email "gitlab-ci@keep.io"
+    - git config --global user.name "GitLab CI"
+  script:
+    - |
+      echo "Updating ${SERVICE_NAME} image tag to ${IMAGE_TAG} in chart repository"
+      
+      # Clone the chart repository with token authentication
+      REPO_URL_WITH_TOKEN=$(echo "${CHART_REPO_URL}" | sed "s|https://|https://oauth2:${CHART_REPO_TOKEN}@|")
+      git clone --branch "${CHART_REPO_BRANCH}" "${REPO_URL_WITH_TOKEN}" chart-repo
+      cd chart-repo
+      
+      # Update the image tag in custom-values.yaml
+      yq eval ".${YAML_PATH} = \"${IMAGE_TAG}\"" -i custom-values.yaml
+      
+      # Check if there are changes
+      if git diff --quiet custom-values.yaml; then
+        echo "No changes to commit"
+        exit 0
+      fi
+      
+      # Commit and push changes
+      git add custom-values.yaml
+      git commit -m "Update ${SERVICE_NAME} image tag to ${IMAGE_TAG}
+      
+      Triggered by: ${CI_PROJECT_NAME}
+      Commit: ${CI_COMMIT_SHA}
+      Pipeline: ${CI_PIPELINE_URL}"
+      
+      git push origin "${CHART_REPO_BRANCH}"
+      echo "Successfully updated ${SERVICE_NAME} image tag in chart repository"
+  when: manual
+  only:
+    refs:
+      - main
+      - develop
+      - tags
+
+# Deploy API to chart repository
+deploy:api:
+  extends: .update_chart
+  variables:
+    SERVICE_NAME: "backend"
+    YAML_PATH: "backend.image.tag"
+  needs:
+    - build:api
+
+# Deploy Event Handler to chart repository
+deploy:event-handler:
+  extends: .update_chart
+  variables:
+    SERVICE_NAME: "event-handler"
+    YAML_PATH: "eventHandler.image.tag"
+  needs:
+    - build:event-handler
+
+# Deploy UI to chart repository
+deploy:ui:
+  extends: .update_chart
+  variables:
+    SERVICE_NAME: "frontend"
+    YAML_PATH: "frontend.image.tag"
+  needs:
+    - build:ui
