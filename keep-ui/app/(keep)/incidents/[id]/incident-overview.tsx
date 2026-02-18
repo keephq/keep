@@ -561,6 +561,10 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             tooltip={
               incident.resolve_on === "all_resolved"
                 ? "Incident will be resolved when all its alerts are resolved"
+                : incident.resolve_on === "first"
+                ? "Incident will be resolved when the first alert is resolved"
+                : incident.resolve_on === "last"
+                ? "Incident will be resolved when the last alert is resolved"
                 : "Incident will resolve only when manually set to resolved"
             }
           >

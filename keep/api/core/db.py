@@ -5367,13 +5367,123 @@ def is_all_alerts_in_status(
 def is_last_incident_alert_resolved(
     incident: Incident, session: Optional[Session] = None
 ) -> bool:
-    return is_edge_incident_alert_resolved(incident, func.max, session)
+
+    if incident.alerts_count == 0:
+        return False
+
+    with existed_or_new_session(session) as session:
+
+        enriched_status_field = get_json_extract_field(
+            session, AlertEnrichment.enrichments, "status"
+        )
+        status_field = get_json_extract_field(session, Alert.event, "status")
+        first_ts_by_fp = (
+                select(
+                    Alert.fingerprint,
+                    func.min(Alert.timestamp).label("first_timestamp")
+                )
+                .join(
+                    LastAlertToIncident,
+                    and_(
+                        LastAlertToIncident.tenant_id == Alert.tenant_id,
+                        LastAlertToIncident.fingerprint == Alert.fingerprint,
+                    )
+                )
+                .where(LastAlertToIncident.incident_id == incident.id)
+                .group_by(Alert.fingerprint)
+                .subquery()
+        )
+        latest_fingerprint = (
+            select(first_ts_by_fp.c.fingerprint)
+            .order_by(desc(first_ts_by_fp.c.first_timestamp))
+            .limit(1)
+            .scalar_subquery()
+        )
+        fingerprint, enriched_status, status = session.exec(
+            select(Alert.fingerprint, enriched_status_field, status_field)
+            .select_from(Alert)
+            .outerjoin(
+                AlertEnrichment,
+                and_(
+                    Alert.tenant_id == AlertEnrichment.tenant_id,
+                    Alert.fingerprint == AlertEnrichment.alert_fingerprint,
+                ),
+            )
+            .join(
+                LastAlertToIncident,
+                and_(
+                    LastAlertToIncident.tenant_id == Alert.tenant_id,
+                    LastAlertToIncident.fingerprint == Alert.fingerprint,
+                ),
+            )
+            .where(
+                LastAlertToIncident.incident_id == incident.id,
+                Alert.fingerprint == latest_fingerprint
+                )
+            .order_by(Alert.timestamp.desc())
+            .limit(1)
+        ).first()
+
+    return enriched_status == AlertStatus.RESOLVED.value or (
+        enriched_status is None and status == AlertStatus.RESOLVED.value
+    )
 
 
 def is_first_incident_alert_resolved(
     incident: Incident, session: Optional[Session] = None
 ) -> bool:
-    return is_edge_incident_alert_resolved(incident, func.min, session)
+    if incident.alerts_count == 0:
+        return False
+
+    with existed_or_new_session(session) as session:
+
+        enriched_status_field = get_json_extract_field(
+            session, AlertEnrichment.enrichments, "status"
+        )
+        status_field = get_json_extract_field(session, Alert.event, "status")
+        #Search the first alert
+        oldest_fingerprint = (
+                            select(Alert.fingerprint)
+                            .join(
+                                LastAlertToIncident,
+                                and_(
+                                    LastAlertToIncident.tenant_id == Alert.tenant_id,
+                                    LastAlertToIncident.fingerprint == Alert.fingerprint,
+                                ),
+                            )
+                            .where(LastAlertToIncident.incident_id == incident.id)
+                            .order_by(Alert.timestamp.asc())
+                            .limit(1)
+                            .scalar_subquery()
+                            )
+        #By the fingerprint, search the last update
+        fingerprint, enriched_status, status = session.exec(
+            select(Alert.fingerprint, enriched_status_field, status_field)
+            .select_from(Alert)
+            .outerjoin(
+                AlertEnrichment,
+                and_(
+                    Alert.tenant_id == AlertEnrichment.tenant_id,
+                    Alert.fingerprint == AlertEnrichment.alert_fingerprint,
+                ),
+            )
+            .join(
+                LastAlertToIncident,
+                and_(
+                    LastAlertToIncident.tenant_id == Alert.tenant_id,
+                    LastAlertToIncident.fingerprint == Alert.fingerprint,
+                ),
+            )
+            .where(
+                LastAlertToIncident.incident_id == incident.id,
+                Alert.fingerprint == oldest_fingerprint
+                )
+            .order_by(Alert.timestamp.desc())
+            .limit(1)
+        ).first()
+    return enriched_status == AlertStatus.RESOLVED.value or (
+        enriched_status is None and status == AlertStatus.RESOLVED.value
+    )
 
 
 def is_edge_incident_alert_resolved(
@@ -5413,9 +5523,9 @@ def is_edge_incident_alert_resolved(
             .order_by(direction(Alert.timestamp))
         ).first()
 
-        return enriched_status == AlertStatus.RESOLVED.value or (
-            enriched_status is None and status == AlertStatus.RESOLVED.value
-        )
+    return enriched_status == AlertStatus.RESOLVED.value or (
+        enriched_status is None and status == AlertStatus.RESOLVED.value
+    )
 
 
 def get_alerts_metrics_by_provider(
