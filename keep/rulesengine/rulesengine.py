@@ -54,6 +54,7 @@ class RulesEngine:
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
         self.env = celpy.Environment()
+        self._historical_patterns_cache = {}
 
     def run_rules(
         self, events: list[AlertDto], session: Optional[Session] = None
