@@ -19,7 +19,7 @@ class KubernetesProviderAuthConfig:
         metadata={
             "name": "api_server",
             "description": "The kubernetes api server url",
-            "required": True,
+            "required": False,
             "sensitive": False,
             "validation": "any_http_url",
         },
@@ -28,8 +28,8 @@ class KubernetesProviderAuthConfig:
         default=None,
         metadata={
             "name": "token",
-            "description": "Bearer token to access kubernetes",
-            "required": True,
+            "description": "Bearer token to access kubernetes (leave empty for in-cluster auth)",
+            "required": False,
             "sensitive": True,
         },
     )
@@ -38,6 +38,16 @@ class KubernetesProviderAuthConfig:
         metadata={
             "name": "insecure",
             "description": "Skip TLS verification",
+            "required": False,
+            "sensitive": False,
+            "type": "switch",
+        },
+    )
+    use_in_cluster_config: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "name": "use_in_cluster_config",
+            "description": "Use in-cluster configuration (ServiceAccount)",
             "required": False,
             "sensitive": False,
             "type": "switch",
@@ -83,15 +93,33 @@ class KubernetesProvider(BaseProvider):
         """
         Create a Kubernetes client.
         """
-        client_configuration = client.Configuration()
+        # Case 1: Manual configuration (API Server + Token)
+        if self.authentication_config.api_server and self.authentication_config.token:
+            client_configuration = client.Configuration()
+            client_configuration.host = str(self.authentication_config.api_server)
+            client_configuration.verify_ssl = not self.authentication_config.insecure
+            client_configuration.api_key = {
+                "authorization": "Bearer " + self.authentication_config.token
+            }
+            return client.ApiClient(client_configuration)
 
-        client_configuration.host = self.authentication_config.api_server
-        client_configuration.verify_ssl = not self.authentication_config.insecure
-        client_configuration.api_key = {
-            "authorization": "Bearer " + self.authentication_config.token
-        }
-
-        return client.ApiClient(client_configuration)
+        # Case 2: In-cluster configuration (ServiceAccount)
+        try:
+            from kubernetes import config as k8s_config
+            k8s_config.load_incluster_config()
+            return client.ApiClient()
+        except Exception as e:
+            self.logger.error(f"Failed to load in-cluster config: {str(e)}")
+            # Fallback to load default kubeconfig if exists
+            try:
+                from kubernetes import config as k8s_config
+                k8s_config.load_kube_config()
+                return client.ApiClient()
+            except Exception as e:
+                self.logger.error(f"Failed to load kube config: {str(e)}")
+                raise Exception(
+                    "Kubernetes provider requires either manual configuration (API Server + Token) or in-cluster configuration (ServiceAccount)."
+                )
 
     def validate_scopes(self):
         """
