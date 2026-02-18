@@ -408,7 +408,24 @@ class JiraProvider(BaseProvider):
                 fields["components"] = [{"name": component} for component in components]
 
             if custom_fields:
-                fields.update(custom_fields)
+                # Filter out priority field if it's set to "none" or empty
+                filtered_fields = {}
+                for key, value in custom_fields.items():
+                    if key == "priority" and (not value or str(value).lower() in ["none", "", "null"]):
+                        self.logger.info(f"Skipping priority field with value '{value}' as it may not be available on the issue screen")
+                        continue
+                    filtered_fields[key] = value
+                fields.update(filtered_fields)
+            
+            # Also handle priority that might come through kwargs
+            if kwargs:
+                filtered_kwargs = {}
+                for key, value in kwargs.items():
+                    if key == "priority" and (not value or str(value).lower() in ["none", "", "null"]):
+                        self.logger.info(f"Skipping priority field from kwargs with value '{value}' as it may not be available on the issue screen")
+                        continue
+                    filtered_kwargs[key] = value
+                fields.update(filtered_kwargs)
 
             request_body = {"fields": fields}
 
