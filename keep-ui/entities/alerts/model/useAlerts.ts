@@ -134,12 +134,30 @@ export const useAlerts = () => {
       }
     };
 
+    // Function to reprocess error alerts with updated provider code
+    // If alertId is provided, reprocesses that specific alert
+    // If no alertId is provided, reprocesses all error alerts
+    const reprocessErrorAlerts = async (alertId?: string) => {
+      if (!api.isReady()) return { success: false, message: "API not ready" };
+
+      try {
+        const payload = alertId ? { alert_id: alertId } : {};
+        const result = await api.post(`/alerts/event/error/reprocess`, payload);
+        await mutate(); // Refresh the data
+        return { success: true, ...result };
+      } catch (error) {
+        console.error("Failed to reprocess error alert(s):", error);
+        return { success: false, message: "Failed to reprocess" };
+      }
+    };
+
     return {
       data,
       error,
       isLoading,
       mutate,
       dismissErrorAlerts,
+      reprocessErrorAlerts,
     };
   };
 

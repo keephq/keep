@@ -30,6 +30,7 @@ from keep.api.core.alerts import (
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
+from keep.api.core.db import dismiss_error_alert_by_id
 from keep.api.core.db import enrich_alerts_with_incidents
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
@@ -39,6 +40,7 @@ from keep.api.core.db import (
     get_enrichment,
 )
 from keep.api.core.db import get_error_alerts as get_error_alerts_db
+from keep.api.core.db import get_error_alerts_to_reprocess
 from keep.api.core.db import (
     get_last_alerts,
     get_last_alerts_by_fingerprints,
@@ -1459,3 +1461,121 @@ def dismiss_error_alerts(
         )
 
         return {"success": True, "message": "Successfully dismissed all alerts"}
+
+
+@router.post(
+    "/event/error/reprocess",
+    description="Reprocess error alerts with updated provider code. If alert_id is provided, reprocesses that specific alert. If no alert_id is provided, reprocesses all error alerts.",
+)
+def reprocess_error_alerts(
+    request: DismissAlertRequest = None,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> dict:
+    """
+    Reprocess failed events with current provider code.
+    If alert_id is provided, reprocesses that specific alert.
+    If no alert_id is provided, reprocesses all error alerts.
+    """
+    tenant_id = authenticated_entity.tenant_id
+    alert_id = request.alert_id if request else None
+
+    logger.info(
+        "Reprocessing error alerts",
+        extra={
+            "tenant_id": tenant_id,
+            "alert_id": alert_id,
+        },
+    )
+
+    # Get error alerts to reprocess
+    error_alerts = get_error_alerts_to_reprocess(tenant_id, alert_id)
+
+    if not error_alerts:
+        logger.info(
+            "No error alerts found to reprocess",
+            extra={"tenant_id": tenant_id, "alert_id": alert_id},
+        )
+        return {"success": True, "message": "No error alerts found to reprocess", "successful": 0, "failed": 0, "total": 0}
+
+    successful = 0
+    failed = 0
+    failed_alerts = []
+
+    for error_alert in error_alerts:
+        try:
+            logger.info(
+                "Attempting to reprocess error alert",
+                extra={
+                    "tenant_id": tenant_id,
+                    "alert_id": str(error_alert.id),
+                    "provider_type": error_alert.provider_type,
+                },
+            )
+
+            # Attempt to reprocess the event
+            process_event(
+                ctx={},  # No arq context for manual reprocessing
+                tenant_id=tenant_id,
+                provider_type=error_alert.provider_type,
+                provider_id=None,
+                fingerprint=None,
+                api_key_name=None,
+                trace_id=None,
+                event=error_alert.raw_alert,
+                notify_client=True,
+            )
+
+            # If successful, mark the error alert as dismissed
+            dismiss_error_alert_by_id(
+                tenant_id, 
+                str(error_alert.id), 
+                dismissed_by=authenticated_entity.email
+            )
+            successful += 1
+
+            logger.info(
+                "Successfully reprocessed error alert",
+                extra={
+                    "tenant_id": tenant_id,
+                    "alert_id": str(error_alert.id),
+                },
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to reprocess error alert: {e}",
+                extra={
+                    "tenant_id": tenant_id,
+                    "alert_id": str(error_alert.id),
+                    "error": str(e),
+                },
+            )
+            failed += 1
+            failed_alerts.append(
+                {"alert_id": str(error_alert.id), "error": str(e)}
+            )
+
+    logger.info(
+        "Reprocessing completed",
+        extra={
+            "tenant_id": tenant_id,
+            "successful": successful,
+            "failed": failed,
+            "total": len(error_alerts),
+        },
+    )
+
+    response = {
+        "success": successful > 0,
+        "message": f"Reprocessed {successful} alert(s) successfully, {failed} failed",
+        "successful": successful,
+        "failed": failed,
+        "total": len(error_alerts),
+    }
+
+    if failed_alerts:
+        response["failed_alerts"] = failed_alerts
+
+    return response
