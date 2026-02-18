@@ -255,11 +255,10 @@ class MaintenanceWindowsBl:
                             "tenant_id": tenant,
                         },
                     )
-
+            incidents = []
             with tracer.start_as_current_span("mw_recover_strategy_run_rules_engine"):
                 # Now we need to run the rules engine
                 if KEEP_CORRELATION_ENABLED:
-                    incidents = []
                     try:
                         rules_engine = RulesEngine(tenant_id=tenant)
                         # handle incidents, also handle workflow execution as
@@ -275,17 +274,34 @@ class MaintenanceWindowsBl:
                                 "tenant_id": tenant,
                             },
                         )
-                    pusher_cache = get_notification_cache()
-                    if incidents and pusher_cache.should_notify(tenant, "incident-change"):
-                        pusher_client = get_pusher_client()
-                        try:
-                            pusher_client.trigger(
-                                f"private-{tenant}",
-                                "incident-change",
-                                {},
-                            )
-                        except Exception:
-                            logger.exception("Failed to tell the client to pull incidents")
+
+            with tracer.start_as_current_span("mw_recover_strategy_notify_client"):
+                pusher_client = get_pusher_client()
+                if not pusher_client:
+                    return
+                pusher_cache = get_notification_cache()
+                if pusher_cache.should_notify(tenant, "poll-alerts"):
+                    try:
+                        pusher_client.trigger(
+                            f"private-{tenant}",
+                            "poll-alerts",
+                            "{}",
+                        )
+                        logger.info("Told client to poll alerts")
+                    except Exception:
+                        logger.exception("Failed to tell client to poll alerts")
+                        pass
+
+                if incidents and pusher_cache.should_notify(tenant, "incident-change"):
+                    pusher_client = get_pusher_client()
+                    try:
+                        pusher_client.trigger(
+                            f"private-{tenant}",
+                            "incident-change",
+                            {},
+                        )
+                    except Exception:
+                        logger.exception("Failed to tell the client to pull incidents")
 
                 try:
                     presets = get_all_presets_dtos(tenant)
