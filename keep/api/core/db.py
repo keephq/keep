@@ -28,6 +28,7 @@ from sqlalchemy import (
     case,
     cast,
     desc,
+    event as sqlalchemy_event,
     func,
     literal,
     null,
@@ -92,6 +93,22 @@ load_dotenv(find_dotenv())
 
 
 engine = create_db_engine()
+
+
+@sqlalchemy_event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if engine.dialect.name == "sqlite":
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
+
+
+@sqlalchemy_event.listens_for(engine, "checkout")
+def checkout_listener(dbapi_connection, connection_record, connection_proxy):
+    # This prevents 'Idle in transaction' which often leads to pool exhaustion
+    dbapi_connection.rollback()
+
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
@@ -2710,6 +2727,7 @@ def create_deduplication_event(
         )
         session.add(deduplication_event)
         session.commit()
+        session.refresh(deduplication_event)
         logger.debug(
             "Deduplication event added",
             extra={
