@@ -20,8 +20,6 @@ export function getLayoutedElements(nodes: TopologyNode[], edges: Edge[]) {
   });
 
   edges.forEach((edge) => {
-    // Safety check: only add edge if both source and target nodes exist in the graph
-    // (Dagre might crash if it tries to layout an edge with missing nodes)
     if (dagreGraph.hasNode(edge.source) && dagreGraph.hasNode(edge.target)) {
       dagreGraph.setEdge(edge.source, edge.target);
     }
