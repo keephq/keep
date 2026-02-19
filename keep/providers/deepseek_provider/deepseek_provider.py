@@ -1,8 +1,7 @@
 import json
 import dataclasses
 import pydantic
-
-from openai import OpenAI
+import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -23,7 +22,6 @@ class DeepseekProviderAuthConfig:
 class DeepseekProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "DeepSeek"
     PROVIDER_CATEGORY = ["AI"]
-    BASE_URL = "https://api.deepseek.com"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -45,49 +43,62 @@ class DeepseekProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="deepseek-reasoner",
+        model="deepseek-chat",
         max_tokens=1024,
-        system_prompt=None,
+        temperature=0.7,
         structured_output_format=None,
     ):
         """
-        Query the DeepSeek API with the given prompt and system prompt.
+        Query the DeepSeek API with the given prompt and model.
         Args:
-            prompt (str): The user query.
-            model (str): The model to use for the query.
+            prompt (str): The prompt to query the model with.
+            model (str): The model to query.
             max_tokens (int): The maximum number of tokens to generate.
-            system_prompt (str): The system prompt to use.
-            structured_output_format (dict): The structured output format.
+            temperature (float): The temperature to use for generation.
+            structured_output_format (dict): The structured output format to use.
         """
-        try:
-            max_tokens = int(max_tokens)
-        except (TypeError, ValueError):
-            max_tokens = 1024
+        api_url = "https://api.deepseek.com/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.authentication_config.api_key}",
+        }
 
-        client = OpenAI(
-            api_key=self.authentication_config.api_key,
-            base_url=self.BASE_URL,
-        )
+        messages = [{"role": "user", "content": prompt}]
 
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        # Handle structured output with system prompt if needed
+        # Note: DeepSeek supports JSON mode if explicitly asked or through system prompt
+        if structured_output_format:
+            schema = structured_output_format.get("json_schema", {})
+            system_prompt = (
+                f"You must respond with valid JSON that matches this schema: {json.dumps(schema)}\n"
+                "Your response must be parseable JSON and nothing else."
+            )
+            messages.insert(0, {"role": "system", "content": system_prompt})
 
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            response_format=structured_output_format,
-        )
-        response = response.choices[0].message.content
-        try:
-            response = json.loads(response)
-        except Exception:
-            pass
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+
+        if structured_output_format:
+            payload["response_format"] = {"type": "json_object"}
+
+        response = requests.post(api_url, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()
+        content = result["choices"][0]["message"]["content"]
+
+        if structured_output_format:
+            try:
+                content = json.loads(content)
+            except Exception:
+                pass
 
         return {
-            "response": response,
+            "response": content,
         }
 
 
@@ -116,25 +127,10 @@ if __name__ == "__main__":
         config=config,
     )
 
-    # Example usage with system prompt
     print(
         provider.query(
-            prompt="Which is the longest river in the world? The Nile River.",
+            prompt="Tell me a joke about DevOps.",
             model="deepseek-chat",
-            system_prompt="""
-            The user will provide some exam text. Please parse the "question" and "answer" 
-            and output them in JSON format.
-
-            EXAMPLE INPUT:
-            Which is the highest mountain in the world? Mount Everest.
-
-            EXAMPLE JSON OUTPUT:
-            {
-                "question": "Which is the highest mountain in the world?",
-                "answer": "Mount Everest"
-            }
-            """,
-            structured_output_format={"type": "json_object"},
             max_tokens=100,
         )
     )
