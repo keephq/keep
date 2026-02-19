@@ -1,1 +1,0 @@
-export { IncidentIconName } from "./IncidentIconName";
