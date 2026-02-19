@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -160,8 +160,8 @@ def get_metric_widgets(
     tenant_id = authenticated_entity.tenant_id
     if not time_stamp.lower_timestamp or not time_stamp.upper_timestamp:
         time_stamp = TimeStampFilter(
-            upper_timestamp=datetime.utcnow(),
-            lower_timestamp=datetime.utcnow() - timedelta(hours=24),
+            upper_timestamp=datetime.now(tz=timezone.utc),
+            lower_timestamp=datetime.now(tz=timezone.utc) - timedelta(hours=24),
         )
     if apd:
         data["apd"] = get_provider_distribution(

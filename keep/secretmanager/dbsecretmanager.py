@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from sqlmodel import Session, select
 
@@ -48,7 +48,7 @@ class DbSecretManager(BaseSecretManager):
             try:
                 if secret_model:
                     secret_model.value = secret_value
-                    secret_model.last_updated = datetime.utcnow()
+                    secret_model.last_updated = datetime.now(tz=timezone.utc)
                     session.commit()
                     return
                 

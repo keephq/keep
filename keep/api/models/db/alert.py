@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID, uuid4
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     incident_id: UUID = Field(
@@ -66,7 +66,7 @@ class LastAlert(SQLModel, table=True):
 
 class LastAlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
     fingerprint: str = Field(primary_key=True)
     incident_id: UUID = Field(
@@ -114,8 +114,8 @@ class Alert(SQLModel, table=True):
     #            todo: on MSSQL, the index is "nonclustered" index which cannot be controlled by SQLModel
     timestamp: datetime = Field(
         sa_column=Column(DATETIME_COLUMN_TYPE, index=True, nullable=False),
-        default_factory=lambda: datetime.utcnow().replace(
-            microsecond=int(datetime.utcnow().microsecond / 1000) * 1000
+        default_factory=lambda: datetime.now(tz=timezone.utc).replace(
+            microsecond=int(datetime.now(tz=timezone.utc).microsecond / 1000) * 1000
         ),
     )
     provider_type: str
@@ -184,7 +184,7 @@ class AlertEnrichment(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     alert_fingerprint: str = Field(unique=True)
     enrichments: dict = Field(sa_column=Column(JSON))
 
@@ -209,9 +209,9 @@ class AlertDeduplicationRule(SQLModel, table=True):
     description: str
     provider_id: str | None = Field(default=None)  # None for default rules
     provider_type: str
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     last_updated_by: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     created_by: str
     enabled: bool = Field(default=True)
     fingerprint_fields: list[str] = Field(sa_column=Column(JSON), default=[])
@@ -229,13 +229,13 @@ class AlertDeduplicationEvent(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     timestamp: datetime = Field(
         sa_column=Column(DATETIME_COLUMN_TYPE, nullable=False),
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(tz=timezone.utc),
     )
     deduplication_rule_id: UUID  # TODO: currently rules can also be implicit (like default) so they won't exists on db Field(foreign_key="alertdeduplicationrule.id", index=True)
     deduplication_type: str = Field()  # 'full' or 'partial'
     date_hour: datetime = Field(
         sa_column=Column(DATETIME_COLUMN_TYPE),
-        default_factory=lambda: datetime.utcnow().replace(
+        default_factory=lambda: datetime.now(tz=timezone.utc).replace(
             minute=0, second=0, microsecond=0
         ),
     )
@@ -292,7 +292,7 @@ class AlertRaw(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     raw_alert: dict = Field(sa_column=Column(JSON))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     provider_type: str | None = Field(default=None)
     error: bool = Field(default=False, index=True)
     error_message: str | None = Field(default=None)
@@ -314,7 +314,7 @@ class AlertAudit(SQLModel, table=True):
     fingerprint: str
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
     # when
-    timestamp: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc), nullable=False)
     # who
     user_id: str = Field(nullable=False)
     # what
@@ -346,7 +346,7 @@ class CommentMention(SQLModel, table=True):
     )
     mentioned_user_id: str = Field(nullable=False)
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc), nullable=False)
     
     alert_audit: AlertAudit = Relationship(
         back_populates="mentions",

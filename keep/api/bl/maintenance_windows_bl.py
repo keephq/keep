@@ -196,7 +196,7 @@ class MaintenanceWindowsBl:
                 if (
                     w_start < alert.timestamp
                     and alert.timestamp < w_end
-                    and w_end > datetime.datetime.utcnow()
+                    and w_end > datetime.datetime.now(tz=datetime.timezone.utc)
                     and is_enable
                 ):
                     logger.info("Checking alert %s in maintenance window %s", alert.id, window.id)
