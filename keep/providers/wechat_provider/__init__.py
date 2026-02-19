@@ -1,0 +1,1 @@
+from keep.providers.wechat_provider.wechat_provider import WechatProvider
