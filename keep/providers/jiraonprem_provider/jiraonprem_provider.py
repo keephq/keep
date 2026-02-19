@@ -284,7 +284,7 @@ class JiraonpremProvider(BaseProvider):
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
-        priority: str = "Medium",
+        priority: str = None,
         **kwargs: dict,
     ):
         """
@@ -304,8 +304,10 @@ class JiraonpremProvider(BaseProvider):
                 "description": description,
                 "project": {"key": project_key},
                 "issuetype": {"name": issue_type},
-                "priority": {"name": priority},
             }
+
+            if priority:
+                fields["priority"] = {"name": priority}
 
             if labels:
                 fields["labels"] = labels
@@ -343,7 +345,7 @@ class JiraonpremProvider(BaseProvider):
         issue_id: str,
         summary: str = "",
         description: str = "",
-        priority: str = "Medium",
+        priority: str = None,
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
@@ -503,7 +505,7 @@ class JiraonpremProvider(BaseProvider):
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
-        priority: str = "Medium",
+        priority: str = None,
         **kwargs: dict,
     ):
         """
