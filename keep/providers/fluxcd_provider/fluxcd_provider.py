@@ -385,17 +385,19 @@ class FluxcdProvider(BaseTopologyProvider):
             # Return None instead of raising an exception to make the provider more robust
             return None
 
-    def __check_flux_installed(self) -> bool:
+    def __check_flux_installed(self) -> Union[bool, str]:
         """
         Check if Flux CD is installed in the cluster.
 
         This method checks if the Flux CD CRDs are installed in the cluster.
 
         Returns:
-            bool: True if Flux CD is installed, False otherwise
+            Union[bool, str]: True if Flux CD is installed, or a string
+                describing the specific error reason (e.g., insufficient
+                RBAC permissions vs. CRDs not found).
         """
         if self.k8s_client is None:
-            return False
+            return "No Kubernetes client available"
 
         try:
             # Check if the GitRepository CRD exists
@@ -405,9 +407,23 @@ class FluxcdProvider(BaseTopologyProvider):
             api_instance.read_custom_resource_definition(name=crd_name)
             self.logger.debug(f"Flux CD CRD {crd_name} found")
             return True
+        except ApiException as e:
+            if e.status == 403:
+                self.logger.warning(
+                    f"Insufficient permissions to check Flux CD CRDs: {str(e)}"
+                )
+                return (
+                    "Insufficient RBAC permissions to verify Flux CD installation. "
+                    "Please ensure the ServiceAccount has 'get' access to "
+                    "customresourcedefinitions.apiextensions.k8s.io"
+                )
+            self.logger.warning(
+                f"Flux CD does not appear to be installed: {str(e)}"
+            )
+            return "Flux CD does not appear to be installed in the cluster"
         except Exception as e:
             self.logger.warning(f"Flux CD does not appear to be installed: {str(e)}")
-            return False
+            return f"Error checking Flux CD installation: {str(e)}"
 
     def validate_scopes(self) -> Dict[str, Union[bool, str]]:
         """
@@ -428,9 +444,9 @@ class FluxcdProvider(BaseTopologyProvider):
                 authenticated = "No Kubernetes cluster available"
             else:
                 # Check if Flux CD is installed
-                if not self.__check_flux_installed():
-                    # This message must match exactly what the test expects
-                    authenticated = "Flux CD is not installed in the cluster"
+                flux_check = self.__check_flux_installed()
+                if flux_check is not True:
+                    authenticated = flux_check
                 else:
                     # Try to list GitRepositories to validate authentication
                     self.__list_git_repositories()
