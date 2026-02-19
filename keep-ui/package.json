@@ -50,7 +50,7 @@
     "@xyflow/react": "^12.4.4",
     "@xyflow/system": "^0.0.52",
     "autoprefixer": "^10.4.21",
-    "axios": "^1.12.2",
+    "axios": "^1.13.5",
     "browserslist": "^4.24.4",
     "chart.js": "^4.4.8",
     "date-fns": "^4.1.0",
