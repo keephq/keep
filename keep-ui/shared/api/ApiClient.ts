@@ -6,6 +6,7 @@ import { getApiURL } from "@/utils/apiUrl";
 import * as Sentry from "@sentry/nextjs";
 import { signOut as signOutClient } from "next-auth/react";
 import { GuestSession } from "@/types/auth";
+import { AuthType } from "@/utils/authenticationType";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
 const READ_ONLY_ALWAYS_ALLOWED_URLS = [
@@ -77,7 +78,12 @@ export class ApiClient {
         if (response.status === 401) {
           // on server, middleware will handle the sign out
           if (!this.isServer) {
-            await signOutClient();
+            // For OAUTH2PROXY auth, redirect to oauth2-proxy's sign_out endpoint
+            if (this.config?.AUTH_TYPE === AuthType.OAUTH2PROXY) {
+              window.location.href = "/oauth2/sign_out";
+            } else {
+              await signOutClient();
+            }
           }
           throw new KeepApiError(
             `${data.message || data.detail}`,
