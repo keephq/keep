@@ -480,11 +480,11 @@ class FluxcdProvider(BaseTopologyProvider):
 
         # Mapping from kind to the API group, version, and plural form
         kind_map = {
-            "HelmRelease": ("helm.toolkit.fluxcd.io", "v2beta1", "helmreleases"),
-            "Kustomization": ("kustomize.toolkit.fluxcd.io", "v1beta2", "kustomizations"),
-            "GitRepository": ("source.toolkit.fluxcd.io", "v1beta2", "gitrepositories"),
-            "OCIRepository": ("source.toolkit.fluxcd.io", "v1beta2", "ocirepositories"),
-            "HelmRepository": ("source.toolkit.fluxcd.io", "v1beta2", "helmrepositories"),
+            "HelmRelease": ("helm.toolkit.fluxcd.io", "v2", "helmreleases"),
+            "Kustomization": ("kustomize.toolkit.fluxcd.io", "v1", "kustomizations"),
+            "GitRepository": ("source.toolkit.fluxcd.io", "v1", "gitrepositories"),
+            "OCIRepository": ("source.toolkit.fluxcd.io", "v1", "ocirepositories"),
+            "HelmRepository": ("source.toolkit.fluxcd.io", "v1", "helmrepositories"),
         }
 
         kind_lower = kind.lower()
