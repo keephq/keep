@@ -460,6 +460,7 @@ class IncidentBl:
                     incident.status = IncidentStatus.RESOLVED.value
                     self.session.add(incident)
                     self.session.commit()
+                    self.send_workflow_event(IncidentDto.from_db_incident(incident), "updated")
                     break
                 except StaleDataError as ex:
                     if "expected to update" in ex.args[0]:
