@@ -196,7 +196,7 @@ class RulesEngine:
 
                             incident = IncidentBl(
                                 self.tenant_id, session
-                            ).resolve_incident_if_require(incident)
+                            ).resolve_incident_if_require(incident, handle_workflow_event=False)
 
                             incident_dto = IncidentDto.from_db_incident(incident)
                             if send_created_event:

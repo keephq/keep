@@ -67,3 +67,48 @@ def test_auto_resolve_sends_workflow_event(db_session, create_alert):
         assert args[0] == SINGLE_TENANT_UUID
         # args[1] is the incident dto
         assert args[2] == "updated" # action
+
+def test_auto_resolve_workflow_suppression(db_session, create_alert):
+    # 1. Create incident
+    incident_id = uuid4()
+    incident = Incident(
+        id=incident_id,
+        tenant_id=SINGLE_TENANT_UUID,
+        status=IncidentStatus.FIRING.value,
+        severity=IncidentSeverity.CRITICAL.value,
+        message="Test Incident",
+        description="Test Description",
+        created_at=datetime.now(timezone.utc),
+        resolve_on=ResolveOn.ALL.value,
+        user_generated_name="Test Incident",
+    )
+    db_session.add(incident)
+    db_session.flush()
+
+    # 2. Add resolved alert
+    create_alert(
+        "test-alert-2",
+        AlertStatus.RESOLVED,
+        datetime.now(timezone.utc),
+        {"severity": AlertSeverity.CRITICAL.value}
+    )
+    alert = db_session.query(Alert).filter(Alert.fingerprint == "test-alert-2").first()
+    add_alerts_to_incident(SINGLE_TENANT_UUID, incident, [alert.fingerprint], session=db_session)
+    
+    incident_bl = IncidentBl(SINGLE_TENANT_UUID, db_session)
+
+    # 3. Test handle_workflow_event=False
+    with patch("keep.workflowmanager.workflowmanager.WorkflowManager.get_instance") as mock_get_instance:
+        mock_wm = MagicMock()
+        mock_get_instance.return_value = mock_wm
+        
+        # Call with flag=False
+        updated_incident = incident_bl.resolve_incident_if_require(
+            incident, 
+            handle_workflow_event=False
+        )
+        
+        assert updated_incident.status == IncidentStatus.RESOLVED.value
+        
+        # Verify NO workflow triggered
+        mock_wm.insert_incident.assert_not_called()
