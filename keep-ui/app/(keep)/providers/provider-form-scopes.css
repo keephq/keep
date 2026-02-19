@@ -1,9 +1,0 @@
-#scope-badge {
-  .tremor-Badge-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: normal;
-    word-break: break-word;
-    padding: 6px;
-  }
-}

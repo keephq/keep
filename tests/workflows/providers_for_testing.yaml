@@ -1,3 +1,0 @@
-slack-demo:
-  authentication:
-    webhook_url: https://yourorg.slack.com/webhooks-whatever1234

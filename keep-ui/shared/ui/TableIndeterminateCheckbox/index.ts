@@ -1,1 +1,0 @@
-export { TableIndeterminateCheckbox } from "./TableIndeterminateCheckbox";

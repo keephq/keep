@@ -1,1 +1,0 @@
-export { VerticalRoundedList } from "./VerticalRoundedList";
