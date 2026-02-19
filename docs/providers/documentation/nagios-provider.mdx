@@ -1,0 +1,86 @@
+---
+title: "Nagios"
+sidebarTitle: "Nagios Provider"
+description: "Nagios provider allows you to receive alerts from Nagios monitoring system and manage them in Keep."
+---
+
+## Overview
+
+[Nagios](https://www.nagios.org/) is one of the most widely used open-source monitoring systems. It monitors hosts, services, and network infrastructure, sending alerts when things go wrong.
+
+Keep's Nagios provider supports both **Nagios Core** and **Nagios XI**, allowing you to:
+
+- Receive real-time alerts via webhooks
+- Pull alerts via API (Nagios XI REST API or Nagios Core JSON CGI)
+- Map Nagios states to Keep's alert model
+
+## Authentication
+
+### Nagios XI
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `host_url` | Base URL of your Nagios XI instance | Yes |
+| `api_key` | Nagios XI API key | Yes |
+
+### Nagios Core
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `host_url` | Base URL of your Nagios Core instance | Yes |
+| `username` | Nagios CGI username | Yes |
+| `password` | Nagios CGI password | Yes |
+
+## Connecting with Webhook
+
+### Nagios Core
+
+Add a notification command to your Nagios configuration:
+
+```
+define command {
+    command_name    notify_keep
+    command_line    /usr/bin/curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "X-API-KEY: $CONTACTPAGER$" \
+        -d '{ "host": "$HOSTNAME$", "service": "$SERVICEDESC$", "state": "$SERVICESTATE$", "output": "$SERVICEOUTPUT$", "type": "$NOTIFICATIONTYPE$", "timestamp": "$TIMET$" }' \
+        {keep_webhook_api_url}
+}
+```
+
+Then create a contact using this command, with your Keep API key set as the pager field.
+
+### Nagios XI
+
+1. Navigate to **Admin > System Extensions > Manage Components**
+2. Configure a webhook notification
+3. Set URL to your Keep webhook endpoint
+4. Add the `X-API-KEY` header with your Keep API key
+
+## Alert Mapping
+
+### Status Mapping
+
+| Nagios State | Keep Status |
+|-------------|-------------|
+| OK / UP | Resolved |
+| WARNING | Firing |
+| CRITICAL | Firing |
+| UNKNOWN | Firing |
+| DOWN | Firing |
+| UNREACHABLE | Firing |
+
+### Severity Mapping
+
+| Nagios State | Keep Severity |
+|-------------|---------------|
+| OK / UP | Info |
+| WARNING | Warning |
+| CRITICAL | Critical |
+| UNKNOWN | Info |
+| DOWN | Critical |
+| UNREACHABLE | High |
+
+## Useful Links
+
+- [Nagios Core Documentation](https://www.nagios.org/documentation/)
+- [Nagios XI API Documentation](https://www.nagios.org/ncpa/help/2.0/api.html)
+- [Nagios CGI JSON Output](https://assets.nagios.com/downloads/nagioscore/docs/nagioscore/4/en/cgiincludes.html)
