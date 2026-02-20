@@ -15,6 +15,7 @@ from prettytable import PrettyTable
 
 from keep.api.core.posthog import posthog_client
 from keep.functions import cyaml
+from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProviderEncoder, ProvidersFactory
 
 load_dotenv(find_dotenv())
@@ -139,6 +140,7 @@ class Info:
             or "config" in arguments
             or "version" in arguments
             or "build_cache" in arguments
+            or ("workflow" in arguments and "validate" in arguments)
         ):
             return
 
@@ -357,6 +359,73 @@ def api(multi_tenant: bool, port: int, host: str):
 def workflow(info: Info):
     """Manage workflows."""
     pass
+
+
+@workflow.command(name="validate")
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(exists=True),
+    help="The workflow YAML file to validate",
+)
+@click.option(
+    "--dir",
+    "-d",
+    "directory",
+    type=click.Path(exists=True, file_okay=False),
+    help="A directory containing workflow YAML files",
+)
+@pass_info
+def validate_workflow(info: Info, file: str | None, directory: str | None):
+    """Validate workflow YAML files for syntax and Keep workflow schema compatibility."""
+    if bool(file) == bool(directory):
+        raise click.UsageError("Please provide exactly one of --file/-f or --dir/-d")
+
+    workflow_files = []
+    if file:
+        workflow_files = [file]
+    else:
+        workflow_files = [
+            os.path.join(directory, filename)
+            for filename in sorted(os.listdir(directory))
+            if filename.endswith((".yml", ".yaml"))
+        ]
+
+    if not workflow_files:
+        raise click.UsageError("No .yml/.yaml workflow files were found")
+
+    parser = Parser()
+    valid_files = []
+    invalid_files = []
+
+    for workflow_file in workflow_files:
+        try:
+            with open(workflow_file, "r", encoding="utf-8") as f:
+                parsed_workflow_yaml = cyaml.safe_load(f)
+
+            if not isinstance(parsed_workflow_yaml, dict):
+                raise ValueError("YAML must define an object at the root level")
+
+            parser.parse(
+                tenant_id=None,
+                parsed_workflow_yaml=parsed_workflow_yaml,
+                is_test=True,
+            )
+            valid_files.append(workflow_file)
+            click.echo(click.style(f"✓ {workflow_file}", fg="green"))
+        except Exception as e:
+            invalid_files.append((workflow_file, str(e)))
+            click.echo(click.style(f"✗ {workflow_file}: {e}", fg="red", bold=True))
+
+    click.echo(
+        click.style(
+            f"Validation summary: {len(valid_files)} passed, {len(invalid_files)} failed",
+            bold=True,
+        )
+    )
+
+    if invalid_files:
+        sys.exit(1)
 
 
 @workflow.command(name="list")

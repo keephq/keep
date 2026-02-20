@@ -1,0 +1,49 @@
+---
+sidebarTitle: "keep workflow validate"
+---
+
+Validate one or more workflow files without requiring API credentials.
+
+## Usage
+
+```
+Usage: keep workflow validate [OPTIONS]
+```
+
+## Options
+* `file`:
+  * Type: Path
+  * Default: `none`
+  * Usage: `--file
+-f`
+
+  The workflow YAML file to validate
+
+* `dir`:
+  * Type: Path
+  * Default: `none`
+  * Usage: `--dir
+-d`
+
+  A directory containing workflow YAML files
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+
+## CLI Help
+
+```
+Usage: keep workflow validate [OPTIONS]
+
+  Validate workflow YAML files for syntax and Keep workflow schema compatibility.
+
+Options:
+  -f, --file PATH  The workflow YAML file to validate
+  -d, --dir PATH   A directory containing workflow YAML files
+  --help           Show this message and exit.
+```
