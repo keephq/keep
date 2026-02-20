@@ -359,6 +359,9 @@ class TopologyProcessor:
                 is_visible=True,  # Topology-based incidents are always confirmed
             )
 
+            session.add(incident)
+            session.flush()
+
             # Get all alerts for the services and find max severity
             for service in services_with_alerts:
                 service_alerts = services_with_alerts[service]
