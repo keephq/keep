@@ -1,0 +1,61 @@
+---
+title: "SolarWinds"
+sidebarTitle: "SolarWinds Provider"
+description: "SolarWinds provider allows you to receive alerts from SolarWinds Orion platform and manage them in Keep."
+---
+
+## Overview
+
+[SolarWinds](https://www.solarwinds.com/) is an enterprise IT monitoring platform for network, systems, and application performance management.
+
+Keep's SolarWinds provider integrates with the **SolarWinds Information Service (SWIS)** REST API to pull active alerts, and supports webhook-based forwarding for real-time notifications.
+
+## Authentication
+
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `host_url` | SolarWinds Orion server URL | Yes |
+| `username` | Orion platform username | Yes |
+| `password` | Orion platform password | Yes |
+
+## Connecting with Webhook
+
+1. In the **Orion Web Console**, go to **Settings > All Settings > Alerts & Reports > Manage Alerts**
+2. Edit or create an alert definition
+3. Add a **Trigger Action** → **Send a GET or POST Request to a URL**
+4. Set the URL to your Keep webhook endpoint
+5. Add header `X-API-KEY` with your Keep API key
+6. Configure the POST body with SolarWinds alert variables
+
+### Example webhook body
+
+```json
+{
+  "alert_id": "${AlertID}",
+  "alert_name": "${AlertName}",
+  "severity": "${Severity}",
+  "node_name": "${NodeName}",
+  "ip_address": "${IP_Address}",
+  "message": "${AlertMessage}",
+  "trigger_time": "${AlertTriggerTime}",
+  "acknowledged": "${Acknowledged}"
+}
+```
+
+## Alert Mapping
+
+### Severity Mapping
+
+| SolarWinds Severity | Keep Severity |
+|-------|---------------|
+| Critical | Critical |
+| Serious | High |
+| Warning | Warning |
+| Informational | Info |
+| Notice | Info |
+
+## Useful Links
+
+- [SolarWinds Orion Platform](https://www.solarwinds.com/orion-platform)
+- [SolarWinds SWIS API Documentation](https://github.com/solarwinds/OrionSDK/wiki/REST)
+- [Alert Variables Reference](https://documentation.solarwinds.com/en/success_center/orionplatform/content/core-alert-variables-sw1702.htm)
