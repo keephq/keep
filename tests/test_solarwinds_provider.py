@@ -9,8 +9,8 @@ Run from the solarwinds-provider directory:
 """
 
 import copy
-import sys
 import os
+import sys
 import unittest
 
 # ---------------------------------------------------------------------------
@@ -19,25 +19,27 @@ import unittest
 # the cloned repo.  Add both to sys.path so both import trees are reachable.
 # ---------------------------------------------------------------------------
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PROVIDER_ROOT = os.path.dirname(_HERE)           # solarwinds-provider/
+_PROVIDER_ROOT = os.path.dirname(_HERE)  # solarwinds-provider/
 _REPO_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(_PROVIDER_ROOT)),  # research/autonomous-income/
-    "repos", "keep",
+    "repos",
+    "keep",
 )
 
 for _p in (_PROVIDER_ROOT, _REPO_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus  # noqa: E402
-from keep.providers.solarwinds_provider.solarwinds_provider import (  # noqa: E402
-    SolarwindsProvider,
-)
+from keep.api.models.alert import (AlertDto, AlertSeverity,  # noqa: E402
+                                   AlertStatus)
 from keep.providers.solarwinds_provider.alerts_mock import ALERTS  # noqa: E402
+from keep.providers.solarwinds_provider.solarwinds_provider import \
+    SolarwindsProvider  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Convenience helpers
 # ---------------------------------------------------------------------------
+
 
 def _fmt(payload: dict) -> AlertDto:
     """Call the static formatter with a copy so tests stay independent."""
@@ -52,6 +54,7 @@ def _payload(key: str) -> dict:
 # ---------------------------------------------------------------------------
 # Test class
 # ---------------------------------------------------------------------------
+
 
 class TestSolarwindsProvider(unittest.TestCase):
 
@@ -145,12 +148,12 @@ class TestSolarwindsProvider(unittest.TestCase):
     def test_format_alert_named_string_severity(self):
         """Named string severities map correctly."""
         cases = [
-            ("critical",     AlertSeverity.CRITICAL.value),
-            ("error",        AlertSeverity.HIGH.value),
-            ("fatal",        AlertSeverity.CRITICAL.value),
-            ("warning",      AlertSeverity.WARNING.value),
-            ("information",  AlertSeverity.INFO.value),
-            ("info",         AlertSeverity.INFO.value),
+            ("critical", AlertSeverity.CRITICAL.value),
+            ("error", AlertSeverity.HIGH.value),
+            ("fatal", AlertSeverity.CRITICAL.value),
+            ("warning", AlertSeverity.WARNING.value),
+            ("information", AlertSeverity.INFO.value),
+            ("info", AlertSeverity.INFO.value),
         ]
         for raw, expected in cases:
             with self.subTest(severity=raw):
@@ -331,10 +334,10 @@ class TestSolarwindsProvider(unittest.TestCase):
         """SEVERITIES_MAP_STR lookup is case-insensitive."""
         cases = [
             ("CRITICAL", AlertSeverity.CRITICAL.value),
-            ("Warning",  AlertSeverity.WARNING.value),
-            ("INFO",     AlertSeverity.INFO.value),
-            ("Fatal",    AlertSeverity.CRITICAL.value),
-            ("ERROR",    AlertSeverity.HIGH.value),
+            ("Warning", AlertSeverity.WARNING.value),
+            ("INFO", AlertSeverity.INFO.value),
+            ("Fatal", AlertSeverity.CRITICAL.value),
+            ("ERROR", AlertSeverity.HIGH.value),
         ]
         for raw, expected in cases:
             with self.subTest(raw=raw):

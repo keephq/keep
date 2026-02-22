@@ -134,7 +134,9 @@ ALERTS = {
 
 if __name__ == "__main__":
     import json
-    from keep.providers.solarwinds_provider.solarwinds_provider import SolarwindsProvider
+
+    from keep.providers.solarwinds_provider.solarwinds_provider import \
+        SolarwindsProvider
 
     print(f"{'='*70}")
     print(f"SolarWinds mock alert round-trip — {len(ALERTS)} payloads")

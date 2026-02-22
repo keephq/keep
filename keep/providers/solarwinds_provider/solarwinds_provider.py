@@ -161,7 +161,9 @@ To automatically resolve alerts in Keep when SolarWinds clears them:
         severity = AlertSeverity.INFO  # safe default
 
         if isinstance(raw_severity, int):
-            severity = SolarwindsProvider.SEVERITIES_MAP.get(raw_severity, AlertSeverity.INFO)
+            severity = SolarwindsProvider.SEVERITIES_MAP.get(
+                raw_severity, AlertSeverity.INFO
+            )
         elif isinstance(raw_severity, str):
             # Orion sometimes sends the integer as a string
             if raw_severity.isdigit():
@@ -216,9 +218,18 @@ To automatically resolve alerts in Keep when SolarWinds clears them:
         # IP_Address is intentionally excluded from known_keys so it flows
         # through **extra into AlertDto (AlertDto extra="allow").
         known_keys = {
-            "AlertName", "AlertMessage", "AlertDescription", "AlertDetailsUrl",
-            "AlertObjectID", "AlertActiveID", "Severity", "Acknowledged",
-            "AlertStatus", "TimeOfAlert", "NodeName", "NodeCaption",
+            "AlertName",
+            "AlertMessage",
+            "AlertDescription",
+            "AlertDetailsUrl",
+            "AlertObjectID",
+            "AlertActiveID",
+            "Severity",
+            "Acknowledged",
+            "AlertStatus",
+            "TimeOfAlert",
+            "NodeName",
+            "NodeCaption",
         }
         extra = {k: v for k, v in event.items() if k not in known_keys}
 
