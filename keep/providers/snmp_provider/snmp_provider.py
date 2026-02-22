@@ -27,19 +27,67 @@ class SnmpProvider(BaseProvider):
     # Well-known SNMP trap OIDs and their descriptions
     WELL_KNOWN_TRAPS = {
         # SNMPv1 generic trap types
-        "0": {"name": "coldStart", "severity": AlertSeverity.WARNING, "description": "Device cold start"},
-        "1": {"name": "warmStart", "severity": AlertSeverity.INFO, "description": "Device warm start"},
-        "2": {"name": "linkDown", "severity": AlertSeverity.CRITICAL, "description": "Network interface down"},
-        "3": {"name": "linkUp", "severity": AlertSeverity.INFO, "description": "Network interface up"},
-        "4": {"name": "authenticationFailure", "severity": AlertSeverity.WARNING, "description": "SNMP authentication failure"},
-        "5": {"name": "egpNeighborLoss", "severity": AlertSeverity.WARNING, "description": "EGP neighbor loss"},
-        "6": {"name": "enterpriseSpecific", "severity": AlertSeverity.WARNING, "description": "Enterprise-specific trap"},
+        "0": {
+            "name": "coldStart",
+            "severity": AlertSeverity.WARNING,
+            "description": "Device cold start",
+        },
+        "1": {
+            "name": "warmStart",
+            "severity": AlertSeverity.INFO,
+            "description": "Device warm start",
+        },
+        "2": {
+            "name": "linkDown",
+            "severity": AlertSeverity.CRITICAL,
+            "description": "Network interface down",
+        },
+        "3": {
+            "name": "linkUp",
+            "severity": AlertSeverity.INFO,
+            "description": "Network interface up",
+        },
+        "4": {
+            "name": "authenticationFailure",
+            "severity": AlertSeverity.WARNING,
+            "description": "SNMP authentication failure",
+        },
+        "5": {
+            "name": "egpNeighborLoss",
+            "severity": AlertSeverity.WARNING,
+            "description": "EGP neighbor loss",
+        },
+        "6": {
+            "name": "enterpriseSpecific",
+            "severity": AlertSeverity.WARNING,
+            "description": "Enterprise-specific trap",
+        },
         # Well-known SNMPv2c/v3 notification OIDs
-        "1.3.6.1.6.3.1.1.5.1": {"name": "coldStart", "severity": AlertSeverity.WARNING, "description": "Device cold start"},
-        "1.3.6.1.6.3.1.1.5.2": {"name": "warmStart", "severity": AlertSeverity.INFO, "description": "Device warm start"},
-        "1.3.6.1.6.3.1.1.5.3": {"name": "linkDown", "severity": AlertSeverity.CRITICAL, "description": "Network interface down"},
-        "1.3.6.1.6.3.1.1.5.4": {"name": "linkUp", "severity": AlertSeverity.INFO, "description": "Network interface up"},
-        "1.3.6.1.6.3.1.1.5.5": {"name": "authenticationFailure", "severity": AlertSeverity.WARNING, "description": "SNMP authentication failure"},
+        "1.3.6.1.6.3.1.1.5.1": {
+            "name": "coldStart",
+            "severity": AlertSeverity.WARNING,
+            "description": "Device cold start",
+        },
+        "1.3.6.1.6.3.1.1.5.2": {
+            "name": "warmStart",
+            "severity": AlertSeverity.INFO,
+            "description": "Device warm start",
+        },
+        "1.3.6.1.6.3.1.1.5.3": {
+            "name": "linkDown",
+            "severity": AlertSeverity.CRITICAL,
+            "description": "Network interface down",
+        },
+        "1.3.6.1.6.3.1.1.5.4": {
+            "name": "linkUp",
+            "severity": AlertSeverity.INFO,
+            "description": "Network interface up",
+        },
+        "1.3.6.1.6.3.1.1.5.5": {
+            "name": "authenticationFailure",
+            "severity": AlertSeverity.WARNING,
+            "description": "SNMP authentication failure",
+        },
     }
 
     # OIDs that indicate a resolved/recovery state
@@ -193,8 +241,12 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
         )
 
         # For SNMPv1, check generic trap type
-        generic_trap = event.get("generic_trap", event.get("genericTrap", event.get("generic-trap")))
-        specific_trap = event.get("specific_trap", event.get("specificTrap", event.get("specific-trap")))
+        generic_trap = event.get(
+            "generic_trap", event.get("genericTrap", event.get("generic-trap"))
+        )
+        specific_trap = event.get(
+            "specific_trap", event.get("specificTrap", event.get("specific-trap"))
+        )
         enterprise = event.get("enterprise", event.get("enterprise_oid"))
 
         # If no OID but we have generic trap type (v1 format)
@@ -239,7 +291,9 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
         - As a list of dicts: [{"oid": "...", "value": "..."}, ...]
         - As raw text (from snmptrapd pipe)
         """
-        varbinds = event.get("varbinds", event.get("variables", event.get("var_binds", {})))
+        varbinds = event.get(
+            "varbinds", event.get("variables", event.get("var_binds", {}))
+        )
 
         if isinstance(varbinds, dict):
             return varbinds
@@ -332,9 +386,19 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
             community=community,
             oid=str(trap_info["oid"]) if trap_info["oid"] else "",
             trap_name=trap_info["trap_name"],
-            generic_trap=str(trap_info["generic_trap"]) if trap_info["generic_trap"] is not None else None,
-            specific_trap=str(trap_info["specific_trap"]) if trap_info["specific_trap"] is not None else None,
-            enterprise=str(trap_info["enterprise"]) if trap_info["enterprise"] else None,
+            generic_trap=(
+                str(trap_info["generic_trap"])
+                if trap_info["generic_trap"] is not None
+                else None
+            ),
+            specific_trap=(
+                str(trap_info["specific_trap"])
+                if trap_info["specific_trap"] is not None
+                else None
+            ),
+            enterprise=(
+                str(trap_info["enterprise"]) if trap_info["enterprise"] else None
+            ),
             varbinds=varbinds,
         )
 

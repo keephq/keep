@@ -16,7 +16,6 @@ import unittest
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.providers.snmp_provider.snmp_provider import SnmpProvider
 
-
 # ---------------------------------------------------------------------------
 # Shared mock payloads (mirrors alerts_mock.ALERTS["…"]["payload"])
 # ---------------------------------------------------------------------------
@@ -118,6 +117,7 @@ CUSTOM_SEVERITY = {
 # ---------------------------------------------------------------------------
 # Test suite
 # ---------------------------------------------------------------------------
+
 
 class TestSnmpProviderFormatAlert(unittest.TestCase):
     """Unit tests for SnmpProvider._format_alert()."""
