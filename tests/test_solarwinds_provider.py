@@ -64,8 +64,8 @@ class TestSolarwindsProvider(unittest.TestCase):
         alert = _fmt(_payload("node_down"))
 
         self.assertIsInstance(alert, AlertDto)
-        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
         self.assertEqual(alert.host, "core-sw-01.example.com")
         self.assertEqual(alert.id, "8819")
         self.assertEqual(alert.source, ["solarwinds"])
@@ -79,8 +79,8 @@ class TestSolarwindsProvider(unittest.TestCase):
         """Severity 1 -> WARNING, status FIRING."""
         alert = _fmt(_payload("high_cpu"))
 
-        self.assertEqual(alert.severity, AlertSeverity.WARNING)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.WARNING.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
         self.assertEqual(alert.id, "9203")
         self.assertEqual(alert.name, "High CPU Load")
 
@@ -92,8 +92,8 @@ class TestSolarwindsProvider(unittest.TestCase):
         """Severity 0 -> INFO."""
         alert = _fmt(_payload("interface_traffic"))
 
-        self.assertEqual(alert.severity, AlertSeverity.INFO)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.INFO.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
 
     # -----------------------------------------------------------------------
     # 4. Fatal / Severity 3 -> CRITICAL (Keep has no Fatal tier)
@@ -103,7 +103,7 @@ class TestSolarwindsProvider(unittest.TestCase):
         """Severity 3 -> CRITICAL (mapped; no Fatal in Keep)."""
         alert = _fmt(_payload("disk_full_acknowledged"))
 
-        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL.value)
 
     # -----------------------------------------------------------------------
     # 5. Acknowledged as string "True" -> ACKNOWLEDGED
@@ -114,7 +114,7 @@ class TestSolarwindsProvider(unittest.TestCase):
         # disk_full_acknowledged uses Acknowledged="True"
         alert = _fmt(_payload("disk_full_acknowledged"))
 
-        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED)
+        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED.value)
 
     # -----------------------------------------------------------------------
     # 6. Acknowledged as bool True -> ACKNOWLEDGED
@@ -125,7 +125,7 @@ class TestSolarwindsProvider(unittest.TestCase):
         # high_memory_resolved uses Acknowledged=True (bool)
         alert = _fmt(_payload("high_memory_resolved"))
 
-        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED)
+        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED.value)
 
     # -----------------------------------------------------------------------
     # 7. Severity as string integer "1" -> WARNING
@@ -135,8 +135,8 @@ class TestSolarwindsProvider(unittest.TestCase):
         """Severity='1' (string containing an integer) -> WARNING."""
         alert = _fmt(_payload("interface_down_string_severity"))
 
-        self.assertEqual(alert.severity, AlertSeverity.WARNING)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.WARNING.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
 
     # -----------------------------------------------------------------------
     # 8. Named string severities: "critical", "error", "fatal"
@@ -145,12 +145,12 @@ class TestSolarwindsProvider(unittest.TestCase):
     def test_format_alert_named_string_severity(self):
         """Named string severities map correctly."""
         cases = [
-            ("critical",     AlertSeverity.CRITICAL),
-            ("error",        AlertSeverity.HIGH),
-            ("fatal",        AlertSeverity.CRITICAL),
-            ("warning",      AlertSeverity.WARNING),
-            ("information",  AlertSeverity.INFO),
-            ("info",         AlertSeverity.INFO),
+            ("critical",     AlertSeverity.CRITICAL.value),
+            ("error",        AlertSeverity.HIGH.value),
+            ("fatal",        AlertSeverity.CRITICAL.value),
+            ("warning",      AlertSeverity.WARNING.value),
+            ("information",  AlertSeverity.INFO.value),
+            ("info",         AlertSeverity.INFO.value),
         ]
         for raw, expected in cases:
             with self.subTest(severity=raw):
@@ -215,7 +215,7 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         alert = _fmt(payload)
 
-        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED.value)
 
     # -----------------------------------------------------------------------
     # 13. AlertStatus="Cleared" -> RESOLVED
@@ -228,7 +228,7 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         alert = _fmt(payload)
 
-        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED.value)
 
     # -----------------------------------------------------------------------
     # 14. Extra / unknown fields pass through to AlertDto
@@ -268,8 +268,8 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         self.assertIsInstance(alert, AlertDto)
         self.assertEqual(alert.name, "SolarWinds Alert")
-        self.assertEqual(alert.severity, AlertSeverity.INFO)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.INFO.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
         self.assertEqual(alert.source, ["solarwinds"])
 
     # -----------------------------------------------------------------------
@@ -282,8 +282,8 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         self.assertIsInstance(alert, AlertDto)
         self.assertEqual(alert.name, "Minimal Alert")
-        self.assertEqual(alert.severity, AlertSeverity.INFO)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.INFO.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
         self.assertEqual(alert.source, ["solarwinds"])
 
     # -----------------------------------------------------------------------
@@ -330,11 +330,11 @@ class TestSolarwindsProvider(unittest.TestCase):
     def test_format_alert_named_severity_case_insensitive(self):
         """SEVERITIES_MAP_STR lookup is case-insensitive."""
         cases = [
-            ("CRITICAL", AlertSeverity.CRITICAL),
-            ("Warning",  AlertSeverity.WARNING),
-            ("INFO",     AlertSeverity.INFO),
-            ("Fatal",    AlertSeverity.CRITICAL),
-            ("ERROR",    AlertSeverity.HIGH),
+            ("CRITICAL", AlertSeverity.CRITICAL.value),
+            ("Warning",  AlertSeverity.WARNING.value),
+            ("INFO",     AlertSeverity.INFO.value),
+            ("Fatal",    AlertSeverity.CRITICAL.value),
+            ("ERROR",    AlertSeverity.HIGH.value),
         ]
         for raw, expected in cases:
             with self.subTest(raw=raw):
@@ -354,7 +354,7 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         alert = _fmt(payload)
 
-        self.assertEqual(alert.severity, AlertSeverity.INFO)
+        self.assertEqual(alert.severity, AlertSeverity.INFO.value)
 
     # -----------------------------------------------------------------------
     # Bonus: description prefers AlertDescription over AlertMessage
@@ -392,7 +392,7 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         alert = _fmt(payload)
 
-        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED.value)
 
     # -----------------------------------------------------------------------
     # Bonus: AlertStatus takes precedence over Acknowledged
@@ -406,7 +406,7 @@ class TestSolarwindsProvider(unittest.TestCase):
 
         alert = _fmt(payload)
 
-        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED.value)
 
     # -----------------------------------------------------------------------
     # Bonus: FINGERPRINT_FIELDS declaration
