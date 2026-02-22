@@ -190,18 +190,20 @@ To automatically resolve alerts in Keep when SolarWinds clears them:
 
         # --- Timestamp ---
         time_of_alert = event.get("TimeOfAlert")
-        last_received: Optional[datetime] = None
+        last_received: Optional[str] = None
         if time_of_alert:
             try:
                 # Orion typically sends ISO-8601; handle both Z and offset forms
                 normalized = time_of_alert.replace("Z", "+00:00")
-                last_received = datetime.fromisoformat(normalized)
-                if last_received.tzinfo is None:
-                    last_received = last_received.replace(tzinfo=timezone.utc)
+                parsed = datetime.fromisoformat(normalized)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                last_received = parsed.isoformat()
             except (ValueError, AttributeError):
                 logger.warning(
                     "SolarwindsProvider: could not parse TimeOfAlert %r", time_of_alert
                 )
+                last_received = datetime.now(tz=timezone.utc).isoformat()
 
         # --- Core AlertDto fields ---
         alert_id = str(event.get("AlertActiveID") or event.get("AlertObjectID") or "")
