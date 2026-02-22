@@ -108,6 +108,7 @@ class UptimekumaProvider(BaseProvider):
         )
 
     def _get_heartbeats(self):
+        api = None
         try:
             api = self._get_api()
             response = api.get_heartbeats()
@@ -117,38 +118,64 @@ class UptimekumaProvider(BaseProvider):
             if length == 0:
                 return []
 
+            # Fetch all monitors once to avoid N+1 API calls
+            try:
+                monitors = api.get_monitors()
+                monitors_dict = {monitor["id"]: monitor for monitor in monitors}
+            except BadNamespaceError:  # Most likely connection issues
+                try:
+                    api.disconnect()
+                except Exception as disconnect_error:
+                    self.logger.warning("Failed to disconnect API during reconnection: %s", disconnect_error)
+                # Single retry
+                try:
+                    api = self._get_api()
+                    monitors = api.get_monitors()
+                    monitors_dict = {monitor["id"]: monitor for monitor in monitors}
+                except Exception as retry_error:
+                    self.logger.error("Failed to get monitors after retry: %s", retry_error)
+                    return []
+            except Exception as monitor_error:
+                self.logger.error("Unexpected error getting monitors: %s", monitor_error)
+                return []
+
             heartbeats = []
 
             for key in response:
                 heartbeat = response[key][-1]
                 monitor_id = heartbeat.get("monitor_id", heartbeat.get("monitorID"))
-                try:
-                    name = api.get_monitor(monitor_id)["name"]
-                except BadNamespaceError: # Most likely connection issues
-                    try:
-                        api.disconnect()
-                    except Exception:
-                        pass
-                    # Single retry
-                    api = self._get_api()
-                    name = api.get_monitor(monitor_id)["name"]
-            heartbeats.append(
-                AlertDto(
-                    id=heartbeat["id"],
-                    name=name,
-                    monitor_id=heartbeat["monitor_id"],
-                    description=heartbeat["msg"],
-                    status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
-                    lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
-                    ping=heartbeat["ping"],
-                    source=["uptimekuma"],
+                
+                # Get monitor name from pre-fetched monitors
+                monitor = monitors_dict.get(monitor_id)
+                if not monitor:
+                    self.logger.warning("Monitor %s not found in monitors list, skipping", monitor_id)
+                    continue
+                
+                name = monitor.get("name", "Unknown")
+                
+                heartbeats.append(
+                    AlertDto(
+                        id=heartbeat["id"],
+                        name=name,
+                        monitor_id=monitor_id,
+                        description=heartbeat["msg"],
+                        status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
+                        lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
+                        ping=heartbeat["ping"],
+                        source=["uptimekuma"],
+                    )
                 )
-            )
-            api.disconnect()
+            
             return heartbeats
         except Exception as e:
             self.logger.error("Error getting heartbeats from UptimeKuma: %s", e)
             raise Exception(f"Error getting heartbeats from UptimeKuma: {e}")
+        finally:
+            if api:
+                try:
+                    api.disconnect()
+                except Exception as disconnect_error:
+                    self.logger.warning("Failed to disconnect API: %s", disconnect_error)
 
     def _get_alerts(self) -> list[AlertDto]:
         try:
@@ -179,7 +206,11 @@ class UptimekumaProvider(BaseProvider):
 
     @staticmethod
     def _format_datetime(dt, offset):
-        return dt + offset
+        from datetime import timedelta
+        # offset is typically in minutes, convert to timedelta
+        if isinstance(offset, (int, float)):
+            return dt + timedelta(minutes=offset)
+        return dt
 
 if __name__ == "__main__":
     import logging
