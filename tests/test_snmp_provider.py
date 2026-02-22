@@ -130,8 +130,8 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         alert = SnmpProvider._format_alert(LINKDOWN_V2C)
 
         self.assertIsInstance(alert, AlertDto)
-        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
         self.assertEqual(alert.host, "switch01.example.com")
         self.assertEqual(alert.source, ["snmp"])
         self.assertEqual(alert.oid, "1.3.6.1.6.3.1.1.5.3")
@@ -143,8 +143,8 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         """v1 linkDown uses generic_trap integer → oid='2', trap_name='linkDown'."""
         alert = SnmpProvider._format_alert(LINKDOWN_V1)
 
-        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
         # OID is derived from the generic_trap integer
         self.assertEqual(alert.oid, "2")
         self.assertEqual(alert.trap_name, "linkDown")
@@ -156,8 +156,8 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         """v1 linkUp (generic_trap=3) is a recovery trap → RESOLVED / INFO."""
         alert = SnmpProvider._format_alert(LINKUP_V1)
 
-        self.assertEqual(alert.status, AlertStatus.RESOLVED)
-        self.assertEqual(alert.severity, AlertSeverity.INFO)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED.value)
+        self.assertEqual(alert.severity, AlertSeverity.INFO.value)
 
     # ------------------------------------------------------------------
     # 4. coldStart — device reboot signal, moderate severity
@@ -166,10 +166,10 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         """coldStart OID maps to WARNING severity and 'coldStart' trap_name."""
         alert = SnmpProvider._format_alert(COLDSTART_V2C)
 
-        self.assertEqual(alert.severity, AlertSeverity.WARNING)
+        self.assertEqual(alert.severity, AlertSeverity.WARNING.value)
         self.assertEqual(alert.trap_name, "coldStart")
         # coldStart is not a resolution event
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
 
     # ------------------------------------------------------------------
     # 5. authenticationFailure — security event
@@ -178,7 +178,7 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         """authenticationFailure OID maps to WARNING; description is preserved."""
         alert = SnmpProvider._format_alert(AUTHFAILURE_V2C)
 
-        self.assertEqual(alert.severity, AlertSeverity.WARNING)
+        self.assertEqual(alert.severity, AlertSeverity.WARNING.value)
         self.assertIn("authentication failure", alert.description.lower())
 
     # ------------------------------------------------------------------
@@ -188,8 +188,8 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         """A user-supplied severity='critical' on an unknown OID → CRITICAL."""
         alert = SnmpProvider._format_alert(ENTERPRISE_V3)
 
-        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
-        self.assertEqual(alert.status, AlertStatus.FIRING)
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL.value)
+        self.assertEqual(alert.status, AlertStatus.FIRING.value)
 
     # ------------------------------------------------------------------
     # 7. Custom name + severity="major" → HIGH
@@ -199,7 +199,7 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         alert = SnmpProvider._format_alert(CUSTOM_SEVERITY)
 
         self.assertEqual(alert.name, "App Health Check Failure")
-        self.assertEqual(alert.severity, AlertSeverity.HIGH)
+        self.assertEqual(alert.severity, AlertSeverity.HIGH.value)
 
     # ------------------------------------------------------------------
     # 8. User status override via "status" field in payload
@@ -209,7 +209,7 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         payload = dict(LINKDOWN_V2C, status="acknowledged")
         alert = SnmpProvider._format_alert(payload)
 
-        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED)
+        self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED.value)
 
     # ------------------------------------------------------------------
     # 9–12. Varbind normalisation variants
@@ -263,9 +263,9 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         alert = SnmpProvider._format_alert({})
 
         self.assertIsInstance(alert, AlertDto)
-        # Severity and status should still be valid enum members
-        self.assertIsInstance(alert.severity, AlertSeverity)
-        self.assertIsInstance(alert.status, AlertStatus)
+        # Severity and status should be valid enum values (stored as strings)
+        self.assertIn(alert.severity, [e.value for e in AlertSeverity])
+        self.assertIn(alert.status, [e.value for e in AlertStatus])
         # Source must always be tagged
         self.assertEqual(alert.source, ["snmp"])
 
@@ -298,7 +298,7 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         self.assertIsInstance(alert, AlertDto)
         # Integer 5 doesn't match any SEVERITIES_MAP key, so the OID-derived
         # default (WARNING for coldStart) applies.
-        self.assertEqual(alert.severity, AlertSeverity.WARNING)
+        self.assertEqual(alert.severity, AlertSeverity.WARNING.value)
 
 
 if __name__ == "__main__":
