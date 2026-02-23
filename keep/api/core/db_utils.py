@@ -225,8 +225,11 @@ def insert_update_conflict(table: SQLModel, session: Session, data_to_insert: di
         query = mysql_insert(table).values(data_to_insert)
         if update_newer:
             data_to_update = {
-                k: case((table.timestamp < query.inserted.timestamp, v), else_=getattr(table, k))
-                for k, v in data_to_update.items()
+                k: case(
+                    (table.timestamp < query.inserted.timestamp, query.inserted[k]),
+                    else_=getattr(table, k)
+                )
+                for k in data_to_update.keys()
             }
         query = query.on_duplicate_key_update(data_to_update)
     elif session.bind.dialect.name == "sqlite":
@@ -239,7 +242,7 @@ def insert_update_conflict(table: SQLModel, session: Session, data_to_insert: di
     else:
         raise NotImplementedError(f"UPSERT not supported for {session.bind.dialect.name}")
 
-    session.exec(query)
+    session.execute(query)
     session.commit()
 
 class json_table(GenericFunction):
