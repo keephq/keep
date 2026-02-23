@@ -96,27 +96,41 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     facetsPanelRefreshToken,
   } = useAlertsTableData(alertsTableDataQuery);
 
+  // Track which fingerprint has already been resolved so that a background
+  // alerts re-fetch (polling / WebSocket) doesn't fire "not found" after the
+  // modal was successfully opened.
+  const resolvedFingerprintRef = useRef<string | null>(null);
+
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
+
+    // Reset when the user navigates to a different fingerprint.
+    if (fingerprint !== resolvedFingerprintRef.current) {
+      resolvedFingerprintRef.current = null;
+    }
+
     if (fingerprint && enrich && alerts) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
+        resolvedFingerprintRef.current = fingerprint;
         setEnrichAlertModal(alert);
         setIsEnrichSidebarOpen(true);
-      } else {
+      } else if (!resolvedFingerprintRef.current) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
     } else if (fingerprint && alerts) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
+        resolvedFingerprintRef.current = fingerprint;
         setViewAlertModal(alert);
-      } else {
+      } else if (!resolvedFingerprintRef.current) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
     } else if (alerts) {
+      resolvedFingerprintRef.current = null;
       setViewAlertModal(null);
       setEnrichAlertModal(null);
       setIsEnrichSidebarOpen(false);
