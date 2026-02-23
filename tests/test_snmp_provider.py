@@ -300,6 +300,73 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         # default (WARNING for coldStart) applies.
         self.assertEqual(alert.severity, AlertSeverity.WARNING.value)
 
+    # ------------------------------------------------------------------
+    # 16. Enterprise-specific trap (generic_trap=6) with different specific_trap
+    #     values from the same agent must produce distinct fingerprint fields.
+    # ------------------------------------------------------------------
+    def test_enterprise_specific_traps_are_distinct(self):
+        """Two enterprise-specific traps from the same agent but different
+        specific_trap codes should carry different specific_trap values,
+        allowing Keep's fingerprinting (which includes 'specific_trap') to
+        keep them separate rather than collapsing them."""
+        enterprise_trap_a = {
+            "version": "v1",
+            "generic_trap": 6,
+            "specific_trap": 1,
+            "enterprise": "1.3.6.1.4.1.9.1",
+            "agent_address": "10.0.0.1",
+            "hostname": "cisco-asr-01",
+        }
+        enterprise_trap_b = {
+            "version": "v1",
+            "generic_trap": 6,
+            "specific_trap": 42,
+            "enterprise": "1.3.6.1.4.1.9.1",
+            "agent_address": "10.0.0.1",
+            "hostname": "cisco-asr-01",
+        }
+        alert_a = SnmpProvider._format_alert(enterprise_trap_a)
+        alert_b = SnmpProvider._format_alert(enterprise_trap_b)
+
+        self.assertEqual(alert_a.trap_name, "enterpriseSpecific")
+        self.assertEqual(alert_b.trap_name, "enterpriseSpecific")
+        # specific_trap must be preserved so fingerprint fields differ
+        self.assertEqual(alert_a.specific_trap, "1")
+        self.assertEqual(alert_b.specific_trap, "42")
+        self.assertNotEqual(alert_a.specific_trap, alert_b.specific_trap)
+
+    # ------------------------------------------------------------------
+    # 17. id=None when no id/trap_id in payload (avoids empty-string dedup)
+    # ------------------------------------------------------------------
+    def test_missing_id_is_none_not_empty_string(self):
+        """When neither 'id' nor 'trap_id' is in the payload, alert.id
+        should be None (not '') so Keep's dedup doesn't treat all
+        id-less traps as duplicates of each other."""
+        payload = dict(LINKDOWN_V2C)
+        payload.pop("id", None)
+        payload.pop("trap_id", None)
+        alert = SnmpProvider._format_alert(payload)
+
+        self.assertIsNone(alert.id)
+
+    # ------------------------------------------------------------------
+    # 18. OID fallback chain — snmpTrapOID.0 numeric key
+    # ------------------------------------------------------------------
+    def test_oid_fallback_numeric_key(self):
+        """When 'oid' is absent but the numeric snmpTrapOID.0 key is present,
+        the provider should resolve it correctly."""
+        payload = {
+            "version": "v2c",
+            "1.3.6.1.6.3.1.1.4.1.0": "1.3.6.1.6.3.1.1.5.3",  # linkDown via numeric key
+            "agent_address": "192.168.1.1",
+            "hostname": "switch02",
+        }
+        alert = SnmpProvider._format_alert(payload)
+
+        self.assertEqual(alert.oid, "1.3.6.1.6.3.1.1.5.3")
+        self.assertEqual(alert.trap_name, "linkDown")
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL.value)
+
 
 if __name__ == "__main__":
     unittest.main()

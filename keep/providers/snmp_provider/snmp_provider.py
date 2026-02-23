@@ -22,11 +22,14 @@ class SnmpProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "SNMP"
     PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_TAGS = ["alert"]
-    FINGERPRINT_FIELDS = ["oid", "agent_address"]
+
+    # Include enterprise + specific_trap so enterprise-specific traps
+    # (generic_trap=6) from the same agent don't collapse into one fingerprint.
+    FINGERPRINT_FIELDS = ["oid", "agent_address", "enterprise", "specific_trap"]
 
     # Well-known SNMP trap OIDs and their descriptions
     WELL_KNOWN_TRAPS = {
-        # SNMPv1 generic trap types
+        # SNMPv1 generic trap types (0–6)
         "0": {
             "name": "coldStart",
             "severity": AlertSeverity.WARNING,
@@ -62,7 +65,7 @@ class SnmpProvider(BaseProvider):
             "severity": AlertSeverity.WARNING,
             "description": "Enterprise-specific trap",
         },
-        # Well-known SNMPv2c/v3 notification OIDs
+        # SNMPv2c/v3 notification OIDs (SNMPv2-MIB::snmpTraps)
         "1.3.6.1.6.3.1.1.5.1": {
             "name": "coldStart",
             "severity": AlertSeverity.WARNING,
@@ -92,11 +95,12 @@ class SnmpProvider(BaseProvider):
 
     # OIDs that indicate a resolved/recovery state
     RESOLUTION_OIDS = {
-        "3",  # linkUp (v1 generic trap type)
-        "1.3.6.1.6.3.1.1.5.4",  # linkUp (v2c/v3)
+        "3",  # linkUp (SNMPv1 generic trap type)
+        "1.3.6.1.6.3.1.1.5.4",  # linkUp (SNMPv2c/v3)
     }
 
-    # Severity mapping for user-provided severity strings
+    # Map user-supplied severity strings to AlertSeverity values.
+    # Different NMS systems use different conventions; cover the common ones.
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
         "major": AlertSeverity.HIGH,
@@ -121,18 +125,24 @@ class SnmpProvider(BaseProvider):
     webhook_markdown = """
 ## SNMP Provider Setup
 
-Keep receives SNMP traps via its webhook endpoint. You need to configure your
-SNMP trap receiver (e.g., `snmptrapd`) to forward traps as JSON to Keep.
+Keep receives SNMP traps via its webhook endpoint. Configure your SNMP trap
+receiver (e.g., `snmptrapd`) to forward traps as JSON to Keep.
 
 ### Using snmptrapd (Net-SNMP)
 
-1. Install Net-SNMP: `apt-get install snmptrapd` or `yum install net-snmp-utils`
+**1. Install Net-SNMP:**
+```bash
+# Debian/Ubuntu
+apt-get install snmptrapd
 
-2. Create a trap handler script (`/usr/local/bin/keep-snmp-handler.sh`):
+# RHEL/CentOS
+yum install net-snmp-utils
+```
 
+**2. Create a trap handler script** (`/usr/local/bin/keep-snmp-handler.sh`):
 ```bash
 #!/bin/bash
-# Read trap data from stdin (snmptrapd format)
+# snmptrapd pipes: hostname on line 1, IP on line 2, then varbinds
 read -r HOSTNAME
 read -r IP_ADDRESS
 VARBINDS=""
@@ -140,34 +150,35 @@ while IFS= read -r line; do
     VARBINDS="$VARBINDS$line\\n"
 done
 
-# Parse and forward to Keep
-curl -X POST {keep_webhook_api_url} \\
+curl -s -X POST "{keep_webhook_api_url}" \\
   -H "Content-Type: application/json" \\
   -H "X-API-KEY: {api_key}" \\
-  -d '{
-    "version": "v2c",
-    "agent_address": "'$IP_ADDRESS'",
-    "hostname": "'$HOSTNAME'",
-    "varbinds_raw": "'$VARBINDS'"
-  }'
+  -d "{
+    \\"version\\": \\"v2c\\",
+    \\"agent_address\\": \\"$IP_ADDRESS\\",
+    \\"hostname\\": \\"$HOSTNAME\\",
+    \\"varbinds_raw\\": \\"$VARBINDS\\"
+  }"
 ```
 
-3. Configure snmptrapd (`/etc/snmp/snmptrapd.conf`):
+Make it executable: `chmod +x /usr/local/bin/keep-snmp-handler.sh`
+
+**3. Configure snmptrapd** (`/etc/snmp/snmptrapd.conf`):
 ```
 authCommunity log,execute public
 traphandle default /usr/local/bin/keep-snmp-handler.sh
 ```
 
-4. Start snmptrapd: `snmptrapd -Lf /var/log/snmptrapd.log`
+**4. Start snmptrapd:**
+```bash
+snmptrapd -Lf /var/log/snmptrapd.log
+```
 
-### Using snmptrapd with JSON output
-
-For a cleaner integration, use snmptrapd's `-Oj` flag for OID output and
-format traps as JSON before sending to Keep.
+---
 
 ### Direct JSON Webhook
 
-You can also send SNMP trap data directly as JSON to the webhook endpoint:
+You can also POST SNMP trap data directly as JSON:
 
 ```json
 {
@@ -175,7 +186,7 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
     "oid": "1.3.6.1.6.3.1.1.5.3",
     "agent_address": "192.168.1.100",
     "community": "public",
-    "hostname": "switch01",
+    "hostname": "switch01.example.com",
     "description": "Interface GigabitEthernet0/1 is down",
     "severity": "critical",
     "varbinds": {
@@ -186,6 +197,25 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
     }
 }
 ```
+
+**SNMPv1 format** (use `generic_trap` integer instead of OID):
+```json
+{
+    "version": "v1",
+    "generic_trap": 2,
+    "specific_trap": 0,
+    "enterprise": "1.3.6.1.4.1.9.1",
+    "agent_address": "10.0.0.1",
+    "hostname": "router01"
+}
+```
+
+**Supported `generic_trap` values:** 0=coldStart, 1=warmStart, 2=linkDown,
+3=linkUp, 4=authenticationFailure, 5=egpNeighborLoss, 6=enterpriseSpecific
+
+**Optional `severity` override:** critical, major, minor, warning, info, clear
+
+---
 
 ### Webhook URL
 
@@ -200,47 +230,36 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
 ```
 """
 
-    def __init__(
-        self,
-        context_manager: ContextManager,
-        provider_id: str,
-        config: ProviderConfig,
-    ):
-        super().__init__(context_manager, provider_id, config)
-
-    def validate_config(self):
-        """
-        No validation required for webhook-only SNMP provider.
-        """
+    def validate_config(self) -> None:
+        """No authentication required for this webhook-only provider."""
         pass
 
-    def dispose(self):
-        """
-        No cleanup required.
-        """
+    def dispose(self) -> None:
+        """No resources to clean up."""
         pass
 
     @staticmethod
     def _get_trap_info(event: dict) -> dict:
         """
-        Extract trap information from the event, handling v1, v2c, and v3 formats.
+        Extract and normalize trap metadata from an SNMP event dict.
 
-        Returns a dict with normalized trap fields:
-            - oid: The trap OID or generic trap type
-            - trap_name: Human-readable trap name
-            - severity: AlertSeverity based on trap type
-            - is_resolved: Whether this trap indicates resolution
+        Handles SNMPv1 (generic_trap integer), SNMPv2c, and SNMPv3 OID formats.
+        Multiple field-name conventions are checked because different trap
+        forwarders (snmptrapd, Zabbix, OpenNMS, etc.) use different keys.
+
+        Returns a dict with keys: oid, trap_name, severity, is_resolved,
+        description, generic_trap, specific_trap, enterprise.
         """
-        # Try to get OID from various field names
+        # OID field names vary by forwarder — check all common conventions.
         oid = (
             event.get("oid")
             or event.get("trap_oid")
             or event.get("snmpTrapOID")
             or event.get("snmpTrapOID.0")
-            or event.get("1.3.6.1.6.3.1.1.4.1.0")  # snmpTrapOID.0 numeric
+            or event.get("1.3.6.1.6.3.1.1.4.1.0")  # snmpTrapOID.0 as numeric key
         )
 
-        # For SNMPv1, check generic trap type
+        # SNMPv1 fields
         generic_trap = event.get(
             "generic_trap", event.get("genericTrap", event.get("generic-trap"))
         )
@@ -249,26 +268,21 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
         )
         enterprise = event.get("enterprise", event.get("enterprise_oid"))
 
-        # If no OID but we have generic trap type (v1 format)
+        # SNMPv1 format: no OID, use generic_trap integer as lookup key
         if not oid and generic_trap is not None:
             oid = str(generic_trap)
 
-        # Look up well-known trap info
         trap_info = SnmpProvider.WELL_KNOWN_TRAPS.get(str(oid), {}) if oid else {}
         trap_name = trap_info.get("name", "unknown")
         default_severity = trap_info.get("severity", AlertSeverity.WARNING)
         description = trap_info.get("description", "")
 
-        # Check if this is a resolution event
         is_resolved = str(oid) in SnmpProvider.RESOLUTION_OIDS if oid else False
 
-        # Check for user-provided severity override
+        # User-supplied severity overrides the well-known trap default
         raw_severity = event.get("severity", "")
         user_severity = str(raw_severity).lower() if raw_severity else ""
-        if user_severity in SnmpProvider.SEVERITIES_MAP:
-            severity = SnmpProvider.SEVERITIES_MAP[user_severity]
-        else:
-            severity = default_severity
+        severity = SnmpProvider.SEVERITIES_MAP.get(user_severity, default_severity)
 
         return {
             "oid": oid,
@@ -284,12 +298,12 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
     @staticmethod
     def _parse_varbinds(event: dict) -> dict:
         """
-        Extract and normalize SNMP varbinds from the event.
+        Normalize SNMP varbinds into a flat {oid: value} dict.
 
-        Varbinds can come in several formats:
-        - As a dict: {"oid": "value", ...}
-        - As a list of dicts: [{"oid": "...", "value": "..."}, ...]
-        - As raw text (from snmptrapd pipe)
+        Varbinds arrive in different shapes depending on the forwarder:
+        - dict:         {"1.3.6.1.2.1.2.2.1.2": "GigabitEthernet0/1", ...}
+        - list of dicts: [{"oid": "...", "value": "..."}, ...]
+        - raw string:   (snmptrapd pipe output stored as-is)
         """
         varbinds = event.get(
             "varbinds", event.get("variables", event.get("var_binds", {}))
@@ -297,7 +311,8 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
 
         if isinstance(varbinds, dict):
             return varbinds
-        elif isinstance(varbinds, list):
+
+        if isinstance(varbinds, list):
             result = {}
             for vb in varbinds:
                 if isinstance(vb, dict):
@@ -306,8 +321,8 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
                     if oid:
                         result[str(oid)] = str(value)
             return result
-        elif isinstance(varbinds, str):
-            # Raw text — store as-is
+
+        if isinstance(varbinds, str):
             return {"raw": varbinds}
 
         return {}
@@ -315,16 +330,16 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
-    ) -> AlertDto | list[AlertDto]:
+    ) -> "AlertDto | list[AlertDto]":
         """
-        Format an SNMP trap event into a Keep AlertDto.
+        Convert an SNMP trap event payload into a Keep AlertDto.
 
         Handles SNMPv1, SNMPv2c, and SNMPv3 trap formats.
         """
         trap_info = SnmpProvider._get_trap_info(event)
         varbinds = SnmpProvider._parse_varbinds(event)
 
-        # Extract common fields
+        # Agent address: prefer explicit field, fall back through common aliases
         agent_address = (
             event.get("agent_address")
             or event.get("agentAddress")
@@ -342,9 +357,12 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
         )
 
         version = event.get("version", event.get("snmp_version", "unknown"))
+
+        # NOTE: community strings are effectively passwords; they are stored
+        # server-side and never returned in API responses.
         community = event.get("community", event.get("community_string", ""))
 
-        # Build description
+        # Build description: prefer explicit field, then well-known trap text
         description = event.get("description", event.get("message", ""))
         if not description:
             if trap_info["description"]:
@@ -352,9 +370,11 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
             elif trap_info["trap_name"] != "unknown":
                 description = f"SNMP Trap: {trap_info['trap_name']}"
             else:
-                description = f"SNMP Trap from {hostname} (OID: {trap_info['oid']})"
+                description = (
+                    f"SNMP Trap from {hostname} (OID: {trap_info['oid']})"
+                )
 
-        # Build alert name
+        # Build name: prefer explicit field, then well-known trap name
         name = event.get("name", "")
         if not name:
             if trap_info["trap_name"] != "unknown":
@@ -362,19 +382,17 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
             else:
                 name = f"SNMP Trap ({trap_info['oid'] or 'unknown'})"
 
-        # Determine status
-        raw_status = event.get("status", "")
-        user_status = str(raw_status).lower() if raw_status else ""
-        if user_status in SnmpProvider.STATUS_MAP:
-            status = SnmpProvider.STATUS_MAP[user_status]
+        # Status: explicit field wins, then resolution OID detection
+        raw_status = str(event.get("status", "")).lower()
+        if raw_status in SnmpProvider.STATUS_MAP:
+            status = SnmpProvider.STATUS_MAP[raw_status]
         elif trap_info["is_resolved"]:
             status = AlertStatus.RESOLVED
         else:
             status = AlertStatus.FIRING
 
-        # Build the alert
-        alert = AlertDto(
-            id=event.get("id", event.get("trap_id", "")),
+        return AlertDto(
+            id=event.get("id", event.get("trap_id")) or None,
             name=name,
             description=description,
             severity=trap_info["severity"],
@@ -401,9 +419,3 @@ You can also send SNMP trap data directly as JSON to the webhook endpoint:
             ),
             varbinds=varbinds,
         )
-
-        return alert
-
-
-if __name__ == "__main__":
-    pass
