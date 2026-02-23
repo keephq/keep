@@ -336,18 +336,27 @@ class TestSnmpProviderFormatAlert(unittest.TestCase):
         self.assertNotEqual(alert_a.specific_trap, alert_b.specific_trap)
 
     # ------------------------------------------------------------------
-    # 17. id=None when no id/trap_id in payload (avoids empty-string dedup)
+    # 17. No id/trap_id in payload — AlertDto auto-assigns a UUID
     # ------------------------------------------------------------------
-    def test_missing_id_is_none_not_empty_string(self):
-        """When neither 'id' nor 'trap_id' is in the payload, alert.id
-        should be None (not '') so Keep's dedup doesn't treat all
-        id-less traps as duplicates of each other."""
+    def test_missing_id_gets_auto_uuid(self):
+        """When neither 'id' nor 'trap_id' is in the payload, Keep's
+        AlertDto auto-generates a UUID so the alert is still uniquely
+        identifiable (not an empty string or None)."""
+        import re
+
+        UUID4_RE = re.compile(
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        )
+
         payload = dict(LINKDOWN_V2C)
         payload.pop("id", None)
         payload.pop("trap_id", None)
         alert = SnmpProvider._format_alert(payload)
 
-        self.assertIsNone(alert.id)
+        # AlertDto.id is never None — it falls back to an auto-generated UUID
+        self.assertIsNotNone(alert.id)
+        self.assertIsInstance(alert.id, str)
+        self.assertRegex(alert.id, UUID4_RE, "alert.id should be a valid UUID4")
 
     # ------------------------------------------------------------------
     # 18. OID fallback chain — snmpTrapOID.0 numeric key
