@@ -110,7 +110,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       resolvedFingerprintRef.current = null;
     }
 
-    if (fingerprint && enrich && alerts) {
+    if (fingerprint && enrich && alerts && !alertsLoading) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
         resolvedFingerprintRef.current = fingerprint;
@@ -120,7 +120,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
-    } else if (fingerprint && alerts) {
+    } else if (fingerprint && alerts && !alertsLoading) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
         resolvedFingerprintRef.current = fingerprint;
@@ -129,13 +129,13 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
-    } else if (alerts) {
+    } else if (alerts && !alertsLoading) {
       resolvedFingerprintRef.current = null;
       setViewAlertModal(null);
       setEnrichAlertModal(null);
       setIsEnrichSidebarOpen(false);
     }
-  }, [searchParams, alerts]);
+  }, [searchParams, alerts, alertsLoading]);
 
   const alertsQueryStateRef = useRef(alertsQueryState);
 
