@@ -1,0 +1,19 @@
+{/_ This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten _/}
+
+## Authentication
+
+This provider requires authentication.
+
+- **host_url**: SolarWinds Orion Host URL (required: True, sensitive: False)
+- **username**: SolarWinds Orion Username (required: True, sensitive: False)
+- **password**: SolarWinds Orion Password (required: True, sensitive: True)
+- **verify_ssl**: Verify SSL certificate (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+
+- **read_alerts**: Read active alerts from SolarWinds Orion via SWIS API
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
