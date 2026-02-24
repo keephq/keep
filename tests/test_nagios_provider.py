@@ -133,6 +133,13 @@ class TestNagiosProvider(unittest.TestCase):
         self.assertEqual(alert.labels.get("object_type"), "service")
         self.assertEqual(alert.severity, AlertSeverity.WARNING)
 
+    def test_empty_payload_has_stable_fallback_fields(self):
+        alert = NagiosProvider._format_alert({})
+
+        self.assertEqual(alert.id, "unknown-host:host:EVENT:UNKNOWN")
+        self.assertEqual(alert.name, "Nagios host alert")
+        self.assertEqual(alert.severity, AlertSeverity.INFO)
+
 
 if __name__ == "__main__":
     unittest.main()

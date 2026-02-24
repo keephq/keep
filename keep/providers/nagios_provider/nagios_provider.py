@@ -79,7 +79,11 @@ class NagiosProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def validate_config(self):
+    def dispose(self):
+        """Dispose provider resources."""
+        pass
+
+    def validate_config(self) -> None:
         """No validation required for Nagios webhook provider."""
         pass
 
@@ -159,6 +163,8 @@ class NagiosProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: BaseProvider = None
     ) -> AlertDto | list[AlertDto]:
+        event = event or {}
+
         service = NagiosProvider._get(
             event,
             "servicedesc",
