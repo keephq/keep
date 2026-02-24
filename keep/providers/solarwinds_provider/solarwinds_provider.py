@@ -40,7 +40,12 @@ class SolarwindsProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def validate_config(self):
+    def dispose(self):
+        """Dispose provider resources."""
+        pass
+
+    def validate_config(self) -> None:
+        """SolarWinds webhook provider requires no configuration validation."""
         pass
 
     @staticmethod
@@ -84,6 +89,7 @@ class SolarwindsProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: BaseProvider = None
     ) -> AlertDto | list[AlertDto]:
+        event = event or {}
         severity_raw = str(
             SolarwindsProvider._get(event, "Severity", "AlertSeverity") or "INFO"
         ).strip().upper()
@@ -110,7 +116,10 @@ class SolarwindsProvider(BaseProvider):
         if not alert_id:
             alert_id = ":".join(
                 [
-                    str(SolarwindsProvider._get(event, "NodeName", "HostName") or "unknown-host"),
+                    str(
+                        SolarwindsProvider._get(event, "NodeName", "HostName")
+                        or "unknown-host"
+                    ),
                     str(SolarwindsProvider._get(event, "AlertName", "Name") or "solarwinds-alert"),
                 ]
             )
