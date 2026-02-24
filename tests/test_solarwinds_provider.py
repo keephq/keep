@@ -49,3 +49,15 @@ class TestSolarwindsProviderFormatAlert:
 
         assert alert.id == "unknown-host:solarwinds-alert"
         assert alert.name == "SolarWinds alert"
+
+    def test_missing_is_active_defaults_to_firing(self):
+        event = {
+            "AlertObjectID": "123459",
+            "AlertName": "Packet loss",
+            "Severity": "Major",
+        }
+
+        alert = SolarwindsProvider._format_alert(event)
+
+        assert alert.status == AlertStatus.FIRING
+        assert alert.severity == AlertSeverity.HIGH

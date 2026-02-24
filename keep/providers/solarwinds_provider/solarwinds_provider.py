@@ -57,14 +57,16 @@ class SolarwindsProvider(BaseProvider):
         return None
 
     @staticmethod
-    def _to_bool(value):
+    def _to_bool(value, default: bool = False) -> bool:
+        if value is None:
+            return default
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
             return value.strip().lower() in {"true", "1", "yes"}
         if isinstance(value, int):
             return value != 0
-        return False
+        return default
 
     @staticmethod
     def _parse_last_received(event: dict) -> str:
@@ -96,15 +98,21 @@ class SolarwindsProvider(BaseProvider):
         severity = SolarwindsProvider.SEVERITY_MAP.get(severity_raw, AlertSeverity.INFO)
 
         is_ack = SolarwindsProvider._to_bool(
-            SolarwindsProvider._get(event, "IsAcknowledged", "Acknowledged")
+            SolarwindsProvider._get(event, "IsAcknowledged", "Acknowledged"),
+            default=False,
         )
+        # If provider doesn't send IsActive, treat alert as active by default.
         is_active = SolarwindsProvider._to_bool(
-            SolarwindsProvider._get(event, "IsActive", "Active", "Triggered")
+            SolarwindsProvider._get(event, "IsActive", "Active", "Triggered"),
+            default=True,
         )
 
-        status = AlertStatus.ACKNOWLEDGED if is_ack else AlertStatus.FIRING
         if not is_active:
             status = AlertStatus.RESOLVED
+        elif is_ack:
+            status = AlertStatus.ACKNOWLEDGED
+        else:
+            status = AlertStatus.FIRING
 
         alert_id = SolarwindsProvider._get(
             event,
