@@ -114,6 +114,7 @@ pytest-mock = "^3.11.1"
 pytest-docker = "^3.1.1"
 pytest-asyncio = "^0.25.0"
 pytest-timeout = "^2.3.1"
+responses = "^0.25.0"
 docstring-parser = "^0.16"
 
 freezegun = "^1.5.1"

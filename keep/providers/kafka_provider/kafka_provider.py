@@ -76,12 +76,13 @@ class ClientIdInjector(logging.Filter):
         # Here, you should implement the logic to extract client_id based on the caller.
         # This can be tricky and might require you to traverse the call stack.
         # Return a default or None if you can't find it.
-        import copy
-
         frame = inspect.currentframe()
         client_id = None
         while frame:
-            local_vars = copy.copy(frame.f_locals)
+            # Use dict() to convert frame.f_locals into a plain dict.
+            # In Python 3.13+, frame.f_locals returns a FrameLocalsProxy
+            # which cannot be copied via copy.copy() (pickle fails).
+            local_vars = dict(frame.f_locals)
             for var_name, var_value in local_vars.items():
                 if isinstance(var_value, KafkaProvider):
                     client_id = var_value.context_manager.tenant_id
