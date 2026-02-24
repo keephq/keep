@@ -1,13 +1,13 @@
-"""
-Nagios Provider is a webhook-based provider for ingesting Nagios notifications.
-"""
+"""Nagios webhook provider for ingesting host/service notifications into Keep."""
 
 from datetime import datetime, timezone
+from typing import Any
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
 
 class NagiosProvider(BaseProvider):
     """Get alerts from Nagios into Keep."""
@@ -63,12 +63,15 @@ class NagiosProvider(BaseProvider):
         "DOWNTIMECANCELLED": AlertStatus.FIRING,
     }
 
-    webhook_description = "Receive Nagios notifications via webhook"
+    webhook_documentation_here_differs_from_general_documentation = True
+    webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-1. Configure Nagios notifications to call Keep webhook URL.
-2. Send Nagios notification macros as form fields or JSON keys.
-3. Use the Keep webhook URL: `{keep_webhook_api_url}`.
+1. Configure Nagios notifications to call Keep's webhook URL.
+2. Send Nagios macros as form fields or JSON keys.
+3. Use webhook URL `{keep_webhook_api_url}`.
+4. Include at least: `NOTIFICATIONTYPE`, `HOSTNAME`, `HOSTSTATE`/`SERVICESTATE`.
+5. Optional but recommended: `HOSTPROBLEMID`/`SERVICEPROBLEMID`, `SHORTDATETIME`.
 """
 
     def __init__(
@@ -81,17 +84,35 @@ class NagiosProvider(BaseProvider):
         pass
 
     @staticmethod
-    def _get(event: dict, *keys: str):
+    def _get(event: dict, *keys: str) -> Any:
         for key in keys:
             if key in event and event.get(key) not in ("", None):
                 return event.get(key)
         return None
 
     @staticmethod
-    def _normalize(value):
+    def _normalize(value: Any) -> str | None:
         if value is None:
             return None
         return str(value).strip().upper()
+
+    @staticmethod
+    def _normalize_notification_type(value: Any) -> str | None:
+        normalized = NagiosProvider._normalize(value)
+        if not normalized:
+            return None
+        # Accept values like "DOWNTIME START" / "DOWNTIME_START"
+        return normalized.replace(" ", "").replace("_", "")
+
+    @staticmethod
+    def _is_service_alert(event: dict, service: str | None) -> bool:
+        if service:
+            return True
+
+        object_type = NagiosProvider._normalize(
+            NagiosProvider._get(event, "objecttype", "object_type", "OBJECTTYPE")
+        )
+        return object_type == "SERVICE"
 
     @staticmethod
     def _parse_last_received(event: dict) -> str:
@@ -131,6 +152,7 @@ class NagiosProvider(BaseProvider):
             except ValueError:
                 continue
 
+        # Let AlertDto validator perform final validation/conversion attempt.
         return raw
 
     @staticmethod
@@ -155,7 +177,7 @@ class NagiosProvider(BaseProvider):
             "HOSTDISPLAYNAME",
         )
 
-        notification_type = NagiosProvider._normalize(
+        notification_type = NagiosProvider._normalize_notification_type(
             NagiosProvider._get(
                 event,
                 "notificationtype",
@@ -182,7 +204,7 @@ class NagiosProvider(BaseProvider):
             )
         )
 
-        is_service_alert = bool(service)
+        is_service_alert = NagiosProvider._is_service_alert(event, service)
         state = service_state if is_service_alert else host_state
 
         severity_map = (
@@ -236,22 +258,23 @@ class NagiosProvider(BaseProvider):
         if not alert_id:
             alert_id = ":".join(
                 [
-                    (host or "unknown-host"),
-                    (service or "host"),
-                    (notification_type or "EVENT"),
-                    (state or "UNKNOWN"),
+                    host or "unknown-host",
+                    service or "host",
+                    notification_type or "EVENT",
+                    state or "UNKNOWN",
                 ]
             )
 
         name = f"{host} - {service}" if service else (host or "Nagios host alert")
-        description = NagiosProvider._get(
+        note = NagiosProvider._get(
             event,
             "notificationcomment",
             "notification_comment",
             "comment",
             "SERVICEACKCOMMENT",
             "HOSTACKCOMMENT",
-        ) or output or name
+        )
+        description = note or output or name
 
         return AlertDto(
             id=str(alert_id),
@@ -272,14 +295,5 @@ class NagiosProvider(BaseProvider):
                 "state": state,
                 "object_type": "service" if is_service_alert else "host",
             },
-            note=NagiosProvider._get(
-                event,
-                "notificationcomment",
-                "notification_comment",
-                "comment",
-            ),
+            note=note,
         )
-
-
-if __name__ == "__main__":
-    pass

@@ -105,6 +105,34 @@ class TestNagiosProvider(unittest.TestCase):
         self.assertEqual(alert.status, AlertStatus.ACKNOWLEDGED)
         self.assertEqual(alert.note, "Investigating")
 
+    def test_notification_type_with_space_is_normalized(self):
+        alert = NagiosProvider._format_alert(
+            {
+                "notificationtype": "downtime start",
+                "hostname": "app-01",
+                "hoststate": "DOWN",
+                "hostoutput": "host in downtime",
+                "shortdatetime": "2026-02-24 12:30:00",
+            }
+        )
+
+        self.assertEqual(alert.status, AlertStatus.SUPPRESSED)
+
+    def test_object_type_service_without_service_desc(self):
+        alert = NagiosProvider._format_alert(
+            {
+                "objecttype": "SERVICE",
+                "notificationtype": "PROBLEM",
+                "hostname": "app-02",
+                "servicestate": "WARNING",
+                "serviceoutput": "Latency high",
+                "shortdatetime": "2026-02-24 12:31:00",
+            }
+        )
+
+        self.assertEqual(alert.labels.get("object_type"), "service")
+        self.assertEqual(alert.severity, AlertSeverity.WARNING)
+
 
 if __name__ == "__main__":
     unittest.main()
