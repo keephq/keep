@@ -110,7 +110,14 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       resolvedFingerprintRef.current = null;
     }
 
-    if (fingerprint && enrich && alerts && !alertsLoading) {
+    // Only act once data is actually settled: either we have alerts to search
+    // through, or the backend confirmed there are zero results (totalCount === 0).
+    // This guards against a 3-render cascade in useLastAlerts where `alerts`
+    // briefly equals [] while `isLoading` is already false but the React state
+    // carrying the actual results hasn't been flushed yet.
+    const dataSettled = alerts && !alertsLoading && (alerts.length > 0 || totalCount === 0);
+
+    if (fingerprint && enrich && dataSettled) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
         resolvedFingerprintRef.current = fingerprint;
@@ -120,7 +127,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
-    } else if (fingerprint && alerts && !alertsLoading) {
+    } else if (fingerprint && dataSettled) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       if (alert) {
         resolvedFingerprintRef.current = fingerprint;
@@ -135,7 +142,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       setEnrichAlertModal(null);
       setIsEnrichSidebarOpen(false);
     }
-  }, [searchParams, alerts, alertsLoading]);
+  }, [searchParams, alerts, alertsLoading, totalCount]);
 
   const alertsQueryStateRef = useRef(alertsQueryState);
 
