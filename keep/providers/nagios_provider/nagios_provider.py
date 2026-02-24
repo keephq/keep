@@ -76,7 +76,7 @@ class NagiosProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def validate_config():
+    def validate_config(self):
         """No validation required for Nagios webhook provider."""
         pass
 
