@@ -176,7 +176,33 @@ def test_multiline_strings():
     """
     data = cyaml.safe_load(yaml_str)
     dumped_yaml = cyaml.dump(data)
-    
+
     assert dumped_yaml is not None
     assert 'query: |' in dumped_yaml
-    
+
+
+def test_block_literal_preserved_with_non_ascii():
+    """Block literal style (|) must be preserved when the string contains
+    non-ASCII characters such as em-dashes.
+
+    Regression test for missing allow_unicode=True in cyaml.dump().
+    Without it, PyYAML's CDumper falls back to double-quoted style for any
+    string containing non-ASCII characters (e.g. code: "{\\n...\\u2014...}"),
+    ignoring the original block literal marker.
+    """
+    yaml_str = (
+        "code: |\n"
+        "  {\n"
+        "      # note \u2014 this comment has an em-dash\n"
+        "      'key': 'value',\n"
+        "  }\n"
+    )
+    data = cyaml.safe_load(yaml_str)
+    dumped = cyaml.dump(data)
+
+    assert dumped is not None
+    # Must keep block literal style, not fall back to double-quoted with escapes
+    assert "code: |" in dumped
+    assert "\\u2014" not in dumped
+    # The em-dash must appear verbatim in the output
+    assert "\u2014" in dumped
