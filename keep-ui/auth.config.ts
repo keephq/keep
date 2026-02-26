@@ -17,7 +17,7 @@ import {
   NoAuthUserEmail,
   SINGLE_TENANT,
 } from "@/utils/authenticationType";
-import {authorizeOAuth2Proxy, getOAuth2HeaderConfig} from "@/shared/lib/oauth2proxy-auth";
+import {authorizeOAuth2Proxy} from "@/shared/lib/oauth2proxy-auth";
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
@@ -113,7 +113,6 @@ async function refreshAccessToken(token: any) {
   }
 }
 
-// getOAuth2HeaderConfig and authorizeOAuth2Proxy are imported from @/shared/lib/oauth2proxy-auth
 
 // Base provider configurations without AzureAD
 const baseProviderConfigs = {
