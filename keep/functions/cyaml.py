@@ -73,6 +73,10 @@ def dump(data, stream=None, Dumper=None, **kwds):
     # Default to no flow style and preserve key order
     kwds.setdefault('default_flow_style', False)
     kwds.setdefault('sort_keys', False)
+    # Allow Unicode characters in output; without this PyYAML's CDumper falls
+    # back to double-quoted style for strings containing non-ASCII characters
+    # (e.g. em-dashes in comments), breaking block literal ('|') preservation.
+    kwds.setdefault('allow_unicode', True)
     return yaml.dump(data, stream, Dumper=Dumper, **kwds)
 
 def add_representer(data_type, representer, Dumper=None):
