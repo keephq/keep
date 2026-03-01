@@ -1798,41 +1798,31 @@ def test_get_incidents_by_cel_is_visible_filter(db_session):
     """
     Tests that the is_visible filter in get_last_incidents_by_cel works correctly.
     """
-    # Create two incidents: one visible, one not visible
-    now = datetime.now(timezone.utc)
-    visible_incident = Incident(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="Visible Incident",
-        user_summary="Test visible summary",          
-        generated_summary="Test visible summary gen",
-        is_visible=True,
-        creation_time=now,
-        start_time=now,
-        last_seen_time=now,
+    visible_incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "Visible Incident",
+            "user_summary": "Test visible summary",
+            "generated_summary": "Test visible summary gen",
+            "is_visible": True,
+        },
     )
-    not_visible_incident = Incident(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="Not Visible Incident",
-        user_summary="Test not visible summary",
-        generated_summary="Test not visible summary gen",
-        is_visible=False,
-        creation_time=now,
-        start_time=now,
-        last_seen_time=now,
+    not_visible_incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "Not Visible Incident",
+            "user_summary": "Test not visible summary",
+            "generated_summary": "Test not visible summary gen",
+            "is_visible": False,
+        },
     )
-    db_session.add(visible_incident)
-    db_session.add(not_visible_incident)
-    db_session.commit()
-    # Refresh objects after commit
-    db_session.refresh(visible_incident)
-    db_session.refresh(not_visible_incident)
 
     # Test fetching ONLY non-visible incidents
     incidents_not_visible, total_not_visible = get_last_incidents_by_cel(
         tenant_id=SINGLE_TENANT_UUID, cel="is_visible == false"
     )
     assert len(incidents_not_visible) == 1, f"Expected 1 non-visible incident, found {len(incidents_not_visible)}"
-    assert incidents_not_visible[0].name == "Not Visible Incident"
+    assert incidents_not_visible[0].user_generated_name == "Not Visible Incident"
     assert total_not_visible == 1, f"Expected total count 1 for non-visible, got {total_not_visible}"
 
     # Test fetching ONLY visible incidents explicitly
@@ -1840,13 +1830,13 @@ def test_get_incidents_by_cel_is_visible_filter(db_session):
         tenant_id=SINGLE_TENANT_UUID, cel="is_visible == true"
     )
     assert len(incidents_visible) == 1, f"Expected 1 visible incident (explicit), found {len(incidents_visible)}"
-    assert incidents_visible[0].name == "Visible Incident"
+    assert incidents_visible[0].user_generated_name == "Visible Incident"
     assert total_visible == 1, f"Expected total count 1 for visible (explicit), got {total_visible}"
 
     # Test the default behavior (no filter) - should only return visible
     incidents_default, total_default = get_last_incidents_by_cel(tenant_id=SINGLE_TENANT_UUID)
     assert len(incidents_default) == 1, f"Expected 1 visible incident (default), found {len(incidents_default)}"
-    assert incidents_default[0].name == "Visible Incident"
+    assert incidents_default[0].user_generated_name == "Visible Incident"
     assert total_default == 1, f"Expected total count 1 for visible (default), got {total_default}"
 
 def test_incident_not_created_maintenance(
