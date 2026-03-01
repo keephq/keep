@@ -1366,6 +1366,7 @@ def batch_enrich(
     action_description: str,
     session=None,
     audit_enabled=True,
+    force=False,
 ):
     """
     Batch enrich multiple alerts with the same enrichments in a single transaction.
@@ -1378,8 +1379,8 @@ def batch_enrich(
         action_callee (str): The ID of the user performing the action.
         action_description (str): Description of the action.
         session (Session, optional): Database session to use.
-        force (bool, optional): Whether to override existing enrichments. Defaults to False.
         audit_enabled (bool, optional): Whether to create audit entries. Defaults to True.
+        force (bool, optional): Whether to override existing enrichments. Defaults to False.
 
     Returns:
         List[AlertEnrichment]: List of enriched alert objects.
@@ -1396,7 +1397,6 @@ def batch_enrich(
         }
 
         # Prepare bulk update for existing enrichments
-        to_update = []
         to_create = []
         audit_entries = []
 
@@ -1404,7 +1404,14 @@ def batch_enrich(
             existing = existing_enrichments.get(fingerprint)
 
             if existing:
-                to_update.append(existing.id)
+                # Merge new enrichments with existing ones (unless force=True)
+                if force:
+                    new_enrichment_data = enrichments
+                else:
+                    new_enrichment_data = {**existing.enrichments, **enrichments}
+                # Update the existing enrichment
+                existing.enrichments = new_enrichment_data
+                session.add(existing)
             else:
                 # For new entries
                 to_create.append(
@@ -1425,15 +1432,6 @@ def batch_enrich(
                         description=action_description,
                     )
                 )
-
-        # Bulk update in a single query
-        if to_update:
-            stmt = (
-                update(AlertEnrichment)
-                .where(AlertEnrichment.id.in_(to_update))
-                .values(enrichments=enrichments)
-            )
-            session.execute(stmt)
 
         # Bulk insert new enrichments
         if to_create:
