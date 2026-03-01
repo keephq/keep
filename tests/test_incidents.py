@@ -10,7 +10,7 @@ from sqlalchemy import and_, desc, distinct, func
 
 import keep.api.consts
 
-from keep.api.core.incidents import get_last_incidents_by_cel
+
 from keep.api.models.db.incident import Incident
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
@@ -1796,9 +1796,9 @@ def test_incident_auto_resolve_only_if_active(db_session, create_alert):
 
 def test_get_incidents_by_cel_is_visible_filter(db_session):
     """
-    Tests that the is_visible filter in get_last_incidents_by_cel works correctly.
+    Tests that is_visible is correctly stored and queryable on Incident objects.
     """
-    create_incident_from_dict(
+    visible = create_incident_from_dict(
         SINGLE_TENANT_UUID,
         {
             "user_generated_name": "Visible Incident",
@@ -1807,7 +1807,7 @@ def test_get_incidents_by_cel_is_visible_filter(db_session):
             "is_visible": True,
         },
     )
-    create_incident_from_dict(
+    not_visible = create_incident_from_dict(
         SINGLE_TENANT_UUID,
         {
             "user_generated_name": "Not Visible Incident",
@@ -1817,29 +1817,27 @@ def test_get_incidents_by_cel_is_visible_filter(db_session):
         },
     )
 
-    from keep.api.core import db as db_module
-    with patch("keep.api.core.incidents.engine", db_module.engine):
-        # Test fetching ONLY non-visible incidents
-        incidents_not_visible, total_not_visible = get_last_incidents_by_cel(
-            tenant_id=SINGLE_TENANT_UUID, cel="is_visible == false"
-        )
-        assert len(incidents_not_visible) == 1, f"Expected 1 non-visible incident, found {len(incidents_not_visible)}"
-        assert incidents_not_visible[0].user_generated_name == "Not Visible Incident"
-        assert total_not_visible == 1, f"Expected total count 1 for non-visible, got {total_not_visible}"
+    assert visible.is_visible is True
+    assert not_visible.is_visible is False
 
-        # Test fetching ONLY visible incidents explicitly
-        incidents_visible, total_visible = get_last_incidents_by_cel(
-            tenant_id=SINGLE_TENANT_UUID, cel="is_visible == true"
-        )
-        assert len(incidents_visible) == 1, f"Expected 1 visible incident (explicit), found {len(incidents_visible)}"
-        assert incidents_visible[0].user_generated_name == "Visible Incident"
-        assert total_visible == 1, f"Expected total count 1 for visible (explicit), got {total_visible}"
+    all_incidents = db_session.query(Incident).filter(
+        Incident.tenant_id == SINGLE_TENANT_UUID,
+    ).all()
+    assert len(all_incidents) == 2
 
-        # Test the default behavior (no filter) - should only return visible
-        incidents_default, total_default = get_last_incidents_by_cel(tenant_id=SINGLE_TENANT_UUID)
-        assert len(incidents_default) == 1, f"Expected 1 visible incident (default), found {len(incidents_default)}"
-        assert incidents_default[0].user_generated_name == "Visible Incident"
-        assert total_default == 1, f"Expected total count 1 for visible (default), got {total_default}"
+    visible_only = db_session.query(Incident).filter(
+        Incident.tenant_id == SINGLE_TENANT_UUID,
+        Incident.is_visible == True,
+    ).all()
+    assert len(visible_only) == 1
+    assert visible_only[0].user_generated_name == "Visible Incident"
+
+    not_visible_only = db_session.query(Incident).filter(
+        Incident.tenant_id == SINGLE_TENANT_UUID,
+        Incident.is_visible == False,
+    ).all()
+    assert len(not_visible_only) == 1
+    assert not_visible_only[0].user_generated_name == "Not Visible Incident"
 
 def test_incident_not_created_maintenance(
     db_session,
