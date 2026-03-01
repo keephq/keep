@@ -110,11 +110,25 @@ class PagerdutyProvider(
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
     }
+    URGENCY_TO_ALERT_SEVERITY = {
+        "high": AlertSeverity.HIGH,
+        "low": AlertSeverity.INFO,
+    }
+    URGENCY_TO_INCIDENT_SEVERITY = {
+        "high": IncidentSeverity.HIGH,
+        "low": IncidentSeverity.INFO,
+    }
     INCIDENT_SEVERITIES_MAP = {
         "P1": IncidentSeverity.CRITICAL,
         "P2": IncidentSeverity.HIGH,
         "P3": IncidentSeverity.WARNING,
         "P4": IncidentSeverity.INFO,
+    }
+    PRIORITY_TO_ALERT_SEVERITY = {
+        "P1": AlertSeverity.CRITICAL,
+        "P2": AlertSeverity.HIGH,
+        "P3": AlertSeverity.WARNING,
+        "P4": AlertSeverity.INFO,
     }
     ALERT_STATUS_MAP = {
         "triggered": AlertStatus.FIRING,
@@ -801,8 +815,18 @@ class PagerdutyProvider(
         url = data.pop("self", data.pop("html_url", None))
         # format status and severity to Keep format
         status = PagerdutyProvider.ALERT_STATUS_MAP.get(data.pop("status", "firing"))
+        urgency = data.get("urgency")
         priority_summary = (data.get("priority", {}) or {}).get("summary")
-        priority = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(priority_summary, "P4")
+        if urgency is not None:
+            priority = PagerdutyProvider.URGENCY_TO_ALERT_SEVERITY.get(
+                urgency, AlertSeverity.INFO
+            )
+        elif priority_summary:
+            priority = PagerdutyProvider.PRIORITY_TO_ALERT_SEVERITY.get(
+                priority_summary, AlertSeverity.INFO
+            )
+        else:
+            priority = AlertSeverity.INFO
         last_received = data.pop(
             "created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         )
@@ -1139,10 +1163,18 @@ class PagerdutyProvider(
         status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
             event.get("status", "firing"), IncidentStatus.FIRING
         )
-        priority_summary = (event.get("priority", {}) or {}).get("summary", "P4")
-        severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
-            priority_summary, IncidentSeverity.INFO
-        )
+        urgency = event.get("urgency")
+        priority_summary = (event.get("priority", {}) or {}).get("summary")
+        if urgency is not None:
+            severity = PagerdutyProvider.URGENCY_TO_INCIDENT_SEVERITY.get(
+                urgency, IncidentSeverity.INFO
+            )
+        elif priority_summary:
+            severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
+                priority_summary, IncidentSeverity.INFO
+            )
+        else:
+            severity = IncidentSeverity.INFO
         service = event.pop("service", {}).get("summary", "unknown")
 
         created_at = event.get("created_at")
