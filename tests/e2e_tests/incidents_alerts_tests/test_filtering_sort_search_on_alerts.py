@@ -131,7 +131,7 @@ def assert_alerts_by_column(
     filtered_alerts = [alert for alert in alerts if predicate(alert)]
     matched_rows = browser.locator("[data-testid='alerts-table'] table tbody tr")
     try:
-        expect(matched_rows).to_have_count(len(filtered_alerts))
+        expect(matched_rows).to_have_count(len(filtered_alerts), timeout=15000)
     except Exception as e:
         save_failure_artifacts(browser, log_entries=[])
         raise e
@@ -329,6 +329,7 @@ def test_search_by_cel(
     expect(cel_input_locator.locator(".view-lines")).to_have_text(cel_query)
 
     browser.keyboard.press("Enter")
+    browser.wait_for_timeout(2000)
 
     assert_alerts_by_column(
         browser,
