@@ -910,6 +910,59 @@ def test_batch_enrichment(db_session, client, test_app, create_alert, elastic_cl
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+@pytest.mark.parametrize("elastic_client", [False], indirect=True)
+def test_batch_enrichment_preserves_existing_enrichments(
+    db_session, client, test_app, create_alert, elastic_client
+):
+    """batch_enrich must merge new enrichments with existing ones, not replace them."""
+    # 1. Create alert
+    create_alert("fp-1", AlertStatus.FIRING, datetime.utcnow(), {})
+
+    # 2. Enrich with ticket_id (simulating Jira workflow enrichment)
+    response = client.post(
+        "/alerts/enrich?dispose_on_new_alert=false",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": "fp-1",
+            "enrichments": {
+                "ticket_id": "DCMA-12345",
+                "ticket_url": "https://jira.example.com/browse/DCMA-12345",
+                "ticket_type": "jira",
+            },
+        },
+    )
+    assert response.status_code == 200
+
+    # 3. Batch enrich (simulating bulk resolve from UI)
+    alerts = db_session.query(Alert).all()
+    fingerprints = [a.fingerprint for a in alerts]
+
+    response = client.post(
+        "/alerts/batch_enrich",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprints": fingerprints,
+            "enrichments": {"status": "resolved"},
+        },
+    )
+    assert response.status_code == 200
+
+    time.sleep(1)
+
+    # 4. Verify: ticket_id must still be present alongside new status
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    assert alerts[0]["status"] == "resolved"
+    assert alerts[0]["ticket_id"] == "DCMA-12345"
+    assert alerts[0]["ticket_url"] == "https://jira.example.com/browse/DCMA-12345"
+    assert alerts[0]["ticket_type"] == "jira"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_incident_manual_enrichment_integration(db_session, client, test_app):
     """
     Test scenario 1: Create incident via API → enrich it manually → fetch and check enrichment
