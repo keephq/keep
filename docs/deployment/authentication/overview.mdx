@@ -26,13 +26,13 @@ Choosing the right authentication strategy depends on your specific use case, se
 | Identity Provider | RBAC | SAML/OIDC/SSO | LDAP | Resource-based permission | User Management | Group Management | On Prem | License |
 |:---:|:----:|:---------:|:----:|:-------------------------:|:----------------:|:-----------------:|:-------:|:-------:|
 | **No Auth** |  ❌   |     ❌     |  ❌   |             ❌            |        ❌        |         ❌         |    ✅    |   **OSS**   |
-| **DB** |  ✅ <br />(Predefiend roles)  |     ❌     |  ❌   |             ✅            |        ✅        |         ❌         |    ✅    |   **OSS**   |
-| **Auth0**             |  ✅ <br />(Predefiend roles)  |     ✅     |  🚧  |             🚧            |        ✅        |         🚧        |    ❌    |   **EE**   |
+| **DB** |  ✅ <br />(Predefined roles)  |     ❌     |  ❌   |             ✅            |        ✅        |         ❌         |    ✅    |   **OSS**   |
+| **Auth0**             |  ✅ <br />(Predefined roles)  |     ✅     |  🚧  |             🚧            |        ✅        |         🚧        |    ❌    |   **EE**   |
 | **Keycloak**          |  ✅ <br />(Custom roles)  |     ✅     |  ✅   |             ✅            |        ✅        |         ✅         |    ✅    |   **EE**    |
-| **Oauth2Proxy**       |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ❌            |        N/A        |         N/A         |    ✅    |   **OSS**   |
-| **Azure AD**       |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ❌            |        By Azure AD        |         By Azure AD         |    ✅    |   **EE**   |
-| **Okta**           |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ✅            |        ❌        |         ❌         |    ✅    |   **OSS**   |
-| **OneLogin**           |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ✅            |        ❌        |         ❌         |    ✅    |   **OSS**   |
+| **Oauth2Proxy**       |  ✅ <br />(Predefined roles)  |     ✅     |  ❌   |             ❌            |        N/A        |         N/A         |    ✅    |   **OSS**   |
+| **Azure AD**       |  ✅ <br />(Predefined roles)  |     ✅     |  ❌   |             ❌            |        By Azure AD        |         By Azure AD         |    ✅    |   **EE**   |
+| **Okta**           |  ✅ <br />(Predefined roles)  |     ✅     |  ❌   |             ✅            |        ❌        |         ❌         |    ✅    |   **OSS**   |
+| **OneLogin**           |  ✅ <br />(Predefined roles)  |     ✅     |  ❌   |             ✅            |        ❌        |         ❌         |    ✅    |   **OSS**   |
 ### How To Configure
 <Tip>
 Some authentication providers require additional environment variables. These will be covered in detail on the specific authentication provider pages.
@@ -48,7 +48,7 @@ The authentication scheme on Keep is controlled with environment variables both 
 | **Keycloak** | `AUTH_TYPE=KEYCLOAK` | `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` |
 | **Oauth2Proxy** | `AUTH_TYPE=OAUTH2PROXY` | `OAUTH2_PROXY_USER_HEADER`, `OAUTH2_PROXY_ROLE_HEADER`, `OAUTH2_PROXY_AUTO_CREATE_USER` |
 | **AzureAD** | `AUTH_TYPE=AZUREAD` | See [AzureAD Configuration](/deployment/authentication/azuread-auth) |
-| **Okta** | `AUTH_TYPE=OKTA` | `OKTA_DOMAIN`, `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET` |
+| **Okta** | `AUTH_TYPE=OKTA` | See [Okta Configuration](/deployment/authentication/okta-auth) |
 | **OneLogin** | `AUTH_TYPE=ONELOGIN` | See [OneLogin Configuration](/deployment/authentication/onelogin-auth) |
 
 For more details on each authentication strategy, including setup instructions and implications, refer to the respective sections.
