@@ -101,6 +101,43 @@ Keep is highly configurable through environment variables. This allows you to cu
 | **KEEP_FORCE_RESET_DEFAULT_PASSWORD** |               Forces reset of default user password               |    No    |    "false"    |                 "true" or "false"                  |
 |       **KEEP_DEFAULT_API_KEYS**       |       Comma-separated list of default API keys to provision       |    No    |      ""       |    Format: "name:role:secret,name:role:secret"     |
 
+### Service Mesh (Internal Alert Ingestion)
+
+<Info>
+  These settings allow trusted services within the same Kubernetes cluster to
+  POST alerts to Keep without requiring a Keep API key. This is intended for
+  service-to-service communication where network-level authentication (e.g.
+  Istio mTLS with AuthorizationPolicy) ensures only authorized callers can
+  reach Keep's alert ingestion endpoints.
+</Info>
+
+|                   Env var                    |                                   Purpose                                    | Required | Default Value |    Valid options     |
+| :------------------------------------------: | :--------------------------------------------------------------------------: | :------: | :-----------: | :-----------------: |
+| **KEEP_ALLOW_MESH_ALERT_INGESTION**          | Allows unauthenticated POST requests to `/alerts/event*` endpoints           |    No    |    "false"    | "true" or "false"   |
+
+When `KEEP_ALLOW_MESH_ALERT_INGESTION` is set to `"true"`, requests to `/alerts/event*` that do not carry an API key or bearer token are accepted and authenticated as an internal service with the `webhook` role.
+
+Calling services can optionally set the `X-Service-Name` HTTP header to identify themselves in Keep's logs and audit trail:
+
+```bash
+curl -X POST http://keep-backend:8080/alerts/event \
+  -H "Content-Type: application/json" \
+  -H "X-Service-Name: my-service" \
+  -d '[{"id":"alert-1","name":"Example Alert","severity":"info","status":"firing","source":["my-service"]}]'
+```
+
+The authenticated entity will have:
+- **email**: `service:<X-Service-Name header value>` (defaults to `service:unknown` if the header is not set)
+- **role**: `webhook` (grants `write:alert` and `write:incident` scopes)
+
+<Warning>
+  This feature bypasses API key authentication for the alert ingestion
+  endpoints. You **must** pair it with network-level access control (such as
+  Istio AuthorizationPolicy) to restrict which services can reach these
+  endpoints. Without network-level enforcement, any client that can reach
+  Keep's backend can POST alerts.
+</Warning>
+
 ### Secrets Management
 
 <Info>
