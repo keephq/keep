@@ -132,18 +132,19 @@ class UptimekumaProvider(BaseProvider):
                     # Single retry
                     api = self._get_api()
                     name = api.get_monitor(monitor_id)["name"]
-            heartbeats.append(
-                AlertDto(
-                    id=heartbeat["id"],
-                    name=name,
-                    monitor_id=heartbeat["monitor_id"],
-                    description=heartbeat["msg"],
-                    status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
-                    lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
-                    ping=heartbeat["ping"],
-                    source=["uptimekuma"],
+                # Bug fix: append was outside the loop — only the last monitor was reported
+                heartbeats.append(
+                    AlertDto(
+                        id=heartbeat["id"],
+                        name=name,
+                        monitor_id=heartbeat.get("monitor_id", heartbeat.get("monitorID")),
+                        description=heartbeat["msg"],
+                        status=self.STATUS_MAP.get(heartbeat["status"], AlertStatus.FIRING.value),
+                        lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
+                        ping=heartbeat.get("ping"),
+                        source=["uptimekuma"],
+                    )
                 )
-            )
             api.disconnect()
             return heartbeats
         except Exception as e:
@@ -164,22 +165,45 @@ class UptimekumaProvider(BaseProvider):
     def _format_alert(
         cls, event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        monitor = event.get("monitor", {})
+        heartbeat = event.get("heartbeat", {})
+        # Bug fix: original code used hard-coded key access which caused KeyError
+        # crashes when optional fields were absent in some notification types.
         alert = AlertDto(
-            id=event["monitor"]["id"],
-            name=event["monitor"]["name"],
-            monitor_url=event["monitor"]["url"],
-            status=cls.STATUS_MAP.get(event["heartbeat"]["status"], "firing"),
-            description=event["msg"],
-            lastReceived=cls._format_datetime(event["heartbeat"]["localDateTime"], event["heartbeat"]["timezoneOffset"]),
-            msg=event["heartbeat"]["msg"],
+            id=str(monitor.get("id", "")),
+            name=monitor.get("name", "unknown"),
+            monitor_url=monitor.get("url", ""),
+            status=cls.STATUS_MAP.get(
+                heartbeat.get("status"), AlertStatus.FIRING.value
+            ),
+            description=event.get("msg", heartbeat.get("msg", "")),
+            lastReceived=cls._format_datetime(
+                heartbeat.get("localDateTime", ""),
+                heartbeat.get("timezoneOffset", 0),
+            ),
+            msg=heartbeat.get("msg", ""),
             source=["uptimekuma"],
         )
-
         return alert
 
     @staticmethod
-    def _format_datetime(dt, offset):
-        return dt + offset
+    def _format_datetime(dt: str, offset) -> str:
+        """
+        Combine a naive datetime string with a UTC offset.
+
+        UptimeKuma returns ``localDateTime`` as a string like
+        ``"2024-01-15 10:30:00"`` and ``timezoneOffset`` as an integer
+        representing minutes east of UTC (e.g. 60 for UTC+1).
+        The original code did ``dt + offset`` which raises a
+        ``TypeError`` (str + int).
+        """
+        from datetime import datetime, timezone, timedelta
+        try:
+            naive = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+            tz = timezone(timedelta(minutes=int(offset)))
+            return naive.replace(tzinfo=tz).isoformat()
+        except Exception:
+            return str(dt)
 
 if __name__ == "__main__":
     import logging
