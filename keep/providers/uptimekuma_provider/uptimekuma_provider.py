@@ -132,18 +132,18 @@ class UptimekumaProvider(BaseProvider):
                     # Single retry
                     api = self._get_api()
                     name = api.get_monitor(monitor_id)["name"]
-            heartbeats.append(
-                AlertDto(
-                    id=heartbeat["id"],
-                    name=name,
-                    monitor_id=heartbeat["monitor_id"],
-                    description=heartbeat["msg"],
-                    status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
-                    lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
-                    ping=heartbeat["ping"],
-                    source=["uptimekuma"],
+                heartbeats.append(
+                    AlertDto(
+                        id=heartbeat["id"],
+                        name=name,
+                        monitor_id=heartbeat["monitor_id"],
+                        description=heartbeat["msg"],
+                        status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
+                        lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
+                        ping=heartbeat["ping"],
+                        source=["uptimekuma"],
+                    )
                 )
-            )
             api.disconnect()
             return heartbeats
         except Exception as e:
