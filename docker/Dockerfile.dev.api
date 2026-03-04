@@ -15,6 +15,7 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
 COPY pyproject.toml ./
+COPY keep/ ./keep/
 RUN . /venv/bin/activate && poetry install --no-root
 
 # Setting the virtual environment path
