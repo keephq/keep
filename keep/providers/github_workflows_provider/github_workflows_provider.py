@@ -157,33 +157,39 @@ class GithubWorkflowsProvider(BaseProvider):
         Get workflow runs for a specific repository.
         """
         alerts = []
-        
-        # Get failed workflow runs
+
         url = f"{self.authentication_config.github_base_url}/repos/{repo}/actions/runs"
         headers = self.__get_auth_headers()
-        
-        # Fetch workflow runs with failure status
-        params = {
-            "status": "completed",
-            "conclusion": "failure,timed_out,cancelled,action_required",
-            "per_page": 100,  # GitHub's maximum per page
-        }
-        
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            response.raise_for_status()
-            
-            data = response.json()
-            workflow_runs = data.get("workflow_runs", [])
-            
-            for run in workflow_runs:
-                alert = self.__convert_workflow_run_to_alert(run, repo)
-                if alert:
-                    alerts.append(alert)
-                    
-        except requests.RequestException as e:
-            self.logger.error(f"Error fetching workflow runs for {repo}: {e}")
-            raise
+
+        # GitHub API uses the 'status' parameter for both run status AND conclusion
+        # values. The 'conclusion' query parameter is ignored by the API.
+        # We must make separate requests for each conclusion type we care about.
+        failure_statuses = ["failure", "timed_out", "cancelled", "action_required"]
+
+        for conclusion in failure_statuses:
+            params = {
+                "status": conclusion,
+                "per_page": 100,  # GitHub's maximum per page
+            }
+
+            try:
+                response = requests.get(url, headers=headers, params=params)
+                response.raise_for_status()
+
+                data = response.json()
+                workflow_runs = data.get("workflow_runs", [])
+
+                for run in workflow_runs:
+                    alert = self.__convert_workflow_run_to_alert(run, repo)
+                    if alert:
+                        alerts.append(alert)
+
+            except requests.RequestException as e:
+                self.logger.error(
+                    f"Error fetching workflow runs for {repo} "
+                    f"(status={conclusion}): {e}"
+                )
+                raise
 
         return alerts
 
