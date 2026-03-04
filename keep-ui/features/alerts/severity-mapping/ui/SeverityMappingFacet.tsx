@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
-import { Text } from "@tremor/react";
+import { Button, Text, Title } from "@tremor/react";
 import { SeverityMappingConfig } from "@/entities/alerts/model/useSeverityMapping";
 
 interface SeverityMappingFacetProps {
@@ -18,7 +18,6 @@ export function SeverityMappingFacet({
     Object.fromEntries(mappingEntries.map(([value]) => [value, true]))
   );
 
-  const allSelected = mappingEntries.every(([value]) => selected[value]);
   const exclusivelySelected = (value: string) => {
     const selectedValues = mappingEntries.filter(([v]) => selected[v]);
     return selectedValues.length === 1 && selected[value];
@@ -62,20 +61,18 @@ export function SeverityMappingFacet({
     return null;
   }
 
+  const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
+
   return (
-    <div className="mb-1">
+    <div className="pb-2 border-b border-gray-200">
       <div
-        className="flex items-center gap-1 py-1.5 cursor-pointer select-none"
+        className="flex items-center px-2 py-2 cursor-pointer hover:bg-gray-50"
         onClick={() => setIsOpen(!isOpen)}
       >
-        {isOpen ? (
-          <ChevronDownIcon className="h-4 w-4 text-tremor-content" />
-        ) : (
-          <ChevronRightIcon className="h-4 w-4 text-tremor-content" />
-        )}
-        <span className="text-tremor-default font-medium text-tremor-content-emphasis capitalize truncate">
-          {config.sourceField}
-        </span>
+        <div className="flex items-center space-x-2">
+          <Icon className="size-5 -m-0.5 text-gray-600" />
+          <Title className="text-sm capitalize">{config.sourceField}</Title>
+        </div>
       </div>
 
       {isOpen && (
@@ -116,7 +113,10 @@ export function SeverityMappingFacet({
                 </div>
 
                 <div className="flex-shrink-0 w-8 text-right flex justify-end">
-                  <button
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="orange"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (isExclusive) {
@@ -125,10 +125,10 @@ export function SeverityMappingFacet({
                         selectOnly(value);
                       }
                     }}
-                    className="h-full text-xs text-orange-600 hidden hover:text-orange-800 group-hover:block"
+                    className="hidden group-hover:block !p-0 !text-xs"
                   >
                     {isExclusive ? "All" : "Only"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
