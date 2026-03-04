@@ -28,6 +28,14 @@ class GithubWorkflowsProviderAuthConfig:
         }
     )
 
+    repositories: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Comma-separated list of repositories to monitor (e.g., 'owner/repo1,owner/repo2')",
+            "sensitive": False,
+        }
+    )
+
     github_base_url: str = dataclasses.field(
         default="https://api.github.com",
         metadata={
@@ -35,14 +43,6 @@ class GithubWorkflowsProviderAuthConfig:
             "description": "GitHub API Base URL (for GitHub Enterprise Server)",
             "sensitive": False,
         },
-    )
-
-    repositories: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Comma-separated list of repositories to monitor (e.g., 'owner/repo1,owner/repo2')",
-            "sensitive": False,
-        }
     )
 
 
