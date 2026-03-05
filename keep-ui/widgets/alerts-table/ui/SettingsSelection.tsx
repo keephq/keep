@@ -14,6 +14,7 @@ import { Table } from "@tanstack/table-core";
 import { AlertDto } from "@/entities/alerts/model";
 import ColumnSelection from "./ColumnSelection";
 import { AlertTableThemeSelection } from "@/features/alerts/change-alert-table-theme";
+import { SeverityMappingSelection } from "@/features/alerts/severity-mapping";
 import { RowStyleSelection } from "@/widgets/alerts-table/ui/RowStyleSelection";
 import { ActionTraySelection } from "@/widgets/alerts-table/ui/ActionTraySelection";
 
@@ -77,6 +78,7 @@ export default function SettingsSelection({
                 <TabList className="mb-4">
                   <Tab data-testid="tab-columns">Columns</Tab>
                   <Tab data-testid="tab-theme">Theme</Tab>
+                  <Tab data-testid="tab-severity">Severity</Tab>
                   <Tab data-testid="tab-row-style">Row Style</Tab>
                   <Tab data-testid="tab-action-tray">Action Tray</Tab>
                 </TabList>
@@ -91,6 +93,9 @@ export default function SettingsSelection({
                   </TabPanel>
                   <TabPanel className="h-full" data-testid="panel-theme">
                     <AlertTableThemeSelection onClose={close} />
+                  </TabPanel>
+                  <TabPanel className="h-full" data-testid="panel-severity">
+                    <SeverityMappingSelection onClose={close} />
                   </TabPanel>
                   <TabPanel className="h-full" data-testid="panel-row-style">
                     <RowStyleSelection onClose={close} />
