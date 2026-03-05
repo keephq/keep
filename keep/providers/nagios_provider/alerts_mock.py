@@ -1,0 +1,15 @@
+ALERTS = {
+    "id": "webserver01/HTTP",
+    "name": "HTTP",
+    "host_name": "webserver01",
+    "service_description": "HTTP",
+    "state": "CRITICAL",
+    "output": "CRITICAL - Socket timeout after 10 seconds",
+    "type": "service",
+    "notification_type": "PROBLEM",
+    "address": "192.168.1.100",
+    "timestamp": "2024-10-26T23:20:39+00:00",
+    "current_state": "2",
+    "problem_acknowledged": "0",
+    "url": "https://nagios.example.com/nagiosxi/includes/components/xicore/status.php?host=webserver01&service=HTTP",
+}
