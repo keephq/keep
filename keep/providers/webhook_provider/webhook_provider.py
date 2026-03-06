@@ -200,7 +200,6 @@ class WebhookProvider(BaseProvider):
             params = {}
 
         extra_args = copy.deepcopy(kwargs)
-        extra_args.pop("enrich_alert", None)
         verify = extra_args.pop("verify", self.authentication_config.verify)
 
         if http_basic_authentication_username and http_basic_authentication_password:
