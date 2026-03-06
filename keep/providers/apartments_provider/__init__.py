@@ -1,0 +1,1 @@
+from .apartments_provider import ApartmentsProvider
