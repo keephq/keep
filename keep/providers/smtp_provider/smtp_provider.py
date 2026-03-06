@@ -1,237 +1,82 @@
-"""
-SMTP Provider is a class that provides the functionality to send emails using SMTP protocol.
-"""
+"""SMTP Email provider using direct SMTP."""
 
 import dataclasses
-import typing
-from email.mime.multipart import MIMEMultipart
+import smtplib
 from email.mime.text import MIMEText
-from smtplib import SMTP, SMTP_SSL
+from email.mime.multipart import MIMEMultipart
+from typing import Dict, Any
 
 import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from keep.validation.fields import NoSchemeUrl, UrlPort
+from keep.providers.models.provider_config import ProviderConfig
 
 
 @pydantic.dataclasses.dataclass
-class SmtpProviderAuthConfig:
-    smtp_server: NoSchemeUrl = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "SMTP Server Address",
-            "config_main_group": "authentication",
-            "validation": "no_scheme_url",
-        }
+class SMTPProviderAuthConfig:
+    host: str = dataclasses.field(
+        metadata={"required": True, "description": "SMTP Server Host"},
+        default=""
+    )
+    port: int = dataclasses.field(
+        metadata={"required": True, "description": "SMTP Server Port"},
+        default=587
+    )
+    username: str = dataclasses.field(
+        metadata={"required": True, "description": "SMTP Username"},
+        default=""
+    )
+    password: str = dataclasses.field(
+        metadata={"required": True, "description": "SMTP Password", "sensitive": True},
+        default=""
+    )
+    from_email: str = dataclasses.field(
+        metadata={"required": True, "description": "From Email Address"},
+        default=""
+    )
+    use_tls: bool = dataclasses.field(
+        metadata={"description": "Use TLS"},
+        default=True
     )
 
-    smtp_port: UrlPort = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "SMTP port",
-            "config_main_group": "authentication",
-            "validation": "port",
-        },
-        default=587,
-    )
-
-    encryption: typing.Literal["SSL", "TLS", "None"] = dataclasses.field(
-        default="TLS",
-        metadata={
-            "required": True,
-            "description": "SMTP encryption",
-            "type": "select",
-            "options": ["SSL", "TLS", "None"],
-            "config_main_group": "authentication",
-        },
-    )
-
-    smtp_username: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "SMTP username",
-            "config_main_group": "authentication",
-        },
-        default="",
-    )
-
-    smtp_password: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "sensitive": True,
-            "description": "SMTP password",
-            "config_main_group": "authentication",
-        },
-        default="",
-    )
-
-
-class SmtpProvider(BaseProvider):
-    PROVIDER_SCOPES = [
-        ProviderScope(
-            name="send_email",
-            description="Send email using SMTP protocol",
-            mandatory=True,
-            alias="Send Email",
-        )
-    ]
-    PROVIDER_CATEGORY = ["Collaboration"]
-
-    PROVIDER_TAGS = ["messaging"]
+class SMTPProvider(BaseProvider):
+    """SMTP Email provider."""
+    
     PROVIDER_DISPLAY_NAME = "SMTP"
+    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_TAGS = ["email"]
 
-    def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-    ):
+    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
+
+    def validate_config(self):
+        self.authentication_config = SMTPProviderAuthConfig(**self.config.authentication)
 
     def dispose(self):
         pass
 
-    def validate_config(self):
-        self.authentication_config = SmtpProviderAuthConfig(
-            **self.config.authentication
-        )
+    def _notify(self, to: str = "", subject: str = "", body: str = "", html: bool = False, **kwargs: Dict[str, Any]):
+        if not to or not subject or not body:
+            raise ProviderException("To, subject, and body are required")
 
-    def validate_scopes(self):
-        """
-        Validate that the scopes provided are correct.
-        """
+        msg = MIMEMultipart() if html else MIMEText(body)
+        msg['From'] = self.authentication_config.from_email
+        msg['To'] = to
+        msg['Subject'] = subject
+
+        if html:
+            msg.attach(MIMEText(body, 'html'))
+
         try:
-            smtp = self.generate_smtp_client()
-            smtp.quit()
-            return {"send_email": True}
+            with smtplib.SMTP(self.authentication_config.host, self.authentication_config.port) as server:
+                if self.authentication_config.use_tls:
+                    server.starttls()
+                server.login(self.authentication_config.username, self.authentication_config.password)
+                server.send_message(msg)
         except Exception as e:
-            return {"send_email": str(e)}
+            raise ProviderException(f"SMTP error: {e}")
 
-    def generate_smtp_client(self):
-        """
-        Generate an SMTP client.
-        """
-        smtp_username = self.authentication_config.smtp_username
-        smtp_password = self.authentication_config.smtp_password
-        smtp_server = self.authentication_config.smtp_server
-        smtp_port = self.authentication_config.smtp_port
-        encryption = self.authentication_config.encryption
-
-        if encryption == "SSL":
-            smtp = SMTP_SSL(smtp_server, smtp_port)
-        elif encryption == "TLS":
-            smtp = SMTP(smtp_server, smtp_port)
-            smtp.starttls()
-        elif encryption == "None":
-            smtp = SMTP(smtp_server, smtp_port)
-        else:
-            raise Exception(f"Invalid encryption: {encryption}")
-
-        if smtp_username and smtp_password:
-            smtp.login(smtp_username, smtp_password)
-
-        return smtp
-
-    def send_email(
-        self,
-        from_email: str,
-        from_name: str,
-        to_email: str | list,
-        subject: str,
-        body: str = None,
-        html: str = None,
-    ):
-        """
-        Send an email using SMTP protocol.
-        """
-        msg = MIMEMultipart()
-        if from_name == "":
-            msg["From"] = from_email
-        else:
-            msg["From"] = f"{from_name} <{from_email}>"
-        
-        if isinstance(to_email, str):
-            msg["To"] = to_email
-        else:
-            msg["To"] = ", ".join(to_email)
-        msg["Subject"] = subject
-        
-        # Prefer HTML content if provided, otherwise use plain text
-        if html:
-            msg.attach(MIMEText(html, "html"))
-        elif body:
-            msg.attach(MIMEText(body, "plain"))
-        else:
-            raise ValueError("Either 'body' or 'html' must be provided")
-
-        smtp = self.generate_smtp_client()
-        smtp.sendmail(from_email, to_email, msg.as_string())
-        smtp.quit()
-
-    def _notify(
-        self, from_email: str, from_name: str, to_email: str, subject: str, body: str = None, html: str = None, **kwargs
-    ):
-        """
-        Send an email using SMTP protocol.
-        """
-        self.send_email(from_email, from_name, to_email, subject, body, html)
-        
-        # Return the notification details
-        result = {"from": from_email, "to": to_email, "subject": subject}
-        if html:
-            result["html"] = html
-        if body:
-            result["body"] = body
-        return result
-
-
-if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-    context_manager = ContextManager(
-        tenant_id="singletenant",
-        workflow_id="test",
-    )
-
-    import os
-
-    smtp_username = os.environ.get("SMTP_USERNAME")
-    smtp_password = os.environ.get("SMTP_PASSWORD")
-    smtp_server = os.environ.get("SMTP_SERVER")
-    smtp_port = os.environ.get("SMTP_PORT")
-    encryption = os.environ.get("ENCRYPTION")
-
-    if smtp_username is None:
-        raise Exception("SMTP_USERNAME is required")
-
-    if smtp_password is None:
-        raise Exception("SMTP_PASSWORD is required")
-
-    if smtp_server is None:
-        raise Exception("SMTP_SERVER is required")
-
-    if smtp_port is None:
-        raise Exception("SMTP_PORT is required")
-
-    if encryption is None:
-        raise Exception("ENCRYPTION is required")
-
-    config = ProviderConfig(
-        description="SMTP Provider",
-        authentication={
-            "smtp_username": smtp_username,
-            "smtp_password": smtp_password,
-            "smtp_server": smtp_server,
-            "smtp_port": smtp_port,
-            "encryption": encryption,
-        },
-    )
-
-    smtp_provider = SmtpProvider(
-        context_manager=context_manager,
-        provider_id="smtp_provider",
-        config=config,
-    )
-
-    smtp = smtp_provider.generate_smtp_client()
-    smtp.quit()
+        self.logger.info("Email sent via SMTP")
+        return {"status": "success"}
