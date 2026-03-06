@@ -1,0 +1,1 @@
+from .pinterest_provider import PinterestProvider
