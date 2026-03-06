@@ -1,0 +1,1 @@
+from .meilisearch_provider import MeilisearchProvider
