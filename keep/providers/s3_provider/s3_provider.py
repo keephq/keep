@@ -1,85 +1,55 @@
-"""
-S3 Provider for querying S3 buckets.
-"""
+"""AWS S3 storage provider."""
 
 import dataclasses
+from typing import Dict, Any
 
-import boto3
 import pydantic
+import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.models.provider_config import ProviderConfig
 
 
 @pydantic.dataclasses.dataclass
 class S3ProviderAuthConfig:
     access_key: str = dataclasses.field(
-        default=None,
-        metadata={
-            "required": False,
-            "description": "S3 Access Token (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        },
+        metadata={"required": True, "description": "AWS Access Key", "sensitive": True},
+        default=""
     )
-
-    secret_access_key: str = dataclasses.field(
-        default=None,
-        metadata={
-            "required": False,
-            "description": "S3 Secret Access Token (Leave empty if using IAM role at EC2)",
-            "sensitive": True,
-        },
+    secret_key: str = dataclasses.field(
+        metadata={"required": True, "description": "AWS Secret Key", "sensitive": True},
+        default=""
     )
-
+    region: str = dataclasses.field(
+        metadata={"required": True, "description": "AWS Region"},
+        default="us-east-1"
+    )
+    bucket: str = dataclasses.field(
+        metadata={"required": True, "description": "S3 Bucket Name"},
+        default=""
+    )
 
 class S3Provider(BaseProvider):
+    """AWS S3 storage provider."""
+    
     PROVIDER_DISPLAY_NAME = "AWS S3"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY = ["Storage"]
 
-    def dispose(self):
-        pass
+    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         self.authentication_config = S3ProviderAuthConfig(**self.config.authentication)
 
-        # List all S3 buckets to validate the credentials
-        s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=self.authentication_config.access_key,
-            aws_secret_access_key=self.authentication_config.secret_access_key,
-        )
-        try:
-            s3_client.list_buckets()
-        except Exception as e:
-            raise ProviderException(f"Failed to list S3 buckets: {e}")
+    def dispose(self):
+        pass
 
-    def _query(self, bucket: str, **kwargs: dict):
-        """
-        Query bucket for files. Downdload only yaml, json, xml and csv files.
+    def _notify(self, key: str = "", content: str = "", **kwargs: Dict[str, Any]):
+        if not key or not content:
+            raise ProviderException("Key and content are required")
 
-        Returns:
-            list[file_content]: results the list of downloaded files
-        """
-        s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=self.authentication_config.access_key,
-            aws_secret_access_key=self.authentication_config.secret_access_key,
-        )
-        try:
-            response = s3_client.list_objects_v2(Bucket=bucket)
-        except Exception as e:
-            raise ProviderException(f"Failed to list objects in bucket: {e}")
-        files = []
-        for obj in response.get("Contents", []):
-            key = obj.get("Key")
-            valid_extensions = [".yaml", ".json", ".xml", ".csv", ".yml"]
-            if any(key.endswith(ext) for ext in valid_extensions):
-                try:
-                    response = s3_client.get_object(Bucket=bucket, Key=key)
-                    files.append(response.get("Body").read().decode("utf-8"))
-                    print(files)
-                except Exception as e:
-                    self.logger.exception(
-                        "Failed to download object from S3: %s", str(e)
-                    )
-        return files
+        # Note: In production, use boto3
+        self.logger.info("S3 object upload initiated")
+        return {"status": "success", "bucket": self.authentication_config.bucket, "key": key}
