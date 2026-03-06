@@ -1,0 +1,1 @@
+from .mailchimp_provider import MailchimpProvider
