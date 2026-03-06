@@ -1,8 +1,7 @@
-"""
-TrelloOutput is a class that implements the BaseOutputProvider interface for Trello updates.
-"""
+"""Trello project management provider."""
 
 import dataclasses
+from typing import Dict, Any
 
 import pydantic
 import requests
@@ -15,87 +14,52 @@ from keep.providers.models.provider_config import ProviderConfig
 
 @pydantic.dataclasses.dataclass
 class TrelloProviderAuthConfig:
-    """Trello authentication configuration."""
-
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Trello API Key", "sensitive": True}
+        metadata={"required": True, "description": "Trello API Key"},
+        default=""
     )
     api_token: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Trello API Token",
-            "sensitive": True,
-        }
+        metadata={"required": True, "description": "Trello API Token", "sensitive": True},
+        default=""
     )
 
-
-class TrelloProvider(BaseProvider):
-    """Enrich alerts with data from Trello."""
-
+class TrelloProvider(BaseModel):
+    """Trello project management provider."""
+    
     PROVIDER_DISPLAY_NAME = "Trello"
     PROVIDER_CATEGORY = ["Collaboration"]
+    TRELLO_API = "https://api.trello.com/1"
 
-    def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-    ):
+    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
-        self.authentication_config = TrelloProviderAuthConfig(
-            **self.config.authentication
-        )
+        self.authentication_config = TrelloProviderAuthConfig(**self.config.authentication)
 
     def dispose(self):
-        """
-        No need to dispose of anything, so just do nothing.
-        """
         pass
 
-    def _query(self, board_id: str = "", filter: str = "createCard", **kwargs: dict):
-        """
-        Notify alert message to Slack using the Slack Incoming Webhook API
-        https://api.slack.com/messaging/webhooks
+    def _notify(self, list_id: str = "", name: str = "", desc: str = "", **kwargs: Dict[str, Any]):
+        if not list_id or not name:
+            raise ProviderException("List ID and name are required")
 
-        Args:
-            board_id (str): Trello board ID
-            filter (str): Trello action filter
-        """
-        self.logger.debug("Fetching data from Trello")
+        params = {
+            "key": self.authentication_config.api_key,
+            "token": self.authentication_config.api_token,
+            "name": name,
+            "desc": desc or name,
+            "idList": list_id
+        }
 
-        trello_api_key = self.authentication_config.api_key
-        trello_api_token = self.authentication_config.api_token
-
-        request_url = f"https://api.trello.com/1/boards/{board_id}/actions?key={trello_api_key}&token={trello_api_token}&filter={filter}"
-        response = requests.get(request_url)
-        if not response.ok:
-            raise ProviderException(
-                f"{self.__class__.__name__} failed to fetch data from Trello: {response.text}"
+        try:
+            response = requests.post(
+                f"{self.TRELLO_API}/cards",
+                params=params,
+                timeout=30
             )
-        self.logger.debug("Fetched data from Trello")
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise ProviderException(f"Trello API error: {e}")
 
-        cards = response.json()
-        return {"cards": cards, "number_of_cards": len(cards)}
-
-
-if __name__ == "__main__":
-    # Output debug messages
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-    context_manager = ContextManager(
-        tenant_id="singletenant",
-        workflow_id="test",
-    )
-    # Load environment variables
-    import os
-
-    trello_api_key = os.environ.get("TRELLO_API_KEY")
-    trello_api_token = os.environ.get("TRELLO_API_TOKEN")
-
-    # Initalize the provider and provider config
-    config = ProviderConfig(
-        description="Trello Input Provider",
-        authentication={"api_key": trello_api_key, "api_token": trello_api_token},
-    )
-    provider = TrelloProvider(context_manager, provider_id="trello-test", config=config)
-    provider.query(board_id="trello-board-id", filter="createCard")
+        self.logger.info("Trello card created")
+        return {"status": "success"}
