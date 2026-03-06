@@ -977,3 +977,43 @@ def test_render_with_consts(context_manager):
     assert (
         result == expected_result
     ), f"Expected '{expected_result}', but got '{result}'"
+
+
+# ── fn.* Mustache lambda helper tests ────────────────────────────────────────
+
+
+def test_fn_na_on_missing_key(mocked_context_manager):
+    """fn.na renders 'N/A' when the wrapped field is absent from the context."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"name": "test-alert"},  # no 'slack_timestamp' field
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    result = iohandler.render("ts={{#fn.na}}{{ alert.slack_timestamp }}{{/fn.na}}")
+    assert result == "ts=N/A", f"Expected 'ts=N/A', got '{result}'"
+
+
+def test_fn_default_on_missing_key(mocked_context_manager):
+    """fn.default renders an empty string when the wrapped field is absent."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"name": "test-alert"},  # no 'silenceURL' field
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    result = iohandler.render("url={{#fn.default}}{{ alert.silenceURL }}{{/fn.default}}")
+    assert result == "url=", f"Expected 'url=', got '{result}'"
+
+
+def test_fn_upper_lower_strip_on_present_value(mocked_context_manager):
+    """fn.upper, fn.lower, and fn.strip transform present field values correctly."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"env": "  Production  "},
+    }
+    iohandler = IOHandler(mocked_context_manager)
+
+    upper = iohandler.render("{{#fn.upper}}{{ alert.env }}{{/fn.upper}}")
+    assert upper == "  PRODUCTION  ", f"fn.upper got '{upper}'"
+
+    lower = iohandler.render("{{#fn.lower}}{{ alert.env }}{{/fn.lower}}")
+    assert lower == "  production  ", f"fn.lower got '{lower}'"
+
+    strip = iohandler.render("{{#fn.strip}}{{ alert.env }}{{/fn.strip}}")
+    assert strip == "Production", f"fn.strip got '{strip}'"

@@ -18,6 +18,21 @@ import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
 from keep.step.step_provider_parameter import StepProviderParameter
 
+# Mustache lambda helpers injected into every render context.
+# Usage in workflow YAML:  {{#fn.na}}{{ alert.someOptionalField }}{{/fn.na}}
+# When a referenced field is missing or empty the helper returns the default
+# instead of raising RenderException (safe mode is disabled automatically
+# when fn.* sections are detected — see _render()).
+WORKFLOW_HELPERS = {
+    "fn": {
+        "default": lambda text, render: render(text) or "",
+        "na":      lambda text, render: render(text) or "N/A",
+        "upper":   lambda text, render: render(text).upper(),
+        "lower":   lambda text, render: render(text).lower(),
+        "strip":   lambda text, render: render(text).strip(),
+    }
+}
+
 
 class RenderException(Exception):
     def __init__(self, message, missing_keys=None):
@@ -429,10 +444,18 @@ class IOHandler:
             )
             safe = False
 
+        # fn.* helper sections explicitly handle missing/empty keys — the lambda
+        # returns a default value so RenderException must not be raised.
+        if "{{#fn." in key or "{{ #fn." in key:
+            safe = False
+
         context = self.context_manager.get_full_context(exclude_providers=True)
 
         if additional_context:
             context.update(additional_context)
+
+        # Inject workflow helper lambdas so fn.* sections are resolvable.
+        context.update(WORKFLOW_HELPERS)
 
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
