@@ -1,0 +1,1 @@
+from .squadcast_provider import SquadcastProvider
