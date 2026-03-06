@@ -1,0 +1,1 @@
+from .contentful_provider import ContentfulProvider
