@@ -1,100 +1,65 @@
+"""Pushover provider for push notifications."""
+
 import dataclasses
-import os
+from typing import Dict, Any
 
 import pydantic
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
 
 @pydantic.dataclasses.dataclass
 class PushoverProviderAuthConfig:
-    """Pushover authentication configuration."""
-
-    token: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Pushover app token",
-            "sensitive": True,
-        }
+    api_token: str = dataclasses.field(
+        metadata={"required": True, "description": "Pushover App API Token", "sensitive": True},
+        default=""
     )
     user_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Pushover user key"}
+        metadata={"required": True, "description": "Pushover User Key", "sensitive": True},
+        default=""
     )
 
 
 class PushoverProvider(BaseProvider):
-    """Send alert message to Pushover."""
+    """Pushover push notification provider."""
 
     PROVIDER_DISPLAY_NAME = "Pushover"
     PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_TAGS = ["messaging"]
 
-    def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-    ):
+    PUSHOVER_API = "https://api.pushover.net/1/messages.json"
+
+    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
-        self.authentication_config = PushoverProviderAuthConfig(
-            **self.config.authentication
-        )
+        self.authentication_config = PushoverProviderAuthConfig(**self.config.authentication)
 
     def dispose(self):
-        """
-        No need to dispose of anything, so just do nothing.
-        """
         pass
 
-    def _notify(self, message=None, **kwargs: dict):
-        """
-        Notify alert message to Pushover using the Pushover API
-        https://support.pushover.net/i44-example-code-and-pushover-libraries#python
+    def _notify(self, message: str = "", title: str = "", priority: int = 0, **kwargs: Dict[str, Any]):
+        """Send push notification via Pushover."""
+        if not message:
+            raise ProviderException("Message is required")
 
-        Args:
-            message (str): The content of the message.
-        """
-        self.logger.debug("Notifying alert message to Pushover")
-        sound = kwargs.get("sound", "pushover")
-        priority = int(kwargs.get("priority", 0))
-        retry = kwargs.get("retry", 60)
-        expire = kwargs.get("expire", 3600)
-        resp = requests.post(
-            "https://api.pushover.net/1/messages.json",
-            data={
-                "token": self.authentication_config.token,
-                "user": self.authentication_config.user_key,
-                "message": message,
-                "sound": sound,
-                "priority": priority,
-                **({"retry": retry, "expire": expire} if priority == 2 else {}),
-            },
-        )
-        resp.raise_for_status()
-        self.logger.debug("Alert message notified to Pushover")
+        payload = {
+            "token": self.authentication_config.api_token,
+            "user": self.authentication_config.user_key,
+            "message": message,
+            "title": title,
+            "priority": priority
+        }
 
+        try:
+            response = requests.post(self.PUSHOVER_API, data=payload, timeout=30)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise ProviderException(f"Pushover API error: {e}")
 
-if __name__ == "__main__":
-    # Output debug messages
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-    context_manager = ContextManager(
-        tenant_id="singletenant",
-        workflow_id="test",
-    )
-    # Load environment variables
-    import os
-
-    pushover_token = os.environ.get("PUSHOVER_TOKEN")
-    pushover_user_key = os.environ.get("PUSHOVER_USER_KEY")
-
-    # Initalize the provider and provider config
-    config = ProviderConfig(
-        id="pushover-test",
-        description="Pushover Output Provider",
-        authentication={"token": pushover_token, "user_key": pushover_user_key},
-    )
-    provider = PushoverProvider(context_manager, provider_id="pushover", config=config)
-    provider.notify(message="Simple alert showing context with name: John Doe")
+        self.logger.info("Pushover notification sent")
+        return {"status": "success"}
