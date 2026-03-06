@@ -1,271 +1,236 @@
 """
-WebhookProvider is a class that provides a way to notify a 3rd party service using a webhook.
+Webhook provider is a generic provider for sending webhook notifications
+to any HTTP endpoint with support for custom headers, authentication, and methods.
 """
 
-import base64
-import copy
 import dataclasses
-import json
-import typing
+from typing import Any, Dict, Optional, Union
 
 import pydantic
 import requests
-from requests.exceptions import JSONDecodeError
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_config import ProviderConfig
 
 
 @pydantic.dataclasses.dataclass
 class WebhookProviderAuthConfig:
-    """
-    Webhook authentication configuration.
-    """
+    """Webhook authentication configuration."""
 
-    url: pydantic.AnyHttpUrl = dataclasses.field(
+    bearer_token: str = dataclasses.field(
         metadata={
-            "required": True,
-            "description": "Webhook URL",
-            "validation": "any_http_url",
-        }
-    )
-
-    verify: bool = dataclasses.field(
-        metadata={
-            "description": "Enable SSL verification",
-            "hint": "Whether to verify the SSL certificate of the webhook URL or not",
-            "type": "switch",
-        },
-        default=True,
-    )
-
-    method: typing.Literal["GET", "POST", "PUT", "DELETE"] = dataclasses.field(
-        default="POST",
-        metadata={
-            "required": True,
-            "description": "HTTP method",
-            "type": "select",
-            "options": ["POST", "GET", "PUT", "DELETE"],
-        },
-    )
-
-    http_basic_authentication_username: typing.Optional[str] = dataclasses.field(
-        default=None,
-        metadata={
-            "description": "HTTP basic authentication - Username",
-            "config_sub_group": "basic_authentication",
-            "config_main_group": "authentication",
-        },
-    )
-
-    http_basic_authentication_password: typing.Optional[str] = dataclasses.field(
-        default=None,
-        metadata={
-            "description": "HTTP basic authentication - Password",
+            "required": False,
+            "description": "Bearer token for authentication",
             "sensitive": True,
-            "config_sub_group": "basic_authentication",
-            "config_main_group": "authentication",
         },
+        default="",
     )
-
-    api_key: typing.Optional[str] = dataclasses.field(
-        default=None,
+    basic_auth_username: str = dataclasses.field(
         metadata={
-            "description": "API key",
+            "required": False,
+            "description": "Username for Basic Authentication",
+            "sensitive": False,
+        },
+        default="",
+    )
+    basic_auth_password: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Password for Basic Authentication",
             "sensitive": True,
-            "config_sub_group": "api_key",
-            "config_main_group": "authentication",
         },
-    )
-
-    headers: typing.Optional[list[dict[str, str]]] = dataclasses.field(
-        default=None,
-        metadata={
-            "description": "Headers",
-            "type": "form",
-        },
+        default="",
     )
 
 
 class WebhookProvider(BaseProvider):
-    """Enrich alerts with data from Webhook."""
+    """Send webhook notifications to custom HTTP endpoints."""
 
-    BLACKLISTED_ENDPOINTS = [
-        "metadata.google.internal",
-        "metadata.internal",
-        "169.254.169.254",
-        "localhost",
-        "googleapis.com",
-    ]
-    PROVIDER_CATEGORY = ["Developer Tools"]
-
-    PROVIDER_SCOPES = [
-        ProviderScope(
-            name="send_webhook",
-            mandatory=True,
-            alias="Send Webhook",
-        )
-    ]
-
-    PROVIDER_TAGS = ["messaging"]
     PROVIDER_DISPLAY_NAME = "Webhook"
+    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_TAGS = ["messaging"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def dispose(self):
-        """
-        Nothing to do here.
-        """
-        pass
-
-    def validate_scopes(self) -> dict[str, bool | str]:
-        validated_scopes = {}
-        try:
-            self.__validate_url(str(self.authentication_config.url))
-            validated_scopes["send_webhook"] = True
-        except Exception as e:
-            self.logger.exception("Error validating webhook URL")
-            validated_scopes["send_webhook"] = str(e)
-        return validated_scopes
-
     def validate_config(self):
+        """Validate provider configuration."""
         self.authentication_config = WebhookProviderAuthConfig(
             **self.config.authentication
         )
 
-    def __validate_url(self, url: str):
+    def dispose(self):
         """
-        Validate that the url is not blacklisted.
+        No need to dispose of anything, so just do nothing.
         """
-        for endpoint in WebhookProvider.BLACKLISTED_ENDPOINTS:
-            if endpoint in url:
-                raise Exception(f"URL {url} is blacklisted")
+        pass
 
     def _notify(
         self,
-        body: dict = None,
-        params: dict = None,
-        **kwargs,
+        url: str,
+        method: str = "POST",
+        headers: Union[Dict, str] = None,
+        body: Union[Dict, str, None] = None,
+        timeout: int = 30,
+        **kwargs: Dict[str, Any],
     ):
         """
-        Send a HTTP request to the given url.
+        Send a webhook notification to the specified URL.
+
+        Args:
+            url (str): The webhook URL to send the request to.
+            method (str): HTTP method to use. Options: POST, PUT, PATCH. Default is POST.
+            headers (Union[Dict, str]): Custom headers to include in the request. Can be a dict or JSON string.
+            body (Union[Dict, str, None]): The request body/payload. Can be a dict or JSON string.
+            timeout (int): Request timeout in seconds. Default is 30.
+
+        Returns:
+            dict: Response information including status code and response text.
         """
-        self.query(
-            url=self.authentication_config.url,
-            method=self.authentication_config.method,
-            http_basic_authentication_username=self.authentication_config.http_basic_authentication_username,
-            http_basic_authentication_password=self.authentication_config.http_basic_authentication_password,
-            api_key=self.authentication_config.api_key,
-            headers=self.authentication_config.headers,
-            body=body,
-            params=params,
-            **kwargs,
+        self.logger.debug(
+            "Sending webhook notification",
+            extra={
+                "url": url,
+                "method": method,
+                "provider_id": self.provider_id,
+            },
         )
 
-    def _query(
-        self,
-        url: str,
-        method: typing.Literal["GET", "POST", "PUT", "DELETE"] = "POST",
-        http_basic_authentication_username: str = None,
-        http_basic_authentication_password: str = None,
-        api_key: str = None,
-        headers: str = None,
-        body: dict = None,
-        params: dict = None,
-        fail_on_error: bool = True,
-        **kwargs: dict,
-    ) -> dict:
-        """
-        Trigger a webhook with the given method, headers, body and params.
-        """
-        self.__validate_url(url)
-        if headers is None:
-            headers = {}
-        if isinstance(headers, str):
-            headers = json.loads(headers)
-        if isinstance(headers, list):
+        # Validate URL
+        if not url:
+            raise ProviderException("URL is required for webhook notification")
+
+        # Validate and normalize method
+        method = method.upper()
+        if method not in ["POST", "PUT", "PATCH"]:
+            raise ProviderException(
+                f"Invalid HTTP method: {method}. Must be one of: POST, PUT, PATCH"
+            )
+
+        # Parse headers if provided as string
+        if headers and isinstance(headers, str):
             try:
-                headers = {header["key"]: header["value"] for header in headers}
+                import json
+                headers = json.loads(headers)
+            except Exception as e:
+                raise ProviderException(f"Failed to parse headers JSON: {e}")
+
+        # Ensure headers is a dict
+        if not headers:
+            headers = {}
+
+        # Set default Content-Type if not specified
+        if "Content-Type" not in headers:
+            headers["Content-Type"] = "application/json"
+
+        # Parse body if provided as string
+        if body and isinstance(body, str):
+            try:
+                import json
+                # Try to parse as JSON first
+                parsed_body = json.loads(body)
+                body = parsed_body
             except Exception:
-                raise Exception(
-                    "Headers must be a list of dictionaries with 'key' and 'value' fields, e.g. [{'key': 'Content-Type', 'value': 'application/json'}]"
-                )
-        if body is None:
-            body = {}
-        if params is None:
-            params = {}
+                # If not valid JSON, use as-is (for text payloads)
+                pass
 
-        extra_args = copy.deepcopy(kwargs)
-        extra_args.pop("enrich_alert", None)
-        verify = extra_args.pop("verify", self.authentication_config.verify)
+        # Build request kwargs
+        request_kwargs = {
+            "url": url,
+            "headers": headers,
+            "timeout": timeout,
+        }
 
-        if http_basic_authentication_username and http_basic_authentication_password:
-            credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
-            encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode(
-                "utf-8"
+        # Add authentication
+        if self.authentication_config.bearer_token:
+            request_kwargs["headers"]["Authorization"] = (
+                f"Bearer {self.authentication_config.bearer_token}"
             )
-            headers["Authorization"] = f"Basic {encoded_credentials}"
-
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        self.logger.debug(
-            f"Sending {method} request to {url}",
-            extra={
-                "body": body,
-                "headers": headers,
-                "params": params,
-            },
-        )
-        if method == "GET":
-            response = requests.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=10,
-                verify=verify,
-                **extra_args,
-            )
-        elif method == "POST":
-            response = requests.post(
-                url, headers=headers, json=body, timeout=10, verify=verify, **extra_args
-            )
-        elif method == "PUT":
-            response = requests.put(
-                url, headers=headers, json=body, timeout=10, verify=verify, **extra_args
-            )
-        elif method == "DELETE":
-            response = requests.delete(
-                url, headers=headers, json=body, timeout=10, verify=verify, **extra_args
+        elif (
+            self.authentication_config.basic_auth_username
+            and self.authentication_config.basic_auth_password
+        ):
+            request_kwargs["auth"] = (
+                self.authentication_config.basic_auth_username,
+                self.authentication_config.basic_auth_password,
             )
 
-        self.logger.debug(
-            f"Trigger a webhook with {method} on {url}",
-            extra={
-                "body": body,
-                "headers": headers,
-                "params": params,
-                "status_code": response.status_code,
-            },
-        )
+        # Add body for methods that support it
+        if body is not None and method in ["POST", "PUT", "PATCH"]:
+            if isinstance(body, dict):
+                request_kwargs["json"] = body
+            else:
+                request_kwargs["data"] = body
 
-        result = {"status": response.ok, "status_code": response.status_code}
-
+        # Send the request
         try:
-            body = response.json()
-        except JSONDecodeError:
-            body = response.text
-
-        if fail_on_error:
-            self.logger.info(
-                f"Webhook response: {response.status_code} {response.reason}",
-                extra={"body": body},
-            )
+            response = requests.request(method, **request_kwargs)
             response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise ProviderException(f"Webhook request failed: {e}")
 
-        result["body"] = body
-        return result
+        self.logger.debug(
+            "Webhook notification sent successfully",
+            extra={
+                "status_code": response.status_code,
+                "provider_id": self.provider_id,
+            },
+        )
+
+        return {
+            "status_code": response.status_code,
+            "response_text": response.text,
+            "success": True,
+        }
+
+
+if __name__ == "__main__":
+    # Output debug messages
+    import logging
+    import os
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+
+    # Load environment variables for testing
+    webhook_url = os.environ.get("WEBHOOK_URL", "https://httpbin.org/post")
+    bearer_token = os.environ.get("WEBHOOK_BEARER_TOKEN", "")
+    basic_user = os.environ.get("WEBHOOK_BASIC_USER", "")
+    basic_pass = os.environ.get("WEBHOOK_BASIC_PASS", "")
+
+    # Initialize the provider and provider config
+    auth_config = {}
+    if bearer_token:
+        auth_config["bearer_token"] = bearer_token
+    elif basic_user and basic_pass:
+        auth_config["basic_auth_username"] = basic_user
+        auth_config["basic_auth_password"] = basic_pass
+
+    config = ProviderConfig(
+        id="webhook-test",
+        description="Webhook Output Provider",
+        authentication=auth_config,
+    )
+
+    provider = WebhookProvider(context_manager, provider_id="webhook", config=config)
+
+    # Test notification
+    result = provider.notify(
+        url=webhook_url,
+        method="POST",
+        headers={"X-Custom-Header": "test-value"},
+        body={
+            "message": "Test webhook notification from Keep",
+            "alert": "Test Alert",
+            "severity": "info",
+        },
+    )
+    print(f"Result: {result}")
