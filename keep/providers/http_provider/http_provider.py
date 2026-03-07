@@ -100,7 +100,6 @@ class HttpProvider(BaseProvider):
             params = {}
 
         extra_args = copy.deepcopy(kwargs)
-        extra_args.pop("enrich_alert", None)
 
         # todo: this might be problematic if params/body/headers contain sensitive data
         # think about changing those debug messages or adding a flag to enable/disable them
