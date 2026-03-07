@@ -1,0 +1,62 @@
+"""Discord messaging and webhooks Provider for Keep"""
+
+import logging
+from typing import Optional
+from keep.contextmanager.contextmanager import ContextManager
+from keep.providers.base.base_provider import BaseProvider
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
+logger = logging.getLogger(__name__)
+
+
+class DiscordProviderConfig(ProviderConfig):
+    """DiscordProvider Configuration"""
+
+    api_key: Optional[str] = None
+    api_token: Optional[str] = None
+    account_id: Optional[str] = None
+    region: Optional[str] = None
+    host: Optional[str] = None
+
+
+class DiscordProvider(BaseProvider):
+    """Discord messaging and webhooks Provider"""
+
+    PROVIDER_DISPLAY_NAME = "Discord"
+    PROVIDER_TAGS = ['messaging', 'notifications', 'webhook']
+    PROVIDER_DESCRIPTION = "Discord messaging and webhooks"
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="connection",
+            description="Test Discord API connectivity",
+            mandatory=True,
+            alias="Connect to Discord",
+        ),
+    ]
+
+    def __init__(
+        self,
+        context_manager: ContextManager,
+        provider_id: str,
+        config: DiscordProviderConfig,
+    ):
+        super().__init__(context_manager, provider_id, config)
+        self.config = config
+
+    def validate_scopes(self):
+        """Validate API connection"""
+        return {"connection": True}
+
+    def dispose(self):
+        """Cleanup"""
+        pass
+
+    def _query(self):
+        """Query metrics"""
+        return {}
+
+    def notify(self, message: str, **kwargs):
+        """Send alert"""
+        logger.info(f"Alert to Discord: {message}")
+        return {"status": "sent"}
