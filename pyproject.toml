@@ -89,6 +89,7 @@ psycopg2-binary = "^2.9.10"
 urllib3 = "<2.7.0"
 
 prometheus-fastapi-instrumentator = "^7.0.0"
+pysnmp-lextudio = "^6.2.5"
 slowapi = "^0.1.9"
 uvloop = "^0.21.0"
 httptools = "^0.6.4"
