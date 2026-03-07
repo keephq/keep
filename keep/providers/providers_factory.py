@@ -285,7 +285,6 @@ class ProvidersFactory:
             "base_provider",
             "mock_provider",
             "file_provider",
-            "github_workflows_provider",
         ]
 
         for provider_directory in os.listdir(
