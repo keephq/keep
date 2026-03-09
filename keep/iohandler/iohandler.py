@@ -434,14 +434,16 @@ class IOHandler:
         if additional_context:
             context.update(additional_context)
 
-        # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
+        stderr_capture = io.StringIO()
         original_stderr = sys.stderr
-        sys.stderr = io.StringIO()
-        rendered = self.render_recursively(key, context)
-        # chevron.render will escape the quotes, we need to unescape them
-        rendered = rendered.replace("&quot;", '"')
-        stderr_output = sys.stderr.getvalue()
-        sys.stderr = original_stderr
+        sys.stderr = stderr_capture
+        try:
+            rendered = self.render_recursively(key, context)
+            # chevron.render will escape the quotes, we need to unescape them
+            rendered = rendered.replace("&quot;", '"')
+            stderr_output = stderr_capture.getvalue()
+        finally:
+            sys.stderr = original_stderr
         # If render should failed if value does not exists
         if safe and "Could not find key" in stderr_output:
             # if more than one keys missing, pretiffy the error
