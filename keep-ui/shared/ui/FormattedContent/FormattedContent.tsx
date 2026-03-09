@@ -38,19 +38,38 @@ function FormattedHTMLContent({
   );
 }
 
+const stripHtmlTags = (html: string) => {
+  return html.replace(/<[^>]*>/g, "").trim();
+};
+
 interface FormattedContentProps {
   content: string | null | undefined;
   format?: "markdown" | "html" | null;
   className?: string;
+  /**
+   * When true, strips all HTML/markdown tags and renders as plain text.
+   * Useful in table cells where line-clamp needs to work on inline text
+   * without block-level elements (like <p>) breaking the clamp.
+   */
+  plain?: boolean;
 }
 
 export const FormattedContent: FC<FormattedContentProps> = ({
   content,
   format,
   className,
+  plain,
 }) => {
   if (!content) {
     return null;
+  }
+
+  if (plain) {
+    return (
+      <div className={clsx("whitespace-normal", className)}>
+        {stripHtmlTags(content)}
+      </div>
+    );
   }
 
   if (format === "markdown") {
