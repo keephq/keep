@@ -1,6 +1,9 @@
+import os
+
 from ee.identitymanager.identity_managers.azuread.azuread_authverifier import (
     AzureadAuthVerifier,
 )
+from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.identity_managers.db.db_identitymanager import (
@@ -15,6 +18,15 @@ class AzureadIdentityManager(BaseIdentityManager):
         self.db_identity_manager = DbIdentityManager(
             tenant_id, context_manager, **kwargs
         )
+
+    def on_start(self, app) -> None:
+        azuread_tenant_id = os.environ.get("KEEP_AZUREAD_TENANT_ID")
+        if azuread_tenant_id:
+            try_create_single_tenant(azuread_tenant_id, create_default_user=False)
+        else:
+            self.logger.warning(
+                "AUTH_TYPE=azuread but KEEP_AZUREAD_TENANT_ID is not set"
+            )
 
     def get_users(self) -> list[User]:
         # we keep the azuread users in the db
