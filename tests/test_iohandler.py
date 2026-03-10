@@ -3,6 +3,8 @@ Test the io handler
 """
 
 import datetime
+import threading
+import time
 from unittest.mock import patch
 
 import pytest
@@ -977,3 +979,47 @@ def test_render_with_consts(context_manager):
     assert (
         result == expected_result
     ), f"Expected '{expected_result}', but got '{result}'"
+
+
+def test_concurrent_render_no_stderr_race(context_manager):
+    """Test that concurrent render calls don't cause a race condition on sys.stderr.
+
+    Before the fix, multiple threads calling render() simultaneously could hit a race
+    where one thread restores sys.stderr to the original TextIOWrapper while another
+    thread tries to call .getvalue() on sys.stderr, causing:
+        AttributeError: '_io.TextIOWrapper' object has no attribute 'getvalue'
+
+    The fix uses a local StringIO reference instead of reading from sys.stderr.
+    See: https://github.com/keephq/keep/issues/6079
+    """
+    iohandler = IOHandler(context_manager)
+    errors = []
+    barrier = threading.Barrier(10)
+
+    # Add a small delay inside render_recursively to force thread interleaving,
+    # making the race condition deterministic rather than timing-dependent.
+    original_render = iohandler.render_recursively
+
+    def slow_render(key, context):
+        result = original_render(key, context)
+        time.sleep(0.001)
+        return result
+
+    iohandler.render_recursively = slow_render
+
+    def render_template(thread_id):
+        try:
+            barrier.wait(timeout=5)
+            for _ in range(20):
+                result = iohandler.render(f"hello from thread {thread_id}")
+                assert result == f"hello from thread {thread_id}"
+        except Exception as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=render_template, args=(i,)) for i in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+
+    assert not errors, f"Concurrent render raised errors: {errors}"
