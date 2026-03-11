@@ -185,7 +185,7 @@ export default function IncidentsTable({
         const summary =
           row.original.user_summary || row.original.generated_summary;
         return (
-          <div className="min-w-32 lg:min-w-64">
+          <div className="min-w-32 lg:min-w-64 max-w-md overflow-hidden">
             <Link
               href={`/incidents/${row.original.id}/alerts`}
               className="text-pretty"
@@ -196,7 +196,8 @@ export default function IncidentsTable({
               <FormattedContent
                 content={summary}
                 format="html"
-                className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3"
+                plain
+                className="text-pretty overflow-hidden text-ellipsis line-clamp-3 text-sm text-gray-500"
               />
             ) : null}
           </div>

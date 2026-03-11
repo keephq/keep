@@ -38,19 +38,34 @@ function FormattedHTMLContent({
   );
 }
 
+const stripHtmlTags = (html: string): string => {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+};
+
 interface FormattedContentProps {
   content: string | null | undefined;
   format?: "markdown" | "html" | null;
+  plain?: boolean;
   className?: string;
 }
 
 export const FormattedContent: FC<FormattedContentProps> = ({
   content,
   format,
+  plain,
   className,
 }) => {
   if (!content) {
     return null;
+  }
+
+  if (plain) {
+    const text = format === "html" ? stripHtmlTags(content) : content;
+    return (
+      <div className={clsx("whitespace-normal", className)}>
+        {text}
+      </div>
+    );
   }
 
   if (format === "markdown") {
