@@ -66,18 +66,27 @@ def get_pusher_client() -> Pusher | None:
         return None
 
     # TODO: defaults on open source no docker
-    pusher = Pusher(
-        host=pusher_host,
-        port=(
-            int(os.environ.get("PUSHER_PORT"))
-            if os.environ.get("PUSHER_PORT")
-            else None
-        ),
-        app_id=pusher_app_id,
-        key=pusher_app_key,
-        secret=pusher_app_secret,
-        ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
-        cluster=os.environ.get("PUSHER_CLUSTER"),
-    )
+    try:
+        pusher = Pusher(
+            host=pusher_host,
+            port=(
+                int(os.environ.get("PUSHER_PORT"))
+                if os.environ.get("PUSHER_PORT")
+                else None
+            ),
+            app_id=pusher_app_id,
+            key=pusher_app_key,
+            secret=pusher_app_secret,
+            ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
+            cluster=os.environ.get("PUSHER_CLUSTER"),
+        )
+    except ValueError:
+        logger.warning(
+            "Pusher client could not be initialized due to invalid configuration "
+            "(PUSHER_APP_ID must be a numeric string). "
+            "Real-time push notifications are disabled.",
+            extra={"pusher_app_id": pusher_app_id},
+        )
+        return None
     logging.debug("Pusher client initialized")
     return pusher
