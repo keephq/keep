@@ -1,0 +1,47 @@
+ALERTS = [
+    {
+        "scopeId": 1,
+        "scope": "SERVICE",
+        "name": "user-service",
+        "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "id0": "dXNlci1zZXJ2aWNl.1",
+        "id1": "",
+        "ruleName": "service_resp_time_rule",
+        "alarmMessage": "Response time of service user-service is more than 1000ms in last 3 minutes.",
+        "startTime": 1710000000000,
+        "recoveryTime": None,
+        "tags": [
+            {"key": "level", "value": "WARNING"},
+        ],
+    },
+    {
+        "scopeId": 1,
+        "scope": "SERVICE",
+        "name": "payment-service",
+        "uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        "id0": "cGF5bWVudC1zZXJ2aWNl.1",
+        "id1": "",
+        "ruleName": "service_sla_rule",
+        "alarmMessage": "Successful rate of service payment-service is lower than 80% in last 2 minutes.",
+        "startTime": 1710000120000,
+        "recoveryTime": None,
+        "tags": [
+            {"key": "level", "value": "CRITICAL"},
+        ],
+    },
+    {
+        "scopeId": 3,
+        "scope": "ENDPOINT",
+        "name": "/api/v1/checkout in payment-service",
+        "uuid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+        "id0": "cGF5bWVudC1zZXJ2aWNl.1_L2FwaS92MS9jaGVja291dA==",
+        "id1": "",
+        "ruleName": "endpoint_resp_time_rule",
+        "alarmMessage": "Response time of endpoint /api/v1/checkout in payment-service is more than 1000ms in last 2 minutes.",
+        "startTime": 1710000060000,
+        "recoveryTime": 1710000180000,
+        "tags": [
+            {"key": "level", "value": "WARNING"},
+        ],
+    },
+]
