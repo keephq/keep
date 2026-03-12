@@ -1398,11 +1398,11 @@ async def test_incident_bl_add_alert_to_incident(db_session, create_alert):
             assert data["incident_id"] == str(incident_dto.id)
 
             # Check workflow manager
-            assert len(workflow_manager.events) == 2  # Created, update
+            assert len(workflow_manager.events) == 3  # Created, update, alert_association_changed
             wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
             assert wf_tenant_id == SINGLE_TENANT_UUID
             assert wf_incident_dto.id == incident_dto.id
-            assert wf_action == "updated"
+            assert wf_action == "alert_association_changed"
 
             # Check elastic
             assert len(elastic_client.alerts) == 1
@@ -1492,12 +1492,12 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
             assert data["incident_id"] == str(incident_dto.id)
 
             # Check workflow manager
-            # Created, updated (added event), updated(deleted event)
-            assert len(workflow_manager.events) == 3
+            # Created, updated (added event), alert_association_change(added event), updated(deleted event), alert_association_changed(deleted event)
+            assert len(workflow_manager.events) == 5
             wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
             assert wf_tenant_id == SINGLE_TENANT_UUID
             assert wf_incident_dto.id == incident_dto.id
-            assert wf_action == "updated"
+            assert wf_action == "alert_association_changed"
 
             # Check elastic
             assert len(elastic_client.alerts) == 2
