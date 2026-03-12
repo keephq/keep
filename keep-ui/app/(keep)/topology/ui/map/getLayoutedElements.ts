@@ -20,7 +20,9 @@ export function getLayoutedElements(nodes: TopologyNode[], edges: Edge[]) {
   });
 
   edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
+    if (dagreGraph.hasNode(edge.source) && dagreGraph.hasNode(edge.target)) {
+      dagreGraph.setEdge(edge.source, edge.target);
+    }
   });
 
   dagre.layout(dagreGraph);
