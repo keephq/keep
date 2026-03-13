@@ -1359,7 +1359,7 @@ def get_alert_quality(
 
 
 @router.get(
-    "/event/error",
+    "/event-errors",
     description="Get alerts that Keep failed to process",
 )
 def get_error_alerts(
@@ -1397,7 +1397,7 @@ def get_error_alerts(
 
 
 @router.post(
-    "/event/error/dismiss",
+    "/event-errors/dismiss",
     description="Dismiss error alerts. If alert_id is provided, dismisses that specific alert. If no alert_id is provided, dismisses all alerts.",
 )
 def dismiss_error_alerts(
