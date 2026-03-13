@@ -112,7 +112,7 @@ export const useAlerts = () => {
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     const { data, error, isLoading, mutate } = useSWR<any>(
-      () => (api.isReady() ? `/alerts/event/error` : null),
+      () => (api.isReady() ? `/alerts/event-errors` : null),
       (url) => api.get(url),
       options
     );
@@ -125,7 +125,7 @@ export const useAlerts = () => {
 
       try {
         const payload = alertId ? { alert_id: alertId } : {};
-        await api.post(`/alerts/event/error/dismiss`, payload);
+        await api.post(`/alerts/event-errors/dismiss`, payload);
         await mutate(); // Refresh the data
         return true;
       } catch (error) {

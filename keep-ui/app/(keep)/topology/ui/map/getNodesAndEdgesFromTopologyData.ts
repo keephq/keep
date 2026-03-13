@@ -64,12 +64,15 @@ export function getNodesAndEdgesFromTopologyData(
       const dependencyService = topologyData.find(
         (s) => s.id === dependency.serviceId
       );
+      if (!dependencyService) {
+        return;
+      }
       const edgeId = dependency.id.toString();
       if (!edgeMap.has(edgeId)) {
         edgeMap.set(edgeId, {
           id: edgeId.toString(),
           source: service.id.toString(),
-          target: dependencyService?.id.toString() ?? "",
+          target: dependencyService.id.toString(),
           label: dependency.protocol === "unknown" ? "" : dependency.protocol,
           animated: false,
           labelBgPadding: edgeLabelBgPaddingNoHover,
