@@ -59,61 +59,67 @@ class MaintenanceWindowsBl:
         env = celpy.Environment()
 
         for maintenance_rule in self.maintenance_rules:
-            if alert.status in maintenance_rule.ignore_statuses:
-                self.logger.debug(
-                    "Alert status is set to be ignored, ignoring maintenance windows",
-                    extra={"tenant_id": self.tenant_id},
-                )
-                continue
+            try:
+                if alert.status in maintenance_rule.ignore_statuses:
+                    self.logger.debug(
+                        "Alert status is set to be ignored, ignoring maintenance windows",
+                        extra={"tenant_id": self.tenant_id},
+                    )
+                    continue
 
-            if maintenance_rule.end_time.replace(tzinfo=datetime.UTC) <= datetime.datetime.now(datetime.UTC):
-                # this is wtf error, should not happen because of query in init
-                self.logger.error(
-                    "Fetched maintenance window which already ended by mistake, should not happen!"
-                )
-                continue
+                if maintenance_rule.end_time.replace(tzinfo=datetime.UTC) <= datetime.datetime.now(datetime.UTC):
+                    # this is wtf error, should not happen because of query in init
+                    self.logger.error(
+                        "Fetched maintenance window which already ended by mistake, should not happen!"
+                    )
+                    continue
 
-            cel_result = MaintenanceWindowsBl.evaluate_cel(maintenance_rule, alert, env, self.logger, extra)
+                cel_result = MaintenanceWindowsBl.evaluate_cel(maintenance_rule, alert, env, self.logger, extra)
 
-            if cel_result:
-                self.logger.info(
-                    "Alert is in maintenance window",
+                if cel_result:
+                    self.logger.info(
+                        "Alert is in maintenance window",
+                        extra={**extra, "maintenance_rule_id": maintenance_rule.id},
+                    )
+
+                    try:
+                        audit = AlertAudit(
+                            tenant_id=self.tenant_id,
+                            fingerprint=alert.fingerprint,
+                            user_id="Keep",
+                            action=ActionType.MAINTENANCE.value,
+                            description=(
+                                f"Alert in maintenance due to rule `{maintenance_rule.name}`"
+                                if not maintenance_rule.suppress
+                                else f"Alert suppressed due to maintenance rule `{maintenance_rule.name}`"
+                            ),
+                        )
+                        self.session.add(audit)
+                        self.session.commit()
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to write audit for alert maintenance window",
+                            extra={
+                                "tenant_id": self.tenant_id,
+                                "fingerprint": alert.fingerprint,
+                            },
+                        )
+
+                    if maintenance_rule.suppress:
+                        # If user chose to suppress the alert, let it in but override the status.
+                        if MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
+                            alert.previous_status = alert.status
+                            alert.status = AlertStatus.MAINTENANCE.value
+                        else:
+                            alert.status = AlertStatus.SUPPRESSED.value
+                        return False
+
+                    return True
+            except Exception:
+                self.logger.exception(
+                    "Error while evaluating maintenance window CEL expression",
                     extra={**extra, "maintenance_rule_id": maintenance_rule.id},
                 )
-
-                try:
-                    audit = AlertAudit(
-                        tenant_id=self.tenant_id,
-                        fingerprint=alert.fingerprint,
-                        user_id="Keep",
-                        action=ActionType.MAINTENANCE.value,
-                        description=(
-                            f"Alert in maintenance due to rule `{maintenance_rule.name}`"
-                            if not maintenance_rule.suppress
-                            else f"Alert suppressed due to maintenance rule `{maintenance_rule.name}`"
-                        ),
-                    )
-                    self.session.add(audit)
-                    self.session.commit()
-                except Exception:
-                    self.logger.exception(
-                        "Failed to write audit for alert maintenance window",
-                        extra={
-                            "tenant_id": self.tenant_id,
-                            "fingerprint": alert.fingerprint,
-                        },
-                    )
-
-                if maintenance_rule.suppress:
-                    # If user chose to suppress the alert, let it in but override the status.
-                    if MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status":
-                        alert.previous_status = alert.status
-                        alert.status = AlertStatus.MAINTENANCE.value
-                    else:
-                        alert.status = AlertStatus.SUPPRESSED.value
-                    return False
-
-                return True
         self.logger.info("Alert is not in maintenance window", extra=extra)
         return False
 
