@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
+  <!-- Google Cloud style hexagon -->
+  <path d="M24 8 L48 8 L60 28 L48 48 L24 48 L12 28 Z" fill="#4285F4"/>
+  <path d="M24 12 L44 12 L54 28 L44 44 L24 44 L14 28 Z" fill="#ffffff" opacity="0.9"/>
+  <!-- AI/ML stylized symbol -->
+  <circle cx="34" cy="28" r="6" fill="#4285F4"/>
+  <circle cx="42" cy="22" r="4" fill="#34A853"/>
+  <circle cx="42" cy="34" r="4" fill="#EA4335"/>
+  <path d="M38 28 L42 22 M38 28 L42 34" stroke="#4285F4" stroke-width="2" fill="none"/>
+  <!-- Text -->
+  <text x="68" y="26" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#5F6368">Vertex</text>
+  <text x="68" y="40" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#4285F4">AI</text>
+</svg>
