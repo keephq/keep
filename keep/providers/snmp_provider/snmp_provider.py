@@ -30,6 +30,7 @@ class SnmpProviderAuthConfig:
             "required": True,
             "description": "SNMP agent host to send traps to",
             "hint": "IP address or hostname of the SNMP agent",
+            "config_main_group": "authentication",
         }
     )
     oid: str = dataclasses.field(
@@ -37,6 +38,7 @@ class SnmpProviderAuthConfig:
             "required": True,
             "description": "OID for SNMP trap",
             "hint": "Object Identifier to include in traps",
+            "config_main_group": "authentication",
         }
     )
     port: int | None = dataclasses.field(
@@ -45,6 +47,7 @@ class SnmpProviderAuthConfig:
             "required": False,
             "description": "SNMP agent port",
             "hint": "Default is 162 (SNMP trap port)",
+            "config_main_group": "authentication",
         },
     )
     community: str | None = dataclasses.field(
@@ -53,6 +56,7 @@ class SnmpProviderAuthConfig:
             "required": False,
             "description": "SNMP community string",
             "sensitive": True,
+            "config_main_group": "authentication",
         },
     )
 
