@@ -105,10 +105,11 @@ class SnmpProvider(BaseProvider):
 
     def validate_config(self):
         auth_config = dict(self.config.authentication)
-        if "port" in auth_config and isinstance(auth_config["port"], str):
-            auth_config["port"] = (
-                int(auth_config["port"]) if auth_config["port"] else 162
-            )
+        if "port" in auth_config and auth_config["port"]:
+            try:
+                auth_config["port"] = int(auth_config["port"])
+            except (ValueError, TypeError):
+                auth_config["port"] = 162
         self.authentication_config = SnmpProviderAuthConfig(**auth_config)
 
     def dispose(self):
