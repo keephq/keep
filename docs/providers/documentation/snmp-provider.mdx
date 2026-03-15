@@ -1,0 +1,136 @@
+---
+title: SNMP Provider
+description: Use the SNMP Provider to send and receive SNMP traps.
+---
+
+# SNMP Provider
+
+The SNMP Provider allows you to:
+1. **Send** SNMP traps/events to a specified SNMP agent
+2. **Receive** SNMP trap events from external SNMP trap collectors as alerts in Keep
+
+## Requirements
+
+To use the SNMP Provider for sending traps, you need to have the `pysnmp` library installed in your Python environment:
+
+```bash
+pip install pysnmp
+```
+
+## Configuration
+
+The SNMP Provider requires the following configuration:
+
+| Field     | Description                                                         | Example           |
+| --------- | ------------------------------------------------------------------- | ----------------- |
+| `host`    | The IP address or hostname of the SNMP agent to send traps to.      | `127.0.0.1`       |
+| `port`    | The port number of the SNMP agent. Defaults to `162`.               | `162`             |
+| `community` | The SNMP community string to use for authentication.                | `public`          |
+| `oid`     | The Object Identifier (OID) to be included in the SNMP trap.      | `1.3.6.1.4.1.99999.1.1` |
+
+**Example Configuration:**
+
+```yaml
+providers:
+  snmp-notifier:
+    type: snmp
+    authentication:
+      host: "192.168.1.100"
+      port: 162
+      community: "private"
+      oid: "1.3.6.1.4.1.12345.1.2.3"
+```
+
+## Sending SNMP Traps
+
+You can use the SNMP provider in your Keep workflows to send traps.
+
+**Example Workflow:**
+
+```yaml
+steps:
+  - name: send-snmp-trap
+    provider:
+      type: snmp-notifier
+      config: "{{ providers.snmp-notifier }}"
+    message: "Alert: Server CPU usage is high!"
+```
+
+This will send an SNMP trap to the configured SNMP agent with the message "Alert: Server CPU usage is high!".
+
+## Receiving SNMP Traps
+
+You can configure your SNMP trap collector/receiver to forward traps to Keep as alerts. This is useful when you have an existing SNMP management infrastructure (like Zabbix, Nagios, SNMPTT, or similar) and want to ingest those traps into Keep.
+
+### Webhook Configuration
+
+The SNMP provider exposes a webhook endpoint that you can configure in your SNMP trap receiver:
+
+**Webhook URL:**
+```
+https://your-keep-instance.com/alerts/event/snmp?provider_id=YOUR_PROVIDER_ID&api_key=YOUR_API_KEY
+```
+
+### Expected Payload Format
+
+Send JSON payloads in the following format:
+
+```json
+{
+  "oid": "1.3.6.1.4.1.12345.1.2.3",
+  "message": "CPU usage is high",
+  "source": "server01",
+  "severity": "critical"
+}
+```
+
+**Payload Fields:**
+
+| Field     | Description                                                         | Required |
+| --------- | ------------------------------------------------------------------- | -------- |
+| `oid`     | The Object Identifier (OID) of the trap                            | Yes      |
+| `message` | The alert message                                                  | Yes      |
+| `source`  | The source of the trap (e.g., hostname)                            | No       |
+| `severity`| The severity level (critical, error, high, warning, medium, low, info) | No       |
+| `timestamp`| Timestamp of the trap (ISO format)                               | No       |
+
+### Example: Configuring Zabbix to Send Traps to Keep
+
+1. In Zabbix, create a media type with the following URL:
+   ```
+   https://your-keep-instance.com/alerts/event/snmp?provider_id=zabbix-snmp&api_key=YOUR_API_KEY
+   ```
+
+2. Set the HTTP method to `POST`
+
+3. Set the content type to `application/json`
+
+4. Use a JSON payload like:
+   ```json
+   {
+     "oid": "{ITEM.ID}",
+     "message": "{ALERT.MESSAGE}",
+     "source": "{HOST.NAME}",
+     "severity": "{TRIGGER.SEVERITY}"
+   }
+   ```
+
+### Example: Configuring Generic SNMP Trap Receiver
+
+If you're using a generic HTTP endpoint for SNMP traps (e.g., SNMPTT configured to send HTTP requests), use this template:
+
+```json
+{
+  "oid": "$oid",
+  "message": "$message",
+  "source": "$hostname",
+  "severity": "$severity",
+  "timestamp": "$formatted_date"
+}
+```
+
+## Note on `pysnmp`
+
+The actual SNMP trap sending functionality relies on the `pysnmp` Python library. If you are encountering issues when sending traps, please ensure that `pysnmp` is correctly installed in your Keep environment. If it is not installed, the provider will log a warning and simulate the trap sending.
+
+For receiving traps via webhook, the `pysnmp` library is not required.
