@@ -32,6 +32,13 @@ class SnmpProviderAuthConfig:
             "hint": "IP address or hostname of the SNMP agent",
         }
     )
+    oid: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "OID for SNMP trap",
+            "hint": "Object Identifier to include in traps",
+        }
+    )
     port: int = dataclasses.field(
         default=162,
         metadata={
@@ -43,17 +50,10 @@ class SnmpProviderAuthConfig:
     community: str = dataclasses.field(
         default="public",
         metadata={
-            "required": True,
+            "required": False,
             "description": "SNMP community string",
             "sensitive": True,
         },
-    )
-    oid: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "OID for SNMP trap",
-            "hint": "Object Identifier to include in traps",
-        }
     )
 
 
