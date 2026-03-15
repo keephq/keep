@@ -275,13 +275,13 @@ Send this JSON to: {keep_webhook_api_url}"""
             source = [source]
 
         return AlertDto(
+            id=None,
             name=name,
             status=AlertStatus.FIRING,
             severity=severity,
             lastReceived=event.get("timestamp", ""),
             description=event.get("message", ""),
             source=source,
-            message=event.get("message", ""),
             fingerprint=event.get("oid", event.get("message", "")),
-            **event,
+            message=event.get("message", ""),
         )
