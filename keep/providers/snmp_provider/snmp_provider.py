@@ -39,12 +39,13 @@ class SnmpProviderAuthConfig:
             "hint": "Object Identifier to include in traps",
         }
     )
-    port: int | None = dataclasses.field(
+    port: int = dataclasses.field(
         default=162,
         metadata={
             "required": False,
             "description": "SNMP agent port",
             "hint": "Default is 162 (SNMP trap port)",
+            "type": "number",
         },
     )
     community: str | None = dataclasses.field(
