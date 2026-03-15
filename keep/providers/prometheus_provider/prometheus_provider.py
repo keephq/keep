@@ -217,6 +217,11 @@ receivers:
                 if getattr(alert_dto, label, None) is not None:
                     continue
                 setattr(alert_dto, label, labels[label])
+            # Always set these as "" when absent so workflow templates can
+            # reference them safely without triggering render_context safe=True errors.
+            for _field in ("value", "instance", "job"):
+                if getattr(alert_dto, _field, None) is None:
+                    setattr(alert_dto, _field, "")
             alert_dtos.append(alert_dto)
         return alert_dtos
 

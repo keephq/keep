@@ -1,0 +1,73 @@
+---
+title: "Okta Authentication"
+---
+
+This document provides comprehensive information about the Okta integration in Keep.
+
+## Overview
+
+Keep supports Okta as an authentication provider, enabling:
+- Single Sign-On (SSO) via Okta
+- OAuth2/OIDC authentication flow
+- JWT token verification with JWKS
+- Role-based access control through token claims
+
+## Environment Variables
+
+### Backend Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `AUTH_TYPE` | Set to `"OKTA"` to enable Okta authentication | Yes |
+| `OKTA_DOMAIN` | Your Okta domain (e.g., `https://company.okta.com`) | Yes |
+| `OKTA_ISSUER` | The issuer URL for your Okta authorization server (e.g., `https://company.okta.com/oauth2/default`) | Yes |
+| `OKTA_CLIENT_ID` | Client ID of your Okta application | Yes |
+| `OKTA_CLIENT_SECRET` | Client Secret of your Okta application | Yes |
+| `OKTA_AUDIENCE` | Expected audience claim in the token. Falls back to `OKTA_CLIENT_ID` if not set | No |
+| `OKTA_JWKS_URL` | Explicit JWKS URL. If not set, derived from `OKTA_ISSUER` | No |
+| `OKTA_API_TOKEN` | Okta API token for management operations | No |
+
+### Frontend Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `"OKTA"` to enable Okta authentication | `OKTA` |
+| `OKTA_ISSUER` | The issuer URL for your Okta authorization server | `https://company.okta.com/oauth2/default` |
+| `OKTA_CLIENT_ID` | Client ID of your Okta application | `0oa1bcdef2ghijklm3n4` |
+| `OKTA_CLIENT_SECRET` | Client Secret of your Okta application | `abcd1234efgh5678` |
+
+## Okta Configuration
+
+### Creating an Okta Application
+
+1. Sign in to your Okta Admin Console
+2. Navigate to **Applications** > **Applications**
+3. Click **Create App Integration**
+4. Select **OIDC - OpenID Connect** as the sign-in method
+5. Select **Web Application** as the application type
+6. Click **Next**
+
+### Application Settings
+
+1. **App integration name**: Enter a name for your application (e.g., "Keep")
+2. **Sign-in redirect URIs**: Add your callback URL: `https://your-keep-domain.com/api/auth/callback/okta`
+3. **Sign-out redirect URIs**: Add your sign-out URL: `https://your-keep-domain.com`
+4. **Assignments**: Assign the application to the appropriate users or groups
+5. Click **Save**
+6. Copy the **Client ID** and **Client Secret** from the application settings
+
+### Role Mapping
+
+Keep extracts the user role from the JWT token. The role is determined in the following order:
+
+1. `keep_role` claim in the token
+2. `role` claim in the token
+3. First entry in the `groups` claim
+4. Falls back to `user` role
+
+To configure role mapping, add a custom claim to your Okta authorization server:
+
+1. Navigate to **Security** > **API** > **Authorization Servers**
+2. Select your authorization server (e.g., `default`)
+3. Go to the **Claims** tab
+4. Add a claim named `keep_role` or `groups` that maps to the user's Keep role
