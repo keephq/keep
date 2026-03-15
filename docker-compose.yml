@@ -23,6 +23,7 @@ services:
       - KEEP_METRICS=true
     volumes:
       - ./state:/state
+      - ./keep/providers/snmp_provider:/venv/lib/python3.13/site-packages/keep/providers/snmp_provider:ro
 
   keep-websocket-server:
     extends:

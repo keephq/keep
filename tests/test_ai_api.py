@@ -1,13 +1,13 @@
 import json
-from unittest.mock import patch
+from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session
 
+from keep.api.api import get_app
 from keep.api.core.db import ExternalAIConfigAndMetadata
-from keep.api.main import app
-from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto
-from keep.api.models.db.ai_external import ExternalAI
+from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto, ExternalAIDto
+from keep.api.models.db.ai_external import ExternalAI, external_ai_transformers
 
 
 @patch("keep.api.core.db.get_or_create_external_ai_settings")
@@ -19,9 +19,8 @@ def test_get_ai_stats(
     mock_get_first_alert_datetime,
     mock_get_alerts_count,
     mock_get_or_create_external_ai_settings,
-    mock_session,
 ):
-    client = TestClient(app)
+    client = TestClient(get_app())
     # Arrange
     tenant_id = "test_tenant"
     mock_authenticated_entity = MagicMock()
@@ -35,19 +34,13 @@ def test_get_ai_stats(
         {"name": "Create New Incidents", "value": True, "type": "bool"},
         {"name": "Enabled", "value": True, "type": "bool"},
     ]
-    mock_algorithm = ExternalAI(
-        name="Test Algorithm",
-        description="A test algorithm",
-        version=1,
-        api_url="http://test.com",
-        api_key="test-key",
-        config_default=json.dumps(sample_settings),
-    )
     mock_ai_config_db = ExternalAIConfigAndMetadata(
         id="algo-id",
-        algorithm_id=mock_algorithm.unique_id,
+        algorithm_id=external_ai_transformers.unique_id,
         tenant_id=tenant_id,
         settings=json.dumps(sample_settings),
+        settings_proposed_by_algorithm=None,
+        feedback_logs=None,
         optimization_target="quality",
     )
     mock_ai_config_dto = ExternalAIConfigAndMetadataDto.from_orm(mock_ai_config_db)
@@ -59,7 +52,7 @@ def test_get_ai_stats(
 
     # Act
     with patch(
-        "keep.identitymanager.identitymanagerfactory.IdentityManagerFactory.get_auth_verifier",
+        "keep.api.routes.ai.IdentityManagerFactory.get_auth_verifier",
         return_value=lambda: mock_authenticated_entity,
     ):
         response = client.get("/ai/stats")
@@ -78,9 +71,8 @@ def test_get_ai_stats(
 def test_update_ai_settings_endpoint(
     mock_update_extrnal_ai_settings,
     mock_get_or_create_external_ai_settings,
-    mock_session,
 ):
-    client = TestClient(app)
+    client = TestClient(get_app())
     # Arrange
     tenant_id = "test_tenant"
     algorithm_id = "test-algorithm_1"
@@ -104,7 +96,7 @@ def test_update_ai_settings_endpoint(
         settings=original_settings_list,
         settings_proposed_by_algorithm=None,
         feedback_logs=None,
-        algorithm=MagicMock(),
+        algorithm=ExternalAIDto(name="Test", description="Test"),
         optimization_target="speed",  # New optimization target
     )
 
@@ -124,13 +116,13 @@ def test_update_ai_settings_endpoint(
         settings=adjusted_settings_list,  # Adjusted settings
         settings_proposed_by_algorithm=None,
         feedback_logs=None,
-        algorithm=MagicMock(),
+        algorithm=ExternalAIDto(name="Test", description="Test"),
         optimization_target="speed",
     )
 
     # Act
     with patch(
-        "keep.identitymanager.identitymanagerfactory.IdentityManagerFactory.get_auth_verifier",
+        "keep.api.routes.ai.IdentityManagerFactory.get_auth_verifier",
         return_value=lambda: mock_authenticated_entity,
     ):
         response = client.put(f"/ai/{algorithm_id}/settings", json=updated_dto.dict())

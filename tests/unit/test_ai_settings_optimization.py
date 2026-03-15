@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,7 +9,7 @@ from keep.api.core.db import (
     _adjust_settings_for_optimization_target,
     update_extrnal_ai_settings,
 )
-from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto
+from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto, ExternalAIDto
 from keep.api.models.db.ai_external import ExternalAI
 
 
@@ -105,10 +104,15 @@ def test_adjust_settings_for_optimization_target_unknown(sample_external_ai_conf
     assert adjusted_settings == original_settings
 
 
+@patch("keep.api.core.db.Session")
 @patch("keep.api.core.db._adjust_settings_for_optimization_target")
 @patch("keep.api.models.ai_external.ExternalAIConfigAndMetadataDto.from_orm")
 def test_update_extrnal_ai_settings(
-    mock_from_orm, mock_adjust_settings, mock_session, mock_external_ai_config_metadata
+    mock_from_orm,
+    mock_adjust_settings,
+    mock_session_class,
+    mock_session,
+    mock_external_ai_config_metadata,
 ):
     # Arrange
     tenant_id = "test-tenant"
@@ -121,11 +125,12 @@ def test_update_extrnal_ai_settings(
         ],
         settings_proposed_by_algorithm=None,
         feedback_logs=None,
-        algorithm=MagicMock(),  # Mock the algorithm attribute
+        algorithm=ExternalAIDto(name="Test", description="Test"),
         optimization_target="speed",
     )
 
-    mock_session.query.return_value.filter.return_value.filter.return_value.first.return_value = (
+    mock_session_class.return_value.__enter__.return_value = mock_session
+    mock_session.query.return_value.filter.return_value.first.return_value = (
         mock_external_ai_config_metadata
     )
     mock_adjust_settings.return_value = [
@@ -155,7 +160,8 @@ def test_update_extrnal_ai_settings(
     assert result == ai_settings_dto
 
 
-def test_update_extrnal_ai_settings_not_found(mock_session):
+@patch("keep.api.core.db.Session")
+def test_update_extrnal_ai_settings_not_found(mock_session_class, mock_session):
     # Arrange
     tenant_id = "test-tenant"
     ai_settings_dto = ExternalAIConfigAndMetadataDto(
@@ -165,13 +171,12 @@ def test_update_extrnal_ai_settings_not_found(mock_session):
         settings=[],
         settings_proposed_by_algorithm=None,
         feedback_logs=None,
-        algorithm=MagicMock(),
+        algorithm=ExternalAIDto(name="Test", description="Test"),
         optimization_target="quality",
     )
 
-    mock_session.query.return_value.filter.return_value.filter.return_value.first.return_value = (
-        None
-    )
+    mock_session_class.return_value.__enter__.return_value = mock_session
+    mock_session.query.return_value.filter.return_value.first.return_value = None
 
     # Act & Assert
     with pytest.raises(ValueError, match="External AI setting not found"):

@@ -1,0 +1,173 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - complementary [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - button "Keep Logo" [ref=e8] [cursor=pointer]:
+          - img "Keep Logo" [ref=e9]
+        - combobox "Search" [ref=e12]
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - button "INCIDENTS" [expanded] [ref=e15] [cursor=pointer]:
+            - paragraph [ref=e16]: INCIDENTS
+            - img [ref=e17]
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Incidents" [ref=e22] [cursor=pointer]:
+                - /url: /incidents
+                - img [ref=e24]
+                - paragraph [ref=e28]: Incidents
+        - generic [ref=e29]:
+          - button "Alerts" [expanded] [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - paragraph [ref=e32]: Alerts
+              - img [ref=e33]
+            - img [ref=e35]
+          - list [ref=e37]:
+            - status [ref=e38]
+        - generic [ref=e39]:
+          - button "‌" [expanded] [ref=e40] [cursor=pointer]:
+            - generic [ref=e43]: ‌
+          - list [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e47]: ‌
+              - generic [ref=e49]: ‌
+            - generic [ref=e50]:
+              - generic [ref=e52]: ‌
+              - generic [ref=e54]: ‌
+            - generic [ref=e55]:
+              - generic [ref=e57]: ‌
+              - generic [ref=e59]: ‌
+            - generic [ref=e60]:
+              - generic [ref=e62]: ‌
+              - generic [ref=e64]: ‌
+            - generic [ref=e65]:
+              - generic [ref=e67]: ‌
+              - generic [ref=e69]: ‌
+            - generic [ref=e70]:
+              - generic [ref=e72]: ‌
+              - generic [ref=e74]: ‌
+            - generic [ref=e75]:
+              - generic [ref=e77]: ‌
+              - generic [ref=e79]: ‌
+            - generic [ref=e80]:
+              - generic [ref=e82]: ‌
+              - generic [ref=e84]: ‌
+        - generic [ref=e85]:
+          - button "Dashboards Beta" [expanded] [ref=e86] [cursor=pointer]:
+            - generic [ref=e87]:
+              - paragraph [ref=e88]: Dashboards
+              - generic [ref=e89]:
+                - generic [ref=e91]: Beta
+                - img [ref=e92]
+          - list [ref=e94]:
+            - paragraph [ref=e95]: Dashboards will appear here when saved.
+            - status [ref=e96]
+            - button "Add Dashboard" [ref=e97] [cursor=pointer]:
+              - img [ref=e98]
+              - generic [ref=e100]: Add Dashboard
+      - list [ref=e101]:
+        - listitem [ref=e102]:
+          - link "Providers" [ref=e104] [cursor=pointer]:
+            - /url: /providers
+            - img [ref=e106]
+            - paragraph [ref=e109]: Providers
+        - listitem [ref=e110]:
+          - link "Slack" [ref=e112] [cursor=pointer]:
+            - /url: https://slack.keephq.dev/
+            - img [ref=e114]
+            - generic [ref=e116]: Slack
+          - link "Docs" [ref=e118] [cursor=pointer]:
+            - /url: https://docs.keephq.dev
+            - img [ref=e120]
+            - generic [ref=e122]: Docs
+        - generic [ref=e123]:
+          - listitem [ref=e124]:
+            - button "KE Keep" [ref=e125] [cursor=pointer]:
+              - generic [ref=e126]:
+                - generic "Keep" [ref=e127]:
+                  - generic [ref=e128]: KE
+                - paragraph [ref=e129]: Keep
+          - button [ref=e130] [cursor=pointer]:
+            - img [ref=e132]
+  - button [ref=e135] [cursor=pointer]:
+    - img [ref=e137]
+  - main [ref=e139]:
+    - generic [ref=e143]:
+      - generic [ref=e144]:
+        - generic [ref=e145]:
+          - paragraph [ref=e146]: Incidents
+          - paragraph [ref=e147]: Group alerts into incidents
+        - generic [ref=e148]:
+          - generic [ref=e150]:
+            - button "All All time" [ref=e151] [cursor=pointer]:
+              - generic [ref=e153]:
+                - generic [ref=e155]: All
+                - paragraph [ref=e157]: All time
+                - img [ref=e158]
+            - button [ref=e162] [cursor=pointer]:
+              - img [ref=e163]
+          - button "Create Incident" [ref=e166] [cursor=pointer]:
+            - img [ref=e167]
+            - generic [ref=e169]: Create Incident
+      - generic [ref=e171]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - button "Add Facet" [ref=e175] [cursor=pointer]:
+              - img [ref=e176]
+              - text: Add Facet
+            - button "Reset" [ref=e178] [cursor=pointer]:
+              - img [ref=e179]
+              - text: Reset
+          - generic [ref=e181]:
+            - generic [ref=e183] [cursor=pointer]:
+              - img [ref=e184]
+              - paragraph
+            - generic [ref=e187]:
+              - generic [ref=e188]:
+                - generic [ref=e190]: ‌
+                - generic [ref=e192]: ‌
+              - generic [ref=e193]:
+                - generic [ref=e195]: ‌
+                - generic [ref=e197]: ‌
+              - generic [ref=e198]:
+                - generic [ref=e200]: ‌
+                - generic [ref=e202]: ‌
+          - generic [ref=e203]:
+            - generic [ref=e205] [cursor=pointer]:
+              - img [ref=e206]
+              - paragraph
+            - generic [ref=e209]:
+              - generic [ref=e210]:
+                - generic [ref=e212]: ‌
+                - generic [ref=e214]: ‌
+              - generic [ref=e215]:
+                - generic [ref=e217]: ‌
+                - generic [ref=e219]: ‌
+              - generic [ref=e220]:
+                - generic [ref=e222]: ‌
+                - generic [ref=e224]: ‌
+          - generic [ref=e225]:
+            - generic [ref=e227] [cursor=pointer]:
+              - img [ref=e228]
+              - paragraph
+            - generic [ref=e231]:
+              - generic [ref=e232]:
+                - generic [ref=e234]: ‌
+                - generic [ref=e236]: ‌
+              - generic [ref=e237]:
+                - generic [ref=e239]: ‌
+                - generic [ref=e241]: ‌
+              - generic [ref=e242]:
+                - generic [ref=e244]: ‌
+                - generic [ref=e246]: ‌
+        - main [ref=e248]:
+          - img "loading" [ref=e249]
+          - paragraph [ref=e250]: Just a second, getting your data 🚨
+    - region "Notifications Alt+T"
+  - button "Open Next.js Dev Tools" [ref=e256] [cursor=pointer]:
+    - img [ref=e257]
+  - alert [ref=e260]
+```
