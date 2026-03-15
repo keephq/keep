@@ -430,7 +430,7 @@ class IncidentBl:
         )
 
     def resolve_incident_if_require(
-        self, incident: Incident, max_retries=3
+        self, incident: Incident, max_retries=3, handle_workflow_event: bool = True
     ) -> Incident:
 
         should_resolve = False
@@ -460,6 +460,10 @@ class IncidentBl:
                     incident.status = IncidentStatus.RESOLVED.value
                     self.session.add(incident)
                     self.session.commit()
+                    if handle_workflow_event:
+                        self.send_workflow_event(
+                            IncidentDto.from_db_incident(incident), "updated"
+                        )
                     break
                 except StaleDataError as ex:
                     if "expected to update" in ex.args[0]:

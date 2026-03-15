@@ -43,7 +43,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [GitHub](/providers/documentation/github-provider)
 - [Github Workflows](/providers/documentation/github_workflows_provider)
 - [GitLab](/providers/documentation/gitlab-provider)
-- [Gitlab Pipelines](/providers/documentation/gitlabpipelines-provider)
+- [GitLab Pipelines](/providers/documentation/gitlabpipelines-provider)
 - [Google Kubernetes Engine](/providers/documentation/gke-provider)
 - [Google Chat](/providers/documentation/google_chat-provider)
 - [Grafana](/providers/documentation/grafana-provider)
