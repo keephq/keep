@@ -118,6 +118,10 @@ class SnmpProvider(BaseProvider):
         """
         pass
 
+    @staticmethod
+    def get_alert_schema() -> dict:
+        pass
+
     def _notify(
         self,
         message: str = "",
