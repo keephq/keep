@@ -261,7 +261,7 @@ Send this JSON to: {keep_webhook_api_url}"""
             "error": AlertSeverity.HIGH,
             "high": AlertSeverity.HIGH,
             "warning": AlertSeverity.WARNING,
-            "medium": AlertSeverity.MEDIUM,
+            "medium": AlertSeverity.WARNING,
             "low": AlertSeverity.LOW,
             "info": AlertSeverity.INFO,
         }
