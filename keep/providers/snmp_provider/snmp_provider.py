@@ -71,12 +71,7 @@ class SnmpProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "SNMP"
     webhook_description = "Configure your SNMP trap receiver (e.g., Zabbix, Nagios, SNMPTT) to send traps to Keep. Use the webhook URL below to receive SNMP traps as alerts in Keep."
-    webhook_template = """{
-  "oid": "{{ alert.oid }}",
-  "message": "{{ alert.message }}",
-  "source": "{{ alert.source }}",
-  "severity": "{{ alert.severity }}"
-}"""
+    webhook_template = ""
 
     PROVIDER_CATEGORY: list[
         Literal[
