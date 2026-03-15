@@ -118,17 +118,6 @@ class SnmpProvider(BaseProvider):
         """
         pass
 
-    from pysnmp.hlapi import (
-        UdpTransportTarget,
-        CommunityData,
-        CommandGenerator,
-        OctetString,
-        ObjectIdentity,
-        NotificationType,
-        sendNotification,
-        ContextData,
-    )
-
     def _notify(
         self,
         message: str = "",
@@ -137,10 +126,33 @@ class SnmpProvider(BaseProvider):
         """
         Sends an SNMP trap.
 
+        Note: Requires pysnmp library to be installed.
+        For receiving traps via webhook, pysnmp is not required.
+
         Args:
             message (str): The message to be sent as part of the SNMP trap.
             **kwargs: Additional parameters for the SNMP trap.
         """
+        try:
+            from pysnmp.hlapi import (
+                UdpTransportTarget,
+                CommunityData,
+                CommandGenerator,
+                OctetString,
+                ObjectIdentity,
+                NotificationType,
+                sendNotification,
+                ContextData,
+            )
+        except ImportError:
+            self.logger.warning(
+                "pysnmp library not installed. SNMP trap sending is disabled. "
+                "Install pysnmp to enable: pip install pysnmp"
+            )
+            self.logger.info(
+                "SNMP trap (simulated)", extra={"message": message, "kwargs": kwargs}
+            )
+            return "SNMP trap simulated (pysnmp not installed)"
         self.logger.info(
             "Sending SNMP trap", extra={"message": message, "kwargs": kwargs}
         )
