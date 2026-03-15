@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  snmp-agent:
+    image: snmpsim/snmpsim
+    command: --agent-udpv4-endpoint=0.0.0.0:162 --data-dir=/data/snmp/data --log-level=debug --logging-file=/data/snmp/snmpsim.log
+    ports:
+      - "162:162/udp"
+    volumes:
+      - ./snmp/data:/data/snmp/data
+      - ./snmp/logs:/data/snmp/logs
+    networks:
+      - default # Assuming the default network for mysql compose is what we want
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z -u localhost 162"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    external:
+      name: tests_default # This should match the network name created by docker-compose-e2e-mysql.yml
+    

@@ -1,0 +1,12 @@
+name: send-snmp-trap-workflow
+description: Sends an SNMP trap using the SNMP provider.
+
+triggers:
+  - type: manual
+
+steps:
+  - name: send-snmp-trap
+    provider:
+      type: snmp
+      config: "{{ providers.snmp-test }}"
+    message: "SNMP Trap from Keep: Alert triggered for a critical event!"
