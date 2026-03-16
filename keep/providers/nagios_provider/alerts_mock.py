@@ -1,0 +1,18 @@
+ALERTS = {
+    "notification_type": "PROBLEM",
+    "host": "webserver01",
+    "host_alias": "Web Server 01",
+    "host_address": "192.168.1.100",
+    "service": "HTTP",
+    "state": "CRITICAL",
+    "output": "HTTP CRITICAL - Socket timeout after 10 seconds",
+    "long_output": "",
+    "timestamp": "1706300400",
+    "attempt": "3",
+    "max_attempts": "3",
+    "state_type": "HARD",
+    "notification_author": "",
+    "notification_comment": "",
+    "contact_name": "admin",
+    "contact_email": "admin@example.com",
+}
