@@ -51,5 +51,6 @@ export function authorizeOAuth2Proxy(
     email: emailValue || userValue || "oauth2proxy-user",
     accessToken: accessToken || `oauth2proxy:${identity}`,
     role: groups || undefined,
+    tenantId: "keep",
   };
 }
