@@ -3,6 +3,8 @@ Test the io handler
 """
 
 import datetime
+import threading
+import time
 from unittest.mock import patch
 
 import pytest
@@ -977,3 +979,87 @@ def test_render_with_consts(context_manager):
     assert (
         result == expected_result
     ), f"Expected '{expected_result}', but got '{result}'"
+
+
+def test_concurrent_render_no_stderr_race(context_manager):
+    """Test that concurrent render calls don't cause a race condition on sys.stderr.
+
+    Before the fix, multiple threads calling render() simultaneously could hit a race
+    where one thread restores sys.stderr to the original TextIOWrapper while another
+    thread tries to call .getvalue() on sys.stderr, causing:
+        AttributeError: '_io.TextIOWrapper' object has no attribute 'getvalue'
+
+    The fix uses a local StringIO reference instead of reading from sys.stderr.
+    See: https://github.com/keephq/keep/issues/6079
+    """
+    iohandler = IOHandler(context_manager)
+    errors = []
+    barrier = threading.Barrier(10)
+
+    # Add a small delay inside render_recursively to force thread interleaving,
+    # making the race condition deterministic rather than timing-dependent.
+    original_render = iohandler.render_recursively
+
+    def slow_render(key, context):
+        result = original_render(key, context)
+        time.sleep(0.001)
+        return result
+
+    iohandler.render_recursively = slow_render
+
+    def render_template(thread_id):
+        try:
+            barrier.wait(timeout=5)
+            for _ in range(20):
+                result = iohandler.render(f"hello from thread {thread_id}")
+                assert result == f"hello from thread {thread_id}"
+        except Exception as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=render_template, args=(i,)) for i in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+
+    assert not errors, f"Concurrent render raised errors: {errors}"
+
+
+# ── fn.* Mustache lambda helper tests ────────────────────────────────────────
+
+
+def test_fn_na_on_missing_key(mocked_context_manager):
+    """fn.na renders 'N/A' when the wrapped field is absent from the context."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"name": "test-alert"},  # no 'slack_timestamp' field
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    result = iohandler.render("ts={{#fn.na}}{{ alert.slack_timestamp }}{{/fn.na}}")
+    assert result == "ts=N/A", f"Expected 'ts=N/A', got '{result}'"
+
+
+def test_fn_default_on_missing_key(mocked_context_manager):
+    """fn.default renders an empty string when the wrapped field is absent."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"name": "test-alert"},  # no 'silenceURL' field
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    result = iohandler.render("url={{#fn.default}}{{ alert.silenceURL }}{{/fn.default}}")
+    assert result == "url=", f"Expected 'url=', got '{result}'"
+
+
+def test_fn_upper_lower_strip_on_present_value(mocked_context_manager):
+    """fn.upper, fn.lower, and fn.strip transform present field values correctly."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"env": "  Production  "},
+    }
+    iohandler = IOHandler(mocked_context_manager)
+
+    upper = iohandler.render("{{#fn.upper}}{{ alert.env }}{{/fn.upper}}")
+    assert upper == "  PRODUCTION  ", f"fn.upper got '{upper}'"
+
+    lower = iohandler.render("{{#fn.lower}}{{ alert.env }}{{/fn.lower}}")
+    assert lower == "  production  ", f"fn.lower got '{lower}'"
+
+    strip = iohandler.render("{{#fn.strip}}{{ alert.env }}{{/fn.strip}}")
+    assert strip == "Production", f"fn.strip got '{strip}'"

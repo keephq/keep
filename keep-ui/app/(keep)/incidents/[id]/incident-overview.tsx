@@ -46,6 +46,8 @@ const PROVISIONED_ENRICHMENTS = [
   "incident_title",
   "environments",
   "repositories",
+  "rca_points",
+  "traces",
 ];
 
 interface Props {
