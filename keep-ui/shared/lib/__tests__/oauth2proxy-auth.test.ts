@@ -222,4 +222,28 @@ describe("authorizeOAuth2Proxy", () => {
 
     expect(user!.id).toBe("email@example.com");
   });
+
+  it("returns tenantId matching backend SINGLE_TENANT_UUID", () => {
+    const headers = makeHeaders({
+      "x-forwarded-user": "Test User",
+      "x-forwarded-email": "test@example.com",
+    });
+
+    const user = authorizeOAuth2Proxy(headers, defaultConfig);
+
+    expect(user).not.toBeNull();
+    expect(user!.tenantId).toBe("keep");
+  });
+
+  it("never returns undefined tenantId for a valid user", () => {
+    const headers = makeHeaders({
+      "x-forwarded-email": "user@example.com",
+    });
+
+    const user = authorizeOAuth2Proxy(headers, defaultConfig);
+
+    expect(user).not.toBeNull();
+    expect(user!.tenantId).toBeDefined();
+    expect(user!.tenantId).not.toBe("undefined");
+  });
 });
