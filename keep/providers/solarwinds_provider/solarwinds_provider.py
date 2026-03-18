@@ -94,10 +94,10 @@ class SolarwindsProvider(BaseProvider):
     ]
 
     SEVERITY_MAP = {
-        1: AlertSeverity.INFO,       # Information
-        2: AlertSeverity.WARNING,    # Warning
-        3: AlertSeverity.CRITICAL,   # Critical
-        4: AlertSeverity.CRITICAL,   # Emergency
+        1: AlertSeverity.INFO,  # Information
+        2: AlertSeverity.WARNING,  # Warning
+        3: AlertSeverity.CRITICAL,  # Critical
+        4: AlertSeverity.CRITICAL,  # Emergency
     }
 
     STATUS_MAP = {
@@ -222,9 +222,7 @@ class SolarwindsProvider(BaseProvider):
                 )
             )
 
-        self.logger.info(
-            "Fetched %d active alerts from SolarWinds", len(alerts)
-        )
+        self.logger.info("Fetched %d active alerts from SolarWinds", len(alerts))
         return alerts
 
     def _get_node_alerts(self) -> list[AlertDto]:
@@ -243,9 +241,9 @@ class SolarwindsProvider(BaseProvider):
 
         # SolarWinds node status codes: 1=Up, 2=Down, 3=Warning, 14=Shutdown, ...
         NODE_SEVERITY_MAP = {
-            2: AlertSeverity.CRITICAL,   # Down
-            3: AlertSeverity.WARNING,    # Warning
-            14: AlertSeverity.INFO,      # Shutdown
+            2: AlertSeverity.CRITICAL,  # Down
+            3: AlertSeverity.WARNING,  # Warning
+            14: AlertSeverity.INFO,  # Shutdown
         }
         NODE_STATUS_MAP = {
             2: AlertStatus.FIRING,
@@ -278,9 +276,7 @@ class SolarwindsProvider(BaseProvider):
                 )
             )
 
-        self.logger.info(
-            "Fetched %d node alerts from SolarWinds", len(alerts)
-        )
+        self.logger.info("Fetched %d node alerts from SolarWinds", len(alerts))
         return alerts
 
     def _get_alerts(self) -> list[AlertDto]:
