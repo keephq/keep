@@ -8,11 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import hashlib
 import logging
 import socket
-import uuid
-from datetime import datetime, timezone
 
 import pydantic
 from pysnmp.carrier.asyncio.dgram import udp
@@ -24,9 +21,9 @@ from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-
-# SNMPv2-MIB::snmpTrapOID.0 (value is the trap's enterprise / notification OID)
-SNMP_TRAP_OID_NUMERIC = "1.3.6.1.6.3.1.1.4.1.0"
+from keep.providers.snmp_provider.snmp_utils import (
+    format_trap_alert as format_trap_alert_utils,
+)
 
 
 @pydantic.dataclasses.dataclass
@@ -132,7 +129,7 @@ class SnmpProvider(BaseProvider):
             cbCtx.logger.exception("Failed to handle SNMP trap")
 
     def _handle_trap(self, varBinds):
-        alert = SnmpProvider.format_trap_alert(varBinds)
+        alert = format_trap_alert_utils(varBinds)
         self.logger.info(
             "SNMP trap received, pushing alert",
             extra={"name": alert.get("name"), "fingerprint": alert.get("fingerprint")},
@@ -141,51 +138,7 @@ class SnmpProvider(BaseProvider):
 
     @staticmethod
     def format_trap_alert(varBinds) -> dict:
-        lines: list[str] = []
-        trap_oid: str | None = None
-        for oid, val in varBinds:
-            o = oid.prettyPrint()
-            v = val.prettyPrint() if val is not None else ""
-            lines.append(f"{o} = {v}")
-            if (
-                o == SNMP_TRAP_OID_NUMERIC
-                or SNMP_TRAP_OID_NUMERIC in o
-                or o.endswith("snmpTrapOID.0")
-            ):
-                trap_oid = v
-
-        body = "\n".join(lines)
-        if not trap_oid and lines:
-            trap_oid = lines[0].split("=", 1)[0].strip()
-
-        name = trap_oid or "snmp-trap"
-        if "." in name:
-            short = name.split(".")[-1]
-            if short and short[0].isdigit():
-                name = f"snmp-trap-{short}"
-            else:
-                name = short or name
-
-        fp_src = f"{trap_oid}|{body}"
-        fingerprint = hashlib.sha256(fp_src.encode("utf-8", errors="replace")).hexdigest()[
-            :32
-        ]
-        now = datetime.now(tz=timezone.utc).isoformat()
-
-        return {
-            "id": str(uuid.uuid4()),
-            "name": name[:500],
-            "status": AlertStatus.FIRING,
-            "severity": AlertSeverity.WARNING,
-            "lastReceived": now,
-            "environment": "snmp",
-            "service": "snmp",
-            "source": ["snmp"],
-            "message": body[:4000] if body else "SNMP trap (no varbinds)",
-            "description": body[:16000] if body else "SNMP trap (no varbinds)",
-            "fingerprint": fingerprint,
-            "labels": {"trap_oid": trap_oid or ""},
-        }
+        return format_trap_alert_utils(varBinds)
 
     def _schedule_stop_watcher(self):
         if self._loop is None:
