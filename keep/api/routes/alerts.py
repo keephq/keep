@@ -618,9 +618,9 @@ async def receive_generic_event(
     "/event/netdata",
     description="Helper function to complete Netdata webhook challenge",
 )
-async def webhook_challenge():
+async def webhook_challenge(request: Request):
     try:
-        token = Request.query_params.get("token").encode("ascii")
+        token = request.query_params.get("token").encode("ascii")
     except Exception as e:
         logger.exception("Failed to get token", extra={"error": str(e)})
         raise HTTPException(status_code=400, detail="Bad request: failed to get token")
