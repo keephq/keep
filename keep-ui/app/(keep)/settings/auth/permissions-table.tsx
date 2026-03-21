@@ -22,13 +22,21 @@ export function PermissionsTable({
   onRowClick,
   isDisabled = false,
 }: PermissionsTableProps) {
+  const { t } = useI18n();
+
   return (
     <Table className="h-full">
       <TableHead>
         <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
-          <TableHeaderCell className="w-8/24">Resource Name</TableHeaderCell>
-          <TableHeaderCell className="w-4/24">Resource Type</TableHeaderCell>
-          <TableHeaderCell className="w-12/24">Assigned To</TableHeaderCell>
+          <TableHeaderCell className="w-8/24">
+            {t("permissionSidebar.resource")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-4/24">
+            {t("permissionSidebar.type")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-12/24">
+            {t("permissionSidebar.assignTo")}
+          </TableHeaderCell>
         </TableRow>
       </TableHead>
       <TableBody className="overflow-auto">
@@ -66,12 +74,16 @@ export function PermissionsTable({
                       })}
                     {resource.assignments.length > 5 && (
                       <Badge color="orange" className="text-xs">
-                        +{resource.assignments.length - 5} more
+                        {t("common.messages.moreCount", {
+                          count: resource.assignments.length - 5,
+                        })}
                       </Badge>
                     )}
                   </>
                 ) : (
-                  <Text className="text-gray-500 text-sm">No assignments</Text>
+                  <Text className="text-gray-500 text-sm">
+                    {t("permissionSidebar.noAssignments")}
+                  </Text>
                 )}
               </div>
             </TableCell>

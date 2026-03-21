@@ -10,11 +10,10 @@ import {
   Button,
   Badge,
 } from "@tremor/react";
-import Image from "next/image";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { AuthType } from "utils/authenticationType";
 import { User } from "@/app/(keep)/settings/models";
-import UserAvatar, { getInitials } from "@/components/navbar/UserAvatar";
+import UserAvatar from "@/components/navbar/UserAvatar";
 import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface UsersTableProps {
@@ -45,15 +44,23 @@ export function UsersTable({
         <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
           <TableHeaderCell className="w-3/12">
             {authType === AuthType.AUTH0 || authType === AuthType.KEYCLOAK
-              ? "Email"
-              : "Username"}
+              ? t("common.labels.email")
+              : t("common.labels.username")}
           </TableHeaderCell>
-          <TableHeaderCell className="w-2/12">Name</TableHeaderCell>
-          <TableHeaderCell className="w-1/12">Role</TableHeaderCell>
+          <TableHeaderCell className="w-2/12">
+            {t("common.labels.name")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-1/12">
+            {t("common.labels.role")}
+          </TableHeaderCell>
           {groupsAllowed && (
-            <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>
+            <TableHeaderCell className="w-3/12">
+              {t("common.labels.groups")}
+            </TableHeaderCell>
           )}
-          <TableHeaderCell className="w-2/12">Last Login</TableHeaderCell>
+          <TableHeaderCell className="w-2/12">
+            {t("common.labels.lastLogin")}
+          </TableHeaderCell>
           <TableHeaderCell className="w-1/12"></TableHeaderCell>
         </TableRow>
       </TableHead>
@@ -106,7 +113,9 @@ export function UsersTable({
                   ))}
                   {user.groups && user.groups.length > 4 && (
                     <Badge color="orange" className="text-xs">
-                      +{user.groups.length - 4} more
+                      {t("common.messages.moreCount", {
+                        count: user.groups.length - 4,
+                      })}
                     </Badge>
                   )}
                 </div>
@@ -116,7 +125,7 @@ export function UsersTable({
               <Text>
                 {user.last_login
                   ? new Date(user.last_login).toLocaleString()
-                  : "Never"}
+                  : t("common.messages.never")}
               </Text>
             </TableCell>
             <TableCell className="w-1/12">

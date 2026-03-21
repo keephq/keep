@@ -11,7 +11,7 @@ import {
   Button,
   Badge,
 } from "@tremor/react";
-import { TrashIcon, KeyIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { CopyBlock, a11yLight } from "react-code-blocks";
 
@@ -37,6 +37,8 @@ export function APIKeysTable({
   onDelete,
   isDisabled = false,
 }: APIKeysTableProps) {
+  const { t } = useI18n();
+
   const getCopyBlockProps = (secret: string) => ({
     theme: { ...a11yLight },
     language: "text",
@@ -49,12 +51,24 @@ export function APIKeysTable({
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell className="text-left">Name</TableHeaderCell>
-          <TableHeaderCell className="text-left w-1/4">Key</TableHeaderCell>
-          <TableHeaderCell className="text-left">Role</TableHeaderCell>
-          <TableHeaderCell className="text-left">Created By</TableHeaderCell>
-          <TableHeaderCell className="text-left">Created At</TableHeaderCell>
-          <TableHeaderCell className="text-left">Last Used</TableHeaderCell>
+          <TableHeaderCell className="text-left">
+            {t("common.labels.name")}
+          </TableHeaderCell>
+          <TableHeaderCell className="text-left w-1/4">
+            {t("apiKey.settings.key")}
+          </TableHeaderCell>
+          <TableHeaderCell className="text-left">
+            {t("common.labels.role")}
+          </TableHeaderCell>
+          <TableHeaderCell className="text-left">
+            {t("apiKey.settings.createdBy")}
+          </TableHeaderCell>
+          <TableHeaderCell className="text-left">
+            {t("apiKey.settings.createdAt")}
+          </TableHeaderCell>
+          <TableHeaderCell className="text-left">
+            {t("apiKey.settings.lastUsed")}
+          </TableHeaderCell>
           <TableHeaderCell className="w-1/12"></TableHeaderCell>
         </TableRow>
       </TableHead>
@@ -69,7 +83,9 @@ export function APIKeysTable({
               <CopyBlock {...getCopyBlockProps(key.secret)} />
             </TableCell>
             <TableCell className="text-left">
-              <Badge color="orange">{key.role || "N/A"}</Badge>
+              <Badge color="orange">
+                {key.role || t("common.messages.notApplicable")}
+              </Badge>
             </TableCell>
             <TableCell className="text-left">
               <Text>{key.created_by}</Text>
@@ -78,12 +94,12 @@ export function APIKeysTable({
               <Text>{key.created_at}</Text>
             </TableCell>
             <TableCell className="text-left">
-              <Text>{key.last_used ?? "Never"}</Text>
+              <Text>{key.last_used ?? t("apiKey.settings.never")}</Text>
             </TableCell>
             <TableCell className="w-1/12">
               <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
-                  tooltip="Regenerate key"
+                  tooltip={t("apiKey.settings.regenerateTooltip")}
                   icon={UpdateIcon}
                   variant="light"
                   color="orange"
@@ -93,7 +109,7 @@ export function APIKeysTable({
                   disabled={isDisabled}
                 />
                 <Button
-                  tooltip="Delete key"
+                  tooltip={t("apiKey.settings.deleteTooltip")}
                   icon={TrashIcon}
                   variant="light"
                   color="orange"

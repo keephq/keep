@@ -13,9 +13,7 @@ export default function NotAuthorized({ message }: { message?: string }) {
     <div className="flex flex-col items-center justify-center h-full">
       <Title>{t("notAuthorized.title")}</Title>
       <div className="flex flex-col items-center">
-        <Subtitle>
-          {message || t("notAuthorized.message")}
-        </Subtitle>
+        <Subtitle>{message || t("notAuthorized.message")}</Subtitle>
         <Subtitle>
           <br />
           {t("notAuthorized.contactUs")}{" "}
@@ -28,7 +26,12 @@ export default function NotAuthorized({ message }: { message?: string }) {
           </Link>
         </Subtitle>
       </div>
-      <Image src="/keep.svg" alt="Keep" width={150} height={150} />
+      <Image
+        src="/keep.svg"
+        alt={t("notAuthorized.logoAlt")}
+        width={150}
+        height={150}
+      />
       <Button
         onClick={() => {
           router.back();

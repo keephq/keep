@@ -37,9 +37,15 @@ export function GroupsTable({
     <Table>
       <TableHead>
         <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
-          <TableHeaderCell className="w-3/24">Group Name</TableHeaderCell>
-          <TableHeaderCell className="w-5/12">Members</TableHeaderCell>
-          <TableHeaderCell className="w-5/12">Roles</TableHeaderCell>
+          <TableHeaderCell className="w-3/24">
+            {t("groupSidebar.groupName")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-5/12">
+            {t("groupSidebar.members")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-5/12">
+            {t("groupSidebar.roles")}
+          </TableHeaderCell>
           <TableHeaderCell className="w-1/24"></TableHeaderCell>
         </TableRow>
       </TableHead>
@@ -63,7 +69,9 @@ export function GroupsTable({
                 ))}
                 {group.members.length > 4 && (
                   <Badge color="orange" className="text-xs">
-                    +{group.members.length - 4} more
+                    {t("common.messages.moreCount", {
+                      count: group.members.length - 4,
+                    })}
                   </Badge>
                 )}
               </div>
@@ -77,7 +85,9 @@ export function GroupsTable({
                 ))}
                 {group.roles.length > 4 && (
                   <Badge color="orange" className="text-xs">
-                    +{group.roles.length - 4} more
+                    {t("common.messages.moreCount", {
+                      count: group.roles.length - 4,
+                    })}
                   </Badge>
                 )}
               </div>

@@ -11,59 +11,61 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 const THRESHOLD = 5;
 
 function ServiceDetailsTooltip({ data }: { data: TopologyService }) {
+  const { t } = useI18n();
+
   return (
     <div className="py-2 px-3 bg-tremor-background-muted border rounded shadow-lg flex flex-col gap-2 text-xs">
       {data.service && (
         <div>
-          <p className="text-gray-500">Service</p>
+          <p className="text-gray-500">{t("topology.nodeForm.service")}</p>
           <span>{data.service}</span>
         </div>
       )}
       {data.display_name && (
         <div>
-          <p className="text-gray-500">Display Name</p>
+          <p className="text-gray-500">{t("topology.nodeForm.displayName")}</p>
           <span>{data.display_name}</span>
         </div>
       )}
       {data.description && (
         <div>
-          <p className="text-gray-500">Description</p>
+          <p className="text-gray-500">{t("topology.nodeForm.description")}</p>
           <span>{data.description}</span>
         </div>
       )}
       {data.team && (
         <div>
-          <p className="text-gray-500">Team</p>
+          <p className="text-gray-500">{t("topology.nodeForm.team")}</p>
           <span>{data.team}</span>
         </div>
       )}
       {data.email && (
         <div>
-          <p className="text-gray-500">Email</p>
+          <p className="text-gray-500">{t("topology.nodeForm.email")}</p>
           <span>{data.email}</span>
         </div>
       )}
       {data.slack && (
         <div>
-          <p className="text-gray-500">Slack</p>
+          <p className="text-gray-500">{t("topology.nodeForm.slack")}</p>
           <span>{data.slack}</span>
         </div>
       )}
       {data.ip_address && (
         <div>
-          <p className="text-gray-500">IP Address</p>
+          <p className="text-gray-500">{t("topology.nodeForm.ipAddress")}</p>
           <span>{data.ip_address}</span>
         </div>
       )}
       {data.mac_address && (
         <div>
-          <p className="text-gray-500">MAC Address</p>
+          <p className="text-gray-500">{t("topology.nodeForm.macAddress")}</p>
           <span>{data.mac_address}</span>
         </div>
       )}
       {data.manufacturer && (
         <div>
-          <p className="text-gray-500">Manufacturer</p>
+          <p className="text-gray-500">{t("topology.nodeForm.manufacturer")}</p>
           <span>{data.manufacturer}</span>
         </div>
       )}

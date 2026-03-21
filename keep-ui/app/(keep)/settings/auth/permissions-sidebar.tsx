@@ -103,7 +103,7 @@ const PermissionSidebar = ({
       handleClose();
     } catch (error) {
       setError("root.serverError", {
-        message: "Failed to save permissions",
+        message: t("permissionSidebar.failedToSave"),
       });
     }
   };
@@ -140,9 +140,9 @@ const PermissionSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                Manage Permissions
+                {t("permissionSidebar.managePermissions")}
                 <Badge className="ml-4" color="orange">
-                  Beta
+                  {t("common.labels.beta")}
                 </Badge>
               </Dialog.Title>
               <Button onClick={handleClose} variant="light">
@@ -156,21 +156,25 @@ const PermissionSidebar = ({
             >
               <div className="flex-grow">
                 <div className="mt-8">
-                  <Title className="mb-2">Resource</Title>
+                  <Title className="mb-2">
+                    {t("permissionSidebar.resource")}
+                  </Title>
                   <Text className="text-gray-900">
                     {selectedResource?.name}
                   </Text>
                 </div>
 
                 <div className="mt-6">
-                  <Title className="mb-2">Type</Title>
+                  <Title className="mb-2">{t("permissionSidebar.type")}</Title>
                   <Badge color="orange" size="lg">
                     {selectedResource?.type}
                   </Badge>
                 </div>
 
                 <div className="mt-6">
-                  <Title className="mb-2">Assign To</Title>
+                  <Title className="mb-2">
+                    {t("permissionSidebar.assignTo")}
+                  </Title>
                   <Controller
                     name="assignments"
                     control={control}
@@ -196,7 +200,7 @@ const PermissionSidebar = ({
               {errors.root?.serverError && (
                 <Callout
                   className="mt-4"
-                  title="Error while saving permissions"
+                  title={t("permissionSidebar.savingError")}
                   color="rose"
                 >
                   {errors.root.serverError.message}
@@ -210,11 +214,11 @@ const PermissionSidebar = ({
                   onClick={handleClose}
                   className="border border-orange-500 text-orange-500"
                 >
-                  Cancel
+                  {t("permissionSidebar.cancel")}
                 </Button>
                 {!isDisabled && (
                   <Button color="orange" type="submit" disabled={!isDirty}>
-                    Save Changes
+                    {t("permissionSidebar.saveChanges")}
                   </Button>
                 )}
               </div>

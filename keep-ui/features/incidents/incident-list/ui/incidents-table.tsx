@@ -344,7 +344,9 @@ export default function IncidentsTable({
     }
 
     const isConfirmed = confirm(
-      `Are you sure you want to delete ${selectedRowIds.length} incidents? This action cannot be undone.`
+      t("incidents.messages.confirmBulkDelete", {
+        count: selectedRowIds.length,
+      })
     );
 
     if (!isConfirmed) {
@@ -352,7 +354,7 @@ export default function IncidentsTable({
     }
 
     bulkDeleteIncidents(selectedRowIds, true);
-  }, [bulkDeleteIncidents, selectedRowIds]);
+  }, [bulkDeleteIncidents, selectedRowIds, t]);
 
   const generateReport = useCallback(
     () => setIsGenerateReportModalOpen(true),
@@ -375,9 +377,11 @@ export default function IncidentsTable({
         <Card className="flex-grow">
           <div className="flex flex-col items-center justify-center gap-y-8 h-full">
             <div className="text-center space-y-3">
-              <Title className="text-2xl">No Incidents Matching Filters</Title>
+              <Title className="text-2xl">
+                {t("incidents.messages.noIncidentsMatchingFilters")}
+              </Title>
               <Subtitle className="text-gray-400">
-                Try changing the filters
+                {t("incidents.messages.tryChangingFilters")}
               </Subtitle>
             </div>
           </div>

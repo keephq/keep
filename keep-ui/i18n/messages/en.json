@@ -97,7 +97,15 @@
       "settings": "Settings",
       "configuration": "Configuration",
       "preferences": "Preferences",
-      "beta": "Beta"
+      "beta": "Beta",
+      "email": "Email",
+      "username": "Username",
+      "role": "Role",
+      "groups": "Groups",
+      "lastLogin": "Last Login",
+      "scopes": "Scopes",
+      "predefined": "Predefined",
+      "by": "by"
     },
     "messages": {
       "success": "Operation completed successfully",
@@ -122,7 +130,10 @@
       "forbidden": "Access Denied",
       "forbiddenDescription": "You don't have permission to access this resource.",
       "unauthorized": "Unauthorized",
-      "unauthorizedDescription": "Please sign in to access this page."
+      "unauthorizedDescription": "Please sign in to access this page.",
+      "never": "Never",
+      "notApplicable": "N/A",
+      "moreCount": "+{count} more"
     },
     "pagination": {
       "previous": "Previous",
@@ -176,6 +187,44 @@
       "title": "Language",
       "en": "English",
       "zh-CN": "Simplified Chinese"
+    },
+    "facets": {
+      "addNewFacet": "Add New Facet",
+      "facetNameOptional": "Facet name (optional):",
+      "facetPropertyPath": "Facet property path:",
+      "selectFacetPropertyPath": "Select facet property path:",
+      "enterFacetName": "Enter facet name",
+      "enterFacetPropertyPath": "Enter facet property path",
+      "enterFacetPropertyPathOrSelect": "Enter facet property path or select from the list",
+      "noPropertyPathSuggestions": "No property path suggestions found",
+      "searchColumns": "Search columns..."
+    },
+    "timeRange": {
+      "allTime": "All time",
+      "all": "All",
+      "live": "Live",
+      "custom": "Custom",
+      "relativeTime": "Relative Time",
+      "fixedTime": "Fixed Time",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "selectFromCalendar": "Select from calendar...",
+      "moreOptions": "More options",
+      "past15Minutes": "Past 15 minutes",
+      "pastHour": "Past hour",
+      "past4Hours": "Past 4 hours",
+      "pastDay": "Past day",
+      "past2Days": "Past 2 days",
+      "past3Days": "Past 3 days",
+      "past7Days": "Past 7 days",
+      "past15Days": "Past 15 days",
+      "past30Days": "Past 30 days",
+      "past30Minutes": "Past 30 minutes",
+      "past45Minutes": "Past 45 minutes",
+      "past2Hours": "Past 2 hours",
+      "past6Hours": "Past 6 hours",
+      "past6Days": "Past 6 days",
+      "past60Days": "Past 60 days"
     }
   },
   "auth": {
@@ -350,6 +399,24 @@
       "addNewFacet": "Add New Facet",
       "searchColumns": "Search columns..."
     },
+    "changeStatus": {
+      "title": "Change Alert Status",
+      "batchTitle": "Change Alerts Status - Alert(s) selected: {count}",
+      "newStatus": "New status:",
+      "selectNewStatus": "Select new status",
+      "disposeOnNewAlerts": "Dispose on new alerts",
+      "keepOnNewAlerts": "Keep on new alerts",
+      "disposeTooltip": "Dispose the status when a new alert comes in.",
+      "keepTooltip": "Keep the status when a new alert comes in.",
+      "addNotePlaceholder": "Add the reason for status change here...",
+      "selectStatusError": "Please select a new status.",
+      "batchHandlerError": "Batch status change should use batch handler.",
+      "successSingle": "Alert status changed successfully!",
+      "successMultiple": "Alert(s) status changed successfully!",
+      "failedSingle": "Failed to change alert status.",
+      "failedMultiple": "Failed to change alert(s) status.",
+      "loadingEditor": "Loading editor..."
+    },
     "tabs": {
       "alerts": "Alerts",
       "groups": "Groups",
@@ -422,7 +489,10 @@
       "delete": "Delete"
     },
     "messages": {
-      "addCommentPlaceholder": "Add a comment..."
+      "addCommentPlaceholder": "Add a comment...",
+      "confirmBulkDelete": "Are you sure you want to delete {count} incidents? This action cannot be undone.",
+      "noIncidentsMatchingFilters": "No Incidents Matching Filters",
+      "tryChangingFilters": "Try changing the filters"
     },
     "tabs": {
       "overview": "Overview",
@@ -617,6 +687,19 @@
       "resetFilter": "Reset filter",
       "noMatchingSearch": "No workflows to display matching your search",
       "clearSearch": "Clear search"
+    },
+    "manualRun": {
+      "titleWithInputs": "Run Workflow with Inputs",
+      "runPrefix": "Run: {name}",
+      "infoTitle": "For your information",
+      "hiddenByPermissions": "Some workflows are not visible to you because you lack permissions.",
+      "selectWorkflow": "Select workflow",
+      "noWorkflowsFound": "No workflows found",
+      "inputsRequired": "Inputs required to run the workflow",
+      "noInputsRequired": "This workflow does not require any inputs",
+      "startedSuccessfully": "Workflow started successfully.",
+      "viewExecution": "View execution",
+      "failedToStart": "Failed to start workflow"
     }
   },
   "dashboard": {
@@ -761,6 +844,21 @@
     },
     "permissions": {
       "title": "Permissions"
+    },
+    "providerImages": {
+      "title": "Upload Provider Icons",
+      "selectProvider": "Select Provider",
+      "selectProviderPlaceholder": "Select Provider",
+      "uploadImage": "Upload PNG Image",
+      "onlyPngSupported": "Only PNG files are supported",
+      "uploading": "Uploading...",
+      "messages": {
+        "selectPng": "Please select a PNG image file"
+      },
+      "provider": "Provider",
+      "image": "Image",
+      "emptyTitle": "No custom provider icons",
+      "emptyDescription": "Upload custom images for your providers to make them easier to recognize"
     },
     "smtp": {
       "title": "SMTP Settings",
@@ -1254,6 +1352,14 @@
       "goBack": "Go back"
     }
   },
+  "notAuthorized": {
+    "title": "403 Not Authorized",
+    "message": "You do not have permission to access this page.",
+    "contactUs": "If you need help, please contact us on",
+    "slack": "Slack",
+    "goBack": "Go back",
+    "logoAlt": "Keep logo"
+  },
   "health": {
     "title": "Providers",
     "resultsModal": {
@@ -1428,7 +1534,15 @@
     "tiles": {
       "linkedTooltip": "Providers that send alerts to Keep and are not installed."
     },
-    "connectTo": "Connect to {providerName}"
+    "connectTo": "Connect to {providerName}",
+    "logs": {
+      "title": "Provider Logs",
+      "loading": "Loading logs...",
+      "notEnabledTitle": "Provider logs are not enabled",
+      "notEnabledDescription": "Provider logs must be enabled in the backend. Check the documentation for instructions on enabling provider logs.",
+      "viewDocumentation": "View documentation",
+      "noLogsFound": "No logs found"
+    }
   },
   "userSidebar": {
     "createUser": "Create User",
@@ -1497,6 +1611,7 @@
     "savingError": "Error while saving permissions",
     "failedToSave": "Failed to save permissions",
     "cancel": "Cancel",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "noAssignments": "No assignments"
   }
 }

@@ -7,14 +7,20 @@ import {
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { DropdownMenu } from "@/shared/ui";
 import clsx from "clsx";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const THEMES = {
-  light: { id: "light", icon: SunIcon, title: "Light" },
-  dark: { id: "dark", icon: MoonIcon, title: "Dark" },
-  system: { id: "system", icon: ComputerDesktopIcon, title: "System" },
+  light: { id: "light", icon: SunIcon, titleKey: "common.theme.light" },
+  dark: { id: "dark", icon: MoonIcon, titleKey: "common.theme.dark" },
+  system: {
+    id: "system",
+    icon: ComputerDesktopIcon,
+    titleKey: "common.theme.system",
+  },
 };
 
 export function ThemeControl({ className }: { className?: string }) {
+  const { t } = useI18n();
   const [theme, setTheme] = useLocalStorage<string | null>(
     LOCALSTORAGE_THEME_KEY,
     null
@@ -47,11 +53,11 @@ export function ThemeControl({ className }: { className?: string }) {
       label=""
       className={clsx(value !== "system" && "text-tremor-brand", className)}
     >
-      {Object.values(THEMES).map(({ id, icon: Icon, title }) => (
+      {Object.values(THEMES).map(({ id, icon: Icon, titleKey }) => (
         <DropdownMenu.Item
           key={id}
           icon={Icon}
-          label={title}
+          label={t(titleKey)}
           onClick={() => updateTheme(id)}
           className={clsx(id === value && "text-tremor-brand")}
         />

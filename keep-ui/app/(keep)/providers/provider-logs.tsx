@@ -99,7 +99,7 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
             </div>
           ))}
 
-          {logs.length === 0 && <Text>No logs found</Text>}
+          {logs.length === 0 && <Text>{t("providers.logs.noLogsFound")}</Text>}
         </div>
       </Card>
     </div>

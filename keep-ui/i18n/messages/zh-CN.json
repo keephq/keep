@@ -16,7 +16,9 @@
         "selectPng": "请选择 PNG 图像文件"
       },
       "provider": "提供商",
-      "image": "图片"
+      "image": "图片",
+      "emptyTitle": "暂无自定义提供商图标",
+      "emptyDescription": "为您的提供商上传自定义图标，便于快速识别"
     },
     "users": {
       "messages": {
@@ -755,7 +757,8 @@
       "loading": "加载日志中...",
       "notEnabledTitle": "提供商日志未启用",
       "notEnabledDescription": "需要在后端启用提供商日志。请查看文档了解如何启用提供商日志的说明。",
-      "viewDocumentation": "查看文档"
+      "viewDocumentation": "查看文档",
+      "noLogsFound": "暂无日志"
     },
     "optionalSettings": "可选设置",
     "configuration": "配置",
@@ -787,7 +790,10 @@
       "confirmAction": "确定要继续吗？",
       "forbiddenDescription": "您没有权限访问此资源。",
       "noDataDescription": "当前没有可显示的数据。",
-      "notFound": "未找到"
+      "notFound": "未找到",
+      "never": "从未",
+      "notApplicable": "不适用",
+      "moreCount": "+{count} 个更多"
     },
     "labels": {
       "name": "名称",
@@ -834,12 +840,58 @@
       "none": "无",
       "advanced": "高级",
       "type": "类型",
-      "yes": "是"
+      "yes": "是",
+      "email": "邮箱",
+      "username": "用户名",
+      "role": "角色",
+      "groups": "分组",
+      "lastLogin": "最后登录",
+      "scopes": "权限范围",
+      "predefined": "预定义",
+      "by": "由"
     },
     "language": {
       "title": "语言",
       "en": "英文",
       "zh-CN": "简体中文"
+    },
+    "facets": {
+      "addNewFacet": "添加新筛选维度",
+      "facetNameOptional": "筛选维度名称（可选）：",
+      "facetPropertyPath": "筛选维度属性路径：",
+      "selectFacetPropertyPath": "选择筛选维度属性路径：",
+      "enterFacetName": "输入筛选维度名称",
+      "enterFacetPropertyPath": "输入筛选维度属性路径",
+      "enterFacetPropertyPathOrSelect": "输入筛选维度属性路径或从列表中选择",
+      "noPropertyPathSuggestions": "未找到可用的属性路径建议",
+      "searchColumns": "搜索列..."
+    },
+    "timeRange": {
+      "allTime": "全部时间",
+      "all": "全部",
+      "live": "实时",
+      "custom": "自定义",
+      "relativeTime": "相对时间",
+      "fixedTime": "固定时间",
+      "today": "今天",
+      "thisWeek": "本周",
+      "selectFromCalendar": "从日历中选择...",
+      "moreOptions": "更多选项",
+      "past15Minutes": "过去15分钟",
+      "pastHour": "过去1小时",
+      "past4Hours": "过去4小时",
+      "pastDay": "过去1天",
+      "past2Days": "过去2天",
+      "past3Days": "过去3天",
+      "past7Days": "过去7天",
+      "past15Days": "过去15天",
+      "past30Days": "过去30天",
+      "past30Minutes": "过去30分钟",
+      "past45Minutes": "过去45分钟",
+      "past2Hours": "过去2小时",
+      "past6Hours": "过去6小时",
+      "past6Days": "过去6天",
+      "past60Days": "过去60天"
     },
     "filters": {
       "startDate": "开始日期",
@@ -950,7 +1002,8 @@
     "managePermissions": "管理权限",
     "resource": "资源",
     "type": "类型",
-    "failedToSave": "保存权限失败"
+    "failedToSave": "保存权限失败",
+    "noAssignments": "暂无分配"
   },
   "errors": {
     "serverError": "服务器内部错误",
@@ -977,6 +1030,14 @@
     },
     "notFound": "未找到",
     "forbidden": "访问被拒绝"
+  },
+  "notAuthorized": {
+    "title": "403 未授权",
+    "message": "您没有权限访问此页面。",
+    "contactUs": "如需帮助，请联系我们",
+    "slack": "Slack",
+    "goBack": "返回",
+    "logoAlt": "Keep 标志"
   },
   "smtp": {
     "toEmail": "收件人：",
@@ -1095,6 +1156,24 @@
       "assignTicket": "分配工单",
       "addNote": "添加备注"
     },
+    "changeStatus": {
+      "title": "更改告警状态",
+      "batchTitle": "更改告警状态 - 已选择 {count} 条告警",
+      "newStatus": "新状态：",
+      "selectNewStatus": "选择新状态",
+      "disposeOnNewAlerts": "新告警到达时清除状态",
+      "keepOnNewAlerts": "新告警到达时保留状态",
+      "disposeTooltip": "当有新告警到达时清除此状态。",
+      "keepTooltip": "当有新告警到达时保留此状态。",
+      "addNotePlaceholder": "在此填写状态变更原因...",
+      "selectStatusError": "请选择一个新状态。",
+      "batchHandlerError": "批量状态变更应使用批量处理逻辑。",
+      "successSingle": "告警状态修改成功！",
+      "successMultiple": "告警状态批量修改成功！",
+      "failedSingle": "修改告警状态失败。",
+      "failedMultiple": "批量修改告警状态失败。",
+      "loadingEditor": "正在加载编辑器..."
+    },
     "tabs": {
       "alerts": "告警",
       "groups": "分组",
@@ -1142,7 +1221,10 @@
       "topology": "拓扑图"
     },
     "messages": {
-      "addCommentPlaceholder": "添加评论..."
+      "addCommentPlaceholder": "添加评论...",
+      "confirmBulkDelete": "确定要删除 {count} 个事件吗？此操作无法撤销。",
+      "noIncidentsMatchingFilters": "没有匹配筛选条件的事件",
+      "tryChangingFilters": "请尝试调整筛选条件"
     },
     "labels": {
       "duration": "持续时间",
@@ -1690,6 +1772,19 @@
       "saved": "保存于",
       "toKeep": "到 Keep",
       "changesNotSaved": "更改未保存"
+    },
+    "manualRun": {
+      "titleWithInputs": "运行带输入参数的工作流",
+      "runPrefix": "运行：{name}",
+      "infoTitle": "提示信息",
+      "hiddenByPermissions": "由于权限不足，部分工作流对您不可见。",
+      "selectWorkflow": "选择工作流",
+      "noWorkflowsFound": "未找到工作流",
+      "inputsRequired": "运行该工作流所需的输入参数",
+      "noInputsRequired": "该工作流不需要额外输入参数",
+      "startedSuccessfully": "工作流启动成功。",
+      "viewExecution": "查看执行详情",
+      "failedToStart": "启动工作流失败"
     }
   },
   "notFound": {

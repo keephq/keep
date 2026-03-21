@@ -13,8 +13,11 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
+import { enUS, zhCN } from "date-fns/locale";
 import { type DateRange } from "react-day-picker";
 import clsx from "clsx";
+import { useI18n } from "@/i18n/hooks/useI18n";
+import { useLocale } from "next-intl";
 
 const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * ONE_MINUTE;
@@ -114,6 +117,9 @@ export default function EnhancedDateRangePicker({
   pausedByDefault = true,
   enableYearNavigation = false,
 }: EnhancedDateRangePickerProps) {
+  const { t } = useI18n();
+  const locale = useLocale();
+  const dateFnsLocale = locale === "zh-CN" ? zhCN : enUS;
   const [isPaused, setIsPaused] = useState(timeFrame.paused ?? pausedByDefault);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
@@ -134,7 +140,7 @@ export default function EnhancedDateRangePicker({
       [
         {
           badge: "15m",
-          label: "Past 15 minutes",
+          label: t("common.timeRange.past15Minutes"),
           value: () => ({
             start: new Date(Date.now() - 15 * ONE_MINUTE),
             end: new Date(),
@@ -142,7 +148,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "1h",
-          label: "Past hour",
+          label: t("common.timeRange.pastHour"),
           value: () => ({
             start: new Date(Date.now() - ONE_HOUR),
             end: new Date(),
@@ -150,7 +156,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "4h",
-          label: "Past 4 hours",
+          label: t("common.timeRange.past4Hours"),
           value: () => ({
             start: new Date(Date.now() - 4 * ONE_HOUR),
             end: new Date(),
@@ -158,7 +164,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "1d",
-          label: "Past day",
+          label: t("common.timeRange.pastDay"),
           value: () => ({
             start: new Date(Date.now() - ONE_DAY),
             end: new Date(),
@@ -166,7 +172,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "2d",
-          label: "Past 2 days",
+          label: t("common.timeRange.past2Days"),
           value: () => ({
             start: new Date(Date.now() - 2 * ONE_DAY),
             end: new Date(),
@@ -174,7 +180,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "3d",
-          label: "Past 3 days",
+          label: t("common.timeRange.past3Days"),
           value: () => ({
             start: new Date(Date.now() - 3 * ONE_DAY),
             end: new Date(),
@@ -182,7 +188,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "7d",
-          label: "Past 7 days",
+          label: t("common.timeRange.past7Days"),
           value: () => ({
             start: new Date(Date.now() - 7 * ONE_DAY),
             end: new Date(),
@@ -190,7 +196,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "15d",
-          label: "Past 15 days",
+          label: t("common.timeRange.past15Days"),
           value: () => ({
             start: new Date(Date.now() - 15 * ONE_DAY),
             end: new Date(),
@@ -198,7 +204,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "30d",
-          label: "Past 30 days",
+          label: t("common.timeRange.past30Days"),
           value: () => ({
             start: new Date(Date.now() - 30 * ONE_DAY),
             end: new Date(),
@@ -206,7 +212,7 @@ export default function EnhancedDateRangePicker({
         },
         {
           badge: "all",
-          label: "All time",
+          label: t("common.timeRange.allTime"),
           value: () => ({
             start: null,
             end: null,
@@ -214,17 +220,17 @@ export default function EnhancedDateRangePicker({
           }),
         },
       ] as TimePreset[],
-    []
+    [t]
   );
 
   const categories = useMemo<CategoryPreset[]>(
     () => [
       {
-        title: "Relative Time",
+        title: t("common.timeRange.relativeTime"),
         options: [
           {
             badge: "30m",
-            label: "Past 30 minutes",
+            label: t("common.timeRange.past30Minutes"),
             value: () => ({
               start: new Date(Date.now() - 30 * ONE_MINUTE),
               end: new Date(),
@@ -232,7 +238,7 @@ export default function EnhancedDateRangePicker({
           },
           {
             badge: "45m",
-            label: "Past 45 minutes",
+            label: t("common.timeRange.past45Minutes"),
             value: () => ({
               start: new Date(Date.now() - 45 * ONE_MINUTE),
               end: new Date(),
@@ -240,7 +246,7 @@ export default function EnhancedDateRangePicker({
           },
           {
             badge: "2h",
-            label: "Past 2 hours",
+            label: t("common.timeRange.past2Hours"),
             value: () => ({
               start: new Date(Date.now() - 2 * ONE_HOUR),
               end: new Date(),
@@ -248,7 +254,7 @@ export default function EnhancedDateRangePicker({
           },
           {
             badge: "6h",
-            label: "Past 6 hours",
+            label: t("common.timeRange.past6Hours"),
             value: () => ({
               start: new Date(Date.now() - 6 * ONE_HOUR),
               end: new Date(),
@@ -256,7 +262,7 @@ export default function EnhancedDateRangePicker({
           },
           {
             badge: "6d",
-            label: "Past 6 days",
+            label: t("common.timeRange.past6Days"),
             value: () => ({
               start: new Date(Date.now() - 6 * ONE_DAY),
               end: new Date(),
@@ -264,7 +270,7 @@ export default function EnhancedDateRangePicker({
           },
           {
             badge: "60d",
-            label: "Past 60 days",
+            label: t("common.timeRange.past60Days"),
             value: () => ({
               start: new Date(Date.now() - 60 * ONE_DAY),
               end: new Date(),
@@ -273,11 +279,11 @@ export default function EnhancedDateRangePicker({
         ],
       },
       {
-        title: "Fixed Time",
+        title: t("common.timeRange.fixedTime"),
         options: [
           {
             badge: "today",
-            label: "Today",
+            label: t("common.timeRange.today"),
             value: () => ({
               start: new Date(new Date().setHours(0, 0, 0, 0)),
               end: new Date(),
@@ -285,7 +291,7 @@ export default function EnhancedDateRangePicker({
           },
           {
             badge: "week",
-            label: "This Week",
+            label: t("common.timeRange.thisWeek"),
             value: () => ({
               start: new Date(
                 new Date().setDate(new Date().getDate() - new Date().getDay())
@@ -296,7 +302,7 @@ export default function EnhancedDateRangePicker({
         ],
       },
     ],
-    []
+    [t]
   );
 
   // set initial preset and notify parent
@@ -427,22 +433,23 @@ export default function EnhancedDateRangePicker({
     }
 
     if (!timeFrame.start || !timeFrame.end) {
-      return "All time";
+      return t("common.timeRange.allTime");
     }
 
-    return `${format(timeFrame.start, "MMM d, yyyy HH:mm")} - ${format(
-      timeFrame.end,
-      "MMM d, yyyy HH:mm"
-    )}`;
+    return `${format(timeFrame.start, "MMM d, yyyy HH:mm", {
+      locale: dateFnsLocale,
+    })} - ${format(timeFrame.end, "MMM d, yyyy HH:mm", {
+      locale: dateFnsLocale,
+    })}`;
   };
 
   const getSelectedBadgeText = () => {
     if (!isPaused || !selectedPreset) {
-      return "Live";
+      return t("common.timeRange.live");
     }
 
     if (!timeFrame.start || !timeFrame.end) {
-      return "All";
+      return t("common.timeRange.all");
     }
 
     return formatDuration(timeFrame.start, timeFrame.end);
@@ -544,7 +551,7 @@ export default function EnhancedDateRangePicker({
                         <CalendarIcon size={16} />
                       </Badge>
                       <span className="text-gray-900 text-sm">
-                        Select from calendar...
+                        {t("common.timeRange.selectFromCalendar")}
                       </span>
                     </div>
                   </Button>
@@ -562,7 +569,7 @@ export default function EnhancedDateRangePicker({
                         <ChevronRight size={16} />
                       </Badge>
                       <span className="text-gray-900 text-sm">
-                        More options
+                        {t("common.timeRange.moreOptions")}
                       </span>
                     </div>
                   </Button>

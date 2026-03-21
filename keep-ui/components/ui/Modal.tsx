@@ -9,6 +9,7 @@ import {
 } from "@tremor/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { PageTitle } from "@/shared/ui/PageTitle";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function Modal({
   children,
@@ -32,6 +33,8 @@ export default function Modal({
   description?: string;
   "data-testid"?: string;
 } & Omit<DialogProps, "open" | "onClose" | "static" | "children">) {
+  const { t } = useI18n();
+
   return (
     <Dialog open={isOpen} onClose={onClose} {...props}>
       <DialogPanel
@@ -46,7 +49,9 @@ export default function Modal({
             <div className="flex flex-row items-center justify-between gap-2">
               <PageTitle>
                 {title}
-                {beta && <Badge color="orange">Beta</Badge>}
+                {beta && (
+                  <Badge color="orange">{t("common.labels.beta")}</Badge>
+                )}
               </PageTitle>
               <Button
                 variant="light"

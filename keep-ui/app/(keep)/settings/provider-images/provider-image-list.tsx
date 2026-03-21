@@ -70,8 +70,8 @@ export function ProviderImagesList() {
     return (
       <EmptyStateCard
         icon={PhotoIcon}
-        title="No custom provider icons"
-        description="Upload custom images for your providers to make them more recognizable"
+        title={t("settings.providerImages.emptyTitle")}
+        description={t("settings.providerImages.emptyDescription")}
       />
     );
   }
@@ -81,8 +81,12 @@ export function ProviderImagesList() {
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>{t("settings.providerImages.provider")}</TableHeaderCell>
-            <TableHeaderCell>{t("settings.providerImages.image")}</TableHeaderCell>
+            <TableHeaderCell>
+              {t("settings.providerImages.provider")}
+            </TableHeaderCell>
+            <TableHeaderCell>
+              {t("settings.providerImages.image")}
+            </TableHeaderCell>
             {/* <TableHeaderCell>Actions</TableHeaderCell> */}
           </TableRow>
         </TableHead>

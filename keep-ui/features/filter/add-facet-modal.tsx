@@ -3,6 +3,7 @@ import { TextInput } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { CreateFacetDto } from "./models";
 import { Button } from "@/components/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface AddFacetModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
   onClose,
   onAddFacet,
 }) => {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [propertyPath, setPropertyPath] = useState("");
 
@@ -40,17 +42,19 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Facet"
+      title={t("common.facets.addNewFacet")}
       className="w-[400px]"
     >
       <div className="mt-3 max-h-96 overflow-auto space-y-1">
         <div>
           <div className="mb-1">
-            <span className="font-bold">Facet name (optional):</span>
+            <span className="font-bold">
+              {t("common.facets.facetNameOptional")}
+            </span>
           </div>
 
           <TextInput
-            placeholder="Enter facet name"
+            placeholder={t("common.facets.enterFacetName")}
             required={true}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -59,11 +63,13 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
         </div>
         <div>
           <div className="mb-1">
-            <span className="font-bold">Facet property path:</span>
+            <span className="font-bold">
+              {t("common.facets.facetPropertyPath")}
+            </span>
           </div>
 
           <TextInput
-            placeholder="Enter facet property path"
+            placeholder={t("common.facets.enterFacetPropertyPath")}
             required={true}
             value={propertyPath}
             onChange={(e) => setPropertyPath(e.target.value)}
@@ -79,7 +85,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           variant="secondary"
           onClick={close}
         >
-          Cancel
+          {t("common.actions.cancel")}
         </Button>
         <Button
           data-testid="create-facet-btn"
@@ -90,7 +96,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
           disabled={!isSubmitEnabled()}
           onClick={() => handleNewFacetCreation()}
         >
-          Create
+          {t("common.actions.create")}
         </Button>
       </div>
     </Modal>

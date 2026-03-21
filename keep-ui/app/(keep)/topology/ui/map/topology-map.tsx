@@ -154,7 +154,10 @@ export function TopologyMap({
   const [nodes, setNodes] = useState<TopologyNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
-  const reactFlowInstanceRef = useRef<ReactFlowInstance<TopologyNode, Edge> | null>(null);
+  const reactFlowInstanceRef = useRef<ReactFlowInstance<
+    TopologyNode,
+    Edge
+  > | null>(null);
 
   const highlightNodes = useCallback((nodeIds: string[]) => {
     setNodes((nds) =>
@@ -184,18 +187,16 @@ export function TopologyMap({
         method: "POST",
         body: formData,
       });
-      showSuccessToast("Topology imported Successfully!");
+      showSuccessToast(t("topology.messages.importSuccess"));
       mutateApplications();
       mutateTopologyData();
     } catch (error) {
-      showErrorToast(error, "Error uploading file");
+      showErrorToast(error, t("topology.messages.errorUploadingFile"));
     }
   };
 
   const handleImportTopology = () => {
-    const confirm = window.confirm(
-      "Current topology will be completely replaced. Do you want to continue?"
-    );
+    const confirm = window.confirm(t("topology.messages.confirmImport"));
     if (confirm) {
       document.getElementById("fileInput")?.click();
     }
@@ -203,12 +204,12 @@ export function TopologyMap({
 
   const menuItems: MenuItem[] = [
     {
-      label: "Import",
+      label: t("topology.actions.import"),
       icon: ArrowUpTrayIcon,
       onClick: handleImportTopology,
     },
     {
-      label: "Export",
+      label: t("topology.actions.export"),
       icon: ArrowDownTrayIcon,
       onClick: async () => {
         try {
@@ -563,8 +564,8 @@ export function TopologyMap({
     return (
       <div className="mt-20 flex flex-col justify-center">
         <ErrorComponent
-          error={error || new Error("Error Loading Topology Data")}
-          description="We encountered some problem while trying to load your topology data, please contact us if this issue continues"
+          error={error || new Error(t("topology.messages.errorLoadingData"))}
+          description={t("topology.messages.errorLoadingDescription")}
           reset={() => {
             mutateTopologyData();
           }}
@@ -583,13 +584,13 @@ export function TopologyMap({
             providerIds={providerIds}
             services={services}
             environment={environment}
-            placeholder="Search for a service or application"
+            placeholder={t("topology.messages.searchPlaceholder")}
             onSelect={handleSelectFromSearch}
           />
           {/* Using z-index to overflow the manage selection component */}
           <div className="basis-1/3 relative z-30">
             <MultiSelect
-              placeholder="Show application"
+              placeholder={t("topology.messages.showApplication")}
               value={selectedApplicationIds}
               onValueChange={setSelectedApplicationIds}
               disabled={!applications.length}
@@ -609,7 +610,7 @@ export function TopologyMap({
               size="md"
               icon={PlusIcon}
             >
-              Add Node
+              {t("topology.actions.addNode")}
             </Button>
             <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
               {menuItems.map((item, index) => (

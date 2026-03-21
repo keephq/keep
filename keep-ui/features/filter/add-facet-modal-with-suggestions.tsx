@@ -5,7 +5,7 @@ import { CreateFacetDto } from "./models";
 import { Button } from "@/components/ui";
 import { FiSearch } from "react-icons/fi";
 import { useFacetPotentialFields } from "./hooks";
-import Loading from "@/app/(keep)/loading";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface AddFacetModalWithSuggestions {
   entityName: string;
@@ -17,6 +17,7 @@ interface AddFacetModalWithSuggestions {
 export const AddFacetModalWithSuggestions: React.FC<
   AddFacetModalWithSuggestions
 > = ({ entityName, isOpen, onClose, onAddFacet }) => {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [propertyPath, setPropertyPath] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,18 +46,20 @@ export const AddFacetModalWithSuggestions: React.FC<
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Facet"
+      title={t("common.facets.addNewFacet")}
       className="w-[400px]"
     >
       <div className="flex flex-col max-w-full overflow-hidden">
         <div className="flex-1 flex flex-col mt-3 max-h-96 space-y-1">
           <div>
             <div className="mb-1">
-              <span className="font-bold">Facet name (optional):</span>
+              <span className="font-bold">
+                {t("common.facets.facetNameOptional")}
+              </span>
             </div>
 
             <TextInput
-              placeholder="Enter facet name"
+              placeholder={t("common.facets.enterFacetName")}
               required={true}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -65,11 +68,13 @@ export const AddFacetModalWithSuggestions: React.FC<
           </div>
           <div>
             <div className="mb-1">
-              <span className="font-bold">Facet property path:</span>
+              <span className="font-bold">
+                {t("common.facets.facetPropertyPath")}
+              </span>
             </div>
 
             <TextInput
-              placeholder="Enter facet property path or select from the list"
+              placeholder={t("common.facets.enterFacetPropertyPathOrSelect")}
               required={true}
               value={propertyPath}
               onChange={(e) => setPropertyPath(e.target.value)}
@@ -78,18 +83,20 @@ export const AddFacetModalWithSuggestions: React.FC<
           </div>
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="mb-1">
-              <span className="font-bold">Select facet property path:</span>
+              <span className="font-bold">
+                {t("common.facets.selectFacetPropertyPath")}
+              </span>
             </div>
-            {!propertyPathSuggestions && "Loading..."}
+            {!propertyPathSuggestions && t("common.actions.loading")}
             {propertyPathSuggestions &&
               propertyPathSuggestions.length === 0 && (
-                <div>No property path suggestions found</div>
+                <div>{t("common.facets.noPropertyPathSuggestions")}</div>
               )}
             {propertyPathSuggestions?.length && (
               <>
                 <TextInput
                   icon={FiSearch}
-                  placeholder="Search columns..."
+                  placeholder={t("common.facets.searchColumns")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="mb-4"
@@ -121,7 +128,7 @@ export const AddFacetModalWithSuggestions: React.FC<
             variant="secondary"
             onClick={close}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button
             data-testid="create-facet-btn"
@@ -132,7 +139,7 @@ export const AddFacetModalWithSuggestions: React.FC<
             disabled={!isSubmitEnabled()}
             onClick={() => handleNewFacetCreation()}
           >
-            Create
+            {t("common.actions.create")}
           </Button>
         </div>
       </div>

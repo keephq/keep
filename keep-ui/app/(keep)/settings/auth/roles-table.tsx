@@ -32,9 +32,15 @@ export function RolesTable({
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell className="w-4/24">Role Name</TableHeaderCell>
-          <TableHeaderCell className="w-4/24">Description</TableHeaderCell>
-          <TableHeaderCell className="w-15/24">Scopes</TableHeaderCell>
+          <TableHeaderCell className="w-4/24">
+            {t("roleSidebar.roleName")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-4/24">
+            {t("common.labels.description")}
+          </TableHeaderCell>
+          <TableHeaderCell className="w-15/24">
+            {t("common.labels.scopes")}
+          </TableHeaderCell>
           <TableHeaderCell className="w-1/24"></TableHeaderCell>
         </TableRow>
       </TableHead>
@@ -58,7 +64,7 @@ export function RolesTable({
                   <div className="flex items-center">
                     {role.predefined ? (
                       <Badge color="orange" className="ml-2 w-24 text-center">
-                        Predefined
+                        {t("common.labels.predefined")}
                       </Badge>
                     ) : (
                       <Badge color="orange" className="ml-2 w-24 text-center">
@@ -80,7 +86,9 @@ export function RolesTable({
                   ))}
                   {role.scopes.length > 4 && (
                     <Badge color="orange" className="text-xs">
-                      +{role.scopes.length - 4} more
+                      {t("common.messages.moreCount", {
+                        count: role.scopes.length - 4,
+                      })}
                     </Badge>
                   )}
                 </div>

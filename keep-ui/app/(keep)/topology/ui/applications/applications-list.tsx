@@ -69,7 +69,10 @@ export function ApplicationsList({
       updateApplication(updatedApplication).then(
         () => {},
         (error) => {
-          showErrorToast(error, "Failed to update application");
+          showErrorToast(
+            error,
+            t("topology.applications.messages.failedToUpdate")
+          );
         }
       );
     },
@@ -82,10 +85,13 @@ export function ApplicationsList({
         removeApplication(applicationId);
         setModalState(initialModalState);
       } catch (error) {
-        showErrorToast(error, "Failed to delete application");
+        showErrorToast(
+          error,
+          t("topology.applications.messages.failedToDelete")
+        );
       }
     },
-    [removeApplication]
+    [removeApplication, t]
   );
 
   function renderEmptyState() {
@@ -93,8 +99,8 @@ export function ApplicationsList({
       <>
         <EmptyStateCard
           icon={RectangleGroupIcon}
-          title="No applications yet"
-          description="Group services that work together into applications for easier management and monitoring"
+          title={t("topology.applications.noApplicationsYet")}
+          description={t("topology.applications.noApplicationsDescription")}
         >
           <Button
             variant="primary"
@@ -107,7 +113,7 @@ export function ApplicationsList({
               });
             }}
           >
-            Create Application
+            {t("topology.applications.createApplication")}
           </Button>
         </EmptyStateCard>
       </>
@@ -123,9 +129,7 @@ export function ApplicationsList({
           <div className="flex w-full items-center justify-between mb-4">
             <div>
               <Title>{t("topology.applications.title")}</Title>
-              <Subtitle>
-                {t("topology.applications.description")}
-              </Subtitle>
+              <Subtitle>{t("topology.applications.description")}</Subtitle>
             </div>
             <div>
               <Button

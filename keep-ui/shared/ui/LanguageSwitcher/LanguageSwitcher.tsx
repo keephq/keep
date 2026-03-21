@@ -2,14 +2,20 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Menu, Transition } from "@headlessui/react";
 import { GlobeIcon } from "lucide-react";
-import { locales, localeNames, localeCookieName, type Locale } from "@/i18n/config";
+import {
+  locales,
+  localeNames,
+  localeCookieName,
+  type Locale,
+} from "@/i18n/config";
 import clsx from "clsx";
 
 export function LanguageSwitcher() {
   const locale = useLocale();
+  const t = useTranslations("common.language");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -29,7 +35,7 @@ export function LanguageSwitcher() {
     <Menu as="div" className="relative">
       <Menu.Button
         className="h-9 w-auto gap-1 border-none bg-transparent px-2 shadow-none flex items-center text-sm text-gray-700 hover:text-orange-500 rounded-lg hover:bg-stone-200/50 transition-colors"
-        aria-label="Select language"
+        aria-label={t("title")}
         disabled={isPending}
       >
         <GlobeIcon className="h-4 w-4" />
