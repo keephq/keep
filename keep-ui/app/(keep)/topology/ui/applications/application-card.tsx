@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { TopologyApplication } from "@/app/(keep)/topology/model";
 import { Card, Subtitle, Title } from "@tremor/react";
 

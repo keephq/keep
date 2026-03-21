@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 // page.tsx - Server Component
 import { Card, Title, Text } from "@tremor/react";
 import { GithubButton } from "./GithubButton";

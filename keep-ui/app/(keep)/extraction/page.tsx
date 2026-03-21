@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import Extraction from "./extraction";
 
 export default function Page() {

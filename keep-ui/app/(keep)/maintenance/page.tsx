@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import Maintenance from "./maintenance"; // Adjust the import based on the folder structure
 
 export default function Page() {

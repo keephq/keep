@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useWorkflowExecutionsV2 } from "@/entities/workflow-executions/model/useWorkflowExecutionsV2";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Callout, Title, Card } from "@tremor/react";
@@ -30,6 +31,7 @@ export default function WorkflowOverview({
   workflow: Workflow | null;
   workflow_id: string;
 }) {
+  const { t } = useI18n();
   const [executionPagination, setExecutionPagination] = useState<Pagination>({
     limit: 25,
     offset: 0,
@@ -54,11 +56,11 @@ export default function WorkflowOverview({
     return (
       <Callout
         className="mt-4"
-        title="Error"
+        title={t("common.error")}
         icon={ExclamationCircleIcon}
         color="rose"
       >
-        Failed to load workflow
+        {t("workflows.overview.errorLoading")}
       </Callout>
     );
   }
@@ -89,7 +91,7 @@ export default function WorkflowOverview({
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatsCard>
-              <Title>Total Executions</Title>
+              <Title>{t("workflows.overview.totalExecutions")}</Title>
               <div>
                 <h1 className="text-2xl font-bold">
                   {formatNumber(data.count ?? 0)}
@@ -97,7 +99,7 @@ export default function WorkflowOverview({
               </div>
             </StatsCard>
             <StatsCard>
-              <Title>Pass / Fail Ratio</Title>
+              <Title>{t("workflows.overview.passFailRatio")}</Title>
               <div>
                 <h1 className="text-2xl font-bold">
                   {formatNumber(data.passCount)}
@@ -107,7 +109,7 @@ export default function WorkflowOverview({
               </div>
             </StatsCard>
             <StatsCard>
-              <Title>Success %</Title>
+              <Title>{t("workflows.overview.successPercent")}</Title>
               <div>
                 <h1 className="text-2xl font-bold">
                   {(data.count
@@ -119,7 +121,7 @@ export default function WorkflowOverview({
               </div>
             </StatsCard>
             <StatsCard>
-              <Title>Avg. Duration</Title>
+              <Title>{t("workflows.overview.avgDuration")}</Title>
               <div>
                 <h1 className="text-2xl font-bold">
                   {(data.avgDuration ?? 0).toFixed(2)}
@@ -127,12 +129,12 @@ export default function WorkflowOverview({
               </div>
             </StatsCard>
             <StatsCard>
-              <Title>Steps</Title>
+              <Title>{t("workflows.overview.steps")}</Title>
               <WorkflowSteps workflow={parsedWorkflowFile} />
             </StatsCard>
           </div>
           <Card>
-            <Title>Executions Graph</Title>
+            <Title>{t("workflows.overview.executionsGraph")}</Title>
             <WorkflowGraph
               full
               showLastExecutionStatus={false}
@@ -143,12 +145,12 @@ export default function WorkflowOverview({
             />
           </Card>
           <Card>
-            <Title>Providers</Title>
+            <Title>{t("workflows.overview.providers")}</Title>
             {_workflow && _workflow.providers && (
               <WorkflowProviders workflow={_workflow} />
             )}
           </Card>
-          <h1 className="text-xl font-bold mt-4">Execution History</h1>
+          <h1 className="text-xl font-bold mt-4">{t("workflows.overview.executionHistory")}</h1>
           <WorkflowExecutionsTable
             workflowId={data.workflow.id}
             workflowName={data.workflow.name}

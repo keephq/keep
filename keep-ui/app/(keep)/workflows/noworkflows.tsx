@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { Button, Icon } from "@tremor/react";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/20/solid";
 const WorkflowsEmptyState = () => {
+  const { t } = useI18n();
   const router = useRouter();
   const { data: configData } = useConfig();
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
@@ -19,17 +21,17 @@ const WorkflowsEmptyState = () => {
   const links = [
     {
       href: `${docsUrl}/platform/workflows`,
-      label: "Learn more about Workflows",
+      label: t("workflows.emptyState.learnMore"),
       icon: AcademicCapIcon,
     },
     {
       href: `${docsUrl}/workflows/overview`,
-      label: "How to create a basic notification flow",
+      label: t("workflows.emptyState.howToCreate"),
       icon: BellAlertIcon,
     },
     {
       href: "https://slack.keephq.dev",
-      label: "Get support on your Workflow",
+      label: t("workflows.emptyState.getSupport"),
       icon: FaSlack,
     },
   ];
@@ -39,8 +41,8 @@ const WorkflowsEmptyState = () => {
       <section className="flex flex-col items-center justify-center mb-10">
         <EmptyStateCard
           noCard
-          title="No Workflows Added Yet"
-          description="Start from scratch, or browse through workflow templates"
+          title={t("workflows.emptyState.title")}
+          description={t("workflows.emptyState.description")}
           icon={() => (
             <DynamicImageProviderIcon
               src="/icons/workflow-icon.png"
@@ -59,7 +61,7 @@ const WorkflowsEmptyState = () => {
               router.push("/workflows/builder");
             }}
           >
-            Create New Workflow
+            {t("workflows.emptyState.createWorkflow")}
           </Button>
           <div className="mt-10 divide-y flex flex-col border border-gray-200 rounded bg-white shadow text-sm">
             {links.map((link) => (

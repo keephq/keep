@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { CopilotChat, MessagesProps } from "@copilotkit/react-ui";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
@@ -27,6 +28,7 @@ import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
 import { EmptyStateCard } from "@/shared/ui";
 import { ChatBubbleOvalLeftIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 
 const INSTRUCTIONS = `DO NOT, NO MATTER WHAT, MAKE UP ANY INFORMATION OR DATA. If you dont know - just say you don't know. Its ok. You are an expert incident resolver who's capable of resolving incidents in a variety of ways. You can get traces from providers, search for traces, create incidents, update incident name and summary, and more. You can also ask the user for information if you need it.
 You should always answer short and concise answers, always trying to suggest the next best action to investigate or resolve the incident.
@@ -41,6 +43,7 @@ export function IncidentChat({
   incident: IncidentDto;
   mutateIncident: () => void;
 }) {
+  const { t } = useI18n();
   const { data: session } = useSession();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id
@@ -357,13 +360,13 @@ export function IncidentChat({
       if (status === "executing" || status === "inProgress") {
         return (
           <Button color="slate" size="lg" disabled loading>
-            Loading...
+            {t("common.actions.loading")}
           </Button>
         );
       } else if (status === "complete" && typeof result !== "string") {
         return <SimpleTraceViewer trace={result} />;
       } else {
-        return <Card>Trace not found: {result}</Card>;
+        return <Card>{t("incidents.chat.traceNotFound")}: {result}</Card>;
       }
     },
   });
@@ -448,7 +451,7 @@ export function IncidentChat({
           const tooltip = document.createElement("span");
           tooltip.className =
             "invisible group-hover:visible absolute bottom-full right-0 whitespace-nowrap rounded bg-tremor-background-emphasis px-2 py-1 text-xs text-tremor-background";
-          tooltip.textContent = "Add to RCA";
+          tooltip.textContent = t("incidents.chat.addToRCA");
 
           const svg = document.createElementNS(
             "http://www.w3.org/2000/svg",
@@ -500,7 +503,7 @@ export function IncidentChat({
               setLoadingStates((prev) => ({ ...prev, [messageId]: false }));
               button.classList.remove("opacity-50", "cursor-not-allowed");
               svg.setAttribute("class", "");
-              toast.info("Added to RCA", {
+              toast.info(t("incidents.chat.addedToRCA"), {
                 position: "top-right",
               });
             }
@@ -539,8 +542,8 @@ export function IncidentChat({
       <EmptyStateCard
         noCard
         icon={ChatBubbleOvalLeftIcon}
-        title="Chat not available"
-        description="Incident assitant will become available as alerts are assigned to this incident."
+        title={t("incidents.chat.notAvailable")}
+        description={t("incidents.chat.notAvailableDescription")}
       />
     );
   return (
@@ -552,10 +555,10 @@ export function IncidentChat({
             className="-mx-2"
             instructions={INSTRUCTIONS}
             labels={{
-              title: "Incident Assistant",
+              title: t("incidents.chat.title"),
               initial:
-                "Hi! Lets work together to resolve this incident! Ask me anything",
-              placeholder: "For example: Find the root cause of this incident",
+                t("incidents.chat.initialMessage"),
+              placeholder: t("incidents.chat.placeholder"),
             }}
             // ResponseButton={CustomResponseButton} // Deprecated in favor of Thumbs Up/Down, Copy and Regenerate.
             // https://docs.copilotkit.ai/troubleshooting/migrate-to-1.8.2#responsebutton-prop-removed

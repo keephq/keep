@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import Skeleton from "react-loading-skeleton";
 
 export function WorkflowOverviewSkeleton() {

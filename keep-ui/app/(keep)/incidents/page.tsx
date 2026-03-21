@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { IncidentList } from "features/incidents/incident-list";
 import { createServerApiClient } from "@/shared/api/server";
 import { getInitialFacets } from "@/features/filter/api";

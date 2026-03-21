@@ -4,14 +4,16 @@ import { Link } from "@/components/ui";
 import { Title, Button, Subtitle } from "@tremor/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function NotFound() {
+  const t = useTranslations("incidents.messages");
   const router = useRouter();
   return (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)]">
-      <Title>Incident not found</Title>
+      <Title>{t("notFound")}</Title>
       <Subtitle>
-        If you believe this is an error, please contact us on{" "}
+        {t("notFoundHelp")}{" "}
         <Link
           href="https://slack.keephq.dev/"
           target="_blank"
@@ -28,7 +30,7 @@ export default function NotFound() {
         color="orange"
         variant="secondary"
       >
-        Go all incidents
+        {t("goAllIncidents")}
       </Button>
     </div>
   );

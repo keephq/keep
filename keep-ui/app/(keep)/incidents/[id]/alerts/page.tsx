@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import IncidentAlerts from "./incident-alerts";
 import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 import { getIncidentName } from "@/entities/incidents/lib/utils";

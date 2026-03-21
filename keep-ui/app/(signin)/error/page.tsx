@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 // app/error/page.tsx
 import ErrorClient from "./error-client";
 import { getAuthTypeEnvVars } from "./authEnvUtils";

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import GenericPopover from "@/components/popover/GenericPopover";
 import { Textarea, Button } from "@tremor/react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -22,16 +23,16 @@ interface PopoverContentProps {
 }
 
 const status = [
-  { value: "success", label: "Success" },
-  { value: "error", label: "Error" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "timeout", label: "Timeout" },
-  { value: "providers_not_configured", label: "Providers Not Configured" },
+  { value: "success", label: "workflows.filters.statuses.success" },
+  { value: "error", label: "workflows.filters.statuses.error" },
+  { value: "in_progress", label: "workflows.filters.statuses.inProgress" },
+  { value: "timeout", label: "workflows.filters.statuses.timeout" },
+  { value: "providers_not_configured", label: "workflows.filters.statuses.providersNotConfigured" },
 ];
 const triggers = [
-  { value: "scheduler", label: "Scheduler" },
-  { value: "manual", label: "Manual" },
-  { value: "type:alert", label: "Alert" },
+  { value: "scheduler", label: "workflows.filters.triggers.scheduler" },
+  { value: "manual", label: "workflows.filters.triggers.manual" },
+  { value: "type:alert", label: "workflows.filters.triggers.alert" },
 ];
 
 const PopoverContent: React.FC<PopoverContentProps> = ({
@@ -39,6 +40,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   filterRef,
   type,
 }) => {
+  const { t } = useI18n();
   // Initialize local state for selected options
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(
     new Set<string>()
@@ -71,7 +73,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   return (
     <>
       <span className="text-gray-400 text-sm">
-        Select {type.charAt(0).toUpperCase() + type.slice(1)}
+        {t("workflows.filters.select", { type: t(`workflows.filters.${type}`) })}
       </span>
       <ul className="flex flex-col mt-3 max-h-96 overflow-auto">
         {options.map((option) => (
@@ -85,7 +87,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
                 }
                 checked={selectedOptions.has(option.value)}
               />
-              {option.label}
+              {t(option.label)}
             </label>
           </li>
         ))}
@@ -95,6 +97,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
 };
 
 export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
+  const { t } = useI18n();
   // Initialize filterRef to store filter values
   const filterRef = useRef<Filters>({
     trigger: [],
@@ -181,12 +184,12 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
           value={executionId}
           onChange={onValueChange}
           onKeyDown={handleKeyDown}
-          placeholder="Filter Workflows..."
+          placeholder={t("workflows.filters.filterWorkflows")}
         />
       </div>
       <div className="flex-1 flex gap-4">
         <GenericPopover
-          triggerText="Trigger"
+          triggerText={t("workflows.filters.trigger")}
           triggerIcon={GoPlusCircle}
           content={
             <PopoverContent
@@ -198,7 +201,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
           onApply={() => setApply(true)}
         />
         <GenericPopover
-          triggerText="Status"
+          triggerText={t("workflows.filters.status")}
           triggerIcon={GoPlusCircle}
           content={
             <PopoverContent
@@ -218,7 +221,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
           setApply(true);
         }}
       >
-        Clear filters
+        {t("workflows.filters.clearFilters")}
       </Button>
     </div>
   );

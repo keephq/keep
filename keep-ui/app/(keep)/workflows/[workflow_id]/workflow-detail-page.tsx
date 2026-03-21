@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import {
   Card,
@@ -49,6 +50,7 @@ export default function WorkflowDetailPage({
   params: { workflow_id: string };
   initialData?: Workflow;
 }) {
+  const { t } = useI18n();
   const { data: configData } = useConfig();
   const searchParams = useSearchParams();
   const [tabIndex, setTabIndex] = useState(
@@ -93,10 +95,10 @@ export default function WorkflowDetailPage({
     <div className="flex flex-col gap-4">
       <TabGroup index={tabIndex} onIndexChange={handleTabChange}>
         <TabList>
-          <Tab icon={AiOutlineSwap}>Overview</Tab>
+          <Tab icon={AiOutlineSwap}>{t("workflows.tabs.overview")}</Tab>
           <Tab icon={WrenchIcon}>
             <div className="flex items-center gap-2">
-              Builder{" "}
+              {t("workflows.tabs.builder")}{" "}
               {isUIBuilderUnsaved ? (
                 <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
               ) : null}
@@ -104,27 +106,27 @@ export default function WorkflowDetailPage({
           </Tab>
           <Tab icon={CodeBracketIcon}>
             <div className="flex items-center gap-2">
-              YAML Definition{" "}
+              {t("workflows.tabs.yamlDefinition")}{" "}
               {isYamlEditorUnsaved ? (
                 <div className="inline-block text-xs size-1.5 rounded-full bg-yellow-500" />
               ) : null}
             </div>
           </Tab>
-          <Tab icon={PiClockCounterClockwise}>Versions</Tab>
-          <Tab icon={KeyIcon}>Secrets</Tab>
+          <Tab icon={PiClockCounterClockwise}>{t("workflows.tabs.versions")}</Tab>
+          <Tab icon={KeyIcon}>{t("workflows.tabs.secrets")}</Tab>
           <TabNavigationLink
             href="https://www.youtube.com/@keepalerting"
             icon={ArrowUpRightIcon}
             target="_blank"
           >
-            Tutorials
+            {t("workflows.tabs.tutorials")}
           </TabNavigationLink>
           <TabNavigationLink
             href={`${docsUrl}/workflows`}
             icon={ArrowUpRightIcon}
             target="_blank"
           >
-            Documentation
+            {t("workflows.tabs.documentation")}
           </TabNavigationLink>
         </TabList>
         <TabPanels>

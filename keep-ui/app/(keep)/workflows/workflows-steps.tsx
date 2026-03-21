@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { MockStep, MockWorkflow } from "@/shared/api/workflows";
 import { TiArrowRight } from "react-icons/ti";

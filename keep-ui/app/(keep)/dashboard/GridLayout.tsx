@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { Responsive, WidthProvider, Layout } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";

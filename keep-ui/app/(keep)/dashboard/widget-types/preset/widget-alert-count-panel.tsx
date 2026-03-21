@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useMemo } from "react";
 import { WidgetData, WidgetType, Threshold } from "../../types";
 import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";

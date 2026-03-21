@@ -8,10 +8,12 @@ import { useState } from "react";
 import { ArrowUpOnSquareStackIcon } from "@heroicons/react/24/outline";
 import { UploadWorkflowsModal } from "./upload-workflows-modal";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function NoWorkflowsState({}: {
   initialFacetsData?: InitialFacetsData;
 }) {
+  const { t } = useI18n();
   const [isUploadWorkflowsModalOpen, setIsUploadWorkflowsModalOpen] =
     useState(false);
   const router = useRouter();
@@ -19,15 +21,14 @@ export function NoWorkflowsState({}: {
   return (
     <div data-testid="no-workflows-state">
       <div className="mb-3">
-        <PageTitle className="mb-3">Create your first workflow</PageTitle>
+        <PageTitle className="mb-3">{t("workflows.messages.createFirstWorkflow")}</PageTitle>
         <PageSubtitle>
           <div className="flex flex-col gap-2">
             <p>
-              Choose a workflow template to start building the automation for
-              your alerts and incidents.
+              {t("workflows.messages.chooseTemplateDescription")}
             </p>
             <div className="flex items-center gap-2">
-              <span>You can also</span>
+              <span>{t("workflows.messages.youCanAlso")}</span>
               <Button
                 color="orange"
                 size="xs"
@@ -38,16 +39,16 @@ export function NoWorkflowsState({}: {
                 icon={ArrowUpOnSquareStackIcon}
                 id="uploadWorkflowButton"
               >
-                Upload Workflows
+                {t("workflows.messages.uploadWorkflows")}
               </Button>
-              <span>or</span>
+              <span>{t("workflows.messages.or")}</span>
               <Button
                 color="orange"
                 size="xs"
                 variant="primary"
                 onClick={() => router.push("/workflows/builder")}
               >
-                Start from scratch
+                {t("workflows.messages.startFromScratch")}
               </Button>
             </div>
           </div>

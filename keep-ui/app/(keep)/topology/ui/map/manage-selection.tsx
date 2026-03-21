@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { Edge, useOnSelectionChange } from "@xyflow/react";
 import { useState, useCallback, useContext, useEffect } from "react";
@@ -34,6 +35,7 @@ export function ManageSelection({
   topologyMutator: KeyedMutator<TopologyService[]>;
   getServiceById: (_id: string) => TopologyService | undefined;
 }) {
+  const { t } = useI18n();
   const { setSelectedObjectId } = useContext(TopologySearchContext);
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications();
@@ -56,7 +58,7 @@ export function ManageSelection({
       selectedServices[0].topologyMutator();
     } catch (error) {
       toast.error(
-        `Error while deleting ${selectedServices.length === 1 ? "service" : "services"}: ${error}`
+        `${t("topology.messages.errorDeletingService")}: ${error}`
       );
     }
   };
@@ -135,7 +137,7 @@ export function ManageSelection({
         setSelectedObjectId(updatedApplication.id);
       },
       (error) => {
-        showErrorToast(error, "Failed to update application");
+        showErrorToast(error, t("topology.applications.messages.failedToUpdate"));
       }
     );
   };
@@ -157,7 +159,7 @@ export function ManageSelection({
         setSelectedApplication(null);
         setIsModalOpen(false);
       } catch (error) {
-        showErrorToast(error, "Failed to delete application");
+        showErrorToast(error, t("topology.applications.messages.failedToDelete"));
       }
     },
     [removeApplication]
@@ -165,7 +167,7 @@ export function ManageSelection({
 
   const editEdgeProtocol = async (edge: Edge) => {
     const protocol = prompt(
-      "Please enter the protocol:",
+      t("topology.applications.manageSelection.enterProtocol"),
       edge.label?.toString()
     );
     if (protocol !== null) {
@@ -176,7 +178,7 @@ export function ManageSelection({
         });
         topologyMutator();
       } catch (error) {
-        toast.error("Failed to update protocol");
+        toast.error(t("topology.messages.failedToUpdateProtocol"));
       }
     }
   };
@@ -196,7 +198,7 @@ export function ManageSelection({
             variant="secondary"
             onClick={() => setIsModalOpen(true)}
           >
-            Edit
+            {t("topology.applications.edit")}
           </Button>
         </div>
         <ApplicationModal
@@ -232,7 +234,7 @@ export function ManageSelection({
                 setServiceToEdit(selectedServices[0]);
               }}
             >
-              Update Service
+              {t("topology.applications.manageSelection.updateService")}
             </Button>
           )}
           {selectedServices.length > 0 &&
@@ -244,7 +246,9 @@ export function ManageSelection({
                 className="mr-3"
                 onClick={() => handleServicesDelete()}
               >
-                Delete {selectedServices.length === 1 ? "Service" : "Services"}
+                {selectedServices.length === 1
+                  ? t("topology.applications.manageSelection.deleteService")
+                  : t("topology.applications.manageSelection.deleteServices")}
               </Button>
             )}
           <Button
@@ -253,7 +257,7 @@ export function ManageSelection({
             variant="primary"
             onClick={() => setIsModalOpen(true)}
           >
-            Create Application
+            {t("topology.applications.manageSelection.createApplication")}
           </Button>
         </div>
         {serviceToEdit && (
@@ -302,7 +306,7 @@ export function ManageSelection({
             variant="secondary"
             onClick={() => editEdgeProtocol(selectedEdges[0])}
           >
-            Edit Dependency
+            {t("topology.applications.manageSelection.editDependency")}
           </Button>
         </div>
       </>

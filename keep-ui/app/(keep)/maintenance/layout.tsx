@@ -1,11 +1,16 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { PageTitle, PageSubtitle } from "@/shared/ui";
-export default function Layout({ children }: { children: any }) {
+import { getTranslations } from "next-intl/server";
+
+export default async function Layout({ children }: { children: any }) {
+  const t = await getTranslations();
+  
   return (
     <main className="mx-auto max-w-full flex flex-col gap-6">
       <header>
-        <PageTitle>Maintenance Windows</PageTitle>
+        <PageTitle>{t("maintenance.title")}</PageTitle>
         <PageSubtitle>
-          Configure maintenance windows and suppress alerts automatically
+          {t("maintenance.description")}
         </PageSubtitle>
       </header>
 

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import useSWR from "swr";
 import { Provider } from "@/shared/api/providers";
 import { Subtitle, Title, Text, Icon } from "@tremor/react";

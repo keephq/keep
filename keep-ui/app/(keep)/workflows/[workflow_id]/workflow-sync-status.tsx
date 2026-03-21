@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { CloudIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui";
 import { useEffect } from "react";
@@ -17,6 +18,7 @@ export function WorkflowSyncStatus({
   lastDeployedAt,
   isChangesSaved,
 }: WorkflowSyncStatusProps) {
+  const { t } = useI18n();
   const { workflow } = useWorkflowDetail(workflowId, null);
 
   const lastSavedAt = workflow?.last_updated + "Z" || lastDeployedAt;
@@ -46,26 +48,26 @@ export function WorkflowSyncStatus({
     nextFormatter
   ) => {
     if (unit === "second") {
-      return "just now";
+      return t("workflows.syncStatus.justNow");
     }
     return nextFormatter?.(value, unit, suffix, epochMiliseconds);
   };
 
   return (
-    <Tooltip content={isChangesSaved ? "Saved to Keep" : "Not saved"}>
+    <Tooltip content={isChangesSaved ? t("workflows.syncStatus.savedToKeep") : t("workflows.syncStatus.notSaved")}>
       <span className="flex items-center gap-1 text-sm">
         {isChangesSaved ? (
           <>
             <CloudIcon className="size-5 text-gray-500" />
             <span className="text-gray-500">
               {revision && (
-                <span data-testid="wf-revision">Revision {revision}</span>
+                <span data-testid="wf-revision">{t("workflows.syncStatus.revision")} {revision}</span>
               )}
-              {revision ? ", saved " : "Saved "}
+              {revision ? `, ${t("workflows.syncStatus.saved")} ` : t("workflows.syncStatus.saved") + " "}
               {lastSavedAt ? (
                 <TimeAgo date={lastSavedAt} formatter={customFormatter} />
               ) : (
-                "to Keep"
+                t("workflows.syncStatus.toKeep")
               )}
             </span>
           </>
@@ -73,7 +75,7 @@ export function WorkflowSyncStatus({
           <>
             <ExclamationTriangleIcon className="size-5 text-yellow-500" />
             <span className="text-yellow-600 font-bold">
-              Changes are not saved
+              {t("workflows.syncStatus.changesNotSaved")}
             </span>
           </>
         )}

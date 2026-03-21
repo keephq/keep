@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Badge } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { DynamicImageProviderIcon } from "@/components/ui";

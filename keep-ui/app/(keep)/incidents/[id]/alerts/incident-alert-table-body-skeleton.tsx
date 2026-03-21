@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { TableBody, TableCell, TableRow } from "@tremor/react";
 import type { Table as ReactTable } from "@tanstack/react-table";

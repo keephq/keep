@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { cn } from "../../../../../utils/helpers";
 import React from "react";

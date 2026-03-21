@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { xor } from "lodash";
@@ -21,6 +22,7 @@ export const EnrichmentEditableField = ({
   onDelete,
   children,
 }: EnrichmentEditableFieldProps) => {
+  const { t } = useI18n();
   const router = useRouter();
 
   const [editMode, setEditMode] = useState(false);
@@ -91,20 +93,20 @@ export const EnrichmentEditableField = ({
             value={fieldName}
             error={fieldNameError}
             onChange={handleNameChange}
-            placeholder="Add name"
+            placeholder={t("incidents.enrichments.addName")}
           />
         )}
         <TextInput
           value={stringedValue}
           error={valueError}
           onChange={handleValueChange}
-          placeholder="Add value"
+          placeholder={t("incidents.enrichments.addValue")}
         />
         <Button
           className="leading-none p-2 rounded-md"
           variant="secondary"
           disabled={!(fieldName && stringedValue)}
-          tooltip="Save"
+          tooltip={t("common.actions.save")}
           icon={() => (
             <Icon icon={FiSave} className={`w-4 h-4 text-orange-500`} />
           )}
@@ -113,7 +115,7 @@ export const EnrichmentEditableField = ({
         <Button
           className="leading-none p-2 rounded-md"
           variant="destructive"
-          tooltip="Cancel"
+          tooltip={t("common.actions.cancel")}
           icon={FiX}
           onClick={handleCancel}
         />
@@ -141,12 +143,12 @@ export const EnrichmentEditableField = ({
                       {item}
                     </Badge>
                   ))
-              : `No data for ${name}`}
+              : `${t("incidents.enrichments.noDataFor")} ${name}`}
 
           <Button
             variant="light"
             className="text-gray-500 leading-none p-2 rounded-md prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50 transition-opacity duration-100 opacity-0 group-hover:opacity-100"
-            tooltip="Edit"
+            tooltip={t("common.actions.edit")}
             onClick={() => setEditMode(true)}
             icon={() => (
               <Icon icon={MdModeEdit} className={`w-4 h-4 text-orange-500`} />
@@ -157,7 +159,7 @@ export const EnrichmentEditableField = ({
             <Button
               variant="light"
               className="text-gray-500 leading-none p-2 rounded-md prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50 transition-opacity duration-100 opacity-0 group-hover:opacity-100"
-              tooltip="Un-enrich"
+              tooltip={t("incidents.enrichments.unenrich")}
               onClick={handleUnenrich}
               icon={() => (
                 <Icon icon={FiTrash2} className={`w-4 h-4 text-red-500`} />
@@ -170,7 +172,7 @@ export const EnrichmentEditableField = ({
           className="flex gap-2 items-center cursor-pointer"
           onClick={() => setEditMode(true)}
         >
-          <Badge>+</Badge> Add new field
+          <Badge>+</Badge> {t("incidents.enrichments.addNewField")}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { FacetDto } from "@/features/filter";
 import { AlertTableServerSide } from "@/widgets/alerts-table/ui/alert-table-server-side";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";

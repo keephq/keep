@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { Link } from "@/components/ui";
 import { Title, Button, Subtitle } from "@tremor/react";
@@ -6,23 +7,24 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function NotAuthorized({ message }: { message?: string }) {
+  const { t } = useI18n();
   const router = useRouter();
   return (
     <div className="flex flex-col items-center justify-center h-full">
-      <Title>403 Not Authorized</Title>
+      <Title>{t("notAuthorized.title")}</Title>
       <div className="flex flex-col items-center">
         <Subtitle>
-          {message || "You do not have permission to access this page."}
+          {message || t("notAuthorized.message")}
         </Subtitle>
         <Subtitle>
           <br />
-          If you need help, please contact us on{" "}
+          {t("notAuthorized.contactUs")}{" "}
           <Link
             href="https://slack.keephq.dev/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Slack
+            {t("notAuthorized.slack")}
           </Link>
         </Subtitle>
       </div>
@@ -34,7 +36,7 @@ export default function NotAuthorized({ message }: { message?: string }) {
         color="orange"
         variant="secondary"
       >
-        Go back
+        {t("notAuthorized.goBack")}
       </Button>
     </div>
   );

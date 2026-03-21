@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import "../../globals.css";
 
 export interface Provider {
@@ -38,6 +39,8 @@ export default function SignInForm({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   console.log("Init SignInForm");
+  const t = useTranslations("auth.login");
+  const tErrors = useTranslations("auth.errors");
   const [providers, setProviders] = useState<Providers | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
@@ -133,7 +136,7 @@ export default function SignInForm({
 
       if (!result) {
         setError("root", {
-          message: "An unexpected error occurred",
+          message: tErrors("unexpected"),
         });
         return;
       }
@@ -156,7 +159,7 @@ export default function SignInForm({
       await revalidateAfterAuth();
     } catch (error) {
       setError("root", {
-        message: (error as Error)?.message || "An unexpected error occurred",
+        message: (error as Error)?.message || tErrors("unexpected"),
       });
       setIsRedirecting(false);
     }
@@ -167,7 +170,7 @@ export default function SignInForm({
     console.log("Redirecting...");
     return (
       <Text className="text-tremor-title h-full flex items-center justify-center font-bold text-tremor-content-strong">
-        Authentication successful, redirecting...
+        {t("authSuccess")}
       </Text>
     );
   }
@@ -177,7 +180,7 @@ export default function SignInForm({
     return (
       <>
         <Text className="text-tremor-title font-bold text-tremor-content-strong">
-          Log in to your account
+          {t("title")}
         </Text>
 
         <form className="w-full space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -190,14 +193,14 @@ export default function SignInForm({
           )}
           <div className="space-y-2">
             <Text className="text-tremor-default font-medium text-tremor-content-strong">
-              Username
+              {t("username")}
             </Text>
             <TextInput
               {...register("username", {
-                required: "Username is required",
+                required: t("usernameRequired"),
               })}
               type="text"
-              placeholder="Enter your username"
+              placeholder={t("usernamePlaceholder")}
               className="w-full"
               error={!!errors.username}
               disabled={isSubmitting || isRedirecting}
@@ -211,14 +214,14 @@ export default function SignInForm({
 
           <div className="space-y-2">
             <Text className="text-tremor-default font-medium text-tremor-content-strong">
-              Password
+              {t("password")}
             </Text>
             <TextInput
               {...register("password", {
-                required: "Password is required",
+                required: t("passwordRequired"),
               })}
               type="password"
-              placeholder="Enter your password"
+              placeholder={t("passwordPlaceholder")}
               className="w-full"
               error={!!errors.password}
               disabled={isSubmitting || isRedirecting}
@@ -240,10 +243,10 @@ export default function SignInForm({
             loading={isSubmitting || isRedirecting}
           >
             {isSubmitting
-              ? "Signing in..."
+              ? t("submitting")
               : isRedirecting
-              ? "Redirecting..."
-              : "Sign in"}
+              ? t("redirecting")
+              : t("submit")}
           </Button>
         </form>
       </>
@@ -252,7 +255,7 @@ export default function SignInForm({
 
   return (
     <Text className="h-full flex items-center justify-center text-tremor-title font-bold text-tremor-content-strong">
-      Redirecting to authentication...
+      {t("redirectToAuth")}
     </Text>
   );
 }

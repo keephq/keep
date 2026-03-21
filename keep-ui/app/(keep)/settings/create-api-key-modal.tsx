@@ -13,6 +13,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { ApiKey } from "@/app/(keep)/settings/auth/types";
 import { Select } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 interface CreateApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,6 +27,7 @@ export default function CreateApiKeyModal({
   setApiKeys,
   roles,
 }: CreateApiKeyModalProps) {
+  const { t } = useI18n();
   const {
     handleSubmit,
     control,
@@ -47,12 +49,12 @@ export default function CreateApiKeyModal({
       if (error instanceof KeepApiError) {
         setError("apiError", {
           type: "manual",
-          message: error.message || "Failed to create API Key",
+          message: error.message || t("settings.apiKeys.messages.createFailed"),
         });
       } else {
         setError("apiError", {
           type: "manual",
-          message: "Unexpected error occurred",
+          message: t("apiKey.modal.unexpectedError"),
         });
       }
     }
@@ -65,7 +67,7 @@ export default function CreateApiKeyModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create API Key">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t("settings.apiKeys.addKey")}>
       <form
         onSubmit={(e) => {
           clearErrors();
@@ -75,11 +77,11 @@ export default function CreateApiKeyModal({
         {/* Email/Username Field */}
         {
           <div className="mt-4">
-            <Subtitle>Name</Subtitle>
+            <Subtitle>{t("apiKey.modal.name")}</Subtitle>
             <Controller
               name="name"
               control={control}
-              rules={{ required: "Name is required" }}
+              rules={{ required: t("apiKey.modal.nameRequired") }}
               render={({ field }) => (
                 <TextInput
                   {...field}
@@ -98,11 +100,11 @@ export default function CreateApiKeyModal({
 
         {/* Role Field */}
         <div className="mt-4">
-          <Subtitle>Role</Subtitle>
+          <Subtitle>{t("apiKey.modal.role")}</Subtitle>
           <Controller
             name="role"
             control={control}
-            rules={{ required: "Role is required" }}
+            rules={{ required: t("apiKey.modal.roleRequired") }}
             render={({ field }) => (
               <Select
                 {...field}
@@ -127,7 +129,7 @@ export default function CreateApiKeyModal({
                   </div>
                 )}
                 getOptionValue={(role) => role.id}
-                placeholder="Select a role"
+                placeholder={t("apiKey.modal.selectRole")}
               />
             )}
           />
@@ -146,14 +148,14 @@ export default function CreateApiKeyModal({
         {/* Submit and Cancel Buttons */}
         <div className="mt-6 flex gap-2">
           <Button color="orange" type="submit">
-            Create API Key{" "}
+            {t("apiKey.modal.createApiKey")}
           </Button>
           <Button
             onClick={handleClose}
             variant="secondary"
             className="border border-orange-500 text-orange-500"
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
         </div>
       </form>

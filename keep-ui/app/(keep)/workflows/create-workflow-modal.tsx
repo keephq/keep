@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import Modal from "@/components/ui/Modal";
 import "react-loading-skeleton/dist/skeleton.css";
 import { WorkflowTemplates } from "./workflow-templates";
@@ -13,23 +14,23 @@ export const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
   onClose,
 }) => {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <Modal
       isOpen={true}
       onClose={onClose}
       className="min-w-[80vw] min-h-[90vh] max-h-[90vh]"
-      title="Create workflow"
+      title={t("workflows.createModal.title")}
     >
       <div className="flex flex-col min-h-0 max-w-full max-h-full overflow-hidden">
         <PageSubtitle>
           <div className="flex flex-col gap-2 mb-3 h-full w-full">
             <p>
-              Choose a workflow template to start building the automation for
-              your alerts and incidents.
+              {t("workflows.createModal.chooseTemplate")}
             </p>
             <p>
-              Or skip this, and{" "}
+              {t("workflows.createModal.orSkip")}{" "}
               <Button
                 className="ml-2"
                 color="orange"
@@ -37,7 +38,7 @@ export const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
                 variant="primary"
                 onClick={() => router.push("/workflows/builder")}
               >
-                Start from scratch
+                {t("workflows.createModal.startFromScratch")}
               </Button>
             </p>
           </div>

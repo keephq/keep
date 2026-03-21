@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Fragment, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Button } from "@/components/ui";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 import { SplitIncidentAlertsModal } from "features/incidents/split-incident-alerts";

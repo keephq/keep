@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import QueryBuilder from "react-querybuilder";
 import { RuleGroup } from "./RuleGroup";
 import { Controller, useFormContext } from "react-hook-form";

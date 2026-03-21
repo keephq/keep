@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { Fragment } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Icon } from "@tremor/react";

@@ -23,6 +23,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { PageSubtitle, PageTitle, showErrorToast } from "@/shared/ui";
 import { ApiKey } from "@/app/(keep)/settings/auth/types";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   selectedTab: string;
@@ -33,6 +34,7 @@ interface ApiKeyResponse {
 }
 
 export default function ApiKeySettings({ selectedTab }: Props) {
+  const { t } = useI18n();
   const { data: configData } = useConfig();
   const api = useApi();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(
@@ -70,7 +72,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
   ) => {
     event.stopPropagation();
     const confirmed = confirm(
-      "This action cannot be undone. This will revoke the key and generate a new one. Any further requests made with this key will fail. Make sure to update any applications that use this key."
+      t("settings.apiKeys.messages.regenerateConfirm")
     );
 
     if (confirmed) {
@@ -78,7 +80,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
         const res = await api.put(`/settings/apikey`, { apiKeyId });
         mutate(`/settings/apikeys`);
       } catch (error) {
-        showErrorToast(error, "Failed to regenerate API key");
+        showErrorToast(error, t("apiKey.settings.regenerateFailed"));
       }
     }
   };
@@ -86,7 +88,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
   const handleDelete = async (apiKeyId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     const confirmed = confirm(
-      "This action cannot be undone. This will permanently delete the API key and any future requests using this key will fail."
+      t("apiKey.settings.deleteConfirm")
     );
 
     if (confirmed) {
@@ -94,7 +96,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
         const res = await api.delete(`/settings/apikey/${apiKeyId}`);
         mutate(`/settings/apikeys`);
       } catch (error) {
-        showErrorToast(error, "Failed to delete API key");
+        showErrorToast(error, t("apiKey.settings.deleteFailed"));
       }
     }
   };
@@ -103,7 +105,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
     <div className="flex flex-col gap-4">
       <header className="flex justify-between">
         <div className="flex flex-col">
-          <PageTitle>API Keys</PageTitle>
+          <PageTitle>{t("settings.apiKeys.title")}</PageTitle>
         </div>
 
         <div>
@@ -115,11 +117,11 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             disabled={!createApiKeyEnabled}
             tooltip={
               !createApiKeyEnabled
-                ? "API Key creation is disabled because Keep is running in NO_AUTH mode."
-                : "Add user"
+                ? t("settings.apiKeys.messages.creationDisabled")
+                : undefined
             }
           >
-            Create API key
+            {t("settings.apiKeys.addKey")}
           </Button>
         </div>
       </header>
@@ -128,19 +130,19 @@ export default function ApiKeySettings({ selectedTab }: Props) {
           <Table>
             <TableHead>
               <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
-                <TableHeaderCell className="text-left">Name</TableHeaderCell>
+                <TableHeaderCell className="text-left">{t("apiKey.settings.name")}</TableHeaderCell>
                 <TableHeaderCell className="text-left w-1/4">
-                  Key
+                  {t("apiKey.settings.key")}
                 </TableHeaderCell>
-                <TableHeaderCell className="text-left">Role</TableHeaderCell>
+                <TableHeaderCell className="text-left">{t("apiKey.settings.role")}</TableHeaderCell>
                 <TableHeaderCell className="text-left">
-                  Created By
-                </TableHeaderCell>
-                <TableHeaderCell className="text-left">
-                  Created At
+                  {t("apiKey.settings.createdBy")}
                 </TableHeaderCell>
                 <TableHeaderCell className="text-left">
-                  Last Used
+                  {t("apiKey.settings.createdAt")}
+                </TableHeaderCell>
+                <TableHeaderCell className="text-left">
+                  {t("apiKey.settings.lastUsed")}
                 </TableHeaderCell>
                 <TableHeaderCell className="w-1/12"></TableHeaderCell>
               </TableRow>
@@ -165,19 +167,19 @@ export default function ApiKeySettings({ selectedTab }: Props) {
                     <Text>{key.created_at}</Text>
                   </TableCell>
                   <TableCell className="text-left">
-                    <Text>{key.last_used ?? "Never"}</Text>
+                    <Text>{key.last_used ?? t("apiKey.settings.never")}</Text>
                   </TableCell>
                   <TableCell className="w-1/12">
                     <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
-                        tooltip="Regenerate key"
+                        tooltip={t("apiKey.settings.regenerateTooltip")}
                         icon={UpdateIcon}
                         variant="light"
                         color="orange"
                         onClick={(e) => handleRegenerate(key.reference_id, e)}
                       />
                       <Button
-                        tooltip="Delete key"
+                        tooltip={t("apiKey.settings.deleteTooltip")}
                         icon={TrashIcon}
                         variant="light"
                         color="orange"
@@ -190,7 +192,7 @@ export default function ApiKeySettings({ selectedTab }: Props) {
             </TableBody>
           </Table>
         ) : (
-          <div className="p-4"> There are no active API keys </div>
+          <div className="p-4"> {t("apiKey.settings.noActiveKeys")} </div>
         )}
       </Card>
       <CreateApiKeyModal

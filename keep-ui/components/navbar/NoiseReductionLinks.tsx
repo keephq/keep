@@ -17,6 +17,7 @@ import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 import { ReactNode } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { useTranslations } from "next-intl";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -50,6 +51,10 @@ const TogglableLink = ({ children, disabledConfigKey }: TogglableLinkProps) => {
 };
 
 export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
+  const t = useTranslations("nav");
+  const tRules = useTranslations("rules");
+  const tWorkflows = useTranslations("workflows");
+  const tTopology = useTranslations("topology");
   const isNOCRole = session?.userRole === "noc";
   const { topologyData } = useTopology();
   const { data: tenantConfig, isLoading } = useTenantConfiguration();
@@ -80,7 +85,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             {tenantConfig && (
               <>
                 <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                  NOISE REDUCTION
+                  {t("noiseReduction", { defaultValue: "降噪" }).toUpperCase()}
                 </Subtitle>
                 <IoChevronUp
                   className={clsx(
@@ -109,7 +114,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               icon={IoMdGitMerge}
               testId="deduplication"
             >
-              <Subtitle className="text-xs">Deduplication</Subtitle>
+              <Subtitle className="text-xs">{tRules("deduplication.title", { defaultValue: "去重" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -118,7 +123,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         >
           <li>
             <LinkWithIcon href="/rules" icon={Rules} testId="rules">
-              <Subtitle className="text-xs">Correlations</Subtitle>
+              <Subtitle className="text-xs">{tRules("correlation.title", { defaultValue: "关联规则" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -127,7 +132,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         >
           <li>
             <LinkWithIcon href="/workflows" icon={Workflows} testId="workflows">
-              <Subtitle className="text-xs">Workflows</Subtitle>
+              <Subtitle className="text-xs">{tWorkflows("title", { defaultValue: "工作流" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -145,7 +150,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               }
               testId="service-topology"
             >
-              <Subtitle className="text-xs">Service Topology</Subtitle>
+              <Subtitle className="text-xs">{tTopology("title", { defaultValue: "服务拓扑" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -154,7 +159,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         >
           <li>
             <LinkWithIcon href="/mapping" icon={Mapping} testId="mapping">
-              <Subtitle className="text-xs">Mapping</Subtitle>
+              <Subtitle className="text-xs">{tRules("mapping.title", { defaultValue: "映射" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -167,7 +172,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               icon={ExportIcon}
               testId="extraction"
             >
-              <Subtitle className="text-xs">Extraction</Subtitle>
+              <Subtitle className="text-xs">{tRules("extraction.title", { defaultValue: "提取" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -180,7 +185,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               icon={FaVolumeMute}
               testId="maintenance"
             >
-              <Subtitle className="text-xs">Maintenance Windows</Subtitle>
+              <Subtitle className="text-xs">{t("maintenanceWindows", { defaultValue: "维护窗口" })}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>

@@ -36,8 +36,10 @@ import { RolesTable } from "./auth/roles-table";
 import { APIKeysTable } from "./auth/api-key-table";
 import { User } from "@/app/(keep)/settings/models";
 import ProviderImagesSettings from "./provider-images/provider-images-settings";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function SettingsPage() {
+  const { t } = useI18n();
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -163,7 +165,7 @@ export default function SettingsPage() {
           ];
           return (
             <EmptyStateTable
-              message={`Users management is disabled. See documentation on how to enable it.`}
+              message={t("settings.users.messages.managementDisabled")}
               documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
               icon={UsersIcon}
             >
@@ -219,7 +221,7 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               icon={UserGroupIcon}
-              message={`Groups management is disabled with. See documentation on how to enabled it.`}
+              message={t("settings.groups.messages.managementDisabledWith")}
               documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <GroupsTable
@@ -254,7 +256,7 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               icon={ShieldCheckIcon}
-              message={`Roles management is disabled with. See documentation on how to enabled it.`}
+              message={t("settings.roles.messages.managementDisabledWith")}
               documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <RolesTable
@@ -299,7 +301,7 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               icon={MdOutlineSecurity}
-              message={`Permissions management is disabled with. See documentation on how to enabled it.`}
+              message={t("settings.permissions.messages.managementDisabledWith")}
               documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <PermissionsTable
@@ -335,7 +337,7 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               icon={KeyIcon}
-              message={`API Keys management is disabled with. See documentation on how to enabled it.`}
+              message={t("settings.apiKeys.messages.managementDisabledWith")}
               documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
             >
               <APIKeysTable
@@ -353,7 +355,7 @@ export default function SettingsPage() {
         } else {
           return (
             <EmptyStateImage
-              message={`SSO management is disabled with. See documentation on how to enabled it.`}
+              message={t("settings.sso.messages.managementDisabledWith")}
               documentationURL={`${docsUrl}/deployment/authentication/overview#authentication-features-comparison`}
               icon={LockClosedIcon}
               imageURL="/sso.png"
@@ -370,19 +372,19 @@ export default function SettingsPage() {
       <TabGroup index={tabIndex} className="flex-grow flex flex-col">
         <TabList>
           <Tab icon={UserGroupIcon} onClick={() => handleTabChange("users")}>
-            Users and Access
+            {t("settings.tabs.usersAndAccess")}
           </Tab>
           <Tab icon={GlobeAltIcon} onClick={() => handleTabChange("webhook")}>
-            Incoming Webhook
+            {t("settings.tabs.incomingWebhook")}
           </Tab>
           <Tab icon={EnvelopeIcon} onClick={() => handleTabChange("smtp")}>
-            SMTP
+            {t("settings.tabs.smtp")}
           </Tab>
           <Tab
             icon={PhotoIcon}
             onClick={() => handleTabChange("provider-images")}
           >
-            Provider Icons
+            {t("settings.tabs.providerImages")}
           </Tab>
         </TabList>
         <TabPanels className="flex-grow overflow-hidden p-px">
@@ -396,37 +398,37 @@ export default function SettingsPage() {
                   icon={UsersIcon}
                   onClick={() => handleUserSubTabChange("users")}
                 >
-                  Users
+                  {t("settings.subTabs.users")}
                 </Tab>
                 <Tab
                   icon={UserGroupIcon}
                   onClick={() => handleUserSubTabChange("groups")}
                 >
-                  Groups
+                  {t("settings.subTabs.groups")}
                 </Tab>
                 <Tab
                   icon={ShieldCheckIcon}
                   onClick={() => handleUserSubTabChange("roles")}
                 >
-                  Roles
+                  {t("settings.subTabs.roles")}
                 </Tab>
                 <Tab
                   icon={LockClosedIcon}
                   onClick={() => handleUserSubTabChange("permissions")}
                 >
-                  Permissions
+                  {t("settings.subTabs.permissions")}
                 </Tab>
                 <Tab
                   icon={KeyIcon}
                   onClick={() => handleUserSubTabChange("api-keys")}
                 >
-                  API Keys
+                  {t("settings.subTabs.apiKeys")}
                 </Tab>
                 <Tab
                   icon={MdOutlineSecurity}
                   onClick={() => handleUserSubTabChange("sso")}
                 >
-                  SSO
+                  {t("settings.subTabs.sso")}
                 </Tab>
               </TabList>
               <TabPanels className="flex-grow overflow-hidden p-px">

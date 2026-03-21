@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { AreaChart } from "@tremor/react";
 import { WidgetData } from "../../types";
@@ -7,6 +8,7 @@ interface GridItemProps {
 }
 
 const GridItem: React.FC<GridItemProps> = ({ item }) => {
+  const { t } = useI18n();
   return (
     <div
       className={
@@ -26,7 +28,7 @@ const GridItem: React.FC<GridItemProps> = ({ item }) => {
           connectNulls
           showLegend={false}
           showTooltip={true}
-          xAxisLabel="Timestamp"
+          xAxisLabel={t("dashboard.timestamp")}
         />
       </div>
     </div>

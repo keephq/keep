@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import ProvidersTiles from "@/app/(keep)/providers/providers-tiles";
 import React, { useEffect, useState } from "react";
@@ -44,6 +45,7 @@ const useFetchProviders = () => {
 };
 
 export default function ProviderHealthPage() {
+  const { t } = useI18n();
   const { providers, isLocalhost, mutate } = useFetchProviders();
 
   if (!providers || providers.length <= 0) {
@@ -54,7 +56,7 @@ export default function ProviderHealthPage() {
     <>
       <HealthPageBanner />
       <ProvidersTiles
-        title="Providers"
+        title={t("health.title")}
         providers={providers}
         isLocalhost={isLocalhost}
         isHealthCheck={true}

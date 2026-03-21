@@ -12,6 +12,7 @@ import {
 } from "@tremor/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { Role } from "@/app/(keep)/settings/models";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface RolesTableProps {
   roles: Role[];
@@ -26,6 +27,7 @@ export function RolesTable({
   onDeleteRole,
   isDisabled = false,
 }: RolesTableProps) {
+  const { t } = useI18n();
   return (
     <Table>
       <TableHead>

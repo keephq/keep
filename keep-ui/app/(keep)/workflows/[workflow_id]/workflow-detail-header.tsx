@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { useWorkflowDetail } from "@/entities/workflows/model/useWorkflowDetail";
 import { Workflow } from "@/shared/api/workflows";
@@ -13,6 +14,7 @@ export default function WorkflowDetailHeader({
   workflowId: string;
   initialData?: Workflow;
 }) {
+  const { t } = useI18n();
   const { workflow, error } = useWorkflowDetail(workflow_id, null, {
     fallbackData: initialData,
   });
@@ -21,7 +23,7 @@ export default function WorkflowDetailHeader({
     useWorkflowRun(workflow as Workflow);
 
   if (error) {
-    return <div>Error loading workflow</div>;
+    return <div>{t("workflows.errorLoading")}</div>;
   }
 
   if (!workflow) {
@@ -72,7 +74,7 @@ export default function WorkflowDetailHeader({
               tooltip={message}
               data-testid="wf-run-now-button"
             >
-              {isRunning ? "Running..." : "Run now"}
+              {isRunning ? t("workflows.running") : t("workflows.runNow")}
             </Button>
           )}
         </div>

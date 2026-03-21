@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { MarkerType } from "@xyflow/react";
 
 export const nodeWidth = 220;

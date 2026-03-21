@@ -37,6 +37,7 @@ import { v4 as uuidV4 } from "uuid";
 import { PaginationState } from "@/features/filter/pagination";
 import { CreateWorkflowModal } from "./create-workflow-modal";
 import { UploadWorkflowsModal } from "./upload-workflows-modal";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -48,6 +49,7 @@ export function ExistingWorkflowsState({
 }: {
   initialFacetsData?: InitialFacetsData;
 }) {
+  const { t } = useI18n();
   const [isUploadWorkflowsModalOpen, setIsUploadWorkflowsModalOpen] =
     useState(false);
   const [isCreateWorkflowModalOpen, setIsCreateWorkflowModalOpen] =
@@ -150,18 +152,18 @@ export function ExistingWorkflowsState({
         renderOptionLabel: (facetOption) => {
           switch (facetOption.value) {
             case "success": {
-              return "Success";
+              return t("workflows.filters.statusOptions.success");
             }
             case "error": {
-              return "Error";
+              return t("workflows.filters.statusOptions.error");
             }
             case "in_progress": {
-              return "In progress";
+              return t("workflows.filters.statusOptions.inProgress");
             }
             case "":
             case null:
             case undefined: {
-              return "Not run yet";
+              return t("workflows.filters.statusOptions.providersNotConfigured");
             }
             default: {
               return facetOption.value;
@@ -169,22 +171,22 @@ export function ExistingWorkflowsState({
           }
         },
       },
-      ["Created by"]: {
+      [t("workflows.filters.createdBy")]: {
         renderOptionIcon: (facetOption) => (
           <UserStatefulAvatar email={facetOption.display_name} size="xs" />
         ),
         renderOptionLabel: (facetOption) => {
           if (facetOption.display_name === "null") {
-            return "Not assigned";
+            return t("workflows.filters.notAssigned");
           }
           return <AssigneeLabel email={facetOption.display_name} />;
         },
       },
-      ["Enabling status"]: {
+      [t("workflows.filters.enablingStatus")]: {
         renderOptionLabel: (facetOption) =>
           ["true", "1"].includes(facetOption.display_name.toLocaleLowerCase())
-            ? "Disabled"
-            : "Enabled",
+            ? t("workflows.filters.disabled")
+            : t("workflows.filters.enabled"),
       },
     };
   }, []);
@@ -195,7 +197,7 @@ export function ExistingWorkflowsState({
         <div className="flex items-center h-full w-full">
           <div className="flex flex-col justify-center items-center w-full">
             <EmptyStateCard
-              title="No workflows to display matching your filter"
+              title={t("workflows.emptyStates.noMatchingFilter")}
               icon={FunnelIcon}
             >
               <Button
@@ -203,7 +205,7 @@ export function ExistingWorkflowsState({
                 variant="secondary"
                 onClick={() => setClearFiltersToken(uuidV4())}
               >
-                Reset filter
+                {t("workflows.emptyStates.resetFilter")}
               </Button>
             </EmptyStateCard>
           </div>
@@ -218,7 +220,7 @@ export function ExistingWorkflowsState({
         <div className="flex items-center h-full w-full">
           <div className="flex flex-col justify-center items-center w-full">
             <EmptyStateCard
-              title="No workflows to display matching your search"
+              title={t("workflows.emptyStates.noMatchingSearch")}
               icon={MagnifyingGlassIcon}
             >
               <Button
@@ -226,7 +228,7 @@ export function ExistingWorkflowsState({
                 variant="secondary"
                 onClick={() => setSearchedValue(null)}
               >
-                Clear search
+                {t("workflows.emptyStates.clearSearch")}
               </Button>
             </EmptyStateCard>
           </div>
@@ -261,9 +263,9 @@ export function ExistingWorkflowsState({
         <div className="flex flex-col gap-6">
           <div className="flex justify-between items-end">
             <div>
-              <PageTitle>Workflows</PageTitle>
+              <PageTitle>{t("workflows.title")}</PageTitle>
               <PageSubtitle>
-                Automate alert management with workflows
+                {t("workflows.subtitle")}
               </PageSubtitle>
             </div>
             <div className="flex gap-2">
@@ -277,7 +279,7 @@ export function ExistingWorkflowsState({
                 icon={ArrowUpOnSquareStackIcon}
                 id="uploadWorkflowButton"
               >
-                Upload Workflows
+                {t("workflows.actions.uploadWorkflows")}
               </Button>
               <Button
                 color="orange"
@@ -286,7 +288,7 @@ export function ExistingWorkflowsState({
                 onClick={() => setIsCreateWorkflowModalOpen(true)}
                 icon={PlusIcon}
               >
-                Create Workflow
+                {t("workflows.actions.createWorkflow")}
               </Button>
             </div>
           </div>
@@ -296,7 +298,7 @@ export function ExistingWorkflowsState({
             <div className="flex flex-col gap-6">
               <SearchInput
                 className="flex-1"
-                placeholder="Search workflows"
+                placeholder={t("workflows.searchPlaceholder")}
                 value={searchedValue as string}
                 onValueChange={setSearchedValue}
               />

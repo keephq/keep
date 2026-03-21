@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import type { FC } from "react";
 import { MultiSelect, MultiSelectItem } from "@tremor/react";
 import { TagIcon } from "@heroicons/react/20/solid";

@@ -9,6 +9,7 @@ import { AuditEvent } from "@/entities/alerts/model";
 import { useUsers } from "@/entities/users/model/useUsers";
 import { extractTaggedUsers } from "../lib/extractTaggedUsers";
 import { IncidentCommentInput } from "./IncidentCommentInput.dynamic";
+import { useTranslations } from "next-intl";
 
 /**
  * Component for adding comments to an incident with user mention capability
@@ -20,6 +21,7 @@ export function IncidentActivityComment({
   incident: IncidentDto;
   mutator: KeyedMutator<AuditEvent[]>;
 }) {
+  const t = useTranslations("incidents");
   const [comment, setComment] = useState("");
 
   const api = useApi();
@@ -33,13 +35,13 @@ export function IncidentActivityComment({
         comment,
         tagged_users: extractedTaggedUsers,
       });
-      toast.success("Comment added!", { position: "top-right" });
+      toast.success(t("messages.commentAdded"), { position: "top-right" });
       setComment("");
       mutator();
     } catch (error) {
-      showErrorToast(error, "Failed to add comment");
+      showErrorToast(error, t("messages.failedToAddComment"));
     }
-  }, [api, incident.id, incident.status, comment, mutator]);
+  }, [api, incident.id, incident.status, comment, mutator, t]);
 
   return (
     <div className="border border-tremor-border rounded-tremor-default shadow-tremor-input flex flex-col">
@@ -47,7 +49,7 @@ export function IncidentActivityComment({
         value={comment}
         onValueChange={setComment}
         users={users}
-        placeholder="Add a comment..."
+        placeholder={t("messages.addCommentPlaceholder")}
         className="min-h-11"
       />
 
@@ -58,7 +60,7 @@ export function IncidentActivityComment({
           disabled={!comment}
           onClick={onSubmit}
         >
-          Comment
+          {t("actions.comment")}
         </Button>
       </div>
     </div>

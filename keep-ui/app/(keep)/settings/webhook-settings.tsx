@@ -26,6 +26,7 @@ import { PageTitle } from "@/shared/ui";
 import { MonacoEditor } from "@/shared/ui";
 import { Link } from "@/components/ui/Link";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Webhook {
   webhookApi: string;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export default function WebhookSettings({ selectedTab }: Props) {
+  const { t } = useI18n();
   const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
 
   const api = useApi();
@@ -54,11 +56,11 @@ export default function WebhookSettings({ selectedTab }: Props) {
     return (
       <Callout
         className="mt-4"
-        title="Error"
+        title={t("webhook.loadingError")}
         icon={ExclamationCircleIcon}
         color="rose"
       >
-        Failed to load webhook settings.
+        {t("webhook.loadingFailed")}
         <br></br>
         <br></br>
         {error.message}
@@ -169,17 +171,17 @@ req.end();
 
     try {
       await navigator.clipboard.writeText(currentCode.code);
-      showSuccessToast("Code copied to clipboard!");
+      showSuccessToast(t("webhook.copiedToClipboard"));
     } catch (err) {
       showErrorToast(
         err,
         <p>
-          Failed to copy code. Please check your browser permissions.{" "}
+          {t("webhook.copyFailed")} {t("webhook.copyFailedDescription")}{" "}
           <Link
             target="_blank"
             href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
           >
-            Learn more
+            {t("webhook.learnMore")}
           </Link>
         </p>
       );
@@ -189,14 +191,14 @@ req.end();
   return (
     <div className="flex flex-col gap-4">
       <header>
-        <PageTitle>Webhook Settings</PageTitle>
-        <PageSubtitle>View your tenant webhook settings</PageSubtitle>
+        <PageTitle>{t("settings.webhook.title")}</PageTitle>
+        <PageSubtitle>{t("webhook.subtitle")}</PageSubtitle>
       </header>
       <Card>
         <div className="flex divide-x">
           <div className="flex-1 basis-4/12 pr-2 flex flex-col gap-y-2">
-            <Title>URL: {data.webhookApi}</Title>
-            <Subtitle>API Key: {data.apiKey}</Subtitle>
+            <Title>{t("webhook.url")} {data.webhookApi}</Title>
+            <Subtitle>{t("webhook.apiKey")} {data.apiKey}</Subtitle>
             <div>
               <Button
                 icon={PlayIcon}
@@ -204,7 +206,7 @@ req.end();
                 onClick={tryNow}
                 id="tooltip-select-0"
               >
-                Click to create an example Alert
+                {t("webhook.createExampleAlert")}
               </Button>
             </div>
           </div>
@@ -226,7 +228,7 @@ req.end();
                 color="orange"
                 onClick={onCopyCode}
               >
-                Copy code
+                {t("webhook.copyCode")}
               </Button>
             </div>
             <TabPanels>

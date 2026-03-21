@@ -38,6 +38,7 @@ import { showErrorToast, Input, KeepLoader } from "@/shared/ui";
 import { PlusIcon, MinusIcon } from "@heroicons/react/20/solid";
 import { MonacoEditor } from "@/shared/ui";
 import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   editRuleId: number | null;
@@ -48,6 +49,7 @@ export default function CreateOrEditMapping({
   editRuleId,
   editCallback,
 }: Props) {
+  const { t } = useI18n();
   const api = useApi();
   const { mutate } = useMappings();
   const [tabIndex, setTabIndex] = useState<number>(0);
@@ -198,9 +200,9 @@ export default function CreateOrEditMapping({
       });
       exitEditOrCreateMode();
       mutate();
-      toast.success("Mapping created successfully");
+      toast.success(t("rules.mapping.messages.createSuccess"));
     } catch (error) {
-      showErrorToast(error, "Failed to create mapping");
+      showErrorToast(error, t("rules.mapping.messages.createFailed"));
     }
   };
 
@@ -223,9 +225,9 @@ export default function CreateOrEditMapping({
       });
       exitEditOrCreateMode();
       mutate();
-      toast.success("Mapping updated successfully");
+      toast.success(t("rules.mapping.messages.updateSuccess"));
     } catch (error) {
-      showErrorToast(error, "Failed to update mapping");
+      showErrorToast(error, t("rules.mapping.messages.updateFailed"));
     }
   };
 
@@ -269,7 +271,7 @@ export default function CreateOrEditMapping({
   };
 
   if (editRuleId !== null && isLoadingEditRule) {
-    return <KeepLoader loadingText="Loading mapping rule..." />;
+    return <KeepLoader loadingText={t("rules.mapping.messages.loadingRule")} />;
   }
 
   return (
@@ -280,10 +282,10 @@ export default function CreateOrEditMapping({
       <div className="mt-2.5 flex space-x-4 items-center">
         <div className="flex-1">
           <Text>
-            Name<span className="text-red-500 text-xs">*</span>
+            {t("rules.mapping.form.name")}<span className="text-red-500 text-xs">*</span>
           </Text>
           <TextInput
-            placeholder="Map Name"
+            placeholder={t("rules.mapping.form.placeholders.mapName")}
             required={true}
             value={mapName}
             onValueChange={setMapName}
@@ -291,16 +293,16 @@ export default function CreateOrEditMapping({
         </div>
         <div className="flex-1/5">
           <Text>
-            Priority
+            {t("rules.mapping.form.priority")}
             <Icon
               icon={InformationCircleIcon}
               size="xs"
               color="gray"
-              tooltip="Higher priority will be executed first"
+              tooltip={t("rules.mapping.form.priorityTooltip")}
             />
           </Text>
           <NumberInput
-            placeholder="Priority"
+            placeholder={t("rules.mapping.form.placeholders.priority")}
             required={true}
             value={priority}
             onValueChange={setPriority}
@@ -310,9 +312,9 @@ export default function CreateOrEditMapping({
         </div>
       </div>
       <div className="mt-2.5">
-        <Text>Description</Text>
+        <Text>{t("rules.mapping.form.description")}</Text>
         <Textarea
-          placeholder="Map Description"
+          placeholder={t("rules.mapping.form.placeholders.mapDescription")}
           value={mapDescription}
           onValueChange={setMapDescription}
         />
@@ -324,7 +326,7 @@ export default function CreateOrEditMapping({
           onIndexChange={(index) => updateMappingType(index)}
         >
           <TabList>
-            <Tab>CSV</Tab>
+            <Tab>{t("rules.mapping.form.csv")}</Tab>
             <Tab
               disabled={!topologyData || topologyData.length === 0}
               className={`${
@@ -333,7 +335,7 @@ export default function CreateOrEditMapping({
                   : ""
               }`}
             >
-              Topology
+              {t("rules.mapping.form.topology")}
             </Tab>
           </TabList>
           <TabPanels>
@@ -341,8 +343,8 @@ export default function CreateOrEditMapping({
               {mappingType === "csv" && (
                 <TabGroup index={csvTabIndex} onIndexChange={setCsvTabIndex}>
                   <TabList>
-                    <Tab>From File</Tab>
-                    <Tab>From Text</Tab>
+                    <Tab>{t("rules.mapping.form.fromFile")}</Tab>
+                    <Tab>{t("rules.mapping.form.fromText")}</Tab>
                   </TabList>
                   <TabPanels>
                     <TabPanel>
@@ -355,7 +357,7 @@ export default function CreateOrEditMapping({
                       />
                       {!parsedData && (
                         <Text className="text-xs text-red-500">
-                          {!editMode ? "* Upload a CSV file to begin" : ""}
+                          {!editMode ? t("rules.mapping.form.uploadRequired") : ""}
                         </Text>
                       )}
                     </TabPanel>
@@ -379,12 +381,12 @@ export default function CreateOrEditMapping({
                           onClick={processCsvText}
                           disabled={!csvText.trim()}
                         >
-                          Process CSV
+                          {t("rules.mapping.form.processCsv")}
                         </Button>
                         {!parsedData && (
                           <Text className="text-xs text-red-500">
                             {!editMode
-                              ? "* Enter and process CSV data to begin"
+                              ? t("rules.mapping.form.enterProcessCsv")
                               : ""}
                           </Text>
                         )}
@@ -401,9 +403,9 @@ export default function CreateOrEditMapping({
 
       {parsedData && mappingType !== "topology" && (
         <div className="mt-4">
-          <Badge color="green">CSV Data Loaded Successfully</Badge>
+          <Badge color="green">{t("rules.mapping.form.csvDataLoaded")}</Badge>
           <Text className="text-xs text-gray-500 mt-1">
-            {parsedData.length} rows and {attributes.length} columns found
+            {parsedData.length} {t("common.labels.rows")} {attributes.length} {t("rules.mapping.form.rowsColumnsFound")}
           </Text>
         </div>
       )}
@@ -419,27 +421,27 @@ export default function CreateOrEditMapping({
                 checked={isMultiLevel}
                 onChange={setIsMultiLevel}
               />
-              <Text>Enable Multi-level Mapping</Text>
+              <Text>{t("rules.mapping.form.enableMultiLevel")}</Text>
             </div>
 
             {isMultiLevel && (
               <div className="mt-2.5 space-y-2">
                 <div>
                   <Text>
-                    New Property Name
+                    {t("rules.mapping.form.newPropertyName")}
                     <span className="text-red-500 text-xs">*</span>
                   </Text>
                   <TextInput
-                    placeholder="Enter property name"
+                    placeholder={t("rules.mapping.form.placeholders.propertyName")}
                     required={true}
                     value={newPropertyName}
                     onValueChange={setNewPropertyName}
                   />
                 </div>
                 <div>
-                  <Text>Prefix to Remove</Text>
+                  <Text>{t("rules.mapping.form.prefixToRemove")}</Text>
                   <TextInput
-                    placeholder="Enter prefix to remove from keys (optional)"
+                    placeholder={t("rules.mapping.form.placeholders.prefixToRemove")}
                     value={prefixToRemove}
                     onValueChange={setPrefixToRemove}
                   />
@@ -449,13 +451,12 @@ export default function CreateOrEditMapping({
           </div>
         )}
 
-      <Subtitle className="mt-2.5">Mapping Configuration</Subtitle>
+      <Subtitle className="mt-2.5">{t("rules.mapping.form.mappingConfiguration")}</Subtitle>
       <div className="mt-2.5">
-        If alert will match the atributes, it will be enriched with the rest of
-        the fields{" "}
+        {t("rules.mapping.form.enrichmentDescription")}
         {mappingType === "csv"
-          ? "from matched row in the CSV."
-          : "from matching node in the topology."}
+          ? t("rules.mapping.form.fromCsvRow")
+          : t("rules.mapping.form.fromTopologyNode")}
         <div className="flex flex-col gap-4 mt-2">
           {attributeGroups.map((group, index) => (
             <div key={index} className="flex items-center space-x-2">
@@ -465,7 +466,7 @@ export default function CreateOrEditMapping({
                 }
                 value={group}
                 placeholder={
-                  isMultiLevel ? "Select Single Attribute" : "Select Attributes"
+                  isMultiLevel ? t("rules.mapping.form.placeholders.selectSingleAttribute") : t("rules.mapping.form.placeholders.selectAttributes")
                 }
                 className="max-w-96"
               >
@@ -511,7 +512,7 @@ export default function CreateOrEditMapping({
         </div>
       </div>
       <div className="mt-2.5">
-        <Text>Enriched with</Text>
+        <Text>{t("rules.mapping.form.enrichedWith")}</Text>
         <div className="flex flex-col gap-1 py-1">
           {attributeGroups.flat().length === 0 ? (
             <Badge color="gray">...</Badge>
@@ -536,7 +537,7 @@ export default function CreateOrEditMapping({
           variant="secondary"
           onClick={exitEditOrCreateMode}
         >
-          Cancel
+          {t("common.actions.cancel")}
         </Button>
 
         <Button
@@ -549,7 +550,7 @@ export default function CreateOrEditMapping({
             (isMultiLevel && !newPropertyName)
           }
         >
-          {editMode ? "Update" : "Create"}
+          {editMode ? t("common.actions.update") : t("common.actions.create")}
         </Button>
       </div>
     </form>

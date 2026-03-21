@@ -18,8 +18,10 @@ import { useDashboards } from "utils/hooks/useDashboards";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { DashboardLink } from "./DashboardLink";
+import { useTranslations } from "next-intl";
 
 export const DashboardLinks = () => {
+  const t = useTranslations("dashboard");
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
   const api = useApi();
   const router = useRouter();
@@ -43,7 +45,7 @@ export const DashboardLinks = () => {
 
   const deleteDashboard = async (id: string) => {
     const isDeleteConfirmed = confirm(
-      "You are about to delete this dashboard. Are you sure?"
+      t("messages.confirmDelete", { defaultValue: "您即将删除此仪表盘。确定要继续吗？" })
     );
     if (isDeleteConfirmed) {
       try {
@@ -88,7 +90,7 @@ export const DashboardLinks = () => {
           <>
             <div className="flex justify-between items-center w-full">
               <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                Dashboards
+                {t("title")}
               </Subtitle>
               <div className="flex items-center">
                 <Badge color="orange" size="xs" className="ml-2 mr-2">
@@ -128,7 +130,7 @@ export const DashboardLinks = () => {
               ))
             ) : (
               <Text className="text-xs max-w-[200px] px-2">
-                Dashboards will appear here when saved.
+                {t("messages.noDashboards", { defaultValue: "保存后的仪表盘将显示在这里。" })}
               </Text>
             )}
           </SortableContext>
@@ -142,7 +144,7 @@ export const DashboardLinks = () => {
           onClick={handleCreateDashboard}
           icon={PlusIcon}
         >
-          Add Dashboard
+          {t("addDashboard", { defaultValue: "添加仪表盘" })}
         </Button>
       </Disclosure.Panel>
     </Disclosure>

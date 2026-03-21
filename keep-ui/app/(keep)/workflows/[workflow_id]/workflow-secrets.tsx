@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useState, useEffect } from "react";
 import { Card } from "@tremor/react";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui";
 import { Input } from "@/shared/ui";
 
 const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
+  const { t } = useI18n();
   const { getSecrets, error, addOrUpdateSecret, deleteSecret } =
     useWorkflowSecrets(workflowId);
   const [newSecret, setNewSecret] = useState({ name: "", value: "" });
@@ -24,7 +26,7 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
 
   const handleDeleteSecret = async (secretName: string) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete the secret "${secretName}"?`
+      t("workflows.secrets.confirmDelete", { secretName })
     );
     if (!confirmed) return;
     await deleteSecret(secretName);
@@ -41,14 +43,14 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
   const columns: DisplayColumnDef<{ name: string; value: string }>[] = [
     {
       id: "name",
-      header: "Name",
+      header: t("workflows.secrets.name"),
       cell: ({ row }) => (
         <code className="bg-gray-100 px-2 py-1 rounded">{`{{ secrets.${row.original.name} }}`}</code>
       ),
     },
     {
       id: "value",
-      header: "Value",
+      header: t("workflows.secrets.value"),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <div
@@ -69,7 +71,7 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: t("workflows.secrets.actions"),
       cell: ({ row }) => (
         <div className="flex gap-2">
           <Button
@@ -96,14 +98,14 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
         <div className="flex gap-4 my-4">
           <Input
             type="text"
-            placeholder="Secret name"
+            placeholder={t("workflows.secrets.secretNamePlaceholder")}
             value={newSecret.name}
             onChange={(e) =>
               setNewSecret((prev) => ({ ...prev, name: e.target.value }))
             }
           />
           <Input
-            placeholder="Secret value"
+            placeholder={t("workflows.secrets.secretValuePlaceholder")}
             value={newSecret.value}
             onChange={(e) =>
               setNewSecret((prev) => ({ ...prev, value: e.target.value }))
@@ -115,7 +117,7 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
             color="orange"
             icon={PlusIcon}
           >
-            Add Secret
+            {t("workflows.secrets.addSecret")}
           </Button>
         </div>
 

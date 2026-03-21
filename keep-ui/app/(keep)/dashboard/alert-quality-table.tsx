@@ -1,4 +1,5 @@
-"use client"; // Add this line at the top to make this a Client Component
+"use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import React, {
   useState,
@@ -7,6 +8,12 @@ import React, {
   SetStateAction,
   useMemo,
 } from "react";
+
+const tabs = [
+  { name: "all", value: "all" },
+  { name: "installed", value: "installed" },
+  { name: "linked", value: "linked" },
+];
 import { GenericTable } from "@/components/table/GenericTable";
 import { useAlertQualityMetrics } from "@/utils/hooks/useAlertQuality";
 import { useProviders } from "@/utils/hooks/useProviders";
@@ -18,18 +25,12 @@ import { AlertKnownKeys } from "@/entities/alerts/model";
 import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 
-const tabs = [
-  { name: "All", value: "all" },
-  { name: "Installed", value: "installed" },
-  { name: "Linked", value: "linked" },
-];
-
-const ALERT_QUALITY_FILTERS = [
+const ALERT_QUALITY_FILTERS = (t: (key: string) => string) => [
   {
     type: "date",
     key: "time_stamp",
     value: "",
-    name: "Last received",
+    name: t("dashboard.lastReceived"),
   },
 ];
 
@@ -42,6 +43,7 @@ const FilterTabs = ({
   setTab: Dispatch<SetStateAction<number>>;
   tab: number;
 }) => {
+  const { t } = useI18n();
   return (
     <div className="max-w-lg space-y-12 pt-6">
       <TabGroup
@@ -52,7 +54,7 @@ const FilterTabs = ({
       >
         <TabList variant="solid" color="black" className="bg-gray-300">
           {tabs.map((tabItem) => (
-            <Tab key={tabItem.value}>{tabItem.name}</Tab>
+            <Tab key={tabItem.value}>{t(`alertQuality.tabs.${tabItem.value}`)}</Tab>
           ))}
         </TabList>
       </TabGroup>
@@ -87,6 +89,7 @@ const QualityTable = ({
   setFields: (fields: string | string[] | Record<string, string>) => void;
   fieldsValue: string | string[] | Record<string, string>;
 }) => {
+  const { t } = useI18n();
   const [pagination, setPagination] = useState<Pagination>({
     limit: 10,
     offset: 0,
@@ -95,7 +98,7 @@ const QualityTable = ({
     type: "select",
     key: "fields",
     value: isDashBoard ? fieldsValue : "",
-    name: "Field",
+    name: t("dashboard.alertQuality.field"),
     options: AlertKnownKeys.map((key) => ({ value: key, label: key })),
     // only_one: true,
     searchParamsNotNeed: isDashBoard,
@@ -292,7 +295,7 @@ const QualityTable = ({
       <div>
         {!isDashBoard && (
           <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-            Alert Quality Dashboard
+            {t("dashboard.alertQuality.title")}
           </h1>
         )}
         <div className="flex items-end mb-4">
@@ -303,7 +306,7 @@ const QualityTable = ({
             filters={
               isDashBoard
                 ? [customFieldFilter]
-                : [...ALERT_QUALITY_FILTERS, customFieldFilter]
+                : [...ALERT_QUALITY_FILTERS(t), customFieldFilter]
             }
           />
         </div>
@@ -337,6 +340,7 @@ const AlertQuality = ({
   };
   setFilters: any;
 }) => {
+  const { t } = useI18n();
   const fieldsValue = filters?.fields || "";
   const { data: providersMeta } = useProviders();
   const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(
@@ -347,11 +351,11 @@ const AlertQuality = ({
     return (
       <Callout
         className="mt-4"
-        title="Error"
+        title={t("common.error")}
         icon={ExclamationCircleIcon}
         color="rose"
       >
-        Failed to load Alert Quality Metrics
+        {t("dashboard.alertQuality.loadFailed")}
       </Callout>
     );
   }

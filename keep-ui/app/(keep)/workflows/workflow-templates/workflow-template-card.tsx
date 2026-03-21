@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { WorkflowSteps } from "../workflows-steps";
 import { WorkflowTemplate } from "@/shared/api/workflows";
 import { Button, Card } from "@tremor/react";
@@ -9,6 +10,7 @@ export const WorkflowTemplateCard: React.FC<{ template: WorkflowTemplate }> = ({
   template,
 }) => {
   const router = useRouter();
+  const { t } = useI18n();
   const handlePreview = (template: WorkflowTemplate) => {
     localStorage.setItem("preview_workflow", JSON.stringify(template));
     router.push(`/workflows/preview/${template.workflow_raw_id}`);
@@ -40,7 +42,7 @@ export const WorkflowTemplateCard: React.FC<{ template: WorkflowTemplate }> = ({
           {!template && <Skeleton className="h-16 w-full mb-2" />}
         </p>
       </div>
-      <div>{template && <Button variant="secondary">Preview</Button>}</div>
+      <div>{template && <Button variant="secondary">{t("workflows.templates.preview")}</Button>}</div>
     </Card>
   );
 };

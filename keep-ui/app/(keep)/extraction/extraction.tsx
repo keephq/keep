@@ -15,8 +15,10 @@ import { Button } from "@tremor/react";
 import SidePanel from "@/components/SidePanel";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { ExportIcon } from "@/components/icons";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function Extraction() {
+  const { t } = useI18n();
   const { data: extractions, isLoading } = useExtractions();
   const [extractionToEdit, setExtractionToEdit] =
     useState<ExtractionRule | null>(null);
@@ -42,9 +44,9 @@ export default function Extraction() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-row items-center justify-between">
         <div>
-          <PageTitle>Extractions</PageTitle>
+          <PageTitle>{t("rules.extraction.title")}</PageTitle>
           <PageSubtitle>
-            Easily extract more attributes from your alerts using Regex
+            {t("rules.extraction.description")}
           </PageSubtitle>
         </div>
         <div>
@@ -55,7 +57,7 @@ export default function Extraction() {
             onClick={() => setIsSidePanelOpen(true)}
             icon={PlusIcon}
           >
-            Create Extraction
+            {t("rules.extraction.addRule")}
           </Button>
         </div>
       </div>
@@ -80,7 +82,7 @@ export default function Extraction() {
                 editCallback={handleSidePanelExit}
               />
             ) : (
-              <EmptyStateCard icon={ExportIcon} title="No extraction rules yet">
+              <EmptyStateCard icon={ExportIcon} title={t("rules.extraction.messages.noRules")}>
                 <Button
                   color="orange"
                   size="md"
@@ -88,7 +90,7 @@ export default function Extraction() {
                   onClick={() => setIsSidePanelOpen(true)}
                   icon={PlusIcon}
                 >
-                  Create Extraction Rule
+                  {t("rules.extraction.addRule")}
                 </Button>
               </EmptyStateCard>
             )}

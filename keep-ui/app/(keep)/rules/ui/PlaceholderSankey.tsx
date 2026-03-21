@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { SVGProps } from "react";
 
 export const PlaceholderSankey = (props: SVGProps<SVGSVGElement>) => (

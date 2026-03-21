@@ -7,6 +7,7 @@ import { Facet } from "./alert-table-facet";
 import Modal from "@/components/ui/Modal";
 import { Table } from "@tanstack/table-core";
 import { FiSearch } from "react-icons/fi";
+import { useTranslations } from "next-intl";
 
 interface AddFacetModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
   onAddFacet,
   existingFacets,
 }) => {
+  const t = useTranslations("alerts");
   const [searchTerm, setSearchTerm] = useState("");
 
   const availableColumns = table
@@ -41,13 +43,13 @@ export const AddFacetModal: React.FC<AddFacetModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Facet"
+      title={t("messages.addNewFacet")}
       className="w-[400px]"
     >
       <div className="p-6">
         <TextInput
           icon={FiSearch}
-          placeholder="Search columns..."
+          placeholder={t("messages.searchColumns")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="mb-4"

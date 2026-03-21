@@ -22,8 +22,10 @@ import GroupsSidebar from "./groups-sidebar";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdGroupAdd } from "react-icons/md";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function GroupsTab() {
+  const { t } = useI18n();
   const api = useApi();
   const {
     data: groups = [],
@@ -88,7 +90,7 @@ export default function GroupsTab() {
     event: React.MouseEvent
   ) => {
     event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this group?")) {
+    if (window.confirm(t("settings.groups.messages.confirmDelete"))) {
       try {
         await api.delete(`/auth/groups/${groupName}`);
 
@@ -104,8 +106,8 @@ export default function GroupsTab() {
     <div className="h-full flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <Title>Groups Management</Title>
-          <Subtitle>Manage user groups</Subtitle>
+          <Title>{t("settings.groups.title")}</Title>
+          <Subtitle>{t("settings.groups.subtitle")}</Subtitle>
         </div>
         <div className="flex space-x-2">
           <Button
@@ -114,12 +116,12 @@ export default function GroupsTab() {
             onClick={handleAddGroupClick}
             icon={MdGroupAdd}
           >
-            Add Group
+            {t("settings.groups.addGroup")}
           </Button>
         </div>
       </div>
       <TextInput
-        placeholder="Search by group name"
+        placeholder={t("settings.groups.searchPlaceholder")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"

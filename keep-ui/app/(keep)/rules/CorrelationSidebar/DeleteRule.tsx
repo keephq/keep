@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@tremor/react";
 import { MouseEvent } from "react";

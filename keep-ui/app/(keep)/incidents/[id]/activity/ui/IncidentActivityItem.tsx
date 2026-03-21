@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { AlertSeverity } from "@/entities/alerts/ui";
 import { AlertDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";

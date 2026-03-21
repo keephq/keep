@@ -1,3 +1,6 @@
+"use client";
+
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { Text } from "@tremor/react";
 import "../../globals.css";
@@ -21,13 +24,13 @@ export const AuthError = ({
   authType,
   authEnvVars,
 }: AuthErrorProps) => {
+  const { t } = useI18n();
+
   const errorMessages: Record<ErrorType, string> = {
-    Configuration:
-      "There was a problem with the authentication setup. It is probably due to a configuration error on the authentication server.\n\nPlease contact the administrator.",
-    AccessDenied: "You don't have permission to access this resource.",
-    Verification:
-      "The verification link has expired or is invalid. Please request a new one.",
-    Default: "An unexpected error occurred. Please try again.",
+    Configuration: t("auth.errors.configurationProblem"),
+    AccessDenied: t("auth.errors.accessDenied"),
+    Verification: t("auth.errors.verificationError"),
+    Default: t("auth.errors.unexpected"),
   };
 
   const getErrorMessage = (errorType: string | null): string => {
@@ -39,8 +42,8 @@ export const AuthError = ({
     <div className="w-full">
       <Text className="text-xl font-bold mb-4 text-center">
         {error === "Configuration"
-          ? "Server Configuration Error"
-          : "Authentication Error"}
+          ? t("auth.errors.configurationError")
+          : t("auth.errors.authenticationError")}
       </Text>
 
       <div className="w-full">

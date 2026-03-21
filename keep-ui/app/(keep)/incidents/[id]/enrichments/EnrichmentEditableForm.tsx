@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, {useState} from "react";
 import {Button} from "@/components/ui";
 import {Icon, TextInput} from "@tremor/react";
@@ -16,6 +17,7 @@ interface EnrichmentEditableFormProps {
 }
 
 export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, children}: EnrichmentEditableFormProps) => {
+  const { t } = useI18n();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newFields, setNewFields] = useState<Record<string, string>>(fields);
@@ -54,7 +56,7 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
       <Button
         variant="light"
         className="text-gray-500 leading-none p-2 rounded-md prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50 transition-opacity duration-100 opacity-0 group-hover:opacity-100"
-        tooltip="Edit"
+        tooltip={t("common.actions.edit")}
         onClick={handleOpenForm}
         icon={() => (
           <Icon
@@ -67,7 +69,7 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
       {(onDelete && some(Object.values(fields))) && <Button
         variant="light"
         className="text-gray-500 leading-none p-2 rounded-md prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50 transition-opacity duration-100 opacity-0 group-hover:opacity-100"
-        tooltip="Un-enrich"
+        tooltip={t("incidents.enrichments.unenrich")}
         onClick={() => onDelete(Object.keys(fields))}
         icon={() => (
           <Icon
@@ -100,7 +102,7 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
           className="leading-none p-2 rounded-md"
           variant="secondary"
           disabled={!some(Object.values(newFields))}
-          tooltip="Save"
+          tooltip={t("common.actions.save")}
           icon={() => <Icon
             icon={FiSave}
             className={`w-4 h-4 text-orange-500`}
@@ -110,7 +112,7 @@ export const EnrichmentEditableForm = ({fields, title, onUpdate, onDelete, child
         <Button
           className="leading-none p-2 rounded-md"
           variant="destructive"
-          tooltip="Cancel"
+          tooltip={t("common.actions.cancel")}
           icon={FiX}
           onClick={handleCancel}
         />

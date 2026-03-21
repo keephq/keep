@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { ReactNode } from "react";
 import { IncidentDto } from "@/entities/incidents/model";

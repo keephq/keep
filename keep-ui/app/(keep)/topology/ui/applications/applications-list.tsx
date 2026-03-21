@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { ApplicationCard } from "./application-card";
 import { Button } from "@/components/ui";
@@ -33,6 +34,7 @@ export function ApplicationsList({
 }: {
   applications?: TopologyApplication[];
 }) {
+  const { t } = useI18n();
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications({
       initialData: initialApplications,
@@ -120,10 +122,9 @@ export function ApplicationsList({
         <>
           <div className="flex w-full items-center justify-between mb-4">
             <div>
-              <Title>Applications</Title>
+              <Title>{t("topology.applications.title")}</Title>
               <Subtitle>
-                Group services that work together into applications for easier
-                management and monitoring
+                {t("topology.applications.description")}
               </Subtitle>
             </div>
             <div>
@@ -135,7 +136,7 @@ export function ApplicationsList({
                 }}
                 icon={PlusIcon}
               >
-                Add Application
+                {t("topology.applications.addApplication")}
               </Button>
             </div>
           </div>
@@ -154,14 +155,14 @@ export function ApplicationsList({
                         setSelectedObjectId(application.id);
                       }}
                     >
-                      Show on map
+                      {t("topology.applications.showOnMap")}
                     </Button>
                     <Button
                       variant="secondary"
                       color="orange"
                       onClick={() => handleEditApplication(application)}
                     >
-                      Edit
+                      {t("common.actions.edit")}
                     </Button>
                   </div>
                 }

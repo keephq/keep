@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   Accordion,
   AccordionHeader,
@@ -31,12 +32,13 @@ const ProviderFormScopes = ({
   refreshLoading: boolean;
   onRevalidate: () => void;
 }) => {
+  const { t } = useI18n();
   var invalidScopesPresent = Object.values(validatedScopes).some(
     (scope) => scope !== true && scope !== undefined
   );
   return (
     <Accordion className="mb-5" defaultOpen={true}>
-      <AccordionHeader>Scopes</AccordionHeader>
+      <AccordionHeader>{t("providers.scopes.title")}</AccordionHeader>
       <AccordionBody className="overflow-hidden">
         {provider.installed && (
           <Button
@@ -47,25 +49,24 @@ const ProviderFormScopes = ({
             variant="secondary"
             loading={refreshLoading}
           >
-            Validate Scopes
+            {t("providers.scopes.validate")}
           </Button>
         )}
         {provider.installed && invalidScopesPresent && (
           <Callout
-            title="Installed With Missing Scopes"
+            title={t("providers.scopes.installedWithMissing")}
             className="mt-5"
             color="gray"
           >
-            Provider is installed. Ignore missing scopes if you don&apos;t need
-            related features.
+            {t("providers.scopes.missingScopesMessage")}
           </Callout>
         )}
         <Table className="mt-5">
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell>Last Status</TableHeaderCell>
-              <TableHeaderCell>Description</TableHeaderCell>
+              <TableHeaderCell>{t("providers.scopes.name")}</TableHeaderCell>
+              <TableHeaderCell>{t("providers.scopes.lastStatus")}</TableHeaderCell>
+              <TableHeaderCell>{t("providers.scopes.description")}</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -105,9 +106,9 @@ const ProviderFormScopes = ({
                         }`}
                       >
                         {validatedScopes[scope.name] === true
-                          ? "Valid"
+                          ? t("providers.scopes.valid")
                           : validatedScopes[scope.name] === undefined
-                          ? "Not checked"
+                          ? t("providers.scopes.notChecked")
                           : validatedScopes[scope.name]}
                       </Badge>
                     </TableCell>
@@ -120,7 +121,7 @@ const ProviderFormScopes = ({
                             variant="simple"
                             color="gray"
                             size="sm"
-                            tooltip="Mandatory for webhook installation"
+                            tooltip={t("providers.scopes.mandatoryForWebhook")}
                           />
                         ) : null}
                       </div>

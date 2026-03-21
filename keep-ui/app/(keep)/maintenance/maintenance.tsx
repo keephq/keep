@@ -10,12 +10,14 @@ import MaintenanceRulesTable from "./maintenance-rules-table";
 import { useRouter } from "next/navigation";
 import { EmptyStateCard } from "@/shared/ui";
 import { FaVolumeMute } from "react-icons/fa";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function Maintenance() {
   const { data: maintenanceRules, isLoading } = useMaintenanceRules();
   const [maintenanceToEdit, setMaintenanceToEdit] =
     useState<MaintenanceRule | null>(null);
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <Card className="p-2">
@@ -42,8 +44,8 @@ export default function Maintenance() {
               <EmptyStateCard
                 noCard
                 icon={FaVolumeMute}
-                title="No maintenance rules yet"
-                description="Create a new maintenance rule using the maintenance rules wizard"
+                title={t("maintenance.messages.noRules")}
+                description={t("maintenance.messages.noRulesDescription")}
               />
             </div>
           )}

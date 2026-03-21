@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   Badge,
   Button,
@@ -32,6 +33,7 @@ type CorrelationTableProps = {
 };
 
 export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -48,7 +50,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
   const CORRELATION_TABLE_COLS = useMemo(
     () => [
       columnHelper.accessor("name", {
-        header: "Correlation Name",
+        header: t("correlation.table.correlationName"),
         cell: (context) => {
           return (
             <div
@@ -61,7 +63,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         },
       }),
       columnHelper.accessor("incident_name_template", {
-        header: "Incident Name Template",
+        header: t("correlation.table.incidentNameTemplate"),
         cell: (context) => {
           const template = context.getValue();
           return template ? (
@@ -73,19 +75,19 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
               }
             </Badge>
           ) : (
-            <Badge color="gray">default</Badge>
+            <Badge color="gray">{t("common.labels.default")}</Badge>
           );
         },
       }),
       columnHelper.accessor("incident_prefix", {
-        header: "Incident Prefix",
+        header: t("correlation.table.incidentPrefix"),
         cell: (context) =>
           context.getValue() && (
             <Badge color="orange">{context.getValue()}</Badge>
           ),
       }),
       columnHelper.accessor("definition_cel", {
-        header: "Description",
+        header: t("common.labels.description"),
         cell: (context) => {
           let cel = context.getValue();
 
@@ -102,13 +104,13 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         },
       }),
       columnHelper.accessor("grouping_criteria", {
-        header: "Grouped by",
+        header: t("correlation.table.groupedBy"),
         cell: (context) => (
           <GroupedByCell fields={context.getValue()}></GroupedByCell>
         ),
       }),
       columnHelper.accessor("incidents", {
-        header: "Incidents",
+        header: t("correlation.table.incidents"),
         cell: (context) => context.getValue(),
       }),
       columnHelper.display({
@@ -131,10 +133,10 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       <div className="flex items-center justify-between">
         <div>
           <PageTitle>
-            Correlations <span className="text-gray-400">({rules.length})</span>
+            {t("rules.correlation.title")} <span className="text-gray-400">({rules.length})</span>
           </PageTitle>
           <PageSubtitle>
-            Manually setup flexible rules for alert to incident correlation
+            {t("rules.correlation.subtitle")}
           </PageSubtitle>
         </div>
         <Button
@@ -144,7 +146,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           onClick={() => setIsRuleCreation(true)}
           icon={PlusIcon}
         >
-          Create correlation
+          {t("rules.correlation.addRule")}
         </Button>
       </div>
       <Card className="p-0">

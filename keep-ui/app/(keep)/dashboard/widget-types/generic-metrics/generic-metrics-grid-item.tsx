@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useEffect, useState } from "react";
 import { WidgetData } from "../../types";
 import AlertQuality from "@/app/(keep)/dashboard/alert-quality-table";

@@ -11,8 +11,10 @@ import { EmptyStateCard, PageSubtitle, PageTitle } from "@/shared/ui";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { Mapping as MappingIcon } from "components/icons";
 import { Drawer } from "@/shared/ui/Drawer";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function Mapping() {
+  const { t } = useI18n();
   const { data: mappings, isLoading } = useMappings();
 
   // We use this state to pass the rule that needs to be edited between the CreateNewMapping and the RulesTable Component.
@@ -39,9 +41,9 @@ export default function Mapping() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-row items-center justify-between">
         <div>
-          <PageTitle>Mapping</PageTitle>
+          <PageTitle>{t("rules.mapping.title")}</PageTitle>
           <PageSubtitle>
-            Enrich alerts with more data from Topology, CSV, JSON and YAMLs
+            {t("rules.mapping.description")}
           </PageSubtitle>
         </div>
         <div>
@@ -52,7 +54,7 @@ export default function Mapping() {
             onClick={() => setIsSidePanelOpen(true)}
             icon={PlusIcon}
           >
-            Create Mapping
+            {t("rules.mapping.addRule")}
           </Button>
         </div>
       </div>
@@ -62,9 +64,9 @@ export default function Mapping() {
           onClose={() => handleSidePanelExit(null)}
         >
           <div className="p-4">
-            <h2 className="text-lg">Configure</h2>
+            <h2 className="text-lg">{t("rules.mapping.configure")}</h2>
             <p className="text-slate-400">
-              Add dynamic context to your alerts with mapping rules
+              {t("rules.mapping.configureDescription")}
             </p>
             <CreateOrEditMapping
               editRuleId={editRule?.id ?? null}
@@ -84,8 +86,8 @@ export default function Mapping() {
           ) : (
             <EmptyStateCard
               icon={() => <MappingIcon className="!size-8" />}
-              title="No mapping rules yet"
-              description="Create a new mapping rule using the mapping rules wizard"
+              title={t("rules.mapping.messages.noRules")}
+              description={t("rules.mapping.messages.noRulesDescription")}
             >
               <Button
                 color="orange"
@@ -94,7 +96,7 @@ export default function Mapping() {
                 onClick={() => setIsSidePanelOpen(true)}
                 icon={PlusIcon}
               >
-                Create Mapping
+                {t("rules.mapping.addRule")}
               </Button>
             </EmptyStateCard>
           )}

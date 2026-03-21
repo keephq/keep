@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import type { IncidentDto } from "@/entities/incidents/model";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
@@ -46,6 +47,7 @@ interface Pagination {
 const columnHelper = createColumnHelper<WorkflowExecutionDetail>();
 
 export default function IncidentWorkflowTable({ incident }: Props) {
+  const { t } = useI18n();
   const [workflowsPagination, setWorkflowsPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
@@ -100,20 +102,20 @@ export default function IncidentWorkflowTable({ incident }: Props) {
 
   const columns = [
     columnHelper.accessor("workflow_name", {
-      header: "Name",
-      cell: (info) => info.getValue() || "Unnamed Workflow",
+      header: t("incidents.workflows.name"),
+      cell: (info) => info.getValue() || t("incidents.workflows.unnamed"),
     }),
     columnHelper.accessor("status", {
-      header: "Status",
+      header: t("incidents.workflows.status"),
       cell: (info) => getIconForStatusString(info.getValue()),
     }),
     columnHelper.accessor("started", {
-      header: "Start Time",
+      header: t("incidents.workflows.startTime"),
       cell: (info) => new Date(info.getValue()).toLocaleString(),
     }),
     columnHelper.display({
       id: "execution_time",
-      header: "Duration",
+      header: t("incidents.workflows.duration"),
       cell: ({ row }) => {
         const customFormatter = (seconds: number | null) => {
           if (seconds === undefined || seconds === null) {
@@ -140,7 +142,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     }),
     columnHelper.display({
       id: "triggered_by",
-      header: "Trigger",
+      header: t("incidents.workflows.trigger"),
       cell: ({ row }) => {
         const triggered_by = row.original.triggered_by;
         const valueToShow = extractTriggerValue(triggered_by);
@@ -161,7 +163,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     }),
     columnHelper.display({
       id: "triggered_by_details",
-      header: "Trigger Details",
+      header: t("incidents.workflows.triggerDetails"),
       cell: ({ row }) => {
         const triggered_by = row.original.triggered_by;
         const details = extractTriggerDetails(triggered_by);
@@ -201,11 +203,11 @@ export default function IncidentWorkflowTable({ incident }: Props) {
         {!isLoading && (workflows?.items ?? []).length === 0 && (
           <Callout
             className="m-4"
-            title="No Workflows"
+            title={t("incidents.workflows.noWorkflows")}
             icon={ExclamationTriangleIcon}
             color="orange"
           >
-            No workflows have been executed for this incident yet.
+            {t("incidents.workflows.noWorkflowsDescription")}
           </Callout>
         )}
         <Table>

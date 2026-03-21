@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Metadata } from "next";
 import WorkflowDetailPage from "./workflow-detail-page";
 import { getWorkflowWithRedirectSafe } from "@/shared/api/workflows";

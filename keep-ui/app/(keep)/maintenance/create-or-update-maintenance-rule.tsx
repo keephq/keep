@@ -24,6 +24,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { Status } from "@/entities/alerts/model";
 import { capitalize } from "@/utils/helpers";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -41,6 +42,7 @@ export default function CreateOrUpdateMaintenanceRule({
 }: Props) {
   const api = useApi();
   const { mutate } = useMaintenanceRules();
+  const { t } = useI18n();
   const [maintenanceName, setMaintenanceName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [celQuery, setCelQuery] = useState<string>("");
@@ -115,9 +117,9 @@ export default function CreateOrUpdateMaintenanceRule({
       });
       clearForm();
       mutate();
-      toast.success("Maintenance rule created successfully");
+      toast.success(t("maintenance.messages.createSuccess"));
     } catch (error) {
-      showErrorToast(error, "Failed to create maintenance rule");
+      showErrorToast(error, t("maintenance.messages.createFailed"));
     }
   };
 
@@ -140,9 +142,9 @@ export default function CreateOrUpdateMaintenanceRule({
       });
       exitEditMode();
       mutate();
-      toast.success("Maintenance rule updated successfully");
+      toast.success(t("maintenance.messages.updateSuccess"));
     } catch (error) {
-      showErrorToast(error, "Failed to update maintenance rule");
+      showErrorToast(error, t("maintenance.messages.updateFailed"));
     }
   };
 
@@ -156,30 +158,30 @@ export default function CreateOrUpdateMaintenanceRule({
   };
 
   const ignoreText = !suppress
-    ? "Alerts will not show in feed"
-    : "Alerts will show in suppressed status";
+    ? t("maintenance.messages.alertsWillNotShow")
+    : t("maintenance.messages.alertsWillShowSuppressed");
 
   return (
     <form
       className="py-2"
       onSubmit={editMode ? updateMaintenanceRule : addMaintenanceRule}
     >
-      <Subtitle>Maintenance Rule Metadata</Subtitle>
+      <Subtitle>{t("maintenance.metadata")}</Subtitle>
       <div className="mt-2.5">
         <Text>
-          Name<span className="text-red-500 text-xs">*</span>
+          {t("maintenance.labels.name")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
-          placeholder="Maintenance Name"
+          placeholder={t("maintenance.placeholders.name")}
           required={true}
           value={maintenanceName}
           onValueChange={setMaintenanceName}
         />
       </div>
       <div className="mt-2.5">
-        <Text>Description</Text>
+        <Text>{t("maintenance.labels.description")}</Text>
         <Textarea
-          placeholder="Maintenance Description"
+          placeholder={t("maintenance.placeholders.description")}
           value={description}
           onValueChange={setDescription}
         />
@@ -202,7 +204,7 @@ export default function CreateOrUpdateMaintenanceRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          Start At<span className="text-red-500 text-xs">*</span>
+          {t("maintenance.labels.startTime")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <DatePicker
           onChange={(date) => setStartTime(date)}
@@ -218,7 +220,7 @@ export default function CreateOrUpdateMaintenanceRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          End After<span className="text-red-500 text-xs">*</span>
+          {t("maintenance.labels.endTime")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <div className="flex gap-2">
           <NumberInput
@@ -227,14 +229,13 @@ export default function CreateOrUpdateMaintenanceRule({
             min={1}
           />
           <Select value={intervalType} onValueChange={setIntervalType}>
-            <SelectItem value="minutes">Minutes</SelectItem>
-            <SelectItem value="hours">Hours</SelectItem>
-            <SelectItem value="days">Days</SelectItem>
+            <SelectItem value="minutes">{t("maintenance.timeUnits.minutes")}</SelectItem>
+            <SelectItem value="hours">{t("maintenance.timeUnits.hours")}</SelectItem>
+            <SelectItem value="days">{t("maintenance.timeUnits.days")}</SelectItem>
           </Select>
         </div>
         <Text className="text-xs text-red-400">
-          * Please adjust when editing existing maintenance rule, as this is
-          calculated upon submit.
+          * {t("maintenance.messages.adjustDuration")}
         </Text>
       </div>
       <div className="flex items-center space-x-3 mt-2.5 w-[300px] justify-between">
@@ -251,7 +252,7 @@ export default function CreateOrUpdateMaintenanceRule({
           htmlFor="enabledSwitch"
           className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
         >
-          Whether this rule is enabled or not
+          {t("maintenance.messages.enabledTooltip")}
         </label>
         <Switch id="enabledSwitch" checked={enabled} onChange={setEnabled} />
       </div>
@@ -264,7 +265,7 @@ export default function CreateOrUpdateMaintenanceRule({
             variant="secondary"
             onClick={exitEditMode}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
         ) : null}
         <Button
@@ -273,7 +274,7 @@ export default function CreateOrUpdateMaintenanceRule({
           size="xs"
           type="submit"
         >
-          {editMode ? "Update" : "Create"}
+          {editMode ? t("common.actions.update") : t("common.actions.create")}
         </Button>
       </div>
     </form>

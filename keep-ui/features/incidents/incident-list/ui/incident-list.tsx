@@ -52,6 +52,7 @@ import EnhancedDateRangePickerV2, {
 } from "@/components/ui/DateRangePickerV2";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -64,6 +65,7 @@ export function IncidentList({
   initialData?: PaginatedIncidentsDto;
   initialFacetsData?: InitialFacetsData;
 }) {
+  const { t } = useI18n();
   const [incidentsPagination, setIncidentsPagination] =
     useState<PaginationState>({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
@@ -296,10 +298,10 @@ export function IncidentList({
         predictedIncidents &&
         predictedIncidents.items.length > 0 ? (
           <Card className="mt-10 mb-10 flex-grow">
-            <Title>Incident Predictions</Title>
+            <Title>{t("incidents.predictions.title")}</Title>
             <Subtitle>
-              Possible problems predicted by Keep AI & Correlation Rules{" "}
-              <Badge color="orange">Beta</Badge>
+              {t("incidents.predictions.description")}{" "}
+              <Badge color="orange">{t("common.labels.beta")}</Badge>
             </Subtitle>
             <PredictedIncidentsTable
               incidents={predictedIncidents}
@@ -311,8 +313,8 @@ export function IncidentList({
         <div className="h-full flex flex-col gap-5">
           <div className="flex justify-between items-center">
             <div>
-              <PageTitle>Incidents</PageTitle>
-              <PageSubtitle>Group alerts into incidents</PageSubtitle>
+              <PageTitle>{t("incidents.title")}</PageTitle>
+              <PageSubtitle>{t("incidents.subtitle")}</PageSubtitle>
             </div>
 
             <div className="flex gap-2">
@@ -324,7 +326,7 @@ export function IncidentList({
                 variant="primary"
                 onClick={() => setIsFormOpen(true)}
               >
-                Create Incident
+                {t("incidents.actions.createIncident")}
               </Button>
             </div>
           </div>
@@ -357,7 +359,7 @@ export function IncidentList({
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         className="w-[600px]"
-        title="Add Incident"
+        title={t("incidents.actions.addIncident")}
       >
         <CreateOrUpdateIncidentForm
           incidentToEdit={incidentToEdit}

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, {
   ElementType,
   useCallback,
@@ -106,6 +107,7 @@ export function TopologyMap({
   isVisible = true,
   standalone = false,
 }: TopologyMapProps) {
+  const { t } = useI18n();
   const [initiallyFitted, setInitiallyFitted] = useState(false);
 
   const {
@@ -685,8 +687,8 @@ export function TopologyMap({
                     <EmptyStateCard
                       className="mb-20 max-w-3xl min-h-72"
                       icon={TbTopologyRing}
-                      title="No Topology Yet"
-                      description="Start by connecting providers that support topology, import topology data or create a new topology manually"
+                      title={t("topology.messages.noTopologyYet")}
+                      description={t("topology.messages.noTopologyDescription")}
                     >
                       <div className="flex gap-2">
                         <Button
@@ -695,7 +697,7 @@ export function TopologyMap({
                           size="md"
                           onClick={handleImportTopology}
                         >
-                          Import
+                          {t("common.actions.import")}
                         </Button>
                         <Button
                           color="orange"
@@ -705,7 +707,7 @@ export function TopologyMap({
                             router.push("/providers?labels=topology")
                           }
                         >
-                          Connect Providers
+                          {t("topology.messages.connectProviders")}
                         </Button>
                       </div>
                     </EmptyStateCard>

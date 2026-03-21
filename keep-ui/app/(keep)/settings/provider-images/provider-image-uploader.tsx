@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useState } from "react";
 import { Button, Text } from "@tremor/react";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -21,6 +22,7 @@ export function ProviderImageUploader({
   onClose,
   onUploadComplete,
 }: Props) {
+  const { t } = useI18n();
   const api = useApi();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<string>("");
@@ -37,7 +39,7 @@ export function ProviderImageUploader({
 
     // Check if file is a PNG
     if (file.type !== "image/png") {
-      showErrorToast(new Error("Please select a PNG image file"));
+      showErrorToast(new Error(t("settings.providerImages.messages.selectPng")));
       event.target.value = ""; // Clear the input
       return;
     }
@@ -73,22 +75,22 @@ export function ProviderImageUploader({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Upload Provider Image">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t("settings.providerImages.title")}>
       <div className="space-y-6">
         <div>
-          <Text className="mb-2">Select Provider</Text>
+          <Text className="mb-2">{t("settings.providerImages.selectProvider")}</Text>
           <Select
             value={providerOptions.find(
               (option) => option.value === selectedProvider
             )}
             onChange={(option) => setSelectedProvider(option?.value || "")}
             options={providerOptions}
-            placeholder="Select a provider"
+            placeholder={t("settings.providerImages.selectProviderPlaceholder")}
           />
         </div>
 
         <div>
-          <Text className="mb-2">Upload PNG Image</Text>
+          <Text className="mb-2">{t("settings.providerImages.uploadImage")}</Text>
           <input
             type="file"
             accept="image/png"
@@ -101,20 +103,20 @@ export function ProviderImageUploader({
               hover:file:bg-orange-100"
           />
           <Text className="mt-1 text-xs text-gray-500">
-            Only PNG files are supported
+            {t("settings.providerImages.onlyPngSupported")}
           </Text>
         </div>
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" color="orange" onClick={handleClose}>
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button
             color="orange"
             onClick={handleUpload}
             disabled={!selectedFile || !selectedProvider || isUploading}
           >
-            {isUploading ? "Uploading..." : "Upload"}
+            {isUploading ? t("settings.providerImages.uploading") : t("common.actions.upload")}
           </Button>
         </div>
       </div>

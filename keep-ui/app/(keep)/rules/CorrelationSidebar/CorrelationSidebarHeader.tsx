@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Button, Icon, Subtitle, Title, Text } from "@tremor/react";
 import { Dialog } from "@headlessui/react";
 import { IoMdClose } from "react-icons/io";
@@ -10,6 +11,7 @@ type CorrelationSidebarHeaderProps = {
 export const CorrelationSidebarHeader = ({
   toggle,
 }: CorrelationSidebarHeaderProps) => {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const isRuleBeingEdited = searchParams ? searchParams.get("id") : null;
 
@@ -17,9 +19,9 @@ export const CorrelationSidebarHeader = ({
     <div className="flex justify-between p-4">
       <div>
         <Title className="font-bold">
-          {isRuleBeingEdited ? "Edit" : "Create"} correlation
+          {isRuleBeingEdited ? t("common.actions.edit") : t("common.actions.create")} {t("rules.correlation.title")}
         </Title>
-        <Text>Group multiple alerts into a single incident</Text>
+        <Text>{t("rules.correlation.sidebar.groupDescription")}</Text>
       </div>
       <div>
         <Button onClick={toggle} variant="light">

@@ -14,6 +14,7 @@ import {
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface SSOProvider {
   id: string;
@@ -22,6 +23,7 @@ interface SSOProvider {
 }
 
 const SSOSettings = () => {
+  const { t } = useI18n();
   const api = useApi();
   const { data, error } = useSWR<{
     sso: boolean;
@@ -30,21 +32,21 @@ const SSOSettings = () => {
   }>(`/settings/sso`, (url: string) => api.get(url));
 
   if (!data) return <Loading />;
-  if (error) return <div>Error loading SSO settings: {error.message}</div>;
+  if (error) return <div>{t("errors.message")}: {error.message}</div>;
 
   const { sso: supportsSSO, providers, wizardUrl } = data;
 
   return (
     <div className="h-full flex flex-col">
-      <Title>SSO Settings</Title>
+      <Title>{t("settings.sso.title")}</Title>
       {supportsSSO && providers.length > 0 && (
         <Card className="mt-4 p-4">
           <Table>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Provider</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell>Actions</TableHeaderCell>
+                <TableHeaderCell>{t("settings.sso.labels.provider")}</TableHeaderCell>
+                <TableHeaderCell>{t("common.labels.status")}</TableHeaderCell>
+                <TableHeaderCell>{t("common.actions.actions")}</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -52,7 +54,7 @@ const SSOSettings = () => {
                 <TableRow key={provider.id}>
                   <TableCell>{provider.name}</TableCell>
                   <TableCell>
-                    {provider.connected ? "Connected" : "Not connected"}
+                    {provider.connected ? t("providers.connected") : t("providers.notConnected")}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -61,7 +63,7 @@ const SSOSettings = () => {
                         /* Connect logic here */
                       }}
                     >
-                      Connect
+                      {t("common.actions.connect")}
                     </Button>
                     <Button
                       color="orange"
@@ -69,7 +71,7 @@ const SSOSettings = () => {
                         /* Disconnect logic here */
                       }}
                     >
-                      Disconnect
+                      {t("common.actions.disconnect")}
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { useState, use } from "react";
 import { ExecutionsTable } from "../../../../../components/table/ExecutionsTable";

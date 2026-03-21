@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Select, SelectItem, Subtitle } from "@tremor/react";
 import { useEffect } from "react";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
@@ -6,7 +7,7 @@ import { GenericsMetrics, LayoutItem } from "../../types";
 const GENERIC_METRICS = [
   {
     key: "alert_quality",
-    label: "Alert Quality",
+    label: "alert_quality",
     widgetType: "table",
     meta: {
       defaultFilters: { fields: "severity" },
@@ -26,6 +27,7 @@ export interface GenericMetricsWidgetFormProps {
 export const GenericMetricsWidgetForm: React.FC<
   GenericMetricsWidgetFormProps
 > = ({ editingItem, onChange }) => {
+  const { t } = useI18n();
   const {
     control,
     formState: { errors, isValid },
@@ -66,26 +68,26 @@ export const GenericMetricsWidgetForm: React.FC<
 
   return (
     <div className="mb-4 mt-2">
-      <Subtitle>Generic Metrics</Subtitle>
+      <Subtitle>{t("dashboard.genericMetrics")}</Subtitle>
       <Controller
         name="selectedGenericMetrics"
         control={control}
         rules={{
           required: {
             value: true,
-            message: "Preset selection is required",
+            message: t("dashboard.presetRequired"),
           },
         }}
         render={({ field }) => (
           <Select
             {...field}
-            placeholder="Select a Generic Metrics"
+            placeholder={t("dashboard.selectGenericMetrics")}
             error={!!get(errors, "selectedGenericMetrics.message")}
             errorMessage={get(errors, "selectedGenericMetrics.message")}
           >
             {GENERIC_METRICS.map((metrics) => (
               <SelectItem key={metrics.key} value={metrics.key}>
-                {metrics.label}
+                {t(`dashboard.${metrics.label}`)}
               </SelectItem>
             ))}
           </Select>

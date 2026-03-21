@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { getWorkflowWithRedirectSafe } from "@/shared/api/workflows";
 import { WorkflowBreadcrumbs } from "./workflow-breadcrumbs";
 import WorkflowDetailHeader from "./workflow-detail-header";

@@ -19,12 +19,15 @@ import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 
 type AlertsLinksProps = {
   session: Session | null;
 };
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
+  const t = useTranslations("alerts");
+  const tCommon = useTranslations("common");
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const isMounted = useMounted();
 
@@ -80,7 +83,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
             <Disclosure.Button className="w-full flex justify-between items-center px-2">
               <div className="flex items-center relative group">
                 <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                  Alerts
+                  {t("title")}
                 </Subtitle>
                 <FiFilter
                   className={clsx(
@@ -124,7 +127,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                       }
                     }}
                   >
-                    <Subtitle className="text-xs">Feed</Subtitle>
+                    <Subtitle className="text-xs">{t("feed")}</Subtitle>
                   </LinkWithIcon>
                 </li>
               )}
@@ -140,9 +143,9 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
         className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
       >
         <div className="space-y-2">
-          <Subtitle>Select tags to watch</Subtitle>
+          <Subtitle>{t("labels.selectTagsToWatch", { defaultValue: "选择要监控的标签" })}</Subtitle>
           <Callout title="" color="orange">
-            Customize your presets list by watching specific tags.
+            {t("messages.customizePresets", { defaultValue: "通过监控特定标签来自定义您的预设列表。" })}
           </Callout>
           <CreatableMultiSelect
             value={tempSelectedTags.map((tag) => ({
@@ -154,7 +157,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               value: tag.name,
               label: tag.name,
             }))}
-            placeholder="Select or create tags"
+            placeholder={tCommon("actions.selectOrCreate", { defaultValue: "选择或创建标签" })}
             className="mt-4"
           />
           <div className="flex justify-end space-x-2.5">
@@ -163,17 +166,17 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               variant="secondary"
               color="orange"
               onClick={() => setIsTagModalOpen(false)}
-              tooltip="Close Modal"
+              tooltip={tCommon("actions.close", { defaultValue: "关闭" })}
             >
-              Close
+              {tCommon("actions.close", { defaultValue: "关闭" })}
             </Button>
             <Button
               size="lg"
               color="orange"
               onClick={handleApplyTags}
-              tooltip="Apply Tags"
+              tooltip={tCommon("actions.apply", { defaultValue: "应用" })}
             >
-              Apply
+              {tCommon("actions.apply", { defaultValue: "应用" })}
             </Button>
           </div>
         </div>

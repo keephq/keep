@@ -1,4 +1,7 @@
 const { withSentryConfig } = require("@sentry/nextjs");
+const createNextIntlPlugin = require("next-intl/plugin");
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const isSentryDisabled =
   process.env.SENTRY_DISABLED === "true" ||
@@ -21,10 +24,8 @@ const nextConfig = {
   devIndicators: {
     position: "bottom-right",
   },
-  experimental: {
-    turbo: {
-      resolveAlias: turbopackAliases,
-    },
+  turbopack: {
+    resolveAlias: turbopackAliases,
   },
   webpack: (
     config,
@@ -215,6 +216,9 @@ const sentryConfig = {
 
 // Compose the final config
 let config = nextConfig;
+
+// Add next-intl
+config = withNextIntl(config);
 
 // Add Sentry if enabled
 if (!isSentryDisabled) {

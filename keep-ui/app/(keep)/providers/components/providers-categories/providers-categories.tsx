@@ -1,8 +1,10 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { TProviderCategory } from "@/shared/api/providers";
 import { Badge } from "@tremor/react";
 import { useFilterContext } from "../../filter-context";
 
 export const ProvidersCategories = () => {
+  const { t } = useI18n();
   const { providersSelectedCategories, setProvidersSelectedCategories } =
     useFilterContext();
 
@@ -23,6 +25,10 @@ export const ProvidersCategories = () => {
     "Coming Soon",
     "Others",
   ];
+
+  const getCategoryDisplayName = (category: TProviderCategory): string => {
+    return t(`providers.categories.${category.replace(/\s+/g, '')}`);
+  };
 
   const toggleCategory = (category: TProviderCategory) => {
     setProvidersSelectedCategories((prev) =>
@@ -47,7 +53,7 @@ export const ProvidersCategories = () => {
           key={category}
           onClick={() => toggleCategory(category)}
         >
-          {category}
+          {getCategoryDisplayName(category)}
         </Badge>
       ))}
     </div>

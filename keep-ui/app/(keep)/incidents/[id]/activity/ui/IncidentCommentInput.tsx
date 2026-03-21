@@ -1,5 +1,6 @@
-// Only import this component via dynamic(); react-quill and quill-mention are not SSR friendly
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
+// Only import this component via dynamic(); react-quill and quill-mention are not SSR friendly
 
 import React, {
   useCallback,
@@ -33,10 +34,14 @@ export function IncidentCommentInput({
   value,
   onValueChange,
   users,
-  placeholder = "Add a comment...",
+  placeholder,
   className = "",
 }: IncidentCommentInputProps) {
+  const { t } = useI18n();
   const [isReady, setIsReady] = useState(false);
+
+  // Use i18n for default placeholder
+  const commentPlaceholder = placeholder || t("incidents.messages.addCommentPlaceholder");
 
   const usersRef = useRef(users);
 
@@ -99,7 +104,7 @@ export function IncidentCommentInput({
           insertItem(item);
         },
         positioningStrategy: "fixed",
-        renderLoading: () => document.createTextNode("Loading..."),
+        renderLoading: () => document.createTextNode(t("common.actions.loading")),
         spaceAfterInsert: true,
       },
     }),
@@ -127,7 +132,7 @@ export function IncidentCommentInput({
       onChange={handleChange}
       modules={quillModules}
       formats={quillFormats}
-      placeholder={placeholder}
+      placeholder={commentPlaceholder}
       theme="snow"
       className={clsx("incident-comment-input", className)}
     />

@@ -18,6 +18,7 @@ import { DynamicImageProviderIcon } from "@/components/ui";
 import { CiViewTimeline } from "react-icons/ci";
 import { KeepLoader, EmptyStateCard } from "@/shared/ui";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { useTranslations } from "next-intl";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -57,10 +58,11 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
   event,
   alert,
 }) => {
+  const t = useTranslations("incidents");
   return (
     <div className="h-full p-4 bg-gray-100 border-l">
       <h2 className="font-semibold mb-2">
-        {alert.name} (<small>Fingerprint: {alert.fingerprint}</small>)
+        {alert.name} (<small>{t("labels.fingerprint")}: {alert.fingerprint}</small>)
       </h2>
       <p className="mb-2 text-md">
         <FormattedContent
@@ -69,24 +71,24 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
         />
       </p>
       <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-sm">
-        <p className="text-gray-400">Date:</p>
+        <p className="text-gray-400">{t("labels.date")}:</p>
         <p className="col-span-3">
           {format(parseISO(event.timestamp), "dd, MMM yyyy - HH:mm:ss 'UTC'")}
         </p>
 
-        <p className="text-gray-400">Action:</p>
+        <p className="text-gray-400">{t("labels.action")}:</p>
         <p className="col-span-3">{event.action}</p>
 
-        <p className="text-gray-400">Description:</p>
+        <p className="text-gray-400">{t("labels.description")}:</p>
         <p className="col-span-3">{event.description}</p>
 
-        <p className="text-gray-400">Severity:</p>
+        <p className="text-gray-400">{t("labels.severity")}:</p>
         <div className="flex items-center col-span-3">
           <AlertSeverity severity={alert.severity} />
           <p className="ml-2">{alert.severity}</p>
         </div>
 
-        <p className="text-gray-400">Source:</p>
+        <p className="text-gray-400">{t("labels.source")}:</p>
         <div className="flex items-center col-span-3">
           {alert.source.map((source, index) => (
             <DynamicImageProviderIcon
@@ -102,7 +104,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
           <p>{alert.source.join(",")}</p>
         </div>
 
-        <p className="text-gray-400">Status:</p>
+        <p className="text-gray-400">{t("status.title")}:</p>
         <p className="col-span-3">{alert.status}</p>
       </div>
     </div>

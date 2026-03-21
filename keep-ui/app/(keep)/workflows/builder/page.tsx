@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
 import { Metadata } from "next";
 

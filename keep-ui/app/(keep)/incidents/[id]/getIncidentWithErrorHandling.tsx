@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { getIncident } from "@/entities/incidents/api";
 import { createServerApiClient } from "@/shared/api/server";
 import { notFound } from "next/navigation";

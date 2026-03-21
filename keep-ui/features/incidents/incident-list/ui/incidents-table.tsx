@@ -1,3 +1,5 @@
+"use client";
+
 import { Badge, Card, Subtitle, Title } from "@tremor/react";
 import {
   ExpandedState,
@@ -35,6 +37,7 @@ import { GenerateReportModal } from "./incidents-report";
 import { DocumentChartBarIcon } from "@heroicons/react/24/outline";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
 import { Pagination, PaginationState } from "@/features/filter/pagination";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -47,6 +50,7 @@ function SelectedRowActions({
   onDelete: () => void;
   onGenerateReport: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="w-full flex justify-between">
       <div>
@@ -54,18 +58,18 @@ function SelectedRowActions({
           color="orange"
           variant="primary"
           icon={DocumentChartBarIcon}
-          tooltip="Generate report for currently visible incidents"
+          tooltip={t("incidents.table.generateReportTooltip")}
           size="md"
           onClick={onGenerateReport}
         >
-          Generate report
+          {t("incidents.table.generateReport")}
         </Button>
       </div>
 
       <div className="flex gap-2 items-center">
         {selectedRowIds.length ? (
           <span className="accent-dark-tremor-content text-sm px-2">
-            {selectedRowIds.length} selected
+            {selectedRowIds.length} {t("incidents.table.selected")}
           </span>
         ) : null}
         <Button
@@ -75,7 +79,7 @@ function SelectedRowActions({
           disabled={selectedRowIds.length < 2}
           onClick={onMergeInitiated}
         >
-          Merge
+          {t("incidents.table.merge")}
         </Button>
         <Button
           color="red"
@@ -84,7 +88,7 @@ function SelectedRowActions({
           disabled={!selectedRowIds.length}
           onClick={onDelete}
         >
-          Delete
+          {t("incidents.table.delete")}
         </Button>
       </div>
     </div>
@@ -112,6 +116,7 @@ export default function IncidentsTable({
   setSorting,
   editCallback,
 }: Props) {
+  const { t } = useI18n();
   const { bulkDeleteIncidents } = useIncidentActions();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -170,7 +175,7 @@ export default function IncidentsTable({
     }),
     columnHelper.display({
       id: "status",
-      header: "Status",
+      header: t("incidents.table.status"),
       cell: ({ row }) => (
         <IncidentChangeStatusSelect
           incidentId={row.original.id}
@@ -180,7 +185,7 @@ export default function IncidentsTable({
     }),
     columnHelper.display({
       id: "name",
-      header: "Incident",
+      header: t("incidents.table.incident"),
       cell: ({ row }) => {
         const summary =
           row.original.user_summary || row.original.generated_summary;
@@ -209,11 +214,11 @@ export default function IncidentsTable({
     }),
     columnHelper.accessor("alerts_count", {
       id: "alerts_count",
-      header: "Alerts",
+      header: t("incidents.table.alerts"),
     }),
     columnHelper.display({
       id: "alert_sources",
-      header: "Sources",
+      header: t("incidents.table.sources"),
       cell: ({ row }) =>
         row.original.alert_sources.map((alert_source, index) => (
           <DynamicImageProviderIcon
@@ -234,7 +239,7 @@ export default function IncidentsTable({
     }),
     columnHelper.display({
       id: "services",
-      header: "Involved Services",
+      header: t("incidents.table.involvedServices"),
       cell: ({ row }) => {
         const maxServices = 2;
         const notNullServices = row.original.services.filter(
@@ -259,14 +264,14 @@ export default function IncidentsTable({
     }),
     columnHelper.display({
       id: "assignee",
-      header: "Assignee",
+      header: t("incidents.table.assignee"),
       cell: ({ row }) => (
         <UserStatefulAvatar email={row.original.assignee} size="xs" />
       ),
     }),
     columnHelper.accessor("creation_time", {
       id: "creation_time",
-      header: "Created At",
+      header: t("incidents.table.createdAt"),
       cell: ({ row }) => <DateTimeField date={row.original.creation_time} />,
     }),
     columnHelper.display({

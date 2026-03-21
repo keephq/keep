@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { createContext, useState, FC, PropsWithChildren } from "react";
 import { IFilterContext } from "./types";
 import { useSearchParams } from "next/navigation";

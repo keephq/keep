@@ -39,6 +39,7 @@ import { BellAlertIcon } from "@heroicons/react/24/outline";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { useAlertTableTheme } from "@/entities/alerts/model";
+import { useTranslations } from "next-intl";
 
 interface Props {
   incident: IncidentDto;
@@ -52,6 +53,7 @@ interface Pagination {
 const columnHelper = createColumnHelper<AlertDto>();
 
 export default function IncidentAlerts({ incident }: Props) {
+  const t = useTranslations("incidents");
   const [alertsPagination, setAlertsPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
@@ -112,18 +114,18 @@ export default function IncidentAlerts({ incident }: Props) {
   const extraColumns = [
     columnHelper.accessor("is_created_by_ai", {
       id: "is_created_by_ai",
-      header: "Correlation",
+      header: t("labels.correlation"),
       minSize: 50,
       cell: (context) => {
         if (isTopologyIncident) {
-          return <div title="Correlated with topology">🌐 Topology</div>;
+          return <div title={t("alerts.correlatedTopology")}>🌐 {t("alerts.topology")}</div>;
         }
         return (
           <>
             {context.getValue() ? (
-              <div title="Correlated with AI">🤖 AI</div>
+              <div title={t("alerts.correlatedAI")}>🤖 {t("alerts.ai")}</div>
             ) : (
-              <div title="Correlated manually">👨‍💻 Manually</div>
+              <div title={t("alerts.correlatedManually")}>👨‍💻 {t("alerts.manually")}</div>
             )}
           </>
         );
@@ -200,8 +202,8 @@ export default function IncidentAlerts({ incident }: Props) {
     return (
       <EmptyStateCard
         className="w-full"
-        title="No alerts yet"
-        description="Alerts will show up here as they are correlated into this incident."
+        title={t("messages.noAlertsYet")}
+        description={t("messages.alertsWillShowUpHere")}
         icon={BellAlertIcon}
       >
         <div className="flex gap-2">
@@ -213,7 +215,7 @@ export default function IncidentAlerts({ incident }: Props) {
               router.push(`/alerts/feed`);
             }}
           >
-            Add Alerts Manually
+            {t("actions.addAlertsManually")}
           </Button>
           <Button
             color="orange"
@@ -223,7 +225,7 @@ export default function IncidentAlerts({ incident }: Props) {
               router.push(`/alerts/feed?createIncidentsFromLastAlerts=50`);
             }}
           >
-            Try AI Correlation
+            {t("actions.tryAiCorrelation")}
           </Button>
         </div>
       </EmptyStateCard>

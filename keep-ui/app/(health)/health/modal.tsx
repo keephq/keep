@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import Modal from "@/components/ui/Modal";
 import {
@@ -22,6 +23,7 @@ const ProviderHealthResultsModal = ({
   isOpen,
   healthResults,
 }: ProviderHealthResultsModalProps) => {
+  const { t } = useI18n();
   const handleModalClose = () => {
     handleClose();
   };
@@ -30,13 +32,13 @@ const ProviderHealthResultsModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title="Health Results"
+      title={t("health.resultsTitle")}
       className="w-[50%] max-w-full"
     >
       <div className="relative bg-white p-6 rounded-lg">
         <div className="grid grid-cols-2 cols-2 gap-4">
           <Card className="text-center flex flex-col justify-between">
-            <Title>Spammy Alerts</Title>
+            <Title>{t("health.spammyAlerts")}</Title>
             {healthResults?.spammy?.length ? (
               <>
                 <BarChart
@@ -51,19 +53,19 @@ const ProviderHealthResultsModal = ({
                   showLegend={false}
                   showGridLines={true}
                 />
-                Sorry to say, but looks like your alerts are spammy
+                {t("health.spammyAlertsDescription")}
               </>
             ) : (
               <>
                 <div className="flex justify-center pt-4 pb-2">
                   <CheckCircle2Icon color="green" />
                 </div>
-                <Subtitle>Everything is ok</Subtitle>
+                <Subtitle>{t("health.everythingOk")}</Subtitle>
               </>
             )}
           </Card>
           <Card className="text-center flex flex-col justify-between">
-            <Title>Rules Quality</Title>
+            <Title>{t("health.rulesQuality")}</Title>
             {healthResults?.rules?.unused ? (
               <>
                 <DonutChart
@@ -76,9 +78,10 @@ const ProviderHealthResultsModal = ({
                   colors={["green", "red"]}
                 />
                 <Subtitle>
-                  {healthResults?.rules.unused} of your{" "}
-                  {healthResults.rules.used + healthResults.rules.unused} alert
-                  rules are not in use
+                  {t("health.unusedRules", {
+                    unused: healthResults?.rules.unused,
+                    total: healthResults.rules.used + healthResults.rules.unused
+                  })}
                 </Subtitle>
               </>
             ) : (
@@ -86,20 +89,20 @@ const ProviderHealthResultsModal = ({
                 <div className="flex justify-center pt-4 pb-2">
                   <CheckCircle2Icon color="green" />
                 </div>
-                <Subtitle>Everything is ok</Subtitle>
+                <Subtitle>{t("health.everythingOk")}</Subtitle>
               </>
             )}
           </Card>
           <Card className="text-center flex flex-col justify-between">
-            <Title>Actionable</Title>
+            <Title>{t("health.actionable")}</Title>
             <div className="flex justify-center pt-4 pb-2">
               <CheckCircle2Icon color="green" />
             </div>
-            <Subtitle>Everything is ok</Subtitle>
+            <Subtitle>{t("health.everythingOk")}</Subtitle>
           </Card>
 
           <Card className="text-center flex flex-col justify-between">
-            <Title>Topology coverage</Title>
+            <Title>{t("health.topologyCoverage")}</Title>
             {healthResults?.topology?.uncovered.length ? (
               <>
                 <DonutChart
@@ -118,7 +121,7 @@ const ProviderHealthResultsModal = ({
                   colors={["green", "red"]}
                 />
                 <Subtitle>
-                  Not of your services are covered. Alerts are missing for:
+                  {t("health.notCovered")}
                   {healthResults?.topology?.uncovered.map((service: any) => {
                     return (
                       <Badge key={service.service} className="mr-1">
@@ -135,14 +138,14 @@ const ProviderHealthResultsModal = ({
                 <div className="flex justify-center pt-4 pb-2">
                   <CheckCircle2Icon color="green" />
                 </div>
-                <Subtitle>Everything is ok</Subtitle>
+                <Subtitle>{t("health.everythingOk")}</Subtitle>
               </>
             )}
           </Card>
         </div>
 
         <Title className="text-center pt-10 pb-5">
-          Want to improve your observability?
+          {t("health.improveObservability")}
         </Title>
         <Button
           size="lg"
@@ -151,7 +154,7 @@ const ProviderHealthResultsModal = ({
           className="w-full"
           onClick={() => window.open(`https://platform.keephq.dev/providers`)}
         >
-          Sign up to Keep
+          {t("health.signUpToKeep")}
         </Button>
       </div>
     </Modal>

@@ -28,6 +28,7 @@ import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import RunMappingModal from "./run-mapping-modal";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useI18n } from "@/i18n/hooks/useI18n";
 const columnHelper = createColumnHelper<MappingRule>();
 
 interface Props {
@@ -83,6 +84,7 @@ const formattedMatchers = (matchers: string[][]) => {
 };
 
 export default function RulesTable({ mappings, editCallback }: Props) {
+  const { t } = useI18n();
   const api = useApi();
   const { mutate } = useMappings();
   const router = useRouter();
@@ -90,7 +92,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
 
   const columns = [
     columnHelper.accessor("name", {
-      header: "Name",
+      header: t("rules.mapping.table.name"),
       cell: (context) => {
         return (
           <div className="flex items-center space-x-2">
@@ -100,22 +102,22 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       },
     }),
     columnHelper.accessor("description", {
-      header: "Description",
+      header: t("rules.mapping.table.description"),
       cell: (info) => info.getValue(),
     }),
     columnHelper.display({
       id: "priority",
-      header: "Priority",
+      header: t("rules.mapping.table.priority"),
       cell: (context) => context.row.original.priority,
     }),
     columnHelper.display({
       id: "matchers",
-      header: "Matchers",
+      header: t("rules.mapping.table.matchers"),
       cell: (context) => formattedMatchers(context.row.original.matchers),
     }),
     columnHelper.display({
       id: "attributes",
-      header: "Enriched With",
+      header: t("rules.mapping.table.enrichedWith"),
       cell: (context) => (
         <div className="flex flex-wrap gap-1">
           {context.row.original.attributes?.map((attr) => (
@@ -135,7 +137,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             color="orange"
             size="xs"
             icon={MdPlayArrow}
-            tooltip="Run"
+            tooltip={t("rules.mapping.table.actions.run")}
             onClick={(event) => {
               event.stopPropagation();
               setRunModalRule(context.row.original.id!);
@@ -146,7 +148,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             size="xs"
             variant="secondary"
             icon={MdModeEdit}
-            tooltip="Edit"
+            tooltip={t("rules.mapping.table.actions.edit")}
             onClick={(event) => {
               event.stopPropagation();
               editCallback(context.row.original!);
@@ -157,7 +159,7 @@ export default function RulesTable({ mappings, editCallback }: Props) {
             size="xs"
             variant="secondary"
             icon={TrashIcon}
-            tooltip="Delete"
+            tooltip={t("rules.mapping.table.actions.delete")}
             onClick={(event) => {
               event.stopPropagation();
               deleteRule(context.row.original.id!);
@@ -179,15 +181,15 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   });
 
   const deleteRule = (ruleId: number) => {
-    if (confirm("Are you sure you want to delete this rule?")) {
+    if (confirm(t("rules.mapping.messages.confirmDelete"))) {
       api
         .delete(`/mapping/${ruleId}`)
         .then(() => {
           mutate();
-          toast.success("Rule deleted successfully");
+          toast.success(t("rules.mapping.messages.deleteSuccess"));
         })
         .catch((error: any) => {
-          showErrorToast(error, "Failed to delete rule");
+          showErrorToast(error, t("rules.mapping.messages.deleteFailed"));
         });
     }
   };

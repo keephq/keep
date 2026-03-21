@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { ErrorComponent, KeepLoader } from "@/shared/ui";
 import { useWorkflowsV2 } from "@/entities/workflows/model/useWorkflowsV2";

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { Badge, Icon } from "@tremor/react";

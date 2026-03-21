@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   Badge,
   Icon,
@@ -111,6 +112,7 @@ function getIconForTag(tag: TProviderLabels) {
 }
 
 export default function ProviderTile({ provider, onClick }: Props) {
+  const { t } = useI18n();
   const renderTags = () => {
     if (provider.installed || provider.linked) {
       return null;
@@ -206,16 +208,16 @@ export default function ProviderTile({ provider, onClick }: Props) {
             {provider.provider_metadata &&
             provider.provider_metadata.version ? (
               <span>
-                Connected | Version: {provider.provider_metadata.version}
+                {t("providers.connected")} | {t("providers.version")}: {provider.provider_metadata.version}
               </span>
             ) : (
-              <span>Connected</span>
+              <span>{t("providers.connected")}</span>
             )}
           </Text>
         ) : null}
         {provider.linked ? (
           <Text color={"green"} className="flex text-xs">
-            Linked
+            {t("providers.linked")}
           </Text>
         ) : null}
         {provider.provisioned ? (

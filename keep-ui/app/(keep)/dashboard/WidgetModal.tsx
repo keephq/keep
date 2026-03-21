@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Select, SelectItem, Subtitle, TextInput } from "@tremor/react";
@@ -8,6 +9,15 @@ import { Preset } from "@/entities/presets/model/types";
 import { PresetWidgetForm } from "./widget-types/preset/preset-widget-form";
 import { MetricWidgetForm } from "./widget-types/metric/metric-widget-form";
 import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic-metrics-widget-form";
+
+const widgetTypeOptions = [
+  { key: WidgetType.PRESET, value: "Preset" },
+  {
+    key: WidgetType.GENERICS_METRICS,
+    value: "Generic Metrics",
+  },
+  { key: WidgetType.METRIC, value: "Metric" },
+];
 
 interface WidgetForm {
   widgetName: string;
@@ -33,6 +43,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
   editingItem,
   metricWidgets,
 }) => {
+  const { t } = useI18n();
   const [innerFormState, setInnerFormState] = useState<{
     isValid: boolean;
     formValue: any;
@@ -83,21 +94,21 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingItem ? "Edit Widget" : "Add Widget"}
+      title={editingItem ? t("dashboard.widget.editWidget") : t("dashboard.widget.addWidget")}
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mb-4 mt-2">
-          <Subtitle>Widget Name</Subtitle>
+          <Subtitle>{t("dashboard.widget.widgetName")}</Subtitle>
           <Controller
             name="widgetName"
             control={control}
             rules={{
-              required: { value: true, message: "Widget name is required" },
+              required: { value: true, message: t("dashboard.widget.nameRequired") },
             }}
             render={({ field }) => (
               <TextInput
                 {...field}
-                placeholder="Enter widget name"
+                placeholder={t("dashboard.widget.namePlaceholder")}
                 error={!!get(errors, "widgetName.message")}
                 errorMessage={get(errors, "widgetName.message")}
               />
@@ -105,34 +116,27 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
           />
         </div>
         <div className="mb-4 mt-2">
-          <Subtitle>Widget Type</Subtitle>
+          <Subtitle>{t("dashboard.widget.widgetType")}</Subtitle>
           <Controller
             name="widgetType"
             control={control}
             rules={{
               required: {
                 value: true,
-                message: "Preset selection is required",
+                message: t("dashboard.widget.typeRequired"),
               },
             }}
             render={({ field }) => {
               return (
                 <Select
                   {...field}
-                  placeholder="Select a Widget Type"
+                  placeholder={t("dashboard.widget.selectType")}
                   error={!!get(errors, "selectedWidgetType.message")}
                   errorMessage={get(errors, "selectedWidgetType.message")}
                 >
-                  {[
-                    { key: WidgetType.PRESET, value: "Preset" },
-                    {
-                      key: WidgetType.GENERICS_METRICS,
-                      value: "Generic Metrics",
-                    },
-                    { key: WidgetType.METRIC, value: "Metric" },
-                  ].map(({ key, value }) => (
+                  {widgetTypeOptions.map(({ key, value }) => (
                     <SelectItem key={key} value={key}>
-                      {value}
+                      {t(`dashboard.widget.types.${key}`)}
                     </SelectItem>
                   ))}
                 </Select>
@@ -173,7 +177,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
           type="submit"
           disabled={!isValid || !innerFormState.isValid}
         >
-          {editingItem ? "Update Widget" : "Add Widget"}
+          {editingItem ? t("dashboard.widget.updateWidget") : t("dashboard.widget.addWidget")}
         </Button>
       </form>
     </Modal>

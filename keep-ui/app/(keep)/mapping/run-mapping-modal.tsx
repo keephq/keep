@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   ruleId: number;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
+  const { t } = useI18n();
   const { useLastAlerts } = useAlerts();
   const { data: alerts = [] } = useLastAlerts({
     cel: "",
@@ -48,7 +50,7 @@ export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
       router.push(`/mapping/${ruleId}/executions/${enrichment_event_id}`);
       clearAndClose();
     } catch (error) {
-      showErrorToast(error, "Failed to run mapping rule");
+      showErrorToast(error, t("rules.mapping.runModal.failed"));
     } finally {
       setIsLoading(false);
     }
@@ -57,13 +59,13 @@ export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
   return (
     <Dialog open={isOpen} onClose={clearAndClose} static={true}>
       <DialogPanel>
-        <Title className="mb-1">Select alert to run mapping rule against</Title>
+        <Title className="mb-1">{t("rules.mapping.runModal.title")}</Title>
 
         {alerts.length > 0 ? (
           <Select
             value={selectedAlertId}
             onValueChange={setSelectedAlertId}
-            placeholder="Select an alert..."
+            placeholder={t("rules.mapping.runModal.placeholder")}
           >
             {alerts.map((alert) => (
               <SelectItem key={alert.event_id} value={alert.event_id}>
@@ -77,12 +79,12 @@ export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
             ))}
           </Select>
         ) : (
-          <div>No alerts found</div>
+          <div>{t("rules.mapping.runModal.noAlerts")}</div>
         )}
 
         <div className="flex justify-end gap-2 mt-4">
           <Button onClick={clearAndClose} color="orange" variant="secondary">
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button
             onClick={handleRun}
@@ -90,7 +92,7 @@ export default function RunMappingModal({ ruleId, isOpen, onClose }: Props) {
             loading={isLoading}
             disabled={!selectedAlertId}
           >
-            Run
+            {t("common.actions.run")}
           </Button>
         </div>
       </DialogPanel>

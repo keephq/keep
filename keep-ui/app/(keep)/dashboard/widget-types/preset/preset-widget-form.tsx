@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Trashcan } from "@/components/icons";
 import { Preset } from "@/entities/presets/model";
 import {
@@ -40,6 +41,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   presets,
   onChange,
 }: PresetWidgetFormProps) => {
+  const { t } = useI18n();
   const {
     control,
     formState: { errors, isValid },
@@ -159,20 +161,20 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   return (
     <>
       <div className="mb-4 mt-2">
-        <Subtitle>Preset</Subtitle>
+        <Subtitle>{t("dashboard.presetWidget.preset")}</Subtitle>
         <Controller
           name="selectedPreset"
           control={control}
           rules={{
             required: {
               value: true,
-              message: "Preset selection is required",
+              message: t("dashboard.presetWidget.presetRequired"),
             },
           }}
           render={({ field }) => (
             <Select
               {...field}
-              placeholder="Select a preset"
+              placeholder={t("dashboard.presetWidget.presetPlaceholder")}
               error={!!get(errors, "selectedPreset.message")}
               errorMessage={get(errors, "selectedPreset.message")}
             >
@@ -186,28 +188,28 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         />
       </div>
       <div className="mb-4 mt-2">
-        <Subtitle>Panel Type</Subtitle>
+        <Subtitle>{t("dashboard.presetWidget.panelType")}</Subtitle>
         <Controller
           name="presetPanelType"
           control={control}
           rules={{
             required: {
               value: true,
-              message: "Panel type selection is required",
+              message: t("dashboard.presetWidget.panelTypeRequired"),
             },
           }}
           render={({ field }) => (
             <Select
               {...field}
-              placeholder="Select a panel type"
+              placeholder={t("dashboard.presetWidget.panelTypePlaceholder")}
               error={!!get(errors, "presetPanelType.message")}
               errorMessage={get(errors, "presetPanelType.message")}
             >
               <SelectItem value={PresetPanelType.ALERT_TABLE}>
-                Alert Table
+                {t("dashboard.presetWidget.alertTable")}
               </SelectItem>
               <SelectItem value={PresetPanelType.ALERT_COUNT_PANEL}>
-                Alert Count Panel
+                {t("dashboard.presetWidget.alertCountPanel")}
               </SelectItem>
             </Select>
           )}
@@ -217,7 +219,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         <>
           <div className="mb-4 mt-2">
             <div className="flex items-center justify-between">
-              <Subtitle>Show Firing Alerts Only</Subtitle>
+              <Subtitle>{t("dashboard.presetWidget.showFiringOnly")}</Subtitle>
               <Controller
                 name="showFiringOnly"
                 control={control}
@@ -231,14 +233,14 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
             </div>
           </div>
           <div className="mb-4 mt-2">
-            <Subtitle>Custom Link (optional)</Subtitle>
+            <Subtitle>{t("dashboard.presetWidget.customLink")}</Subtitle>
             <Controller
               name="customLink"
               control={control}
               render={({ field }) => (
                 <TextInput
                   {...field}
-                  placeholder="https://example.com or leave empty for preset link"
+                  placeholder={t("dashboard.presetWidget.customLinkPlaceholder")}
                   type="url"
                 />
               )}
@@ -249,14 +251,14 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       {formValues.presetPanelType === PresetPanelType.ALERT_TABLE && (
         <>
           <div className="mb-4 mt-2">
-            <Subtitle>Last alerts count to display</Subtitle>
+            <Subtitle>{t("dashboard.presetWidget.lastAlertsCount")}</Subtitle>
             <Controller
               name="countOfLastAlerts"
               control={control}
               rules={{
                 required: {
                   value: true,
-                  message: "Preset selection is required",
+                  message: t("dashboard.presetWidget.presetRequired"),
                 },
               }}
               render={({ field }) => (
@@ -266,7 +268,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
               errorMessage={get(errors, "countOfLastAlerts.message")}
               onBlur={handleThresholdBlur}
               type="number"
-              placeholder="Value indicating how many alerts to display in widget"
+              placeholder={t("dashboard.presetWidget.lastAlertsCountPlaceholder")}
               required
             />
           )}
@@ -280,7 +282,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       )}
       <div className="mb-4">
         <div className="flex items-center justify-between">
-          <Subtitle>Thresholds</Subtitle>
+          <Subtitle>{t("dashboard.presetWidget.thresholds")}</Subtitle>
           <Button
             color="orange"
             variant="secondary"
@@ -296,7 +298,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
               <TextInput
                 {...register(`thresholds.${index}.value`, { required: true })}
                 onBlur={handleThresholdBlur}
-                placeholder="Threshold value"
+                placeholder={t("dashboard.presetWidget.thresholdValue")}
                 type="number"
                 required
               />

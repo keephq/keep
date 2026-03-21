@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Title } from "@tremor/react";
 import { Providers, Provider } from "@/shared/api/providers";
 import { useEffect, useState } from "react";
@@ -27,6 +28,7 @@ const ProvidersTiles = ({
   isHealthCheck?: boolean;
   mutate: () => void;
 }) => {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
   const [openHealthModal, setOpenHealthModal] = useState(false);
@@ -109,7 +111,7 @@ const ProvidersTiles = ({
           <div className="relative">
             <Tooltip
               content={
-                <>Providers that send alerts to Keep and are not installed.</>
+                <>{t("providers.tiles.linkedTooltip")}</>
               }
             >
               <QuestionMarkCircleIcon className="w-4 h-4" />
@@ -129,7 +131,7 @@ const ProvidersTiles = ({
       </div>
 
       <Drawer
-        title={`Connect to ${selectedProvider?.display_name}`}
+        title={t("providers.connectTo", { providerName: selectedProvider?.display_name })}
         isOpen={openPanel}
         onClose={handleCloseModal}
       >

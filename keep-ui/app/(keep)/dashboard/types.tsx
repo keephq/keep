@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
 

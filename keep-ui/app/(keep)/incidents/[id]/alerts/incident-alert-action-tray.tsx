@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { AlertDto } from "@/entities/alerts/model";
 import { EyeIcon, LinkIcon } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
@@ -20,6 +21,7 @@ export function IncidentAlertActionTray({
   onUnlink,
   isCandidate,
 }: Props) {
+  const { t } = useI18n();
   const [rowStyle] = useAlertRowStyle();
   const { isRowExpanded, toggleRowExpanded } =
     useExpandedRows("incident-alerts");
@@ -55,7 +57,7 @@ export function IncidentAlertActionTray({
               )}
             />
           )}
-          tooltip={expanded ? "Collapse Row" : "Expand Row"}
+          tooltip={expanded ? t("incidents.alerts.collapseRow") : t("incidents.alerts.expandRow")}
         />
         <Button
           className={actionIconButtonClassName}
@@ -67,7 +69,7 @@ export function IncidentAlertActionTray({
           icon={() => (
             <Icon icon={EyeIcon} className="w-4 h-4 text-gray-500" />
           )}
-          tooltip="View Alert Details"
+          tooltip={t("incidents.alerts.viewAlertDetails")}
         />
         {!isCandidate && (
           <Button
@@ -80,7 +82,7 @@ export function IncidentAlertActionTray({
             icon={() => (
               <Icon icon={LinkIcon} className="rotate-45 w-4 h-4 text-gray-500" />
             )}
-            tooltip="Unlink from incident"
+            tooltip={t("incidents.alerts.unlinkFromIncident")}
           />
         )}
       </div>

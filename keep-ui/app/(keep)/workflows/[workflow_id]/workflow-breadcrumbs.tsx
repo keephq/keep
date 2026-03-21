@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { Icon } from "@tremor/react";
 import { useParams } from "next/navigation";
@@ -7,22 +8,22 @@ import { Subtitle } from "@tremor/react";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 
 export function WorkflowBreadcrumbs({ workflowId }: { workflowId: string }) {
+  const { t } = useI18n();
   const clientParams = useParams();
 
   return (
     <Subtitle className="text-sm">
-      <Link href="/workflows">All Workflows</Link>{" "}
+      <Link href="/workflows">{t("workflows.breadcrumbs.allWorkflows")}</Link>{" "}
       {clientParams.workflow_execution_id ? (
         <>
           <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-          <Link href={`/workflows/${workflowId}`}>Workflow Details</Link>
-          <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Workflow
-          Execution Details
+          <Link href={`/workflows/${workflowId}`}>{t("workflows.breadcrumbs.workflowDetails")}</Link>
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" /> {t("workflows.breadcrumbs.workflowExecutionDetails")}
         </>
       ) : (
         <>
           <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-          <Link href={`/workflows/${workflowId}`}>Workflow Details</Link>
+          <Link href={`/workflows/${workflowId}`}>{t("workflows.breadcrumbs.workflowDetails")}</Link>
         </>
       )}
       {clientParams.revision && (
@@ -31,7 +32,7 @@ export function WorkflowBreadcrumbs({ workflowId }: { workflowId: string }) {
           <Link
             href={`/workflows/${workflowId}/versions/${clientParams.revision}`}
           >
-            Workflow Revision {clientParams.revision}
+            {t("workflows.breadcrumbs.workflowRevision", { revision: clientParams.revision })}
           </Link>
         </>
       )}

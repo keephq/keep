@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {
@@ -36,6 +37,7 @@ const GroupsSidebar = ({
   isNewGroup,
   mutateGroups,
 }: GroupSidebarProps) => {
+  const { t } = useI18n();
   const {
     control,
     handleSubmit,
@@ -89,11 +91,11 @@ const GroupsSidebar = ({
     } catch (error) {
       if (error instanceof KeepApiError) {
         setError("root.serverError", {
-          message: error.message || "Failed to save group",
+          message: error.message || t("settings.groups.messages.failedToSave"),
         });
       } else {
         setError("root.serverError", {
-          message: "An unexpected error occurred",
+          message: t("settings.groups.messages.unexpectedError"),
         });
       }
     } finally {
@@ -140,7 +142,7 @@ const GroupsSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {isNewGroup ? "Create Group" : "Group Details"}
+                {isNewGroup ? t("settings.groups.createGroup") : t("settings.groups.groupDetails")}
               </Dialog.Title>
               <Button onClick={handleClose} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
@@ -153,12 +155,12 @@ const GroupsSidebar = ({
               <div className="flex-grow">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Group Name
+                    {t("settings.groups.groupName")}
                   </label>
                   <Controller
                     name="name"
                     control={control}
-                    rules={{ required: "Group name is required" }}
+                    rules={{ required: t("settings.groups.groupNameRequired") }}
                     render={({ field }) => (
                       <TextInput
                         {...field}
@@ -172,7 +174,7 @@ const GroupsSidebar = ({
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Members
+                    {t("settings.groups.members")}
                   </label>
                   <Controller
                     name="members"
@@ -195,7 +197,7 @@ const GroupsSidebar = ({
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Roles
+                    {t("settings.groups.roles")}
                   </label>
                   <Controller
                     name="roles"
@@ -220,7 +222,7 @@ const GroupsSidebar = ({
               {errors.root?.serverError && (
                 <Callout
                   className="mt-4"
-                  title="Error while saving group"
+                  title={t("settings.groups.messages.savingError")}
                   color="rose"
                 >
                   {errors.root.serverError.message}
@@ -236,7 +238,7 @@ const GroupsSidebar = ({
                   }}
                   className="border border-orange-500 text-orange-500"
                 >
-                  Cancel
+                  {t("settings.groups.cancel")}
                 </Button>
                 <Button
                   color="orange"
@@ -244,10 +246,10 @@ const GroupsSidebar = ({
                   disabled={isSubmitting || (isNewGroup ? false : !isDirty)}
                 >
                   {isSubmitting
-                    ? "Saving..."
+                    ? t("settings.groups.saving")
                     : isNewGroup
-                      ? "Create Group"
-                      : "Save"}
+                      ? t("settings.groups.createGroup")
+                      : t("settings.groups.save")}
                 </Button>
               </div>
             </form>

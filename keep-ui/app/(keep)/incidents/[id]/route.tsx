@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { redirect } from "next/navigation";
 
 // This is just a redirect from legacy route

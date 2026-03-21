@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Button, Callout, Icon } from "@tremor/react";
 import { formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -27,6 +28,7 @@ export const CorrelationSidebarBody = ({
   toggle,
   defaultValue,
 }: CorrelationSidebarBodyProps) => {
+  const { t } = useI18n();
   const api = useApi();
   const { data: config } = useConfig();
 
@@ -109,7 +111,7 @@ export const CorrelationSidebarBody = ({
       mutate();
       router.replace("/rules");
     } catch (error) {
-      showErrorToast(error, "Failed to create correlation rule");
+      showErrorToast(error, t("rules.correlation.sidebar.errorWhileSaving"));
     }
   };
 
@@ -118,11 +120,10 @@ export const CorrelationSidebarBody = ({
       {isCalloutShown && (
         <Callout
           className="relative"
-          title="What is alert correlations? and why grouping alerts together can ease your work"
+          title={t("rules.correlation.sidebar.description")}
           color="teal"
         >
-          A versatile tool for grouping and consolidating alerts. Read more in
-          our{"  "}
+          {t("rules.correlation.sidebar.description1")}{"  "}
           <Link
             icon={ArrowUpRightIcon}
             iconPosition="right"
@@ -132,7 +133,7 @@ export const CorrelationSidebarBody = ({
               config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
             }/overview/correlation`}
           >
-            docs
+            {t("common.actions.learnMore")}
           </Link>
           <Button
             className="absolute top-0 right-0"
@@ -146,8 +147,7 @@ export const CorrelationSidebarBody = ({
       {isNoteShown && (
         <Callout
           className="relative"
-          title="NOTE: Rules will be applied only to new alerts. Historical data will
-          be ignored."
+          title={t("rules.deduplication.sidebar.activeHint")}
           color="orange"
         >
           <Button

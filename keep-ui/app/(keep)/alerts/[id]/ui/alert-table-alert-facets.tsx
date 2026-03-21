@@ -13,6 +13,7 @@ import {
 } from "./alert-table-facet-dynamic";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export const AlertFacets: React.FC<AlertFacetsProps> = ({
   alerts,
@@ -25,6 +26,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
   table,
   showSkeleton,
 }) => {
+  const t = useTranslations("alerts");
   const pathname = usePathname();
   const timeRangeFilter = table
     .getState()
@@ -196,10 +198,10 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           className="w-full mt-2 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-2"
         >
           <PlusIcon className="h-4 w-4" />
-          Add Facet
+          {t("messages.addFacet")}
         </button>
         <Facet
-          name="Severity"
+          name={t("facets.severity")}
           values={getFacetValues("severity")}
           onSelect={(value, exclusive, isAllOnly) =>
             handleSelect("severity", value, exclusive, isAllOnly)
@@ -209,7 +211,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           showSkeleton={showSkeleton}
         />
         <Facet
-          name="Status"
+          name={t("facets.status")}
           values={getFacetValues("status")}
           onSelect={(value, exclusive, isAllOnly) =>
             handleSelect("status", value, exclusive, isAllOnly)
@@ -219,7 +221,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           showSkeleton={showSkeleton}
         />
         <Facet
-          name="Source"
+          name={t("facets.source")}
           values={getFacetValues("source")}
           onSelect={(value, exclusive, isAllOnly) =>
             handleSelect("source", value, exclusive, isAllOnly)
@@ -229,7 +231,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           showSkeleton={showSkeleton}
         />
         <Facet
-          name="Assignee"
+          name={t("facets.assignee")}
           values={getFacetValues("assignee")}
           onSelect={(value, exclusive, isAllOnly) =>
             handleSelect("assignee", value, exclusive, isAllOnly)
@@ -239,7 +241,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           showSkeleton={showSkeleton}
         />
         <Facet
-          name="Dismissed"
+          name={t("facets.dismissed")}
           values={getFacetValues("dismissed")}
           onSelect={(value, exclusive, isAllOnly) =>
             handleSelect("dismissed", value, exclusive, isAllOnly)
@@ -249,7 +251,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           showSkeleton={showSkeleton}
         />
         <Facet
-          name="Incident"
+          name={t("facets.incident")}
           facetKey="incident"
           values={getFacetValues("incident")}
           onSelect={(value, exclusive, isAllOnly) =>

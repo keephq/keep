@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useState, useEffect } from "react";
 import { Title, Subtitle, Card, TextInput } from "@tremor/react";
 import { usePermissions } from "utils/hooks/usePermissions";
@@ -28,6 +29,7 @@ interface ResourcePermission {
 }
 
 export default function PermissionsTab({ isDisabled = false }: Props) {
+  const { t } = useI18n();
   const api = useApi();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<any>(null);
@@ -132,12 +134,12 @@ export default function PermissionsTab({ isDisabled = false }: Props) {
   return (
     <div className="h-full w-full flex flex-col">
       <div className="mb-4">
-        <Title>Permissions Management</Title>
-        <Subtitle>Manage permissions for resources</Subtitle>
+        <Title>{t("settings.permissions.title")}</Title>
+        <Subtitle>{t("settings.permissions.subtitle")}</Subtitle>
       </div>
 
       <TextInput
-        placeholder="Search resources"
+        placeholder={t("settings.permissions.searchPlaceholder")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {
@@ -45,6 +46,7 @@ const UsersSidebar = ({
   identifierType,
   userCreationAllowed,
 }: UserSidebarProps) => {
+  const { t } = useI18n();
   const {
     control,
     handleSubmit,
@@ -122,12 +124,12 @@ const UsersSidebar = ({
       if (error instanceof KeepApiError) {
         setError("root.serverError", {
           type: "manual",
-          message: error.message || "Failed to save user",
+          message: error.message || t("userSidebar.failedToSave"),
         });
       } else {
         setError("root.serverError", {
           type: "manual",
-          message: "An unexpected error occurred",
+          message: t("userSidebar.unexpectedError"),
         });
       }
     } finally {
@@ -175,7 +177,7 @@ const UsersSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {isNewUser ? "Create User" : "User Details"}
+                {isNewUser ? t("userSidebar.createUser") : t("userSidebar.userDetails")}
               </Dialog.Title>
               <Button onClick={handleClose} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
@@ -189,27 +191,26 @@ const UsersSidebar = ({
                 {!userCreationAllowed && (
                   <Callout
                     className="mt-4"
-                    title="Users are managed externally"
+                    title={t("userSidebar.externallyManaged")}
                     color="orange"
                   >
-                    User management is handled through your external
-                    authentication system.
+                    {t("userSidebar.externallyManagedDescription")}
                   </Callout>
                 )}
                 {identifierType === "email" ? (
                   <>
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-gray-700">
-                        Email
+                        {t("userSidebar.email")}
                       </label>
                       <Controller
                         name="username"
                         control={control}
                         rules={{
-                          required: "Email is required",
+                          required: t("userSidebar.emailRequired"),
                           pattern: {
                             value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                            message: "Invalid email address",
+                            message: t("userSidebar.invalidEmail"),
                           },
                         }}
                         render={({ field }) => (
@@ -225,12 +226,12 @@ const UsersSidebar = ({
                     </div>
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-gray-700">
-                        Name
+                        {t("userSidebar.name")}
                       </label>
                       <Controller
                         name="name"
                         control={control}
-                        rules={{ required: "Name is required" }}
+                        rules={{ required: t("userSidebar.nameRequired") }}
                         render={({ field }) => (
                           <TextInput
                             {...field}
@@ -246,12 +247,12 @@ const UsersSidebar = ({
                 ) : (
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700">
-                      Username
+                      {t("userSidebar.username")}
                     </label>
                     <Controller
                       name="username"
                       control={control}
-                      rules={{ required: "Username is required" }}
+                      rules={{ required: t("userSidebar.usernameRequired") }}
                       render={({ field }) => (
                         <TextInput
                           {...field}
@@ -269,11 +270,11 @@ const UsersSidebar = ({
                   isNewUser &&
                   userCreationAllowed && (
                     <div className="mt-4">
-                      <Subtitle>Password</Subtitle>
+                      <Subtitle>{t("userSidebar.password")}</Subtitle>
                       <Controller
                         name="password"
                         control={control}
-                        rules={{ required: "Password is required" }}
+                        rules={{ required: t("userSidebar.passwordRequired") }}
                         render={({ field }) => (
                           <TextInput
                             type="password"
@@ -292,7 +293,7 @@ const UsersSidebar = ({
                   )}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Role
+                    {t("userSidebar.role")}
                   </label>
                   <Controller
                     name="role"
@@ -307,7 +308,7 @@ const UsersSidebar = ({
                         options={roles}
                         getOptionLabel={(role) => role.name}
                         getOptionValue={(role) => role.name}
-                        placeholder="Select a role"
+                        placeholder={t("userSidebar.selectRole")}
                         isDisabled={!userCreationAllowed}
                       />
                     )}
@@ -316,7 +317,7 @@ const UsersSidebar = ({
                 {groupsEnabled && (
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700">
-                      Groups
+                      {t("userSidebar.groups")}
                     </label>
                     <Controller
                       name="groups"
@@ -344,7 +345,7 @@ const UsersSidebar = ({
               {errors.root?.serverError && (
                 <Callout
                   className="mt-4"
-                  title="Error while saving user"
+                  title={t("userSidebar.errorWhileSaving")}
                   color="rose"
                 >
                   {errors.root.serverError.message}
@@ -360,7 +361,7 @@ const UsersSidebar = ({
                   }}
                   className="border border-orange-500 text-orange-500"
                 >
-                  Close
+                  {t("common.actions.close")}
                 </Button>
                 {userCreationAllowed && (
                   <Button
@@ -369,10 +370,10 @@ const UsersSidebar = ({
                     disabled={isSubmitting || (isNewUser ? false : !isDirty)}
                   >
                     {isSubmitting
-                      ? "Saving..."
+                      ? t("common.actions.saving")
                       : isNewUser
-                        ? "Create User"
-                        : "Save"}
+                        ? t("userSidebar.createUser")
+                        : t("common.actions.save")}
                   </Button>
                 )}
               </div>

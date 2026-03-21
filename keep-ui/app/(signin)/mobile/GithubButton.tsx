@@ -1,10 +1,12 @@
-// GithubButton.tsx - Client Component
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
+// GithubButton.tsx - Client Component
 
 import { Button } from "@tremor/react";
 import { Github } from "lucide-react";
 
 export function GithubButton() {
+  const { t } = useI18n();
   return (
     <Button
       icon={Github}
@@ -12,7 +14,7 @@ export function GithubButton() {
       className="mt-4"
       onClick={() => window.open("https://github.com/keephq/keep", "_blank")}
     >
-      Star us on GitHub
+      {t("auth.login.githubButton")}
     </Button>
   );
 }

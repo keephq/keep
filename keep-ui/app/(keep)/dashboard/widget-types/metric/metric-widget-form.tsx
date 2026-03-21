@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Select, SelectItem, Subtitle } from "@tremor/react";
 import { useEffect } from "react";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
@@ -19,6 +20,7 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
   editingItem,
   onChange,
 }) => {
+  const { t } = useI18n();
   const {
     control,
     formState: { errors, isValid },
@@ -52,14 +54,14 @@ export const MetricWidgetForm: React.FC<MetricWidgetFormProps> = ({
 
   return (
     <div className="mb-4 mt-2">
-      <Subtitle>Widget</Subtitle>
+      <Subtitle>{t("dashboard.widget")}</Subtitle>
       <Controller
         name="selectedMetricWidget"
         control={control}
         render={({ field }) => (
           <Select
             {...field}
-            placeholder="Select a metric widget"
+            placeholder={t("dashboard.selectMetricWidget")}
             error={!!get(errors, "selectedMetricWidget.message")}
             errorMessage={get(errors, "selectedMetricWidget.message")}
           >

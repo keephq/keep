@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React from "react";
 import { Card, Badge, Text, Button } from "@tremor/react";
 import { useProviderLogs } from "@/utils/hooks/useProviderLogs";
@@ -18,11 +19,12 @@ const LOG_LEVEL_COLORS = {
 } as const;
 
 const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
+  const { t } = useI18n();
   const { logs, isLoading, error, refresh } = useProviderLogs({ providerId });
   const { data: config } = useConfig();
 
   if (isLoading) {
-    return <Text>Loading logs...</Text>;
+    return <Text>{t("providers.logs.loading")}</Text>;
   }
 
   if (error) {
@@ -30,8 +32,8 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
       return (
         <div className="flex items-center">
           <EmptyStateCard
-            title="Provider Logs Not Enabled"
-            description="Provider logs need to be enabled on the backend. Please check the documentation for instructions on how to enable provider logs."
+            title={t("providers.logs.notEnabledTitle")}
+            description={t("providers.logs.notEnabledDescription")}
           >
             <Button
               color="orange"
@@ -43,7 +45,7 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
                 )
               }
             >
-              View Documentation
+              {t("providers.logs.viewDocumentation")}
             </Button>
           </EmptyStateCard>
         </div>
@@ -59,14 +61,14 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
   return (
     <div className="mt-4 space-y-4">
       <div className="flex justify-between items-center">
-        <Text>Provider Logs</Text>
+        <Text>{t("providers.logs.title")}</Text>
         <Button
           size="xs"
           variant="secondary"
           icon={ArrowPathIcon}
           onClick={() => refresh()}
         >
-          Refresh
+          {t("common.actions.refresh")}
         </Button>
       </div>
 

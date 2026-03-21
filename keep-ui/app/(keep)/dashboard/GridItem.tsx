@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useState } from "react";
 import { Card } from "@tremor/react";
 import MenuButton from "./MenuButton";

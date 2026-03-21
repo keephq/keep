@@ -1,0 +1,1502 @@
+{
+  "common": {
+    "actions": {
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving...",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "close": "Close",
+      "create": "Create",
+      "update": "Update",
+      "refresh": "Refresh",
+      "search": "Search",
+      "filter": "Filter",
+      "export": "Export",
+      "import": "Import",
+      "enable": "Enable",
+      "disable": "Disable",
+      "view": "View",
+      "copy": "Copy",
+      "add": "Add",
+      "remove": "Remove",
+      "clear": "Clear",
+      "reset": "Reset",
+      "apply": "Apply",
+      "submit": "Submit",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "loading": "Loading...",
+      "retry": "Retry",
+      "download": "Download",
+      "upload": "Upload",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "showMore": "Show More",
+      "showLess": "Show Less",
+      "new": "New",
+      "clone": "Clone",
+      "test": "Test",
+      "run": "Run",
+      "stop": "Stop",
+      "pause": "Pause",
+      "resume": "Resume",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "configure": "Configure",
+      "manage": "Manage",
+      "learnMore": "Learn More",
+      "selectOrCreate": "Select or Create"
+    },
+    "labels": {
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "severity": "Severity",
+      "source": "Source",
+      "created": "Created",
+      "updated": "Updated",
+      "lastUpdated": "Last Updated",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "type": "Type",
+      "value": "Value",
+      "key": "Key",
+      "tags": "Tags",
+      "priority": "Priority",
+      "owner": "Owner",
+      "assignedTo": "Assigned To",
+      "noResults": "No results found",
+      "loading": "Loading...",
+      "required": "Required",
+      "optional": "Optional",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "active": "Active",
+      "inactive": "Inactive",
+      "all": "All",
+      "none": "None",
+      "other": "Other",
+      "yes": "Yes",
+      "no": "No",
+      "true": "True",
+      "false": "False",
+      "default": "Default",
+      "custom": "Custom",
+      "general": "General",
+      "advanced": "Advanced",
+      "details": "Details",
+      "summary": "Summary",
+      "overview": "Overview",
+      "history": "History",
+      "activity": "Activity",
+      "settings": "Settings",
+      "configuration": "Configuration",
+      "preferences": "Preferences",
+      "beta": "Beta"
+    },
+    "messages": {
+      "success": "Operation completed successfully",
+      "error": "An error occurred",
+      "warning": "Warning",
+      "info": "Information",
+      "confirmDelete": "Are you sure you want to delete this item?",
+      "confirmAction": "Are you sure you want to proceed?",
+      "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?",
+      "savedSuccessfully": "Saved successfully",
+      "deletedSuccessfully": "Deleted successfully",
+      "updatedSuccessfully": "Updated successfully",
+      "createdSuccessfully": "Created successfully",
+      "copiedToClipboard": "Copied to clipboard",
+      "comingSoon": "Coming Soon",
+      "noData": "No data available",
+      "noDataDescription": "There is no data to display at the moment.",
+      "emptyState": "Nothing here yet",
+      "emptyStateDescription": "Get started by creating your first item.",
+      "notFound": "Not Found",
+      "notFoundDescription": "The page you're looking for doesn't exist.",
+      "forbidden": "Access Denied",
+      "forbiddenDescription": "You don't have permission to access this resource.",
+      "unauthorized": "Unauthorized",
+      "unauthorizedDescription": "Please sign in to access this page."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "first": "First",
+      "last": "Last",
+      "page": "Page",
+      "of": "of",
+      "itemsPerPage": "items per page",
+      "showing": "Showing",
+      "to": "to",
+      "results": "results"
+    },
+    "filters": {
+      "all": "All",
+      "none": "None",
+      "clear": "Clear Filters",
+      "apply": "Apply Filters",
+      "search": "Search...",
+      "searchPlaceholder": "Search by name, description...",
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "lastHour": "Last Hour",
+      "last24Hours": "Last 24 Hours",
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "custom": "Custom Range"
+    },
+    "time": {
+      "justNow": "Just now",
+      "secondsAgo": "{count} second ago",
+      "secondsAgo_other": "{count} seconds ago",
+      "minutesAgo": "{count} minute ago",
+      "minutesAgo_other": "{count} minutes ago",
+      "hoursAgo": "{count} hour ago",
+      "hoursAgo_other": "{count} hours ago",
+      "daysAgo": "{count} day ago",
+      "daysAgo_other": "{count} days ago",
+      "weeksAgo": "{count} week ago",
+      "weeksAgo_other": "{count} weeks ago",
+      "monthsAgo": "{count} month ago",
+      "monthsAgo_other": "{count} months ago"
+    },
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "title": "Language",
+      "en": "English",
+      "zh-CN": "Simplified Chinese"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Log in to your account",
+      "subtitle": "Enter your credentials to access your account",
+      "username": "Username",
+      "usernamePlaceholder": "Enter your username",
+      "usernameRequired": "Username is required",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "passwordRequired": "Password is required",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "redirecting": "Redirecting...",
+      "authSuccess": "Authentication successful, redirecting...",
+      "redirectToAuth": "Redirecting to authentication provider...",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "sso": {
+        "title": "Or continue with",
+        "google": "Google",
+        "github": "GitHub",
+        "azure": "Azure AD",
+        "keycloak": "Keycloak",
+        "auth0": "Auth0"
+      },
+      "githubButton": "Star us on GitHub"
+    },
+    "logout": {
+      "title": "Sign out",
+      "confirm": "Are you sure you want to sign out?",
+      "submit": "Sign out"
+    },
+    "errors": {
+      "unexpected": "An unexpected error occurred",
+      "invalidCredentials": "Invalid username or password",
+      "userNotFound": "User not found",
+      "accountLocked": "Account is locked. Please contact administrator.",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "unauthorized": "You are not authorized to access this resource",
+      "networkError": "Network error. Please check your connection.",
+      "serviceUnavailable": "The authentication service is currently unavailable",
+      "configurationError": "Server Configuration Error",
+      "authenticationError": "Authentication Error",
+      "configurationProblem": "There was a problem with the authentication setup. It is probably due to a configuration error on the authentication server.\n\nPlease contact the administrator.",
+      "accessDenied": "You don't have permission to access this resource.",
+      "verificationError": "The verification link has expired or is invalid. Please request a new one."
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "alerts": "Alerts",
+    "alertsFeed": "Feed",
+    "incidents": "Incidents",
+    "workflows": "Workflows",
+    "topology": "Topology",
+    "providers": "Providers",
+    "rules": "Rules",
+    "settings": "Settings",
+    "documentation": "Documentation",
+    "help": "Help",
+    "profile": "Profile",
+    "logout": "Sign Out",
+    "notifications": "Notifications",
+    "search": "Search",
+    "menu": "Menu",
+    "maintenanceWindows": "Maintenance Windows",
+    "noiseReduction": "Noise Reduction",
+    "searchMenu": {
+      "placeholder": "Search",
+      "placeholderWithShortcut": "Search (or ⌘K)",
+      "navigate": "Navigate",
+      "externalSources": "External Sources",
+      "goToProviders": "Go to Providers",
+      "goToAlertConsole": "Go to Alert Console",
+      "goToAlertQuality": "Go to Alert Quality",
+      "goToAlertGroups": "Go to Alert Groups",
+      "goToWorkflows": "Go to Workflows",
+      "goToUsersManagement": "Go to Users Management",
+      "goToGenericWebhook": "Go to Generic Webhook",
+      "goToSMTPSettings": "Go to SMTP Settings",
+      "goToAPIKey": "Go to API Key",
+      "keepDocs": "Keep Docs",
+      "keepSourceCode": "Keep Source Code",
+      "keepTwitter": "Keep Twitter",
+      "nothingFound": "Nothing found",
+      "switchTenant": "Switch Tenant"
+    }
+  },
+  "alerts": {
+    "title": "Alerts",
+    "feed": "Alert Feed",
+    "all": "All Alerts",
+    "firing": "Firing",
+    "resolved": "Resolved",
+    "acknowledged": "Acknowledged",
+    "status": {
+      "firing": "Firing",
+      "resolved": "Resolved",
+      "acknowledged": "Acknowledged",
+      "suppressed": "Suppressed",
+      "dismissed": "Dismissed",
+      "pending": "Pending"
+    },
+    "severity": {
+      "title": "Severity",
+      "critical": "Critical",
+      "high": "High",
+      "warning": "Warning",
+      "info": "Info",
+      "low": "Low",
+      "debug": "Debug"
+    },
+    "actions": {
+      "assignTicket": "Assign Ticket",
+      "addNote": "Add Note",
+      "runWorkflow": "Run Workflow",
+      "dismiss": "Dismiss",
+      "changeStatus": "Change Status",
+      "viewRaw": "View Raw Data",
+      "enrich": "Enrich",
+      "associateIncident": "Associate to Incident",
+      "acknowledge": "Acknowledge",
+      "resolve": "Resolve",
+      "silence": "Silence",
+      "delete": "Delete",
+      "export": "Export Selected"
+    },
+    "labels": {
+      "fingerprint": "Fingerprint",
+      "source": "Source",
+      "service": "Service",
+      "lastReceived": "Last Received",
+      "count": "Count",
+      "duration": "Duration",
+      "assignee": "Assignee",
+      "ticket": "Ticket",
+      "ticketUrl": "Ticket URL",
+      "selectTagsToWatch": "Select tags to watch"
+    },
+    "facets": {
+      "severity": "Severity",
+      "status": "Status",
+      "source": "Source",
+      "assignee": "Assignee",
+      "dismissed": "Dismissed",
+      "incident": "Incident"
+    },
+    "messages": {
+      "notFound": "Alert not found",
+      "noAlerts": "No alerts to display",
+      "noAlertsDescription": "There are no alerts matching your criteria.",
+      "showFiringOnly": "Show Firing Alerts Only",
+      "totalAlerts": "Total Alerts",
+      "firingAlerts": "Firing Alerts",
+      "dismissedAlerts": "Dismissed Alerts",
+      "customizePresets": "Customize your preset list by monitoring specific tags.",
+      "fingerprintNotFound": "Alert with this fingerprint not found",
+      "filterValues": "Filter values...",
+      "noMatchingValues": "No matching values",
+      "notAssigned": "Not assigned",
+      "noIncident": "No incident",
+      "dismissed": "Dismissed",
+      "notDismissed": "Not dismissed",
+      "all": "All",
+      "only": "Only",
+      "addFacet": "Add Facet",
+      "addNewFacet": "Add New Facet",
+      "searchColumns": "Search columns..."
+    },
+    "tabs": {
+      "alerts": "Alerts",
+      "groups": "Groups",
+      "history": "History"
+    }
+  },
+  "incidents": {
+    "title": "Incidents",
+    "subtitle": "Group alerts into incidents",
+    "all": "All Incidents",
+    "predictions": {
+      "title": "Incident Predictions",
+      "description": "Possible problems predicted by Keep AI & Correlation Rules"
+    },
+    "status": {
+      "title": "Status",
+      "open": "Open",
+      "investigating": "Investigating",
+      "mitigated": "Mitigated",
+      "resolved": "Resolved",
+      "closed": "Closed",
+      "deleted": "Deleted"
+    },
+    "severity": {
+      "title": "Severity",
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "actions": {
+      "createIncident": "Create Incident",
+      "addIncident": "Add Incident",
+      "editIncident": "Edit Incident",
+      "deleteIncident": "Delete Incident",
+      "mergeIncidents": "Merge Incidents",
+      "splitIncident": "Split Incident",
+      "comment": "Comment",
+      "updateStatus": "Update Status",
+      "assignUser": "Assign User",
+      "addAlerts": "Add Alerts",
+      "removeAlerts": "Remove Alerts"
+    },
+    "labels": {
+      "incidentId": "Incident ID",
+      "appName": "Application",
+      "service": "Service",
+      "summary": "Summary",
+      "description": "Description",
+      "assignee": "Assignee",
+      "reporter": "Reporter",
+      "alertsCount": "Alerts Count",
+      "affectedServices": "Affected Services",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration"
+    },
+    "table": {
+      "status": "Status",
+      "incident": "Incident",
+      "alerts": "Alerts",
+      "sources": "Sources",
+      "involvedServices": "Involved Services",
+      "assignee": "Assignee",
+      "createdAt": "Created At",
+      "generateReport": "Generate report",
+      "generateReportTooltip": "Generate report for currently visible incidents",
+      "selected": "selected",
+      "merge": "Merge",
+      "delete": "Delete"
+    },
+    "messages": {
+      "addCommentPlaceholder": "Add a comment..."
+    },
+    "tabs": {
+      "overview": "Overview",
+      "alerts": "Alerts",
+      "timeline": "Timeline",
+      "activity": "Activity",
+      "topology": "Topology",
+      "workflows": "Workflows",
+      "chat": "AI Chat"
+    },
+    "chat": {
+      "title": "Incident Assistant",
+      "notAvailable": "Chat not available",
+      "notAvailableDescription": "Incident assistant will become available as alerts are assigned to this incident.",
+      "initialMessage": "Hi! Lets work together to resolve this incident! Ask me anything",
+      "placeholder": "For example: Find the root cause of this incident",
+      "addToRCA": "Add to RCA",
+      "addedToRCA": "Added to RCA"
+    },
+    "overview": {
+      "summary": "Summary",
+      "services": "Services",
+      "environments": "Environments",
+      "externalIncident": "External incident",
+      "repositories": "Repositories",
+      "assignee": "Assignee",
+      "noAssignee": "No assignee yet",
+      "assignToMe": "Assign to me",
+      "assignConfirm": "Are you sure you want to assign this incident to yourself?",
+      "groupedBy": "Grouped by",
+      "lastSeenAt": "Last seen at",
+      "startedAt": "Started at",
+      "resolveOn": "Resolve on",
+      "resolveOnAll": "Incident will be resolved when all its alerts are resolved",
+      "resolveOnManual": "Incident will resolve only when manually set to resolved",
+      "noExternalIncidents": "No external incidents",
+      "noEnvironments": "No environments involved",
+      "aiSummary": "AI Summary",
+      "generateAiSummary": "Generate AI Summary",
+      "aiNotConfigured": "AI is not configured"
+    },
+    "activity": {
+      "mergedInto": "Merged into"
+    },
+    "ticketing": {
+      "openIn": "Open in {provider}",
+      "createNewTicket": "Create New Ticket",
+      "linkExisting": "Link to Existing Ticket"
+    },
+    "workflows": {
+      "name": "Name",
+      "unnamed": "Unnamed Workflow",
+      "status": "Status",
+      "startTime": "Start Time",
+      "duration": "Duration",
+      "trigger": "Trigger",
+      "triggerDetails": "Trigger Details",
+      "noWorkflows": "No Workflows",
+      "noWorkflowsDescription": "No workflows have been executed for this incident yet."
+    }
+  },
+  "workflows": {
+    "title": "Workflows",
+    "subtitle": "Automate alert management with workflows",
+    "searchPlaceholder": "Search workflows",
+    "all": "All Workflows",
+    "status": {
+      "title": "Status",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "draft": "Draft"
+    },
+    "execution": {
+      "title": "Execution",
+      "running": "Running",
+      "success": "Success",
+      "failed": "Failed",
+      "pending": "Pending",
+      "cancelled": "Cancelled",
+      "timeout": "Timeout"
+    },
+    "actions": {
+      "createWorkflow": "Create Workflow",
+      "uploadWorkflows": "Upload Workflows",
+      "editWorkflow": "Edit Workflow",
+      "deleteWorkflow": "Delete Workflow",
+      "duplicateWorkflow": "Duplicate Workflow",
+      "enableWorkflow": "Enable Workflow",
+      "disableWorkflow": "Disable Workflow",
+      "runWorkflow": "Run Workflow",
+      "runNow": "Run Now",
+      "scheduleRun": "Schedule Run",
+      "viewExecutions": "View Executions",
+      "viewLogs": "View Logs",
+      "downloadYAML": "Download YAML",
+      "importYAML": "Import YAML"
+    },
+    "builder": {
+      "title": "Workflow Builder",
+      "visualEditor": "Visual Editor",
+      "yamlEditor": "YAML Editor",
+      "addTrigger": "Add Trigger",
+      "addStep": "Add Step",
+      "addCondition": "Add Condition",
+      "addAction": "Add Action",
+      "trigger": "Trigger",
+      "step": "Step",
+      "condition": "Condition",
+      "action": "Action"
+    },
+    "labels": {
+      "workflowId": "Workflow ID",
+      "name": "Workflow Name",
+      "description": "Description",
+      "lastExecution": "Last Execution",
+      "nextExecution": "Next Execution",
+      "executionCount": "Execution Count",
+      "successRate": "Success Rate",
+      "averageDuration": "Average Duration"
+    },
+    "messages": {
+      "notFound": "Workflow not found",
+      "noWorkflows": "No workflows to display",
+      "noWorkflowsDescription": "Create your first workflow to automate alert processing.",
+      "confirmDelete": "Are you sure you want to delete this workflow?",
+      "confirmRun": "Are you sure you want to run this workflow now?",
+      "executionStarted": "Workflow execution started",
+      "executionCompleted": "Workflow execution completed",
+      "executionFailed": "Workflow execution failed"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "builder": "Builder",
+      "yaml": "YAML Definition",
+      "versions": "Versions",
+      "secrets": "Secrets",
+      "tutorials": "Tutorials",
+      "documentation": "Documentation"
+    },
+    "errorLoading": "Error loading workflow",
+    "running": "Running...",
+    "runNow": "Run now",
+    "breadcrumbs": {
+      "allWorkflows": "All Workflows",
+      "workflowDetails": "Workflow Details",
+      "executionDetails": "Execution Details",
+      "workflowRevision": "Workflow Revision {revision}",
+      "builder": "Workflow Builder"
+    },
+    "preview": {
+      "loading": "Loading workflow preview...",
+      "goBack": "Go Back",
+      "notFound": "Workflow not found!",
+      "previewTemplate": "Preview workflow template"
+    },
+    "executions": {
+      "revision": "Rev.",
+      "current": "Current",
+      "triggeredBy": "Triggered by",
+      "executionDuration": "Execution Duration",
+      "startedAt": "Started at",
+      "viewLogs": "View Logs",
+      "copyExecutionId": "Copy Execution ID",
+      "copiedToClipboard": "Execution ID copied to clipboard",
+      "copyFailed": "Failed to copy execution id. Please check your browser permissions.",
+      "manuallyBy": "Manually by {user}",
+      "interval": "Interval",
+      "manuallyTriggered": "Manually",
+      "alert": "Alert"
+    },
+    "filters": {
+      "filterWorkflows": "Filter Workflows...",
+      "trigger": "Trigger",
+      "status": "Status",
+      "clearFilters": "Clear filters",
+      "selectType": "Select {type}",
+      "statusOptions": {
+        "success": "Success",
+        "error": "Error",
+        "inProgress": "In Progress",
+        "timeout": "Timeout",
+        "providersNotConfigured": "Providers Not Configured"
+      },
+      "triggerOptions": {
+        "scheduler": "Scheduler",
+        "manual": "Manual",
+        "alert": "Alert"
+      }
+    },
+    "emptyStates": {
+      "noMatchingFilter": "No workflows to display matching your filter",
+      "resetFilter": "Reset filter",
+      "noMatchingSearch": "No workflows to display matching your search",
+      "clearSearch": "Clear search"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "addWidget": "Add Widget",
+    "editWidget": "Edit Widget",
+    "deleteWidget": "Delete Widget",
+    "saveDashboard": "Save Dashboard",
+    "resetDashboard": "Reset Dashboard",
+    "editMode": "Edit Mode",
+    "widgetTypes": {
+      "preset": "Preset",
+      "genericMetrics": "Generic Metrics",
+      "metric": "Metric"
+    },
+    "messages": {
+      "noWidgets": "No widgets available",
+      "noWidgetsDescription": "Click to add your first widget",
+      "savedSuccessfully": "Dashboard saved successfully",
+      "saveFailed": "Failed to save dashboard",
+      "noDashboards": "Dashboards will appear here when saved."
+    },
+    "labels": {
+      "widgetName": "Widget Name",
+      "widgetType": "Widget Type",
+      "selectPreset": "Select Preset",
+      "selectTags": "Select Tags to Watch"
+    },
+    "addDashboard": "Add Dashboard",
+    "alertQuality": {
+      "title": "Alert Quality Dashboard",
+      "providerName": "Provider Name",
+      "alertsReceived": "Alerts Received",
+      "correlatedPercent": "% of Alerts Correlated to Incidents",
+      "havingPercent": "% of Alerts Having {field}",
+      "lastReceived": "Last received",
+      "field": "Field",
+      "tabs": {
+        "all": "All",
+        "installed": "Installed",
+        "linked": "Linked"
+      },
+      "error": "Error",
+      "loadFailed": "Failed to load Alert Quality Metrics"
+    },
+    "widgetModal": {
+      "widgetName": "Widget Name",
+      "widgetNamePlaceholder": "Enter widget name",
+      "widgetType": "Widget Type",
+      "widgetTypePlaceholder": "Select a Widget Type",
+      "nameRequired": "Widget name is required",
+      "typeRequired": "Preset selection is required"
+    },
+    "presetWidget": {
+      "preset": "Preset",
+      "presetPlaceholder": "Select a preset",
+      "presetRequired": "Preset selection is required",
+      "panelType": "Panel Type",
+      "panelTypePlaceholder": "Select a panel type",
+      "panelTypeRequired": "Panel type selection is required",
+      "alertTable": "Alert Table",
+      "alertCountPanel": "Alert Count Panel",
+      "showFiringOnly": "Show Firing Alerts Only",
+      "customLink": "Custom Link (optional)",
+      "customLinkPlaceholder": "https://example.com or leave empty for preset link",
+      "lastAlertsCount": "Last alerts count to display",
+      "lastAlertsCountPlaceholder": "Value indicating how many alerts to display in widget",
+      "thresholds": "Thresholds",
+      "thresholdValue": "Threshold value",
+      "valueRequired": "Preset selection is required"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "users": {
+      "title": "Users Management",
+      "subtitle": "Add or remove users from your tenant",
+      "addUser": "Add User",
+      "editUser": "Edit User",
+      "deleteUser": "Delete User",
+      "searchPlaceholder": "Search by username",
+      "labels": {
+        "username": "Username",
+        "email": "Email",
+        "role": "Role",
+        "lastLogin": "Last Login",
+        "created": "Created"
+      },
+      "messages": {
+        "confirmDelete": "Are you sure you want to delete this user?",
+        "deleteFailed": "Failed to delete user",
+        "externallyManaged": "Users are managed externally and cannot be created from Keep"
+      }
+    },
+    "groups": {
+      "title": "Groups Management",
+      "subtitle": "Manage user groups",
+      "addGroup": "Add Group",
+      "editGroup": "Edit Group",
+      "deleteGroup": "Delete Group",
+      "searchPlaceholder": "Search by group name",
+      "messages": {
+        "confirmDelete": "Are you sure you want to delete this group?"
+      }
+    },
+    "roles": {
+      "title": "Roles Management",
+      "addRole": "Add Role",
+      "editRole": "Edit Role",
+      "deleteRole": "Delete Role",
+      "searchPlaceholder": "Search by role name",
+      "messages": {
+        "confirmDelete": "Are you sure you want to delete this role?"
+      }
+    },
+    "apiKeys": {
+      "title": "API Keys",
+      "addKey": "Create API Key",
+      "revokeKey": "Revoke API Key",
+      "labels": {
+        "keyName": "Key Name",
+        "createdAt": "Created At",
+        "expiresAt": "Expires At",
+        "lastUsed": "Last Used"
+      },
+      "messages": {
+        "regenerateConfirm": "This action cannot be undone. This will revoke the key and generate a new one. Any further requests made with this key will fail. Make sure to update any applications that use this key.",
+        "deleteConfirm": "This action cannot be undone. This will permanently delete the API key and any future requests using this key will fail.",
+        "creationDisabled": "API Key creation is disabled because Keep is running in NO_AUTH mode."
+      }
+    },
+    "sso": {
+      "title": "SSO",
+      "configure": "Configure SSO",
+      "labels": {
+        "provider": "Provider",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "tenantId": "Tenant ID"
+      }
+    },
+    "permissions": {
+      "title": "Permissions"
+    },
+    "smtp": {
+      "title": "SMTP Settings",
+      "host": "SMTP Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "fromEmail": "From Email"
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "addWebhook": "Add Webhook",
+      "testWebhook": "Test Webhook"
+    },
+    "tenant": {
+      "title": "Tenant Settings"
+    }
+  },
+  "providers": {
+    "title": "Providers",
+    "installed": "Installed Providers",
+    "available": "Available Providers",
+    "linked": "Linked Providers",
+    "actions": {
+      "addProvider": "Add Provider",
+      "configureProvider": "Configure Provider",
+      "deleteProvider": "Delete Provider",
+      "testConnection": "Test Connection",
+      "refreshScopes": "Refresh Scopes"
+    },
+    "labels": {
+      "providerName": "Provider Name",
+      "provider": "provider",
+      "type": "Type",
+      "status": "Connection Status",
+      "installed": "Installed",
+      "notInstalled": "Not Installed",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Error"
+    },
+    "messages": {
+      "installSuccess": "Provider installed successfully",
+      "installFailed": "Failed to install provider",
+      "connectionSuccess": "Connection test successful",
+      "connectionFailed": "Connection test failed",
+      "confirmDelete": "Are you sure you want to delete this provider?",
+      "found": "found",
+      "noProviders": "No providers found matching your filters."
+    },
+    "categories": {
+      "monitoring": "Monitoring",
+      "ticketing": "Ticketing",
+      "communication": "Communication",
+      "cloud": "Cloud",
+      "database": "Database",
+      "security": "Security"
+    }
+  },
+  "rules": {
+    "title": "Rules",
+    "correlation": {
+      "title": "Correlation Rules",
+      "addRule": "Add Correlation Rule",
+      "editRule": "Edit Correlation Rule",
+      "messages": {
+        "noCorrelations": "No Correlations Yet",
+        "noCorrelationsDescription": "Start building correlations to group alerts into incidents."
+      }
+    },
+    "mapping": {
+      "title": "Mapping",
+      "description": "Enrich alerts with more data from Topology, CSV, JSON and YAMLs",
+      "configure": "Configure",
+      "configureDescription": "Add dynamic context to your alerts with mapping rules",
+      "addRule": "Create Mapping",
+      "messages": {
+        "noRules": "No mapping rules yet",
+        "noRulesDescription": "Create a new mapping rule using the mapping rules wizard",
+        "confirmDelete": "Are you sure you want to delete this mapping rule?",
+        "deleteSuccess": "Rule deleted successfully",
+        "deleteFailed": "Failed to delete mapping rule",
+        "createSuccess": "Mapping created successfully",
+        "createFailed": "Failed to create mapping",
+        "updateSuccess": "Mapping updated successfully",
+        "updateFailed": "Failed to update mapping",
+        "loadingRule": "Loading mapping rule..."
+      },
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "priority": "Priority",
+        "matchers": "Matchers",
+        "enrichedWith": "Enriched With",
+        "actions": {
+          "run": "Run",
+          "edit": "Edit",
+          "delete": "Delete"
+        }
+      },
+      "form": {
+        "name": "Name",
+        "priority": "Priority",
+        "priorityTooltip": "Higher priority will be executed first",
+        "description": "Description",
+        "mappingType": "Mapping Type",
+        "csv": "CSV",
+        "topology": "Topology",
+        "fromFile": "From File",
+        "fromText": "From Text",
+        "processCsv": "Process CSV",
+        "csvDataLoaded": "CSV Data Loaded Successfully",
+        "rowsColumnsFound": "rows and {columns} columns found",
+        "uploadRequired": "* Upload a CSV file to begin",
+        "enterProcessCsv": "* Enter and process CSV data to begin",
+        "enableMultiLevel": "Enable Multi-level Mapping",
+        "newPropertyName": "New Property Name",
+        "prefixToRemove": "Prefix to Remove",
+        "mappingConfiguration": "Mapping Configuration",
+        "enrichmentDescription": "If alert will match the atributes, it will be enriched with the rest of the fields",
+        "fromCsvRow": "from matched row in the CSV.",
+        "fromTopologyNode": "from matching node in the topology.",
+        "enrichedWith": "Enriched with",
+        "placeholders": {
+          "mapName": "Map Name",
+          "mapDescription": "Map Description",
+          "priority": "Priority",
+          "selectSingleAttribute": "Select Single Attribute",
+          "selectAttributes": "Select Attributes",
+          "propertyName": "Enter property name",
+          "prefixToRemove": "Enter prefix to remove from keys (optional)"
+        }
+      },
+      "runModal": {
+        "title": "Select alert to run mapping rule against",
+        "placeholder": "Select an alert...",
+        "noAlerts": "No alerts found",
+        "failed": "Failed to run mapping rule"
+      }
+    },
+    "extraction": {
+      "title": "Extractions",
+      "description": "Easily extract more attributes from your alerts using Regex",
+      "addRule": "Create Extraction",
+      "messages": {
+        "noRules": "No extraction rules yet",
+        "confirmDelete": "Are you sure you want to delete this rule?",
+        "deleteSuccess": "Extraction deleted successfully",
+        "deleteFailed": "Failed to delete extraction rule",
+        "createSuccess": "Extraction rule created successfully",
+        "createFailed": "Failed to create extraction rule",
+        "updateSuccess": "Extraction updated successfully",
+        "updateFailed": "Failed to update extraction"
+      },
+      "table": {
+        "priority": "Priority",
+        "name": "Name",
+        "description": "Description",
+        "preFormatting": "Pre-formatting",
+        "attribute": "Attribute",
+        "regex": "Regex",
+        "regexTooltip": "Python regex pattern for group matching",
+        "condition": "Condition",
+        "conditionTooltip": "See extractions documentation for more information",
+        "extractedAttributes": "Extracted Attributes",
+        "actions": {
+          "run": "Run",
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "createdAt": "Created At:",
+        "createdBy": "Created By:",
+        "updatedAt": "Updated At:",
+        "updatedBy": "Updated By:"
+      },
+      "form": {
+        "extractionMetadata": "Extraction Metadata",
+        "name": "Name",
+        "description": "Description",
+        "priority": "Priority",
+        "priorityTooltip": "Higher priority will be executed first",
+        "preFormatting": "Pre-formatting",
+        "preFormattingTooltip": "Whether this rule should be applied before or after the alert is standardized.",
+        "extractionDefinition": "Extraction Definition",
+        "docsTooltip": "See extractions documentation for more information",
+        "attribute": "Attribute",
+        "attributePlaceholder": "Event attribute name to extract from",
+        "regex": "Regex",
+        "regexPlaceholder": "The regex rule to extract by",
+        "regexTooltip": "Python regex pattern for group matching",
+        "invalidRegex": "Invalid regex pattern. Must contain named groups.",
+        "condition": "Condition",
+        "conditionTooltip": "CEL based condition",
+        "extractedAttributes": "Extracted Attributes",
+        "extractedAttributesDescription": "(I.e., attributes that will be added to matching incoming events)",
+        "placeholders": {
+          "extractionName": "Extraction Name",
+          "extractionDescription": "Extraction Description",
+          "priority": "Priority"
+        }
+      },
+      "executions": {
+        "allRules": "All Rules",
+        "executions": "Executions",
+        "executionDetails": "Execution Details",
+        "extractionRuleExecutions": "Extraction Rule Executions",
+        "status": "Status:",
+        "logs": "Logs",
+        "alertId": "Alert ID:",
+        "extractedFields": "Extracted Fields"
+      }
+    },
+    "deduplication": {
+      "title": "Deduplication Rules",
+      "addRule": "Add Deduplication Rule",
+      "messages": {
+        "noRules": "No Deduplications Yet",
+        "description1": "Alert deduplication is the first layer of denoising. It groups similar alerts from one source.",
+        "description2": "To connect alerts across sources into incidents, check",
+        "activeHint": "This page will become active once the first alerts are registered.",
+        "confirmDelete": "Are you sure you want to delete this deduplication rule?",
+        "deleteFailed": "Error deleting deduplication rule:",
+        "default": "Default",
+        "custom": "Custom",
+        "fullDeduplication": "Full Deduplication",
+        "unknownYet": "Unknown yet",
+        "defaultDeduplicationRule": "{provider} deduplication rule",
+        "cannotDeleteDefault": "Cannot delete default rule",
+        "cannotDeleteProvisioned": "Cannot delete provisioned rule.",
+        "deleteRule": "Delete Rule",
+        "tooltips": {
+          "distribution": "Displays the number of alerts processed hourly over the last 24 hours. A consistent or high distribution indicates steady activity for this deduplication rule.",
+          "dedupRatio": "Represents the percentage of alerts successfully deduplicated. Higher values indicate better deduplication efficiency, meaning fewer redundant alerts."
+        }
+      },
+      "table": {
+        "description": "Description",
+        "ingested": "Ingested",
+        "dedupRatio": "Dedup Ratio",
+        "distribution": "Distribution",
+        "fields": "Fields",
+        "actions": "Disable Rule"
+      },
+      "sidebar": {
+        "addRule": "Add deduplication rule",
+        "editRule": "Edit {name}",
+        "defaultRule": "Default Rule",
+        "editingDefault": "Editing a Default Rule",
+        "editingDefaultDescription": "Editing a default deduplication rule requires advanced knowledge. Default rules are carefully designed to provide optimal deduplication for specific alert types. Modifying these rules may impact the efficiency of your alert processing. If you're unsure about making changes, we recommend creating a new custom rule instead of modifying the default one.",
+        "learnMore": "Learn more about deduplication rules",
+        "editingProvisioned": "Editing a Provisioned Rule",
+        "editingProvisionedDescription": "Editing a provisioned deduplication rule is not allowed. Please contact your system administrator for more information.",
+        "ruleName": "Rule name",
+        "ruleNameRequired": "Rule name is required",
+        "description": "Description",
+        "descriptionRequired": "Description is required",
+        "provider": "Provider",
+        "providerTooltip": "Select the provider for which this deduplication rule will apply. This determines the source of alerts that will be processed by this rule.",
+        "providerRequired": "Provider is required",
+        "selectProvider": "Select provider",
+        "fingerprintFields": "Fields to use for fingerprint",
+        "fingerprintFieldsTooltip": "Fingerprint fields are used to identify and group similar alerts. Choose fields that uniquely identify an alert type, such as 'service', 'error_type', or 'affected_component'.",
+        "fingerprintFieldsRequired": "At least one fingerprint field is required",
+        "selectFingerprintFields": "Select fingerprint fields",
+        "noOptions": "No options",
+        "chooseProviderFirst": "Please choose provider to see available fields",
+        "fullDeduplication": "Full deduplication",
+        "fullDeduplicationTooltip": "1. Full deduplication: Keep will discard events if they are the same (excluding the 'Ignore Fields'). 2. Partial deduplication (default): Uses specified fields to correlate alerts. E.g., two alerts with same 'service' and 'env' fields will be deduped into one alert.",
+        "ignoreFields": "Ignore fields",
+        "selectIgnoreFields": "Select ignore fields",
+        "errorWhileSaving": "Error while saving rule",
+        "saving": "Saving...",
+        "save": "Save"
+      }
+    },
+    "labels": {
+      "ruleName": "Rule Name",
+      "description": "Description",
+      "priority": "Priority",
+      "enabled": "Enabled"
+    },
+    "messages": {
+      "confirmDelete": "Are you sure you want to delete this rule?"
+    }
+  },
+  "topology": {
+    "title": "Topology",
+    "services": "Services",
+    "applications": {
+      "title": "Applications",
+      "subtitle": "Group services that work together into applications for easier management and monitoring",
+      "noApplicationsYet": "No applications yet",
+      "noApplicationsDescription": "Group services that work together into applications for easier management and monitoring",
+      "createApplication": "Create Application",
+      "addApplication": "Add Application",
+      "edit": "Edit",
+      "showOnMap": "Show on map",
+      "form": {
+        "title": "Group services into an application",
+        "applicationName": "Application name",
+        "description": "Description (optional)",
+        "repositoryUrl": "Repository URL (optional)",
+        "selectedServices": "Selected services",
+        "searchServices": "Search services by name or id",
+        "placeholders": {
+          "applicationName": "Application name",
+          "description": "Description (optional)",
+          "repositoryUrl": "Repository URL"
+        },
+        "errors": {
+          "nameRequired": "Enter the application name",
+          "selectService": "Select at least one service",
+          "validUrl": "Please enter a valid URL"
+        }
+      },
+      "messages": {
+        "failedToUpdate": "Failed to update application",
+        "failedToDelete": "Failed to delete application"
+      },
+      "manageSelection": {
+        "selected": "Selected: {services}",
+        "updateService": "Update Service",
+        "deleteService": "Delete Service",
+        "deleteServices": "Delete Services",
+        "createApplication": "Create Application",
+        "editDependency": "Edit Dependency",
+        "enterProtocol": "Please enter the protocol:"
+      }
+    },
+    "infrastructure": "Infrastructure",
+    "dependencies": "Dependencies",
+    "tabs": {
+      "map": "Topology Map"
+    },
+    "actions": {
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All",
+      "filterByService": "Filter by Service",
+      "filterByApplication": "Filter by Application",
+      "pullFromProviders": "Pull from providers",
+      "import": "Import",
+      "export": "Export",
+      "addNode": "Add Node"
+    },
+    "messages": {
+      "pullSuccess": "Topology pull initiated",
+      "pullFailed": "Failed to pull topology",
+      "importSuccess": "Topology imported Successfully!",
+      "errorUploadingFile": "Error uploading file",
+      "errorExporting": "Error exporting topology",
+      "errorLoadingData": "Error Loading Topology Data",
+      "errorLoadingDescription": "We encountered some problem while trying to load your topology data, please contact us if this issue continues",
+      "confirmImport": "Current topology will be completely replaced. Do you want to continue?",
+      "importedFrom": "Topology pulled from {providerId} ({providerType})",
+      "searchPlaceholder": "Search for a service or application",
+      "showApplication": "Show application",
+      "fullTopologyMap": "Full topology map",
+      "noTopologyYet": "No Topology Yet",
+      "noTopologyDescription": "Start by connecting providers that support topology, import topology data or create a new topology manually",
+      "connectProviders": "Connect Providers",
+      "errorAddingConnection": "Error while adding connection from {source} to {target}: {error}",
+      "errorReconnecting": "Error while adding (re)connection from {source} to {target}",
+      "errorDeletingConnection": "Failed to delete connection from {source} to {target}",
+      "failedToUpdateProtocol": "Failed to update protocol",
+      "selectServiceOrApplication": "Select a service or application",
+      "serviceOrApplication": "service or application"
+    },
+    "labels": {
+      "service": "Service",
+      "application": "Application",
+      "status": "Status",
+      "health": "Health",
+      "alerts": "Alerts"
+    },
+    "nodeForm": {
+      "service": "Service",
+      "displayName": "Display Name",
+      "description": "Description",
+      "repository": "Repository",
+      "tags": "Tags",
+      "team": "Team",
+      "email": "Email",
+      "slack": "Slack",
+      "ipAddress": "IP Address",
+      "macAddress": "MAC Address",
+      "category": "Category",
+      "manufacturer": "Manufacturer",
+      "namespace": "Namespace",
+      "placeholders": {
+        "service": "Enter service here...",
+        "displayName": "Enter display name here...",
+        "description": "Enter description here...",
+        "repository": "Enter repository here...",
+        "tags": "Enter tags here (comma-separated)...",
+        "team": "Enter team here...",
+        "email": "Enter email here...",
+        "slack": "Enter Slack channel here...",
+        "ipAddress": "Enter IP address here...",
+        "macAddress": "Enter MAC address here...",
+        "category": "Enter category here...",
+        "manufacturer": "Enter manufacturer here...",
+        "namespace": "Enter namespace here..."
+      },
+      "messages": {
+        "addedSuccessfully": "Service added successfully",
+        "failedToAdd": "Failed to add service: {error}",
+        "updatedSuccessfully": "Service updated successfully",
+        "failedToUpdate": "Failed to update service: {error}"
+      }
+    },
+    "map": {
+      "errorLoadingTopology": "Error Loading Topology Data",
+      "errorLoadingDescription": "We encountered some problem while trying to load your topology data, please contact us if this issue continues"
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance Windows",
+    "description": "Configure maintenance windows and suppress alerts automatically",
+    "addRule": "Add Maintenance Rule",
+    "editRule": "Edit Maintenance Rule",
+    "metadata": "Maintenance Rule Metadata",
+    "labels": {
+      "name": "Name",
+      "description": "Description",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "enabled": "Enabled",
+      "celQuery": "CEL Query",
+      "suppress": "Suppress Alerts",
+      "ignoreStatuses": "Ignore Statuses"
+    },
+    "placeholders": {
+      "name": "Maintenance Name",
+      "description": "Maintenance Description"
+    },
+    "messages": {
+      "noRules": "No maintenance rules yet",
+      "noRulesDescription": "Create a new maintenance rule using the maintenance rules wizard",
+      "alertsWillNotShow": "Alerts will not show in feed",
+      "alertsWillShowSuppressed": "Alerts will show in suppressed status",
+      "enabledTooltip": "Whether this rule is enabled or not",
+      "adjustDuration": "Please adjust when editing existing maintenance rule, as this is calculated upon submit.",
+      "createSuccess": "Maintenance rule created successfully",
+      "createFailed": "Failed to create maintenance rule",
+      "updateSuccess": "Maintenance rule updated successfully",
+      "updateFailed": "Failed to update maintenance rule",
+      "deleteSuccess": "Maintenance rule deleted successfully",
+      "deleteFailed": "Failed to delete maintenance rule",
+      "confirmDelete": "Are you sure you want to delete this maintenance rule?"
+    },
+    "timeUnits": {
+      "seconds": "Seconds",
+      "minutes": "Minutes",
+      "hours": "Hours",
+      "days": "Days"
+    },
+    "table": {
+      "name": "Name",
+      "description": "Description",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "cel": "CEL",
+      "enabled": "Enabled",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At"
+    }
+  },
+  "errors": {
+    "generic": "An unexpected error occurred",
+    "notFound": "Not Found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access Denied",
+    "badRequest": "Bad Request",
+    "serverError": "Internal Server Error",
+    "networkError": "Network Error",
+    "timeout": "Request Timeout",
+    "validation": {
+      "required": "This field is required",
+      "email": "Please enter a valid email address",
+      "minLength": "Minimum {min} characters required",
+      "maxLength": "Maximum {max} characters allowed",
+      "pattern": "Invalid format",
+      "number": "Please enter a valid number",
+      "url": "Please enter a valid URL"
+    },
+    "notAuthorized": {
+      "title": "403 Not Authorized",
+      "defaultMessage": "You do not have permission to access this page.",
+      "contactSupport": "If you need help, please contact us on",
+      "goBack": "Go back"
+    }
+  },
+  "health": {
+    "title": "Providers",
+    "resultsModal": {
+      "title": "Health Results",
+      "spammyAlerts": "Spammy Alerts",
+      "timestamp": "Timestamp",
+      "spammyMessage": "Sorry to say, but looks like your alerts are spammy",
+      "everythingOk": "Everything is ok",
+      "rulesQuality": "Rules Quality",
+      "unusedRulesMessage": "{unused} of your {total} alert rules are not in use",
+      "actionable": "Actionable",
+      "topologyCoverage": "Topology coverage",
+      "notCoveredMessage": "Not of your services are covered. Alerts are missing for:",
+      "wantToImprove": "Want to improve your observability?",
+      "signUpToKeep": "Sign up to Keep"
+    }
+  },
+  "notFound": {
+    "title": "404 Page not found",
+    "message": "If you believe this is an error, please contact us on",
+    "slack": "Slack",
+    "goBack": "Go back"
+  },
+  "aiPlugins": {
+    "title": "AI Plugins",
+    "subtitle": "For correlation, summarization, and enrichment",
+    "loading": "Loading algorithms and their settings...",
+    "noAIEnabled": "No AI enabled for this tenant",
+    "description1": "AI plugins can correlate, enrich, or summarize your alerts and incidents by leveraging the the context within Keep allowing you to gain deeper insights and respond more effectively.",
+    "description2": "By the way, AI plugins are designed to work even in air-gapped environments. You can train models using your data, so there is no need to share information with third-party providers like OpenAI. Keep your data secure and private.",
+    "contactUs": "Talk to us to get access!",
+    "newSettingsProposal": "The new settings proposal",
+    "proposalDescription": "The last time the model was trained and used for inference, it suggested a configuration update. However, please note that a configuration update might not be very effective if the data quantity or quality is low. For more details, please refer to the logs below.",
+    "applyProposedSettings": "Apply proposed settings",
+    "executionLogs": "Execution logs:",
+    "notExecutedYet": "Algorithm not executed yet.",
+    "value": "value"
+  },
+  "providerImages": {
+    "title": "Provider Icons",
+    "subtitle": "Customize provider icons",
+    "uploadNewImage": "Upload New Image"
+  },
+  "apiKey": {
+    "modal": {
+      "nameRequired": "Name is required",
+      "roleRequired": "Role is required",
+      "unexpectedError": "Unexpected error occurred",
+      "name": "Name",
+      "role": "Role",
+      "selectRole": "Select a role",
+      "createApiKey": "Create API Key"
+    },
+    "settings": {
+      "name": "Name",
+      "key": "Key",
+      "role": "Role",
+      "createdBy": "Created By",
+      "createdAt": "Created At",
+      "lastUsed": "Last Used",
+      "never": "Never",
+      "noActiveKeys": "There are no active API keys",
+      "regenerateTooltip": "Regenerate key",
+      "deleteTooltip": "Delete key",
+      "regenerateFailed": "Failed to regenerate API key",
+      "deleteFailed": "Failed to delete API key",
+      "copyFailed": "Failed to copy code",
+      "copyFailedDescription": "Please check your browser permissions.",
+      "learnMore": "Learn more",
+      "deleteConfirm": "This action cannot be undone. This will permanently delete the API key and any future requests using this key will fail."
+    }
+  },
+  "webhook": {
+    "subtitle": "View your tenant webhook settings",
+    "url": "URL:",
+    "apiKey": "API Key:",
+    "createExampleAlert": "Click to create an example Alert",
+    "copyCode": "Copy Code",
+    "copiedToClipboard": "Code copied to clipboard!",
+    "copyFailed": "Failed to copy code",
+    "copyFailedDescription": "Please check your browser permissions.",
+    "learnMore": "Learn more",
+    "loadingError": "Error",
+    "loadingFailed": "Failed to load webhook settings."
+  },
+  "smtp": {
+    "title": "SMTP Settings",
+    "subtitle": "Configure your SMTP server to send emails",
+    "host": "Host",
+    "hostPlaceholder": "smtp.example.com",
+    "hostDescription": "The SMTP host name of your mail server.",
+    "port": "Port",
+    "portDescription": "SMTP port number to use. Default is 25.",
+    "fromAddress": "From address",
+    "fromAddressPlaceholder": "keepserver@example.com",
+    "fromAddressDescription": "The default address this server will use to send the emails from.",
+    "username": "Username",
+    "usernameDescription": "Optional - if you use authenticated SMTP, enter your username.",
+    "password": "Password",
+    "passwordDescription": "Optional - if you use authenticated SMTP, enter your password.",
+    "useTLS": "Use TLS",
+    "toEmail": "To:",
+    "toEmailPlaceholder": "recipient@example.com",
+    "toEmailDescription": "A test mail address. Keep will try to send email to this address.",
+    "save": "Save",
+    "delete": "Delete",
+    "test": "Test",
+    "hostRequired": "Host is required",
+    "portInvalid": "Port is invalid",
+    "fromRequired": "From is required",
+    "toRequiredForTesting": "To is required for testing",
+    "saveSuccess": "SMTP settings saved successfully.",
+    "deleteSuccess": "SMTP settings deleted successfully.",
+    "testSuccess": "Success!",
+    "testFailed": "An error occurred while saving.",
+    "deleteFailed": "An unexpected error occurred",
+    "connectionFailed": "Failed to connect to server or process the request.",
+    "testMail": "Test",
+    "message": "Message:",
+    "logs": "Logs:",
+    "noLogs": "No logs available."
+  },
+  "correlation": {
+    "form": {
+      "correlationName": "Correlation name",
+      "namePlaceholder": "Correlation rule name",
+      "nameRequired": "Name is required",
+      "appendIncident": "Append to the same Incident if delay between alerts is below",
+      "appendIncidentTooltip": "When the first alert arrives, Keep calculates the timespan. Any new alert within this timeframe will correlate into the same incident. The timeframe cannot exceed 90 days.",
+      "seconds": "Seconds",
+      "minutes": "Minutes",
+      "hours": "Hours",
+      "days": "Days",
+      "incidentNameTemplate": "Incident name template",
+      "incidentNameTemplateTooltip": "You can use alert fields in the template by wrapping them in curly braces, e.g. 'Incident on hosts {{ alert.host }}'. With two alerts from hosts 'host1' and 'host2', the incident name would be 'Incident on hosts host1, host2'. Default: correlation rule name will be used.",
+      "incidentNameTemplatePlaceholder": "Use Keep's expressions to create the incident name, for example: 'Incident on hosts {{ alert.host }}' will create an incident name like 'Incident on hosts host1, host2'. Default: correlation rule name will be used.",
+      "incidentNameRequired": "Incident name template is required",
+      "incidentPrefix": "Incident prefix",
+      "incidentPrefixTooltip": "Incident prefix will be added to the incident name with a running number. For example, if the incident prefix is ACME and the incident name is 'Incident on hosts host1, host2', the incident name will be 'ACME-1 - Incident on hosts host1, host2'.",
+      "incidentPrefixPlaceholder": "INC",
+      "incidentPrefixRequired": "Incident prefix is required",
+      "incidentPrefixTooLong": "Incident prefix must be less than 10 characters",
+      "incidentPrefixInvalid": "Incident prefix must contain only letters and numbers",
+      "groupByAttributes": "Select attribute(s) to group by",
+      "groupByTooltip": "Attributes are used to distinguish between incidents. For example, grouping by 'host' will correlate alerts with hostX and hostY into separate incidents. Attributes cannot be calculated without alerts.",
+      "resolveOn": "Resolve on",
+      "noAutoResolution": "No auto-resolution",
+      "allAlertsResolved": "All alerts resolved",
+      "firstAlertResolved": "First alert resolved",
+      "lastAlertResolved": "Last alert resolved",
+      "startIncidentOn": "Start incident on",
+      "anyConditionMet": "Any condition met",
+      "allConditionsMet": "All conditions met",
+      "alertsThreshold": "Alerts threshold",
+      "thresholdPlaceholder": "1",
+      "thresholdRequired": "Threshold is required",
+      "thresholdPositive": "Threshold should be positive",
+      "autoAssignToUser": "Auto-assign to user",
+      "noAssignment": "No assignment",
+      "requireManualApprove": "Created incidents require manual approve",
+      "multiLevelCorrelation": "Multi-level correlation",
+      "multiLevelPropertyName": "Multi-level property name",
+      "multiLevelPropertyNameTooltip": "The property name to use for the multi-level correlation. For example, if the property name is 'host', the correlation will be 'host1, host2'.",
+      "multiLevelPropertyNameRequired": "Multi-level property name is required"
+    }
+  },
+  "providers": {
+    "layout": {
+      "title": "Providers",
+      "subtitle": "Connect monitoring services for Keep to ingest alerts, and other integrations to automate your workflows."
+    },
+    "tiles": {
+      "linkedTooltip": "Providers that send alerts to Keep and are not installed."
+    },
+    "connectTo": "Connect to {providerName}"
+  },
+  "userSidebar": {
+    "createUser": "Create User",
+    "userDetails": "User Details",
+    "externallyManaged": "Users are managed externally",
+    "externallyManagedDescription": "User management is handled through your external authentication system.",
+    "email": "Email",
+    "emailRequired": "Email is required",
+    "invalidEmail": "Invalid email address",
+    "name": "Name",
+    "nameRequired": "Name is required",
+    "username": "Username",
+    "usernameRequired": "Username is required",
+    "password": "Password",
+    "passwordRequired": "Password is required",
+    "role": "Role",
+    "selectRole": "Select a role",
+    "groups": "Groups",
+    "savingError": "Error while saving user",
+    "failedToSave": "Failed to save user",
+    "unexpectedError": "An unexpected error occurred",
+    "close": "Close",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "groupSidebar": {
+    "createGroup": "Create Group",
+    "groupDetails": "Group Details",
+    "groupName": "Group Name",
+    "groupNameRequired": "Group name is required",
+    "members": "Members",
+    "roles": "Roles",
+    "savingError": "Error while saving group",
+    "failedToSave": "Failed to save group",
+    "unexpectedError": "An unexpected error occurred",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "roleSidebar": {
+    "editRole": "Edit Role",
+    "addRole": "Add Role",
+    "predefinedRole": "Predefined Role",
+    "roleName": "Role Name",
+    "roleNameRequired": "Role name is required",
+    "description": "Description",
+    "descriptionRequired": "Description is required",
+    "scopes": "Scopes",
+    "read": "Read",
+    "write": "Write",
+    "delete": "Delete",
+    "update": "Update",
+    "savingError": "Error while adding role",
+    "failedToSave": "Failed to save role",
+    "unexpectedError": "An unexpected error occurred",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveRole": "Save Role",
+    "atLeastOneScope": "At least one scope must be selected"
+  },
+  "permissionSidebar": {
+    "managePermissions": "Manage Permissions",
+    "resource": "Resource",
+    "type": "Type",
+    "assignTo": "Assign To",
+    "savingError": "Error while saving permissions",
+    "failedToSave": "Failed to save permissions",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes"
+  }
+}

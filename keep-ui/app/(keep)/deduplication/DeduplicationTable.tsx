@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
@@ -46,6 +47,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   deduplicationRules,
   mutateDeduplicationRules,
 }) => {
+  const { t } = useI18n();
   const api = useApi();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,7 +88,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
     if (rule.default) return; // Don't delete default rules
 
     if (
-      window.confirm("Are you sure you want to delete this deduplication rule?")
+      window.confirm(t("rules.deduplication.messages.confirmDelete"))
     ) {
       try {
         await api.delete(`/deduplications/${rule.id}`);
@@ -115,24 +117,22 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   }, [isSidebarOpen, selectedId, router]);
 
   const TOOLTIPS = {
-    distribution:
-      "Displays the number of alerts processed hourly over the last 24 hours. A consistent or high distribution indicates steady activity for this deduplication rule.",
-    dedup_ratio:
-      "Represents the percentage of alerts successfully deduplicated. Higher values indicate better deduplication efficiency, meaning fewer redundant alerts.",
+    distribution: t("rules.deduplication.table.tooltips.distribution"),
+    dedup_ratio: t("rules.deduplication.table.tooltips.dedupRatio"),
   };
 
   function resolveDeleteButtonTooltip(
     deduplicationRule: DeduplicationRule
   ): string {
     if (deduplicationRule.default) {
-      return "Cannot delete default rule";
+      return t("rules.deduplication.table.tooltips.cannotDeleteDefault");
     }
 
     if (deduplicationRule.is_provisioned) {
-      return "Cannot delete provisioned rule.";
+      return t("rules.deduplication.table.tooltips.cannotDeleteProvisioned");
     }
 
-    return "Delete Rule";
+    return t("rules.deduplication.table.actions.delete");
   }
 
   const DEDUPLICATION_TABLE_COLS = useMemo(
@@ -155,7 +155,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         ),
       }),
       columnHelper.accessor("description", {
-        header: "Description",
+        header: t("rules.deduplication.table.description"),
         cell: (info) => {
           const matchingProvider = providers.installed_providers.find(
             (provider) => provider.id === info.row.original.provider_id
@@ -169,21 +169,21 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             <div className="flex flex-row items-center max-w-[320px]">
               <span className="truncate lg:whitespace-normal flex-grow">
                 {info.row.original.description ||
-                  `${providerName} deduplication rule`}
+                  `${providerName} ${t("rules.deduplication.table.defaultRuleName")}`}
               </span>
               <div className="flex items-center ml-2">
                 {info.row.original.default ? (
                   <Badge color="gray" size="xs" className="mx-1">
-                    Default
+                    {t("rules.deduplication.table.badges.default")}
                   </Badge>
                 ) : (
                   <Badge color="orange" size="xs" className="mx-1">
-                    Custom
+                    {t("rules.deduplication.table.badges.custom")}
                   </Badge>
                 )}
                 {info.row.original.full_deduplication && (
                   <Badge color="orange" size="xs" className="ml-1">
-                    Full Deduplication
+                    {t("rules.deduplication.table.badges.fullDeduplication")}
                   </Badge>
                 )}
               </div>
@@ -192,7 +192,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         },
       }),
       columnHelper.accessor("ingested", {
-        header: "Ingested",
+        header: t("rules.deduplication.table.ingested"),
         cell: (info) => (
           <div className="min-w-16 text-right">{info.getValue() || 0}</div>
         ),
@@ -201,11 +201,11 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         },
       }),
       columnHelper.accessor("dedup_ratio", {
-        header: "Dedup Ratio",
+        header: t("rules.deduplication.table.dedupRatio"),
         cell: (info) => {
           let formattedValue;
           if (info.row.original.ingested === 0) {
-            formattedValue = "Unknown yet";
+            formattedValue = t("rules.deduplication.table.unknown");
           } else {
             const value = info.getValue() || 0;
             formattedValue = `${Number(value).toFixed(1)}%`;
@@ -217,7 +217,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         },
       }),
       columnHelper.accessor("distribution", {
-        header: "Distribution",
+        header: t("rules.deduplication.table.distribution"),
         cell: (info) => {
           const rawData = info.getValue();
           const maxNumber = Math.max(...rawData.map((item) => item.number));
@@ -243,7 +243,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         },
       }),
       columnHelper.accessor("fingerprint_fields", {
-        header: "Fields",
+        header: t("rules.deduplication.table.fields"),
         cell: (info) => {
           const fields = info.getValue();
           const ignoreFields = info.row.original.ignore_fields;
@@ -254,7 +254,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
             return (
               <div className="flex flex-wrap items-center gap-2 w-[200px]">
                 <Badge color="orange" size="md">
-                  N/A
+                  {t("common.labels.notApplicable")}
                 </Badge>
               </div>
             );
@@ -328,13 +328,13 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <PageTitle>
-            Deduplication Rules{" "}
+            {t("rules.deduplication.page.title")}{" "}
             <span className="text-gray-400">
               ({deduplicationRules?.length})
             </span>
           </PageTitle>
           <PageSubtitle>
-            Set up rules to deduplicate similar alerts
+            {t("rules.deduplication.page.subtitle")}
           </PageSubtitle>
         </div>
         <Button
@@ -347,7 +347,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
           variant="primary"
           size="md"
         >
-          Create Deduplication Rule
+          {t("rules.deduplication.page.createRuleButton")}
         </Button>
       </div>
       <Card className="p-0">

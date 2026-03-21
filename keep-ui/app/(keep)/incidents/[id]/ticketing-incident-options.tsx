@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { useState, useMemo } from "react";
 import { Button } from "@tremor/react";
@@ -21,6 +22,7 @@ interface TicketingIncidentOptionsProps {
 export function TicketingIncidentOptions({
   incident,
 }: TicketingIncidentOptionsProps) {
+  const { t } = useI18n();
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { installedProviders } = useFetchProviders();
@@ -82,7 +84,7 @@ export function TicketingIncidentOptions({
           onClick={() => openInProvider(linkedTicket)}
           disabled={!linkedTicketUrl}
         >
-          Open in {linkedTicket.provider.display_name}
+          {t("incidents.ticketing.openIn", { provider: linkedTicket.provider.display_name })}
         </Button>
       ) : (
         <>
@@ -94,7 +96,7 @@ export function TicketingIncidentOptions({
             icon={MdOutlineBookmarkAdd}
             onClick={createNewTicket}
           >
-            Create New Ticket
+            {t("incidents.ticketing.createNewTicket")}
           </Button>
           <Button
             color="orange"
@@ -104,7 +106,7 @@ export function TicketingIncidentOptions({
             icon={MdLink}
             onClick={linkIncidentToExistingTicket}
           >
-            Link to Existing Ticket
+            {t("incidents.ticketing.linkExisting")}
           </Button>
         </>
       )}

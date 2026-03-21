@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SearchInput } from "@/features/filter";

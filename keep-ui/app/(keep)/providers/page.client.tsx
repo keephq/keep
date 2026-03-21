@@ -9,6 +9,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { showErrorToast } from "@/shared/ui";
 import { Link } from "@/components/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -117,6 +118,7 @@ export default function ProvidersPage({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  const { t } = useI18n();
   const {
     providers,
     installedProviders,
@@ -149,7 +151,7 @@ export default function ProvidersPage({
         );
       }
     } else if (searchParams?.oauth === "success") {
-      toast.success("Successfully installed provider", {
+      toast.success(t("providers.messages.installSuccess"), {
         position: "top-left",
       });
     }
@@ -207,27 +209,27 @@ export default function ProvidersPage({
       {isFilteringActive && (
         <div className="mb-4">
           <ProvidersTiles
-            title="Available Providers"
+            title={t("providers.available")}
             providers={filteredProviders}
             isLocalhost={isLocalhost}
             mutate={mutate}
           />
           {displayableProviders.length > 0 && (
             <p className="text-m text-gray-500">
-              {displayableProviders.length} provider
-              {displayableProviders.length > 1 ? "s" : ""} found
+              {displayableProviders.length} {t("providers.labels.provider")}
+              {displayableProviders.length > 1 ? "s" : ""} {t("providers.messages.found")}
             </p>
           )}
           {displayableProviders.length === 0 && (
             <p className="text-m text-gray-500">
-              No providers found matching your filters.
+              {t("providers.messages.noProviders")}
             </p>
           )}
         </div>
       )}
       {installedProviders.length > 0 && (
         <ProvidersTiles
-          title="Installed Providers"
+          title={t("providers.installed")}
           providers={installedProviders}
           installedProvidersMode={true}
           mutate={mutate}
@@ -235,7 +237,7 @@ export default function ProvidersPage({
       )}
       {linkedProviders?.length > 0 && (
         <ProvidersTiles
-          title="Linked Providers"
+          title={t("providers.linked")}
           providers={linkedProviders}
           linkedProvidersMode={true}
           isLocalhost={isLocalhost}
@@ -244,7 +246,7 @@ export default function ProvidersPage({
       )}
       {!isFilteringActive && (
         <ProvidersTiles
-          title="Available Providers"
+          title={t("providers.available")}
           providers={filteredProviders}
           isLocalhost={isLocalhost}
           mutate={mutate}

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { CreateOrUpdateApplicationForm } from "@/app/(keep)/topology/ui/applications/create-or-update-application-form";
 import Modal from "@/components/ui/Modal";
 import { TopologyApplication } from "@/app/(keep)/topology/model";

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useEffect, useState, use } from "react";
 import { KeepLoader } from "@/shared/ui";
 import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
@@ -10,6 +11,7 @@ type PageProps = {
 };
 
 export default function Page(props: PageProps) {
+  const { t } = useI18n();
   const searchParams = use(props.searchParams);
   const params = use(props.params);
   const [workflowPreviewData, setWorkflowPreviewData] = useState<any>(null);
@@ -29,7 +31,7 @@ export default function Page(props: PageProps) {
   return (
     <>
       {!workflowPreviewData && (
-        <KeepLoader loadingText="Loading workflow preview..." />
+        <KeepLoader loadingText={t("workflows.preview.loading")} />
       )}
       {workflowPreviewData && workflowPreviewData.name === key && (
         <WorkflowBuilderWidget
@@ -44,10 +46,10 @@ export default function Page(props: PageProps) {
             className="p-2 bg-orange-500 text-white hover:bg-orange-600 rounded"
             href="/workflows"
           >
-            Go Back
+            {t("common.actions.goBack")}
           </Link>
           <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center text-red-500">Workflow not found!</div>
+            <div className="text-center text-red-500">{t("workflows.preview.notFound")}</div>
           </div>
         </>
       )}

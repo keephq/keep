@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { Text, Button, TextInput, Badge, Title, Card } from "@tremor/react";
@@ -23,6 +24,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
   toggle,
   selectedExecution,
 }) => {
+  const { t } = useI18n();
   const { data: workflowExecutionData } = useWorkflowExecutionDetail(
     selectedExecution.workflow_id,
     selectedExecution.id
@@ -144,7 +146,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
 
               <Card>
                 <Text className="block text-sm font-medium text-gray-700 mb-2">
-                  Execution Logs
+                  {t("incidents.workflows.executionLogs")}
                 </Text>
                 <div className="bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
                   <pre className="whitespace-pre-wrap">
@@ -154,7 +156,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                             {log.timestamp} - {log.message}
                           </div>
                         ))
-                      : "No logs available"}
+                      : t("incidents.workflows.noLogs")}
                   </pre>
                 </div>
               </Card>

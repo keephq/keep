@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useMemo } from "react";
 import Image from "next/image";

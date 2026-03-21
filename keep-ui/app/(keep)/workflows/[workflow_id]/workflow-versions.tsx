@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   useWorkflowDetail,
   useWorkflowRevisions,
@@ -17,6 +18,7 @@ export function WorkflowVersions({
   workflowId: string;
   currentRevision: number | null;
 }) {
+  const { t } = useI18n();
   const [selectedRevision, setSelectedRevision] = useState<number | null>(
     currentRevision
   );
@@ -65,7 +67,7 @@ export function WorkflowVersions({
   if (error) {
     return (
       <div className="p-4">
-        <Text color="red">Error loading workflow revisions</Text>
+        <Text color="red">{t("workflows.versions.errorLoading")}</Text>
       </div>
     );
   }
@@ -73,7 +75,7 @@ export function WorkflowVersions({
   if (data?.versions.length === 0) {
     return (
       <div className="p-4">
-        <Text>No revisions found for this workflow</Text>
+        <Text>{t("workflows.versions.noRevisions")}</Text>
       </div>
     );
   }
@@ -84,7 +86,7 @@ export function WorkflowVersions({
       <div className="flex justify-center items-center h-48">
         <KeepLoader
           includeMinHeight={false}
-          loadingText="Loading workflow revisions"
+          loadingText={t("workflows.versions.loading")}
         />
       </div>
     );
@@ -132,10 +134,10 @@ export function WorkflowVersions({
                 onClick={() => setSelectedRevision(revision.revision)}
               >
                 <span className="font-bold flex items-center gap-1 leading-none">
-                  Revision {revision.revision}
+                  {t("workflows.versions.revision")} {revision.revision}
                   {currentRevision === revision.revision ? (
                     <Badge color="green" size="xs" className="text-xs">
-                      Current
+                      {t("workflows.versions.current")}
                     </Badge>
                   ) : null}
                 </span>
@@ -156,7 +158,7 @@ export function WorkflowVersions({
             checked={showDiff}
             onChange={() => setShowDiff(!showDiff)}
           />
-          <label htmlFor="show-diff">Show diff from previous revision</label>
+          <label htmlFor="show-diff">{t("workflows.versions.showDiff")}</label>
         </div>
       </div>
     </Card>

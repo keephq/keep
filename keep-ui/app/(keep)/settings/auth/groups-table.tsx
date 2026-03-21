@@ -10,6 +10,7 @@ import {
   Button,
 } from "@tremor/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Group {
   id: string;
@@ -31,6 +32,7 @@ export function GroupsTable({
   onDeleteGroup,
   isDisabled = false,
 }: GroupsTableProps) {
+  const { t } = useI18n();
   return (
     <Table>
       <TableHead>

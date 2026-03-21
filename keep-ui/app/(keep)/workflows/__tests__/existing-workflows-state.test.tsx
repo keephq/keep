@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { act, fireEvent, getByText, render } from "@testing-library/react";
 import { ExistingWorkflowsState } from "../existing-workflows-state";
 import { useWorkflowsV2 } from "@/entities/workflows/model/useWorkflowsV2";

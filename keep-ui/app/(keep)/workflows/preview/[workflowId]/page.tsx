@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useEffect, useState, use } from "react";
 import { KeepLoader } from "@/shared/ui";
 import { WorkflowBuilderWidget } from "@/widgets/workflow-builder";
@@ -12,6 +13,7 @@ export default function PageWithId(
     params: Promise<{ workflowId: string }>;
   }
 ) {
+  const { t } = useI18n();
   const params = use(props.params);
   const [workflowPreviewData, setWorkflowPreviewData] = useState<any>(null);
   const key = params?.workflowId;
@@ -30,13 +32,12 @@ export default function PageWithId(
   return (
     <div className="flex flex-col h-full gap-4">
       <Subtitle className="text-sm">
-        <Link href="/workflows">All Workflows</Link>{" "}
-        <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Preview workflow
-        template
+        <Link href="/workflows">{t("workflows.breadcrumbs.allWorkflows")}</Link>{" "}
+        <Icon icon={ArrowRightIcon} color="gray" size="xs" /> {t("workflows.preview.title")}
       </Subtitle>
       <div className="flex-1 h-full">
         {!workflowPreviewData && (
-          <KeepLoader loadingText="Loading workflow preview..." />
+          <KeepLoader loadingText={t("workflows.preview.loading")} />
         )}
         {workflowPreviewData && workflowPreviewData.name === key && (
           <WorkflowBuilderWidget
@@ -51,11 +52,11 @@ export default function PageWithId(
               className="p-2 bg-orange-500 text-white hover:bg-orange-600 rounded"
               href="/workflows"
             >
-              Go Back
+              {t("common.actions.goBack")}
             </Link>
             <div className="flex items-center justify-center min-h-screen">
               <div className="text-center text-red-500">
-                Workflow not found!
+                {t("workflows.preview.notFound")}
               </div>
             </div>
           </>

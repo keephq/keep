@@ -23,12 +23,14 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdAddModerator } from "react-icons/md";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { PageTitle } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface RolesTabProps {
   customRolesAllowed: boolean;
 }
 
 export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
+  const { t } = useI18n();
   const api = useApi();
   const { data: scopes = [], isLoading: scopesLoading } = useScopes();
   const {
@@ -70,7 +72,7 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
 
   const handleDeleteRole = async (roleId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this role?")) {
+    if (window.confirm(t("settings.roles.messages.confirmDelete"))) {
       try {
         await api.delete(`/auth/roles/${roleId}`);
         await mutateRoles();
@@ -84,7 +86,7 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
     <div className="h-full flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <PageTitle>Roles Management</PageTitle>
+          <PageTitle>{t("settings.roles.title")}</PageTitle>
         </div>
         <div className="flex space-x-2 items-center">
           <Button
@@ -107,7 +109,7 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
         </div>
       </div>
       <TextInput
-        placeholder="Search by role name"
+        placeholder={t("settings.roles.searchPlaceholder")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"

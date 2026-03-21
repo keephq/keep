@@ -17,6 +17,7 @@ import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { pullTopology } from "./api";
 import { toast } from "react-toastify";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function TopologyPageClient({
   applications,
@@ -25,6 +26,7 @@ export function TopologyPageClient({
   applications?: TopologyApplication[];
   topologyServices?: TopologyService[];
 }) {
+  const { t } = useI18n();
   const [tabIndex, setTabIndex] = useState(0);
   const { selectedObjectId } = useContext(TopologySearchContext);
   const api = useApi();
@@ -34,9 +36,9 @@ export function TopologyPageClient({
     e.stopPropagation();
     try {
       await pullTopology(api);
-      toast.success("Topology pull initiated");
+      toast.success(t("topology.messages.pullSuccess"));
     } catch (error) {
-      toast.error("Failed to pull topology");
+      toast.error(t("topology.messages.pullFailed"));
       console.error("Failed to pull topology:", error);
     }
   };
@@ -59,15 +61,15 @@ export function TopologyPageClient({
         <Tab
           className="items-center"
         >
-          Topology Map
+          {t("topology.tabs.map")}
         </Tab>
-        <Tab className="items-center">Applications</Tab>
+        <Tab className="items-center">{t("topology.applications.title")}</Tab>
         <Tab
           className="items-center"
           icon={ArrowPathIcon}
           onClick={handlePullTopology}
         >
-          Pull from providers</Tab>
+          {t("topology.actions.pullFromProviders")}</Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
         <TabPanel className="h-[calc(100vh-10rem)]">

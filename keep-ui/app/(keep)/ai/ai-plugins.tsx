@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { Card, Title } from "@tremor/react";
 import { useAIStats, useAIActions } from "utils/hooks/useAI";
@@ -17,9 +18,11 @@ import { AIConfig } from "./model";
 function RangeInputWithLabel({
   setting,
   onChange,
+  t,
 }: {
   setting: any;
   onChange: (newValue: number) => void;
+  t: (key: string) => string;
 }) {
   const [value, setValue] = useState(setting.value);
 
@@ -38,7 +41,7 @@ function RangeInputWithLabel({
 
   return (
     <div className="flex flex-col gap-1 items-end">
-      <p className="text-right text-sm text-gray-500">value: {value}</p>
+      <p className="text-right text-sm text-gray-500">{t("aiPlugins.value")}: {value}</p>
       <input
         type="range"
         className="bg-orange-500 accent-orange-500 [&::-webkit-slider-runnable-track]:bg-gray-100 [&::-webkit-slider-runnable-track]:rounded-full"
@@ -60,6 +63,7 @@ function RangeInputWithLabel({
 }
 
 export function AIPlugins() {
+  const { t } = useI18n();
   const {
     data: aistats,
     isLoading,
@@ -75,7 +79,7 @@ export function AIPlugins() {
   ) => {
     try {
       await updateAISettings(algorithm_id, algorithm_config);
-      showSuccessToast("Settings updated successfully!");
+      showSuccessToast(t("common.messages.savedSuccessfully"));
       refetchAIStats();
     } catch (error) {
       showErrorToast(error);
@@ -86,9 +90,9 @@ export function AIPlugins() {
     <main className="flex flex-col gap-6">
       <header className="flex justify-between items-center">
         <div>
-          <PageTitle>AI Plugins</PageTitle>
+          <PageTitle>{t("aiPlugins.title")}</PageTitle>
           <PageSubtitle>
-            For correlation, summarization, and enrichment
+            {t("aiPlugins.subtitle")}
           </PageSubtitle>
         </div>
       </header>
@@ -97,7 +101,7 @@ export function AIPlugins() {
           <div>
             <div className="grid grid-cols-1 gap-4">
               {isLoading ? (
-                <KeepLoader loadingText="Loading algorithms and their settings..." />
+                <KeepLoader loadingText={t("aiPlugins.loading")} />
               ) : null}
               {aistats?.algorithm_configs?.length === 0 && (
                 <div className="flex flex-row">
@@ -109,26 +113,19 @@ export function AIPlugins() {
                     className="mr-4 rounded-lg"
                   />
                   <div>
-                    <Title>No AI enabled for this tenant</Title>
+                    <Title>{t("aiPlugins.noAIEnabled")}</Title>
                     <p className="pt-2">
-                      AI plugins can correlate, enrich, or summarize your alerts
-                      and incidents by leveraging the the context within Keep
-                      allowing you to gain deeper insights and respond more
-                      effectively.
+                      {t("aiPlugins.description1")}
                     </p>
                     <p className="pt-2">
-                      By the way, AI plugins are designed to work even in
-                      air-gapped environments. You can train models using your
-                      data, so there is no need to share information with
-                      third-party providers like OpenAI. Keep your data secure
-                      and private.
+                      {t("aiPlugins.description2")}
                     </p>
                     <p className="pt-2">
                       <a
                         href="https://www.keephq.dev/meet-keep"
                         className="text-orange-500 underline"
                       >
-                        Talk to us to get access!
+                        {t("aiPlugins.contactUs")}
                       </a>
                     </p>
                   </div>
@@ -182,6 +179,7 @@ export function AIPlugins() {
                               <RangeInputWithLabel
                                 key={setting.value}
                                 setting={setting}
+                                t={t}
                                 onChange={(newValue) => {
                                   setting.value = newValue;
                                   handleUpdateAISettings(
@@ -197,6 +195,7 @@ export function AIPlugins() {
                               <RangeInputWithLabel
                                 key={setting.value}
                                 setting={setting}
+                                t={t}
                                 onChange={(newValue) => {
                                   setting.value = newValue;
                                   handleUpdateAISettings(
@@ -217,14 +216,9 @@ export function AIPlugins() {
                           algorithm_config.settings_proposed_by_algorithm
                         ) && (
                         <Card className="m-2 mt-4 p-2">
-                          <Title>The new settings proposal</Title>
+                          <Title>{t("aiPlugins.newSettingsProposal")}</Title>
                           <p className="text-sm">
-                            The last time the model was trained and used for
-                            inference, it suggested a configuration update.
-                            However, please note that a configuration update
-                            might not be very effective if the data quantity or
-                            quality is low. For more details, please refer to
-                            the logs below.
+                            {t("aiPlugins.proposalDescription")}
                           </p>
                           {algorithm_config.settings_proposed_by_algorithm.map(
                             (proposed_setting: any, idx: number) => (
@@ -247,16 +241,16 @@ export function AIPlugins() {
                               );
                             }}
                           >
-                            Apply proposed settings
+                            {t("aiPlugins.applyProposedSettings")}
                           </button>
                         </Card>
                       )}
                   </div>
-                  <h4 className="text-md font-medium mt-4">Execution logs:</h4>
+                  <h4 className="text-md font-medium mt-4">{t("aiPlugins.executionLogs")}</h4>
                   <pre className="text-sm bg-gray-100 p-2 rounded break-words whitespace-pre-wrap">
                     {algorithm_config.feedback_logs
                       ? algorithm_config.feedback_logs
-                      : "Algorithm not executed yet."}
+                      : t("aiPlugins.notExecutedYet")}
                   </pre>
                 </Card>
               ))}

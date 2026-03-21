@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Dispatch, SetStateAction } from "react";
 import {
   createColumnHelper,
@@ -51,6 +52,7 @@ function WorkflowExecutionRowMenu({
 }: {
   row: Row<WorkflowExecutionDetail>;
 }) {
+  const { t } = useI18n();
   const { data: config } = useConfig();
   const router = useRouter();
   return (
@@ -61,7 +63,7 @@ function WorkflowExecutionRowMenu({
     >
       <DropdownMenu.Item
         icon={ArrowUpRightIcon}
-        label="View Logs"
+        label={t("workflows.executions.viewLogs")}
         onClick={() => {
           router.push(
             `/workflows/${row.original.workflow_id}/runs/${row.original.id}`
@@ -70,22 +72,21 @@ function WorkflowExecutionRowMenu({
       />
       <DropdownMenu.Item
         icon={ClipboardDocumentIcon}
-        label="Copy Execution ID"
+        label={t("workflows.executions.copyExecutionId")}
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(row.original.id);
-            showSuccessToast("Execution ID copied to clipboard");
+            showSuccessToast(t("workflows.executions.executionIdCopied"));
           } catch (err) {
             showErrorToast(
               err,
               <p>
-                Failed to copy execution id. Please check your browser
-                permissions.{" "}
+                {t("workflows.executions.copyExecutionIdFailed")}{" "}
                 <Link
                   target="_blank"
                   href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
                 >
-                  Learn more
+                  {t("common.actions.learnMore")}
                 </Link>
               </p>
             );
@@ -103,12 +104,13 @@ export function WorkflowExecutionsTable({
   setPagination,
   currentRevision,
 }: WorkflowExecutionsTableProps) {
+  const { t } = useI18n();
   const columnHelper = createColumnHelper<WorkflowExecutionDetail>();
 
   const columns = [
     columnHelper.display({
       id: "status",
-      header: "Status",
+      header: t("workflows.executions.status"),
       cell: ({ row }) => {
         const status = row.original.status;
         return <div>{getIconForStatusString(status)}</div>;
@@ -116,7 +118,7 @@ export function WorkflowExecutionsTable({
     }),
     columnHelper.display({
       id: "workflow_revision",
-      header: "Workflow",
+      header: t("workflows.executions.workflow"),
       cell: ({ row }) => {
         return (
           <>
@@ -127,7 +129,7 @@ export function WorkflowExecutionsTable({
             </Link>
             {row.original.workflow_revision === currentRevision ? (
               <Badge color="green" size="xs" className="ml-1">
-                Current
+                {t("workflows.executions.current")}
               </Badge>
             ) : null}
           </>
@@ -136,7 +138,7 @@ export function WorkflowExecutionsTable({
     }),
     columnHelper.display({
       id: "triggered_by",
-      header: "Triggered by",
+      header: t("workflows.executions.triggeredBy"),
       cell: ({ row }) => {
         const triggered_by = row.original.triggered_by;
         const { type, details } = extractTriggerDetailsV2(triggered_by);
@@ -162,15 +164,15 @@ export function WorkflowExecutionsTable({
               )}`}
               onClick={(e) => e.stopPropagation()}
             >
-              Alert &quot;{details.name}&quot;
+              {t("workflows.executions.alertName", { name: details.name })}
             </Link>
           );
         }
         if (type === "manual") {
-          detailsContent = `Manually by ${details.user}`;
+          detailsContent = t("workflows.executions.manuallyBy", { user: details.user });
         }
         if (type === "interval") {
-          detailsContent = `Interval`;
+          detailsContent = t("workflows.executions.interval");
         }
         return (
           <>
@@ -189,7 +191,7 @@ export function WorkflowExecutionsTable({
     }),
     columnHelper.display({
       id: "execution_time",
-      header: "Execution Duration",
+      header: t("workflows.executions.executionDuration"),
       cell: ({ row }) => {
         const customFormatter = (seconds: number | null) => {
           if (seconds === undefined || seconds === null) {
@@ -221,7 +223,7 @@ export function WorkflowExecutionsTable({
 
     columnHelper.display({
       id: "started",
-      header: "Started at",
+      header: t("workflows.executions.startedAt"),
       cell: ({ row }) => {
         const customFormatter: Formatter = (
           value: number,

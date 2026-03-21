@@ -24,6 +24,7 @@ import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const columnHelper = createColumnHelper<MaintenanceRule>();
 
@@ -37,6 +38,7 @@ export default function MaintenanceRulesTable({
   editCallback,
 }: Props) {
   const api = useApi();
+  const { t } = useI18n();
 
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -71,28 +73,28 @@ export default function MaintenanceRulesTable({
     }),
     columnHelper.display({
       id: "name",
-      header: "Name",
+      header: t("maintenance.table.name"),
       cell: ({ row }) => row.original.name,
     }),
     columnHelper.display({
       id: "description",
-      header: "Description",
+      header: t("maintenance.table.description"),
       cell: (context) => context.row.original.description,
     }),
     columnHelper.display({
       id: "start_time",
-      header: "Start Time",
+      header: t("maintenance.table.startTime"),
       cell: (context) =>
         new Date(context.row.original.start_time + "Z").toLocaleString(),
     }),
     columnHelper.display({
       id: "CEL",
-      header: "CEL",
+      header: t("maintenance.table.cel"),
       cell: (context) => context.row.original.cel_query,
     }),
     columnHelper.display({
       id: "end_time",
-      header: "End Time",
+      header: t("maintenance.table.endTime"),
       cell: (context) =>
         context.row.original.end_time
           ? new Date(context.row.original.end_time + "Z").toLocaleString()
@@ -100,7 +102,7 @@ export default function MaintenanceRulesTable({
     }),
     columnHelper.display({
       id: "enabled",
-      header: "Enabled",
+      header: t("maintenance.table.enabled"),
       cell: (context) => (
         <div>
           {context.row.original.enabled ? (
@@ -123,14 +125,14 @@ export default function MaintenanceRulesTable({
   });
 
   const deleteMaintenanceRule = (maintenanceRuleId: number) => {
-    if (confirm("Are you sure you want to delete this maintenance rule?")) {
+    if (confirm(t("maintenance.messages.confirmDelete"))) {
       api
         .delete(`/maintenance/${maintenanceRuleId}`)
         .then(() => {
-          toast.success("Maintenance rule deleted successfully");
+          toast.success(t("maintenance.messages.deleteSuccess"));
         })
         .catch((error: any) => {
-          showErrorToast(error, "Failed to delete maintenance rule");
+          showErrorToast(error, t("maintenance.messages.deleteFailed"));
         });
     }
   };
@@ -176,13 +178,13 @@ export default function MaintenanceRulesTable({
                 <TableCell colSpan={columns.length}>
                   <div className="flex space-x-2 divide-x">
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold">Created By:</span>
+                      <span className="font-bold">{t("maintenance.table.createdBy")}:</span>
                       <span>{row.original.created_by}</span>
                     </div>
                     {row.original.updated_at && (
                       <>
                         <div className="flex items-center space-x-2 pl-2.5">
-                          <span className="font-bold">Updated At:</span>
+                          <span className="font-bold">{t("maintenance.table.updatedAt")}:</span>
                           <span>
                             {new Date(
                               row.original.updated_at + "Z"
@@ -190,8 +192,8 @@ export default function MaintenanceRulesTable({
                           </span>
                         </div>
                         <div className="flex items-center space-x-2 pl-2.5">
-                          <span className="font-bold">Enabled:</span>
-                          <span>{row.original.enabled ? "Yes" : "No"}</span>
+                          <span className="font-bold">{t("maintenance.table.enabled")}:</span>
+                          <span>{row.original.enabled ? t("common.labels.yes") : t("common.labels.no")}</span>
                         </div>
                       </>
                     )}

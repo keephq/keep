@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {
@@ -28,6 +29,7 @@ const RoleSidebar = ({
   mutateRoles,
 }: RoleSidebarProps) => {
   const api = useApi();
+  const { t } = useI18n();
   const {
     control,
     handleSubmit,
@@ -208,13 +210,13 @@ const RoleSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {selectedRole ? "Edit Role" : "Add Role"}
+                {selectedRole ? t("rolesSidebar.editRole") : t("rolesSidebar.addRole")}
                 <Badge className="ml-4" color="orange">
                   Beta
                 </Badge>
                 {selectedRole && selectedRole.predefined && (
                   <Badge className="ml-2" color="orange">
-                    Predefined Role
+                    {t("rolesSidebar.predefinedRole")}
                   </Badge>
                 )}
               </Dialog.Title>
@@ -229,12 +231,12 @@ const RoleSidebar = ({
               <div className="flex-grow">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Role Name
+                    {t("rolesSidebar.roleName")}
                   </label>
                   <Controller
                     name="name"
                     control={control}
-                    rules={{ required: "Role name is required" }}
+                    rules={{ required: t("rolesSidebar.roleNameRequired") }}
                     render={({ field }) => (
                       <TextInput
                         {...field}
@@ -252,12 +254,12 @@ const RoleSidebar = ({
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Description
+                    {t("rolesSidebar.description")}
                   </label>
                   <Controller
                     name="description"
                     control={control}
-                    rules={{ required: "Description is required" }}
+                    rules={{ required: t("rolesSidebar.descriptionRequired") }}
                     render={({ field }) => (
                       <TextInput
                         {...field}
@@ -274,13 +276,13 @@ const RoleSidebar = ({
                   />
                 </div>
                 <div className="mt-4">
-                  <Text>Scopes</Text>
+                  <Text>{t("rolesSidebar.scopes")}</Text>
                   <div className="grid grid-cols-5 gap-4 mt-2">
                     <div></div>
-                    <Text>Read</Text>
-                    <Text>Write</Text>
-                    <Text>Delete</Text>
-                    <Text>Update</Text>
+                    <Text>{t("rolesSidebar.read")}</Text>
+                    <Text>{t("rolesSidebar.write")}</Text>
+                    <Text>{t("rolesSidebar.delete")}</Text>
+                    <Text>{t("rolesSidebar.update")}</Text>
                     {prepopulateScopes()}
                   </div>
                 </div>
@@ -288,7 +290,7 @@ const RoleSidebar = ({
                   typeof errors.root.serverError.message === "string" && (
                     <Callout
                       className="mt-4"
-                      title="Error while adding role"
+                      title={t("rolesSidebar.errorWhileAdding")}
                       color="rose"
                     >
                       {errors.root.serverError.message}
@@ -306,7 +308,7 @@ const RoleSidebar = ({
                   }}
                   className="border border-orange-500 text-orange-500"
                 >
-                  Cancel
+                  {t("common.actions.cancel")}
                 </Button>
                 {!selectedRole?.predefined && (
                   <Button
@@ -320,11 +322,11 @@ const RoleSidebar = ({
                     }
                     title={
                       !newRoleScopes
-                        ? "At least one scope must be selected"
+                        ? t("rolesSidebar.atLeastOneScope")
                         : ""
                     }
                   >
-                    {isSubmitting ? "Saving..." : "Save Role"}
+                    {isSubmitting ? t("common.actions.saving") : t("rolesSidebar.saveRole")}
                   </Button>
                 )}
               </div>

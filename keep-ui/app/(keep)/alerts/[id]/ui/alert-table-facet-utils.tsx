@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { FacetFilters } from "./alert-table-facet-types";
 import { AlertDto } from "@/entities/alerts/model";
 import { isQuickPresetRange } from "@/components/ui/DateRangePicker";

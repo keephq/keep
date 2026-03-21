@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/table-core";
 

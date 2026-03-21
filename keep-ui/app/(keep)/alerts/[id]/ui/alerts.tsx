@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { type AlertDto, type AlertsQuery } from "@/entities/alerts/model";
 import { usePresets, type Preset } from "@/entities/presets/model";
 import { AlertHistoryModal } from "@/features/alerts/alert-history";
@@ -44,6 +46,7 @@ type AlertsProps = {
 };
 
 export default function Alerts({ presetName, initialFacets }: AlertsProps) {
+  const t = useTranslations("alerts");
   const api = useApi();
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined
@@ -124,7 +127,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         setEnrichAlertModal(alert);
         setIsEnrichSidebarOpen(true);
       } else if (!resolvedFingerprintRef.current) {
-        showErrorToast(null, "Alert fingerprint not found");
+        showErrorToast(null, t("messages.fingerprintNotFound"));
         resetUrlAfterModal();
       }
     } else if (fingerprint && dataSettled) {
@@ -133,7 +136,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         resolvedFingerprintRef.current = fingerprint;
         setViewAlertModal(alert);
       } else if (!resolvedFingerprintRef.current) {
-        showErrorToast(null, "Alert fingerprint not found");
+        showErrorToast(null, t("messages.fingerprintNotFound"));
         resetUrlAfterModal();
       }
     } else if (alerts && !alertsLoading) {

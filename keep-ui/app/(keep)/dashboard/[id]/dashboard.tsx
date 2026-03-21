@@ -22,19 +22,21 @@ import {
 } from "@/utils/hooks/useDashboardMetricWidgets";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import "../styles.css";
 import { Preset } from "@/entities/presets/model/types";
 
-const DASHBOARD_FILTERS = [
+const DASHBOARD_FILTERS = (t: (key: string) => string) => [
   {
     type: "date",
     key: "time_stamp",
     value: "",
-    name: "Last received",
+    name: t("dashboard.lastReceived"),
   },
 ];
 
 const DashboardPage = () => {
+  const { t } = useI18n();
   const api = useApi();
   const allPresets = useDashboardPreset();
   const { id }: any = useParams();
@@ -144,9 +146,9 @@ const DashboardPage = () => {
 
       console.log("Dashboard saved successfully", result);
       mutateDashboard();
-      toast.success("Dashboard saved successfully");
+      toast.success(t("dashboard.messages.savedSuccessfully"));
     } catch (error) {
-      showErrorToast(error, "Failed to save dashboard");
+      showErrorToast(error, t("dashboard.messages.saveFailed"));
     }
   };
 
@@ -167,7 +169,7 @@ const DashboardPage = () => {
               value={dashboardName}
               onChange={handleNameChange}
               onBlur={toggleEditingName}
-              placeholder="Dashboard Name"
+              placeholder={t("dashboard.labels.widgetName")}
               className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
             />
           ) : (
@@ -184,17 +186,17 @@ const DashboardPage = () => {
           />
         </div>
         <div className="flex gap-1 items-end">
-          <GenericFilters filters={DASHBOARD_FILTERS} />
+          <GenericFilters filters={DASHBOARD_FILTERS(t)} />
           <div className="flex">
             <Button
               icon={FiSave}
               color="orange"
               size="sm"
               onClick={handleSaveDashboard}
-              tooltip="Save current dashboard"
+              tooltip={t("dashboard.saveDashboard")}
             />
             <Button color="orange" onClick={openModal} className="ml-2">
-              Add Widget
+              {t("dashboard.addWidget")}
             </Button>
           </div>
         </div>
@@ -205,8 +207,8 @@ const DashboardPage = () => {
           onClick={openModal}
         >
           <div className="text-center">
-            <p className="text-lg font-medium">No widgets available</p>
-            <p className="text-gray-500">Click to add your first widget</p>
+            <p className="text-lg font-medium">{t("dashboard.messages.noWidgets")}</p>
+            <p className="text-gray-500">{t("dashboard.messages.noWidgetsDescription")}</p>
           </div>
         </Card>
       ) : (

@@ -4,6 +4,7 @@ import { TopologyPageClient } from "./topology-client";
 import { createServerApiClient } from "@/shared/api/server";
 import { TopologyApplication, TopologyService } from "./model";
 import { PageSubtitle, PageTitle } from "@/shared/ui";
+import { getTranslations } from "next-intl/server";
 
 export const metadata = {
   title: "Keep - Service Topology",
@@ -21,6 +22,7 @@ type PageProps = {
 export default async function Page(props: PageProps) {
   const searchParams = await props.searchParams;
   const api = await createServerApiClient();
+  const t = await getTranslations("topology");
 
   let applications: TopologyApplication[] | undefined;
   let topologyServices: TopologyService[] | undefined;
@@ -40,9 +42,9 @@ export default async function Page(props: PageProps) {
     <>
       <div className="flex w-full justify-between items-center mb-2">
         <div>
-          <PageTitle>Service Topology</PageTitle>
+          <PageTitle>{t("title")}</PageTitle>
           <PageSubtitle>
-            Data describing the topology of components in your environment.
+            {t("description")}
           </PageSubtitle>
         </div>
       </div>

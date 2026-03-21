@@ -8,8 +8,7 @@ import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
 import { getProviderBaseUrl, getTicketCreateUrl, canCreateTickets } from "@/entities/incidents/lib/ticketing-utils";
-
-interface CreateTicketModalProps {
+import { useTranslations } from "next-intl";interface CreateTicketModalProps {
   incident: IncidentDto;
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +19,7 @@ export function CreateTicketModal({
   isOpen,
   onClose,
 }: CreateTicketModalProps) {
+  const t = useTranslations("incidents");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [ticketTitle, setTicketTitle] = useState<string>("");
   const [ticketDescription, setTicketDescription] = useState<string>("");
@@ -71,16 +71,16 @@ export function CreateTicketModal({
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title="Create New Ticket"
+        title={t("actions.createTicket")}
         className="w-[450px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-gray-500">
-            Loading ticketing providers...
+            {t("messages.loadingProviders")}
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
-              Close
+              {t("common:actions.close", { ns: "common" })}
             </Button>
           </div>
         </div>
@@ -94,16 +94,16 @@ export function CreateTicketModal({
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title="Create New Ticket"
+        title={t("actions.createTicket")}
         className="w-[450px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-red-500">
-            No providers with ticket creation URL are configured. Please configure a ticketing creation URL first.
+            {t("messages.noProvidersConfigured")}
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
-              Close
+              {t("common:actions.close", { ns: "common" })}
             </Button>
           </div>
         </div>
@@ -115,7 +115,7 @@ export function CreateTicketModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Create New Ticket"
+      title={t("actions.createTicket")}
       className="w-[450px]"
     >
       <div className="flex flex-col gap-2">
@@ -123,10 +123,10 @@ export function CreateTicketModal({
         {ticketingProviders.length > 1 ? (
           <div>
             <Text className="mb-2">
-              Select Ticketing Provider <span className="text-red-500">*</span>
+              {t("labels.selectTicketingProvider")} <span className="text-red-500">*</span>
             </Text>
             <Select
-              placeholder="Select a ticketing provider"
+              placeholder={t("labels.selectProvider")}
               value={selectedProviderId}
               onValueChange={setSelectedProviderId}
             >
@@ -158,10 +158,10 @@ export function CreateTicketModal({
         {/* Ticket Title Input */}
         <div>
           <Text className="mb-2">
-            Ticket Title <span className="text-red-500">*</span>
+            {t("labels.ticketTitle")} <span className="text-red-500">*</span>
           </Text>
           <TextInput
-            placeholder="Enter ticket title"
+            placeholder={t("labels.enterTicketTitle")}
             value={ticketTitle}
             onChange={(e) => setTicketTitle(e.target.value)}
           />
@@ -170,10 +170,10 @@ export function CreateTicketModal({
         {/* Ticket Description Input */}
         <div>
           <Text className="mb-2">
-            Ticket Description
+            {t("labels.ticketDescription")}
           </Text>
           <Textarea
-            placeholder="Enter ticket description"
+            placeholder={t("labels.enterTicketDescription")}
             value={ticketDescription}
             onChange={(e) => setTicketDescription(e.target.value.replace(/<[^>]*>/g, ''))}
             rows={4}
@@ -183,7 +183,7 @@ export function CreateTicketModal({
         {/* Show selected provider info */}
         {selectedProvider && (
           <>
-            <Text className="text-sm font-medium mb-1">Selected Provider</Text>
+            <Text className="text-sm font-medium mb-1">{t("labels.selectedProvider")}</Text>
 
             <div className="bg-gray-50 p-3 rounded-md space-y-2">
               <div className="flex items-center gap-3">
@@ -205,11 +205,11 @@ export function CreateTicketModal({
             </div>
             <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-md">
               <Text className="text-sm text-blue-700">
-                <strong>Note:</strong> After creating the ticket, you&apos;ll need to manually link it back to this incident using the ticket URL.
+                {t("messages.ticketNote")}
               </Text>
             </div>
             <Text className="text-sm text-orange-500 mt-1">
-              You will be redirected to the {selectedProvider.display_name || selectedProvider.id} instance with the details above.
+              {t("messages.redirectToProvider", { provider: selectedProvider.display_name || selectedProvider.id })}
             </Text>
           </>
         )}
@@ -220,7 +220,7 @@ export function CreateTicketModal({
             variant="secondary"
             onClick={handleCancel}
           >
-            Cancel
+            {t("common:actions.cancel", { ns: "common" })}
           </Button>
           <Button
             variant="primary"
@@ -228,7 +228,7 @@ export function CreateTicketModal({
             onClick={handleCreateTicket}
             disabled={!selectedProviderId || !ticketTitle.trim()}
           >
-            Create Ticket
+            {t("actions.createTicket")}
           </Button>
         </div>
       </div>

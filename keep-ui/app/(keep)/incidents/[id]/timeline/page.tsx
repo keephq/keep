@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 import IncidentTimeline from "./incident-timeline";

@@ -15,6 +15,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import { AuthType } from "utils/authenticationType";
 import { User } from "@/app/(keep)/settings/models";
 import UserAvatar, { getInitials } from "@/components/navbar/UserAvatar";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface UsersTableProps {
   users: User[];
@@ -37,6 +38,7 @@ export function UsersTable({
   groupsAllowed = true,
   userCreationAllowed = true,
 }: UsersTableProps) {
+  const { t } = useI18n();
   return (
     <Table>
       <TableHead>

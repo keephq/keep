@@ -32,59 +32,60 @@ import { useConfig } from "utils/hooks/useConfig";
 import { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const NAVIGATION_OPTIONS = [
   {
     icon: VscDebugDisconnect,
-    label: "Go to the providers page",
+    labelKey: "nav.searchMenu.goToProviders",
     shortcut: ["p"],
     navigate: "/providers",
   },
   {
     icon: AiOutlineAlert,
-    label: "Go to alert console",
+    labelKey: "nav.searchMenu.goToAlertConsole",
     shortcut: ["g"],
     navigate: "/alerts/feed",
   },
   {
     icon: AiOutlineGroup,
-    label: "Go to alert quality",
+    labelKey: "nav.searchMenu.goToAlertQuality",
     shortcut: ["q"],
     navigate: "/alerts/quality",
   },
   {
     icon: MdOutlineEngineering,
-    label: "Go to alert groups",
+    labelKey: "nav.searchMenu.goToAlertGroups",
     shortcut: ["g"],
     navigate: "/rules",
   },
   {
     icon: LuWorkflow,
-    label: "Go to the workflows page",
+    labelKey: "nav.searchMenu.goToWorkflows",
     shortcut: ["wf"],
     navigate: "/workflows",
   },
   {
     icon: UserGroupIcon,
-    label: "Go to users management",
+    labelKey: "nav.searchMenu.goToUsersManagement",
     shortcut: ["u"],
     navigate: "/settings?selectedTab=users",
   },
   {
     icon: GlobeAltIcon,
-    label: "Go to generic webhook",
+    labelKey: "nav.searchMenu.goToGenericWebhook",
     shortcut: ["w"],
     navigate: "/settings?selectedTab=webhook",
   },
   {
     icon: EnvelopeIcon,
-    label: "Go to SMTP settings",
+    labelKey: "nav.searchMenu.goToSMTPSettings",
     shortcut: ["s"],
     navigate: "/settings?selectedTab=smtp",
   },
   {
     icon: KeyIcon,
-    label: "Go to API key",
+    labelKey: "nav.searchMenu.goToAPIKey",
     shortcut: ["a"],
     navigate: "/settings?selectedTab=users&userSubTab=api-keys",
   },
@@ -95,6 +96,7 @@ interface SearchProps {
 }
 
 export const Search = ({ session }: SearchProps) => {
+  const { t } = useI18n();
   const [query, setQuery] = useState<string>("");
   const [, setSelectedOption] = useState<string | null>(null);
   const router = useRouter();
@@ -111,25 +113,28 @@ export const Search = ({ session }: SearchProps) => {
   const EXTERNAL_OPTIONS = [
     {
       icon: FileTextIcon,
-      label: "Keep Docs",
+      labelKey: "nav.searchMenu.keepDocs",
       shortcut: ["⇧", "D"],
       navigate: docsUrl,
     },
     {
       icon: GitHubLogoIcon,
-      label: "Keep Source code",
+      labelKey: "nav.searchMenu.keepSourceCode",
       shortcut: ["⇧", "C"],
       navigate: "https://github.com/keephq/keep",
     },
     {
       icon: TwitterLogoIcon,
-      label: "Keep Twitter",
+      labelKey: "nav.searchMenu.keepTwitter",
       shortcut: ["⇧", "T"],
       navigate: "https://twitter.com/keepalerting",
     },
   ];
 
-  const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
+  const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS].map(option => ({
+    ...option,
+    label: t(option.labelKey)
+  }));
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -200,7 +205,7 @@ export const Search = ({ session }: SearchProps) => {
       return (
         <ListItem className="flex flex-col items-center justify-center cursor-default select-none px-4 py-2 text-gray-700 h-72">
           <Icon color="orange" size="xl" icon={MdOutlineSearchOff} />
-          Nothing found.
+          {t("nav.searchMenu.nothingFound")}
         </ListItem>
       );
     }
@@ -248,11 +253,11 @@ export const Search = ({ session }: SearchProps) => {
       <ListItem className="flex flex-col">
         <List>
           <ListItem className="pl-2">
-            <Subtitle>Navigate</Subtitle>
+            <Subtitle>{t("nav.searchMenu.navigate")}</Subtitle>
           </ListItem>
           {NAVIGATION_OPTIONS.map((option) => (
             <ComboboxOption
-              key={option.label}
+              key={option.labelKey}
               as={Fragment}
               value={option.navigate}
             >
@@ -265,7 +270,7 @@ export const Search = ({ session }: SearchProps) => {
                     icon={option.icon}
                     color="orange"
                   />
-                  <span className="text-left">{option.label}</span>
+                  <span className="text-left">{t(option.labelKey)}</span>
                 </ListItem>
               )}
             </ComboboxOption>
@@ -273,11 +278,11 @@ export const Search = ({ session }: SearchProps) => {
         </List>
         <List>
           <ListItem className="pl-2">
-            <Subtitle>External Sources</Subtitle>
+            <Subtitle>{t("nav.searchMenu.externalSources")}</Subtitle>
           </ListItem>
           {EXTERNAL_OPTIONS.map((option) => (
             <ComboboxOption
-              key={option.label}
+              key={option.labelKey}
               as={Fragment}
               value={option.navigate}
             >
@@ -290,7 +295,7 @@ export const Search = ({ session }: SearchProps) => {
                     icon={option.icon}
                     color="orange"
                   />
-                  <span className="text-left">{option.label}</span>
+                  <span className="text-left">{t(option.labelKey)}</span>
                 </ListItem>
               )}
             </ComboboxOption>
@@ -309,15 +314,16 @@ export const Search = ({ session }: SearchProps) => {
     );
   };
 
-  const [placeholderText, setPlaceholderText] = useState("Search");
+  const [placeholderText, setPlaceholderText] = useState("");
 
   // Using effect to avoid mismatch on hydration. TODO: context provider for user agent
   useEffect(function updatePlaceholderText() {
     if (!isMac()) {
-      return;
+      setPlaceholderText(t("nav.searchMenu.placeholder"));
+    } else {
+      setPlaceholderText(t("nav.searchMenu.placeholderWithShortcut"));
     }
-    setPlaceholderText("Search (or ⌘K)");
-  }, []);
+  }, [t]);
 
   // Check if tenant switching is available - with null/undefined check safety
   const hasTenantSwitcher =
@@ -359,7 +365,7 @@ export const Search = ({ session }: SearchProps) => {
                 <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                   <div className="py-1 divide-y divide-gray-200">
                     <div className="px-3 py-2 text-xs font-medium text-gray-500">
-                      Switch Tenant
+                      {t("nav.searchMenu.switchTenant")}
                     </div>
                     {session.user.tenantIds?.map((tenant) => (
                       <button

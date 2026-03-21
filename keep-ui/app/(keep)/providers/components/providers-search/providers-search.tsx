@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { FC, ChangeEvent } from "react";
 import { TextInput } from "@tremor/react";
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";

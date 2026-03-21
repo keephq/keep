@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import SidePanel from "@/components/SidePanel";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Button, TextInput } from "@tremor/react";
@@ -37,6 +38,7 @@ export function AddEditNodeSidePanel({
   topologyMutator,
 }: AddNodeSidePanelProps) {
   const api = useApi();
+  const { t } = useI18n();
 
   const handleSave = async () => {
     try {
@@ -47,9 +49,9 @@ export function AddEditNodeSidePanel({
           .map((tag) => tag.trim()) // Trim whitespace from each tag
           .filter((tag) => tag !== ""),
       });
-      toast.success(`Service added successfully`, { position: "top-right" });
+      toast.success(t("topology.addNode.success"), { position: "top-right" });
     } catch (error) {
-      toast.error(`Failed to add service: ${error}`, { position: "top-right" });
+      toast.error(`${t("topology.addNode.failed")}: ${error}`, { position: "top-right" });
     }
     topologyMutator();
     handleClosePanel();
@@ -65,9 +67,9 @@ export function AddEditNodeSidePanel({
           .filter((tag) => tag !== ""),
         id: formData.id,
       });
-      toast.success(`Service updated successfully`, { position: "top-right" });
+      toast.success(t("topology.addNode.updateSuccess"), { position: "top-right" });
     } catch (error) {
-      toast.error(`Failed to update service: ${error}`, {
+      toast.error(`${t("topology.addNode.updateFailed")}: ${error}`, {
         position: "top-right",
       });
     }
@@ -121,12 +123,12 @@ export function AddEditNodeSidePanel({
         <div className="flex flex-col gap-y-3">
           <div>
             <label htmlFor="service">
-              Service<sup className="text-red-500">*</sup>
+              {t("topology.nodeForm.service")}<sup className="text-red-500">*</sup>
             </label>
             <TextInput
               id="service"
               name="service"
-              placeholder="Enter service here..."
+              placeholder={t("topology.nodeForm.placeholders.service")}
               value={formData.service}
               onChange={handleChange}
               required
@@ -134,123 +136,123 @@ export function AddEditNodeSidePanel({
           </div>
           <div>
             <label htmlFor="display_name">
-              Display Name<sup className="text-red-500">*</sup>
+              {t("topology.nodeForm.displayName")}<sup className="text-red-500">*</sup>
             </label>
             <TextInput
               id="display_name"
               name="display_name"
-              placeholder="Enter display name here..."
+              placeholder={t("topology.nodeForm.placeholders.displayName")}
               value={formData.display_name}
               onChange={handleChange}
               required
             />
           </div>
           <div>
-            <label htmlFor="description">Description</label>
+            <label htmlFor="description">{t("topology.nodeForm.description")}</label>
             <TextInput
               id="description"
               name="description"
-              placeholder="Enter description here..."
+              placeholder={t("topology.nodeForm.placeholders.description")}
               value={formData.description || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="repository">Repository</label>
+            <label htmlFor="repository">{t("topology.nodeForm.repository")}</label>
             <TextInput
               id="repository"
               name="repository"
-              placeholder="Enter repository here..."
+              placeholder={t("topology.nodeForm.placeholders.repository")}
               value={formData.repository || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="tags">Tags</label>
+            <label htmlFor="tags">{t("topology.nodeForm.tags")}</label>
             <TextInput
               id="tags"
               name="tags"
-              placeholder="Enter tags here (comma-separated)..."
+              placeholder={t("topology.nodeForm.placeholders.tags")}
               value={formData.tags || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="team">Team</label>
+            <label htmlFor="team">{t("topology.nodeForm.team")}</label>
             <TextInput
               id="team"
               name="team"
-              placeholder="Enter team here..."
+              placeholder={t("topology.nodeForm.placeholders.team")}
               value={formData.team || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t("topology.nodeForm.email")}</label>
             <TextInput
               id="email"
               name="email"
-              placeholder="Enter email here..."
+              placeholder={t("topology.nodeForm.placeholders.email")}
               value={formData.email || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="slack">Slack</label>
+            <label htmlFor="slack">{t("topology.nodeForm.slack")}</label>
             <TextInput
               id="slack"
               name="slack"
-              placeholder="Enter Slack channel here..."
+              placeholder={t("topology.nodeForm.placeholders.slack")}
               value={formData.slack || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="ip_address">IP Address</label>
+            <label htmlFor="ip_address">{t("topology.nodeForm.ipAddress")}</label>
             <TextInput
               id="ip_address"
               name="ip_address"
-              placeholder="Enter IP address here..."
+              placeholder={t("topology.nodeForm.placeholders.ipAddress")}
               value={formData.ip_address || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="mac_address">MAC Address</label>
+            <label htmlFor="mac_address">{t("topology.nodeForm.macAddress")}</label>
             <TextInput
               id="mac_address"
               name="mac_address"
-              placeholder="Enter MAC address here..."
+              placeholder={t("topology.nodeForm.placeholders.macAddress")}
               value={formData.mac_address || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="category">Category</label>
+            <label htmlFor="category">{t("topology.nodeForm.category")}</label>
             <TextInput
               id="category"
               name="category"
-              placeholder="Enter category here..."
+              placeholder={t("topology.nodeForm.placeholders.category")}
               value={formData.category || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="manufacturer">Manufacturer</label>
+            <label htmlFor="manufacturer">{t("topology.nodeForm.manufacturer")}</label>
             <TextInput
               id="manufacturer"
               name="manufacturer"
-              placeholder="Enter manufacturer here..."
+              placeholder={t("topology.nodeForm.placeholders.manufacturer")}
               value={formData.manufacturer || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="namespace">Namespace</label>
+            <label htmlFor="namespace">{t("topology.nodeForm.namespace")}</label>
             <TextInput
               id="namespace"
               name="namespace"
-              placeholder="Enter namespace here..."
+              placeholder={t("topology.nodeForm.placeholders.namespace")}
               value={formData.namespace || ""}
               onChange={handleChange}
             />
@@ -260,7 +262,7 @@ export function AddEditNodeSidePanel({
       <div className="sticky bottom-0 p-4 border-t border-gray-200 bg-white flex justify-end gap-2">
         {editData ? (
           <Button onClick={handleUpdate} color="orange" variant="primary">
-            Update
+            {t("common.actions.update")}
           </Button>
         ) : (
           <Button
@@ -269,11 +271,11 @@ export function AddEditNodeSidePanel({
             variant="primary"
             disabled={!handleSaveValidation()}
           >
-            Save
+            {t("common.actions.save")}
           </Button>
         )}
         <Button onClick={handleClosePanel} color="orange" variant="secondary">
-          Close
+          {t("common.actions.close")}
         </Button>
       </div>
     </SidePanel>

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { useDeduplicationRules } from "utils/hooks/useDeduplicationRules";
 import { DeduplicationPlaceholder } from "./DeduplicationPlaceholder";

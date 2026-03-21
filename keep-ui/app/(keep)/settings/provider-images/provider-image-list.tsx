@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   Card,
   Table,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/ImagePreviewTooltip";
 
 export function ProviderImagesList() {
+  const { t } = useI18n();
   const { customImages, isLoading, getImageUrl } = useProviderImages();
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
@@ -79,8 +81,8 @@ export function ProviderImagesList() {
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Provider</TableHeaderCell>
-            <TableHeaderCell>Image</TableHeaderCell>
+            <TableHeaderCell>{t("settings.providerImages.provider")}</TableHeaderCell>
+            <TableHeaderCell>{t("settings.providerImages.image")}</TableHeaderCell>
             {/* <TableHeaderCell>Actions</TableHeaderCell> */}
           </TableRow>
         </TableHead>

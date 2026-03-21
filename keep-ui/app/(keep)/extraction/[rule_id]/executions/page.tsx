@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 import { useState, use } from "react";
 import { Card, Title, Icon, Subtitle } from "@tremor/react";
@@ -16,6 +17,7 @@ interface Pagination {
 export default function ExtractionExecutionsPage(props: {
   params: Promise<{ rule_id: string }>;
 }) {
+  const { t } = useI18n();
   const params = use(props.params);
   const [pagination, setPagination] = useState<Pagination>({
     limit: 20,
@@ -40,12 +42,12 @@ export default function ExtractionExecutionsPage(props: {
     <div className="p-4 space-y-4">
       <div>
         <Subtitle className="text-sm">
-          <Link href="/extraction">All Rules</Link>{" "}
+          <Link href="/extraction">{t("rules.extraction.executions.allRules")}</Link>{" "}
           <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
           {rule?.name || `Rule ${params.rule_id}`}
-          <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Executions
+          <Icon icon={ArrowRightIcon} color="gray" size="xs" /> {t("rules.extraction.executions.title")}
         </Subtitle>
-        <Title>Extraction Rule Executions</Title>
+        <Title>{t("rules.extraction.executions.ruleExecutions")}</Title>
       </div>
 
       <Card>

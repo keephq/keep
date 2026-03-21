@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Icon } from "@tremor/react";
 import ProviderForm from "../../providers/provider-form";
 import { Provider as FullProvider } from "@/shared/api/providers";

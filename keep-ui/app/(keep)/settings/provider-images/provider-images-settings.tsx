@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useState } from "react";
 import { Button } from "@tremor/react";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
@@ -10,6 +11,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { useProviderImages } from "@/entities/provider-images/model/useProviderImages";
 
 export default function ProviderImagesSettings() {
+  const { t } = useI18n();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const { useAllAlerts } = useAlerts();
   const { data: alerts = [] } = useAllAlerts("feed");
@@ -37,11 +39,11 @@ export default function ProviderImagesSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <PageTitle>Provider Icons</PageTitle>
-          <PageSubtitle>Customize provider icons</PageSubtitle>
+          <PageTitle>{t("providerImages.title")}</PageTitle>
+          <PageSubtitle>{t("providerImages.subtitle")}</PageSubtitle>
         </div>
         <Button icon={PhotoIcon} onClick={() => setIsUploadModalOpen(true)}>
-          Upload New Image
+          {t("providerImages.uploadNewImage")}
         </Button>
       </div>
 

@@ -11,6 +11,7 @@ import { UserStatefulAvatar } from "@/entities/users/ui";
 import { useUser } from "@/entities/users/model/useUser";
 import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -26,6 +27,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
   showIcon = false,
   facetFilters,
 }) => {
+  const t = useTranslations("alerts");
   const { data: incidents } = useIncidents(
     {
       candidate: false,
@@ -137,13 +139,13 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     (label: string, facetKey: string) => {
       if (facetKey === "assignee") {
         if (label === "n/a") {
-          return "Not assigned";
+          return t("messages.notAssigned");
         }
         return <AssigneeLabel email={label} />;
       }
       if (facetKey === "incident") {
         if (label === "n/a") {
-          return "No incident";
+          return t("messages.noIncident");
         }
         if (incident) {
           return getIncidentName(incident);
@@ -152,11 +154,11 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         }
       }
       if (facetKey === "dismissed") {
-        return label === "true" ? "Dismissed" : "Not dismissed";
+        return label === "true" ? t("messages.dismissed") : t("messages.notDismissed");
       }
       return <span className="capitalize">{label}</span>;
     },
-    [incident]
+    [incident, t]
   );
 
   const currentFilter = facetFilters[facetKey] || [];
@@ -193,7 +195,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           onClick={handleActionClick}
           className="text-xs text-orange-600 hover:text-orange-800 hidden group-hover:block"
         >
-          {isExclusivelySelected() ? "All" : "Only"}
+          {isExclusivelySelected() ? t("messages.all") : t("messages.only")}
         </button>
         {count > 0 && (
           <Text className="text-xs text-gray-500 group-hover:hidden">

@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createServerApiClient } from "@/shared/api/server";

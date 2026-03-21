@@ -27,9 +27,11 @@ import Link from "next/link";
 import { WorkflowPermissionsBadge } from "@/entities/workflows/ui/WorkflowPermissionsBadge";
 import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
 import { useWorkflowZodSchema } from "@/entities/workflows/lib/useWorkflowZodSchema";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import "./workflow-tile.css";
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
+  const { t } = useI18n();
   return (
     <ListItem>
       <WorkflowTriggerBadge trigger={trigger} />
@@ -38,7 +40,7 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
           <Icon icon={CheckCircleIcon} color="green" className="p-0" />
         </span>
       )}
-      {trigger.type === "interval" && <span>{trigger.value} seconds</span>}
+      {trigger.type === "interval" && <span>{trigger.value} {t("workflows.labels.seconds")}</span>}
       {trigger.type === "alert" && (
         <span className="text-sm text-right">
           {trigger.cel && <Fragment>CEL = {trigger.cel}</Fragment>}
@@ -55,6 +57,7 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
 }
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
+  const { t } = useI18n();
   // Create a set to keep track of unique providers
   const router = useRouter();
 
@@ -152,7 +155,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     if (validationResult.success) {
       return (
         <Badge color="green" size="xs">
-          Valid YAML
+          {t("workflows.labels.validYAML")}
         </Badge>
       );
     }
@@ -164,8 +167,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           .map((issue) => `${issue.path}: ${issue.message}`)
           .join("\n")}
       >
-        {validationResult.error.issues.length} issue
-        {validationResult.error.issues.length > 1 ? "s" : ""}
+        {validationResult.error.issues.length} {validationResult.error.issues.length > 1 ? t("workflows.labels.issues") : t("workflows.labels.issue")}
       </Badge>
     );
   }
@@ -191,17 +193,17 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
             {workflow.provisioned && (
               <Badge color="orange" size="xs" className="mr-2 mb-2">
-                Provisioned
+                {t("workflows.labels.provisioned")}
               </Badge>
             )}
             {workflow.alertRule && (
               <Badge color="orange" size="xs" className="mr-2 mb-2">
-                Alert Rule
+                {t("workflows.labels.alertRule")}
               </Badge>
             )}
             {workflow.disabled && (
               <Badge color="slate" size="xs" className="mr-2 mb-2">
-                Disabled
+                {t("workflows.labels.disabled")}
               </Badge>
             )}
           </div>
@@ -211,11 +213,11 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               <div className="flex flex-col">
                 {renderValidationBadge()}
                 <h2 className="truncate leading-6 font-bold text-base lg:text-lg">
-                  {workflow?.name || "Unknown"}
+                  {workflow?.name || t("workflows.labels.unknown")}
                 </h2>
               </div>
               <p className="text-gray-500 line-clamp-2 text-sm">
-                {workflow?.description || "no description"}
+                {workflow?.description || t("workflows.labels.noDescription")}
               </p>
             </div>
             <div className="flex justify-between items-end">
@@ -271,7 +273,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           setOpenTriggerModal(false);
         }}
       >
-        <Title>Triggers</Title>
+        <Title>{t("workflows.labels.triggers")}</Title>
         <div>
           {workflow.triggers.length > 0 ? (
             <List>
@@ -281,7 +283,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             </List>
           ) : (
             <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
-              This workflow does not have any triggers.
+              {t("workflows.messages.noTriggers")}
             </p>
           )}
         </div>
@@ -292,7 +294,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             variant="secondary"
             onClick={() => setOpenTriggerModal(false)}
           >
-            Close
+            {t("common.actions.close")}
           </Button>
         </div>
       </Modal>

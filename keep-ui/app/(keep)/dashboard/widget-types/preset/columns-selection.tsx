@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useFacetPotentialFields } from "@/features/filter/hooks";
 import { MultiSelect, MultiSelectItem } from "@tremor/react";
 import React, { useEffect, useMemo, useState } from "react";
@@ -12,6 +13,7 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
   selectedColumns,
   onChange,
 }) => {
+  const { t } = useI18n();
   const [selectedColumnsState, setSelectedColumnsState] = useState<Set<string>>(
     new Set(selectedColumns || defaultColumns)
   );
@@ -36,7 +38,7 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
 
   return (
     <MultiSelect
-      placeholder="Select alert columns"
+      placeholder={t("dashboard.selectAlertColumns")}
       value={Array.from(selectedColumnsState)}
       onValueChange={(selected) => setSelectedColumnsState(new Set(selected))}
     >

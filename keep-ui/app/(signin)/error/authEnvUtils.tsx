@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 // utils/authEnvUtils.ts
 import { AuthType } from "@/utils/authenticationType";
 

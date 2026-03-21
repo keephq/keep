@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   Button,
   MultiSelect,
@@ -27,6 +28,7 @@ export const CorrelationForm = ({
   alertsFound = [],
   isLoading,
 }: CorrelationFormProps) => {
+  const { t } = useI18n();
   const {
     control,
     register,
@@ -65,13 +67,13 @@ export const CorrelationForm = ({
     <div className="flex flex-col gap-y-4 flex-1">
       <fieldset className="grid grid-cols-2">
         <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong">
-          Correlation name <span className="text-red-500">*</span>
+          {t("correlation.form.correlationName")} <span className="text-red-500">*</span>
           <TextInput
             type="text"
-            placeholder="Correlation rule name"
+            placeholder={t("correlation.form.namePlaceholder")}
             className="mt-2"
             {...register("name", {
-              required: { message: "Name is required", value: true },
+              required: { message: t("correlation.form.nameRequired"), value: true },
             })}
             error={isSubmitted && !!get(errors, "name.message")}
             errorMessage={isSubmitted && get(errors, "name.message")}
@@ -81,13 +83,13 @@ export const CorrelationForm = ({
         <span className="grid grid-cols-2 gap-x-2">
           <legend
             className="text-tremor-default font-medium text-tremor-content-strong flex items-center col-span-2 truncate"
-            title="Append to the same Incident if delay between alerts is below"
+            title={t("correlation.form.appendIncident")}
           >
-            Append to the same Incident if delay between alerts is below{" "}
+            {t("correlation.form.appendIncident")}{" "}
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="When the first alert arrives, Keep calculates the timespan. Any new alert within this timeframe will correlate into the same incident. The timeframe cannot exceed 90 days."
+              tooltip={t("correlation.form.appendIncidentTooltip")}
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"
@@ -106,10 +108,10 @@ export const CorrelationForm = ({
             name="timeUnit"
             render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
-                <SelectItem value="seconds">Seconds</SelectItem>
-                <SelectItem value="minutes">Minutes</SelectItem>
-                <SelectItem value="hours">Hours</SelectItem>
-                <SelectItem value="days">Days</SelectItem>
+                <SelectItem value="seconds">{t("correlation.form.seconds")}</SelectItem>
+                <SelectItem value="minutes">{t("correlation.form.minutes")}</SelectItem>
+                <SelectItem value="hours">{t("correlation.form.hours")}</SelectItem>
+                <SelectItem value="days">{t("correlation.form.days")}</SelectItem>
               </Select>
             )}
           />
@@ -118,11 +120,11 @@ export const CorrelationForm = ({
       <fieldset className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
-            Incident name template
+            {t("correlation.form.incidentNameTemplate")}
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="You can use alert fields in the template by wrapping them in curly braces, e.g. 'Incident on hosts {{ alert.host }}'. With two alerts from hosts 'host1' and 'host2', the incident name would be 'Incident on hosts host1, host2'. Default: correlation rule name will be used."
+              tooltip={t("correlation.form.incidentNameTemplateTooltip")}
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"
@@ -131,11 +133,11 @@ export const CorrelationForm = ({
           </label>
           <TextInput
             type="text"
-            placeholder="Use Keep's expressions to create the incident name, for example: 'Incident on hosts {{ alert.host }}' will create an incident name like 'Incident on hosts host1, host2'. Default: correlation rule name will be used."
+            placeholder={t("correlation.form.incidentNameTemplatePlaceholder")}
             className="mt-2"
             {...register("incidentNameTemplate", {
               required: {
-                message: "Incident name template is required",
+                message: t("correlation.form.incidentNameRequired"),
                 value: false,
               },
             })}
@@ -147,11 +149,11 @@ export const CorrelationForm = ({
         </div>
         <div>
           <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
-            Incident prefix
+            {t("correlation.form.incidentPrefix")}
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="Incident prefix will be added to the incident name with a running number. For example, if the incident prefix is ACME and the incident name is 'Incident on hosts host1, host2', the incident name will be 'ACME-1 - Incident on hosts host1, host2'."
+              tooltip={t("correlation.form.incidentPrefixTooltip")}
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"
@@ -160,20 +162,20 @@ export const CorrelationForm = ({
           </label>
           <TextInput
             type="text"
-            placeholder="INC"
+            placeholder={t("correlation.form.incidentPrefixPlaceholder")}
             className="mt-2"
             {...register("incidentPrefix", {
               required: {
-                message: "Incident prefix is required",
+                message: t("correlation.form.incidentPrefixRequired"),
                 value: false,
               },
               validate: (value) => {
                 if (!value) return true;
                 if (value.length > 10) {
-                  return "Incident prefix must be less than 10 characters";
+                  return t("correlation.form.incidentPrefixTooLong");
                 }
                 if (!/^[a-zA-Z0-9]+$/.test(value)) {
-                  return "Incident prefix must contain only letters and numbers";
+                  return t("correlation.form.incidentPrefixInvalid");
                 }
                 return true;
               },
@@ -189,14 +191,14 @@ export const CorrelationForm = ({
           <label
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong truncate"
             htmlFor="groupedAttributes"
-            title="Select attribute(s) to group by"
+            title={t("correlation.form.groupByTooltip")}
           >
-            Select attribute(s) to group by{" "}
+            {t("correlation.form.groupByAttributes")}{" "}
             {keys.length < 1 && (
               <Button
                 className="cursor-default ml-2"
                 type="button"
-                tooltip="Attributes are used to distinguish between incidents. For example, grouping by 'host' will correlate alerts with hostX and hostY into separate incidents. Attributes cannot be calculated without alerts."
+                tooltip={t("correlation.form.groupByTooltip")}
                 icon={QuestionMarkCircleIcon}
                 size="xs"
                 variant="light"
@@ -229,7 +231,7 @@ export const CorrelationForm = ({
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
             htmlFor="resolveOn"
           >
-            Resolve on{" "}
+            {t("correlation.form.resolveOn")}{" "}
           </label>
 
           <Controller
@@ -237,15 +239,15 @@ export const CorrelationForm = ({
             name="resolveOn"
             render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
-                <SelectItem value="never">No auto-resolution</SelectItem>
+                <SelectItem value="never">{t("correlation.form.noAutoResolution")}</SelectItem>
                 <SelectItem value="all_resolved">
-                  All alerts resolved
+                  {t("correlation.form.allAlertsResolved")}
                 </SelectItem>
                 <SelectItem value="first_resolved">
-                  First alert resolved
+                  {t("correlation.form.firstAlertResolved")}
                 </SelectItem>
                 <SelectItem value="last_resolved">
-                  Last alert resolved
+                  {t("correlation.form.lastAlertResolved")}
                 </SelectItem>
               </Select>
             )}
@@ -257,7 +259,7 @@ export const CorrelationForm = ({
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
             htmlFor="resolveOn"
           >
-            Start incident on{" "}
+            {t("correlation.form.startIncidentOn")}{" "}
           </label>
 
           <Controller
@@ -265,8 +267,8 @@ export const CorrelationForm = ({
             name="createOn"
             render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
-                <SelectItem value="any">Any condition met</SelectItem>
-                <SelectItem value="all">All conditions met</SelectItem>
+                <SelectItem value="any">{t("correlation.form.anyConditionMet")}</SelectItem>
+                <SelectItem value="all">{t("correlation.form.allConditionsMet")}</SelectItem>
               </Select>
             )}
           />
@@ -277,7 +279,7 @@ export const CorrelationForm = ({
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong mt-1"
             htmlFor="threshold"
           >
-            Alerts threshold{" "}
+            {t("correlation.form.alertsThreshold")}{" "}
           </label>
 
           <Controller
@@ -286,16 +288,16 @@ export const CorrelationForm = ({
             render={({ field: { value, onChange } }) => (
               <Input
                 type="number"
-                placeholder="1"
+                placeholder={t("correlation.form.thresholdPlaceholder")}
                 className="mt-2"
                 {...register("threshold", {
                   required: {
-                    message: "Threshold is required",
+                    message: t("correlation.form.thresholdRequired"),
                     value: false,
                   },
                   validate: (value) => {
                     if (value <= 0) {
-                      return "Threshold should be positive";
+                      return t("correlation.form.thresholdPositive");
                     }
                     return true;
                   },
@@ -310,7 +312,7 @@ export const CorrelationForm = ({
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong mt-1"
             htmlFor="assignee"
           >
-            Auto-assign to user{" "}
+            {t("correlation.form.autoAssignToUser")}{" "}
           </label>
 
           <Controller
@@ -322,7 +324,7 @@ export const CorrelationForm = ({
                 onValueChange={onChange}
                 className="mt-2"
               >
-                <SelectItem value="">No assignment</SelectItem>
+                <SelectItem value="">{t("correlation.form.noAssignment")}</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.email} value={user.email}>
                     {user.name || user.email}
@@ -349,7 +351,7 @@ export const CorrelationForm = ({
         />
 
         <label htmlFor="requireManualApprove" className="text-sm text-gray-500">
-          <Text>Created incidents require manual approve</Text>
+          <Text>{t("correlation.form.requireManualApprove")}</Text>
         </label>
       </div>
       {tenantConfiguration?.["multi_level_enabled"] && (
@@ -371,19 +373,19 @@ export const CorrelationForm = ({
             htmlFor="multiLevelCorrelation"
             className="text-sm text-gray-500"
           >
-            <Text>Multi-level correlation</Text>
+            <Text>{t("correlation.form.multiLevelCorrelation")}</Text>
           </label>
         </div>
       )}
       {watch("multiLevel") && tenantConfiguration?.["multi_level_enabled"] && (
         <div>
           <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong flex items-center">
-            Multi-level property name
+            {t("correlation.form.multiLevelPropertyName")}
             <span className="text-red-500 ml-1">*</span>
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="The property name to use for the multi-level correlation. For example, if the property name is 'host', the correlation will be 'host1, host2'."
+              tooltip={t("correlation.form.multiLevelPropertyNameTooltip")}
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"

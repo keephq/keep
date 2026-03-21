@@ -4,12 +4,14 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { EmptyStateCard } from "@/shared/ui";
 import { Button } from "@tremor/react";
 import { Workflows as WorkflowsIcon } from "components/icons";
+import { useTranslations } from "next-intl";
 
 export function IncidentWorkflowsEmptyState({
   incident,
 }: {
   incident: IncidentDto;
 }) {
+  const t = useTranslations("incidents");
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
 
@@ -21,8 +23,8 @@ export function IncidentWorkflowsEmptyState({
     <>
       <EmptyStateCard
         icon={() => <WorkflowsIcon className="!size-8" />}
-        title="No Workflows"
-        description="No workflows have been executed for this incident yet."
+        title={t("messages.noWorkflows")}
+        description={t("messages.noWorkflowsDescription")}
       >
         <Button
           color="orange"
@@ -35,7 +37,7 @@ export function IncidentWorkflowsEmptyState({
             handleRunWorkflow();
           }}
         >
-          Run a workflow
+          {t("actions.runAWorkflow")}
         </Button>
       </EmptyStateCard>
 

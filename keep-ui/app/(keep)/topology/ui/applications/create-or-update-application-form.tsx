@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Callout } from "@tremor/react";
 import { TextInput, Textarea, Button } from "@/components/ui";
 import { useCallback, useState } from "react";
@@ -42,6 +43,7 @@ export function CreateOrUpdateApplicationForm({
   onCancel,
   onDelete,
 }: CreatOrUpdateApplicationFormProps) {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [applicationName, setApplicationName] = useState(
@@ -65,13 +67,13 @@ export function CreateOrUpdateApplicationForm({
   ): FormErrors => {
     const newErrors: FormErrors = {};
     if (!formValues.name.trim()) {
-      newErrors.name = "Enter the application name";
+      newErrors.name = t("topology.application.nameRequired");
     }
     if (formValues.services.length === 0) {
-      newErrors.services = "Select at least one service";
+      newErrors.services = t("topology.application.selectAtLeastOne");
     }
     if (formValues.repository && !isValidUrl(formValues.repository)) {
-      newErrors.repository = "Please enter a valid URL";
+      newErrors.repository = t("topology.application.validUrl");
     }
     return newErrors;
   };
@@ -135,16 +137,16 @@ export function CreateOrUpdateApplicationForm({
       className="flex flex-col gap-4 text-tremor-content-emphasis"
       onSubmit={handleSubmit}
     >
-      <p className="">Group services into an application</p>
+      <p className="">{t("topology.application.groupServices")}</p>
       <div>
         <div className="mb-1">
-          <span className="font-bold">Application name</span>
+          <span className="font-bold">{t("topology.application.applicationName")}</span>
           {errors.name && (
             <p className="text-red-500 text-sm mt-1">{errors.name}</p>
           )}
         </div>
         <TextInput
-          placeholder="Application name"
+          placeholder={t("topology.application.namePlaceholder")}
           value={applicationName}
           onChange={(e) => setApplicationName(e.target.value)}
           required={true}
@@ -152,30 +154,30 @@ export function CreateOrUpdateApplicationForm({
       </div>
       <div>
         <div className="mb-1">
-          <span className="font-bold">Description (optional)</span>
+          <span className="font-bold">{t("topology.application.description")}</span>
         </div>
         <Textarea
-          placeholder="Description (optional)"
+          placeholder={t("topology.application.descriptionPlaceholder")}
           value={applicationDescription}
           onChange={(e) => setApplicationDescription(e.target.value)}
         />
       </div>
       <div>
         <div className="mb-1">
-          <span className="font-bold">Repository URL (optional)</span>
+          <span className="font-bold">{t("topology.application.repositoryUrl")}</span>
           {errors.repository && (
             <p className="text-red-500 text-sm mt-1">{errors.repository}</p>
           )}
         </div>
         <TextInput
-          placeholder="Repository URL"
+          placeholder={t("topology.application.repositoryUrlPlaceholder")}
           value={applicationRepo}
           onChange={(e) => setApplicationRepo(e.target.value)}
         />
       </div>
       <div className="flex flex-col gap-2">
         <div>
-          <span className="font-bold">Selected services</span>
+          <span className="font-bold">{t("topology.application.selectedServices")}</span>
           {errors.services && (
             <p className="text-red-500 text-sm mt-1">{errors.services}</p>
           )}
@@ -210,7 +212,7 @@ export function CreateOrUpdateApplicationForm({
             </ul>
           )}
           <TopologySearchAutocomplete
-            placeholder="Search services by name or id"
+            placeholder={t("topology.application.searchPlaceholder")}
             includeApplications={false}
             excludeServiceIds={selectedServices.map((s) => s.service)}
             onSelect={({ value }: { value: TopologyServiceMinimal }) => {
@@ -220,7 +222,7 @@ export function CreateOrUpdateApplicationForm({
         </div>
       </div>
       {error && (
-        <Callout title="Error" color="red">
+        <Callout title={t("common.error")} color="red">
           {error.message}
         </Callout>
       )}
@@ -232,7 +234,7 @@ export function CreateOrUpdateApplicationForm({
             variant="destructive"
             onClick={onDelete}
           >
-            Delete
+            {t("common.actions.delete")}
           </Button>
         )}
         <div className="flex flex-1 justify-end gap-2">
@@ -242,7 +244,7 @@ export function CreateOrUpdateApplicationForm({
             variant="secondary"
             onClick={onCancel}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button
             color="orange"
@@ -251,7 +253,7 @@ export function CreateOrUpdateApplicationForm({
             type="submit"
             loading={isLoading}
           >
-            {action === "create" ? "Create" : "Update"}
+            {action === "create" ? t("common.actions.create") : t("common.actions.update")}
           </Button>
         </div>
       </div>

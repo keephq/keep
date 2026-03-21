@@ -1,0 +1,1715 @@
+{
+  "settings": {
+    "webhooks": {
+      "title": "Webhook",
+      "addWebhook": "添加 Webhook",
+      "testWebhook": "测试 Webhook"
+    },
+    "providerImages": {
+      "title": "上传提供商图标",
+      "selectProvider": "选择提供商",
+      "selectProviderPlaceholder": "选择提供商",
+      "uploadImage": "上传 PNG 图像",
+      "onlyPngSupported": "仅支持 PNG 文件",
+      "uploading": "上传中...",
+      "messages": {
+        "selectPng": "请选择 PNG 图像文件"
+      },
+      "provider": "提供商",
+      "image": "图片"
+    },
+    "users": {
+      "messages": {
+        "externallyManaged": "用户由外部管理，无法在此创建",
+        "confirmDelete": "确定要删除此用户吗？",
+        "deleteFailed": "删除用户失败"
+      },
+      "labels": {
+        "username": "用户名",
+        "role": "角色",
+        "email": "邮箱",
+        "created": "创建时间",
+        "lastLogin": "最后登录"
+      },
+      "subtitle": "添加或移除租户用户",
+      "title": "用户管理",
+      "deleteUser": "删除用户",
+      "editUser": "编辑用户",
+      "addUser": "添加用户",
+      "searchPlaceholder": "按用户名搜索"
+    },
+    "smtp": {
+      "username": "用户名",
+      "fromEmail": "发件人邮箱",
+      "port": "端口",
+      "host": "SMTP 主机",
+      "title": "SMTP 设置",
+      "password": "密码"
+    },
+    "sso": {
+      "title": "SSO",
+      "labels": {
+        "provider": "提供商",
+        "tenantId": "租户 ID",
+        "clientSecret": "客户端密钥",
+        "clientId": "客户端 ID"
+      },
+      "configure": "配置 SSO"
+    },
+    "apiKeys": {
+      "messages": {
+        "deleteConfirm": "此操作不可撤销。这将永久删除 API 密钥，使用此密钥的后续请求将失败。",
+        "regenerateConfirm": "此操作不可撤销。这将撤销密钥并生成新密钥。使用此密钥的后续请求将失败。请确保更新使用此密钥的应用程序。",
+        "creationDisabled": "Keep 运行在 NO_AUTH 模式下，无法创建 API 密钥。"
+      },
+      "labels": {
+        "expiresAt": "过期时间",
+        "createdAt": "创建于",
+        "keyName": "密钥名称",
+        "lastUsed": "最后使用"
+      },
+      "title": "API 密钥",
+      "addKey": "创建 API 密钥",
+      "revokeKey": "撤销 API 密钥"
+    },
+    "groups": {
+      "messages": {
+        "confirmDelete": "确定要删除此分组吗？"
+      },
+      "addGroup": "添加分组",
+      "searchPlaceholder": "按分组名搜索",
+      "title": "分组管理",
+      "subtitle": "管理用户分组",
+      "deleteGroup": "删除分组",
+      "editGroup": "编辑分组"
+    },
+    "tenant": {
+      "title": "租户设置"
+    },
+    "title": "设置",
+    "subtitle": "管理租户设置",
+    "permissions": {
+      "title": "权限管理",
+      "subtitle": "管理资源权限",
+      "searchPlaceholder": "搜索资源"
+    },
+    "roles": {
+      "messages": {
+        "confirmDelete": "确定要删除此角色吗？"
+      },
+      "addRole": "添加角色",
+      "deleteRole": "删除角色",
+      "editRole": "编辑角色",
+      "title": "角色管理",
+      "searchPlaceholder": "按角色名搜索"
+    },
+    "general": "常规"
+  },
+  "webhook": {
+    "learnMore": "了解更多",
+    "copiedToClipboard": "代码已复制到剪贴板！",
+    "apiKey": "API 密钥：",
+    "copyCode": "复制代码",
+    "copyFailed": "复制代码失败",
+    "url": "URL：",
+    "copyFailedDescription": "请检查浏览器权限。",
+    "createExampleAlert": "点击创建示例告警",
+    "subtitle": "查看租户 Webhook 设置",
+    "loadingFailed": "加载 Webhook 设置失败。",
+    "loadingError": "错误"
+  },
+  "apiKey": {
+    "settings": {
+      "learnMore": "了解更多",
+      "deleteTooltip": "删除密钥",
+      "deleteConfirm": "此操作不可撤销。这将永久删除 API 密钥，使用此密钥的后续请求将失败。",
+      "name": "名称",
+      "never": "从未",
+      "regenerateTooltip": "重新生成密钥",
+      "createdAt": "创建于",
+      "copyFailed": "复制代码失败",
+      "role": "角色",
+      "regenerateFailed": "重新生成 API 密钥失败",
+      "createdBy": "创建者",
+      "noActiveKeys": "没有活跃的 API 密钥",
+      "copyFailedDescription": "请检查浏览器权限。",
+      "deleteFailed": "删除 API 密钥失败",
+      "key": "键",
+      "lastUsed": "最后使用"
+    },
+    "modal": {
+      "name": "名称",
+      "unexpectedError": "发生意外错误",
+      "roleRequired": "角色为必填项",
+      "role": "角色",
+      "nameRequired": "名称为必填项",
+      "createApiKey": "创建 API 密钥",
+      "selectRole": "选择角色"
+    }
+  },
+  "dashboard": {
+    "addDashboard": "添加仪表盘",
+    "deleteWidget": "删除组件",
+    "genericMetrics": "通用指标",
+    "selectGenericMetrics": "选择通用指标",
+    "presetRequired": "请选择预设",
+    "widget": "组件",
+    "selectMetricWidget": "选择指标组件",
+    "alert_quality": "告警质量",
+    "lastReceived": "最后接收",
+    "selectAlertColumns": "选择告警列",
+    "timestamp": "时间戳",
+    "labels": {
+      "widgetType": "组件类型",
+      "selectTags": "选择要监控的标签",
+      "selectPreset": "选择预设",
+      "widgetName": "组件名称"
+    },
+    "messages": {
+      "noWidgetsDescription": "点击添加您的第一个组件",
+      "noWidgets": "没有可用的组件",
+      "savedSuccessfully": "仪表盘保存成功",
+      "saveFailed": "保存仪表盘失败",
+      "noDashboards": "保存后仪表盘将显示在这里。"
+    },
+    "resetDashboard": "重置仪表盘",
+    "addWidget": "添加组件",
+    "editMode": "编辑模式",
+    "widget": {
+      "editWidget": "编辑组件",
+      "addWidget": "添加组件",
+      "updateWidget": "更新组件",
+      "widgetName": "组件名称",
+      "namePlaceholder": "输入组件名称",
+      "nameRequired": "组件名称为必填项",
+      "widgetType": "组件类型",
+      "selectType": "选择组件类型",
+      "typeRequired": "必须选择组件类型",
+      "types": {
+        "PRESET": "预设",
+        "GENERICS_METRICS": "通用指标",
+        "METRIC": "指标"
+      }
+    },
+    "title": "仪表盘",
+    "saveDashboard": "保存仪表盘",
+    "widgetTypes": {
+      "genericMetrics": "通用指标",
+      "preset": "预设",
+      "metric": "指标"
+    },
+    "editWidget": "编辑组件",
+    "presetWidget": {
+      "alertTable": "告警表格",
+      "showFiringOnly": "仅显示告警中的告警",
+      "panelTypeRequired": "请选择面板类型",
+      "presetRequired": "请选择预设",
+      "customLink": "自定义链接（可选）",
+      "valueRequired": "请选择预设",
+      "lastAlertsCount": "显示的最后告警数量",
+      "presetPlaceholder": "选择预设",
+      "thresholdValue": "阈值",
+      "panelTypePlaceholder": "选择面板类型",
+      "lastAlertsCountPlaceholder": "显示在组件中的告警数量",
+      "panelType": "面板类型",
+      "customLinkPlaceholder": "https://example.com 或留空使用预设链接",
+      "preset": "预设",
+      "alertCountPanel": "告警计数面板",
+      "thresholds": "阈值"
+    },
+    "alertQuality": {
+      "field": "字段",
+      "correlatedPercent": "关联到事件的告警百分比",
+      "havingPercent": "包含 {field} 的告警百分比",
+      "title": "告警质量仪表盘",
+      "alertsReceived": "接收告警数",
+      "error": "错误",
+      "loadFailed": "加载告警质量指标失败",
+      "tabs": {
+        "linked": "已关联",
+        "installed": "已安装",
+        "all": "全部"
+      },
+      "lastReceived": "最后接收",
+      "providerName": "提供商名称"
+    },
+    "widgetModal": {
+      "widgetNamePlaceholder": "请输入组件名称",
+      "widgetType": "组件类型",
+      "nameRequired": "组件名称为必填项",
+      "widgetTypePlaceholder": "选择组件类型",
+      "typeRequired": "请选择预设",
+      "widgetName": "组件名称"
+    }
+  },
+  "rules": {
+    "messages": {
+      "confirmDelete": "确定要删除此规则吗？"
+    },
+    "labels": {
+      "ruleName": "规则名称",
+      "enabled": "已启用",
+      "priority": "优先级",
+      "description": "描述"
+    },
+    "deduplication": {
+      "messages": {
+        "cannotDeleteProvisioned": "无法删除预配置规则。",
+        "unknownYet": "未知",
+        "tooltips": {
+          "distribution": "显示过去 24 小时内每小时处理的告警数量。一致或较高的分布表示此去重规则活动稳定。",
+          "dedupRatio": "表示成功去重的告警百分比。值越高表示去重效率越好，冗余告警越少。"
+        },
+        "fullDeduplication": "完全去重",
+        "custom": "自定义",
+        "cannotDeleteDefault": "无法删除默认规则",
+        "description1": "告警去重是降噪的第一层。它将同一来源的相似告警进行分组。",
+        "deleteRule": "删除规则",
+        "confirmDelete": "确定要删除此去重规则吗？",
+        "deleteFailed": "删除去重规则出错：",
+        "activeHint": "当第一个告警注册后，此页面将变为可用。",
+        "noRules": "暂无去重规则",
+        "defaultDeduplicationRule": "{provider} 去重规则",
+        "description2": "要将不同来源的告警关联为事件，请查看",
+        "default": "默认"
+      },
+      "table": {
+        "distribution": "分布",
+        "dedupRatio": "去重率",
+        "description": "描述",
+        "ingested": "已接收",
+        "fields": "字段",
+        "actions": "禁用规则"
+      },
+      "sidebar": {
+        "ruleName": "规则名称",
+        "providerTooltip": "选择此去重规则适用的提供商。这将决定由此规则处理的告警来源。",
+        "fullDeduplication": "完全去重",
+        "addRule": "添加去重规则",
+        "defaultRule": "默认规则",
+        "selectFingerprintFields": "选择指纹字段",
+        "selectProvider": "选择提供商",
+        "editRule": "编辑 {name}",
+        "editingDefaultDescription": "编辑默认去重规则需要高级知识。默认规则经过精心设计，为特定告警类型提供最佳去重效果。修改这些规则可能影响告警处理效率。如果您不确定如何修改，建议创建新的自定义规则。",
+        "fingerprintFieldsRequired": "至少需要一个指纹字段",
+        "fingerprintFieldsTooltip": "指纹字段用于识别和分组相似告警。选择能唯一标识告警类型的字段，如 'service'、'error_type' 或 'affected_component'。",
+        "ignoreFields": "忽略字段",
+        "fingerprintFields": "用于指纹的字段",
+        "ruleNameRequired": "规则名称为必填项",
+        "selectIgnoreFields": "选择忽略字段",
+        "providerRequired": "请选择提供商",
+        "saving": "保存中...",
+        "description": "描述",
+        "chooseProviderFirst": "请先选择提供商以查看可用字段",
+        "save": "保存",
+        "errorWhileSaving": "保存规则时出错",
+        "editingDefault": "编辑默认规则",
+        "noOptions": "无选项",
+        "learnMore": "了解更多去重规则",
+        "editingProvisioned": "编辑预配置规则",
+        "editingProvisionedDescription": "不允许编辑预配置的去重规则。请联系系统管理员了解更多信息。",
+        "fullDeduplicationTooltip": "1. 完全去重：如果事件相同（不包括'忽略字段'），Keep 将丢弃重复事件。2. 部分去重（默认）：使用指定字段关联告警。例如，具有相同 'service' 和 'env' 字段的两个告警将被去重为一个。",
+        "provider": "提供商",
+        "descriptionRequired": "描述为必填项"
+      },
+      "title": "去重规则",
+      "addRule": "添加去重规则"
+    },
+    "mapping": {
+      "messages": {
+        "loadingRule": "加载映射规则...",
+        "updateFailed": "更新映射失败",
+        "noRulesDescription": "使用映射规则向导创建新的映射规则",
+        "createFailed": "创建映射失败",
+        "updateSuccess": "映射更新成功",
+        "deleteSuccess": "规则删除成功",
+        "confirmDelete": "确定要删除此映射规则吗？",
+        "deleteFailed": "删除映射规则失败",
+        "noRules": "暂无映射规则",
+        "createSuccess": "映射创建成功"
+      },
+      "form": {
+        "name": "名称",
+        "uploadRequired": "* 上传 CSV 文件以开始",
+        "processCsv": "处理 CSV",
+        "rowsColumnsFound": "找到 {columns} 列数据",
+        "fromFile": "从文件",
+        "topology": "拓扑图",
+        "mappingConfiguration": "映射配置",
+        "mappingType": "映射类型",
+        "enrichmentDescription": "如果告警匹配属性，将使用其余字段进行富化",
+        "fromText": "从文本",
+        "csvDataLoaded": "CSV 数据加载成功",
+        "newPropertyName": "新属性名称",
+        "description": "描述",
+        "enableMultiLevel": "启用多级映射",
+        "prefixToRemove": "要移除的前缀",
+        "fromTopologyNode": "来自拓扑中匹配的节点。",
+        "priorityTooltip": "优先级越高越先执行",
+        "csv": "CSV",
+        "placeholders": {
+          "mapDescription": "映射描述",
+          "mapName": "映射名称",
+          "prefixToRemove": "输入要从键中移除的前缀（可选）",
+          "selectAttributes": "选择属性",
+          "priority": "优先级",
+          "selectSingleAttribute": "选择单个属性",
+          "propertyName": "输入属性名称"
+        },
+        "fromCsvRow": "来自 CSV 中匹配的行。",
+        "priority": "优先级",
+        "enterProcessCsv": "* 输入并处理 CSV 数据以开始",
+        "enrichedWith": "富化内容"
+      },
+      "description": "使用拓扑图、CSV、JSON 和 YAML 数据丰富告警信息",
+      "table": {
+        "matchers": "匹配器",
+        "name": "名称",
+        "description": "描述",
+        "priority": "优先级",
+        "actions": {
+          "run": "运行",
+          "delete": "删除",
+          "edit": "编辑"
+        },
+        "enrichedWith": "富化内容"
+      },
+      "configure": "配置",
+      "title": "映射",
+      "addRule": "创建映射",
+      "runModal": {
+        "failed": "运行映射规则失败",
+        "placeholder": "选择告警...",
+        "title": "选择告警以运行映射规则",
+        "noAlerts": "未找到告警"
+      },
+      "configureDescription": "使用映射规则为告警添加动态上下文"
+    },
+    "title": "规则",
+    "correlation": {
+      "title": "关联规则",
+      "editRule": "编辑关联规则",
+      "messages": {
+        "noCorrelationsDescription": "开始构建关联规则，将告警分组为事件。",
+        "noCorrelations": "暂无关联规则"
+      },
+      "addRule": "添加关联规则",
+      "sidebar": {
+        "description": "什么是告警关联？为什么将告警分组在一起可以简化您的工作",
+        "description1": "一个用于分组和整合告警的多功能工具。在我们的",
+        "groupDescription": "将多个告警分组为一个事件",
+        "errorWhileSaving": "保存关联规则时出错"
+      }
+    },
+    "extraction": {
+      "messages": {
+        "updateFailed": "更新提取规则失败",
+        "createFailed": "创建提取规则失败",
+        "updateSuccess": "提取规则更新成功",
+        "deleteSuccess": "提取规则删除成功",
+        "confirmDelete": "确定要删除此规则吗？",
+        "deleteFailed": "删除提取规则失败",
+        "noRules": "暂无提取规则",
+        "createSuccess": "提取规则创建成功"
+      },
+      "form": {
+        "name": "名称",
+        "regex": "正则表达式",
+        "docsTooltip": "查看提取规则文档了解更多信息",
+        "regexPlaceholder": "用于提取的正则规则",
+        "conditionTooltip": "基于 CEL 的条件",
+        "regexTooltip": "用于分组匹配的 Python 正则表达式",
+        "extractedAttributesDescription": "（即：将添加到匹配的传入事件中的属性）",
+        "attributePlaceholder": "要提取的事件属性名",
+        "preFormatting": "预格式化",
+        "attribute": "属性",
+        "extractionDefinition": "提取规则定义",
+        "condition": "条件",
+        "description": "描述",
+        "invalidRegex": "无效的正则表达式，必须包含命名分组。",
+        "priorityTooltip": "优先级越高越先执行",
+        "extractionMetadata": "提取元数据",
+        "placeholders": {
+          "priority": "优先级",
+          "extractionName": "提取规则名称",
+          "extractionDescription": "提取规则描述"
+        },
+        "priority": "优先级",
+        "preFormattingTooltip": "此规则应在告警标准化之前还是之后应用。",
+        "extractedAttributes": "提取的属性"
+      },
+      "description": "使用正则表达式从告警中提取更多属性",
+      "selectAlertTitle": "选择要运行提取规则的告警",
+      "selectAlertPlaceholder": "选择告警...",
+      "fingerprint": "指纹",
+      "noAlerts": "未找到告警",
+      "runFailed": "运行提取规则失败",
+      "executions": {
+        "extractionRuleExecutions": "提取规则执行记录",
+        "status": "状态：",
+        "allRules": "全部规则",
+        "extractedFields": "提取的字段",
+        "executions": "执行记录",
+        "executionDetails": "执行详情",
+        "logs": "日志",
+        "alertId": "告警 ID："
+      },
+      "table": {
+        "name": "名称",
+        "preFormatting": "预格式化",
+        "condition": "条件",
+        "description": "描述",
+        "createdAt": "创建于：",
+        "updatedAt": "更新于：",
+        "createdBy": "创建者：",
+        "regex": "正则表达式",
+        "priority": "优先级",
+        "conditionTooltip": "查看提取规则文档了解更多信息",
+        "extractedAttributes": "提取的属性",
+        "attribute": "属性",
+        "regexTooltip": "用于分组匹配的 Python 正则表达式",
+        "updatedBy": "更新者：",
+        "actions": {
+          "run": "运行",
+          "delete": "删除",
+          "edit": "编辑"
+        }
+      },
+      "title": "提取",
+      "addRule": "创建提取规则"
+    }
+  },
+  "aiPlugins": {
+    "newSettingsProposal": "新的设置建议",
+    "notExecutedYet": "算法尚未执行。",
+    "subtitle": "用于关联、摘要和富化",
+    "proposalDescription": "模型上次训练和推理时建议了配置更新。但请注意，如果数据量或质量较低，配置更新可能效果不佳。详情请参阅以下日志。",
+    "title": "AI 插件",
+    "loading": "正在加载算法及其设置...",
+    "value": "值",
+    "description1": "AI 插件可以利用 Keep 中的上下文来关联、富化或总结您的告警和事件，帮助您获得更深入的洞察并更有效地响应。",
+    "contactUs": "联系我们获取访问权限！",
+    "applyProposedSettings": "应用建议设置",
+    "description2": "此外，AI 插件设计为可在隔离环境中工作。您可以使用自己的数据训练模型，无需与 OpenAI 等第三方提供商共享信息。确保数据安全私密。",
+    "noAIEnabled": "此租户未启用 AI",
+    "executionLogs": "执行日志："
+  },
+  "correlation": {
+    "form": {
+      "incidentPrefix": "事件前缀",
+      "incidentNameTemplateTooltip": "您可以在模板中使用告警字段，用花括号包裹，例如 'Incident on hosts {{ alert.host }}'。如果有来自 'host1' 和 'host2' 的两个告警，事件名称将是 'Incident on hosts host1, host2'。默认使用关联规则名称。",
+      "allAlertsResolved": "所有告警恢复",
+      "incidentPrefixTooLong": "事件前缀必须少于 10 个字符",
+      "minutes": "分钟",
+      "resolveOn": "恢复条件",
+      "nameRequired": "名称为必填项",
+      "requireManualApprove": "创建的事件需要手动确认",
+      "anyConditionMet": "满足任一条件",
+      "thresholdRequired": "阈值为必填项",
+      "correlationName": "关联名称",
+      "namePlaceholder": "关联规则名称",
+      "appendIncidentTooltip": "当第一个告警到达时，Keep 计算时间跨度。在此时间范围内的任何新告警将关联到同一事件。时间跨度不能超过 90 天。",
+      "noAssignment": "不分配",
+      "autoAssignToUser": "自动分配用户",
+      "multiLevelCorrelation": "多级关联",
+      "incidentNameRequired": "事件名称模板为必填项",
+      "groupByAttributes": "选择分组依据属性",
+      "multiLevelPropertyNameRequired": "多级属性名称为必填项",
+      "alertsThreshold": "告警阈值",
+      "incidentPrefixTooltip": "事件前缀将加到事件名称前，附带递增编号。例如，如果事件前缀是 ACME，事件名称是 'Incident on hosts host1, host2'，最终名称将是 'ACME-1 - Incident on hosts host1, host2'。",
+      "seconds": "秒",
+      "incidentPrefixInvalid": "事件前缀只能包含字母和数字",
+      "appendIncident": "如果告警之间的延迟低于此值，则追加到同一事件",
+      "groupByTooltip": "属性用于区分不同事件。例如，按 'host' 分组会将 hostX 和 hostY 的告警关联到不同事件。没有告警无法计算属性。",
+      "incidentPrefixRequired": "事件前缀为必填项",
+      "incidentNameTemplatePlaceholder": "使用 Keep 表达式创建事件名称，例如：'Incident on hosts {{ alert.host }}' 将创建类似 'Incident on hosts host1, host2' 的事件名称。默认使用关联规则名称。",
+      "allConditionsMet": "满足所有条件",
+      "firstAlertResolved": "首个告警恢复",
+      "incidentNameTemplate": "事件名称模板",
+      "thresholdPositive": "阈值必须为正数",
+      "days": "天",
+      "lastAlertResolved": "最后告警恢复",
+      "hours": "小时",
+      "thresholdPlaceholder": "1",
+      "incidentPrefixPlaceholder": "INC",
+      "startIncidentOn": "事件开始条件",
+      "multiLevelPropertyName": "多级属性名称",
+      "multiLevelPropertyNameTooltip": "多级关联使用的属性名称。例如，如果属性名称是 'host'，关联结果将是 'host1, host2'。",
+      "noAutoResolution": "不自动恢复"
+    },
+    "table": {
+      "correlationName": "关联名称",
+      "incidentNameTemplate": "事件名称模板",
+      "incidentPrefix": "事件前缀",
+      "groupedBy": "分组依据",
+      "incidents": "事件"
+    }
+  },
+  "topology": {
+    "messages": {
+      "importSuccess": "拓扑导入成功！",
+      "errorReconnecting": "添加（重新）连接从 {source} 到 {target} 时出错",
+      "errorLoadingDescription": "加载拓扑数据时遇到问题，如果问题持续请联系我们",
+      "selectServiceOrApplication": "选择一个服务或应用",
+      "importedFrom": "从 {providerId} ({providerType}) 拉取的拓扑",
+      "noTopologyDescription": "开始连接支持拓扑的提供商、导入拓扑数据或手动创建新拓扑",
+      "pullSuccess": "拓扑拉取已启动",
+      "fullTopologyMap": "完整拓扑图",
+      "serviceOrApplication": "服务或应用",
+      "errorUploadingFile": "上传文件出错",
+      "errorDeletingService": "删除服务时出错",
+      "connectProviders": "连接提供商",
+      "confirmImport": "当前拓扑将被完全替换，确定要继续吗？",
+      "failedToUpdateProtocol": "更新协议失败",
+      "errorExporting": "导出拓扑出错",
+      "errorLoadingData": "加载拓扑数据出错",
+      "errorDeletingConnection": "删除从 {source} 到 {target} 的连接失败",
+      "noTopologyYet": "暂无拓扑",
+      "showApplication": "显示应用",
+      "errorAddingConnection": "添加从 {source} 到 {target} 的连接时出错：{error}",
+      "pullFailed": "拉取拓扑失败",
+      "searchPlaceholder": "搜索服务或应用"
+    },
+    "labels": {
+      "status": "状态",
+      "alerts": "告警",
+      "application": "应用",
+      "service": "服务",
+      "health": "健康"
+    },
+    "nodeForm": {
+      "team": "团队",
+      "ipAddress": "IP 地址",
+      "macAddress": "MAC 地址",
+      "messages": {
+        "addedSuccessfully": "服务添加成功",
+        "failedToUpdate": "更新服务失败：{error}",
+        "updatedSuccessfully": "服务更新成功",
+        "failedToAdd": "添加服务失败：{error}"
+      },
+      "category": "类别",
+      "slack": "Slack",
+      "service": "服务",
+      "description": "描述",
+      "displayName": "显示名称",
+      "manufacturer": "制造商",
+      "placeholders": {
+        "team": "输入团队...",
+        "ipAddress": "输入 IP 地址...",
+        "macAddress": "输入 MAC 地址...",
+        "category": "输入类别...",
+        "slack": "输入 Slack 频道...",
+        "service": "输入服务名称...",
+        "description": "输入描述...",
+        "displayName": "输入显示名称...",
+        "manufacturer": "输入制造商...",
+        "email": "输入邮箱...",
+        "repository": "输入代码仓库...",
+        "tags": "输入标签（逗号分隔）...",
+        "namespace": "输入命名空间..."
+      },
+      "email": "邮箱",
+      "repository": "代码仓库",
+      "tags": "标签",
+      "namespace": "命名空间"
+    },
+    "applications": {
+      "createApplication": "创建应用",
+      "messages": {
+        "failedToUpdate": "更新应用失败",
+        "failedToDelete": "删除应用失败"
+      },
+      "form": {
+        "description": "描述（可选）",
+        "placeholders": {
+          "applicationName": "应用名称",
+          "repositoryUrl": "代码仓库 URL",
+          "description": "描述（可选）"
+        },
+        "repositoryUrl": "代码仓库 URL（可选）",
+        "selectedServices": "已选服务",
+        "title": "将服务分组为应用",
+        "searchServices": "按名称或 ID 搜索服务",
+        "applicationName": "应用名称",
+        "errors": {
+          "nameRequired": "请输入应用名称",
+          "selectService": "请至少选择一个服务",
+          "validUrl": "请输入有效的 URL"
+        }
+      },
+      "noApplicationsYet": "暂无应用",
+      "manageSelection": {
+        "editDependency": "编辑依赖",
+        "createApplication": "创建应用",
+        "deleteService": "删除服务",
+        "selected": "已选：{services}",
+        "deleteServices": "删除服务",
+        "updateService": "更新服务",
+        "enterProtocol": "请输入协议："
+      },
+      "addApplication": "添加应用",
+      "title": "应用",
+      "subtitle": "将协同工作的服务分组为应用，便于管理和监控",
+      "noApplicationsDescription": "将协同工作的服务分组为应用，便于管理和监控",
+      "showOnMap": "在地图上显示",
+      "edit": "编辑",
+      "description": "将协同工作的服务组合为应用，便于管理和监控"
+    },
+    "title": "服务拓扑",
+    "map": {
+      "errorLoadingTopology": "加载拓扑数据出错",
+      "errorLoadingDescription": "加载拓扑数据时遇到问题，如果问题持续请联系我们"
+    },
+    "services": "服务",
+    "dependencies": "依赖",
+    "actions": {
+      "import": "导入",
+      "expandAll": "全部展开",
+      "filterByApplication": "按应用筛选",
+      "pullFromProviders": "从提供商拉取",
+      "filterByService": "按服务筛选",
+      "addNode": "添加节点",
+      "export": "导出",
+      "collapseAll": "全部收起"
+    },
+    "tabs": {
+      "map": "拓扑地图"
+    },
+    "infrastructure": "基础设施",
+    "description": "描述环境中组件的拓扑数据"
+  },
+  "providerImages": {
+    "subtitle": "自定义提供商图标",
+    "title": "提供商图标",
+    "uploadNewImage": "上传新图标"
+  },
+  "userSidebar": {
+    "name": "名称",
+    "groups": "分组",
+    "invalidEmail": "无效的邮箱地址",
+    "role": "角色",
+    "nameRequired": "名称为必填项",
+    "email": "邮箱",
+    "createUser": "创建用户",
+    "unexpectedError": "发生意外错误",
+    "usernameRequired": "请输入用户名",
+    "savingError": "保存用户时出错",
+    "emailRequired": "邮箱为必填项",
+    "passwordRequired": "请输入密码",
+    "password": "密码",
+    "externallyManagedDescription": "用户管理通过外部认证系统处理。",
+    "saving": "保存中...",
+    "username": "用户名",
+    "save": "保存",
+    "errorWhileSaving": "保存用户时出错",
+    "selectRole": "选择角色",
+    "externallyManaged": "用户由外部管理",
+    "failedToSave": "保存用户失败",
+    "close": "关闭",
+    "userDetails": "用户详情"
+  },
+  "providers": {
+    "tiles": {
+      "linkedTooltip": "向 Keep 发送告警但未安装的提供商。"
+    },
+    "layout": {
+      "subtitle": "连接监控服务让 Keep 接收告警，并集成其他服务来自动化工作流。",
+      "title": "提供商"
+    },
+    "categories": {
+      "AI": "AI",
+      "Monitoring": "监控",
+      "IncidentManagement": "事件管理",
+      "CloudInfrastructure": "云基础设施",
+      "Ticketing": "工单系统",
+      "DeveloperTools": "开发工具",
+      "Database": "数据库",
+      "IdentityandAccessManagement": "身份与访问管理",
+      "Security": "安全",
+      "Collaboration": "协作",
+      "CRM": "客户关系管理",
+      "Queues": "队列",
+      "Orchestration": "编排",
+      "ComingSoon": "即将推出",
+      "Others": "其他"
+    },
+    "scopes": {
+      "title": "作用域",
+      "validate": "验证作用域",
+      "installedWithMissing": "安装时缺少作用域",
+      "missingScopesMessage": "提供商已安装。如果不需要相关功能，请忽略缺少的作用域。",
+      "name": "名称",
+      "lastStatus": "最后状态",
+      "description": "描述",
+      "valid": "有效",
+      "notChecked": "未检查",
+      "mandatoryForWebhook": "Webhook 安装所必需"
+    },
+    "installed": "已安装的提供商",
+    "available": "可用的提供商",
+    "linked": "已关联的提供商",
+    "connectTo": "连接到 {providerName}",
+    "title": "提供商",
+    "logs": {
+      "title": "提供商日志",
+      "loading": "加载日志中...",
+      "notEnabledTitle": "提供商日志未启用",
+      "notEnabledDescription": "需要在后端启用提供商日志。请查看文档了解如何启用提供商日志的说明。",
+      "viewDocumentation": "查看文档"
+    },
+    "optionalSettings": "可选设置",
+    "configuration": "配置",
+    "connected": "已连接",
+    "linked": "已关联",
+    "version": "版本"
+  },
+  "common": {
+    "messages": {
+      "info": "信息",
+      "notFoundDescription": "您访问的页面不存在。",
+      "warning": "警告",
+      "success": "操作成功完成",
+      "confirmDelete": "确定要删除此项吗？",
+      "unauthorized": "未授权",
+      "copiedToClipboard": "已复制到剪贴板",
+      "forbidden": "访问被拒绝",
+      "updatedSuccessfully": "更新成功",
+      "savedSuccessfully": "保存成功",
+      "noData": "暂无数据",
+      "unauthorizedDescription": "请登录后访问此页面。",
+      "createdSuccessfully": "创建成功",
+      "deletedSuccessfully": "删除成功",
+      "unsavedChanges": "您有未保存的更改，确定要离开吗？",
+      "emptyStateDescription": "创建您的第一个项目开始使用。",
+      "error": "发生错误",
+      "emptyState": "暂无内容",
+      "comingSoon": "即将推出",
+      "confirmAction": "确定要继续吗？",
+      "forbiddenDescription": "您没有权限访问此资源。",
+      "noDataDescription": "当前没有可显示的数据。",
+      "notFound": "未找到"
+    },
+    "labels": {
+      "name": "名称",
+      "settings": "设置",
+      "history": "历史记录",
+      "status": "状态",
+      "optional": "选填",
+      "enabled": "已启用",
+      "beta": "测试版",
+      "owner": "负责人",
+      "summary": "摘要",
+      "created": "创建时间",
+      "required": "必填",
+      "activity": "活动",
+      "false": "否",
+      "other": "其他",
+      "source": "来源",
+      "configuration": "配置",
+      "no": "否",
+      "all": "全部",
+      "custom": "自定义",
+      "details": "详情",
+      "disabled": "已禁用",
+      "updated": "更新时间",
+      "key": "键",
+      "overview": "概览",
+      "preferences": "偏好设置",
+      "description": "描述",
+      "noResults": "未找到结果",
+      "inactive": "不活跃",
+      "updatedAt": "更新于",
+      "assignedTo": "分配给",
+      "loading": "加载中...",
+      "value": "值",
+      "tags": "标签",
+      "general": "常规",
+      "default": "默认",
+      "active": "活跃",
+      "severity": "严重程度",
+      "createdAt": "创建于",
+      "true": "是",
+      "lastUpdated": "最后更新",
+      "priority": "优先级",
+      "none": "无",
+      "advanced": "高级",
+      "type": "类型",
+      "yes": "是"
+    },
+    "language": {
+      "title": "语言",
+      "en": "英文",
+      "zh-CN": "简体中文"
+    },
+    "filters": {
+      "startDate": "开始日期",
+      "last30Days": "最近30天",
+      "apply": "应用筛选",
+      "last24Hours": "最近24小时",
+      "all": "全部",
+      "custom": "自定义范围",
+      "none": "无",
+      "dateRange": "日期范围",
+      "clear": "清除筛选",
+      "last7Days": "最近7天",
+      "searchPlaceholder": "按名称、描述搜索...",
+      "lastHour": "最近一小时",
+      "endDate": "结束日期",
+      "search": "搜索..."
+    },
+    "actions": {
+      "back": "返回",
+      "enable": "启用",
+      "selectOrCreate": "选择或创建",
+      "connect": "连接",
+      "deselectAll": "取消全选",
+      "retry": "重试",
+      "reset": "重置",
+      "previous": "上一页",
+      "next": "下一步",
+      "submit": "提交",
+      "showMore": "显示更多",
+      "search": "搜索",
+      "apply": "应用",
+      "filter": "筛选",
+      "stop": "停止",
+      "resume": "恢复",
+      "upload": "上传",
+      "pause": "暂停",
+      "run": "运行",
+      "add": "添加",
+      "saving": "保存中...",
+      "download": "下载",
+      "collapse": "收起",
+      "refresh": "刷新",
+      "remove": "移除",
+      "expand": "展开",
+      "update": "更新",
+      "loading": "加载中...",
+      "save": "保存",
+      "new": "新建",
+      "showLess": "收起",
+      "disable": "禁用",
+      "clear": "清除",
+      "test": "测试",
+      "learnMore": "了解更多",
+      "import": "导入",
+      "clone": "克隆",
+      "create": "创建",
+      "manage": "管理",
+      "configure": "配置",
+      "copy": "复制",
+      "cancel": "取消",
+      "disconnect": "断开连接",
+      "export": "导出",
+      "delete": "删除",
+      "close": "关闭",
+      "confirm": "确认",
+      "view": "查看",
+      "selectAll": "全选",
+      "edit": "编辑"
+    },
+    "theme": {
+      "system": "跟随系统",
+      "light": "浅色",
+      "dark": "深色"
+    },
+    "time": {
+      "monthsAgo_other": "{count} 个月前",
+      "hoursAgo": "{count} 小时前",
+      "secondsAgo": "{count} 秒前",
+      "daysAgo": "{count} 天前",
+      "minutesAgo": "{count} 分钟前",
+      "hoursAgo_other": "{count} 小时前",
+      "weeksAgo": "{count} 周前",
+      "justNow": "刚刚",
+      "minutesAgo_other": "{count} 分钟前",
+      "daysAgo_other": "{count} 天前",
+      "weeksAgo_other": "{count} 周前",
+      "monthsAgo": "{count} 个月前",
+      "secondsAgo_other": "{count} 秒前"
+    },
+    "pagination": {
+      "results": "条结果",
+      "showing": "显示",
+      "to": "至",
+      "first": "首页",
+      "itemsPerPage": "条/页",
+      "last": "末页",
+      "of": "/",
+      "page": "页",
+      "previous": "上一页",
+      "next": "下一步"
+    }
+  },
+  "permissionSidebar": {
+    "saveChanges": "保存更改",
+    "assignTo": "分配给",
+    "savingError": "保存权限时出错",
+    "cancel": "取消",
+    "managePermissions": "管理权限",
+    "resource": "资源",
+    "type": "类型",
+    "failedToSave": "保存权限失败"
+  },
+  "errors": {
+    "serverError": "服务器内部错误",
+    "timeout": "请求超时",
+    "networkError": "网络错误",
+    "badRequest": "错误请求",
+    "generic": "发生意外错误",
+    "notAuthorized": {
+      "title": "403 未授权",
+      "message": "您没有权限访问此页面。",
+      "contactUs": "如需帮助，请联系我们",
+      "slack": "Slack",
+      "goBack": "返回"
+    },
+    "unauthorized": "未授权",
+    "validation": {
+      "url": "请输入有效的 URL",
+      "minLength": "最少需要 {min} 个字符",
+      "email": "请输入有效的邮箱地址",
+      "number": "请输入有效数字",
+      "maxLength": "最多允许 {max} 个字符",
+      "pattern": "格式无效",
+      "required": "此字段为必填项"
+    },
+    "notFound": "未找到",
+    "forbidden": "访问被拒绝"
+  },
+  "smtp": {
+    "toEmail": "收件人：",
+    "testSuccess": "成功！",
+    "passwordDescription": "可选 - 如果使用认证 SMTP，请输入密码。",
+    "fromAddressDescription": "此服务器发送邮件的默认发件地址。",
+    "testMail": "测试",
+    "fromAddressPlaceholder": "keepserver@example.com",
+    "message": "消息：",
+    "portDescription": "SMTP 端口号，默认为 25。",
+    "useTLS": "使用 TLS",
+    "connectionFailed": "连接服务器或处理请求失败。",
+    "title": "SMTP 设置",
+    "hostRequired": "主机为必填项",
+    "fromRequired": "发件人为必填项",
+    "saveSuccess": "SMTP 设置保存成功。",
+    "fromAddress": "发件人地址",
+    "deleteFailed": "发生意外错误",
+    "testFailed": "保存时发生错误。",
+    "password": "密码",
+    "hostPlaceholder": "smtp.example.com",
+    "noLogs": "暂无日志。",
+    "toEmailDescription": "测试邮箱地址。Keep 将尝试向此地址发送邮件。",
+    "portInvalid": "端口无效",
+    "username": "用户名",
+    "deleteSuccess": "SMTP 设置删除成功。",
+    "port": "端口",
+    "save": "保存",
+    "subtitle": "配置 SMTP 服务器以发送邮件",
+    "logs": "日志：",
+    "test": "测试",
+    "hostDescription": "邮件服务器的 SMTP 主机名。",
+    "toRequiredForTesting": "测试时收件人为必填项",
+    "toEmailPlaceholder": "recipient@example.com",
+    "host": "主机",
+    "usernameDescription": "可选 - 如果使用认证 SMTP，请输入用户名。",
+    "delete": "删除"
+  },
+  "alerts": {
+    "messages": {
+      "showFiringOnly": "仅显示告警中的告警",
+      "notDismissed": "未忽略",
+      "firingAlerts": "告警中",
+      "noIncident": "无关联事件",
+      "addFacet": "添加筛选维度",
+      "all": "全部",
+      "noAlerts": "没有可显示的告警",
+      "dismissedAlerts": "已忽略",
+      "fingerprintNotFound": "未找到具有此指纹的告警",
+      "searchColumns": "搜索列...",
+      "totalAlerts": "告警总数",
+      "customizePresets": "通过监控特定标签自定义您的预设列表。",
+      "filterValues": "筛选值...",
+      "noMatchingValues": "无匹配值",
+      "only": "仅",
+      "addNewFacet": "添加新筛选维度",
+      "noAlertsDescription": "没有符合您条件的告警。",
+      "notAssigned": "未分配",
+      "dismissed": "已忽略",
+      "notFound": "告警未找到"
+    },
+    "labels": {
+      "duration": "持续时间",
+      "assignee": "处理人",
+      "ticket": "工单",
+      "source": "来源",
+      "fingerprint": "指纹",
+      "ticketUrl": "工单链接",
+      "count": "数量",
+      "selectTagsToWatch": "选择要监控的标签",
+      "service": "服务",
+      "lastReceived": "最后接收时间"
+    },
+    "status": {
+      "suppressed": "已抑制",
+      "firing": "告警中",
+      "dismissed": "已忽略",
+      "resolved": "已恢复",
+      "pending": "待处理",
+      "acknowledged": "已确认"
+    },
+    "firing": "告警中",
+    "severity": {
+      "info": "信息",
+      "low": "低",
+      "warning": "警告",
+      "debug": "调试",
+      "high": "高",
+      "title": "严重程度",
+      "critical": "严重"
+    },
+    "facets": {
+      "source": "来源",
+      "assignee": "处理人",
+      "status": "状态",
+      "severity": "严重程度",
+      "dismissed": "已忽略",
+      "incident": "事件"
+    },
+    "all": "全部告警",
+    "title": "告警",
+    "feed": "告警动态",
+    "resolved": "已恢复",
+    "actions": {
+      "associateIncident": "关联到事件",
+      "acknowledge": "确认",
+      "viewRaw": "查看原始数据",
+      "silence": "静默",
+      "enrich": "富化",
+      "runWorkflow": "运行工作流",
+      "resolve": "恢复",
+      "export": "导出所选",
+      "delete": "删除",
+      "dismiss": "忽略",
+      "changeStatus": "更改状态",
+      "assignTicket": "分配工单",
+      "addNote": "添加备注"
+    },
+    "tabs": {
+      "alerts": "告警",
+      "groups": "分组",
+      "history": "历史记录"
+    },
+    "acknowledged": "已确认"
+  },
+  "roleSidebar": {
+    "saveRole": "保存角色",
+    "atLeastOneScope": "至少需要选择一个权限范围",
+    "unexpectedError": "发生意外错误",
+    "roleName": "角色名称",
+    "savingError": "添加角色时出错",
+    "roleNameRequired": "角色名称为必填项",
+    "predefinedRole": "预定义角色",
+    "saving": "保存中...",
+    "description": "描述",
+    "editRole": "编辑角色",
+    "update": "更新",
+    "read": "读取",
+    "addRole": "添加角色",
+    "cancel": "取消",
+    "write": "写入",
+    "scopes": "权限范围",
+    "delete": "删除",
+    "failedToSave": "保存角色失败",
+    "descriptionRequired": "描述为必填项"
+  },
+  "incidents": {
+    "notFound": {
+      "noIncidentsFound": "未找到事件",
+      "noActiveIncidents": "没有活跃的事件",
+      "noIncidentsMatchingFilter": "没有匹配筛选条件的事件",
+      "clearFiltersToSeeAll": "清除筛选以查看所有事件",
+      "correlateManually": "手动关联告警",
+      "tryAICorrelation": "尝试 AI 关联"
+    },
+    "tabs": {
+      "timeline": "时间线",
+      "overview": "概览",
+      "chat": "AI 聊天",
+      "alerts": "告警",
+      "workflows": "工作流",
+      "activity": "活动",
+      "topology": "拓扑图"
+    },
+    "messages": {
+      "addCommentPlaceholder": "添加评论..."
+    },
+    "labels": {
+      "duration": "持续时间",
+      "assignee": "处理人",
+      "endTime": "结束时间",
+      "description": "描述",
+      "reporter": "报告人",
+      "startTime": "开始时间",
+      "alertsCount": "告警数量",
+      "summary": "摘要",
+      "incidentId": "事件 ID",
+      "affectedServices": "受影响的服务",
+      "appName": "应用",
+      "service": "服务"
+    },
+    "table": {
+      "status": "状态",
+      "incident": "事件",
+      "alerts": "告警",
+      "sources": "来源",
+      "involvedServices": "涉及服务",
+      "assignee": "处理人",
+      "createdAt": "创建时间",
+      "generateReport": "生成报告",
+      "generateReportTooltip": "为当前可见事件生成报告",
+      "selected": "已选择",
+      "merge": "合并",
+      "delete": "删除"
+    },
+    "status": {
+      "deleted": "已删除",
+      "closed": "已关闭",
+      "mitigated": "已缓解",
+      "open": "待处理",
+      "title": "状态",
+      "resolved": "已恢复",
+      "investigating": "调查中"
+    },
+    "overview": {
+      "assignee": "处理人",
+      "environments": "环境",
+      "resolveOn": "恢复条件",
+      "summary": "摘要",
+      "services": "服务",
+      "noEnvironments": "无相关环境",
+      "noExternalIncidents": "无外部事件",
+      "resolveOnAll": "当所有告警恢复时，事件将自动恢复",
+      "noAssignee": "暂无处理人",
+      "externalIncident": "外部事件",
+      "repositories": "代码仓库",
+      "assignConfirm": "确定要将此事件分配给自己吗？",
+      "resolveOnManual": "事件仅在手动设置为恢复时才会恢复",
+      "lastSeenAt": "最后出现于",
+      "startedAt": "开始于",
+      "groupedBy": "分组依据",
+      "aiNotConfigured": "AI 未配置",
+      "aiSummary": "AI 摘要",
+      "generateAiSummary": "生成 AI 摘要",
+      "assignToMe": "分配给我"
+    },
+    "ticketing": {
+      "linkExisting": "关联已有工单",
+      "openIn": "在 {provider} 中打开",
+      "createNewTicket": "创建新工单"
+    },
+    "severity": {
+      "low": "低",
+      "high": "高",
+      "medium": "中",
+      "title": "严重程度",
+      "critical": "严重"
+    },
+    "chat": {
+      "addToRCA": "添加到 RCA",
+      "notAvailable": "聊天不可用",
+      "title": "事件助手",
+      "notAvailableDescription": "当告警分配到此事件后，事件助手将可用。",
+      "placeholder": "例如：查找此事件的根本原因",
+      "addedToRCA": "已添加到 RCA",
+      "initialMessage": "你好！让我们一起解决这个事件！有什么问题尽管问"
+    },
+    "enrichments": {
+      "addName": "添加名称",
+      "addValue": "添加值",
+      "noDataFor": "{name} 没有数据",
+      "unenrich": "取消富化",
+      "addNewField": "添加新字段"
+    },
+    "all": "全部事件",
+    "title": "事件",
+    "alerts": {
+      "collapseRow": "收起行",
+      "expandRow": "展开行",
+      "viewAlertDetails": "查看告警详情",
+      "unlinkFromIncident": "从事件中取消关联"
+    },
+    "workflows": {
+      "name": "名称",
+      "trigger": "触发器",
+      "duration": "持续时间",
+      "status": "状态",
+      "startTime": "开始时间",
+      "noWorkflows": "暂无工作流",
+      "triggerDetails": "触发详情",
+      "noWorkflowsDescription": "此事件尚未执行任何工作流。",
+      "unnamed": "未命名工作流",
+      "executionLogs": "执行日志",
+      "noLogs": "无可用日志"
+    },
+    "subtitle": "将告警分组为事件",
+    "actions": {
+      "assignUser": "分配用户",
+      "splitIncident": "拆分事件",
+      "addIncident": "添加事件",
+      "createIncident": "创建事件",
+      "comment": "评论",
+      "deleteIncident": "删除事件",
+      "updateStatus": "更新状态",
+      "mergeIncidents": "合并事件",
+      "addAlerts": "添加告警",
+      "editIncident": "编辑事件",
+      "removeAlerts": "移除告警"
+    },
+    "predictions": {
+      "title": "事件预测",
+      "description": "由 Keep AI 和关联规则预测的可能问题"
+    },
+    "notFoundPage": "未找到事件",
+    "notFoundHelp": "您访问的事件不存在。",
+    "goAllIncidents": "查看所有事件",
+    "activity": {
+      "mergedInto": "合并到"
+    }
+  },
+  "nav": {
+    "settings": "设置",
+    "dashboard": "仪表盘",
+    "logout": "退出登录",
+    "rules": "规则",
+    "search": "搜索",
+    "topology": "拓扑图",
+    "providers": "提供商",
+    "maintenanceWindows": "维护窗口",
+    "documentation": "文档",
+    "menu": "菜单",
+    "alerts": "告警",
+    "noiseReduction": "降噪",
+    "incidents": "事件",
+    "alertsFeed": "动态",
+    "notifications": "通知",
+    "profile": "个人资料",
+    "help": "帮助",
+    "workflows": "工作流",
+    "home": "首页",
+    "searchMenu": {
+      "placeholder": "搜索",
+      "placeholderWithShortcut": "搜索（或 ⌘K）",
+      "navigate": "导航",
+      "externalSources": "外部来源",
+      "goToProviders": "前往提供商页面",
+      "goToAlertConsole": "前往告警控制台",
+      "goToAlertQuality": "前往告警质量",
+      "goToAlertGroups": "前往告警分组",
+      "goToWorkflows": "前往工作流页面",
+      "goToUsersManagement": "前往用户管理",
+      "goToGenericWebhook": "前往通用 Webhook",
+      "goToSMTPSettings": "前往 SMTP 设置",
+      "goToAPIKey": "前往 API 密钥",
+      "keepDocs": "Keep 文档",
+      "keepSourceCode": "Keep 源代码",
+      "keepTwitter": "Keep Twitter",
+      "nothingFound": "未找到结果",
+      "switchTenant": "切换租户"
+    }
+  },
+  "maintenance": {
+    "messages": {
+      "updateFailed": "更新维护规则失败",
+      "noRulesDescription": "使用维护规则向导创建新的维护规则",
+      "createFailed": "创建维护规则失败",
+      "updateSuccess": "维护规则更新成功",
+      "deleteSuccess": "维护规则删除成功",
+      "alertsWillNotShow": "告警将不在动态中显示",
+      "createSuccess": "维护规则创建成功",
+      "enabledTooltip": "是否启用此规则",
+      "confirmDelete": "确定要删除此维护规则吗？",
+      "deleteFailed": "删除维护规则失败",
+      "noRules": "暂无维护规则",
+      "adjustDuration": "编辑现有维护规则时请调整，因为提交时会重新计算。",
+      "alertsWillShowSuppressed": "告警将以已抑制状态显示"
+    },
+    "labels": {
+      "name": "名称",
+      "duration": "持续时间",
+      "endTime": "结束时间",
+      "description": "描述",
+      "startTime": "开始时间",
+      "enabled": "已启用",
+      "ignoreStatuses": "忽略状态",
+      "celQuery": "CEL 查询",
+      "suppress": "抑制告警"
+    },
+    "description": "配置维护窗口并自动抑制告警",
+    "placeholders": {
+      "name": "维护名称",
+      "description": "维护描述"
+    },
+    "table": {
+      "name": "名称",
+      "cel": "CEL",
+      "endTime": "结束时间",
+      "description": "描述",
+      "startTime": "开始时间",
+      "enabled": "已启用",
+      "updatedAt": "更新于",
+      "createdBy": "创建者"
+    },
+    "metadata": "维护规则元数据",
+    "title": "维护窗口",
+    "editRule": "编辑维护规则",
+    "timeUnits": {
+      "minutes": "分钟",
+      "days": "天",
+      "seconds": "秒",
+      "hours": "小时"
+    },
+    "addRule": "添加维护规则"
+  },
+  "alertQuality": {
+    "tabs": {
+      "all": "全部",
+      "installed": "已安装",
+      "linked": "已关联"
+    },
+    "error": "错误",
+    "loadFailed": "加载告警质量指标失败",
+    "providerName": "提供商名称",
+    "alertsReceived": "接收告警数",
+    "correlatedPercent": "关联到事件的告警百分比"
+  },
+  "health": {
+    "title": "提供商",
+    "resultsModal": {
+      "everythingOk": "一切正常",
+      "signUpToKeep": "注册 Keep",
+      "actionable": "可操作",
+      "spammyMessage": "抱歉，您的告警看起来比较垃圾",
+      "timestamp": "时间戳",
+      "unusedRulesMessage": "您的 {total} 条告警规则中有 {unused} 条未使用",
+      "topologyCoverage": "拓扑覆盖率",
+      "title": "健康检查结果",
+      "spammyAlerts": "垃圾告警",
+      "wantToImprove": "想要提升可观测性？",
+      "notCoveredMessage": "您的部分服务未被覆盖，缺少以下告警：",
+      "rulesQuality": "规则质量"
+    },
+    "resultsTitle": "健康检查结果",
+    "spammyAlerts": "垃圾告警",
+    "everythingOk": "一切正常",
+    "rulesQuality": "规则质量",
+    "actionable": "可操作",
+    "topologyCoverage": "拓扑覆盖率",
+    "spammyAlertsDescription": "很抱歉，看起来您的告警是垃圾告警",
+    "unusedRules": "您的 {unused} / {total} 条告警规则未使用",
+    "notCovered": "您的服务未被覆盖。以下服务缺少告警：",
+    "improveObservability": "想要提高可观测性？",
+    "signUpToKeep": "注册 Keep"
+  },
+  "rolesSidebar": {
+    "errorWhileAdding": "添加角色时出错"
+  },
+  "auth": {
+    "logout": {
+      "submit": "退出登录",
+      "title": "退出登录",
+      "confirm": "确定要退出登录吗？"
+    },
+    "login": {
+      "usernamePlaceholder": "请输入用户名",
+      "githubButton": "在 GitHub 上给我们加星",
+      "submit": "登录",
+      "noAccount": "没有账户？",
+      "usernameRequired": "请输入用户名",
+      "redirectToAuth": "正在跳转到认证服务...",
+      "sso": {
+        "google": "Google",
+        "keycloak": "Keycloak",
+        "github": "GitHub",
+        "auth0": "Auth0",
+        "title": "或使用以下方式登录",
+        "azure": "Azure AD"
+      },
+      "passwordPlaceholder": "请输入密码",
+      "submitting": "登录中...",
+      "title": "登录您的账户",
+      "passwordRequired": "请输入密码",
+      "password": "密码",
+      "username": "用户名",
+      "forgotPassword": "忘记密码？",
+      "subtitle": "输入您的凭据以访问账户",
+      "rememberMe": "记住我",
+      "signUp": "注册",
+      "redirecting": "重定向中...",
+      "authSuccess": "认证成功，正在重定向..."
+    },
+    "errors": {
+      "configurationProblem": "认证配置出现问题，可能是认证服务器配置错误。\n\n请联系管理员。",
+      "accountLocked": "账户已锁定，请联系管理员。",
+      "unexpected": "发生意外错误",
+      "invalidCredentials": "用户名或密码无效",
+      "verificationError": "验证链接已过期或无效，请重新请求。",
+      "networkError": "网络错误，请检查您的连接。",
+      "authenticationError": "认证错误",
+      "accessDenied": "您没有权限访问此资源。",
+      "configurationError": "服务器配置错误",
+      "unauthorized": "您没有权限访问此资源",
+      "sessionExpired": "您的会话已过期，请重新登录。",
+      "userNotFound": "用户不存在",
+      "serviceUnavailable": "认证服务当前不可用"
+    }
+  },
+  "groupSidebar": {
+    "unexpectedError": "发生意外错误",
+    "saving": "保存中...",
+    "savingError": "保存分组时出错",
+    "members": "成员",
+    "groupName": "分组名称",
+    "createGroup": "创建分组",
+    "cancel": "取消",
+    "save": "保存",
+    "failedToSave": "保存分组失败",
+    "roles": "角色",
+    "groupNameRequired": "分组名称为必填项",
+    "groupDetails": "分组详情"
+  },
+  "workflows": {
+    "secrets": {
+      "confirmDelete": "确定要删除密钥 \"{secretName}\" 吗？",
+      "name": "名称",
+      "value": "值",
+      "actions": "操作",
+      "secretNamePlaceholder": "密钥名称",
+      "secretValuePlaceholder": "密钥值",
+      "addSecret": "添加密钥"
+    },
+    "status": {
+      "enabled": "已启用",
+      "title": "状态",
+      "draft": "草稿",
+      "disabled": "已禁用"
+    },
+    "executions": {
+      "startedAt": "开始于",
+      "copyExecutionId": "复制执行 ID",
+      "alert": "告警",
+      "copyFailed": "复制执行 ID 失败，请检查浏览器权限。",
+      "manuallyTriggered": "手动",
+      "viewLogs": "查看日志",
+      "current": "当前",
+      "interval": "间隔",
+      "copiedToClipboard": "执行 ID 已复制到剪贴板",
+      "revision": "版本",
+      "triggeredBy": "触发方式",
+      "manuallyBy": "由 {user} 手动触发",
+      "executionDuration": "执行耗时"
+    },
+    "emptyStates": {
+      "resetFilter": "重置筛选",
+      "clearSearch": "清除搜索",
+      "noMatchingFilter": "没有符合筛选条件的工作流",
+      "noMatchingSearch": "没有符合搜索条件的工作流"
+    },
+    "all": "全部工作流",
+    "running": "运行中...",
+    "title": "工作流",
+    "filters": {
+      "trigger": "触发器",
+      "clearFilters": "清除筛选",
+      "status": "状态",
+      "filterWorkflows": "筛选工作流...",
+      "selectType": "选择 {type}",
+      "triggerOptions": {
+        "manual": "手动",
+        "alert": "告警",
+        "scheduler": "定时器"
+      },
+      "statusOptions": {
+        "timeout": "超时",
+        "inProgress": "进行中",
+        "success": "成功",
+        "error": "错误",
+        "providersNotConfigured": "提供商未配置"
+      },
+      "createdBy": "创建者",
+      "enablingStatus": "启用状态",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "notAssigned": "未分配"
+    },
+    "builder": {
+      "addTrigger": "添加触发器",
+      "addStep": "添加步骤",
+      "trigger": "触发器",
+      "condition": "条件",
+      "action": "动作",
+      "addAction": "添加动作",
+      "step": "步骤",
+      "addCondition": "添加条件",
+      "visualEditor": "可视化编辑器",
+      "title": "工作流构建器",
+      "yamlEditor": "YAML 编辑器"
+    },
+    "runNow": "立即运行",
+    "messages": {
+      "confirmRun": "确定要立即运行此工作流吗？",
+      "executionCompleted": "工作流执行已完成",
+      "executionStarted": "工作流执行已开始",
+      "noWorkflows": "没有可显示的工作流",
+      "executionFailed": "工作流执行失败",
+      "confirmDelete": "确定要删除此工作流吗？",
+      "noWorkflowsDescription": "创建您的第一个工作流来自动化处理告警。",
+      "notFound": "工作流未找到",
+      "createFirstWorkflow": "创建您的第一个工作流",
+      "chooseTemplateDescription": "选择一个工作流模板，开始构建自动化流程。",
+      "youCanAlso": "您也可以",
+      "uploadWorkflows": "上传工作流",
+      "or": "或",
+      "startFromScratch": "从头开始"
+    },
+    "errorLoading": "加载工作流出错",
+    "execution": {
+      "timeout": "超时",
+      "running": "运行中",
+      "title": "执行",
+      "success": "成功",
+      "cancelled": "已取消",
+      "failed": "失败",
+      "pending": "待处理"
+    },
+    "subtitle": "使用工作流自动化告警管理",
+    "emptyState": {
+      "learnMore": "了解工作流",
+      "howToCreate": "如何创建基本的通知流",
+      "getSupport": "获取工作流支持",
+      "title": "尚未添加工作流",
+      "description": "从头开始，或浏览工作流模板",
+      "createWorkflow": "创建新工作流"
+    },
+    "actions": {
+      "runNow": "立即运行",
+      "importYAML": "导入 YAML",
+      "createWorkflow": "创建工作流",
+      "downloadYAML": "下载 YAML",
+      "download": "下载",
+      "viewExecutions": "查看执行记录",
+      "lastExecutions": "查看执行记录",
+      "editWorkflow": "编辑工作流",
+      "scheduleRun": "定时运行",
+      "duplicateWorkflow": "复制工作流",
+      "disableWorkflow": "禁用工作流",
+      "viewLogs": "查看日志",
+      "runWorkflow": "运行工作流",
+      "enableWorkflow": "启用工作流",
+      "openInBuilder": "在构建器中打开",
+      "uploadWorkflows": "上传工作流",
+      "deleteWorkflow": "删除工作流"
+    },
+    "labels": {
+      "name": "工作流名称",
+      "description": "描述",
+      "averageDuration": "平均耗时",
+      "successRate": "成功率",
+      "lastExecution": "最后执行",
+      "nextExecution": "下次执行",
+      "workflowId": "工作流 ID",
+      "executionCount": "执行次数"
+    },
+    "preview": {
+      "previewTemplate": "预览工作流模板",
+      "loading": "加载工作流预览...",
+      "goBack": "返回",
+      "notFound": "工作流未找到！"
+    },
+    "uploadModal": {
+      "title": "上传工作流文件",
+      "supportedFormats": "仅支持 .yml 和 .yaml 文件",
+      "orPasteYaml": "或粘贴 YAML 定义：",
+      "load": "加载",
+      "orTryExamples": "或尝试 Keep 示例：",
+      "slackExample": "为每个告警或手动发送 Slack 消息",
+      "sqlExample": "运行 SQL 查询并将结果作为 Slack 消息发送",
+      "moreExamplesAt": "更多示例请访问",
+      "githubRepo": "Keep GitHub 仓库"
+    },
+    "searchPlaceholder": "搜索工作流",
+    "breadcrumbs": {
+      "builder": "工作流构建器",
+      "allWorkflows": "全部工作流",
+      "workflowRevision": "工作流版本 {revision}",
+      "executionDetails": "执行详情",
+      "workflowDetails": "工作流详情"
+    },
+    "tabs": {
+      "secrets": "密钥",
+      "builder": "构建器",
+      "overview": "概览",
+      "yaml": "YAML 定义",
+      "documentation": "文档",
+      "versions": "版本",
+      "tutorials": "教程"
+    },
+    "versions": {
+      "errorLoading": "加载工作流版本时出错",
+      "noRevisions": "此工作流没有版本记录",
+      "loading": "加载工作流版本...",
+      "revision": "版本",
+      "current": "当前",
+      "showDiff": "显示与上一版本的差异"
+    },
+    "overview": {
+      "errorLoading": "加载工作流失败",
+      "totalExecutions": "总执行次数",
+      "passFailRatio": "成功/失败比例",
+      "successPercent": "成功率",
+      "avgDuration": "平均耗时",
+      "steps": "步骤",
+      "executionsGraph": "执行图表",
+      "providers": "提供商",
+      "executionHistory": "执行历史"
+    },
+    "templates": {
+      "preview": "预览"
+    },
+    "createModal": {
+      "title": "创建工作流",
+      "chooseTemplate": "选择工作流模板，开始构建告警和事件的自动化流程。",
+      "orSkip": "或跳过此步骤，",
+      "startFromScratch": "从头开始"
+    },
+    "syncStatus": {
+      "justNow": "刚刚",
+      "savedToKeep": "已保存到 Keep",
+      "notSaved": "未保存",
+      "revision": "版本",
+      "saved": "保存于",
+      "toKeep": "到 Keep",
+      "changesNotSaved": "更改未保存"
+    }
+  },
+  "notFound": {
+    "title": "404 页面未找到",
+    "goBack": "返回",
+    "message": "如果您认为这是一个错误，请联系我们",
+    "slack": "Slack"
+  },
+  "mapping": {
+    "allRules": "所有规则",
+    "rule": "规则",
+    "executions": "执行记录",
+    "executionDetails": "执行详情",
+    "logs": "日志",
+    "alertId": "告警 ID",
+    "enrichedFields": "丰富字段"
+  },
+  "notificationsHub": {
+    "title": "通知中心",
+    "description": "管理所有与通知相关的内容",
+    "comingSoon": "即将推出"
+  }
+}

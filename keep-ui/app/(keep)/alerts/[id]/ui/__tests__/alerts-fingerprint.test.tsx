@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 /**
  * Tests for the alerts.tsx fingerprint-modal fix.
  *

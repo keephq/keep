@@ -20,12 +20,14 @@ import { CopilotKit } from "@copilotkit/react-core";
 import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { TicketingIncidentOptions } from "./ticketing-incident-options";
+import { useTranslations } from "next-intl";
 
 export function IncidentHeader({
   incident: initialIncidentData,
 }: {
   incident: IncidentDto;
 }) {
+  const t = useTranslations("incidents");
   const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
     fallbackData: initialIncidentData,
     revalidateOnMount: false,
@@ -68,9 +70,9 @@ export function IncidentHeader({
         <div className="flex flex-row justify-between items-end mb-2.5">
           <div>
             <Subtitle className="text-sm">
-              <Link href="/incidents">All Incidents</Link>{" "}
+              <Link href="/incidents">{t("allIncidents")}</Link>{" "}
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_candidate ? "" : "Possible "}
+              {incident.is_candidate ? "" : `${t("possible")} `}
               {getIncidentName(incident)}
               {pathNameCapitalized && (
                 <>
@@ -100,7 +102,7 @@ export function IncidentHeader({
                   handleRunWorkflow();
                 }}
               >
-                Run Workflow
+                {t("actions.runWorkflow")}
               </Button>
               <Button
                 color="orange"
@@ -114,7 +116,7 @@ export function IncidentHeader({
                   handleStartEdit();
                 }}
               >
-                Edit Incident
+                {t("actions.editIncident")}
               </Button>
             </div>
           )}
@@ -126,9 +128,9 @@ export function IncidentHeader({
                 color="blue"
                 size="xs"
                 icon={TbTopologyStar3}
-                tooltip="Created by topology correlation"
+                tooltip={t("messages.topologyTooltip")}
               >
-                Topology
+                {t("messages.topology")}
               </Badge>
             )}
             {incident.rule_is_deleted && (
@@ -136,9 +138,9 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 icon={TbInfoCircle}
-                tooltip={`Created by deleted rule ${incident.rule_name}`}
+                tooltip={t("messages.orphanedTooltip", { ruleName: incident.rule_name })}
               >
-                Orphaned
+                {t("messages.orphaned")}
               </Badge>
             )}
           </div>
@@ -147,9 +149,9 @@ export function IncidentHeader({
               <Button
                 color="orange"
                 size="xs"
-                tooltip="Confirm incident"
+                tooltip={t("messages.confirmIncident")}
                 variant="secondary"
-                title="Confirm"
+                title={t("actions.confirm")}
                 icon={MdDone}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -157,13 +159,13 @@ export function IncidentHeader({
                   confirmPredictedIncident(incident.id!);
                 }}
               >
-                Confirm
+                {t("actions.confirm")}
               </Button>
               <Button
                 color="red"
                 size="xs"
                 variant="secondary"
-                tooltip={"Discard"}
+                tooltip={t("actions.discard")}
                 icon={MdBlock}
                 onClick={async (e: React.MouseEvent) => {
                   e.preventDefault();
@@ -183,7 +185,7 @@ export function IncidentHeader({
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         className="w-[600px]"
-        title="Edit Incident"
+        title={t("actions.editIncident")}
       >
         <CreateOrUpdateIncidentForm
           incidentToEdit={incident}

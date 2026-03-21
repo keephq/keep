@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { AlertDto } from "@/entities/alerts/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function RunExtractionModal({ ruleId, isOpen, onClose }: Props) {
+  const { t } = useI18n();
   const { useLastAlerts } = useAlerts();
   const { data: alerts = [] } = useLastAlerts({
     cel: "",
@@ -48,7 +50,7 @@ export default function RunExtractionModal({ ruleId, isOpen, onClose }: Props) {
       router.push(`/extraction/${ruleId}/executions/${enrichment_event_id}`);
       clearAndClose();
     } catch (error) {
-      showErrorToast(error, "Failed to run extraction rule");
+      showErrorToast(error, t("extraction.runFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -58,33 +60,33 @@ export default function RunExtractionModal({ ruleId, isOpen, onClose }: Props) {
     <Dialog open={isOpen} onClose={clearAndClose} static={true}>
       <DialogPanel>
         <Title className="mb-1">
-          Select alert to run extraction rule against
+          {t("extraction.selectAlertTitle")}
         </Title>
 
         {alerts.length > 0 ? (
           <Select
             value={selectedAlertId}
             onValueChange={setSelectedAlertId}
-            placeholder="Select an alert..."
+            placeholder={t("extraction.selectAlertPlaceholder")}
           >
             {alerts.map((alert) => (
               <SelectItem key={alert.event_id} value={alert.event_id}>
                 <div className="flex flex-col">
                   <span className="font-medium">{alert.name}</span>
                   <span className="text-xs text-gray-500">
-                    Fingerprint: {alert.fingerprint}
+                    {t("extraction.fingerprint")}: {alert.fingerprint}
                   </span>
                 </div>
               </SelectItem>
             ))}
           </Select>
         ) : (
-          <div>No alerts found</div>
+          <div>{t("extraction.noAlerts")}</div>
         )}
 
         <div className="flex justify-end gap-2 mt-4">
           <Button onClick={clearAndClose} color="orange" variant="secondary">
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button
             onClick={handleRun}
@@ -92,7 +94,7 @@ export default function RunExtractionModal({ ruleId, isOpen, onClose }: Props) {
             loading={isLoading}
             disabled={!selectedAlertId}
           >
-            Run
+            {t("common.actions.run")}
           </Button>
         </div>
       </DialogPanel>

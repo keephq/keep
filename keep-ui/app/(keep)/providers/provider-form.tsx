@@ -1,3 +1,4 @@
+import { useI18n } from "@/i18n/hooks/useI18n";
 import React, { useState, useMemo } from "react";
 import {
   Provider,
@@ -127,13 +128,6 @@ function getInitialFormValues(provider: Provider, isHealthCheck?: boolean) {
   return initialValues;
 }
 
-const providerNameFieldConfig: ProviderAuthConfig = {
-  required: true,
-  description: "Provider Name",
-  placeholder: "Enter provider name",
-  default: null,
-};
-
 const ProviderForm = ({
   provider,
   onConnectChange,
@@ -145,6 +139,7 @@ const ProviderForm = ({
   mutate,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const [formValues, setFormValues] = useState<ProviderFormData>(() =>
     getInitialFormValues(provider, isHealthCheck)
@@ -180,18 +175,27 @@ const ProviderForm = ({
   const inInstalledMode =
     installedProvidersMode && Object.keys(provider.config).length > 0;
 
+  const providerNameFieldConfig: ProviderAuthConfig = useMemo(
+    () => ({
+      required: true,
+      description: t("providers.providerName"),
+      placeholder: t("providers.enterProviderName"),
+      default: null,
+    }),
+    [t]
+  );
+
   function installWebhook(provider: Provider) {
     return toast.promise(
       api
         .post(`/providers/install/webhook/${provider.type}/${provider.id}`)
         .catch((error) => Promise.reject({ data: error })),
       {
-        pending: "Webhook installing 🤞",
-        success: `${provider.type} webhook installed 👌`,
+        pending: t("providers.webhook.installing"),
+        success: t("providers.webhook.installedSuccess", { provider: provider.type }),
         error: {
           render({ data }) {
-            // When the promise reject, data will contains the error
-            return `Webhook installation failed 😢 Error: ${
+            return `${t("providers.webhook.installFailed")}: ${
               (data as any).data.responseJson.detail
             }`;
           },
@@ -245,7 +249,7 @@ const ProviderForm = ({
         setRefreshLoading(false);
       })
       .catch((error: any) => {
-        showErrorToast(error, "Failed to revalidate scopes");
+        showErrorToast(error, t("providers.scopes.revalidateFailed"));
         setRefreshLoading(false);
       });
   }
@@ -397,11 +401,11 @@ const ProviderForm = ({
   function setApiError(error: string) {
     if (error.includes("SyntaxError")) {
       setFormErrors(
-        "Bad response from API: Check the backend logs for more details"
+        t("providers.errors.badResponse")
       );
     } else if (error.includes("Failed to fetch")) {
       setFormErrors(
-        "Failed to connect to API: Check provider settings and your internet connection"
+        t("providers.errors.connectionFailed")
       );
     } else {
       setFormErrors(error);
@@ -418,7 +422,7 @@ const ProviderForm = ({
           validatedScopes: { [key: string]: boolean | string };
         }) => {
           setIsLoading(false);
-          toast.success("Updated provider successfully", {
+          toast.success(t("providers.updateSuccess"), {
             position: "top-left",
           });
           setProviderValidatedScopes(responseJson.validatedScopes);
@@ -426,7 +430,7 @@ const ProviderForm = ({
         }
       )
       .catch((error) => {
-        showErrorToast("Failed to update provider");
+        showErrorToast(t("providers.updateFailed"));
         handleSubmitError(error);
         setIsLoading(false);
       });
@@ -530,7 +534,7 @@ const ProviderForm = ({
       {/* Render optional fields in a card */}
       {Object.keys(optionalConfigs).length > 0 && (
         <Accordion className="mt-4" defaultOpen={true}>
-          <AccordionHeader>Provider Optional Settings</AccordionHeader>
+          <AccordionHeader>{t("providers.optionalSettings")}</AccordionHeader>
           <AccordionBody>
             <Card>
               {Object.entries(optionalConfigs).map(([field, config]) => (
@@ -704,8 +708,8 @@ const ProviderForm = ({
               disabled={!installOrUpdateWebhookEnabled || provider.provisioned}
               tooltip={
                 !installOrUpdateWebhookEnabled
-                  ? "Fix required webhook scopes and refresh scopes to enable"
-                  : "This uses server saved credentials. If needed, please use the `Update` button first"
+                  ? t("providers.webhook.scopesRequired")
+                  : t("providers.webhook.useSavedCredentials")
               }
             >
               Install/Update Webhook
@@ -838,7 +842,7 @@ const ProviderForm = ({
 
         {formErrors && (
           <Callout
-            title="Connection Problem"
+            title={t("providers.connectionProblem")}
             icon={ExclamationCircleIcon}
             className="my-5"
             color="rose"
@@ -850,8 +854,8 @@ const ProviderForm = ({
         {installedProvidersMode ? (
           <TabGroup className="mt-4">
             <TabList>
-              <Tab>Configuration</Tab>
-              <Tab>Logs</Tab>
+              <Tab>{t("providers.configuration")}</Tab>
+              <Tab>{t("providers.logs")}</Tab>
             </TabList>
             <TabPanels>
               <TabPanel>

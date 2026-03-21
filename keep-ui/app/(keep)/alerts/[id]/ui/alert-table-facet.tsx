@@ -6,6 +6,7 @@ import { FacetValue } from "./alert-table-facet-value";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { usePathname } from "next/navigation";
 import Skeleton from "react-loading-skeleton";
+import { useTranslations } from "next-intl";
 
 export const Facet: React.FC<FacetProps> = ({
   name,
@@ -16,6 +17,7 @@ export const Facet: React.FC<FacetProps> = ({
   showIcon = true,
   showSkeleton,
 }) => {
+  const t = useTranslations("alerts");
   const pathname = usePathname();
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
@@ -56,7 +58,7 @@ export const Facet: React.FC<FacetProps> = ({
             <div className="px-2 mb-1">
               <input
                 type="text"
-                placeholder="Filter values..."
+                placeholder={t("messages.filterValues")}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
@@ -89,7 +91,7 @@ export const Facet: React.FC<FacetProps> = ({
               ))
             ) : (
               <div className="px-2 py-1 text-sm text-gray-500 italic">
-                No matching values found
+                {t("messages.noMatchingValues")}
               </div>
             )}
           </div>
