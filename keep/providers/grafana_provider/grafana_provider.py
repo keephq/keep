@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import json
 import logging
+import re
 import time
 
 import pydantic
@@ -397,7 +398,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         return [alert_dto]
 
     def _get_grafana_version(self) -> str:
-        """Get the Grafana version."""
+        """Get the Grafana version (PEP 440-compatible for comparison).
+
+        Grafana Cloud/Enterprise returns versions like '13.0.0-22843068776.patch2'
+        which packaging.version.Version cannot parse. We extract the base
+        semantic version (e.g. '13.0.0') before returning.
+        """
         try:
             headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
             health_url = f"{self.authentication_config.host}/api/health"
@@ -406,7 +412,11 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
 
             if resp.ok:
                 health_data = resp.json()
-                return health_data.get("version", "unknown")
+                raw_version = health_data.get("version", "unknown")
+                if not raw_version or raw_version == "unknown":
+                    return "0.0.0"
+                match = re.match(r"^(\d+\.\d+(?:\.\d+)?)", raw_version)
+                return match.group(1) if match else "0.0.0"
             else:
                 self.logger.warning(
                     f"Failed to get Grafana version: {resp.status_code}"

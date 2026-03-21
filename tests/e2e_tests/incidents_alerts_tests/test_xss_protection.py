@@ -110,12 +110,14 @@ def test_legit_html_content(
             "table[data-testid='incidents-table'] tbody tr",
             has_text=legit_html_incident["user_generated_name"],
         ).first
-        html_content = incident_row.inner_html()
-        assert "<h2>" in html_content, "H2 tag not found in HTML"
-        assert "<code>" in html_content, "Code tag not found in HTML"
+        # Incident list renders summaries as plain text (tags stripped) for
+        # proper CSS line-clamp. Verify text content is preserved.
+        text_content = incident_row.inner_text()
+        assert "Test Failure" in text_content, "Summary text not found"
         assert (
-            '<a href="https://google.com">' in html_content
-        ), "Link tag not found in HTML"
+            "test_csb_upload_send_two_times_same_sequence_number" in text_content
+        ), "Code text not found in summary"
+        assert "Google" in text_content, "Link text not found in summary"
     except Exception:
         save_failure_artifacts(browser, log_entries=[])
         raise
