@@ -157,10 +157,10 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         return label === "true" ? t("messages.dismissed") : t("messages.notDismissed");
       }
       if (facetKey === "severity") {
-        return t(`severity.${label}`);
+        return t(`severity.${label.toLowerCase()}`);
       }
       if (facetKey === "status") {
-        return t(`status.${label}`);
+        return t(`status.${label.toLowerCase()}`);
       }
       return <span className="capitalize">{label}</span>;
     },
