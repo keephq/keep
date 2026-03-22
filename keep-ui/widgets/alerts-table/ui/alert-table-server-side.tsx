@@ -670,7 +670,9 @@ export function AlertTableServerSide({
       <div className="flex-none">
         <div className="flex justify-between">
           <span data-testid="preset-page-title">
-            <PageTitle className="capitalize inline">{presetName}</PageTitle>
+            <PageTitle className="capitalize inline">
+              {presetName === "feed" ? t("alerts.feed") : presetName}
+            </PageTitle>
           </span>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
             {timeFrame && (
