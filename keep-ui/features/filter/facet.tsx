@@ -40,7 +40,8 @@ export const Facet: React.FC<FacetProps> = ({
     "Source": tAlerts("labels.source"),
     "Assignee": t("labels.assignee"),
     "Service": t("labels.service"),
-    "Linked incident": t("labels.linkedIncident"),
+    "Incident": t("table.incident"),
+    "Linked incident": t("table.incident"),
     "Dismissed": t("facets.dismissed"),
   };
   const displayName = facetNameMap[facet.name] || facet.name;
