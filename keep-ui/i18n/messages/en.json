@@ -402,7 +402,7 @@
       "dismissed": "Dismissed",
       "notDismissed": "Not dismissed",
       "noAlerts": "No Alerts to Display",
-      "noAlertsDescription": "Connect a data source to start receiving alerts, or simulate an alert to test the platform"
+      "noAlertsDescription": "Connect a data source to start receiving alerts, or simulate an alert to test the platform",
       "all": "All",
       "only": "Only",
       "addFacet": "Add Facet",

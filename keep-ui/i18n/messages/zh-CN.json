@@ -1236,7 +1236,7 @@
       "showFiringOnly": "仅显示告警中的告警",
       "notDismissed": "未忽略",
       "noAlerts": "没有可显示的告警",
-      "noAlertsDescription": "连接数据源以开始接收告警，或模拟一个告警来测试平台"
+      "noAlertsDescription": "连接数据源以开始接收告警，或模拟一个告警来测试平台",
       "firingAlerts": "告警中",
       "noIncident": "无关联事件",
       "addFacet": "添加筛选维度",

@@ -144,7 +144,7 @@ export function Pagination({
             disabled={isRefreshing}
             loading={isRefreshing}
             onClick={async () => onRefresh?.()}
-            title="Refresh"
+            title={t("common.actions.refresh")}
           />
         )}
       </div>

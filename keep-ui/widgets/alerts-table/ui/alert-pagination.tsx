@@ -121,7 +121,7 @@ export default function AlertPagination({
             disabled={isValidating}
             loading={isValidating}
             onClick={async () => await mutate()}
-            title="Refresh"
+            title={t("common.actions.refresh")}
           />
         )}
       </div>
