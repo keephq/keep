@@ -16,8 +16,6 @@ import { ThemeControl, LanguageSwitcher } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 import { useTranslations } from "next-intl";
 
-const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
-
 type UserDropdownProps = {
   session: Session;
 };
@@ -49,12 +47,12 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
       </Menu.Button>
 
       <Menu.Items
-        className="w-48 ml-2 origin-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-10"
+        className="w-48 ml-2 origin-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50"
         style={floatingStyles}
         ref={refs.setFloating}
         as="ul"
       >
-        <div className="px-1 py-1 ">
+        <div className="px-1 py-1">
           {userRole !== "noc" && (
             <li>
               <Menu.Item
