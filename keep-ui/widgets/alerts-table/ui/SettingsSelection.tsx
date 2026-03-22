@@ -17,6 +17,7 @@ import { AlertTableThemeSelection } from "@/features/alerts/change-alert-table-t
 import { SeverityMappingSelection } from "@/features/alerts/severity-mapping";
 import { RowStyleSelection } from "@/widgets/alerts-table/ui/RowStyleSelection";
 import { ActionTraySelection } from "@/widgets/alerts-table/ui/ActionTraySelection";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface SettingsSelectionProps {
   table: Table<AlertDto>;
@@ -29,6 +30,7 @@ export default function SettingsSelection({
   presetName,
   presetId,
 }: SettingsSelectionProps) {
+  const { t } = useI18n();
   const arrowRef = useRef(null);
   const { refs, floatingStyles, context } = useFloating({
     strategy: "fixed",
@@ -52,7 +54,7 @@ export default function SettingsSelection({
             icon={FiSettings}
             ref={refs.setReference}
             data-testid="settings-button"
-            aria-label="Settings"
+            aria-label={t("common.labels.settings")}
           />
           <Popover.Overlay className="fixed inset-0 bg-black opacity-30 z-20" />
           <Popover.Panel
@@ -76,11 +78,11 @@ export default function SettingsSelection({
             >
               <TabGroup className="flex flex-col flex-1">
                 <TabList className="mb-4">
-                  <Tab data-testid="tab-columns">Columns</Tab>
-                  <Tab data-testid="tab-theme">Theme</Tab>
-                  <Tab data-testid="tab-severity">Severity</Tab>
-                  <Tab data-testid="tab-row-style">Row Style</Tab>
-                  <Tab data-testid="tab-action-tray">Action Tray</Tab>
+                  <Tab data-testid="tab-columns">{t("common.labels.columns")}</Tab>
+                  <Tab data-testid="tab-theme">{t("common.labels.theme")}</Tab>
+                  <Tab data-testid="tab-severity">{t("alerts.severity.title")}</Tab>
+                  <Tab data-testid="tab-row-style">{t("alerts.labels.rowStyle")}</Tab>
+                  <Tab data-testid="tab-action-tray">{t("alerts.labels.actionTray")}</Tab>
                 </TabList>
                 <TabPanels className="flex-1 overflow-hidden">
                   <TabPanel className="h-full" data-testid="panel-columns">

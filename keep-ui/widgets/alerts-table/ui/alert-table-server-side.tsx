@@ -38,6 +38,7 @@ import { severityMapping } from "@/entities/alerts/model";
 import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   EmptyStateCard,
   PageTitle,
@@ -136,6 +137,7 @@ export function AlertTableServerSide({
   onReload,
   onQueryChange,
 }: Props) {
+  const { t } = useI18n();
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -551,8 +553,8 @@ export function AlertTableServerSide({
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 noCard
-                title="No Alerts to Display"
-                description="Connect a data source to start receiving alerts, or simulate an alert to test the platform"
+                title={t("alerts.messages.noAlerts")}
+                description={t("alerts.messages.noAlertsDescription")}
               >
                 <div className="flex gap-2 justify-center">
                   <Button
@@ -561,7 +563,7 @@ export function AlertTableServerSide({
                     variant="secondary"
                     onClick={handleModalOpen}
                   >
-                    Simulate Alert
+                    {t("alerts.actions.simulate")}
                   </Button>
                   <Button
                     icon={PlusIcon}
@@ -571,7 +573,7 @@ export function AlertTableServerSide({
                       router.push("/providers?labels=alert");
                     }}
                   >
-                    Connect Data Source
+                    {t("alerts.actions.connectDataSource")}
                   </Button>
                 </div>
               </EmptyStateCard>

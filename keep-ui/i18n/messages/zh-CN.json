@@ -911,6 +911,10 @@
     "labels": {
       "name": "名称",
       "settings": "设置",
+      "columns": "列",
+      "theme": "主题",
+      "rowStyle": "行样式",
+      "actionTray": "操作托盘",
       "history": "历史记录",
       "status": "状态",
       "optional": "选填",
@@ -1231,6 +1235,8 @@
     "messages": {
       "showFiringOnly": "仅显示告警中的告警",
       "notDismissed": "未忽略",
+      "noAlerts": "没有可显示的告警",
+      "noAlertsDescription": "连接数据源以开始接收告警，或模拟一个告警来测试平台"
       "firingAlerts": "告警中",
       "noIncident": "无关联事件",
       "addFacet": "添加筛选维度",
@@ -1306,7 +1312,9 @@
       "dismiss": "忽略",
       "changeStatus": "更改状态",
       "assignTicket": "分配工单",
-      "addNote": "添加备注"
+      "addNote": "添加备注",
+      "simulate": "模拟告警",
+      "connectDataSource": "连接数据源"
     },
     "changeStatus": {
       "title": "更改告警状态",

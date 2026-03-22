@@ -9,6 +9,7 @@ import { Button, Text } from "@tremor/react";
 import { SingleValueProps, components, GroupBase } from "react-select";
 import { Table } from "@tanstack/react-table";
 import { Select } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props<T> {
   table: Table<T>;
@@ -31,6 +32,7 @@ const SingleValue = ({
 );
 
 export default function Pagination<T>({ table, isRefreshAllowed }: Props<T>) {
+  const { t } = useI18n();
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
 
@@ -39,7 +41,7 @@ export default function Pagination<T>({ table, isRefreshAllowed }: Props<T>) {
       <Text>
         {pageCount ? (
           <>
-            Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+            {t("shared.pagination.showingOf", { current: pageIndex + 1, total: pageCount })}
           </>
         ) : null}
       </Text>

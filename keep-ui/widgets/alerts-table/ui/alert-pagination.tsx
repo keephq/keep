@@ -12,6 +12,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/react-table";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { Select } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   presetName: string;
@@ -39,6 +40,7 @@ export default function AlertPagination({
   table,
   isRefreshAllowed,
 }: Props) {
+  const { t } = useI18n();
   const { usePresetAlerts } = useAlerts();
   // TODO: adopt usePresetAlertsRevalidation() strategy instead
   const { mutate, isLoading: isValidating } = usePresetAlerts(presetName);
@@ -51,7 +53,7 @@ export default function AlertPagination({
       <Text>
         {pageCount ? (
           <>
-            Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+            {t("shared.pagination.showingOf", { current: pageIndex + 1, total: pageCount })}
           </>
         ) : null}
       </Text>

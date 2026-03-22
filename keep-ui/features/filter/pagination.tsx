@@ -10,6 +10,7 @@ import { Button, Text } from "@tremor/react";
 import { SingleValueProps, components, GroupBase } from "react-select";
 import { Select } from "@/shared/ui";
 import { useMemo } from "react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export interface PaginationState {
   limit: number;
@@ -50,6 +51,7 @@ export function Pagination({
   onStateChange,
   onRefresh,
 }: Props) {
+  const { t } = useI18n();
   const pageSizeOptionsMemoized = useMemo(
     () => pageSizeOptions || [20, 50, 100],
     [pageSizeOptions]
@@ -81,7 +83,7 @@ export function Pagination({
   return (
     <div className="flex justify-between items-center">
       <Text>
-        Showing {pagesCount === 0 ? 0 : pageIndex + 1} of {pagesCount}
+        {t("shared.pagination.showingOf", { current: pageIndex + 1, total: pagesCount })}
       </Text>
       <div className="flex gap-1">
         <Select

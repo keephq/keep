@@ -95,6 +95,10 @@
       "history": "History",
       "activity": "Activity",
       "settings": "Settings",
+      "columns": "Columns",
+      "theme": "Theme",
+      "rowStyle": "Row Style",
+      "actionTray": "Action Tray",
       "configuration": "Configuration",
       "preferences": "Preferences",
       "beta": "Beta",
@@ -357,7 +361,9 @@
       "resolve": "Resolve",
       "silence": "Silence",
       "delete": "Delete",
-      "export": "Export Selected"
+      "export": "Export Selected",
+      "simulate": "Simulate Alert",
+      "connectDataSource": "Connect Data Source"
     },
     "labels": {
       "fingerprint": "Fingerprint",
@@ -395,6 +401,8 @@
       "noIncident": "No incident",
       "dismissed": "Dismissed",
       "notDismissed": "Not dismissed",
+      "noAlerts": "No Alerts to Display",
+      "noAlertsDescription": "Connect a data source to start receiving alerts, or simulate an alert to test the platform"
       "all": "All",
       "only": "Only",
       "addFacet": "Add Facet",
