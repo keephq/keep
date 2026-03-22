@@ -29,6 +29,7 @@ import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
 import { useCelState } from "@/features/cel-input/use-cel-state";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -60,11 +61,16 @@ const kbdStyle = {
 interface CustomMenuListProps
   extends MenuListProps<any, boolean, GroupBase<any>> {
   docsUrl: string;
+  wildcardText: string;
+  orText: string;
+  andText: string;
+  enterToUpdateText: string;
+  seeDocsText: string;
 }
 
 // Custom MenuList with a static line at the end
 const CustomMenuList = (props: CustomMenuListProps) => {
-  const { docsUrl, ...menuListProps } = props;
+  const { docsUrl, wildcardText, orText, andText, enterToUpdateText, seeDocsText, ...menuListProps } = props;
 
   return (
     <components.MenuList {...menuListProps}>
@@ -82,16 +88,16 @@ const CustomMenuList = (props: CustomMenuListProps) => {
         }}
       >
         <span>
-          Wildcard: <kbd style={kbdStyle}>source.contains(&quot;&quot;)</kbd>
+          {wildcardText}: <kbd style={kbdStyle}>source.contains(&quot;&quot;)</kbd>
         </span>
         <span>
-          OR: <kbd style={kbdStyle}> || </kbd>
+          {orText}: <kbd style={kbdStyle}> || </kbd>
         </span>
         <span>
-          AND: <kbd style={kbdStyle}> && </kbd>
+          {andText}: <kbd style={kbdStyle}> && </kbd>
         </span>
         <span>
-          <kbd style={kbdStyle}>Enter</kbd> to update query
+          <kbd style={kbdStyle}>Enter</kbd> {enterToUpdateText}
         </span>
         <a
           href={`${docsUrl}/overview/cel`}
@@ -104,7 +110,7 @@ const CustomMenuList = (props: CustomMenuListProps) => {
             alignItems: "center",
           }}
         >
-          See Syntax Documentation{" "}
+          {seeDocsText}{" "}
           <FiExternalLink style={{ marginLeft: "5px" }} />
         </a>
       </div>
@@ -192,6 +198,7 @@ export const AlertsRulesBuilder = ({
   shouldSetQueryParam = true,
   onCelChanges,
 }: AlertsRulesBuilderProps) => {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -280,7 +287,7 @@ export const AlertsRulesBuilder = ({
       if (isValidCEL) {
         setAppliedCel(celRules);
         if (showToast)
-          toast.success("Condition applied", { position: "top-right" });
+          toast.success(t("presets.conditionApplied"), { position: "top-right" });
       }
     }
   };
@@ -348,12 +355,12 @@ export const AlertsRulesBuilder = ({
 
   function getSaveFilterTooltipText(): string {
     if (!isValidCEL) {
-      return "You can only save a valid CEL expression.";
+      return t("presets.invalidCELTooltip");
     }
 
     return action === "update"
-      ? "Edit preset"
-      : "Save current filter as a preset";
+      ? t("presets.editPresetTooltip")
+      : t("presets.saveFilterTooltip");
   }
 
   return (
@@ -367,7 +374,7 @@ export const AlertsRulesBuilder = ({
               <div className="relative">
                 <CelInput
                   id="alerts-cel-input"
-                  placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
+                  placeholder={t("presets.celPlaceholder")}
                   value={celRules}
                   fieldsForSuggestions={alertFields}
                   onValueChange={setCELRules}
@@ -395,6 +402,11 @@ export const AlertsRulesBuilder = ({
                                   config?.KEEP_DOCS_URL ||
                                   "https://docs.keephq.dev"
                                 }
+                                wildcardText={t("presets.wildcard")}
+                                orText={t("presets.or")}
+                                andText={t("presets.and")}
+                                enterToUpdateText={t("presets.enterToUpdate")}
+                                seeDocsText={t("presets.seeSyntaxDocs")}
                               />
                             ),
                           }
@@ -405,13 +417,13 @@ export const AlertsRulesBuilder = ({
               )}
               {!isValidCEL && (
                 <div className="text-red-500 text-sm relative top-1">
-                  Invalid Common Expression Logic expression.
+                  {t("presets.invalidCEL")}
                 </div>
               )}
               <div className="flex items-center justify-end pt-1 px-2">
                 <span className="text-xs text-gray-400">
                   <CornerDownLeft className="h-3 w-3 mr-1 inline-block" />
-                  Enter to apply
+                  {t("presets.enterToApply")}
                 </span>
               </div>
             </div>
@@ -438,7 +450,7 @@ export const AlertsRulesBuilder = ({
               onClick={onImportSQL}
               icon={TbDatabaseImport}
               size="sm"
-              tooltip="Import from SQL"
+              tooltip={t("presets.importFromSQL")}
             ></Button>
           )}
           {isDynamic && (
@@ -446,7 +458,7 @@ export const AlertsRulesBuilder = ({
               icon={TrashIcon}
               variant="secondary"
               color="red"
-              title="Delete preset"
+              title={t("presets.deletePreset")}
               onClick={() =>
                 deletePreset(selectedPreset!.id!, selectedPreset!.name).then(
                   () => {
@@ -465,7 +477,7 @@ export const AlertsRulesBuilder = ({
           setImportSQLOpen(false);
           setSqlError(null);
         }} // Clear the error when closing the modal
-        title="Import from SQL"
+        title={t("presets.importFromSQL")}
       >
         <div className="space-y-4 pt-4">
           <Textarea
@@ -474,7 +486,7 @@ export const AlertsRulesBuilder = ({
             onValueChange={setSQLQuery}
           />
           {sqlError && (
-            <div className="text-red-500 text-sm mb-2">Error: {sqlError}</div>
+            <div className="text-red-500 text-sm mb-2">{t("presets.error")} {sqlError}</div>
           )}
           <div className="flex justify-end">
             <Button
@@ -482,7 +494,7 @@ export const AlertsRulesBuilder = ({
               onClick={onImportSQLSubmit}
               disabled={!(sqlQuery.length > 0)}
             >
-              Convert to CEL
+              {t("presets.convertToCEL")}
             </Button>
           </div>
         </div>
@@ -492,7 +504,7 @@ export const AlertsRulesBuilder = ({
         isOpen={isGUIOpen}
         onClose={() => setIsGUIOpen(false)}
         className="w-[50%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
-        title="Query Builder"
+        title={t("presets.queryBuilder")}
       >
         <div className="space-y-2 pt-4">
           <div className="max-h-96 overflow-auto">
@@ -510,7 +522,7 @@ export const AlertsRulesBuilder = ({
               onClick={onGenerateQuery}
               disabled={!query.rules.length}
             >
-              Generate Query
+              {t("presets.generateQuery")}
             </Button>
           </div>
         </div>

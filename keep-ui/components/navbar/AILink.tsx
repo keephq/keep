@@ -6,13 +6,16 @@ import { RiSparkling2Line } from "react-icons/ri";
 
 import { useEffect, useState } from "react";
 import { usePollAILogs } from "utils/hooks/useAI";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export const AILink = () => {
+  const { t } = useI18n();
   const [text, setText] = useState("");
-  const [newText, setNewText] = useState("AI Plugins");
+  const [newText, setNewText] = useState(() => t("aiPlugins.title"));
+  const [iteratedText, setIteratedText] = useState(() => t("aiPlugins.iterated"));
 
   const mutateAILogs = (logs: any) => {
-    setNewText("AI iterated 🎉");
+    setNewText(iteratedText);
   };
 
   usePollAILogs(mutateAILogs);

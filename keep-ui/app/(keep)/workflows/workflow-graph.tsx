@@ -108,6 +108,7 @@ export default function WorkflowGraph({
   showAll?: boolean;
   full?: boolean;
 }) {
+  const { t } = useI18n();
   let height;
   switch (size) {
     case "sm":
@@ -202,7 +203,7 @@ export default function WorkflowGraph({
           height
         )}
       >
-        No data available
+        {t("common.messages.noData")}
       </div>
     );
   }

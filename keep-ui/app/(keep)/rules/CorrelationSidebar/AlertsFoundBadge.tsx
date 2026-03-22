@@ -16,36 +16,39 @@ export const AlertsFoundBadge = ({
   isLoading,
   role,
 }: AlertsFoundBadgeProps) => {
+  const { t } = useI18n();
   function renderFoundAlertsText() {
+    const alertText = totalAlertsFound > 1
+      ? t("rules.correlation.messages.alertsFoundPlural")
+      : t("rules.correlation.messages.alertsFoundSingle");
+
     if (role === "ruleCondition") {
       return (
         <>
-          {totalAlertsFound} alert{totalAlertsFound > 1 ? "s" : ""} were found
-          matching this condition
+          {totalAlertsFound} {alertText} matching this condition
         </>
       );
     }
 
     return (
       <>
-        {totalAlertsFound} alert{totalAlertsFound > 1 ? "s" : ""} were found
-        matching correlation rule conditions
+        {totalAlertsFound} {alertText} matching correlation rule conditions
       </>
     );
   }
 
   function getNotFoundText() {
     if (role === "ruleCondition") {
-      return "No alerts were found with this condition. Please try something else.";
+      return t("rules.correlation.messages.noAlertsFoundRuleCondition");
     }
 
-    return "No alerts were found with these correlation rule conditions. Please try something else.";
+    return t("rules.correlation.messages.noAlertsFoundCorrelationConditions");
   }
 
   if (totalAlertsFound === 0) {
     return (
       <Badge className="mt-3 w-full" color="gray">
-        {isLoading ? "Getting your alerts..." : getNotFoundText()}
+        {isLoading ? t("rules.correlation.messages.gettingYourAlerts") : getNotFoundText()}
       </Badge>
     );
   }

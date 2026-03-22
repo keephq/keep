@@ -1161,7 +1161,13 @@
       "aiDisabled": "AI is disabled",
       "aiDisabledDescription": "Contact us to enable AI for you.",
       "contactUs": "Contact us",
-      "yaml": "yaml"
+      "yaml": "yaml",
+      "showYAMLEditor": "Show YAML editor",
+      "hideYAMLEditor": "Hide YAML editor",
+      "showAIAssistant": "Show AI Assistant",
+      "hideAIAssistant": "Hide AI Assistant",
+      "loadingProviders": "Loading providers...",
+      "failedToLoadProviders": "Failed to load providers"
     }
   },
   "dashboard": {
@@ -1388,7 +1394,12 @@
       "editRule": "Edit Correlation Rule",
       "messages": {
         "noCorrelations": "No Correlations Yet",
-        "noCorrelationsDescription": "Start building correlations to group alerts into incidents."
+        "noCorrelationsDescription": "Start building correlations to group alerts into incidents.",
+        "alertsFoundSingle": "alert was found",
+        "alertsFoundPlural": "alerts were found",
+        "noAlertsFoundRuleCondition": "No alerts were found with this condition. Please try something else.",
+        "noAlertsFoundCorrelationConditions": "No alerts were found with these correlation rule conditions. Please try something else.",
+        "gettingYourAlerts": "Getting your alerts..."
       }
     },
     "mapping": {
@@ -1778,6 +1789,7 @@
       "hours": "Hours",
       "days": "Days"
     },
+    "timeCaption": "Time",
     "table": {
       "name": "Name",
       "description": "Description",
@@ -1858,6 +1870,7 @@
     "applyProposedSettings": "Apply proposed settings",
     "executionLogs": "Execution logs:",
     "notExecutedYet": "Algorithm not executed yet.",
+    "iterated": "AI iterated 🎉",
     "value": "value"
   },
   "providerImages": {
@@ -2184,5 +2197,33 @@
     "cancel": "Cancel",
     "saveChanges": "Save Changes",
     "noAssignments": "No assignments"
+  },
+  "presets": {
+    "celPlaceholder": "Use CEL to filter your alerts e.g. source.contains(\"kibana\").",
+    "enterToApply": "Enter to apply",
+    "invalidCEL": "Invalid Common Expression Logic expression.",
+    "conditionApplied": "Condition applied",
+    "wildcard": "Wildcard:",
+    "or": "OR:",
+    "and": "AND:",
+    "enterToUpdate": "to update query",
+    "seeSyntaxDocs": "See Syntax Documentation",
+    "importFromSQL": "Import from SQL",
+    "deletePreset": "Delete preset",
+    "convertToCEL": "Convert to CEL",
+    "queryBuilder": "Query Builder",
+    "generateQuery": "Generate Query",
+    "saveFilterTooltip": "Save current filter as a preset",
+    "editPresetTooltip": "Edit preset",
+    "invalidCELTooltip": "You can only save a valid CEL expression.",
+    "error": "Error:",
+    "setTableFields": "Set table fields",
+    "syncedAcrossDevices": "Synced across devices",
+    "searchFields": "Search fields...",
+    "loadingColumnConfig": "Loading column configuration...",
+    "searching": "Searching...",
+    "noColumnsFound": "No columns found matching \"{search}\"",
+    "savingChanges": "Saving...",
+    "saveChanges": "Save changes"
   }
 }

@@ -22,6 +22,7 @@ import { WorkflowBuilderChatSafe } from "@/features/workflows/ai-assistant";
 import debounce from "lodash.debounce";
 import { getOrderedWorkflowYamlStringFromJSON } from "@/entities/workflows/lib/yaml-utils";
 import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   loadedYamlFileContents: string | null;
@@ -38,6 +39,7 @@ export function WorkflowBuilder({
   workflowId,
   installedProviders,
 }: Props) {
+  const { t } = useI18n();
   const { createWorkflow, updateWorkflow } = useWorkflowActions();
   const {
     getSecrets: { data: workflowSecrets },
@@ -289,7 +291,7 @@ export function WorkflowBuilder({
                 className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md cursor-pointer"
                 onClick={() => setLeftColumnMode("yaml")}
                 data-testid="wf-open-editor-button"
-                title="Show YAML editor"
+                title={t("workflows.builder.showYAMLEditor")}
               >
                 <CodeBracketIcon className="size-5" />
               </button>
@@ -298,7 +300,7 @@ export function WorkflowBuilder({
                 className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
                 onClick={() => setLeftColumnMode(null)}
                 data-testid="wf-close-yaml-editor-button"
-                title="Hide YAML editor"
+                title={t("workflows.builder.hideYAMLEditor")}
               >
                 <CodeBracketIcon className="size-5" />
               </button>
@@ -310,7 +312,7 @@ export function WorkflowBuilder({
                 className="flex justify-center items-center bg-white w-full h-full border-b border-r rounded-br-lg shadow-md cursor-pointer"
                 onClick={() => setLeftColumnMode("chat")}
                 data-testid="wf-open-chat-button"
-                title="Show AI Assistant"
+                title={t("workflows.builder.showAIAssistant")}
               >
                 <SparklesIcon className="size-5" />
               </button>
@@ -319,7 +321,7 @@ export function WorkflowBuilder({
                 className="flex justify-center bg-white items-center w-full h-full border-b border-r rounded-br-lg shadow-md text-orange-500"
                 onClick={() => setLeftColumnMode(null)}
                 data-testid="wf-close-chat-button"
-                title="Hide AI Assistant"
+                title={t("workflows.builder.hideAIAssistant")}
               >
                 <SparklesIcon className="size-5" />
               </button>

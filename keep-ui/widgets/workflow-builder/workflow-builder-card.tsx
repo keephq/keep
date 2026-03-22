@@ -6,6 +6,7 @@ import { EmptyBuilderState } from "./empty-builder-state";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { KeepLoader } from "@/shared/ui";
 import clsx from "clsx";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const Builder = dynamic(
   () => import("./workflow-builder").then((mod) => mod.WorkflowBuilder),
@@ -27,6 +28,7 @@ export function WorkflowBuilderCard({
   workflowId,
   standalone = false,
 }: Props) {
+  const { t } = useI18n();
   const {
     data: { providers, installed_providers: installedProviders } = {},
     error,
@@ -43,7 +45,7 @@ export function WorkflowBuilderCard({
   if (!providers || isLoading)
     return (
       <Card className={cardClassName}>
-        <KeepLoader loadingText="Loading providers..." />
+        <KeepLoader loadingText={t("workflows.builder.loadingProviders")} />
       </Card>
     );
 
@@ -52,11 +54,11 @@ export function WorkflowBuilderCard({
       <Card className={cardClassName}>
         <Callout
           className="mt-4"
-          title="Error"
+          title={t("common.labels.error")}
           icon={ExclamationCircleIcon}
           color="rose"
         >
-          Failed to load providers
+          {t("workflows.builder.failedToLoadProviders")}
         </Callout>
       </Card>
     );

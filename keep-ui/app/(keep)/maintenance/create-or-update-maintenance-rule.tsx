@@ -198,7 +198,7 @@ export default function CreateOrUpdateMaintenanceRule({
       <div className="mt-2.5">
         <MultiSelect value={ignoreStatuses} onValueChange={setIgnoreStatuses}>
           {Object.values(Status).map((value) => {
-            return <MultiSelectItem key={value} value={value}>{capitalize(value)}</MultiSelectItem>
+            return <MultiSelectItem key={value} value={value}>{t(`alerts.status.${value.toLowerCase()}` as const)}</MultiSelectItem>
           })}
         </MultiSelect>
       </div>
@@ -213,7 +213,7 @@ export default function CreateOrUpdateMaintenanceRule({
           timeFormat="p"
           timeIntervals={15}
           minDate={new Date()}
-          timeCaption="Time"
+          timeCaption={t("maintenance.timeCaption")}
           dateFormat="MMMM d, yyyy h:mm:ss aa"
           inline
         />
@@ -227,6 +227,7 @@ export default function CreateOrUpdateMaintenanceRule({
             value={endInterval}
             onValueChange={setEndInterval}
             min={1}
+            placeholder=""
           />
           <Select value={intervalType} onValueChange={setIntervalType}>
             <SelectItem value="minutes">{t("maintenance.timeUnits.minutes")}</SelectItem>

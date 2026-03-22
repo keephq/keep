@@ -393,7 +393,12 @@
       "editRule": "编辑关联规则",
       "messages": {
         "noCorrelationsDescription": "开始构建关联规则，将告警分组为事件。",
-        "noCorrelations": "暂无关联规则"
+        "noCorrelations": "暂无关联规则",
+        "alertsFoundSingle": "条告警匹配",
+        "alertsFoundPlural": "条告警匹配",
+        "noAlertsFoundRuleCondition": "此条件未找到告警。请尝试其他条件。",
+        "noAlertsFoundCorrelationConditions": "这些关联规则条件未找到告警。请尝试其他条件。",
+        "gettingYourAlerts": "正在获取告警..."
       },
       "addRule": "添加关联规则",
       "sidebar": {
@@ -484,6 +489,7 @@
   "aiPlugins": {
     "newSettingsProposal": "新的设置建议",
     "notExecutedYet": "算法尚未执行。",
+    "iterated": "AI 已迭代 🎉",
     "subtitle": "用于关联、摘要和富化",
     "proposalDescription": "模型上次训练和推理时建议了配置更新。但请注意，如果数据量或质量较低，配置更新可能效果不佳。详情请参阅以下日志。",
     "title": "AI 插件",
@@ -1912,6 +1918,7 @@
       "seconds": "秒",
       "hours": "小时"
     },
+    "timeCaption": "时间",
     "addRule": "添加维护规则"
   },
   "alertQuality": {
@@ -2391,7 +2398,13 @@
       "aiDisabled": "AI 已禁用",
       "aiDisabledDescription": "联系我们以启用 AI。",
       "contactUs": "联系我们",
-      "yaml": "yaml"
+      "yaml": "yaml",
+      "showYAMLEditor": "显示 YAML 编辑器",
+      "hideYAMLEditor": "隐藏 YAML 编辑器",
+      "showAIAssistant": "显示 AI 助手",
+      "hideAIAssistant": "隐藏 AI 助手",
+      "loadingProviders": "加载集成中...",
+      "failedToLoadProviders": "加载集成失败"
     }
   },
   "notFound": {
@@ -2413,5 +2426,33 @@
     "title": "通知中心",
     "description": "管理所有与通知相关的内容",
     "comingSoon": "即将推出"
+  },
+  "presets": {
+    "celPlaceholder": "使用 CEL 过滤告警，例如 source.contains(\"kibana\")。",
+    "enterToApply": "按回车应用",
+    "invalidCEL": "无效的通用表达式逻辑。",
+    "conditionApplied": "条件已应用",
+    "wildcard": "通配符：",
+    "or": "或：",
+    "and": "与：",
+    "enterToUpdate": "更新查询",
+    "seeSyntaxDocs": "查看语法文档",
+    "importFromSQL": "从 SQL 导入",
+    "deletePreset": "删除预设",
+    "convertToCEL": "转换为 CEL",
+    "queryBuilder": "查询构建器",
+    "generateQuery": "生成查询",
+    "saveFilterTooltip": "将当前筛选保存为预设",
+    "editPresetTooltip": "编辑预设",
+    "invalidCELTooltip": "只能保存有效的 CEL 表达式。",
+    "error": "错误：",
+    "setTableFields": "设置表格字段",
+    "syncedAcrossDevices": "跨设备同步",
+    "searchFields": "搜索字段...",
+    "loadingColumnConfig": "加载列配置中...",
+    "searching": "搜索中...",
+    "noColumnsFound": "未找到匹配\"{search}\"的列",
+    "savingChanges": "保存中...",
+    "saveChanges": "保存更改"
   }
 }

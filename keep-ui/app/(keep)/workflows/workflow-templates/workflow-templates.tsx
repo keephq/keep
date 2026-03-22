@@ -76,7 +76,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
               variant="secondary"
               onClick={() => setSearchValue("")}
             >
-              Clear search
+              {t("common.actions.clear")}
             </Button>
           </div>
         </div>
@@ -111,7 +111,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-3">
       <SearchInput
-        placeholder="Search workflows"
+        placeholder={t("workflows.searchPlaceholder")}
         value={searchValue as string}
         onValueChange={setSearchValue}
       />

@@ -5,6 +5,7 @@ import { VisibilityState } from "@tanstack/react-table";
 import { FiSearch } from "react-icons/fi";
 import { AlertDto } from "@/entities/alerts/model";
 import { usePresetColumnState } from "@/entities/presets/model";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
@@ -19,6 +20,7 @@ export default function ColumnSelection({
   presetId,
   onClose,
 }: AlertColumnsSelectProps) {
+  const { t } = useI18n();
   const tableColumns = table.getAllColumns();
 
   // Use the unified column state hook - it will automatically determine
@@ -183,16 +185,16 @@ export default function ColumnSelection({
     <form onSubmit={onMultiSelectChange} className="flex flex-col h-full">
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-400 text-sm">Set table fields</span>
+          <span className="text-gray-400 text-sm">{t("presets.setTableFields")}</span>
           {useBackend && (
             <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-              Synced across devices
+              {t("presets.syncedAcrossDevices")}
             </span>
           )}
         </div>
         <TextInput
           icon={FiSearch}
-          placeholder="Search fields..."
+          placeholder={t("presets.searchFields")}
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="mb-3"
@@ -201,12 +203,12 @@ export default function ColumnSelection({
           {isLoading && useBackend ? (
             <div className="flex items-center justify-center py-8 text-gray-400">
               <span data-testid="columns-loading">
-                Loading column configuration...
+                {t("presets.loadingColumnConfig")}
               </span>
             </div>
           ) : isSearching ? (
             <div className="flex items-center justify-center py-8 text-gray-400">
-              <span data-testid="columns-searching">Searching...</span>
+              <span data-testid="columns-searching">{t("presets.searching")}</span>
             </div>
           ) : (
             <ul
@@ -237,7 +239,7 @@ export default function ColumnSelection({
                   className="text-gray-400 p-2"
                   data-testid="no-columns-found"
                 >
-                  No columns found matching &ldquo;{searchTerm}&rdquo;
+                  {t("presets.noColumnsFound", { search: searchTerm })}
                 </li>
               )}
             </ul>
@@ -251,7 +253,7 @@ export default function ColumnSelection({
         loading={useBackend && isLoading}
         disabled={useBackend && isLoading}
       >
-        {useBackend && isLoading ? "Saving..." : "Save changes"}
+        {useBackend && isLoading ? t("presets.savingChanges") : t("presets.saveChanges")}
       </Button>
     </form>
   );
