@@ -1277,7 +1277,8 @@
       "dismissed": "已忽略",
       "resolved": "已恢复",
       "pending": "待处理",
-      "acknowledged": "已确认"
+      "acknowledged": "已确认",
+      "maintenance": "维护中"
     },
     "firing": "告警中",
     "severity": {

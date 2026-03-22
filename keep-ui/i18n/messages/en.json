@@ -337,7 +337,8 @@
       "acknowledged": "Acknowledged",
       "suppressed": "Suppressed",
       "dismissed": "Dismissed",
-      "pending": "Pending"
+      "pending": "Pending",
+      "maintenance": "Maintenance"
     },
     "severity": {
       "title": "Severity",
