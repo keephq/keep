@@ -139,7 +139,7 @@ export function IncidentList({
           const label =
             severityMapping[Number(facetOption.display_name)] ||
             facetOption.display_name;
-          return <span className="capitalize">{label}</span>;
+          return <span>{t(`incidents.severity.${label}`)}</span>;
         },
         renderOptionIcon: (facetOption) => (
           <SeverityBorderIcon
@@ -154,6 +154,9 @@ export function IncidentList({
       },
       ["Status"]: {
         checkedByDefaultOptionValues: DEFAULT_INCIDENTS_CHECKED_OPTIONS,
+        renderOptionLabel: (facetOption) => {
+          return <span>{t(`incidents.status.${facetOption.display_name.toLowerCase()}`)}</span>;
+        },
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
