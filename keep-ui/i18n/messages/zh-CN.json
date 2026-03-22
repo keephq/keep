@@ -1266,7 +1266,9 @@
       "count": "数量",
       "selectTagsToWatch": "选择要监控的标签",
       "service": "服务",
-      "lastReceived": "最后接收时间"
+      "lastReceived": "最后接收时间",
+      "rowStyle": "行样式",
+      "actionTray": "操作托盘"
     },
     "status": {
       "title": "状态",

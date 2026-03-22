@@ -375,7 +375,9 @@
       "assignee": "Assignee",
       "ticket": "Ticket",
       "ticketUrl": "Ticket URL",
-      "selectTagsToWatch": "Select tags to watch"
+      "selectTagsToWatch": "Select tags to watch",
+      "rowStyle": "Row Style",
+      "actionTray": "Action Tray"
     },
     "facets": {
       "severity": "Severity",
