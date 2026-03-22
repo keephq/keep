@@ -5,6 +5,7 @@ import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import { useFilterContext } from "../../filter-context";
 
 export const ProvidersSearch: FC = () => {
+  const { t } = useI18n();
   const { providersSearchString, setProvidersSearchString } =
     useFilterContext();
 
@@ -16,7 +17,7 @@ export const ProvidersSearch: FC = () => {
     <TextInput
       id="search-providers"
       icon={MagnifyingGlassIcon}
-      placeholder="Filter providers..."
+      placeholder={t("providers.filterProviders")}
       className="w-full"
       value={providersSearchString}
       onChange={handleChange}

@@ -1,11 +1,14 @@
+"use client";
+
 import { Subtitle, Title } from "@tremor/react";
 import clsx from "clsx";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export function KeepLoader({
   includeMinHeight = true,
   slowLoading = false,
-  loadingText = "Just a second, getting your data 🚨",
+  loadingText,
   className,
   ...props
 }: {
@@ -13,6 +16,8 @@ export function KeepLoader({
   slowLoading?: boolean;
   loadingText?: string;
 } & React.HTMLAttributes<HTMLDivElement>) {
+  const t = useTranslations("common");
+
   return (
     <main
       className={clsx(
@@ -29,11 +34,9 @@ export function KeepLoader({
         width={200}
         height={200}
       />
-      <Title>{loadingText}</Title>
+      <Title>{loadingText ?? t("messages.loadingText")}</Title>
       {slowLoading && (
-        <Subtitle>
-          This is taking a bit longer than usual, please wait...
-        </Subtitle>
+        <Subtitle>{t("messages.slowLoadingText")}</Subtitle>
       )}
     </main>
   );

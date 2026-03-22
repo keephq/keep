@@ -60,6 +60,7 @@ export const ProvidersCarousel = ({
 };
 
 export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
+  const { t } = useI18n();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
     null
@@ -126,7 +127,7 @@ export function WorkflowProviders({ workflow }: { workflow: Workflow }) {
         onConnectClick={handleConnectProvider}
       />
       <Drawer
-        title={`Connect to ${selectedProvider?.display_name}`}
+        title={t("providers.connectTo", { providerName: selectedProvider?.display_name ?? "" })}
         isOpen={openPanel}
         onClose={handleCloseModal}
       >

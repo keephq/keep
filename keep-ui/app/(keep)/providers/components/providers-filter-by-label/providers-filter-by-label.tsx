@@ -6,6 +6,7 @@ import { useFilterContext, PROVIDER_LABELS } from "../../filter-context";
 import type { TProviderLabels } from "@/shared/api/providers";
 
 export const ProvidersFilterByLabel: FC = (props) => {
+  const { t } = useI18n();
   const { setProvidersSelectedTags, providersSelectedTags } =
     useFilterContext();
 
@@ -19,7 +20,7 @@ export const ProvidersFilterByLabel: FC = (props) => {
     <MultiSelect
       onValueChange={headerSelect}
       value={providersSelectedTags}
-      placeholder="All Labels"
+      placeholder={t("providers.allLabels")}
       className="w-64 ml-2.5"
       icon={TagIcon}
     >

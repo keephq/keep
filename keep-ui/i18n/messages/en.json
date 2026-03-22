@@ -133,7 +133,9 @@
       "unauthorizedDescription": "Please sign in to access this page.",
       "never": "Never",
       "notApplicable": "N/A",
-      "moreCount": "+{count} more"
+      "moreCount": "+{count} more",
+      "loadingText": "Just a second, getting your data 🚨",
+      "slowLoadingText": "This is taking a bit longer than usual, please wait..."
     },
     "pagination": {
       "previous": "Previous",
@@ -617,6 +619,7 @@
       "notFound": "Workflow not found",
       "noWorkflows": "No workflows to display",
       "noWorkflowsDescription": "Create your first workflow to automate alert processing.",
+      "noWorkflowsMatchingSearch": "No workflows to display matching your search",
       "confirmDelete": "Are you sure you want to delete this workflow?",
       "confirmRun": "Are you sure you want to run this workflow now?",
       "executionStarted": "Workflow execution started",
@@ -1542,7 +1545,37 @@
       "notEnabledDescription": "Provider logs must be enabled in the backend. Check the documentation for instructions on enabling provider logs.",
       "viewDocumentation": "View documentation",
       "noLogsFound": "No logs found"
-    }
+    },
+    "providerName": "Provider Name",
+    "enterProviderName": "Enter provider name",
+    "webhook": {
+      "installing": "Installing...",
+      "installedSuccess": "Successfully installed {provider}",
+      "installFailed": "Installation failed",
+      "scopesRequired": "Scopes validation required",
+      "useSavedCredentials": "Use saved credentials"
+    },
+    "scopes": {
+      "revalidateFailed": "Failed to revalidate scopes"
+    },
+    "connectionProblem": "Connection Problem",
+    "updateSuccess": "Provider updated successfully",
+    "updateFailed": "Failed to update provider",
+    "errors": {
+      "badResponse": "Bad response, please check your configuration",
+      "connectionFailed": "Connection failed"
+    },
+    "pullingEnabled": "Pulling Enabled",
+    "pullingTooltip": "Whether Keep should try to pull alerts automatically from the provider once in a while",
+    "needHelp": "Need help? Check out the",
+    "providerDocumentation": "Provider Documentation",
+    "orAskSlackCommunity": ", or ask Slack Community",
+    "lastPullTime": "Provider last pull time: ",
+    "editingProvisionedNotPossible": "Editing provisioned providers is not possible from UI.",
+    "filterProviders": "Filter providers...",
+    "allLabels": "All Labels",
+    "noProvidersMatching": "No providers found matching your filters.",
+    "selectProvider": "Select provider"
   },
   "userSidebar": {
     "createUser": "Create User",

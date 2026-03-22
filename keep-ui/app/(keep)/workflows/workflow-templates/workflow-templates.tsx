@@ -12,6 +12,7 @@ import { useQueryWorkflowTemplate } from "@/entities/workflows/lib/use-query-wor
 interface WorkflowTemplatesProps {}
 
 export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
+  const { t } = useI18n();
   const [searchValue, setSearchValue] = useState("");
   const [paginationState, setPaginationState] = useState<PaginationState>({
     offset: 0,
@@ -66,7 +67,7 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = () => {
                 aria-hidden={true}
               />
               <p className="mt-2 text-xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                No workflows to display matching your search
+                {t("workflows.messages.noWorkflowsMatchingSearch")}
               </p>
             </div>
             <Button

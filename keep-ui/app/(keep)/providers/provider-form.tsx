@@ -602,13 +602,13 @@ const ProviderForm = ({
                       htmlFor="pulling_enabled"
                       className="flex items-center"
                     >
-                      <Text className="capitalize">Pulling Enabled</Text>
+                      <Text className="capitalize">{t("providers.pullingEnabled")}</Text>
                       <Icon
                         icon={QuestionMarkCircleIcon}
                         variant="simple"
                         color="gray"
                         size="sm"
-                        tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                        tooltip={t("providers.pullingTooltip")}
                       />
                     </label>
                   </>
@@ -660,7 +660,7 @@ const ProviderForm = ({
                   checked={Boolean(formValues["pulling_enabled"])}
                 />
                 <label htmlFor="pulling_enabled" className="flex items-center">
-                  <Text className="capitalize">Pulling Enabled</Text>
+                  <Text className="capitalize">{t("providers.pullingEnabled")}</Text>
                   <Icon
                     icon={QuestionMarkCircleIcon}
                     variant="simple"
@@ -688,7 +688,7 @@ const ProviderForm = ({
                 checked={Boolean(formValues["pulling_enabled"])}
               />
               <label htmlFor="pulling_enabled" className="flex items-center">
-                <Text className="capitalize">Pulling Enabled</Text>
+                <Text className="capitalize">{t("providers.pullingEnabled")}</Text>
                 <Icon
                   icon={QuestionMarkCircleIcon}
                   variant="simple"
@@ -730,7 +730,7 @@ const ProviderForm = ({
       <div className="flex-grow p-5">
         <div className="flex flex-row w-full">
           <div className="flex-grow flex gap-1">
-            <Title>Connect to {provider.display_name}</Title>
+            <Title>{t("providers.connectTo", { providerName: provider.display_name })}</Title>
             {provider.provisioned && (
               <Badge color="orange" className="ml-2">
                 Provisioned
@@ -753,7 +753,7 @@ const ProviderForm = ({
           <Subtitle>Id: {provider.id}</Subtitle>
         )}
         <Subtitle>
-          Need help? Check out the{" "}
+          {t("providers.needHelp")}{" "}
           <Link
             className="text-orange-600 underline"
             href={`${
@@ -761,9 +761,9 @@ const ProviderForm = ({
             }/providers/documentation/${provider.type}-provider`}
             target="_blank"
           >
-            {`Provider Documentation`}
+            {t("providers.providerDocumentation")}
           </Link>
-          , or ask{" "}
+          {t("providers.orAskSlackCommunity")}{" "}
           <Link
             className="text-orange-600 underline"
             href={`https://getkeep.slack.com/join/shared_invite/zt-2leydxr6s-XmuQtBttgxZ0GOv8MJu6rQ#/shared-invite/email`}
@@ -774,7 +774,7 @@ const ProviderForm = ({
         </Subtitle>
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
-            Provider last pull time:{" "}
+            {t("providers.lastPullTime")}
             <TimeAgo date={provider.last_pull_time + "Z"} />
           </Subtitle>
         )}
@@ -788,7 +788,7 @@ const ProviderForm = ({
               className="w-full"
             >
               <Text>
-                Editing provisioned providers is not possible from UI.
+                {t("providers.editingProvisionedNotPossible")}
               </Text>
             </Callout>
           </div>

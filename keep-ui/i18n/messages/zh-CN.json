@@ -764,7 +764,37 @@
     "configuration": "配置",
     "connected": "已连接",
     "linked": "已关联",
-    "version": "版本"
+    "version": "版本",
+    "providerName": "集成名称",
+    "enterProviderName": "输入集成名称",
+    "webhook": {
+      "installing": "正在安装...",
+      "installedSuccess": "已成功安装 {provider}",
+      "installFailed": "安装失败",
+      "scopesRequired": "需要验证作用域",
+      "useSavedCredentials": "使用已保存的凭据"
+    },
+    "scopes": {
+      "revalidateFailed": "重新验证作用域失败"
+    },
+    "connectionProblem": "连接问题",
+    "updateSuccess": "集成更新成功",
+    "updateFailed": "集成更新失败",
+    "errors": {
+      "badResponse": "响应异常，请检查配置",
+      "connectionFailed": "连接失败"
+    },
+    "pullingEnabled": "启用拉取",
+    "pullingTooltip": "是否让 Keep 定期自动从集成中拉取告警",
+    "needHelp": "需要帮助？请查看",
+    "providerDocumentation": "集成文档",
+    "orAskSlackCommunity": "，或在 Slack 社区提问",
+    "lastPullTime": "集成上次拉取时间：",
+    "editingProvisionedNotPossible": "预配置的集成无法在 UI 中编辑。",
+    "filterProviders": "筛选集成...",
+    "allLabels": "全部标签",
+    "noProvidersMatching": "没有找到匹配筛选条件的集成。",
+    "selectProvider": "选择集成"
   },
   "common": {
     "messages": {
@@ -793,7 +823,9 @@
       "notFound": "未找到",
       "never": "从未",
       "notApplicable": "不适用",
-      "moreCount": "+{count} 个更多"
+      "moreCount": "+{count} 个更多",
+      "loadingText": "请稍候，正在获取数据 🚨",
+      "slowLoadingText": "加载时间比平时稍长，请耐心等待..."
     },
     "labels": {
       "name": "名称",
@@ -1112,6 +1144,7 @@
       "lastReceived": "最后接收时间"
     },
     "status": {
+      "title": "状态",
       "suppressed": "已抑制",
       "firing": "告警中",
       "dismissed": "已忽略",
@@ -1647,6 +1680,7 @@
       "executionFailed": "工作流执行失败",
       "confirmDelete": "确定要删除此工作流吗？",
       "noWorkflowsDescription": "创建您的第一个工作流来自动化处理告警。",
+      "noWorkflowsMatchingSearch": "没有找到匹配搜索条件的工作流模板",
       "notFound": "工作流未找到",
       "createFirstWorkflow": "创建您的第一个工作流",
       "chooseTemplateDescription": "选择一个工作流模板，开始构建自动化流程。",

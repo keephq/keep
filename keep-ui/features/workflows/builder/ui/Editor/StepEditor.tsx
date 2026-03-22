@@ -41,6 +41,7 @@ import { EditorField } from "./EditorField";
 import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
 import { Drawer } from "@/shared/ui/Drawer";
+import { useTranslations } from "next-intl";
 
 export function EditorLayout({
   children,
@@ -137,6 +138,7 @@ function InstallProviderButton({
   providerType: string;
   onConnect: (result: any) => void;
 }) {
+  const tProviders = useTranslations("providers");
   const { data: { providers } = {}, mutate: mutateProviders } = useProviders();
   const providerObject = providers?.find((p) => p.type === providerType);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -189,7 +191,7 @@ function InstallProviderButton({
         </span>
       </Button>
       <Drawer
-        title={`Connect to ${providerObject.display_name}`}
+        title={tProviders("connectTo", { providerName: providerObject.display_name })}
         isOpen={isFormOpen}
         onClose={closeModal}
       >
@@ -219,6 +221,7 @@ function KeepSetupProviderEditor({
   providerError?: string | null;
   providerNameError?: string | null;
 }) {
+  const tProviders = useTranslations("providers");
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
   const providerObject =
@@ -297,14 +300,14 @@ function KeepSetupProviderEditor({
   return (
     <section>
       <div className="mb-2">
-        <Text className="font-bold">Select provider</Text>
+        <Text className="font-bold">{tProviders("selectProvider")}</Text>
         {isGeneralError && (
           <Text className="text-red-500">{providerError}</Text>
         )}
       </div>
       <Select
         className="mb-1.5"
-        placeholder="Select provider"
+        placeholder={tProviders("selectProvider")}
         value={selectValue}
         icon={getSelectIcon}
         onValueChange={handleSelectChange}
