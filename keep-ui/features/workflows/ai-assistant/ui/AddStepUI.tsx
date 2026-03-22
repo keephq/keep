@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { StepPreview } from "./StepPreview";
 import { SuggestionResult, SuggestionStatus } from "./SuggestionStatus";
 import clsx from "clsx";
@@ -32,6 +33,7 @@ export const AddStepUI = ({
   result,
   respond,
 }: AddStepUIProps) => {
+  const { t } = useI18n();
   const { addNodeBetween, setSelectedNode, getNodeById } = useWorkflowStore();
 
   const selectNode = () => {
@@ -61,7 +63,7 @@ export const AddStepUI = ({
       addNodeBetween(addBeforeNodeId, step, "node");
       respond?.({
         status: "complete",
-        message: "Step added",
+        message: t("workflows.aiAssistant.stepAdded"),
       });
     } catch (e) {
       respond?.({
@@ -74,7 +76,7 @@ export const AddStepUI = ({
   const onCancel = () => {
     respond?.({
       status: "declined",
-      message: "User cancelled adding step",
+      message: t("workflows.aiAssistant.userCancelledAddingStep"),
     });
   };
 
@@ -82,8 +84,7 @@ export const AddStepUI = ({
     return (
       <div className="flex flex-col gap-1 my-2">
         <div>
-          Do you want to add this action before node {nodeLink(addBeforeNodeId)}
-          ?
+          {t("workflows.aiAssistant.confirmAddStep", { nodeId: addBeforeNodeId })}
         </div>
         <StepPreview
           step={step}
@@ -102,8 +103,7 @@ export const AddStepUI = ({
       <div>
         {/* TODO: add the place where the action will be added in text */}
         <div>
-          Do you want to add this action before node {nodeLink(addBeforeNodeId)}
-          ?
+          {t("workflows.aiAssistant.confirmAddStep", { nodeId: addBeforeNodeId })}
         </div>
         <div className="my-2">
           <StepPreview step={step} />
@@ -111,10 +111,10 @@ export const AddStepUI = ({
       </div>
       <div className="flex gap-2">
         <Button color="orange" variant="primary" onClick={onAdd}>
-          Add (⌘+Enter)
+          {t("workflows.aiAssistant.addStep")}
         </Button>
         <Button color="orange" variant="secondary" onClick={onCancel}>
-          No
+          {t("workflows.aiAssistant.no")}
         </Button>
       </div>
     </div>

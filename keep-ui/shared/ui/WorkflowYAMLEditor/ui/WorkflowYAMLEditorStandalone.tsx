@@ -11,6 +11,7 @@ import { getOrderedWorkflowYamlString } from "@/entities/workflows/lib/yaml-util
 import { Button } from "@tremor/react";
 import { WorkflowTestRunButton } from "@/features/workflows/test-run";
 import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function WorkflowYAMLEditorStandalone({
   workflowId,
@@ -28,6 +29,7 @@ export function WorkflowYAMLEditorStandalone({
   const [isSaving, setIsSaving] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
   const [definition, setDefinition] = useState<DefinitionV2 | null>(null);
+  const { t } = useI18n();
 
   const {
     setWorkflowId,
@@ -145,7 +147,7 @@ export function WorkflowYAMLEditorStandalone({
           onClick={handleSaveWorkflow}
           data-testid="wf-yaml-editor-save-button"
         >
-          {isSaving ? "Saving..." : "Save"}
+          {isSaving ? t("common.actions.saving") : t("common.actions.save")}
         </Button>
       </WorkflowYamlEditorHeader>
       <WorkflowYAMLEditor

@@ -15,6 +15,7 @@ import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
 import { AlertsCountBadge } from "@/features/presets/create-or-update-preset/ui/alerts-count-badge";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function TriggerEditor() {
   const {
@@ -26,6 +27,7 @@ export function TriggerEditor() {
   } = useWorkflowStore();
 
   const { data: config } = useConfig();
+  const { t } = useI18n();
 
   const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keep.dev";
 
@@ -115,7 +117,7 @@ export function TriggerEditor() {
             )}
             <div>
               <div className="flex  items-center">
-                <Subtitle>CEL Expression</Subtitle>
+                <Subtitle>{t("workflows.builder.celExpression")}</Subtitle>
                 <Icon
                   icon={QuestionMarkCircleIcon}
                   variant="simple"
@@ -125,7 +127,7 @@ export function TriggerEditor() {
                   onClick={() => {
                     window.open(`${docsUrl}/overview/cel`, "_blank");
                   }}
-                  tooltip="Read more about CEL expressions"
+                  tooltip={t("workflows.builder.readMoreAboutCEL")}
                 />
               </div>
               <div className="flex items-center mt-1 relative">
@@ -148,10 +150,9 @@ export function TriggerEditor() {
               </div>
             </div>
             <div>
-              <Subtitle className="mt-2.5">Alert filter (deprecated)</Subtitle>
+              <Subtitle className="mt-2.5">{t("workflows.builder.alertFilterDeprecated")}</Subtitle>
               <Text className="text-sm text-gray-500">
-                Please convert your alert filters to CEL expressions to ensure
-                stability and performance.
+                {t("workflows.builder.convertToCELDescription")}
               </Text>
               <div className="w-1/2">
                 <Button
@@ -162,7 +163,7 @@ export function TriggerEditor() {
                   color="gray"
                   icon={FunnelIcon}
                 >
-                  Add Filter
+                  {t("workflows.builder.addFilter")}
                 </Button>
               </div>
               {properties.alert.filters &&
@@ -198,7 +199,7 @@ export function TriggerEditor() {
       case "incident":
         return (
           <>
-            <Subtitle className="mt-2.5">Incident events</Subtitle>
+            <Subtitle className="mt-2.5">{t("workflows.builder.incidentEvents")}</Subtitle>
             {Array("created", "updated", "deleted").map((event) => (
               <div key={`incident-${event}`} className="flex">
                 <Switch
@@ -235,7 +236,7 @@ export function TriggerEditor() {
         const value = properties[selectedTriggerKey];
         return (
           <>
-            <Subtitle className="mt-2.5">Interval (in seconds)</Subtitle>
+            <Subtitle className="mt-2.5">{t("workflows.builder.interval")}</Subtitle>
             <TextInput
               placeholder={`Set the ${selectedTriggerKey}`}
               onChange={(e: any) =>
@@ -247,7 +248,7 @@ export function TriggerEditor() {
             />
             {value && (
               <Text className="text-sm text-gray-500">
-                Workflow will run every {getHumanReadableInterval(value)}
+                {t("workflows.builder.intervalDescription", { interval: getHumanReadableInterval(value) })}
               </Text>
             )}
           </>

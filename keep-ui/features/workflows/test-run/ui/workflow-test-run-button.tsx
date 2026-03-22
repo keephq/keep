@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from "uuid";
 import { AlertWorkflowRunPayload } from "../../manual-run-workflow/model/types";
 import { IncidentWorkflowRunPayload } from "../../manual-run-workflow/model/types";
 import { WorkflowInputsForm } from "../../manual-run-workflow/ui/WorkflowInputsForm";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const manualEventPayload = {
   id: "manual-run",
@@ -33,6 +34,7 @@ export function WorkflowTestRunButton({
   isValid,
   ...props
 }: WorkflowTestRunButtonProps & ButtonProps) {
+  const { t } = useI18n();
   const [isTestRunModalOpen, setIsTestRunModalOpen] = useState(false);
   const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
     null
@@ -190,7 +192,7 @@ export function WorkflowTestRunButton({
     if (error !== null) {
       return (
         <div className="flex justify-center">
-          <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
+          <Callout title={t("workflows.testRun.error")} icon={ExclamationCircleIcon} color="rose">
             {error.message}
           </Callout>
         </div>
@@ -201,7 +203,7 @@ export function WorkflowTestRunButton({
         <div className="flex flex-col gap-4" data-testid="wf-test-run-results">
           <div className="flex justify-between items-center">
             <div>
-              <Title>Workflow Execution Results</Title>
+              <Title>{t("workflows.testRun.executionResults")}</Title>
             </div>
             <div></div>
           </div>
@@ -218,8 +220,8 @@ export function WorkflowTestRunButton({
     if (dependencies) {
       if (dependencies.alert.length > 0 && dependencies.incident.length > 0) {
         return (
-          <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
-            Alert and incident dependencies cannot be used together
+          <Callout title={t("workflows.testRun.error")} icon={ExclamationCircleIcon} color="rose">
+            {t("workflows.testRun.alertIncidentTogether")}
           </Callout>
         );
       }
@@ -250,7 +252,7 @@ export function WorkflowTestRunButton({
                 inputsValues,
               })
             }
-            submitLabel="Test Run with Payload"
+            submitLabel={t("workflows.testRun.testRunWithPayload")}
           />
         );
       }
@@ -267,25 +269,25 @@ export function WorkflowTestRunButton({
                 inputsValues,
               })
             }
-            submitLabel="Test Run with Payload"
+            submitLabel={t("workflows.testRun.testRunWithPayload")}
           />
         );
       }
     }
     return (
       <div className="flex justify-center">
-        <KeepLoader loadingText="Waiting for workflow execution results..." />
+        <KeepLoader loadingText={t("workflows.testRun.waitingResults")} />
       </div>
     );
   };
 
   const testRunDescription = useMemo(() => {
     if (!isValid) {
-      return "Workflow is not valid";
+      return t("workflows.testRun.workflowNotValid");
     }
-    return `Test run with current changes${
-      dependencies ? " and provided payload" : ""
-    }. Will not be saved in history`;
+    return t("workflows.testRun.description", {
+      payload: dependencies ? t("workflows.testRun.andProvidedPayload") : "",
+    });
   }, [isValid, dependencies]);
 
   return (
@@ -302,14 +304,14 @@ export function WorkflowTestRunButton({
           onClick={handleClickTestRun}
           {...props}
         >
-          Test Run
+          {t("workflows.builder.testRun")}
         </Button>
       </Tooltip>
       {isTestRunModalOpen && (
         <Modal
           isOpen={isTestRunModalOpen}
           onClose={closeWorkflowExecutionResultsModal}
-          title="Test Run"
+          title={t("workflows.builder.testRun")}
           description={testRunDescription}
           className="max-w-7xl"
         >

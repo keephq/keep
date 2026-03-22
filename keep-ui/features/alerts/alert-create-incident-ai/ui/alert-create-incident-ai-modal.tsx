@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface CreateIncidentWithAIModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export const CreateIncidentWithAIModal = ({
   handleClose,
   alerts,
 }: CreateIncidentWithAIModalProps) => {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [incidentCandidates, setIncidentCandidates] = useState<
@@ -141,15 +143,15 @@ export const CreateIncidentWithAIModal = ({
       if (error instanceof KeepApiError) {
         if (error.statusCode === 400) {
           setError(
-            "Keep backend is not initialized with an AI model. See documentation on how to enable it."
+            t("alerts.createIncidentAI.errorNotInitialized")
           );
         } else {
           setError(
-            error.message || "Failed to create incident suggestions with AI"
+            error.message || t("alerts.createIncidentAI.errorFailed")
           );
         }
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError(t("alerts.createIncidentAI.errorUnexpected"));
       }
       console.error("Error creating incident with AI:", error);
     } finally {
@@ -284,16 +286,16 @@ export const CreateIncidentWithAIModal = ({
         incidentsWithFeedback
       );
 
-      toast.success("Incidents created successfully");
+      toast.success(t("alerts.createIncidentAI.toastSuccess"));
       await mutateIncidents();
       handleCloseAIModal();
       router.push("/incidents");
     } catch (error) {
       console.error("Error creating incidents:", error);
       if (error instanceof KeepApiError) {
-        setError(error.message || "Failed to create incidents");
+        setError(error.message || t("alerts.createIncidentAI.errorCreateFailed"));
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError(t("alerts.createIncidentAI.errorUnexpected"));
       }
     }
   };
@@ -311,13 +313,13 @@ export const CreateIncidentWithAIModal = ({
       isOpen={isOpen}
       onClose={handleCloseAIModal}
       beta={true}
-      title="Create Incidents with AI"
+      title={t("alerts.createIncidentAI.title")}
       className="max-w-[600px] w-full lg:max-w-[1200px]"
     >
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center">
-            <Loading loadingText="This is taking a bit longer then usual, please wait..." />
+            <Loading loadingText={t("alerts.createIncidentAI.loadingText")} />
           </div>
         ) : incidentCandidates.length > 0 ? (
           <DndContext
@@ -334,12 +336,10 @@ export const CreateIncidentWithAIModal = ({
           >
             <div className="space-y-6">
               <Callout
-                title="Help the AI out by adjusting the incident groupings"
+                title={t("alerts.createIncidentAI.helpTitle")}
                 color="orange"
               >
-                - Drag and drop alerts between incidents to adjust the incidents
-                and improve the AI&apos;s algorithm.
-                <br />- Click on an incident to edit its name and summary.
+                {t("alerts.createIncidentAI.helpMessage")}
               </Callout>
               {incidentCandidates.map((incident, index) => (
                 <div key={incident.id} className="flex items-center space-x-4">
@@ -364,7 +364,7 @@ export const CreateIncidentWithAIModal = ({
                 color="orange"
                 onClick={handleCreateIncidents}
               >
-                Create Incidents
+                {t("alerts.createIncidentAI.createIncidentsButton")}
               </Button>
             </div>
             {createPortal(
@@ -372,21 +372,21 @@ export const CreateIncidentWithAIModal = ({
                 {activeAlert && activeIncidentIndex !== null && (
                   <div className="bg-white shadow-lg rounded p-2 border border-gray-200 min-w-[800px] flex items-center gap-4">
                     <div className="w-1/6 break-words font-medium">
-                      {activeAlert.name || "Unnamed Alert"}
+                      {activeAlert.name || t("alerts.createIncidentAI.unnamedAlert")}
                     </div>
                     <div className="w-2/3 break-words whitespace-normal text-gray-600">
                       <FormattedContent
-                        content={activeAlert.description || "No description"}
+                        content={activeAlert.description || t("alerts.createIncidentAI.noDescription")}
                         format={activeAlert.description_format}
                       />
                     </div>
                     <div className="w-1/12 break-words">
                       <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm">
-                        {activeAlert.severity || "N/A"}
+                        {activeAlert.severity || t("common.messages.notApplicable")}
                       </span>
                     </div>
                     <div className="w-1/12 break-words text-gray-600">
-                      {activeAlert.status || "N/A"}
+                      {activeAlert.status || t("common.messages.notApplicable")}
                     </div>
                   </div>
                 )}
@@ -396,31 +396,28 @@ export const CreateIncidentWithAIModal = ({
           </DndContext>
         ) : (
           <Card className="flex flex-col items-center h-[400px] p-8">
-            <Title className="text-2xl">Create New Incident with AI</Title>
+            <Title className="text-2xl">{t("alerts.createIncidentAI.cardTitle")}</Title>
             <div className="flex-1" />
             <div className="w-full flex flex-col items-center">
               {alerts.length > 50 ? (
                 <Callout
-                  title="Alert Limit"
+                  title={t("alerts.createIncidentAI.alertLimitTitle")}
                   color="orange"
                   className="w-full mb-4"
                 >
-                  You have selected {alerts.length} alerts. Keep currently
-                  supports only 50 alerts at a time. Only the first 50 alerts
-                  will be processed.
+                  {t("alerts.createIncidentAI.alertLimitMessage", { count: alerts.length })}
                 </Callout>
               ) : (
                 <Callout
-                  title="AI Analysis"
+                  title={t("alerts.createIncidentAI.aiAnalysisTitle")}
                   color="purple"
                   className="w-full mb-4"
                 >
-                  AI will analyze {alerts.length} alert
-                  {alerts.length > 1 ? "s" : ""} and suggest incident groupings.
+                  {t("alerts.createIncidentAI.aiAnalysisMessage", { count: alerts.length })}
                 </Callout>
               )}
               {error && (
-                <Callout title="Error" color="red" className="w-full mb-4">
+                <Callout title={t("alerts.createIncidentAI.errorTitle")} color="red" className="w-full mb-4">
                   {error}
                 </Callout>
               )}
@@ -431,7 +428,7 @@ export const CreateIncidentWithAIModal = ({
               color="orange"
               onClick={createIncidentWithAI}
             >
-              Generate incident suggestions with AI
+              {t("alerts.createIncidentAI.generateButton")}
             </Button>
           </Card>
         )}

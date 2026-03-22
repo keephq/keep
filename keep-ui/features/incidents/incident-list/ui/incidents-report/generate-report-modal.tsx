@@ -7,6 +7,7 @@ import { useReportData } from "./use-report-data";
 import { IncidentData } from "./models";
 import { IncidentsReport } from "./incidents-report";
 import { PrinterIcon } from "@heroicons/react/24/outline";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface GenerateReportModalProps {
   filterCel: string;
@@ -18,6 +19,7 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   onClose,
 }) => {
   const { data, isLoading } = useReportData(filterCel);
+  const { t } = useI18n();
 
   const contentRef = useRef<HTMLDivElement>(null);
   const reactToPrintFn = useReactToPrint({
@@ -29,7 +31,7 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
 
   return (
     <Modal
-      title="Incidents Report"
+      title={t("incidents.report.title")}
       className="min-w-[80vw] h-[80vh]"
       isOpen={true}
       onClose={onClose}
@@ -51,7 +53,7 @@ export const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
                 icon={PrinterIcon}
                 onClick={handlePrint}
               >
-                Print
+                {t("incidents.report.print")}
               </Button>
             </div>
           </div>

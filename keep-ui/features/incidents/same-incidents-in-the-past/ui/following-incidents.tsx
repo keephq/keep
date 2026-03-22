@@ -9,6 +9,7 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { FieldHeader } from "@/shared/ui";
 import { Link } from "@/components/ui";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 function FollowingIncident({ incidentId }: { incidentId: string }) {
   const { data: incident } = useIncident(incidentId);
@@ -30,6 +31,7 @@ function FollowingIncident({ incidentId }: { incidentId: string }) {
 }
 
 export function FollowingIncidents({ incident }: { incident: IncidentDto }) {
+  const { t } = useI18n();
   const { data: same_incidents_in_the_future } = useIncidentFutureIncidents(
     incident.id
   );
@@ -43,7 +45,7 @@ export function FollowingIncidents({ incident }: { incident: IncidentDto }) {
 
   return (
     <>
-      <FieldHeader>Following incidents</FieldHeader>
+      <FieldHeader>{t("incidents.followingIncidents")}</FieldHeader>
       <ul>
         {same_incidents_in_the_future.items.map((item) => (
           <li key={item.id}>

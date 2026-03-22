@@ -5,6 +5,7 @@ import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { AlertDto, AuditEvent } from "@/entities/alerts/model";
 import { getInitials } from "@/components/navbar/UserAvatar";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const formatTimestamp = (timestamp: Date | string) => {
   const date = timestamp.toString().endsWith("Z")
@@ -26,13 +27,14 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
   isLoading,
   onRefresh,
 }) => {
+  const { t } = useI18n();
   // Default audit event if no audit data is available
   const defaultAuditEvent = alert
     ? [
         {
           user_id: "system",
-          action: "Alert is triggered",
-          description: "alert received from provider with status firing",
+          action: t("alerts.timeline.alertTriggered"),
+          description: t("alerts.timeline.alertReceivedFromProvider"),
           timestamp: alert.lastReceived,
         },
       ]
@@ -75,7 +77,7 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <Title>Timeline</Title>
+        <Title>{t("alerts.timeline.title")}</Title>
         <Button
           icon={ArrowPathIcon}
           color="orange"
@@ -83,13 +85,13 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
           disabled={isLoading}
           loading={isLoading}
           onClick={onRefresh}
-          title="Refresh"
+          title={t("alerts.timeline.refresh")}
         />
       </div>
       <Card className="max-h-[500px] overflow-y-auto p-0">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
-            <p>Loading...</p>
+            <p>{t("alerts.timeline.loading")}</p>
           </div>
         ) : (
           <div className="flex-grow">

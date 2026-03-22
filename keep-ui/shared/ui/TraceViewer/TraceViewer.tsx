@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo } from "react";
 import { Globe, Database, Cpu } from "lucide-react";
 import { TraceData } from "./Trace";
@@ -9,6 +11,7 @@ import {
   Tooltip,
   Portal,
 } from "@radix-ui/react-tooltip";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface ProcessedSpan {
   id: string;
@@ -27,16 +30,17 @@ interface ProcessedSpan {
 }
 
 const SpanTooltipContent = ({ span }: { span: ProcessedSpan }) => {
+  const { t } = useI18n();
   return (
     <div className="p-2 max-w-md">
       <div className="font-medium">{span.displayName}</div>
       <div className="text-sm text-gray-500">
-        Duration: {span.duration.toFixed(2)}%
+        {t("shared.traceViewer.duration")} {span.duration.toFixed(2)}%
       </div>
-      <div className="text-sm text-gray-500">Service: {span.service}</div>
+      <div className="text-sm text-gray-500">{t("shared.traceViewer.service")} {span.service}</div>
       {span.meta?.["db.statement"] && (
         <div className="mt-2">
-          <div className="text-sm font-medium text-gray-700">SQL Query:</div>
+          <div className="text-sm font-medium text-gray-700">{t("shared.traceViewer.sqlQuery")}</div>
           <div className="text-xs bg-gray-100 p-2 rounded mt-1 font-mono whitespace-pre-wrap">
             {span.meta["db.statement"]}
           </div>
@@ -47,6 +51,7 @@ const SpanTooltipContent = ({ span }: { span: ProcessedSpan }) => {
 };
 
 const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
+  const { t } = useI18n();
   const processedData = useMemo(() => {
     const calculateLevel = (
       spanId: string,
@@ -133,10 +138,10 @@ const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
     <Card className="w-full max-w-6xl">
       <div className="space-y-1">
         <div className="flex text-sm font-medium text-gray-500 mb-2">
-          <div className="w-64">Name</div>
-          <div className="flex-1">Timeline</div>
-          <div className="w-24 text-right">Duration</div>
-          <div className="w-20 text-right">Status</div>
+          <div className="w-64">{t("shared.traceViewer.name")}</div>
+          <div className="flex-1">{t("shared.traceViewer.timeline")}</div>
+          <div className="w-24 text-right">{t("shared.traceViewer.durationHeader")}</div>
+          <div className="w-20 text-right">{t("shared.traceViewer.status")}</div>
         </div>
         {processedData.map((span) => (
           <TooltipProvider key={span.id}>

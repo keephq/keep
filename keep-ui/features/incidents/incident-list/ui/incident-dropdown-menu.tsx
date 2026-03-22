@@ -3,6 +3,7 @@ import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { DropdownMenu } from "@/shared/ui";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   incident: IncidentDto;
@@ -16,13 +17,14 @@ export function IncidentDropdownMenu({
   handleRunWorkflow,
 }: Props) {
   const { deleteIncident } = useIncidentActions();
+  const { t } = useI18n();
 
   return (
     <>
       <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
         <DropdownMenu.Item
           icon={PencilIcon}
-          label="Edit"
+          label={t("incidents.dropdown.edit")}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -31,7 +33,7 @@ export function IncidentDropdownMenu({
         />
         <DropdownMenu.Item
           icon={PlayIcon}
-          label="Run workflow"
+          label={t("incidents.dropdown.runWorkflow")}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -40,7 +42,7 @@ export function IncidentDropdownMenu({
         />
         <DropdownMenu.Item
           icon={TrashIcon}
-          label="Delete"
+          label={t("incidents.dropdown.delete")}
           variant="destructive"
           onClick={(e) => {
             e.preventDefault();

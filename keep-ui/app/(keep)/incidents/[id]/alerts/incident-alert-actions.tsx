@@ -18,6 +18,7 @@ export function IncidentAlertsActions({
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
   const { unlinkAlertsFromIncident } = useIncidentActions();
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <>
@@ -27,7 +28,7 @@ export function IncidentAlertsActions({
           onClick={() => setIsSplitModalOpen(true)}
           disabled={selectedFingerprints.length === 0}
         >
-          Split
+          {t("incidents.alerts.split")}
         </Button>
         <Button
           variant="destructive"
@@ -38,7 +39,7 @@ export function IncidentAlertsActions({
           }}
           disabled={selectedFingerprints.length === 0}
         >
-          Unlink
+          {t("incidents.alerts.unlink")}
         </Button>
         <Button
           variant="secondary"
@@ -48,7 +49,7 @@ export function IncidentAlertsActions({
             router.push(`/alerts/feed?cel=${cel}`);
           }}
         >
-          View in feed
+          {t("incidents.alerts.viewInFeed")}
         </Button>
       </div>
       {isSplitModalOpen && (

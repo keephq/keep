@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import SidePanel from "@/components/SidePanel";
 import { showErrorToast } from "@/shared/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface EnrichAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -19,6 +20,7 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
   handleClose,
   mutate,
 }) => {
+  const { t } = useI18n();
   const api = useApi();
 
   const [customFields, setCustomFields] = useState<
@@ -132,11 +134,11 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
 
       const response = await api.post("/alerts/enrich", requestData);
 
-      toast.success("Alert enriched successfully");
+      toast.success(t("alerts.enrich.success"));
       await mutate();
       handleClose();
     } catch (error) {
-      showErrorToast(error, "Failed to enrich alert");
+      showErrorToast(error, t("alerts.enrich.failed"));
     }
   };
 
@@ -144,14 +146,14 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
     customFields.map((field, index) => (
       <div key={index} className="mb-4 flex items-center gap-2">
         <TextInput
-          placeholder="Field Name"
+          placeholder={t("alerts.enrich.fieldNamePlaceholder")}
           value={field.key}
           onChange={(e) => updateCustomField(index, "key", e.target.value)}
           required
           className="w-1/3"
         />
         <TextInput
-          placeholder="Field Value"
+          placeholder={t("alerts.enrich.fieldValuePlaceholder")}
           value={field.value}
           onChange={(e) => updateCustomField(index, "value", e.target.value)}
           className="w-full"
@@ -165,7 +167,7 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
   return (
     <SidePanel isOpen={isOpen} onClose={handleClose} panelWidth={"w-1/3"}>
       <div className="flex justify-between items-center min-w-full">
-        <h2 className="text-lg font-semibold">Enrich Alert</h2>
+        <h2 className="text-lg font-semibold">{t("alerts.enrich.title")}</h2>
       </div>
 
       <div className="flex-1 overflow-auto pb-6 mt-4">
@@ -178,7 +180,7 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
           className="bg-orange-500"
           variant="primary"
         >
-          + Add Field
+          + {t("alerts.enrich.addField")}
         </Button>
         <Button
           onClick={handleSave}
@@ -186,10 +188,10 @@ export const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
           variant="primary"
           disabled={!isDataValid}
         >
-          Save
+          {t("common.actions.save")}
         </Button>
         <Button onClick={handleClose} color="orange" variant="secondary">
-          Close
+          {t("common.actions.close")}
         </Button>
       </div>
     </SidePanel>

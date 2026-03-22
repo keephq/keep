@@ -21,6 +21,7 @@ import { normalizeStepType, triggerTypes } from "../lib/utils";
 import { getTriggerDescriptionFromStep } from "@/entities/workflows/lib/getTriggerDescription";
 import { ValidationError } from "@/entities/workflows/lib/validate-definition";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function DebugNodeInfo({ id, data }: Pick<FlowNode, "id" | "data">) {
   const { data: config } = useConfig();
@@ -87,6 +88,7 @@ function ErrorIcon({ error }: { error: ValidationError | null }) {
 }
 
 function WorkflowNode({ id, data }: FlowNode) {
+  const { t } = useI18n();
   const {
     selectedNode,
     setSelectedNode,
@@ -106,9 +108,7 @@ function WorkflowNode({ id, data }: FlowNode) {
   function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
     e.stopPropagation();
     if (!synced) {
-      toast(
-        "Please save the previous step or wait while properties sync with the workflow."
-      );
+      toast(t("workflows.builder.propertiesNotSynced"));
       return;
     }
     if (data?.notClickable) {
@@ -181,7 +181,7 @@ function WorkflowNode({ id, data }: FlowNode) {
               <GoPlus className="w-8 h-8 text-gray-600 font-bold p-0" />
               {selectedNode === id && (
                 <div className="text-gray-600 font-bold text-center">
-                  Go to Toolbox
+                  {t("workflows.builder.goToToolbox")}
                 </div>
               )}
             </div>
@@ -234,9 +234,7 @@ function WorkflowNode({ id, data }: FlowNode) {
           onClick={(e) => {
             e.stopPropagation();
             if (!synced) {
-              toast(
-                "Please save the previous step or wait while properties sync with the workflow."
-              );
+              toast(t("workflows.builder.propertiesNotSynced"));
               return;
             }
             if (specialNodeCheck || id?.includes("end")) {

@@ -42,6 +42,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import ProviderForm from "@/app/(keep)/providers/provider-form";
 import { Drawer } from "@/shared/ui/Drawer";
 import { useTranslations } from "next-intl";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function EditorLayout({
   children,
@@ -62,6 +63,7 @@ function KeyValueListField({
   keyValueList: { key: string; value: string }[];
   onChange: (value: any) => void;
 }) {
+  const { t } = useI18n();
   if (!keyValueList || !Array.isArray(keyValueList)) {
     return null;
   }
@@ -115,7 +117,7 @@ function KeyValueListField({
         color="gray"
         icon={PlusIcon}
       >
-        Add key-value pair
+        {t("workflows.builder.addKeyValue")}
       </Button>
     </div>
   );
@@ -138,6 +140,7 @@ function InstallProviderButton({
   providerType: string;
   onConnect: (result: any) => void;
 }) {
+  const { t } = useI18n();
   const tProviders = useTranslations("providers");
   const { data: { providers } = {}, mutate: mutateProviders } = useProviders();
   const providerObject = providers?.find((p) => p.type === providerType);
@@ -185,7 +188,7 @@ function InstallProviderButton({
           />
         )}
       >
-        Install {""}
+        {t("common.actions.install")} {""}
         <span className="text-sm capitalize">
           {providerObject.display_name}
         </span>
@@ -221,6 +224,7 @@ function KeepSetupProviderEditor({
   providerError?: string | null;
   providerNameError?: string | null;
 }) {
+  const { t } = useI18n();
   const tProviders = useTranslations("providers");
   const { data: { providers, installed_providers: installedProviders } = {} } =
     useProviders();
@@ -289,9 +293,8 @@ function KeepSetupProviderEditor({
   if (!doesProviderNeedInstallation) {
     return (
       <section>
-        <Callout color="teal" title="You're all set">
-          <span className="capitalize">{providerType}</span> provider does not
-          require installation
+        <Callout color="teal" title={t("workflows.builder.youAreAllSet")}>
+          <span className="capitalize">{providerType}</span> {t("workflows.builder.providerNoInstall")}
         </Callout>
       </section>
     );
@@ -337,14 +340,14 @@ function KeepSetupProviderEditor({
           icon={() => <PencilIcon className="mx-0.5 size-5 mr-1.5" />}
           value="enter-manually"
         >
-          Manual provider name
+          {t("workflows.builder.manualProviderName")}
         </SelectItem>
         {providerType && (
           <SelectItem
             icon={() => <PlusIcon className="mx-0.5 size-5 mr-1.5" />}
             value="add-new"
           >
-            Add {providerObject?.display_name ?? providerType} provider
+            {t("workflows.builder.addProvider", { provider: providerObject?.display_name ?? providerType })}
           </SelectItem>
         )}
       </Select>
@@ -352,9 +355,9 @@ function KeepSetupProviderEditor({
       {/* <p className="text-sm text-gray-500 text-center mb-1.5">or</p> */}
       {selectValue === "enter-manually" && (
         <>
-          <Text className="mb-1.5">Enter provider name manually</Text>
+          <Text className="mb-1.5">{t("workflows.builder.enterProviderName")}</Text>
           <TextInput
-            placeholder="Enter provider name"
+            placeholder={t("workflows.builder.enterProviderNamePlaceholder")}
             onChange={(e: any) => updateProperty("config", e.target.value)}
             className="mb-2.5"
             value={providerConfig || ""}
@@ -384,6 +387,7 @@ function KeepStepEditor({
   parametersError?: string | null;
   variableError?: string | null;
 }) {
+  const { t } = useI18n();
   const stepParams =
     ((type?.includes("step-")
       ? properties.stepParams
@@ -408,7 +412,7 @@ function KeepStepEditor({
     <div className="flex flex-col gap-2">
       <section className="flex flex-col gap-2">
         <div>
-          <Text className="font-bold">Provider parameters</Text>
+          <Text className="font-bold">{t("workflows.builder.providerParams")}</Text>
           {parametersError && (
             <Callout
               color="rose"
@@ -447,19 +451,19 @@ function KeepStepEditor({
           })}
         </div>
         <div className="flex flex-col gap-2">
-          <Text className="font-bold">Step parameters</Text>
+          <Text className="font-bold">{t("workflows.builder.stepParams")}</Text>
           <div>
-            <Text className="mb-1.5">If Condition</Text>
+            <Text className="mb-1.5">{t("workflows.builder.ifCondition")}</Text>
             <TextInput
               id="if"
-              placeholder="If Condition"
+              placeholder={t("workflows.builder.ifConditionPlaceholder")}
               onValueChange={(value) => updateProperty("if", value)}
               className="mb-2.5"
               value={properties?.if || ("" as string)}
             />
           </div>
           <div>
-            <Text className="capitalize mb-1.5">Variables</Text>
+            <Text className="capitalize mb-1.5">{t("workflows.builder.variables")}</Text>
             <KeyValueListField
               keyValueList={Object.entries(properties.vars ?? {}).map(
                 ([key, value]) => ({
@@ -480,10 +484,9 @@ function KeepStepEditor({
           </div>
           {properties.with?.enrich_alert && (
             <div>
-              <Text>Enrich Alert</Text>
+              <Text>{t("workflows.builder.enrichAlert")}</Text>
               <Text className="text-sm text-gray-500 mb-2">
-                Enrich alert with the following key-value pairs. Only works if
-                alert trigger is enabled.
+                {t("workflows.builder.enrichAlertDescription")}
               </Text>
               <KeyValueListField
                 keyValueList={properties.with.enrich_alert}
@@ -498,10 +501,9 @@ function KeepStepEditor({
           )}
           {properties.with?.enrich_incident && (
             <div>
-              <Text>Enrich Incident</Text>
+              <Text>{t("workflows.builder.enrichIncident")}</Text>
               <Text className="text-sm text-gray-500 mb-2">
-                Enrich incident with the following key-value pairs. Only works
-                if incident trigger is enabled.
+                {t("workflows.builder.enrichIncidentDescription")}
               </Text>
               <KeyValueListField
                 keyValueList={properties.with.enrich_incident}
@@ -529,39 +531,40 @@ function KeepThresholdConditionEditor({
   updateProperty: (key: string, value: any) => void;
   error?: ValidationError | null;
 }) {
+  const { t } = useI18n();
   const currentValueValue = properties.value ?? "";
   const currentCompareToValue = properties.compare_to ?? "";
   const errorMessage = error?.[0];
   return (
     <>
       {errorMessage && <Text className="text-red-500">{errorMessage}</Text>}
-      <Text>Value</Text>
+      <Text>{t("common.labels.value")}</Text>
       {typeof currentValueValue === "number" ? (
         <NumberInput
-          placeholder="Value"
+          placeholder={t("common.labels.value")}
           onChange={(e: any) => updateProperty("value", e.target.value)}
           className="mb-2.5"
           value={currentValueValue}
         />
       ) : (
         <TextInput
-          placeholder="Value"
+          placeholder={t("common.labels.value")}
           onChange={(e: any) => updateProperty("value", e.target.value)}
           className="mb-2.5"
           value={currentValueValue}
         />
       )}
-      <Text>Compare to</Text>
+      <Text>{t("workflows.builder.compareTo")}</Text>
       {typeof currentCompareToValue === "number" ? (
         <NumberInput
-          placeholder="Compare with"
+          placeholder={t("workflows.builder.compareWith")}
           onChange={(e: any) => updateProperty("compare_to", e.target.value)}
           className="mb-2.5"
           value={currentCompareToValue}
         />
       ) : (
         <TextInput
-          placeholder="Compare with"
+          placeholder={t("workflows.builder.compareWith")}
           onChange={(e: any) => updateProperty("compare_to", e.target.value)}
           className="mb-2.5"
           value={currentCompareToValue}
@@ -580,13 +583,14 @@ function KeepAssertConditionEditor({
   updateProperty: (key: string, value: any) => void;
   error?: ValidationError | null;
 }) {
+  const { t } = useI18n();
   const currentAssertValue = properties.assert ?? "";
   const errorMessage = error?.[0];
   return (
     <>
-      <Text>Assert</Text>
+      <Text>{t("workflows.builder.assert")}</Text>
       <TextInput
-        placeholder="E.g. 200 == 200"
+        placeholder={t("workflows.builder.assertPlaceholder")}
         onChange={(e: any) => updateProperty("assert", e.target.value)}
         className="mb-2.5"
         value={currentAssertValue}
@@ -606,11 +610,12 @@ function KeepForeachEditor({
   updateProperty: (key: string, value: any) => void;
   error?: ValidationError | null;
 }) {
+  const { t } = useI18n();
   const currentValueValue = properties.value ?? "";
   const errorMessage = error?.[0];
   return (
     <>
-      <Text>Foreach Value</Text>
+      <Text>{t("workflows.builder.foreachValue")}</Text>
       <TextInput
         placeholder="Value"
         onChange={(e: any) => updateProperty("value", e.target.value)}
@@ -808,6 +813,7 @@ function ActionOrStepEditor({
     isEditorSyncedWithNodes,
     isSaving,
   } = useWorkflowStore();
+  const { t } = useI18n();
 
   const saveFormDataToStoreDebounced = useCallback(
     debounce((formData: any) => {
@@ -893,7 +899,7 @@ function ActionOrStepEditor({
   };
 
   const saveButtonDisabled = !isEditorSyncedWithNodes || isSaving;
-  const saveButtonText = isSaving ? "Saving..." : "Save & Continue";
+  const saveButtonText = isSaving ? t("common.actions.saving") : `${t("common.actions.save")} & ${t("common.actions.next")}`;
 
   const setupStatus = () => {
     if (providerError) {
@@ -935,29 +941,29 @@ function ActionOrStepEditor({
         <Subtitle className="font-medium capitalize">
           {providerType} {formData.type.split("-")[0]}
         </Subtitle>
-        <Text className="mt-1">Unique Identifier</Text>
+        <Text className="mt-1">{t("workflows.builder.uniqueIdentifier")}</Text>
         <TextInput
           className="mb-2.5"
           icon={KeyIcon}
           name="name"
           value={formData.name || ""}
           onChange={handleInputChange}
-          placeholder="e.g. my-step"
+          placeholder={t("workflows.builder.uniqueIdentifierPlaceholder")}
           data-testid="wf-editor-step-name-input"
         />
       </div>
       <TabList className="px-4">
         <Tab value="select">
           <div className="flex items-center gap-1">
-            Setup {getStepIcon(setupStatus())}
+            {t("workflows.builder.tabSetup")} {getStepIcon(setupStatus())}
           </div>
         </Tab>
         <Tab value="configure">
           <div className="flex items-center gap-1">
-            Configure {getStepIcon(configureStatus())}
+            {t("workflows.builder.tabConfigure")} {getStepIcon(configureStatus())}
           </div>
         </Tab>
-        <Tab value="test">Test</Tab>
+        <Tab value="test">{t("workflows.builder.tabTest")}</Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
         <TabPanel className="flex-1">

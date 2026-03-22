@@ -25,6 +25,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { AlertDto } from "@/entities/alerts/model";
 import { IncidentCandidateDto } from "@/entities/incidents/model";
 import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface IncidentCardProps {
   incident: IncidentCandidateDto;
@@ -38,13 +39,13 @@ interface EditableField {
   type: "text" | "textarea";
 }
 
-const editableFields: EditableField[] = [
-  { name: "name", label: "Incident Name", type: "text" },
-  { name: "description", label: "Description", type: "textarea" },
-  { name: "confidence_score", label: "Confidence Score", type: "text" },
+const getEditableFields = (t: (key: string) => string): EditableField[] => [
+  { name: "name", label: t("alerts.createIncidentAI.incidentName"), type: "text" },
+  { name: "description", label: t("common.labels.description"), type: "textarea" },
+  { name: "confidence_score", label: t("alerts.createIncidentAI.confidenceScore"), type: "text" },
   {
     name: "confidence_explanation",
-    label: "Confidence Explanation",
+    label: t("alerts.createIncidentAI.confidenceExplanation"),
     type: "textarea",
   },
 ];
@@ -60,6 +61,7 @@ const DraggableAlertRow: React.FC<DraggableAlertRowProps> = ({
   alertIndex,
   incidentIndex,
 }) => {
+  const { t } = useI18n();
   const {
     attributes,
     listeners,
@@ -95,19 +97,19 @@ const DraggableAlertRow: React.FC<DraggableAlertRowProps> = ({
       } hover:bg-gray-50 transition-colors`}
     >
       <TableCell className="w-1/6 break-words">
-        {alert.name || "Unnamed Alert"}
+        {alert.name || t("alerts.createIncidentAI.unnamedAlert")}
       </TableCell>
       <TableCell className="w-2/3 break-words whitespace-normal">
         <FormattedContent
-          content={alert.description || "No description"}
+          content={alert.description || t("alerts.createIncidentAI.noDescription")}
           format={alert.description_format}
         />
       </TableCell>
       <TableCell className="w-1/12 break-words">
-        {alert.severity || "N/A"}
+        {alert.severity || t("common.messages.notApplicable")}
       </TableCell>
       <TableCell className="w-1/12 break-words">
-        {alert.status || "N/A"}
+        {alert.status || t("common.messages.notApplicable")}
       </TableCell>
     </TableRow>
   );
@@ -141,6 +143,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
   index,
   onIncidentChange,
 }) => {
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [editedIncident, setEditedIncident] =
     useState<IncidentCandidateDto>(incident);
@@ -200,28 +203,28 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
     <Card key={incident.id} className="mb-6 relative">
       <div className="absolute top-4 right-4">
         <Button onClick={handleEditToggle}>
-          {isEditing ? "Save Changes" : "Edit Incident"}
+          {isEditing ? t("alerts.createIncidentAI.saveChanges") : t("alerts.createIncidentAI.editIncident")}
         </Button>
       </div>
       {isEditing ? (
-        <div className="mt-12">{editableFields.map(renderEditableField)}</div>
+        <div className="mt-12">{getEditableFields(t).map(renderEditableField)}</div>
       ) : (
         <>
-          <Title>{editedIncident.name || "Unnamed Incident"}</Title>
-          <Subtitle className="mt-2">Description</Subtitle>
+          <Title>{editedIncident.name || t("alerts.createIncidentAI.unnamedIncident")}</Title>
+          <Subtitle className="mt-2">{t("common.labels.description")}</Subtitle>
           <Text className="mt-2">
             <FormattedContent
-              content={editedIncident.description || "No description"}
+              content={editedIncident.description || t("alerts.createIncidentAI.noDescription")}
               format={editedIncident.description_format}
             />
           </Text>
-          <Subtitle className="mt-2">Severity</Subtitle>
-          <Badge color="orange">{editedIncident.severity || "N/A"}</Badge>
-          <Subtitle className="mt-2">Confidence Score</Subtitle>
-          <Text>{editedIncident.confidence_score || "N/A"}</Text>
-          <Subtitle className="mt-2">Confidence Explanation</Subtitle>
+          <Subtitle className="mt-2">{t("common.labels.severity")}</Subtitle>
+          <Badge color="orange">{editedIncident.severity || t("common.messages.notApplicable")}</Badge>
+          <Subtitle className="mt-2">{t("alerts.createIncidentAI.confidenceScore")}</Subtitle>
+          <Text>{editedIncident.confidence_score || t("common.messages.notApplicable")}</Text>
+          <Subtitle className="mt-2">{t("alerts.createIncidentAI.confidenceExplanation")}</Subtitle>
           <Text>
-            {editedIncident.confidence_explanation || "No explanation"}
+            {editedIncident.confidence_explanation || t("alerts.createIncidentAI.noExplanation")}
           </Text>
         </>
       )}
@@ -229,10 +232,10 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeaderCell className="w-1/6">Alert Name</TableHeaderCell>
-              <TableHeaderCell className="w-2/3">Description</TableHeaderCell>
-              <TableHeaderCell className="w-1/12">Severity</TableHeaderCell>
-              <TableHeaderCell className="w-1/12">Status</TableHeaderCell>
+              <TableHeaderCell className="w-1/6">{t("alerts.createIncidentAI.alertName")}</TableHeaderCell>
+              <TableHeaderCell className="w-2/3">{t("common.labels.description")}</TableHeaderCell>
+              <TableHeaderCell className="w-1/12">{t("common.labels.severity")}</TableHeaderCell>
+              <TableHeaderCell className="w-1/12">{t("common.labels.status")}</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>

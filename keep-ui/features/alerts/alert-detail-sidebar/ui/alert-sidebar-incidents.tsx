@@ -1,12 +1,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { IncidentDto } from "@/entities/incidents/model";
+import { useI18n } from "@/i18n/hooks/useI18n";
 interface CollapsibleIncidentsListProps {
     incidents: IncidentDto[];
 }
 
 const CollapsibleIncidentsList = ({ incidents }: CollapsibleIncidentsListProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const { t } = useI18n();
     const maxVisible = 5; // default max visible rows
 
     const visibleIncidents = isExpanded
@@ -37,7 +39,7 @@ const CollapsibleIncidentsList = ({ incidents }: CollapsibleIncidentsListProps) 
                         onClick={() => setIsExpanded(true)}
                         className="text-blue-600 hover:underline text-sm mt-1 block"
                     >
-                        ... ({incidents.length - maxVisible} more)
+                        {t("alerts.incidentsList.moreCount", { count: incidents.length - maxVisible })}
                     </button>
                 )}
 
@@ -46,7 +48,7 @@ const CollapsibleIncidentsList = ({ incidents }: CollapsibleIncidentsListProps) 
                         onClick={() => setIsExpanded(false)}
                         className="text-blue-600 hover:underline text-sm mt-2 block"
                     >
-                        Show Less ↑
+                        {t("alerts.incidentsList.showLess")}
                     </button>
                 )}
             </div>

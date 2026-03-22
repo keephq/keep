@@ -2,6 +2,7 @@ import { Button, Textarea, TextInput } from "@/components/ui";
 import { Workflow } from "@/shared/api/workflows";
 import { Subtitle, Text } from "@tremor/react";
 import { useState } from "react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function EditWorkflowMetadataForm({
   workflow,
@@ -15,6 +16,7 @@ export function EditWorkflowMetadataForm({
     { name, description }: { name: string; description: string }
   ) => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(workflow.name);
   const [description, setDescription] = useState(workflow.description);
   const isSubmitEnabled = !!name && !!description;
@@ -26,29 +28,29 @@ export function EditWorkflowMetadataForm({
 
   return (
     <form className="py-2" onSubmit={handleSubmit}>
-      <Subtitle>Workflow Metadata</Subtitle>
+      <Subtitle>{t("workflows.builder.workflowMetadata")}</Subtitle>
       <div className="mt-2.5">
         <Text className="mb-2">
-          Name<span className="text-red-500 text-xs">*</span>
+          {t("common.labels.name")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
-          placeholder="Workflow Name"
+          placeholder={t("workflows.builder.workflowNamePlaceholder")}
           required={true}
           value={name}
           onValueChange={setName}
         />
       </div>
       <div className="mt-2.5">
-        <Text className="mb-2">Description</Text>
+        <Text className="mb-2">{t("common.labels.description")}</Text>
         <Textarea
-          placeholder="Workflow Description"
+          placeholder={t("workflows.builder.workflowDescriptionPlaceholder")}
           value={description}
           onValueChange={setDescription}
         />
       </div>
       <div className="mt-auto pt-6 space-x-1 flex flex-row justify-end items-center">
         <Button color="orange" size="xs" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t("common.actions.cancel")}
         </Button>
         <Button
           disabled={!isSubmitEnabled}
@@ -57,7 +59,7 @@ export function EditWorkflowMetadataForm({
           size="xs"
           type="submit"
         >
-          Update
+          {t("common.actions.update")}
         </Button>
       </div>
     </form>

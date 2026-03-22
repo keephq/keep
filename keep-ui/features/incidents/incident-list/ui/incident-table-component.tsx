@@ -13,6 +13,7 @@ import React, { ReactNode } from "react";
 import { IncidentDto } from "@/entities/incidents/model";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   table: ReactTable<IncidentDto>;
@@ -29,6 +30,7 @@ const SortableHeaderCell = ({
   children,
   className,
 }: SortableHeaderCellProps) => {
+  const { t } = useI18n();
   const { column } = header;
   const { style, className: commonClassName } =
     getCommonPinningStylesAndClassNames(column);
@@ -60,10 +62,10 @@ const SortableHeaderCell = ({
               }}
               tooltip={
                 column.getNextSortingOrder() === "asc"
-                  ? "Sort ascending"
+                  ? t("incidents.sort.ascending")
                   : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                    ? t("incidents.sort.descending")
+                    : t("incidents.sort.clearSort")
               }
               icon={
                 column.getIsSorted()

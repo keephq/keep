@@ -72,6 +72,7 @@ export interface AlertSidebarFieldRendererProps {
   config?: any;
   handleCopyFingerprint?: (fingerprint: string) => void;
   handleCopyUrl?: (url: string | undefined) => void;
+  t?: (key: string, params?: Record<string, any>) => string;
 }
 
 export interface AlertSidebarFieldConfig {
@@ -87,9 +88,9 @@ export const alertSidebarFieldsConfig: Record<
   service: {
     name: "service",
     shouldRender: (alert) => !!alert.service,
-    render: ({ alert }) => (
+    render: ({ alert, t }) => (
       <p>
-        <FieldHeader>Service</FieldHeader>
+        <FieldHeader>{t?.("alerts.fields.service") ?? "Service"}</FieldHeader>
         <Badge size="sm" color="gray">
           {alert.service}
         </Badge>
@@ -99,9 +100,9 @@ export const alertSidebarFieldsConfig: Record<
   source: {
     name: "source",
     shouldRender: (alert) => !!alert.source && alert.source.length > 0,
-    render: ({ alert, providerName }) => (
+    render: ({ alert, providerName, t }) => (
       <p>
-        <FieldHeader>Source</FieldHeader>
+        <FieldHeader>{t?.("alerts.fields.source") ?? "Source"}</FieldHeader>
         <DynamicImageProviderIcon
           src={`/icons/${alert.source![0]}-icon.png`}
           alt={alert.source![0]}
@@ -117,9 +118,9 @@ export const alertSidebarFieldsConfig: Record<
   description: {
     name: "description",
     shouldRender: (alert) => !!alert.description,
-    render: ({ alert }) => (
+    render: ({ alert, t }) => (
       <p>
-        <FieldHeader>Description</FieldHeader>
+        <FieldHeader>{t?.("alerts.fields.description") ?? "Description"}</FieldHeader>
         <FormattedContent
           content={alert.description}
           format={alert.description_format}
@@ -130,9 +131,9 @@ export const alertSidebarFieldsConfig: Record<
   message: {
     name: "message",
     shouldRender: (alert) => !!alert.message,
-    render: ({ alert }) => (
+    render: ({ alert, t }) => (
       <p>
-        <FieldHeader>Message</FieldHeader>
+        <FieldHeader>{t?.("alerts.fields.message") ?? "Message"}</FieldHeader>
         <span className="break-words">{alert.message}</span>
       </p>
     ),
@@ -140,23 +141,21 @@ export const alertSidebarFieldsConfig: Record<
   fingerprint: {
     name: "fingerprint",
     shouldRender: () => true,
-    render: ({ alert, config, handleCopyFingerprint }) => (
+    render: ({ alert, config, handleCopyFingerprint, t }) => (
       <p>
         <FieldHeader className="flex items-center gap-1">
-          Fingerprint
+          {t?.("alerts.fields.fingerprint") ?? "Fingerprint"}
           <Tooltip
             content={
               <>
-                Fingerprints are unique identifiers associated with alert
-                instances in Keep. Each provider declares the fields fingerprints
-                are calculated based on.{" "}
+                {t?.("alerts.fields.fingerprintTooltip") ?? "Fingerprints are unique identifiers associated with alert instances in Keep. Each provider declares the fields fingerprints are calculated based on."}{" "}
                 <Link
                   href={`${
                     config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
                   }/overview/fingerprints`}
                   className="text-white"
                 >
-                  Read more about it here.
+                  {t?.("alerts.fields.fingerprintTooltipLink") ?? "Read more about it here."}
                 </Link>
               </>
             }
@@ -180,7 +179,7 @@ export const alertSidebarFieldsConfig: Record<
                 e.stopPropagation();
                 handleCopyFingerprint(alert.fingerprint);
               }}
-              tooltip="Copy fingerprint"
+              tooltip={t?.("alerts.fields.copyFingerprint") ?? "Copy fingerprint"}
             />
           )}
         </div>
@@ -190,9 +189,9 @@ export const alertSidebarFieldsConfig: Record<
   url: {
     name: "url",
     shouldRender: (alert) => !!alert.url,
-    render: ({ alert, handleCopyUrl }) => (
+    render: ({ alert, handleCopyUrl, t }) => (
       <p>
-        <FieldHeader>URL</FieldHeader>
+        <FieldHeader>{t?.("alerts.fields.url") ?? "URL"}</FieldHeader>
         <div className="flex items-center gap-2">
           <Link
             href={alert.url!}
@@ -213,7 +212,7 @@ export const alertSidebarFieldsConfig: Record<
                 e.stopPropagation();
                 handleCopyUrl(alert.url);
               }}
-              tooltip="Copy URL"
+              tooltip={t?.("alerts.fields.copyUrl") ?? "Copy URL"}
             />
           )}
         </div>

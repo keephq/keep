@@ -9,6 +9,7 @@ import { WorkflowAlertIncidentDependenciesForm } from "@/entities/workflows/ui/W
 import { WorkflowInputsForm } from "../ui/WorkflowInputsForm";
 import { WorkflowInput } from "@/entities/workflows/model/yaml.types";
 import { AlertWorkflowRunPayload, IncidentWorkflowRunPayload } from "./types";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 type InputsModalProps = {
   inputs: WorkflowInput[];
@@ -56,6 +57,7 @@ export function WorkflowModalProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const [inputsModalProps, setInputsModalProps] =
     useState<InputsModalProps | null>(null);
   const [alertModalProps, setAlertModalProps] =
@@ -134,7 +136,7 @@ export function WorkflowModalProvider({
             alertModalProps || incidentModalProps ? "max-w-5xl" : ""
           )}
           onClose={closeAllModals}
-          title="Run Workflow"
+          title={t("workflows.actions.runWorkflow")}
         >
           {unsavedChangesModalProps && (
             <WorkflowUnsavedChangesForm

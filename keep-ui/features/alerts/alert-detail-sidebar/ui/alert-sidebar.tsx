@@ -20,6 +20,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { AlertMenu } from "@/features/alerts/alert-menu";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import CollapsibleIncidentsList from "./alert-sidebar-incidents";
 import {
   alertSidebarFieldsConfig,
@@ -49,6 +50,7 @@ export const AlertSidebar = ({
   setIsIncidentSelectorOpen,
 }: AlertSidebarProps) => {
   const { useAlertAudit } = useAlerts();
+  const { t } = useI18n();
   const {
     data: auditData,
     isLoading,
@@ -69,22 +71,22 @@ export const AlertSidebar = ({
 
   const handleCopyFingerprint = async (alertFingerprint: string) => {
     if (!alertFingerprint) {
-      showErrorToast(new Error("Alert has no fingerprint"));
+      showErrorToast(new Error(t("alerts.sidebar.noFingerprint")));
       return;
     }
     try {
       await navigator.clipboard.writeText(alertFingerprint);
-      showSuccessToast("Fingerprint copied to clipboard");
+      showSuccessToast(t("alerts.sidebar.fingerprintCopied"));
     } catch (err) {
       showErrorToast(
         err,
         <p>
-          Failed to copy fingerprint. Please check your browser permissions.{" "}
+          {t("alerts.sidebar.failedToCopyFingerprint")}{" "}
           <Link
             target="_blank"
             href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
           >
-            Learn more
+            {t("alerts.sidebar.learnMore")}
           </Link>
         </p>
       );
@@ -93,17 +95,17 @@ export const AlertSidebar = ({
 
   const handleCopyUrl = async (alertUrl: string | undefined) => {
     if (!alertUrl) {
-      showErrorToast(new Error("Alert has no URL"));
+      showErrorToast(new Error(t("alerts.sidebar.noUrl")));
       return;
     }
     try {
       await navigator.clipboard.writeText(alertUrl);
-      showSuccessToast("URL copied to clipboard");
+      showSuccessToast(t("alerts.sidebar.urlCopied"));
     } catch (err) {
       showErrorToast(
         err,
         <p>
-          Failed to copy URL. Please check your browser permissions.{" "}
+          {t("alerts.sidebar.failedToCopyUrl")}{" "}
         </p>
       );
     }
@@ -144,7 +146,7 @@ export const AlertSidebar = ({
                       severity={alert.severity as unknown as UISeverity}
                     />
                   )}
-                  {alert?.name ? alert.name : "Alert Details"}
+                  {alert?.name ? alert.name : t("alerts.sidebar.alertDetails")}
                 </Dialog.Title>
                 <Divider className="mb-0" />
                 {alert && (
@@ -180,6 +182,7 @@ export const AlertSidebar = ({
                       config,
                       handleCopyFingerprint,
                       handleCopyUrl,
+                      t,
                     };
 
                     const standardFields = enabledFields.map((fieldName) => {
@@ -218,7 +221,7 @@ export const AlertSidebar = ({
                 {config?.ALERT_SIDEBAR_FIELDS?.includes("incidents") &&
                   alert.incident_dto && (
                     <div>
-                      <FieldHeader>Incidents</FieldHeader>
+                      <FieldHeader>{t("alerts.sidebar.incidents")}</FieldHeader>
                       <CollapsibleIncidentsList
                         incidents={alert.incident_dto}
                       />
@@ -235,7 +238,7 @@ export const AlertSidebar = ({
                 )}
                 {config?.ALERT_SIDEBAR_FIELDS?.includes("relatedServices") && (
                   <>
-                    <Title>Related Services</Title>
+                    <Title>{t("alerts.sidebar.relatedServices")}</Title>
                     <TopologySearchProvider>
                       <TopologyMap
                         providerIds={alert.providerId ? [alert.providerId] : []}

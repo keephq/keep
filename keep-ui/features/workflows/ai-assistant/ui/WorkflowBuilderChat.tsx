@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { Provider } from "@/shared/api/providers";
 import {
   DefinitionV2,
@@ -55,6 +56,7 @@ export function WorkflowBuilderChat({
   definition,
   installedProviders,
 }: WorkflowBuilderChatProps) {
+  const { t } = useI18n();
   const { data: config } = useConfig();
   const {
     nodes,
@@ -173,7 +175,7 @@ export function WorkflowBuilderChat({
     ],
     handler: ({ name }: { name: string }) => {
       setProperties({ ...properties, name });
-      showSuccessToast("Workflow name updated");
+      showSuccessToast(t("workflows.aiAssistant.workflowNameUpdated"));
     },
   });
 
@@ -190,7 +192,7 @@ export function WorkflowBuilderChat({
     ],
     handler: ({ description }: { description: string }) => {
       setProperties({ ...properties, description });
-      showSuccessToast("Workflow description updated");
+      showSuccessToast(t("workflows.aiAssistant.workflowDescriptionUpdated"));
     },
   });
 
@@ -213,30 +215,30 @@ export function WorkflowBuilderChat({
     ],
     renderAndWaitForResponse: ({ status, args, respond }) => {
       if (status === "inProgress") {
-        return <div>Loading...</div>;
+        return <div>{t("workflows.aiAssistant.loading")}</div>;
       }
       const stepId = args.stepId;
       // TODO: nice UI for this
-      if (confirm(`Are you sure you want to remove ${stepId} step?`)) {
+      if (confirm(t("workflows.aiAssistant.confirmRemoveStep", { stepId }))) {
         try {
           const deletedNodeIds = deleteNodes(stepId);
           if (deletedNodeIds.length > 0) {
-            respond?.("Step removed");
-            return <p>Step {stepId} removed</p>;
+            respond?.(t("workflows.aiAssistant.stepRemoved"));
+            return <p>{t("workflows.aiAssistant.stepRemoved")}</p>;
           } else {
-            respond?.("Step removal failed");
-            return <p>Step removal failed</p>;
+            respond?.(t("workflows.aiAssistant.stepRemovalFailed"));
+            return <p>{t("workflows.aiAssistant.stepRemovalFailed")}</p>;
           }
         } catch (e) {
           respond?.({
             status: "error",
-            message: getErrorMessage(e, "Step removal failed"),
+            message: getErrorMessage(e, t("workflows.aiAssistant.stepRemovalFailed")),
           });
-          return <p>Step removal failed</p>;
+          return <p>{t("workflows.aiAssistant.stepRemovalFailed")}</p>;
         }
       } else {
-        respond?.("User cancelled the step removal");
-        return <p>Step removal cancelled</p>;
+        respond?.(t("workflows.aiAssistant.userCancelledStepRemoval"));
+        return <p>{t("workflows.aiAssistant.stepRemovalCancelled")}</p>;
       }
     },
   });
@@ -255,33 +257,33 @@ export function WorkflowBuilderChat({
     ],
     renderAndWaitForResponse: ({ status, args, respond }) => {
       if (status === "inProgress") {
-        return <div>Loading...</div>;
+        return <div>{t("workflows.aiAssistant.loading")}</div>;
       }
       const triggerNodeId = args.triggerNodeId;
 
       // TODO: nice UI for this
       if (
-        confirm(`Are you sure you want to remove ${triggerNodeId} trigger?`)
+        confirm(t("workflows.aiAssistant.confirmRemoveTrigger", { triggerNodeId }))
       ) {
         try {
           const deletedNodeIds = deleteNodes(triggerNodeId);
           if (deletedNodeIds.length > 0) {
-            respond?.("Trigger removed");
-            return <p>Trigger {triggerNodeId} removed</p>;
+            respond?.(t("workflows.aiAssistant.triggerRemoved"));
+            return <p>{t("workflows.aiAssistant.triggerRemoved")}</p>;
           } else {
-            respond?.("Trigger removal failed");
-            return <p>Trigger removal failed</p>;
+            respond?.(t("workflows.aiAssistant.triggerRemovalFailed"));
+            return <p>{t("workflows.aiAssistant.triggerRemovalFailed")}</p>;
           }
         } catch (e) {
           respond?.({
             status: "error",
-            message: getErrorMessage(e, "Trigger removal failed"),
+            message: getErrorMessage(e, t("workflows.aiAssistant.triggerRemovalFailed")),
           });
-          return <p>Trigger removal failed</p>;
+          return <p>{t("workflows.aiAssistant.triggerRemovalFailed")}</p>;
         }
       } else {
-        respond?.("User cancelled the trigger removal");
-        return <p>Trigger removal cancelled</p>;
+        respond?.(t("workflows.aiAssistant.userCancelledTriggerRemoval"));
+        return <p>{t("workflows.aiAssistant.triggerRemovalCancelled")}</p>;
       }
     },
   });
@@ -615,9 +617,9 @@ Example: 'node_123__empty_true'`,
       if (!action) {
         respond?.({
           status: "error",
-          error: "Action definition is invalid",
+          error: t("workflows.aiAssistant.actionDefinitionInvalid"),
         });
-        return <div>Action definition is invalid</div>;
+        return <div>{t("workflows.aiAssistant.actionDefinitionInvalid")}</div>;
       }
 
       if (status === "complete") {
@@ -743,9 +745,9 @@ Example: 'node_123__empty_true'`,
       if (!step) {
         respond?.({
           status: "error",
-          error: "Step definition is invalid",
+          error: t("workflows.aiAssistant.stepDefinitionInvalid"),
         });
-        return <div>Step definition is invalid</div>;
+        return <div>{t("workflows.aiAssistant.stepDefinitionInvalid")}</div>;
       }
 
       if (status === "complete") {
@@ -868,9 +870,9 @@ Example: 'node_123__empty_true'`,
         if (!condition) {
           respond?.({
             status: "error",
-            message: "Condition definition is invalid",
+            message: t("workflows.aiAssistant.conditionDefinitionInvalid"),
           });
-          return <div>Condition definition is invalid</div>;
+          return <div>{t("workflows.aiAssistant.conditionDefinitionInvalid")}</div>;
         }
         if (status === "complete") {
           return (
@@ -894,7 +896,7 @@ Example: 'node_123__empty_true'`,
         );
       } catch (e: any) {
         respond?.({ status: "error", message: getErrorMessage(e) });
-        return <div>Failed to add condition {e?.message}</div>;
+        return <div>{t("workflows.aiAssistant.failedToAddCondition", { message: e?.message || "" })}</div>;
       }
     },
   });
@@ -1062,14 +1064,14 @@ Example: 'node_123__empty_true'`,
               size="xs"
               onClick={() => setMessages([])}
             >
-              Reset
+              {t("workflows.aiAssistant.reset")}
             </Button>
             <Button
               variant="secondary"
               size="xs"
               onClick={() => setDebugInfoVisible(!debugInfoVisible)}
             >
-              {debugInfoVisible ? "Hide definition" : "Show definition"}
+              {debugInfoVisible ? t("workflows.aiAssistant.hideDefinition") : t("workflows.aiAssistant.showDefinition")}
             </Button>
           </div>
           {debugInfoVisible && (
@@ -1084,10 +1086,9 @@ Example: 'node_123__empty_true'`,
       <CopilotChat
         instructions={chatInstructions}
         labels={{
-          title: "Workflow Builder",
-          initial: "What can I help you automate?",
-          placeholder:
-            "For example: For each alert about CPU > 80%, send a slack message to the channel #alerts",
+          title: t("workflows.aiAssistant.chatTitle"),
+          initial: t("workflows.aiAssistant.initialGreeting"),
+          placeholder: t("workflows.aiAssistant.placeholder"),
         }}
         className="h-full flex-1"
         onSubmitMessage={handleSubmitMessage}

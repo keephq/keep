@@ -21,6 +21,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -47,6 +48,7 @@ export function CreateOrUpdateIncidentForm({
     useState<string>("all");
   const { data: users = [] } = useUsers();
   const { addIncident, updateIncident } = useIncidentActions();
+  const { t } = useI18n();
 
     // Sort users alphabetically
   const sortedUsers = [...users].sort((a, b) =>
@@ -145,9 +147,9 @@ export function CreateOrUpdateIncidentForm({
 
   return (
     <form className="py-2" onSubmit={handleSubmit}>
-      <Subtitle>Incident Metadata</Subtitle>
+      <Subtitle>{t("incidents.form.metadata")}</Subtitle>
       <div className="mt-2.5">
-        <Text className="mb-2">Severity</Text>
+        <Text className="mb-2">{t("incidents.severity.title")}</Text>
         <IncidentSeveritySelect
           value={incidentSeverity}
           onChange={setIncidentSeverity}
@@ -155,30 +157,30 @@ export function CreateOrUpdateIncidentForm({
       </div>
       <div className="mt-2.5">
         <Text className="mb-2">
-          Name<span className="text-red-500 text-xs">*</span>
+          {t("incidents.form.name")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
-          placeholder="Incident Name"
+          placeholder={t("incidents.form.namePlaceholder")}
           required={true}
           value={incidentName}
           onValueChange={setIncidentName}
         />
       </div>
       <div className="mt-2.5">
-        <Text className="mb-2">Summary</Text>
+        <Text className="mb-2">{t("incidents.form.summary")}</Text>
         <ReactQuill
           value={incidentUserSummary}
           onChange={(value: string) => setIncidentUserSummary(value)}
           theme="snow" // Use the Snow theme
           modules={modules}
           formats={formats} // Add formats
-          placeholder="What happened?"
+          placeholder={t("incidents.form.summaryPlaceholder")}
           className="border border-tremor-border rounded-tremor-default shadow-tremor-input"
         />
       </div>
 
       <div className="mt-2.5">
-        <Text className="mb-2">Assignee</Text>
+        <Text className="mb-2">{t("incidents.form.assignee")}</Text>
         {sortedUsers.length > 0 ? (
           <Select
             value={incidentAssignee}
@@ -192,7 +194,7 @@ export function CreateOrUpdateIncidentForm({
           </Select>
         ) : (
           <TextInput
-            placeholder="Who is responsible"
+            placeholder={t("incidents.form.assigneePlaceholder")}
             value={incidentAssignee}
             onValueChange={setIncidentAssignee}
           />
@@ -214,7 +216,7 @@ export function CreateOrUpdateIncidentForm({
               )
             }
           />
-          <Text>Resolve when all alerts are resolved</Text>
+          <Text>{t("incidents.form.resolveOnAll")}</Text>
         </div>
       </div>
 
@@ -228,7 +230,7 @@ export function CreateOrUpdateIncidentForm({
             variant="secondary"
             onClick={exitEditMode}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
         )}
         <Button
@@ -237,7 +239,7 @@ export function CreateOrUpdateIncidentForm({
           size="xs"
           type="submit"
         >
-          {editMode ? "Update" : "Create"}
+          {editMode ? t("common.actions.update") : t("common.actions.create")}
         </Button>
       </div>
     </form>

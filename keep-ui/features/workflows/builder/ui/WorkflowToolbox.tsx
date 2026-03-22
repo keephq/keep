@@ -8,6 +8,7 @@ import { V2Step, V2StepTrigger } from "@/entities/workflows/model/types";
 import { DynamicImageProviderIcon, TextInput } from "@/components/ui";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
 import { triggerTypes } from "../lib/utils";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 type GroupedMenuBaseProps = {
   searchTerm: string;
@@ -150,6 +151,7 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
   const [open, setOpen] = useState(true);
   const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
     useWorkflowStore();
+  const { t } = useI18n();
 
   const showOnlyTriggers = selectedEdge?.startsWith("etrigger_start");
   // User cannot add conditions inside a condition
@@ -229,12 +231,12 @@ export const WorkflowToolbox = ({ isDraggable }: { isDraggable?: boolean }) => {
         {/* Sticky header */}
         <div className="sticky top-0 left-0 z-10 bg-white">
           <Subtitle className="font-medium p-2">
-            Add {showOnlyTriggers ? "trigger" : "step"}
+            {showOnlyTriggers ? t("workflows.builder.addTrigger") : t("workflows.builder.addStep")}
           </Subtitle>
           <div className="flex items-center justify-between p-2 pt-0 bg-white">
             <TextInput
               type="text"
-              placeholder="Search..."
+              placeholder={t("workflows.builder.searchPlaceholder")}
               className="w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

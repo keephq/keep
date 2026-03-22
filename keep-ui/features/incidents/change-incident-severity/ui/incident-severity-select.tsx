@@ -5,6 +5,7 @@ import { capitalize } from "@/utils/helpers";
 import { Severity } from "@/entities/incidents/model/models";
 import { getIncidentSeverityIconAndColor } from "@/entities/incidents/lib/utils";
 import { Icon } from "@tremor/react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const customClassNames: ClassNamesConfig<any, false, any> = {
   container: () => "inline-flex",
@@ -34,6 +35,7 @@ type Props = {
 };
 
 export function IncidentSeveritySelect({ value, onChange, className }: Props) {
+  const { t } = useI18n();
   // Use a portal to render the menu outside the table container with overflow: hidden
   const menuPortalTarget = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -44,17 +46,18 @@ export function IncidentSeveritySelect({ value, onChange, className }: Props) {
     () =>
       Object.values(Severity).map((severity) => {
         const { icon, color } = getIncidentSeverityIconAndColor(severity);
+        const translated = t(`incidents.severity.${severity.toLowerCase()}` as const);
         return {
           value: severity,
           label: (
             <div className="flex items-center">
               <Icon
                 icon={icon}
-                tooltip={capitalize(severity)}
+                tooltip={translated}
                 color={color}
                 className="w-4 h-4 mr-2"
               />
-              <span>{capitalize(severity)}</span>
+              <span>{translated}</span>
             </div>
           ),
         };
@@ -79,7 +82,7 @@ export function IncidentSeveritySelect({ value, onChange, className }: Props) {
       options={severityOptions}
       value={selectedOption}
       onChange={handleChange}
-      placeholder="Severity"
+      placeholder={t("incidents.severity.title")}
       classNames={customClassNames}
       menuPortalTarget={menuPortalTarget.current}
       menuPosition="fixed"

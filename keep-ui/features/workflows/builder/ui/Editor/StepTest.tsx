@@ -9,6 +9,7 @@ import { useCopilotChat } from "@copilotkit/react-core";
 import { Role } from "@copilotkit/runtime-client-gql";
 import { TextMessage } from "@copilotkit/runtime-client-gql";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function useTestStep() {
   const api = useApi();
@@ -32,6 +33,7 @@ const WFDebugWithAI = ({
   errors: { [key: string]: string };
   description: string;
 }) => {
+  const { t } = useI18n();
   // careful, useCopilotChat may not be available if user has not set an OpenAI API key
   const { appendMessage } = useCopilotChat();
   return (
@@ -51,7 +53,7 @@ const WFDebugWithAI = ({
         );
       }}
     >
-      Debug with AI
+      {t("workflows.builder.debugWithAI")}
     </Button>
   );
 };
@@ -81,6 +83,7 @@ export function TestRunStepForm({
   method: "_query" | "_notify";
   methodParams: Record<string, any>;
 }) {
+  const { t } = useI18n();
   const testStep = useTestStep();
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [result, setResult] = useState<any>(null);
@@ -165,9 +168,9 @@ export function TestRunStepForm({
         );
         setResult(result);
       } catch (e: unknown) {
-        const errorMessage = e instanceof Error ? e.message : "Unknown error";
+        const errorMessage = e instanceof Error ? e.message : t("workflows.builder.unknownError");
         setErrors({
-          "Failed to test step": errorMessage,
+          [t("workflows.builder.failedToTestStep")]: errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -186,10 +189,9 @@ export function TestRunStepForm({
       <EditorLayout className="flex-1 flex flex-col gap-5">
         {Object.values(variables).length > 0 && (
           <section>
-            <Text className="font-bold mb-2">Override variables</Text>
+            <Text className="font-bold mb-2">{t("workflows.builder.overrideVariables")}</Text>
             <Text className="mb-2">
-              Your parameters use the following variables. You can override
-              them, it only applies to this test run.
+              {t("workflows.builder.overrideVariablesDescription")}
             </Text>
             <ul className="flex flex-col gap-2">
               {Object.entries(variables).map(([varName, value]) => (
@@ -210,21 +212,21 @@ export function TestRunStepForm({
           </section>
         )}
         <section>
-          <Text className="font-bold mb-2">Provider and parameters</Text>
+          <Text className="font-bold mb-2">{t("workflows.builder.providerAndParams")}</Text>
           {Object.values(variablesOverride).some((value) => value) && (
             <Text className="mb-2">
-              The parameters after the variables are overridden.
+              {t("workflows.builder.providerAndParamsDescription")}
             </Text>
           )}
           <div>
-            <JsonCard title="Provider configuration" json={providerInfo} />
-            <JsonCard title="Parameters" json={resultingParameters} />
+            <JsonCard title={t("workflows.builder.providerConfiguration")} json={providerInfo} />
+            <JsonCard title={t("workflows.builder.parameters")} json={resultingParameters} />
           </div>
         </section>
         <section>
-          <Text className="font-bold mb-2">Result</Text>
+          <Text className="font-bold mb-2">{t("workflows.builder.result")}</Text>
           <Text className="mb-2">
-            The result of the test run will be displayed here.
+            {t("workflows.builder.resultDescription")}
           </Text>
           {result && (
             <pre
@@ -235,7 +237,7 @@ export function TestRunStepForm({
                 }
               }}
             >
-              <div className="text-gray-500 bg-gray-50 p-2">Result</div>
+              <div className="text-gray-500 bg-gray-50 p-2">{t("workflows.builder.result")}</div>
               <div
                 className="overflow-auto bg-[#fffffe] break-words whitespace-pre-wrap py-2 border rounded-[inherit] rounded-t-none  border-gray-200"
                 style={{
@@ -296,7 +298,7 @@ export function TestRunStepForm({
           disabled={isLoading || isDisabled}
           data-testid="wf-editor-step-test-run-button"
         >
-          {isLoading ? "Running..." : "Test Run"}
+          {isLoading ? t("workflows.builder.running") : t("workflows.builder.testRun")}
         </Button>
       </div>
     </form>

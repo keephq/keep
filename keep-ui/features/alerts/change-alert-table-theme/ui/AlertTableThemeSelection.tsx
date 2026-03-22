@@ -9,6 +9,7 @@ import {
 } from "@tremor/react";
 import clsx from "clsx";
 import { useAlertTableTheme } from "@/entities/alerts/model";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export const predefinedThemes = {
   Transparent: {
@@ -48,6 +49,7 @@ export const AlertTableThemeSelection = ({
   onClose?: () => void;
 }) => {
   const { setTheme } = useAlertTableTheme();
+  const { t } = useI18n();
   const [selectedTab, setSelectedTab] = useState<ThemeName>("Transparent");
 
   const handleTabChange = (event: any) => {
@@ -67,13 +69,13 @@ export const AlertTableThemeSelection = ({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-hidden flex flex-col">
-        <span className="text-gray-400 text-sm mb-2">Set theme colors</span>
+        <span className="text-gray-400 text-sm mb-2">{t("alerts.theme.setThemeColors")}</span>
         <div className="flex-1 overflow-y-auto">
           <TabGroup onIndexChange={handleTabChange}>
             <TabList data-testid="theme-tab-list">
-              <Tab>Transparent</Tab>
-              <Tab>Keep</Tab>
-              <Tab>Basic</Tab>
+              <Tab>{t("alerts.theme.transparent")}</Tab>
+              <Tab>{t("alerts.theme.keep")}</Tab>
+              <Tab>{t("alerts.theme.basic")}</Tab>
             </TabList>
             <TabPanels>
               {Object.keys(predefinedThemes).map((themeName) => (
@@ -106,7 +108,7 @@ export const AlertTableThemeSelection = ({
         color="orange"
         onClick={onApplyTheme}
       >
-        Apply theme
+        {t("alerts.theme.applyTheme")}
       </Button>
     </div>
   );

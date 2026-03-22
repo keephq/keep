@@ -15,6 +15,7 @@ import { Select } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface PushAlertToServerModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const PushAlertToServerModal = ({
   handleClose,
   presetName,
 }: PushAlertToServerModalProps) => {
+  const { t } = useI18n();
   const [alertSources, setAlertSources] = useState<AlertSource[]>([]);
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -95,12 +97,12 @@ export const PushAlertToServerModal = ({
       if (error instanceof KeepApiError) {
         setError("apiError", {
           type: "manual",
-          message: error.message || "Failed to push alert",
+          message: error.message || t("alerts.simulate.failedToPush"),
         });
       } else {
         setError("apiError", {
           type: "manual",
-          message: "An unexpected error occurred",
+          message: t("errors.generic"),
         });
       }
     }
@@ -110,7 +112,7 @@ export const PushAlertToServerModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Simulate Alert"
+      title={t("alerts.simulate.title")}
       className="w-[600px]"
     >
       <form
@@ -118,12 +120,12 @@ export const PushAlertToServerModal = ({
         className="flex flex-col gap-2 mt-4"
       >
         <label className="block text-sm font-medium text-gray-700">
-          Alert Source
+          {t("alerts.simulate.alertSource")}
         </label>
         <Controller
           name="source"
           control={control}
-          rules={{ required: "Alert source is required" }}
+          rules={{ required: t("alerts.simulate.alertSourceRequired") }}
           render={({ field: { value, onChange, ...field } }) => (
             // FIX: Select prevent modal from closing on Escape key
             <Select
@@ -148,7 +150,7 @@ export const PushAlertToServerModal = ({
                 </div>
               )}
               getOptionValue={(source) => source.type}
-              placeholder="Select alert source"
+              placeholder={t("alerts.simulate.selectAlertSource")}
             />
           )}
         />
@@ -161,29 +163,28 @@ export const PushAlertToServerModal = ({
         {selectedSource && (
           <>
             <Callout
-              title="About alert payload"
+              title={t("alerts.simulate.aboutPayloadTitle")}
               color="orange"
               className="break-words mt-4"
             >
-              Feel free to edit the payload as you want. However, some of the
-              providers expects specific fields, so be careful.
+              {t("alerts.simulate.aboutPayloadDescription")}
             </Callout>
 
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700">
-                Alert Payload
+                {t("alerts.simulate.alertPayload")}
               </label>
               <Controller
                 name="alertJson"
                 control={control}
                 rules={{
-                  required: "Alert payload is required",
+                  required: t("alerts.simulate.alertPayloadRequired"),
                   validate: (value) => {
                     try {
                       JSON.parse(value);
                       return true;
                     } catch (e) {
-                      return "Invalid JSON format";
+                      return t("alerts.simulate.invalidJson");
                     }
                   },
                 }}
@@ -202,7 +203,7 @@ export const PushAlertToServerModal = ({
 
         {errors.apiError && (
           <div className="text-sm text-rose-500 mt-4">
-            <Callout title="Error" color="rose">
+            <Callout title={t("common.messages.error")} color="rose">
               {errors.apiError.message?.toString()}
             </Callout>
           </div>
@@ -210,10 +211,10 @@ export const PushAlertToServerModal = ({
 
         <div className="mt-6 flex gap-2 justify-end">
           <Button color="orange" onClick={handleClose} variant="secondary">
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button color="orange" variant="primary" type="submit">
-            Submit
+            {t("common.actions.submit")}
           </Button>
         </div>
       </form>

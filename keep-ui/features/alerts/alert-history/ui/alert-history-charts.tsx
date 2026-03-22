@@ -2,6 +2,7 @@ import { AreaChart } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "@/entities/alerts/model";
 import { calculateFatigue } from "@/utils/fatigue";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   minLastReceived: Date;

@@ -8,8 +8,10 @@ import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { ChangeSameIncidentInThePastForm } from "./change-same-incident-in-the-past-form";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function SameIncidentField({ incident }: { incident: IncidentDto }) {
+  const { t } = useI18n();
   const { data: same_incident_in_the_past } = useIncident(
     incident.same_incident_in_the_past_id
   );
@@ -28,7 +30,7 @@ export function SameIncidentField({ incident }: { incident: IncidentDto }) {
 
   return (
     <>
-      <FieldHeader>Same in the past</FieldHeader>
+      <FieldHeader>{t("incidents.sameIncident.sameInThePast")}</FieldHeader>
       {same_incident_in_the_past ? (
         <p className="flex gap-2">
           <Link
@@ -49,13 +51,13 @@ export function SameIncidentField({ incident }: { incident: IncidentDto }) {
             className="!px-1 !py-0.5"
             onClick={(e) => handleChangeSameIncidentInThePast(e, incident)}
           >
-            Change
+            {t("incidents.sameIncident.change")}
           </Button>
         </p>
       ) : (
         <>
           <p className="flex items-baseline gap-2">
-            No linked incidents
+            {t("incidents.sameIncident.noLinkedIncidents")}
             <Button
               color="orange"
               variant="secondary"
@@ -63,11 +65,11 @@ export function SameIncidentField({ incident }: { incident: IncidentDto }) {
               className="!px-1 !py-0.5"
               onClick={(e) => handleChangeSameIncidentInThePast(e, incident)}
             >
-              Link incident
+              {t("incidents.sameIncident.linkIncident")}
             </Button>
           </p>
           <p className="text-sm text-tremor-content-subtle">
-            Link the same incident from the past to help the AI classifier
+            {t("incidents.sameIncident.linkHelpText")}
           </p>
         </>
       )}
@@ -75,7 +77,7 @@ export function SameIncidentField({ incident }: { incident: IncidentDto }) {
         <Modal
           isOpen={changeSameIncidentInThePast !== null}
           onClose={() => setChangeSameIncidentInThePast(null)}
-          title="Link to the same incident in the past"
+          title={t("incidents.sameIncident.linkModalTitle")}
           className="w-[600px]"
         >
           <ChangeSameIncidentInThePastForm

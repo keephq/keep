@@ -7,6 +7,7 @@ import {
 import { useWorkflowStore } from "@/entities/workflows";
 import clsx from "clsx";
 import { ValidationError } from "@/entities/workflows/lib/validate-definition";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 function ErrorList({
   validationErrors,
@@ -15,9 +16,10 @@ function ErrorList({
   validationErrors: Record<string, ValidationError>;
   onErrorClick: (id: string) => void;
 }) {
-  const textSummary = `${Object.keys(validationErrors).length} error${
-    Object.keys(validationErrors).length === 1 ? "" : "s"
-  }`;
+  const { t } = useI18n();
+  const textSummary = t("workflows.builder.errorCount", {
+    count: Object.keys(validationErrors).length,
+  });
   return (
     <details className="flex flex-col gap-1">
       <summary className="text-sm font-medium">{textSummary}</summary>
@@ -49,6 +51,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
     setSelectedNode,
     setSelectedEdge,
   } = useWorkflowStore();
+  const { t } = useI18n();
 
   const handleErrorClick = (id: string) => {
     if (id === "trigger_end") {
@@ -77,11 +80,11 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
     return (
       <Callout
         className={clsx("rounded p-2 text-sm", className)}
-        title="Workflow is valid"
+        title={t("workflows.builder.workflowValid")}
         icon={CheckCircleIcon}
         color="teal"
       >
-        It can be deployed and run
+        {t("workflows.builder.workflowValidDescription")}
       </Callout>
     );
   }
@@ -89,11 +92,11 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
     return (
       <Callout
         className={clsx("rounded p-2 text-sm", className)}
-        title="Workflow has errors"
+        title={t("workflows.builder.workflowHasErrors")}
         icon={ExclamationTriangleIcon}
         color="yellow"
       >
-        It can be saved, but to run it, fix errors
+        {t("workflows.builder.workflowHasErrorsDescription")}
         {/* TODO: fix In HTML, <summary> cannot be a descendant of <p>. */}
         <ErrorList
           validationErrors={validationErrors}
@@ -105,7 +108,7 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
   return (
     <Callout
       className={clsx("rounded p-2 text-sm", className)}
-      title="Fix the errors before saving"
+      title={t("workflows.builder.fixErrorsBeforeSaving")}
       icon={ExclamationCircleIcon}
       color="rose"
     >

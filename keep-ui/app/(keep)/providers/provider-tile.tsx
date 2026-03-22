@@ -187,7 +187,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
               color="green"
               size="sm"
-              tooltip="Webhook available"
+              tooltip={t("providers.tile.webhookAvailable")}
             />
           )}
         {provider.oauth2_url && !provider.installed && !provider.linked && (
@@ -200,7 +200,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             } grayscale hover:grayscale-0 group-hover:grayscale-0`}
             color="green"
             size="sm"
-            tooltip="OAuth2 available"
+            tooltip={t("providers.tile.oauth2Available")}
           />
         )}
         {provider.installed ? (
@@ -226,7 +226,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             className="absolute top-[-15px] right-[-15px]"
             color="orange"
             size="sm"
-            tooltip="Provisioned"
+            tooltip={t("providers.tile.provisioned")}
           />
         ) : null}
         <div className="flex flex-col gap-2">
@@ -234,25 +234,25 @@ export default function ProviderTile({ provider, onClick }: Props) {
             <Title className="capitalize" title={provider.details?.name}>
               {provider.display_name}{" "}
               {provider.coming_soon && !provider.linked && (
-                <span className="text-sm">(Coming Soon)</span>
+                <span className="text-sm">{t("providers.tile.comingSoon")}</span>
               )}
             </Title>
 
             {provider.details && provider.details.name && (
               <Subtitle className="truncate">
-                Name: {provider.details.name}
+                {t("providers.tile.name")}{provider.details.name}
               </Subtitle>
             )}
             {provider.last_alert_received ? (
               <Text>
-                Last alert:{" "}
+                {t("providers.tile.lastAlert")}
                 <TimeAgo date={provider.last_alert_received + "Z"} />
               </Text>
             ) : (
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text className="truncate">Name: {provider.id}</Text>
+              <Text className="truncate">{t("providers.tile.name")}{provider.id}</Text>
             ) : null}
             {renderChart()}
           </div>
@@ -279,7 +279,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             icon={Cog6ToothIcon}
             color="gray"
             className="w-6 h-6 self-end place-self-end"
-            tooltip="Modify"
+            tooltip={t("providers.tile.modify")}
           />
         ) : null}
       </div>

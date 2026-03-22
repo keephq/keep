@@ -27,6 +27,7 @@ import { useWorkflowSecrets } from "@/utils/hooks/useWorkflowSecrets";
 import { Link } from "@/components/ui/Link";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const KeepSchemaPath = "file:///workflow-schema.json";
 
@@ -48,6 +49,7 @@ export const WorkflowYAMLEditor = ({
   const { getSecrets } = useWorkflowSecrets(workflowId);
   const { data: secrets } = getSecrets;
   const { data: config } = useConfig();
+  const { t } = useI18n();
 
   const {
     validationErrors,
@@ -167,17 +169,17 @@ export const WorkflowYAMLEditor = ({
     }
     try {
       await navigator.clipboard.writeText(value);
-      showSuccessToast("Workflow YAML copied to clipboard");
+      showSuccessToast(t("shared.workflowYaml.copiedToClipboard"));
     } catch (err) {
       showErrorToast(
         err,
         <p>
-          Failed to copy Workflow YAML. Please check your browser permissions.{" "}
+          {t("shared.workflowYaml.copyFailed")}{" "}
           <Link
             target="_blank"
             href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
           >
-            Learn more
+            {t("common.actions.learnMore")}
           </Link>
         </p>
       );
@@ -233,7 +235,7 @@ export const WorkflowYAMLEditor = ({
           readOnly={readOnly}
         />
         <Suspense
-          fallback={<KeepLoader loadingText="Loading YAML editor..." />}
+          fallback={<KeepLoader loadingText={t("shared.workflowYaml.loadingEditor")} />}
         >
           <MonacoYAMLEditor
             height="100%"
@@ -242,7 +244,7 @@ export const WorkflowYAMLEditor = ({
             onMount={handleEditorDidMount}
             onChange={handleChange}
             options={editorOptions}
-            loading={<KeepLoader loadingText="Loading YAML editor..." />}
+            loading={<KeepLoader loadingText={t("shared.workflowYaml.loadingEditor")} />}
             theme="light"
             schemas={schemas}
             {...props}

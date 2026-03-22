@@ -5,6 +5,7 @@ import {
   getSeverityBgClassName,
   UISeverity,
 } from "@/shared/ui/utils/severity-utils";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface IncidentSeverityMetricProps {
   severityMetrics: SeverityMetrics;
@@ -13,6 +14,7 @@ interface IncidentSeverityMetricProps {
 export const IncidentSeverityMetric: React.FC<IncidentSeverityMetricProps> = ({
   severityMetrics: severityMetric,
 }) => {
+  const { t } = useI18n();
   const sortedByValue = useMemo(() => {
     Object.entries(severityMetric);
     return Object.entries(severityMetric)
@@ -39,13 +41,21 @@ export const IncidentSeverityMetric: React.FC<IncidentSeverityMetricProps> = ({
     [sortedByValue]
   );
 
+  function translateSeverity(name: string): string {
+    const key = `incidents.severity.${name}` as const;
+    const translated = t(key);
+    return translated !== key ? translated : name;
+  }
+
   function formatIncidentsCount(count: number): string {
-    return count > 1 ? `${count} incidents` : `${count} incident`;
+    return count > 1
+      ? t("incidents.report.incidentCountPlural", { count })
+      : t("incidents.report.incidentCountSingle");
   }
 
   return (
     <div className="break-inside-avoid text-lg">
-      <p className="font-bold mb-2">Incidents severity:</p>
+      <p className="font-bold mb-2">{t("incidents.report.incidentsSeverity")}</p>
       <div className="flex items-center gap-10">
         <DonutChart
           className="w-48 h-48"
@@ -61,7 +71,7 @@ export const IncidentSeverityMetric: React.FC<IncidentSeverityMetricProps> = ({
                 className={`min-w-5 h-3 mt-2 ${severityBgColorDictionary[chartValue.name]}`}
               ></div>
               <div>
-                <span className="font-bold">{chartValue.name}</span> -{" "}
+                <span className="font-bold">{translateSeverity(chartValue.name)}</span> -{" "}
                 <span>{formatIncidentsCount(chartValue.value)}</span>
               </div>
             </div>

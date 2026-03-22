@@ -4,8 +4,10 @@ import { Button, Divider, Icon, Subtitle, Text } from "@tremor/react";
 import { BackspaceIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { TextInput } from "@/components/ui";
 import { EditorLayout } from "./StepEditor";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function WorkflowEditorV2() {
+  const { t } = useI18n();
   const {
     v2Properties: properties,
     updateV2Properties,
@@ -46,7 +48,7 @@ export function WorkflowEditorV2() {
   return (
     <EditorLayout>
       <Subtitle className="font-medium flex items-baseline justify-between">
-        Workflow Settings
+        {t("workflows.builder.workflowSettings")}
       </Subtitle>
       <div className="flex flex-col gap-2">
         {propertyKeys.map((key, index) => {
@@ -93,7 +95,7 @@ export function WorkflowEditorV2() {
                             className="flex items-center mt-1"
                           >
                             <TextInput
-                              placeholder={`Key ${constKey}`}
+                              placeholder={`${t("common.labels.key")} ${constKey}`}
                               value={constKey}
                               onChange={(e) => {
                                 const updatedConsts = {
@@ -107,7 +109,7 @@ export function WorkflowEditorV2() {
                               }}
                             />
                             <TextInput
-                              placeholder={`Value ${constValue}`}
+                              placeholder={`${t("common.labels.value")} ${constValue}`}
                               value={constValue}
                               onChange={(e) => {
                                 const updatedConsts = {
@@ -123,7 +125,7 @@ export function WorkflowEditorV2() {
                               icon={BackspaceIcon}
                               className="cursor-pointer"
                               color="red"
-                              tooltip={`Remove ${constKey}`}
+                              tooltip={`${t("common.actions.remove")} ${constKey}`}
                               onClick={() => {
                                 const updatedConsts = {
                                   ...(properties[key] as {
@@ -144,14 +146,14 @@ export function WorkflowEditorV2() {
                           color="gray"
                           icon={PlusIcon}
                         >
-                          Add Constant
+                          {t("workflows.builder.addConstant")}
                         </Button>
                       </div>
                     );
                   default:
                     return (
                       <TextInput
-                        placeholder={`Set the ${key}`}
+                        placeholder={`${t("workflows.builder.setPropertyPlaceholder")} ${key}`}
                         onChange={(e: any) => handleChange(key, e.target.value)}
                         value={properties[key] || ("" as string)}
                         error={!!error}

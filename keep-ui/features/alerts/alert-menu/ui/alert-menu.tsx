@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/ImagePreviewTooltip";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface Props {
   alert: AlertDto;
@@ -86,6 +87,7 @@ export function AlertMenu({
   const api = useApi();
   const router = useRouter();
   const { data: appConfig } = useConfig();
+  const { t } = useI18n();
   const { data: executions } = appConfig?.KEEP_WF_LIST_EXTENDED_INFO === true
     ? useWorkflowExecutions()
     : { data: [] };
@@ -245,11 +247,13 @@ export function AlertMenu({
         )}
         tooltip={
           viewedAlert
-            ? `Viewed ${format(
-                new Date(viewedAlert.viewedAt),
-                "MMM d, yyyy HH:mm"
-              )}`
-            : "View Alert Payload"
+            ? t("alerts.menu.viewed", {
+                date: format(
+                  new Date(viewedAlert.viewedAt),
+                  "MMM d, yyyy HH:mm"
+                ),
+              })
+            : t("alerts.menu.viewAlertPayload")
         }
       />
       {/* Expand button */}
@@ -269,7 +273,7 @@ export function AlertMenu({
             )}
           />
         )}
-        tooltip={expanded ? "Collapse Row" : "Expand Row"}
+        tooltip={expanded ? t("alerts.menu.collapseRow") : t("alerts.menu.expandRow")}
       />
       {imageUrl && !imageError && (
         <div
@@ -278,13 +282,13 @@ export function AlertMenu({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleImageClick}
-          title="View Image"
+          title={t("alerts.menu.viewImage")}
         >
           {/* because we'll have to start managing every external static asset url (datadog/grafana/etc.) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
-            alt="Preview"
+            alt={t("alerts.menu.preview")}
             className="h-4 w-4 object-cover rounded prevent-row-click max-w-none"
             onError={() => setImageError(true)}
           />
@@ -298,7 +302,7 @@ export function AlertMenu({
             window.open(url || generatorURL, "_blank");
           }}
           className={actionIconButtonClassName}
-          tooltip="Open Original Alert"
+          tooltip={t("alerts.menu.openOriginalAlert")}
           icon={() => (
             <Icon icon={LinkIcon} className="w-4 h-4 text-gray-500" />
           )}
@@ -318,10 +322,12 @@ export function AlertMenu({
           className={actionIconButtonClassName}
           tooltip={
             ticketUrl
-              ? `Ticket Assigned ${
-                  ticketStatus ? `(status: ${ticketStatus})` : ""
-                }`
-              : "Assign Ticket"
+              ? t("alerts.menu.ticketAssigned", {
+                  status: ticketStatus
+                    ? `(status: ${ticketStatus})`
+                    : "",
+                })
+              : t("alerts.menu.assignTicket")
           }
           icon={() => (
             <Icon
@@ -341,7 +347,7 @@ export function AlertMenu({
             window.open(playbook_url, "_blank");
           }}
           className={actionIconButtonClassName}
-          tooltip="View Playbook"
+          tooltip={t("alerts.menu.viewPlaybook")}
           icon={() => (
             <Icon icon={BookOpenIcon} className="w-4 h-4 text-gray-500" />
           )}
@@ -355,7 +361,7 @@ export function AlertMenu({
             setNoteModalAlert(alert);
           }}
           className={actionIconButtonClassName}
-          tooltip={note ? "Edit Note" : "Add Note"}
+          tooltip={note ? t("alerts.menu.editNote") : t("alerts.menu.addNote")}
           icon={() => (
             <Icon
               icon={note ? RiStickyNoteLine : RiStickyNoteAddLine}
@@ -375,12 +381,13 @@ export function AlertMenu({
             );
           }}
           className={actionIconButtonClassName}
-          tooltip={`Workflow ${
-            relevantWorkflowExecution.workflow_status
-          } at ${format(
-            new Date(relevantWorkflowExecution.workflow_started),
-            "MMM d, yyyy HH:mm"
-          )}`}
+          tooltip={t("alerts.menu.workflowStatus", {
+            status: relevantWorkflowExecution.workflow_status,
+            date: format(
+              new Date(relevantWorkflowExecution.workflow_started),
+              "MMM d, yyyy HH:mm"
+            ),
+          })}
           icon={() => (
             <Icon
               icon={
@@ -415,9 +422,7 @@ export function AlertMenu({
   const callAssignEndpoint = useCallback(
     async (unassign: boolean = false) => {
       if (
-        confirm(
-          "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
-        )
+        confirm(t("alerts.menu.selfAssignConfirm"))
       ) {
         const lastReceived =
           typeof alert.lastReceived === "string"
@@ -463,12 +468,12 @@ export function AlertMenu({
     () => [
       {
         icon: PlayIcon,
-        label: "Run Workflow",
+        label: t("alerts.menu.runWorkflow"),
         onClick: () => setRunWorkflowModalAlert?.(alert),
       },
       {
         icon: PlusIcon,
-        label: "Workflow",
+        label: t("alerts.menu.workflow"),
         onClick: () =>
           router.push(
             `/workflows/builder?alertName=${encodeURIComponent(
@@ -479,13 +484,13 @@ export function AlertMenu({
       },
       {
         icon: ArchiveBoxIcon,
-        label: "History",
+        label: t("alerts.menu.history"),
         onClick: () =>
           updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
       },
       {
         icon: AdjustmentsHorizontalIcon,
-        label: "Enrich",
+        label: t("alerts.menu.enrich"),
         onClick: () =>
           updateUrl({
             newParams: {
@@ -496,13 +501,13 @@ export function AlertMenu({
       },
       {
         icon: UserPlusIcon,
-        label: "Self-Assign",
+        label: t("alerts.menu.selfAssign"),
         onClick: () => callAssignEndpoint(),
         show: canAssign,
       },
       {
         icon: EyeIcon,
-        label: "View Alert",
+        label: t("alerts.menu.viewAlert"),
         onClick: openAlertPayloadModal,
       },
       ...(provider?.methods?.map((method) => ({
@@ -521,17 +526,17 @@ export function AlertMenu({
       })) ?? []),
       {
         icon: IoNotificationsOffOutline,
-        label: alert.dismissed ? "Restore" : "Dismiss",
+        label: alert.dismissed ? t("alerts.menu.restore") : t("alerts.menu.dismiss"),
         onClick: onDismiss,
       },
       {
         icon: ChevronDoubleRightIcon,
-        label: "Change Status",
+        label: t("alerts.menu.changeStatus"),
         onClick: () => setChangeStatusAlert?.(alert),
       },
       {
         icon: PlusIcon,
-        label: "Correlate Incident",
+        label: t("alerts.menu.correlateIncident"),
         onClick: () => setIsIncidentSelectorOpen?.(true),
         show: !!setIsIncidentSelectorOpen,
       },
@@ -551,6 +556,7 @@ export function AlertMenu({
       isMethodEnabled,
       openMethodModal,
       setChangeStatusAlert,
+      t,
     ]
   );
 

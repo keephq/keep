@@ -41,6 +41,7 @@ export const Facet: React.FC<FacetProps> = ({
     "Assignee": t("labels.assignee"),
     "Service": t("labels.service"),
     "Linked incident": t("labels.linkedIncident"),
+    "Dismissed": t("facets.dismissed"),
   };
   const displayName = facetNameMap[facet.name] || facet.name;
 
@@ -247,7 +248,7 @@ export const Facet: React.FC<FacetProps> = ({
     if (!optionsToRender.length) {
       return (
         <div className="px-2 py-1 text-sm text-gray-500 italic">
-          No matching values found
+          {tAlerts("messages.noMatchingValues")}
         </div>
       );
     }
@@ -289,7 +290,7 @@ export const Facet: React.FC<FacetProps> = ({
             <div className="px-2 mb-1">
               <input
                 type="text"
-                placeholder="Filter values..."
+                placeholder={tAlerts("messages.filterValues")}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded"

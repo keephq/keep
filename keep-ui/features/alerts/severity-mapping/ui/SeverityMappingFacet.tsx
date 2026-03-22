@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { Button, Text, Title } from "@tremor/react";
 import { SeverityMappingConfig } from "@/entities/alerts/model/useSeverityMapping";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface SeverityMappingFacetProps {
   config: SeverityMappingConfig;
@@ -12,6 +13,7 @@ export function SeverityMappingFacet({
   config,
   onCelChange,
 }: SeverityMappingFacetProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(true);
   const mappingEntries = Object.entries(config.mappings);
   const [selected, setSelected] = useState<Record<string, boolean>>(() =>
@@ -127,7 +129,7 @@ export function SeverityMappingFacet({
                     }}
                     className="hidden group-hover:block !p-0 !text-xs"
                   >
-                    {isExclusive ? "All" : "Only"}
+                    {isExclusive ? t("alerts.messages.all") : t("alerts.messages.only")}
                   </Button>
                 </div>
               </div>

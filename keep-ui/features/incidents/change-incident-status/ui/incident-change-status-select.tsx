@@ -5,6 +5,7 @@ import Select, { ClassNamesConfig } from "react-select";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capitalize } from "@/utils/helpers";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const customClassNames: ClassNamesConfig<any, false, any> = {
   container: () => "inline-flex",
@@ -39,6 +40,7 @@ export function IncidentChangeStatusSelect({
   onChange,
   className,
 }: Props) {
+  const { t } = useI18n();
   // Use a portal to render the menu outside the table container with overflow: hidden
   const menuPortalTarget = useRef<HTMLElement | null>(null);
   const [isDisabled, setIsDisabled] = useState(false);
@@ -56,7 +58,7 @@ export function IncidentChangeStatusSelect({
           label: (
             <div className="flex items-center">
               {STATUS_ICONS[status]}
-              <span>{capitalize(status)}</span>
+              <span>{t(`incidents.status.${status.toLowerCase()}` as const)}</span>
             </div>
           ),
         })),
@@ -90,7 +92,7 @@ export function IncidentChangeStatusSelect({
       value={selectedOption}
       onChange={handleChange}
       isDisabled={isDisabled}
-      placeholder="Status"
+      placeholder={t("incidents.status.title")}
       classNames={customClassNames}
       menuPortalTarget={menuPortalTarget.current}
       menuPosition="fixed"

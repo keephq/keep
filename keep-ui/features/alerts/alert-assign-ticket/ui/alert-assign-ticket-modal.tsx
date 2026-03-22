@@ -9,6 +9,7 @@ import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface AlertAssignTicketModalProps {
   handleClose: () => void;
@@ -39,6 +40,7 @@ export const AlertAssignTicketModal = ({
   ticketingProviders,
   alert,
 }: AlertAssignTicketModalProps) => {
+  const { t } = useI18n();
   const api = useApi();
   const {
     handleSubmit,
@@ -86,7 +88,7 @@ export const AlertAssignTicketModal = ({
     ...providerOptions,
     {
       value: "add_provider",
-      label: "Add another ticketing provider",
+      label: t("alerts.assignTicket.addAnotherProvider"),
       icon: "plus",
       isAddProvider: true,
       id: "add_provider",
@@ -156,7 +158,7 @@ export const AlertAssignTicketModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title="Assign Ticket"
+      title={t("alerts.actions.assignTicket")}
       beforeTitle={alert?.name}
       className="w-[400px]"
     >
@@ -166,18 +168,18 @@ export const AlertAssignTicketModal = ({
             <div className="mt-4">
               <div className="flex flex-row items-center mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Ticket Provider
+                  {t("alerts.assignTicket.ticketProvider")}
                 </label>
                 <Icon
                   icon={QuestionMarkCircleIcon}
-                  tooltip="Select a Ticketing provider from the list below, Keep will use the select provider and Ticket URL to enrich your alert."
+                  tooltip={t("alerts.assignTicket.ticketProviderTooltip")}
                   className="w-2 h-2 ml-2 z-[60]"
                 />
               </div>
               <Controller
                 name="provider"
                 control={control}
-                rules={{ required: "Provider is required" }}
+                rules={{ required: t("alerts.assignTicket.providerRequired") }}
                 render={({ field }) => (
                   // FIX: Select prevent modal from closing on Escape key
                   <Select
@@ -194,16 +196,16 @@ export const AlertAssignTicketModal = ({
             </div>
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700">
-                Ticket URL
+                {t("alerts.assignTicket.ticketUrl")}
               </label>
               <Controller
                 name="ticket_url"
                 control={control}
                 rules={{
-                  required: "URL is required",
+                  required: t("alerts.assignTicket.urlRequired"),
                   pattern: {
                     value: /^(https?|http):\/\/[^\s/$.?#].[^\s]*$/i,
-                    message: "Invalid URL format",
+                    message: t("alerts.assignTicket.urlInvalid"),
                   },
                 }}
                 render={({ field }) => (
@@ -211,7 +213,7 @@ export const AlertAssignTicketModal = ({
                     <TextInput
                       {...field}
                       className="w-full mt-1"
-                      placeholder="Ticket URL"
+                      placeholder={t("alerts.assignTicket.ticketUrlPlaceholder")}
                     />
                     {errors.ticket_url && (
                       <span className="text-red-500">
@@ -228,7 +230,7 @@ export const AlertAssignTicketModal = ({
                 variant="secondary"
                 color="orange"
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 color="orange"
@@ -236,15 +238,14 @@ export const AlertAssignTicketModal = ({
                 type="submit"
                 disabled={isSubmitting}
               >
-                Assign Ticket
+                {t("alerts.actions.assignTicket")}
               </Button>
             </div>
           </form>
         ) : (
           <div className="text-center mt-4">
             <Text className="text-gray-700 text-sm">
-              Please connect at least one ticketing provider to use this
-              feature.
+              {t("alerts.assignTicket.noProviderMessage")}
             </Text>
             <Button
               onClick={() =>
@@ -253,7 +254,7 @@ export const AlertAssignTicketModal = ({
               color="orange"
               className="mt-4 mr-4"
             >
-              <Text>Connect Ticketing Provider</Text>
+              <Text>{t("alerts.assignTicket.connectProvider")}</Text>
             </Button>
             <Button
               onClick={handleModalClose}
@@ -261,7 +262,7 @@ export const AlertAssignTicketModal = ({
               variant="secondary"
               className="mt-4 border border-orange-500 text-orange-500"
             >
-              Close
+              {t("common.actions.close")}
             </Button>
           </div>
         )}

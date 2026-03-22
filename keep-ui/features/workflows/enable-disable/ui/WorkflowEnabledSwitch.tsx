@@ -1,6 +1,7 @@
 import { useWorkflowStore } from "@/entities/workflows";
 import { Switch } from "@tremor/react";
 import { showErrorToast } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function WorkflowEnabledSwitch() {
   const { updateV2Properties, triggerSave } = useWorkflowStore();
@@ -9,15 +10,16 @@ export function WorkflowEnabledSwitch() {
   const isEnabled = useWorkflowStore(
     (state) => !!state.workflowId && !state.v2Properties?.disabled
   );
+  const { t } = useI18n();
   let tooltip = undefined;
   if (!isValid) {
-    tooltip = "Fix the errors in the workflow before enabling it";
+    tooltip = t("workflows.builder.fixErrorsBeforeEnabling");
   } else if (!isInitialized) {
-    tooltip = "Deploy the workflow before enabling it";
+    tooltip = t("workflows.builder.deployBeforeEnabling");
   } else if (isEnabled) {
-    tooltip = "The workflow is enabled";
+    tooltip = t("workflows.builder.workflowEnabled");
   } else {
-    tooltip = "The workflow is disabled";
+    tooltip = t("workflows.builder.workflowDisabled");
   }
   return (
     <div className="flex items-center gap-2 px-2">
@@ -27,7 +29,7 @@ export function WorkflowEnabledSwitch() {
         onChange={(flag) => {
           if (!isValid) {
             showErrorToast(
-              new Error("Fix the errors in the workflow before enabling it")
+              new Error(t("workflows.builder.fixErrorsBeforeEnabling"))
             );
             return;
           }
@@ -40,7 +42,7 @@ export function WorkflowEnabledSwitch() {
         disabled={!isValid}
       />
       <label className="text-sm" htmlFor="workflow-enabled-switch">
-        {isEnabled ? "Enabled" : "Disabled"}
+        {isEnabled ? t("common.labels.enabled") : t("common.labels.disabled")}
       </label>
     </div>
   );

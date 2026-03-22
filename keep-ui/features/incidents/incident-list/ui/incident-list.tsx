@@ -187,14 +187,14 @@ export function IncidentList({
         ),
         renderOptionLabel: (facetOption) => {
           if (!facetOption.display_name) {
-            return "Not assigned";
+            return t("incidents.overview.noAssignee");
           }
           return <AssigneeLabel email={facetOption.display_name} />;
         },
       },
       ["Dismissed"]: {
         renderOptionLabel: (facetOption) =>
-          facetOption.display_name === "true" ? "Dismissed" : "Not dismissed",
+          facetOption.display_name === "true" ? t("incidents.facets.dismissed") : t("incidents.facets.notDismissed"),
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={
@@ -214,8 +214,8 @@ export function IncidentList({
         renderOptionLabel: (facetOption) =>
           facetOption.display_name == "1" ||
           facetOption.display_name.toLocaleLowerCase() == "true"
-            ? "Yes"
-            : "No",
+            ? t("common.labels.yes")
+            : t("common.labels.no"),
       },
     };
   }, []);

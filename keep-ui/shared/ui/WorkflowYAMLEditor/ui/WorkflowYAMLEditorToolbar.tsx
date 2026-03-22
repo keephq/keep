@@ -2,6 +2,7 @@ import { Check, Copy, Download } from "lucide-react";
 import { Button } from "@tremor/react";
 import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export interface WorkflowYAMLEditorToolbarProps {
   onCopy: () => Promise<void>;
@@ -22,6 +23,7 @@ export function WorkflowYAMLEditorToolbar({
 }: WorkflowYAMLEditorToolbarProps) {
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const { t } = useI18n();
 
   useEffect(() => {
     return () => {
@@ -81,7 +83,7 @@ export function WorkflowYAMLEditorToolbar({
           variant="primary"
           data-testid="save-yaml-button"
         >
-          Save
+          {t("common.actions.save")}
         </Button>
       ) : null}
     </div>

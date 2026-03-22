@@ -256,12 +256,13 @@ const AlertBar: React.FC<AlertBarProps> = ({
 
 const IncidentTimelineNoAlerts: React.FC = () => {
   const router = useRouter();
+  const t = useTranslations("incidents");
   return (
     <div className="h-80">
       <EmptyStateCard
         icon={CiViewTimeline}
-        title="No Timeline Yet"
-        description="No alerts found for this incident. Go to the alerts feed and assign alerts to view the timeline."
+        title={t("timeline.noTimelineYet")}
+        description={t("timeline.noAlertsDescription")}
       >
         <Button
           color="orange"
@@ -269,7 +270,7 @@ const IncidentTimelineNoAlerts: React.FC = () => {
           size="md"
           onClick={() => router.push("/alerts/feed")}
         >
-          Assign Alerts
+          {t("timeline.assignAlerts")}
         </Button>
       </EmptyStateCard>
     </div>

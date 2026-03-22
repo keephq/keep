@@ -6,19 +6,21 @@ import {
   TableBody,
   TableCell,
 } from "@tremor/react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function AlertMethodResultsTable({
   results,
 }: {
   results: string[] | object[];
 }) {
+  const { t } = useI18n();
   const resultsAreObject = results.length > 0 && typeof results[0] === "object";
   return (
     <Table>
       <TableHead>
         <TableRow>
           {!resultsAreObject ? (
-            <TableHeaderCell>Results</TableHeaderCell>
+            <TableHeaderCell>{t("alerts.method.results")}</TableHeaderCell>
           ) : (
             Object.keys(results[0]).map((key, index) => {
               return <TableHeaderCell key={index}>{key}</TableHeaderCell>;

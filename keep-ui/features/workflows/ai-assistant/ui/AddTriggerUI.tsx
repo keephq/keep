@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import { useWorkflowStore } from "@/entities/workflows";
 import { Button } from "@/components/ui";
 import { JsonCard } from "@/shared/ui";
@@ -32,6 +33,7 @@ export const AddTriggerUI = ({
   respond,
   result,
 }: AddTriggerUIProps) => {
+  const { t } = useI18n();
   const [isAddingTrigger, setIsAddingTrigger] = useState(false);
   const { addNodeBetween, getNextEdge } = useWorkflowStore();
   const { data: config } = useConfig();
@@ -46,7 +48,7 @@ export const AddTriggerUI = ({
       if (!nextEdge) {
         respond?.({
           status: "error",
-          message: "Can't find the edge to add the trigger after",
+          message: t("workflows.aiAssistant.cantFindEdge"),
         });
         return;
       }
@@ -54,7 +56,7 @@ export const AddTriggerUI = ({
         addNodeBetween(nextEdge.id, trigger, "edge");
         respond?.({
           status: "complete",
-          message: "Trigger added",
+          message: t("workflows.aiAssistant.triggerAdded"),
         });
       } catch (e) {
         respond?.({
@@ -89,7 +91,7 @@ export const AddTriggerUI = ({
         {config?.KEEP_WORKFLOW_DEBUG && (
           <JsonCard title="trigger" json={trigger} />
         )}
-        <p>Do you want to add this trigger to the workflow?</p>
+        <p>{t("workflows.aiAssistant.confirmAddTrigger")}</p>
         <StepPreview step={trigger} />
         <SuggestionStatus status={result?.status} message={result?.message} />
       </div>
@@ -100,7 +102,7 @@ export const AddTriggerUI = ({
       {config?.KEEP_WORKFLOW_DEBUG && (
         <JsonCard title="trigger" json={trigger} />
       )}
-      <p>Do you want to add this trigger to the workflow?</p>
+      <p>{t("workflows.aiAssistant.confirmAddTrigger")}</p>
       <div className="flex flex-col gap-2 my-2">
         <StepPreview step={trigger} />
         <div className="flex gap-2">
@@ -112,18 +114,18 @@ export const AddTriggerUI = ({
               handleAddTrigger();
             }}
           >
-            {isAddingTrigger ? "Adding..." : "Add (⌘+Enter)"}
+            {isAddingTrigger ? t("workflows.aiAssistant.adding") : t("workflows.aiAssistant.addTrigger")}
           </Button>
           <Button
             variant="secondary"
             onClick={() =>
               respond?.({
                 status: "declined",
-                message: "Trigger suggestion declined",
+                message: t("workflows.aiAssistant.triggerSuggestionDeclined"),
               })
             }
           >
-            No
+            {t("workflows.aiAssistant.no")}
           </Button>
         </div>
       </div>

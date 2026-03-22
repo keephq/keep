@@ -7,6 +7,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/20/solid";
 import clsx from "clsx";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const severityOrder = ["error", "warning", "info"];
 
@@ -19,6 +20,8 @@ export function WorkflowYAMLValidationErrors({
   validationErrors: YamlValidationError[] | null;
   onErrorClick?: (error: YamlValidationError) => void;
 }) {
+  const { t } = useI18n();
+
   if (!isMounted) {
     return (
       <div
@@ -26,7 +29,7 @@ export function WorkflowYAMLValidationErrors({
         data-testid="wf-yaml-editor-validation-errors-loading"
       >
         <Loader2Icon className="h-4 w-4 animate-spin shrink-0 mt-0.5" />
-        Loading editor...
+        {t("shared.workflowYaml.loadingEditorShort")}
       </div>
     );
   }
@@ -37,7 +40,7 @@ export function WorkflowYAMLValidationErrors({
         data-testid="wf-yaml-editor-validation-errors-initializing"
       >
         <Loader2Icon className="h-4 w-4 animate-spin shrink-0 mt-0.5" />
-        Initializing validation...
+        {t("shared.workflowYaml.initializingValidation")}
       </div>
     );
   }
@@ -63,7 +66,7 @@ export function WorkflowYAMLValidationErrors({
         data-testid="wf-yaml-editor-validation-errors-no-errors"
       >
         <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-        No validation errors
+        {t("shared.workflowYaml.noValidationErrors")}
       </div>
     );
   }
@@ -93,9 +96,11 @@ export function WorkflowYAMLValidationErrors({
         className="text-sm cursor-pointer hover:underline gap-1 px-4 py-1"
         data-testid="wf-yaml-editor-validation-errors-summary"
       >
-        {`${validationErrors.length} validation ${
-          validationErrors.length === 1 ? "error" : "errors"
-        }`}
+        {`${validationErrors.length} ${t(
+          validationErrors.length === 1
+            ? "shared.workflowYaml.validationError"
+            : "shared.workflowYaml.validationErrors"
+        )}`}
       </summary>
       <div
         className="flex flex-col"

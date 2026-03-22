@@ -5,6 +5,8 @@ import { useIncidentActions, Status } from "@/entities/incidents/model";
 import { useMemo, useState } from "react";
 import { Select, VerticalRoundedList } from "@/shared/ui";
 import { IncidentIconName } from "@/entities/incidents/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
+
 interface Props {
   incidents: IncidentDto[];
   handleClose: () => void;
@@ -49,6 +51,7 @@ export function MergeIncidentsModal({
   }, [sourceIncidents]);
 
   const { mergeIncidents } = useIncidentActions();
+  const { t } = useI18n();
   const handleMerge = () => {
     mergeIncidents(sourceIncidents, destinationIncident!);
     handleClose();
@@ -59,19 +62,18 @@ export function MergeIncidentsModal({
     <Modal onClose={handleClose} isOpen={true}>
       <div className="flex flex-col gap-5">
         <div>
-          <Title>Merge Incidents</Title>
+          <Title>{t("incidents.merge.title")}</Title>
           <Subtitle>
-            Alerts from the following incidents will be moved into the
-            destination incident and the source incidents would be marked as{" "}
-            <b>Merged</b>
+            {t("incidents.merge.description")}{" "}
+            <b>{t("incidents.merge.merged")}</b>
           </Subtitle>
         </div>
         <div>
           <div className="mb-1">
-            <span className="font-bold">Source Incidents</span>
+            <span className="font-bold">{t("incidents.merge.sourceIncidents")}</span>
             {errors.alreadyMerged && (
               <p className="text-red-500 text-sm mt-1">
-                These incidents were already merged
+                {t("incidents.merge.alreadyMerged")}
               </p>
             )}
           </div>
@@ -83,27 +85,27 @@ export function MergeIncidentsModal({
         </div>
         <div>
           <div className="mb-1">
-            <span className="font-bold">Destination Incident</span>
+            <span className="font-bold">{t("incidents.merge.destinationIncident")}</span>
           </div>
           <Select
             instanceId="merge-incidents-destination-incident-select"
             options={incidentOptions}
             value={selectValue}
             onChange={(option) => setDestinationIncidentId(option!.value)}
-            placeholder="Select destination incident"
+            placeholder={t("incidents.merge.selectDestination")}
           />
         </div>
       </div>
       <div className="flex justify-end mt-4 gap-2">
         <Button onClick={handleClose} color="orange" variant="secondary">
-          Cancel
+          {t("common.actions.cancel")}
         </Button>
         <Button
           onClick={handleMerge}
           color="orange"
           disabled={Object.values(errors).length != 0}
         >
-          Confirm merge
+          {t("incidents.merge.confirmMerge")}
         </Button>
       </div>
     </Modal>

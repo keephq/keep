@@ -5,6 +5,7 @@ import {
   useSeverityMapping,
 } from "@/entities/alerts/model/useSeverityMapping";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface MappingEntry {
   value: string;
@@ -19,6 +20,7 @@ export function SeverityMappingSelection({
   onClose?: () => void;
 }) {
   const { severityMapping, setSeverityMapping } = useSeverityMapping();
+  const { t } = useI18n();
 
   const [enabled, setEnabled] = useState(severityMapping.enabled);
   const [sourceField, setSourceField] = useState(severityMapping.sourceField);
@@ -71,7 +73,7 @@ export function SeverityMappingSelection({
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-hidden flex flex-col">
         <span className="text-gray-400 text-sm mb-2">
-          Map alert field values to custom bar colors
+          {t("alerts.severityMapping.mapFieldValues")}
         </span>
 
         <label className="flex items-center gap-2 mb-3 cursor-pointer">
@@ -81,14 +83,14 @@ export function SeverityMappingSelection({
             onChange={(e) => setEnabled(e.target.checked)}
             className="rounded border-gray-300"
           />
-          <span className="text-sm">Enable custom severity mapping</span>
+          <span className="text-sm">{t("alerts.severityMapping.enableCustomMapping")}</span>
         </label>
 
         {enabled && (
           <>
             <div className="mb-3">
               <label className="text-sm text-gray-500 mb-1 block">
-                Source field
+                {t("alerts.severityMapping.sourceField")}
               </label>
               <TextInput
                 placeholder="e.g. priority"
@@ -99,7 +101,7 @@ export function SeverityMappingSelection({
 
             <div className="flex-1 overflow-y-auto">
               <label className="text-sm text-gray-500 mb-1 block">
-                Value → Color
+                {t("alerts.severityMapping.valueToColor")}
               </label>
               <div className="space-y-2">
                 {entries.map((entry, index) => (
@@ -119,7 +121,7 @@ export function SeverityMappingSelection({
                     <button
                       onClick={() => removeEntry(index)}
                       className="p-1 text-gray-400 hover:text-red-500"
-                      aria-label="Remove mapping"
+                      aria-label={t("alerts.severityMapping.removeMapping")}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -134,7 +136,7 @@ export function SeverityMappingSelection({
                 className="mt-2"
                 onClick={addEntry}
               >
-                + Add mapping
+                + {t("alerts.severityMapping.addMapping")}
               </Button>
             </div>
           </>
@@ -142,7 +144,7 @@ export function SeverityMappingSelection({
       </div>
 
       <Button className="mt-4" color="orange" onClick={handleApply}>
-        Apply
+        {t("common.actions.apply")}
       </Button>
     </div>
   );

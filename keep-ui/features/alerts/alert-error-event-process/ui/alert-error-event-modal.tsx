@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   Card,
   Text,
@@ -31,6 +32,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t } = useI18n();
   const { useErrorAlerts } = useAlerts();
   const { data: errorAlerts, dismissErrorAlerts } = useErrorAlerts();
   const [selectedAlertId, setSelectedAlertId] = useState<string>("");
@@ -103,7 +105,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
       className="w-[80%] max-w-screen-2xl max-h-[80vh] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
     >
       <div className="flex justify-between items-center mb-4">
-        <Title>Events failed to process ({errorAlerts?.length || 0})</Title>
+        <Title>{t("alerts.errorEvent.title")} ({errorAlerts?.length || 0})</Title>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -129,7 +131,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
               <Select
                 value={selectedAlertId}
                 onValueChange={handleAlertChange}
-                placeholder="Select an error alert"
+                placeholder={t("alerts.errorEvent.selectAlert")}
               >
                 {errorAlerts.map((alert: ErrorAlert, index: number) => (
                   <SelectItem key={index} value={index.toString()}>
@@ -145,7 +147,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
                         />
                       </div>
                       <span>
-                        Event from {alert.provider_type || "unknown provider"}
+                        {t("alerts.errorEvent.eventFrom")} {alert.provider_type || t("alerts.errorEvent.unknownProvider")}
                       </span>
                     </div>
                   </SelectItem>
@@ -159,7 +161,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
                 onClick={handleDismissSelected}
                 disabled={isDismissing || !selectedAlert}
               >
-                {isDismissing ? "Dismissing..." : "Dismiss current alert"}
+                {isDismissing ? t("alerts.errorEvent.dismissing") : t("alerts.errorEvent.dismissCurrent")}
               </Button>
               <Button
                 size="xs"
@@ -168,7 +170,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
                 onClick={handleDismissAll}
                 disabled={isDismissing}
               >
-                {isDismissing ? "Dismissing..." : "Dismiss All"}
+                {isDismissing ? t("alerts.errorEvent.dismissing") : t("alerts.errorEvent.dismissAll")}
               </Button>
             </div>
           </div>
@@ -186,29 +188,29 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
                   </div>
                 )}
                 <Title>
-                  Error parsing event{" "}
+                  {t("alerts.errorEvent.errorParsingEvent")}{" "}
                   {selectedAlert.provider_type
-                    ? `from ${selectedAlert.provider_type}`
+                    ? `${t("alerts.errorEvent.from")} ${selectedAlert.provider_type}`
                     : ""}
                 </Title>
               </div>
 
               <div className="mb-4">
-                <Subtitle>Timestamp</Subtitle>
+                <Subtitle>{t("alerts.errorEvent.timestamp")}</Subtitle>
                 <Badge color="orange">
                   {formatDate(selectedAlert.timestamp)}
                 </Badge>
               </div>
 
               <div>
-                <Subtitle>Raw Event Data</Subtitle>
+                <Subtitle>{t("alerts.errorEvent.rawEventData")}</Subtitle>
                 <pre className="mt-1 p-3 bg-gray-100 rounded-md text-xs overflow-x-auto whitespace-pre-wrap">
                   {JSON.stringify(selectedAlert.event, null, 2)}
                 </pre>
               </div>
 
               <div className="mb-4 mt-4">
-                <Subtitle>Stack Trace</Subtitle>
+                <Subtitle>{t("alerts.errorEvent.stackTrace")}</Subtitle>
                 <pre className="mt-1 p-3 bg-gray-100 rounded-md text-xs overflow-x-auto whitespace-pre-wrap">
                   {selectedAlert.error_message}
                 </pre>
@@ -217,7 +219,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
           )}
         </>
       ) : (
-        <Text className="text-center py-8">No error alerts found</Text>
+        <Text className="text-center py-8">{t("alerts.errorEvent.noErrorAlerts")}</Text>
       )}
     </Modal>
   );

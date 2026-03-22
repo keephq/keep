@@ -9,8 +9,10 @@ import { WorkflowEditorV2 } from "./WorkflowEditor";
 import { TriggerEditor } from "./TriggerEditor";
 import { WorkflowStatus } from "../workflow-status";
 import { triggerTypes } from "../../lib/utils";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const ReactFlowEditor = () => {
+  const { t } = useI18n();
   const { selectedNode, selectedEdge, setEditorOpen, editorOpen } =
     useWorkflowStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,7 @@ const ReactFlowEditor = () => {
             className="flex justify-center items-center bg-white w-full h-full border-b border-l rounded-bl-lg shadow-md"
             onClick={() => setEditorOpen(true)}
             data-testid="wf-open-editor-button"
-            title="Show step editor"
+            title={t("workflows.builder.showStepEditor")}
           >
             <Cog8ToothIcon className="size-5" />
           </button>
@@ -73,7 +75,7 @@ const ReactFlowEditor = () => {
               className="flex justify-center bg-white items-center w-full h-full border-b border-l rounded-bl-lg shadow-md"
               onClick={() => setEditorOpen(false)}
               data-testid="wf-close-editor-button"
-              title="Hide step editor"
+              title={t("workflows.builder.hideStepEditor")}
             >
               <ChevronRightIcon className="size-5" />
             </button>

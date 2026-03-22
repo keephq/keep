@@ -2,6 +2,7 @@ import React from "react";
 import { IncidentData } from "./models";
 import { IncidentSeverityMetric } from "./incident-severity-metric";
 import { PieChart } from "./pie-chart";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface IncidentsReportProps {
   incidentsReportData: IncidentData;
@@ -10,6 +11,8 @@ interface IncidentsReportProps {
 export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   incidentsReportData,
 }) => {
+  const { t } = useI18n();
+
   function convertSeconds(secondsValue: number): string {
     const result = [];
 
@@ -65,7 +68,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderMainReasons(): React.JSX.Element {
     return (
       <div className="break-inside-avoid incidents-main-reasons text-lg">
-        <p className="font-bold mb-2">Most of the incidents reasons:</p>
+        <p className="font-bold mb-2">{t("incidents.report.mostCommonReasons")}</p>
         <PieChart
           formatCount={formatIncidentsCount}
           data={Object.entries(
@@ -82,7 +85,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderAffectedServices(): React.JSX.Element {
     return (
       <div className="break-inside-avoid text-lg">
-        <p className="font-bold mb-2">Affected services:</p>
+        <p className="font-bold mb-2">{t("incidents.report.affectedServices")}</p>
         <PieChart
           formatCount={formatIncidentsCount}
           data={Object.entries(
@@ -99,7 +102,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderRecurringIncidents(): React.JSX.Element {
     return (
       <div className="text-lg break-inside-avoid">
-        <p className="font-bold mb-2">Recurring incidents:</p>
+        <p className="font-bold mb-2">{t("incidents.report.recurringIncidents")}</p>
         <PieChart
           formatCount={formatIncidentsCount}
           data={incidentsReportData?.recurring_incidents.map(
@@ -116,24 +119,24 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderTimeMetrics(): React.JSX.Element {
     return (
       <div className="break-inside-avoid">
-        <p className="font-bold text-lg">Incident Metrics:</p>
+        <p className="font-bold text-lg">{t("incidents.report.incidentMetrics")}</p>
         <div className="pl-4">
           {renderTimeMetric(
-            "Mean Time To Detect (MTTD)",
+            t("incidents.report.mTTD"),
             incidentsReportData?.mean_time_to_detect_seconds
           )}
           {renderTimeMetric(
-            "Mean Time To Resolve (MTTR)",
+            t("incidents.report.mTTR"),
             incidentsReportData?.mean_time_to_resolve_seconds
           )}
           {incidentsReportData?.incident_durations &&
             renderTimeMetric(
-              "Shortest Incident Duration",
+              t("incidents.report.shortestDuration"),
               incidentsReportData?.incident_durations?.shortest_duration_seconds
             )}
           {incidentsReportData?.incident_durations &&
             renderTimeMetric(
-              "Longest Incident Duration",
+              t("incidents.report.longestDuration"),
               incidentsReportData?.incident_durations?.longest_duration_seconds
             )}
         </div>

@@ -13,6 +13,7 @@ import type { GroupBase, SingleValueProps } from "react-select";
 import { components } from "react-select";
 import { Select } from "@/shared/ui";
 import { INCIDENT_PAGINATION_OPTIONS } from "@/entities/incidents/model/models";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 type Props = {
   table: Table<any>;
@@ -36,6 +37,7 @@ const SingleValue = ({
 );
 
 export function TablePagination({ table }: Props) {
+  const { t } = useI18n();
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
 
@@ -44,7 +46,10 @@ export function TablePagination({ table }: Props) {
       <Text>
         {pageCount ? (
           <>
-            Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
+            {t("shared.pagination.showingOf", {
+              current: pageCount === 0 ? 0 : pageIndex + 1,
+              total: pageCount,
+            })}
           </>
         ) : null}
       </Text>

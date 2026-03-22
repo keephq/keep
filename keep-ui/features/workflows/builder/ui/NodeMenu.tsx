@@ -5,6 +5,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import { useWorkflowStore } from "@/entities/workflows";
 import { IoMdSettings } from "react-icons/io";
 import { FlowNode } from "@/entities/workflows/model/types";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export default function NodeMenu({
   data,
@@ -13,6 +14,7 @@ export default function NodeMenu({
   data: FlowNode["data"];
   id: string;
 }) {
+  const { t } = useI18n();
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
@@ -57,7 +59,7 @@ export default function NodeMenu({
                       } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     >
                       <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Delete
+                      {t("common.actions.delete")}
                     </button>
                   )}
                 </Menu.Item>
@@ -76,7 +78,7 @@ export default function NodeMenu({
                         className="mr-2 h-4 w-4"
                         aria-hidden="true"
                       />
-                      Properties
+                      {t("workflows.builder.properties")}
                     </button>
                   )}
                 </Menu.Item>

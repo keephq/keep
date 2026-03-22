@@ -7,6 +7,7 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { Select } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface ChangeSameIncidentInThePastFormProps {
   incident: IncidentDto;
@@ -29,6 +30,7 @@ export function ChangeSameIncidentInThePastForm({
     linkedIncident?.id
   );
   const { updateIncident, mutateIncidentsList } = useIncidentActions();
+  const { t } = useI18n();
   const router = useRouter();
   usePollIncidents(mutateIncidentsList);
 
@@ -70,7 +72,7 @@ export function ChangeSameIncidentInThePastForm({
       return (
         <div className="flex flex-col items-center justify-center gap-y-8 h-full">
           <div className="text-center space-y-3">
-            <Title className="text-2xl">No Incidents Yet</Title>
+            <Title className="text-2xl">{t("incidents.placeholder.noIncidentsYet")}</Title>
           </div>
 
           <div className="flex items-center justify-between w-full gap-6">
@@ -79,7 +81,7 @@ export function ChangeSameIncidentInThePastForm({
               color="orange"
               onClick={() => router.push("/incidents")}
             >
-              Incidents page
+              {t("nav.incidents")}
             </Button>
           </div>
         </div>
@@ -95,7 +97,7 @@ export function ChangeSameIncidentInThePastForm({
         <Select
           instanceId="change-same-incident-in-the-past-select"
           className="my-2.5"
-          placeholder="Select incident"
+          placeholder={t("incidents.sameIncident.selectIncident")}
           value={
             selectedIncidentInstance
               ? {
@@ -125,7 +127,7 @@ export function ChangeSameIncidentInThePastForm({
               onClick={handleUnlinkIncident}
               disabled={selectedIncident === null}
             >
-              Unlink
+              {t("incidents.sameIncident.unlink")}
             </Button>
           )}
           <Button
@@ -133,7 +135,7 @@ export function ChangeSameIncidentInThePastForm({
             onClick={handleLinkIncident}
             disabled={selectedIncident === null}
           >
-            Link and help AI
+            {t("incidents.sameIncident.linkAndHelpAI")}
           </Button>
         </div>
       </form>

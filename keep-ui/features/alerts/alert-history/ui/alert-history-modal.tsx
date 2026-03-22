@@ -10,6 +10,7 @@ import { toDateObjectWithFallback } from "@/utils/helpers";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import { AlertNoteModal } from "@/features/alerts/alert-note";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
@@ -23,6 +24,7 @@ const AlertHistoryPanel = ({
   presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
+  const { t } = useI18n();
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>(null);
 
   const additionalColsToGenerate = [
@@ -78,19 +80,19 @@ const AlertHistoryPanel = ({
       <Flex alignItems="center" justifyContent="between">
         <div className="w-11/12">
           <Title className="truncate">
-            History of: {alertsHistoryWithDate.at(0)?.name}
+            {t("alerts.history.titleOf")}: {alertsHistoryWithDate.at(0)?.name}
           </Title>
           <Subtitle>
-            Showing: {alertsHistoryWithDate.length} alerts (1000 maximum)
+            {t("alerts.history.showing")}: {alertsHistoryWithDate.length} {t("alerts.history.alerts")} (1000 {t("alerts.history.maximum")})
           </Subtitle>
-          <Subtitle>First Occurence: {minLastReceived.toString()}</Subtitle>
-          <Subtitle>Last Occurence: {maxLastReceived.toString()}</Subtitle>
+          <Subtitle>{t("alerts.history.firstOccurrence")}: {minLastReceived.toString()}</Subtitle>
+          <Subtitle>{t("alerts.history.lastOccurrence")}: {maxLastReceived.toString()}</Subtitle>
         </div>
         <Button
           className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
           onClick={() => router.replace(`/alerts/${presetName.toLowerCase()}`)}
         >
-          Close
+          {t("common.actions.close")}
         </Button>
       </Flex>
       <Divider />

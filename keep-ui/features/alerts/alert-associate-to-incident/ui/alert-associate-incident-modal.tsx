@@ -13,6 +13,7 @@ import {
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast } from "@/shared/ui";
 import { IncidentDto, Status } from "@/entities/incidents/model";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const AlertAssociateIncidentModal = ({
   handleClose,
   alerts,
 }: AlertAssociateIncidentModalProps) => {
+  const { t } = useI18n();
   const [createIncident, setCreateIncident] = useState(false);
 
   const {
@@ -50,11 +52,11 @@ export const AlertAssociateIncidentModal = ({
         );
         handleSuccess();
         await mutate();
-        toast.success("Alerts associated with incident successfully");
+        toast.success(t("alerts.associateIncident.toastSuccess"));
       } catch (error) {
         showErrorToast(
           error,
-          "Failed to associated alerts with incident, please contact us if this issue persists."
+          t("alerts.associateIncident.toastFailed")
         );
       }
     },
@@ -106,14 +108,14 @@ export const AlertAssociateIncidentModal = ({
     if (!incidents || incidents.items.length === 0) {
       return (
         <div className="flex flex-col">
-          <Title className="text-md text-gray-500 my-4">No incidents yet</Title>
+          <Title className="text-md text-gray-500 my-4">{t("alerts.associateIncident.noIncidents")}</Title>
 
           <Button
             className="flex-1"
             color="orange"
             onClick={showCreateIncidentForm}
           >
-            Create a new incident
+            {t("alerts.associateIncident.createNew")}
           </Button>
         </div>
       );
@@ -127,7 +129,7 @@ export const AlertAssociateIncidentModal = ({
       <div className="h-full justify-center">
         <Select
           className="my-2.5"
-          placeholder="Select incident"
+          placeholder={t("alerts.associateIncident.selectIncident")}
           value={
             selectedIncidentInstance
               ? {
@@ -152,7 +154,7 @@ export const AlertAssociateIncidentModal = ({
             onClick={handleAssociateAlerts}
             disabled={!selectedIncidentInstance}
           >
-            Associate {alerts.length} alert{alerts.length > 1 ? "s" : ""}
+            {t("alerts.associateIncident.associateButton", { count: alerts.length })}
           </Button>
 
           <Button
@@ -161,7 +163,7 @@ export const AlertAssociateIncidentModal = ({
             variant="secondary"
             onClick={showCreateIncidentForm}
           >
-            Create a new incident
+            {t("alerts.associateIncident.createNew")}
           </Button>
         </div>
       </div>
@@ -172,7 +174,7 @@ export const AlertAssociateIncidentModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Associate alerts to incident"
+      title={t("alerts.associateIncident.title")}
       className="w-[600px]"
     >
       <div className="relative">

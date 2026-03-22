@@ -26,7 +26,7 @@ export const ProvidersFilterByLabel: FC = (props) => {
     >
       {options.map(([value, label]) => (
         <MultiSelectItem key={value} value={value}>
-          {label}
+          {t(`providers.filterLabels.${value}`)}
         </MultiSelectItem>
       ))}
     </MultiSelect>

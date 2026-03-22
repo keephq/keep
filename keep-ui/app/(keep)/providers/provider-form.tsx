@@ -479,7 +479,7 @@ const ProviderForm = ({
               icon={ArrowTopRightOnSquareIcon}
               onClick={handleOauth}
             >
-              Install with OAuth2
+              {t("providers.form.installWithOAuth2")}
             </Button>
             <Divider />
           </>
@@ -579,7 +579,7 @@ const ProviderForm = ({
                   disabled={isLocalhost || provider.webhook_required}
                 />
                 <label htmlFor="install_webhook" className="flex items-center">
-                  <Text className="capitalize">Install Webhook</Text>
+                  <Text className="capitalize">{t("providers.form.installWebhook")}</Text>
                   <Icon
                     icon={QuestionMarkCircleIcon}
                     variant="simple"
@@ -712,7 +712,7 @@ const ProviderForm = ({
                   : t("providers.webhook.useSavedCredentials")
               }
             >
-              Install/Update Webhook
+              {t("providers.form.installOrUpdateWebhook")}
             </Button>
           </>
         )}
@@ -733,7 +733,7 @@ const ProviderForm = ({
             <Title>{t("providers.connectTo", { providerName: provider.display_name })}</Title>
             {provider.provisioned && (
               <Badge color="orange" className="ml-2">
-                Provisioned
+                {t("providers.tile.provisioned")}
               </Badge>
             )}
           </div>
@@ -750,7 +750,7 @@ const ProviderForm = ({
           </Button>
         </div>
         {installedProvidersMode && provider.id && (
-          <Subtitle>Id: {provider.id}</Subtitle>
+          <Subtitle>{t("providers.form.id")}{provider.id}</Subtitle>
         )}
         <Subtitle>
           {t("providers.needHelp")}{" "}
@@ -769,7 +769,7 @@ const ProviderForm = ({
             href={`https://getkeep.slack.com/join/shared_invite/zt-2leydxr6s-XmuQtBttgxZ0GOv8MJu6rQ#/shared-invite/email`}
             target="_blank"
           >
-            Slack Community
+            {t("providers.form.slackCommunity")}
           </Link>
         </Subtitle>
         {installedProvidersMode && provider.last_pull_time && (
@@ -883,7 +883,7 @@ const ProviderForm = ({
             variant="secondary"
             icon={TrashIcon}
           >
-            Disconnect
+            {t("common.actions.disconnect")}
           </Button>
         ) : (
           <div></div>
@@ -896,7 +896,7 @@ const ProviderForm = ({
             className="mr-2.5"
             disabled={isLoading}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           {inInstalledMode && (
             <Button
@@ -907,7 +907,7 @@ const ProviderForm = ({
               disabled={provider.provisioned}
               variant="primary"
             >
-              Update
+              {t("common.actions.update")}
             </Button>
           )}
           {!inInstalledMode && (
@@ -917,7 +917,7 @@ const ProviderForm = ({
               color="orange"
               icon={LightningBoltIcon}
             >
-              {isHealthCheck ? `Check health` : `Connect`}
+              {isHealthCheck ? t("providers.form.checkHealth") : t("common.actions.connect")}
             </Button>
           )}
         </div>

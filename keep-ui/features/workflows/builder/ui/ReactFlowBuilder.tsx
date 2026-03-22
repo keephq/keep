@@ -15,6 +15,7 @@ import ReactFlowEditor from "./Editor/ReactFlowEditor";
 import { FlowNode, useWorkflowStore } from "@/entities/workflows";
 import { KeepLoader } from "@/shared/ui";
 import "@xyflow/react/dist/style.css";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const nodeTypes = { custom: WorkflowNode as any };
 const edgeTypes: EdgeTypesType = {
@@ -26,6 +27,7 @@ const defaultFitViewOptions: FitViewOptions = {
 };
 
 export const ReactFlowBuilder = () => {
+  const { t } = useI18n();
   const {
     nodes,
     edges,
@@ -106,7 +108,7 @@ export const ReactFlowBuilder = () => {
           <Background />
         </ReactFlow>
       ) : (
-        <KeepLoader loadingText="Initializing workflow builder..." />
+        <KeepLoader loadingText={t("workflows.builder.initializing")} />
       )}
       <ReactFlowEditor />
     </div>

@@ -8,6 +8,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { edgeCanHaveAddButton } from "../lib/utils";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function DebugEdgeInfo({
   id,
@@ -61,6 +62,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   data,
   style,
 }: WorkflowEdgeProps) => {
+  const { t } = useI18n();
   const { setSelectedEdge, selectedEdge } = useWorkflowStore();
 
   // Calculate the path and midpoint
@@ -153,7 +155,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
               opacity: isLayouted ? 1 : 0,
             }}
             className={`p-0 m-0 bg-transparent text-transparent border-none`}
-            tooltip={source === "trigger_start" ? "Add trigger" : "Add step"}
+            tooltip={source === "trigger_start" ? t("workflows.builder.addTrigger") : t("workflows.builder.addStep")}
             onClick={(e) => {
               setSelectedEdge(id);
             }}

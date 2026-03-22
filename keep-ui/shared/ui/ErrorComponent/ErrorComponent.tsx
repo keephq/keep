@@ -14,10 +14,11 @@ import { KeepApiHealthError } from "@/shared/api/KeepApiError";
 import { useHealth } from "@/shared/lib/hooks/useHealth";
 import { KeepLogoError } from "@/shared/ui/KeepLogoError";
 import { useConfig } from "utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function ErrorComponent({
   error: originalError,
-  defaultMessage = "An error occurred",
+  defaultMessage = "",
   description,
   reset,
 }: {
@@ -29,6 +30,7 @@ export function ErrorComponent({
   const signOut = useSignOut();
   const { isHealthy } = useHealth();
   const { data: config } = useConfig();
+  const { t } = useI18n();
 
   const contactUsUrl =
     config?.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/";
@@ -51,7 +53,7 @@ export function ErrorComponent({
       <KeepLogoError />
       <div className="max-w-md">
         <Title className="text-xl font-bold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          {error.message || defaultMessage}
+          {error.message || defaultMessage || t("common.messages.error")}
         </Title>
         {subtitle && <Subtitle>{subtitle}</Subtitle>}
       </div>
@@ -59,14 +61,14 @@ export function ErrorComponent({
         <code className="text-gray-600 text-left bg-gray-100 p-2 rounded-md">
           {error instanceof KeepApiError && (
             <>
-              {error.statusCode && <p>Status Code: {error.statusCode}</p>}
-              {error.message && <p>Message: {error.message}</p>}
-              {error.url && <p>URL: {error.url}</p>}
+              {error.statusCode && <p>{t("shared.error.statusCode")} {error.statusCode}</p>}
+              {error.message && <p>{t("shared.error.message")} {error.message}</p>}
+              {error.url && <p>{t("shared.error.url")} {error.url}</p>}
             </>
           )}
           {error.stack && (
             <details>
-              <summary>Stack</summary>
+              <summary>{t("shared.error.stack")}</summary>
               {error.stack.split("\n").map((line, i) => (
                 <div key={`${i}-${line.trim()}`}>{line}</div>
               ))}
@@ -77,7 +79,7 @@ export function ErrorComponent({
       <div className="flex gap-2">
         {error instanceof KeepApiError && error.statusCode === 401 ? (
           <Button onClick={signOut} color="orange" variant="secondary">
-            <Text>Sign Out</Text>
+            <Text>{t("nav.logout")}</Text>
           </Button>
         ) : (
           <Button
@@ -91,7 +93,7 @@ export function ErrorComponent({
             color="orange"
             variant="primary"
           >
-            Try again
+            {t("shared.error.tryAgain")}
           </Button>
         )}{" "}
         <Button
@@ -99,7 +101,7 @@ export function ErrorComponent({
           variant="secondary"
           onClick={() => window.open(contactUsUrl, "_blank")}
         >
-          {contactUsUrl.includes("slack") ? "Slack Us" : "Mail Us"}
+          {contactUsUrl.includes("slack") ? t("shared.error.slackUs") : t("shared.error.mailUs")}
         </Button>
       </div>
     </div>

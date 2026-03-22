@@ -1,4 +1,5 @@
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import Image from "next/image";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { Text, Title } from "@tremor/react";
@@ -21,6 +22,7 @@ export function WorkflowBuilderChatSafe({
   definition,
   ...props
 }: WorkflowBuilderChatSafeProps) {
+  const { t } = useI18n();
   const { data: config } = useConfig();
 
   // If AI is not enabled, return null to collapse the chat section
@@ -29,7 +31,7 @@ export function WorkflowBuilderChatSafe({
       <div className="flex flex-col items-center justify-center h-full relative">
         <Image
           src={BuilderChatPlaceholder}
-          alt="Workflow AI Assistant"
+          alt={t("workflows.aiAssistant.aiDisabledTitle")}
           width={400}
           height={895}
           className="w-full h-full object-cover object-top max-w-[500px] mx-auto absolute inset-0"
@@ -38,14 +40,14 @@ export function WorkflowBuilderChatSafe({
         <div className="flex flex-col items-center justify-center h-full z-10">
           <div className="flex flex-col items-center justify-center bg-[radial-gradient(circle,white_50%,transparent)] p-8 rounded-lg aspect-square">
             <SparklesIcon className="size-10 text-orange-500" />
-            <Title>AI is disabled</Title>
-            <Text>Contact us to enable AI for you.</Text>
+            <Title>{t("workflows.aiAssistant.aiDisabled")}</Title>
+            <Text>{t("workflows.aiAssistant.aiDisabledDescription")}</Text>
             <Link
               href="https://slack.keephq.dev/"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Contact us
+              {t("workflows.aiAssistant.contactUs")}
             </Link>
           </div>
         </div>

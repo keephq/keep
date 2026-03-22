@@ -22,6 +22,7 @@ import "react-quill-new/dist/quill.snow.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import "./alert-dismiss-modal.css";
 import dynamic from "next/dynamic";
 
@@ -38,6 +39,7 @@ export function AlertDismissModal({
   alert: alerts,
   handleClose,
 }: Props) {
+  const { t } = useI18n();
   const [dismissComment, setDismissComment] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState<number>(0);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
@@ -109,13 +111,13 @@ export function AlertDismissModal({
         `/alerts/batch_enrich?dispose_on_new_alert=true`,
         requestData
       );
-      toast.success(`${alerts.length} alerts dismissed successfully!`, {
+      toast.success(t("alerts.dismiss.toastSuccess", { count: alerts.length }), {
         position: "top-right",
       });
       await alertsMutator();
       await presetsMutator();
     } catch (error) {
-      showErrorToast(error, "Failed to dismiss alerts");
+      showErrorToast(error, t("alerts.dismiss.toastFailed"));
     } finally {
       clearAndClose();
       setIsLoading(false);
@@ -147,25 +149,25 @@ export function AlertDismissModal({
       isOpen={isOpen}
       className="overflow-visible"
       beforeTitle={alerts?.[0]?.name}
-      title="Dismiss Alert"
+      title={t("alerts.dismiss.title")}
     >
       {alerts && alerts.length == 1 && alerts[0].dismissed ? (
         <>
           <Subtitle className="text-center">
-            Are you sure you want to restore this alert?
+            {t("alerts.dismiss.restoreConfirmation")}
           </Subtitle>
           <div className="flex justify-center mt-4 space-x-2">
             <Button onClick={handleDismissChange} color="orange">
-              Restore
+              {t("alerts.dismiss.restore")}
             </Button>
           </div>
         </>
       ) : (
         <>
-          <Callout color="orange" title="Dismissing Alerts" className="mb-2.5">
-            {`This will dismiss the alert until an alert with the same fingerprint comes in${
-              selectedTab === 1 ? ` or until ${selectedDateTime}.` : "."
-            }`}
+          <Callout color="orange" title={t("alerts.dismiss.calloutTitle")} className="mb-2.5">
+            {selectedTab === 1
+              ? t("alerts.dismiss.calloutMessageUntil", { dateTime: selectedDateTime })
+              : t("alerts.dismiss.calloutMessageForever")}
           </Callout>
           <TabGroup
             index={selectedTab}
@@ -173,8 +175,8 @@ export function AlertDismissModal({
             className="mb-4"
           >
             <TabList>
-              <Tab>Dismiss Forever</Tab>
-              <Tab>Dismiss Until</Tab>
+              <Tab>{t("alerts.dismiss.tabForever")}</Tab>
+              <Tab>{t("alerts.dismiss.tabUntil")}</Tab>
             </TabList>
             <TabPanels>
               <TabPanel></TabPanel>
@@ -187,7 +189,7 @@ export function AlertDismissModal({
                       showTimeSelect
                       timeFormat="p"
                       timeIntervals={15}
-                      timeCaption="Time"
+                      timeCaption={t("alerts.dismiss.timeCaption")}
                       dateFormat="MMMM d, yyyy h:mm:ss aa"
                       minDate={new Date()}
                       minTime={set(new Date(), {
@@ -206,7 +208,7 @@ export function AlertDismissModal({
                     />
                     {showError && (
                       <div className="text-red-500 mt-2">
-                        Must choose a date
+                        {t("alerts.dismiss.dateError")}
                       </div>
                     )}
                   </div>
@@ -214,25 +216,25 @@ export function AlertDismissModal({
               </TabPanel>
             </TabPanels>
           </TabGroup>
-          <Title>Dismiss Comment</Title>
+          <Title>{t("alerts.dismiss.commentTitle")}</Title>
           <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
             <ReactQuill
               value={dismissComment}
               onChange={(value: string) => setDismissComment(value)}
               theme="snow"
-              placeholder="Add your dismiss comment here..."
+              placeholder={t("alerts.dismiss.commentPlaceholder")}
             />
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="secondary" color="orange" onClick={clearAndClose}>
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button
               onClick={handleDismissChange}
               color="orange"
               loading={isLoading}
             >
-              Dismiss
+              {t("alerts.dismiss.dismissButton")}
             </Button>
           </div>
         </>

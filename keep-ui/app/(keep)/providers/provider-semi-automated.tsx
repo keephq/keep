@@ -21,6 +21,7 @@ interface Props {
 
 export const ProviderSemiAutomated = ({ provider }: Props) => {
   const api = useApi();
+  const { t } = useI18n();
   const uri = provider.installed
     ? `/providers/${provider.type}/webhook?provider_id=${provider.id}`
     : `/providers/${provider.type}/webhook`;
@@ -29,7 +30,7 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
     (url: string) => api.get(url)
   );
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div>{t("common.labels.loading")}</div>;
   if (error) return <div>Error: {error.message}</div>;
 
   const settings = {
@@ -52,7 +53,7 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
   return (
     <div className="my-2.5">
       <Title>
-        Push alerts from{" "}
+        {t("providers.semiAutomated.pushAlertsFrom")}{" "}
         {provider.type.charAt(0).toLocaleUpperCase() +
           provider.display_name.slice(1)}
       </Title>
@@ -74,7 +75,7 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
         />
       </div>
       <Subtitle>
-        Seamlessly push alerts without actively connecting{" "}
+        {t("providers.semiAutomated.description")}{" "}
         {provider.display_name}
       </Subtitle>
       {isMultiline ? (

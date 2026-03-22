@@ -7,6 +7,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import dynamic from "next/dynamic";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
@@ -22,6 +23,7 @@ export const AlertNoteModal = ({
   alert,
   readOnly = false,
 }: AlertNoteModalProps) => {
+  const { t } = useI18n();
   const api = useApi();
   const [noteContent, setNoteContent] = useState<string>("");
 
@@ -70,7 +72,7 @@ export const AlertNoteModal = ({
 
       handleNoteClose();
     } catch (error) {
-      showErrorToast(error, "Failed to save note");
+      showErrorToast(error, t("alerts.note.saveFailed"));
     }
   };
 
@@ -87,7 +89,7 @@ export const AlertNoteModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       beforeTitle={alert?.name}
-      title="Add Note"
+      title={t("alerts.note.title")}
     >
       <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
         {/* WYSIWYG editor */}
@@ -95,7 +97,7 @@ export const AlertNoteModal = ({
           value={noteContent}
           onChange={(value: string) => setNoteContent(value)}
           theme="snow" // Use the Snow theme
-          placeholder="Add your note here..."
+          placeholder={t("alerts.note.placeholder")}
           modules={readOnly ? { toolbar: [] } : modules}
           readOnly={readOnly}
           formats={formats} // Add formats
@@ -107,14 +109,14 @@ export const AlertNoteModal = ({
           variant="secondary"
           color="orange"
         >
-          {readOnly ? "Close" : "Cancel"}
+          {readOnly ? t("common.actions.close") : t("common.actions.cancel")}
         </Button>
         {!readOnly && (
           <Button // Use Tremor button for Save
             onClick={saveNote}
             color="orange"
           >
-            Save
+            {t("common.actions.save")}
           </Button>
         )}
       </div>

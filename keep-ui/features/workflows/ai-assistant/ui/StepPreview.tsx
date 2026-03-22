@@ -1,4 +1,5 @@
 import { V2Step, V2StepTrigger } from "@/entities/workflows";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import clsx from "clsx";
 import Image from "next/image";
 import { NodeTriggerIcon } from "@/entities/workflows/ui/NodeTriggerIcon";
@@ -25,6 +26,7 @@ export const StepPreview = ({
   step: V2Step | V2StepTrigger;
   className?: string;
 }) => {
+  const { t } = useI18n();
   const { data: config } = useConfig();
   const yamlDefinition = getYamlFromStep(step);
   const yaml = yamlDefinition ? stringify(yamlDefinition) : null;
@@ -60,7 +62,7 @@ export const StepPreview = ({
       </div>
       {yaml && (
         <details className="text-sm text-gray-500 overflow-auto bg-[#fffffe] break-words whitespace-pre-wrap border rounded  border-gray-200">
-          <summary className="text-gray-500 bg-gray-50 p-2">yaml</summary>
+          <summary className="text-gray-500 bg-gray-50 p-2">{t("workflows.aiAssistant.yaml")}</summary>
           <div
             className="py-2"
             style={{

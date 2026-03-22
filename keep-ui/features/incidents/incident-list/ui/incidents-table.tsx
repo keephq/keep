@@ -252,9 +252,9 @@ export default function IncidentsTable({
               .slice(0, maxServices)}
             {notNullServices.length > maxServices ? (
               <span>
-                and{" "}
+                {t("common.labels.and")}{" "}
                 <Link href={`/incidents/${row.original.id}/alerts`}>
-                  {notNullServices.length - maxServices} more
+                  {notNullServices.length - maxServices} {t("common.labels.more")}
                 </Link>
               </span>
             ) : null}

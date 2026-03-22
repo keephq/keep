@@ -23,6 +23,7 @@ import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { AlertDto } from "@/entities/alerts/model";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
@@ -35,6 +36,7 @@ export function AlertMethodModal({
   presetName,
   alerts,
 }: AlertMethodModalProps) {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const router = useRouter();
   const api = useApi();
@@ -174,7 +176,7 @@ export function AlertMethodModal({
       if (method.type === "action") {
         alertsMutator();
       }
-      toast.success(`Successfully called "${method.name}"`, {
+      toast.success(`${t("alerts.method.success")} "${method.name}"`, {
         position: "top-left",
       });
       if (method.type === "view") {
@@ -184,9 +186,9 @@ export function AlertMethodModal({
     } catch (e: any) {
       showErrorToast(
         e,
-        `Failed to invoke "${method.name}" on ${
+        `${t("alerts.method.failedToInvoke")} "${method.name}" ${t("alerts.method.onProvider")} ${
           provider.details.name ?? provider.id
-        } due to ${e.message}`
+        } ${t("alerts.method.dueTo")} ${e.message}`
       );
       handleClose();
     } finally {
@@ -224,7 +226,7 @@ export function AlertMethodModal({
             onClick={() => invokeMethod(provider, method, inputParameters)}
             disabled={!isInvokeEnabled()}
           >
-            Invoke {`"${method.name}"`}
+            {t("alerts.method.invoke")} {`"${method.name}"`}
           </Button>
         </div>
       )}

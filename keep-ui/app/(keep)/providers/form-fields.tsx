@@ -400,6 +400,7 @@ export function KVForm({
   onAdd: (data: ProviderFormKVData) => void;
   onChange: (value: ProviderFormKVData) => void;
 }) {
+  const { t } = useI18n();
   function handleAdd() {
     const newData = Array.isArray(value)
       ? [...value, { key: "", value: "" }]
@@ -421,7 +422,7 @@ export function KVForm({
           onClick={handleAdd}
           disabled={disabled}
         >
-          Add Entry
+          {t("providers.formFields.addEntry")}
         </Button>
       </div>
       {Array.isArray(value) && <KVInput data={value} onChange={onChange} />}
@@ -439,6 +440,7 @@ export const KVInput = ({
   data: ProviderFormKVData;
   onChange: (entries: ProviderFormKVData) => void;
 }) => {
+  const { t } = useI18n();
   const handleEntryChange = (index: number, name: string, value: string) => {
     const newEntries = data.map((entry, i) =>
       i === index ? { ...entry, [name]: value } : entry
@@ -458,13 +460,13 @@ export const KVInput = ({
           <TextInput
             value={entry.key}
             onChange={(e) => handleEntryChange(index, "key", e.target.value)}
-            placeholder="Key"
+            placeholder={t("common.labels.key")}
             className="mr-2"
           />
           <TextInput
             value={entry.value}
             onChange={(e) => handleEntryChange(index, "value", e.target.value)}
-            placeholder="Value"
+            placeholder={t("common.labels.value")}
             className="mr-2"
           />
           <Button

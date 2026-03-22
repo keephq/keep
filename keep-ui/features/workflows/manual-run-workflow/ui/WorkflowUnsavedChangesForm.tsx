@@ -1,6 +1,7 @@
 import { useUIBuilderUnsavedChanges } from "@/entities/workflows/model/workflow-store";
 import { useWorkflowYAMLEditorStore } from "@/entities/workflows/model/workflow-yaml-editor-store";
 import { Button } from "@tremor/react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 export function WorkflowUnsavedChangesForm({
   onClose,
@@ -13,6 +14,7 @@ export function WorkflowUnsavedChangesForm({
   onSaveUIBuilder: () => void;
   onRunWithoutSaving: () => void;
 }) {
+  const { t } = useI18n();
   const isUIBuilderUnsaved = useUIBuilderUnsavedChanges();
   const { hasUnsavedChanges: isYamlEditorUnsaved } =
     useWorkflowYAMLEditorStore();
@@ -28,8 +30,7 @@ export function WorkflowUnsavedChangesForm({
         }}
       >
         <p>
-          You have unsaved changes in both the YAML editor and the workflow
-          editor. Please save your changes before running the workflow.
+          {t("workflows.unsavedChanges.bothUnsaved")}
         </p>
         <div className="flex justify-between gap-2">
           <Button
@@ -38,10 +39,10 @@ export function WorkflowUnsavedChangesForm({
             color="rose"
             onClick={onRunWithoutSaving}
           >
-            Discard all changes and run
+            {t("workflows.unsavedChanges.discardAllAndRun")}
           </Button>
           <Button variant="primary" size="sm" color="orange" type="submit">
-            Return to editor
+            {t("workflows.unsavedChanges.returnToEditor")}
           </Button>
         </div>
       </form>
@@ -58,7 +59,7 @@ export function WorkflowUnsavedChangesForm({
         }}
       >
         <p>
-          You have unsaved changes in the YAML editor. Do you want to save them?
+          {t("workflows.unsavedChanges.yamlUnsaved")}
         </p>
         <div className="flex justify-between gap-2">
           <Button
@@ -67,7 +68,7 @@ export function WorkflowUnsavedChangesForm({
             color="orange"
             onClick={onClose}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <div className="flex justify-end gap-2">
             <Button
@@ -77,7 +78,7 @@ export function WorkflowUnsavedChangesForm({
               onClick={onRunWithoutSaving}
               data-testid="wf-unsaved-changes-discard-and-run"
             >
-              Discard changes and run
+              {t("workflows.unsavedChanges.discardAndRun")}
             </Button>
             <Button
               variant="primary"
@@ -86,7 +87,7 @@ export function WorkflowUnsavedChangesForm({
               type="submit"
               data-testid="wf-unsaved-changes-save-and-run"
             >
-              Save and run
+              {t("workflows.unsavedChanges.saveAndRun")}
             </Button>
           </div>
         </div>
@@ -104,8 +105,7 @@ export function WorkflowUnsavedChangesForm({
         }}
       >
         <p>
-          You have unsaved changes in the workflow UI builder. Do you want to
-          save them?
+          {t("workflows.unsavedChanges.uiBuilderUnsaved")}
         </p>
         <div className="flex justify-between gap-2">
           <Button
@@ -114,7 +114,7 @@ export function WorkflowUnsavedChangesForm({
             color="orange"
             onClick={onClose}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <div className="flex justify-end gap-2">
             <Button
@@ -124,7 +124,7 @@ export function WorkflowUnsavedChangesForm({
               onClick={onRunWithoutSaving}
               data-testid="wf-unsaved-changes-discard-and-run"
             >
-              Discard changes and run
+              {t("workflows.unsavedChanges.discardAndRun")}
             </Button>
             <Button
               variant="primary"
@@ -133,7 +133,7 @@ export function WorkflowUnsavedChangesForm({
               type="submit"
               data-testid="wf-unsaved-changes-save-and-run"
             >
-              Save and run
+              {t("workflows.unsavedChanges.saveAndRun")}
             </Button>
           </div>
         </div>
@@ -141,5 +141,5 @@ export function WorkflowUnsavedChangesForm({
     );
   }
   // should not happen
-  return "Saving...";
+  return t("common.actions.saving");
 }

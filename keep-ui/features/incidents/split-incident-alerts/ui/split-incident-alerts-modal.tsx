@@ -4,6 +4,7 @@ import { useIncidentActions } from "@/entities/incidents/model";
 import { useMemo, useState } from "react";
 import { Select, VerticalRoundedList } from "@/shared/ui";
 import { IncidentIconName } from "@/entities/incidents/ui";
+import { useI18n } from "@/i18n/hooks/useI18n";
 import {
   useIncident,
   useIncidents,
@@ -62,6 +63,7 @@ export function SplitIncidentAlertsModal({
   }, [destinationIncidentId, destinationIncident]);
 
   const { splitIncidentAlerts } = useIncidentActions();
+  const { t } = useI18n();
   const handleSplit = () => {
     splitIncidentAlerts(
       sourceIncidentId,
@@ -76,15 +78,14 @@ export function SplitIncidentAlertsModal({
     <Modal onClose={handleClose} isOpen={true}>
       <div className="flex flex-col gap-5">
         <div>
-          <Title>Split Incident Alerts</Title>
+          <Title>{t("incidents.split.title")}</Title>
           <Subtitle>
-            Alerts from the this incident will be moved into the destination
-            incident.
+            {t("incidents.split.description")}
           </Subtitle>
         </div>
         <div>
           <div className="mb-1">
-            <span className="font-bold">Source Incident</span>
+            <span className="font-bold">{t("incidents.split.sourceIncident")}</span>
           </div>
           <VerticalRoundedList>
             {isSourceIncidentLoading || !sourceIncident ? (
@@ -96,7 +97,7 @@ export function SplitIncidentAlertsModal({
         </div>
         <div>
           <div className="mb-1">
-            <span className="font-bold">Destination Incident</span>
+            <span className="font-bold">{t("incidents.split.destinationIncident")}</span>
           </div>
           <Select
             instanceId="split-incident-alerts-destination-incident-select"
@@ -105,16 +106,16 @@ export function SplitIncidentAlertsModal({
             onChange={(option) =>
               option && setDestinationIncidentId(option.value)
             }
-            placeholder="Select destination incident"
+            placeholder={t("incidents.split.selectDestination")}
           />
         </div>
       </div>
       <div className="flex justify-end mt-4 gap-2">
         <Button onClick={handleClose} color="orange" variant="secondary">
-          Cancel
+          {t("common.actions.cancel")}
         </Button>
         <Button onClick={handleSplit} color="orange">
-          Confirm split
+          {t("incidents.split.confirmSplit")}
         </Button>
       </div>
     </Modal>

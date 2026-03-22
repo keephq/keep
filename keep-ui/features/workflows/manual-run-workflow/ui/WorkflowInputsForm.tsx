@@ -2,6 +2,7 @@ import { WorkflowInput } from "@/entities/workflows/model/yaml.types";
 import { WorkflowInputFields } from "@/entities/workflows/ui/WorkflowInputFields";
 import { Button, Text } from "@tremor/react";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface WorkflowInputsFormProps {
   workflowInputs: WorkflowInput[];
@@ -14,6 +15,7 @@ export function WorkflowInputsForm({
   onSubmit,
   onCancel,
 }: WorkflowInputsFormProps) {
+  const { t } = useI18n();
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function WorkflowInputsForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <Text className="font-bold">Inputs required to run the workflow</Text>
+      <Text className="font-bold">{t("workflows.manualRun.inputsRequired")}</Text>
       <WorkflowInputFields
         workflowInputs={enhancedInputs}
         inputValues={inputValues}
@@ -64,7 +66,7 @@ export function WorkflowInputsForm({
           onClick={onCancel}
           data-testid="wf-inputs-form-cancel"
         >
-          Cancel
+          {t("common.actions.cancel")}
         </Button>
         <Button
           variant="primary"
@@ -72,7 +74,7 @@ export function WorkflowInputsForm({
           type="submit"
           data-testid="wf-inputs-form-submit"
         >
-          Run
+          {t("common.actions.run")}
         </Button>
       </div>
     </form>

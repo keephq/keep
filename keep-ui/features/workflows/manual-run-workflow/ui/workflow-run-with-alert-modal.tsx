@@ -5,6 +5,7 @@ import { TextInput, Button, Text } from "@tremor/react";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
 import { buildNestedObject } from "@/shared/lib/object-utils";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 interface StaticField {
   key: string;
@@ -31,6 +32,7 @@ export function AlertTriggerModal({
   staticFields = [],
   dependencies = [],
 }: AlertTriggerModalProps) {
+  const { t } = useI18n();
   const [dynamicFields, setDynamicFields] = useState<Field[]>([]);
   const [fieldErrors, setFieldErrors] = useState(
     new Array(dynamicFields.length).fill(false)
@@ -148,11 +150,11 @@ export function AlertTriggerModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Build Alert Payload">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("workflows.alertPayload.title")}>
       <form onSubmit={handleSubmit}>
         {Array.isArray(staticFields) && staticFields.length > 0 && (
           <>
-            <Text className="mb-2">Fields Defined As Workflow Filters</Text>
+            <Text className="mb-2">{t("workflows.alertPayload.fieldsAsFilters")}</Text>
             {staticFields.map((field, index) => (
               <div key={field.key} className="flex gap-2 mb-2">
                 <TextInput placeholder="Key" value={field.key} disabled />
@@ -163,7 +165,7 @@ export function AlertTriggerModal({
         )}
 
         <Text className="mb-2">
-          These fields are needed for the workflow to run
+          {t("workflows.alertPayload.fieldsNeeded")}
         </Text>
         {Array.isArray(dependencies) &&
           dependencies.map((dependencyName, index) => (
@@ -218,7 +220,7 @@ export function AlertTriggerModal({
             color="orange"
             onClick={handleAddField}
           >
-            Add another field
+            {t("workflows.alertPayload.addAnotherField")}
           </Button>
         </div>
 
@@ -228,10 +230,10 @@ export function AlertTriggerModal({
             variant="secondary"
             className="border border-orange-500 text-orange-500"
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button color="orange" type="submit">
-            Run workflow
+            {t("workflows.alertPayload.runWorkflow")}
           </Button>
         </div>
       </form>

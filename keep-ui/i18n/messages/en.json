@@ -419,10 +419,230 @@
       "failedMultiple": "Failed to change alert(s) status.",
       "loadingEditor": "Loading editor..."
     },
+    "menu": {
+      "viewed": "Viewed {date}",
+      "viewAlertPayload": "View Alert Payload",
+      "collapseRow": "Collapse Row",
+      "expandRow": "Expand Row",
+      "viewImage": "View Image",
+      "preview": "Preview",
+      "openOriginalAlert": "Open Original Alert",
+      "ticketAssigned": "Ticket Assigned {status}",
+      "assignTicket": "Assign Ticket",
+      "viewPlaybook": "View Playbook",
+      "editNote": "Edit Note",
+      "addNote": "Add Note",
+      "workflow": "Workflow",
+      "workflowStatus": "Workflow {status} at {date}",
+      "runWorkflow": "Run Workflow",
+      "history": "History",
+      "enrich": "Enrich",
+      "selfAssign": "Self-Assign",
+      "selfAssignConfirm": "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?",
+      "viewAlert": "View Alert",
+      "restore": "Restore",
+      "dismiss": "Dismiss",
+      "changeStatus": "Change Status",
+      "correlateIncident": "Correlate Incident"
+    },
+    "sidebar": {
+      "alertDetails": "Alert Details",
+      "incidents": "Incidents",
+      "relatedServices": "Related Services",
+      "noFingerprint": "Alert has no fingerprint",
+      "fingerprintCopied": "Fingerprint copied to clipboard",
+      "failedToCopyFingerprint": "Failed to copy fingerprint. Please check your browser permissions.",
+      "failedToCopyUrl": "Failed to copy URL. Please check your browser permissions.",
+      "learnMore": "Learn more",
+      "noUrl": "Alert has no URL",
+      "urlCopied": "URL copied to clipboard"
+    },
+    "fields": {
+      "service": "Service",
+      "source": "Source",
+      "description": "Description",
+      "message": "Message",
+      "fingerprint": "Fingerprint",
+      "fingerprintTooltip": "Fingerprints are unique identifiers associated with alert instances in Keep. Each provider declares the fields fingerprints are calculated based on.",
+      "fingerprintTooltipLink": "Read more about it here.",
+      "copyFingerprint": "Copy fingerprint",
+      "url": "URL",
+      "copyUrl": "Copy URL"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "alertTriggered": "Alert is triggered",
+      "alertReceivedFromProvider": "alert received from provider with status firing",
+      "refresh": "Refresh",
+      "loading": "Loading..."
+    },
+    "incidentsList": {
+      "moreCount": "... ({count} more)",
+      "showLess": "Show Less ↑"
+    },
     "tabs": {
       "alerts": "Alerts",
       "groups": "Groups",
       "history": "History"
+    },
+    "rawAlert": {
+      "alertPayload": "Alert Payload",
+      "enrichedFieldsOnly": "Enriched Fields Only",
+      "editWithCaution": "Edit with caution",
+      "editWithCautionDescription": "Keep in mind that some of the fields are used in ways that editing may break them.",
+      "readOnlyFieldsDescription": "Any changes in the following fields will be ignored:",
+      "clickToUnenrich": "Click to un-enrich",
+      "fieldCannotBeEdited": "This field cannot be edited",
+      "clickUnlockToEdit": "Click the unlock button to edit",
+      "noChanges": "No changes in the alert payload",
+      "alertCopied": "Alert copied to clipboard",
+      "copyFailed": "Failed to copy alert. Please check your browser permissions.",
+      "updateSuccess": "Alert updated successfully!",
+      "updateFailed": "Failed to update alert",
+      "confirmUnenrich": "Are you sure you want to un-enrich {key}?",
+      "unenrichSuccess": "{key} un-enriched successfully!",
+      "unenrichFailed": "Failed to unenrich {key}",
+      "confirmDiscardChanges": "You have unsaved changes. Are you sure you want to discard them?",
+      "cannotModifyReadOnly": "Cannot modify read-only field: {field}",
+      "invalidEnumValue": "Invalid value for \"{field}\". Allowed values: {values}"
+    },
+    "theme": {
+      "setThemeColors": "Set theme colors",
+      "transparent": "Transparent",
+      "keep": "Keep",
+      "basic": "Basic",
+      "applyTheme": "Apply theme"
+    },
+    "severityMapping": {
+      "mapFieldValues": "Map alert field values to custom bar colors",
+      "enableCustomMapping": "Enable custom severity mapping",
+      "sourceField": "Source field",
+      "valueToColor": "Value \u2192 Color",
+      "addMapping": "Add mapping",
+      "removeMapping": "Remove mapping"
+    },
+    "errorEvent": {
+      "title": "Events failed to process",
+      "selectAlert": "Select an error alert",
+      "eventFrom": "Event from",
+      "unknownProvider": "unknown provider",
+      "dismissing": "Dismissing...",
+      "dismissCurrent": "Dismiss current alert",
+      "dismissAll": "Dismiss All",
+      "errorParsingEvent": "Error parsing event",
+      "from": "from",
+      "timestamp": "Timestamp",
+      "rawEventData": "Raw Event Data",
+      "stackTrace": "Stack Trace",
+      "noErrorAlerts": "No error alerts found"
+    },
+    "enrich": {
+      "title": "Enrich Alert",
+      "fieldNamePlaceholder": "Field Name",
+      "fieldValuePlaceholder": "Field Value",
+      "addField": "Add Field",
+      "success": "Alert enriched successfully",
+      "failed": "Failed to enrich alert"
+    },
+    "simulate": {
+      "title": "Simulate Alert",
+      "alertSource": "Alert Source",
+      "alertSourceRequired": "Alert source is required",
+      "selectAlertSource": "Select alert source",
+      "aboutPayloadTitle": "About alert payload",
+      "aboutPayloadDescription": "Feel free to edit the payload as you want. However, some of the providers expects specific fields, so be careful.",
+      "alertPayload": "Alert Payload",
+      "alertPayloadRequired": "Alert payload is required",
+      "invalidJson": "Invalid JSON format",
+      "failedToPush": "Failed to push alert"
+    },
+    "history": {
+      "titleOf": "History of",
+      "showing": "Showing",
+      "alerts": "alerts",
+      "maximum": "maximum",
+      "firstOccurrence": "First Occurrence",
+      "lastOccurrence": "Last Occurrence"
+    },
+    "method": {
+      "success": "Successfully called",
+      "failedToInvoke": "Failed to invoke",
+      "onProvider": "on",
+      "dueTo": "due to",
+      "invoke": "Invoke",
+      "results": "Results"
+    },
+    "dismiss": {
+      "title": "Dismiss Alert",
+      "restoreConfirmation": "Are you sure you want to restore this alert?",
+      "restore": "Restore",
+      "calloutTitle": "Dismissing Alerts",
+      "calloutMessageForever": "This will dismiss the alert until an alert with the same fingerprint comes in.",
+      "calloutMessageUntil": "This will dismiss the alert until an alert with the same fingerprint comes in or until {dateTime}.",
+      "tabForever": "Dismiss Forever",
+      "tabUntil": "Dismiss Until",
+      "timeCaption": "Time",
+      "dateError": "Must choose a date",
+      "commentTitle": "Dismiss Comment",
+      "commentPlaceholder": "Add your dismiss comment here...",
+      "dismissButton": "Dismiss",
+      "toastSuccess": "{count} alerts dismissed successfully!",
+      "toastFailed": "Failed to dismiss alerts"
+    },
+    "note": {
+      "title": "Add Note",
+      "placeholder": "Add your note here...",
+      "saveFailed": "Failed to save note"
+    },
+    "assignTicket": {
+      "addAnotherProvider": "Add another ticketing provider",
+      "ticketProvider": "Ticket Provider",
+      "ticketProviderTooltip": "Select a Ticketing provider from the list below, Keep will use the select provider and Ticket URL to enrich your alert.",
+      "providerRequired": "Provider is required",
+      "ticketUrl": "Ticket URL",
+      "ticketUrlPlaceholder": "Ticket URL",
+      "urlRequired": "URL is required",
+      "urlInvalid": "Invalid URL format",
+      "noProviderMessage": "Please connect at least one ticketing provider to use this feature.",
+      "connectProvider": "Connect Ticketing Provider"
+    },
+    "associateIncident": {
+      "title": "Associate alerts to incident",
+      "noIncidents": "No incidents yet",
+      "createNew": "Create a new incident",
+      "selectIncident": "Select incident",
+      "associateButton": "Associate {count} alert(s)",
+      "toastSuccess": "Alerts associated with incident successfully",
+      "toastFailed": "Failed to associate alerts with incident, please contact us if this issue persists."
+    },
+    "createIncidentAI": {
+      "title": "Create Incidents with AI",
+      "cardTitle": "Create New Incident with AI",
+      "loadingText": "This is taking a bit longer then usual, please wait...",
+      "helpTitle": "Help the AI out by adjusting the incident groupings",
+      "helpMessage": "- Drag and drop alerts between incidents to adjust the incidents and improve the AI's algorithm.\n- Click on an incident to edit its name and summary.",
+      "createIncidentsButton": "Create Incidents",
+      "generateButton": "Generate incident suggestions with AI",
+      "alertLimitTitle": "Alert Limit",
+      "alertLimitMessage": "You have selected {count} alerts. Keep currently supports only 50 alerts at a time. Only the first 50 alerts will be processed.",
+      "aiAnalysisTitle": "AI Analysis",
+      "aiAnalysisMessage": "AI will analyze {count} alert(s) and suggest incident groupings.",
+      "errorTitle": "Error",
+      "errorNotInitialized": "Keep backend is not initialized with an AI model. See documentation on how to enable it.",
+      "errorFailed": "Failed to create incident suggestions with AI",
+      "errorUnexpected": "An unexpected error occurred. Please try again.",
+      "errorCreateFailed": "Failed to create incidents",
+      "toastSuccess": "Incidents created successfully",
+      "unnamedAlert": "Unnamed Alert",
+      "noDescription": "No description",
+      "unnamedIncident": "Unnamed Incident",
+      "noExplanation": "No explanation",
+      "incidentName": "Incident Name",
+      "confidenceScore": "Confidence Score",
+      "confidenceExplanation": "Confidence Explanation",
+      "alertName": "Alert Name",
+      "saveChanges": "Save Changes",
+      "editIncident": "Edit Incident"
     }
   },
   "incidents": {
@@ -440,14 +660,19 @@
       "mitigated": "Mitigated",
       "resolved": "Resolved",
       "closed": "Closed",
-      "deleted": "Deleted"
+      "deleted": "Deleted",
+      "firing": "Firing",
+      "acknowledged": "Acknowledged",
+      "merged": "Merged"
     },
     "severity": {
       "title": "Severity",
       "critical": "Critical",
       "high": "High",
       "medium": "Medium",
-      "low": "Low"
+      "low": "Low",
+      "warning": "Warning",
+      "info": "Info"
     },
     "actions": {
       "createIncident": "Create Incident",
@@ -536,6 +761,95 @@
       "generateAiSummary": "Generate AI Summary",
       "aiNotConfigured": "AI is not configured"
     },
+    "form": {
+      "metadata": "Incident Metadata",
+      "name": "Name",
+      "namePlaceholder": "Incident Name",
+      "summary": "Summary",
+      "summaryPlaceholder": "What happened?",
+      "assignee": "Assignee",
+      "assigneePlaceholder": "Who is responsible",
+      "resolveOnAll": "Resolve when all alerts are resolved"
+    },
+    "dropdown": {
+      "edit": "Edit",
+      "runWorkflow": "Run workflow",
+      "delete": "Delete"
+    },
+    "placeholder": {
+      "noIncidentsYet": "No Incidents Yet",
+      "createToEnableAI": "Create incidents manually to enable AI detection",
+      "createIncident": "Create Incident"
+    },
+    "merge": {
+      "title": "Merge Incidents",
+      "description": "Alerts from the following incidents will be moved into the destination incident and the source incidents would be marked as",
+      "merged": "Merged",
+      "sourceIncidents": "Source Incidents",
+      "alreadyMerged": "These incidents were already merged",
+      "destinationIncident": "Destination Incident",
+      "selectDestination": "Select destination incident",
+      "confirmMerge": "Confirm merge"
+    },
+    "split": {
+      "title": "Split Incident Alerts",
+      "description": "Alerts from this incident will be moved into the destination incident.",
+      "sourceIncident": "Source Incident",
+      "destinationIncident": "Destination Incident",
+      "selectDestination": "Select destination incident",
+      "confirmSplit": "Confirm split"
+    },
+    "sameIncident": {
+      "sameInThePast": "Same in the past",
+      "change": "Change",
+      "noLinkedIncidents": "No linked incidents",
+      "linkIncident": "Link incident",
+      "linkHelpText": "Link the same incident from the past to help the AI classifier",
+      "linkModalTitle": "Link to the same incident in the past",
+      "selectIncident": "Select incident",
+      "unlink": "Unlink",
+      "linkAndHelpAI": "Link and help AI"
+    },
+    "alerts": {
+      "collapseRow": "Collapse row",
+      "expandRow": "Expand row",
+      "viewAlertDetails": "View alert details",
+      "unlinkFromIncident": "Unlink from incident",
+      "split": "Split",
+      "unlink": "Unlink",
+      "viewInFeed": "View in feed"
+    },
+    "timeline": {
+      "noTimelineYet": "No Timeline Yet",
+      "noAlertsDescription": "No alerts found for this incident. Go to the alerts feed and assign alerts to view the timeline.",
+      "assignAlerts": "Assign Alerts",
+      "noData": "No Data"
+    },
+    "report": {
+      "title": "Incidents Report",
+      "print": "Print",
+      "mostCommonReasons": "Most of the incidents reasons:",
+      "affectedServices": "Affected services:",
+      "recurringIncidents": "Recurring incidents:",
+      "incidentMetrics": "Incident Metrics:",
+      "mTTD": "Mean Time To Detect (MTTD)",
+      "mTTR": "Mean Time To Resolve (MTTR)",
+      "shortestDuration": "Shortest Incident Duration",
+      "longestDuration": "Longest Incident Duration",
+      "incidentsSeverity": "Incidents severity:",
+      "incidentCountSingle": "1 incident",
+      "incidentCountPlural": "{count} incidents"
+    },
+    "sort": {
+      "ascending": "Sort ascending",
+      "descending": "Sort descending",
+      "clearSort": "Clear sort"
+    },
+    "followingIncidents": "Following incidents",
+    "facets": {
+      "dismissed": "Dismissed",
+      "notDismissed": "Not dismissed"
+    },
     "activity": {
       "mergedInto": "Merged into"
     },
@@ -603,7 +917,84 @@
       "trigger": "Trigger",
       "step": "Step",
       "condition": "Condition",
-      "action": "Action"
+      "action": "Action",
+      "addKeyValue": "Add key-value pair",
+      "noProviderSelected": "No provider selected",
+      "providerNoInstall": "provider does not require installation",
+      "providerNoInstallDescription": "You're all set",
+      "enterProviderName": "Enter provider name manually",
+      "enterProviderNamePlaceholder": "Enter provider name",
+      "providerParams": "Provider parameters",
+      "stepParams": "Step parameters",
+      "ifCondition": "If Condition",
+      "ifConditionPlaceholder": "If Condition",
+      "variables": "Variables",
+      "enrichAlert": "Enrich Alert",
+      "enrichAlertDescription": "Enrich alert with the following key-value pairs. Only works if alert trigger is enabled.",
+      "enrichIncident": "Enrich Incident",
+      "enrichIncidentDescription": "Enrich incident with the following key-value pairs. Only works if incident trigger is enabled.",
+      "compareTo": "Compare to",
+      "compareWith": "Compare with",
+      "assert": "Assert",
+      "assertPlaceholder": "E.g. 200 == 200",
+      "foreachValue": "Foreach Value",
+      "uniqueIdentifier": "Unique Identifier",
+      "uniqueIdentifierPlaceholder": "e.g. my-step",
+      "tabSetup": "Setup",
+      "tabConfigure": "Configure",
+      "tabTest": "Test",
+      "addProvider": "Add {provider} provider",
+      "manualProviderName": "Manual provider name",
+      "debugWithAI": "Debug with AI",
+      "unknownError": "Unknown error",
+      "failedToTestStep": "Failed to test step",
+      "overrideVariables": "Override variables",
+      "overrideVariablesDescription": "Your parameters use the following variables. You can override them, it only applies to this test run.",
+      "providerAndParams": "Provider and parameters",
+      "providerAndParamsDescription": "The parameters after the variables are overridden.",
+      "providerConfiguration": "Provider configuration",
+      "parameters": "Parameters",
+      "result": "Result",
+      "resultDescription": "The result of the test run will be displayed here.",
+      "running": "Running...",
+      "testRun": "Test Run",
+      "celExpression": "CEL Expression",
+      "readMoreAboutCEL": "Read more about CEL expressions",
+      "alertFilterDeprecated": "Alert filter (deprecated)",
+      "convertToCELDescription": "Please convert your alert filters to CEL expressions to ensure stability and performance.",
+      "addFilter": "Add Filter",
+      "incidentEvents": "Incident events",
+      "interval": "Interval (in seconds)",
+      "intervalDescription": "Workflow will run every {interval}",
+      "searchPlaceholder": "Search...",
+      "workflowValid": "Workflow is valid",
+      "workflowValidDescription": "It can be deployed and run",
+      "workflowHasErrors": "Workflow has errors",
+      "workflowHasErrorsDescription": "It can be saved, but to run it, fix errors",
+      "fixErrorsBeforeSaving": "Fix the errors before saving",
+      "workflowEnabled": "The workflow is enabled",
+      "workflowDisabled": "The workflow is disabled",
+      "fixErrorsBeforeEnabling": "Fix the errors in the workflow before enabling it",
+      "deployBeforeEnabling": "Deploy the workflow before enabling it",
+      "properties": "Properties",
+      "workflowMetadata": "Workflow Metadata",
+      "workflowNamePlaceholder": "Workflow Name",
+      "workflowDescriptionPlaceholder": "Workflow Description",
+      "youAreAllSet": "You're all set",
+      "errorCount": "{count} error(s)",
+      "goToToolbox": "Go to Toolbox",
+      "propertiesNotSynced": "Please save the previous step or wait while properties sync with the workflow.",
+      "initializing": "Initializing workflow builder...",
+      "showStepEditor": "Show step editor",
+      "hideStepEditor": "Hide step editor",
+      "workflowSettings": "Workflow Settings",
+      "addConstant": "Add Constant",
+      "setPropertyPlaceholder": "Set the",
+      "groupTriggers": "Triggers",
+      "groupSteps": "Steps",
+      "groupActions": "Actions",
+      "groupMisc": "Misc",
+      "groupConditions": "Conditions"
     },
     "labels": {
       "workflowId": "Workflow ID",
@@ -703,6 +1094,74 @@
       "startedSuccessfully": "Workflow started successfully.",
       "viewExecution": "View execution",
       "failedToStart": "Failed to start workflow"
+    },
+    "testRun": {
+      "modalTitle": "Test Run",
+      "executionResults": "Workflow Execution Results",
+      "error": "Error",
+      "waitingResults": "Waiting for workflow execution results...",
+      "testRunWithPayload": "Test Run with Payload",
+      "workflowNotValid": "Workflow is not valid",
+      "description": "Test run with current changes{payload}. Will not be saved in history",
+      "andProvidedPayload": " and provided payload",
+      "alertIncidentTogether": "Alert and incident dependencies cannot be used together"
+    },
+    "unsavedChanges": {
+      "bothUnsaved": "You have unsaved changes in both the YAML editor and the workflow editor. Please save your changes before running the workflow.",
+      "yamlUnsaved": "You have unsaved changes in the YAML editor. Do you want to save them?",
+      "uiBuilderUnsaved": "You have unsaved changes in the workflow UI builder. Do you want to save them?",
+      "discardAllAndRun": "Discard all changes and run",
+      "returnToEditor": "Return to editor",
+      "discardAndRun": "Discard changes and run",
+      "saveAndRun": "Save and run"
+    },
+    "alertPayload": {
+      "title": "Build Alert Payload",
+      "fieldsAsFilters": "Fields Defined As Workflow Filters",
+      "fieldsNeeded": "These fields are needed for the workflow to run",
+      "addAnotherField": "Add another field",
+      "runWorkflow": "Run workflow"
+    },
+    "aiAssistant": {
+      "chatTitle": "Workflow Builder",
+      "initialGreeting": "What can I help you automate?",
+      "placeholder": "For example: For each alert about CPU > 80%, send a slack message to the channel #alerts",
+      "workflowNameUpdated": "Workflow name updated",
+      "workflowDescriptionUpdated": "Workflow description updated",
+      "confirmRemoveStep": "Are you sure you want to remove {stepId} step?",
+      "stepRemoved": "Step removed",
+      "stepRemovalFailed": "Step removal failed",
+      "stepRemovalCancelled": "Step removal cancelled",
+      "userCancelledStepRemoval": "User cancelled the step removal",
+      "confirmRemoveTrigger": "Are you sure you want to remove {triggerNodeId} trigger?",
+      "triggerRemoved": "Trigger removed",
+      "triggerRemovalFailed": "Trigger removal failed",
+      "triggerRemovalCancelled": "Trigger removal cancelled",
+      "userCancelledTriggerRemoval": "User cancelled the trigger removal",
+      "actionDefinitionInvalid": "Action definition is invalid",
+      "stepDefinitionInvalid": "Step definition is invalid",
+      "conditionDefinitionInvalid": "Condition definition is invalid",
+      "failedToAddCondition": "Failed to add condition {message}",
+      "reset": "Reset",
+      "hideDefinition": "Hide definition",
+      "showDefinition": "Show definition",
+      "loading": "Loading...",
+      "confirmAddStep": "Do you want to add this action before node {nodeId}?",
+      "addStep": "Add (⌘+Enter)",
+      "no": "No",
+      "stepAdded": "Step added",
+      "userCancelledAddingStep": "User cancelled adding step",
+      "confirmAddTrigger": "Do you want to add this trigger to the workflow?",
+      "adding": "Adding...",
+      "addTrigger": "Add (⌘+Enter)",
+      "triggerAdded": "Trigger added",
+      "triggerSuggestionDeclined": "Trigger suggestion declined",
+      "cantFindEdge": "Can't find the edge to add the trigger after",
+      "aiDisabledTitle": "Workflow AI Assistant",
+      "aiDisabled": "AI is disabled",
+      "aiDisabledDescription": "Contact us to enable AI for you.",
+      "contactUs": "Contact us",
+      "yaml": "yaml"
     }
   },
   "dashboard": {
@@ -1556,7 +2015,17 @@
       "useSavedCredentials": "Use saved credentials"
     },
     "scopes": {
-      "revalidateFailed": "Failed to revalidate scopes"
+      "revalidateFailed": "Failed to revalidate scopes",
+      "title": "Scopes",
+      "validate": "Validate Scopes",
+      "installedWithMissing": "Installed with missing scopes",
+      "missingScopesMessage": "Provider is installed. If you don't need the related features, you can ignore the missing scopes.",
+      "name": "Name",
+      "lastStatus": "Last Status",
+      "description": "Description",
+      "valid": "Valid",
+      "notChecked": "Not Checked",
+      "mandatoryForWebhook": "Mandatory for webhook installation"
     },
     "connectionProblem": "Connection Problem",
     "updateSuccess": "Provider updated successfully",
@@ -1575,7 +2044,40 @@
     "filterProviders": "Filter providers...",
     "allLabels": "All Labels",
     "noProvidersMatching": "No providers found matching your filters.",
-    "selectProvider": "Select provider"
+    "selectProvider": "Select provider",
+    "tile": {
+      "webhookAvailable": "Webhook available",
+      "oauth2Available": "OAuth2 available",
+      "provisioned": "Provisioned",
+      "comingSoon": "(Coming Soon)",
+      "name": "Name: ",
+      "lastAlert": "Last alert: ",
+      "modify": "Modify"
+    },
+    "form": {
+      "installWithOAuth2": "Install with OAuth2",
+      "installWebhook": "Install Webhook",
+      "installOrUpdateWebhook": "Install/Update Webhook",
+      "id": "Id: ",
+      "slackCommunity": "Slack Community",
+      "checkHealth": "Check health"
+    },
+    "formFields": {
+      "addEntry": "Add Entry"
+    },
+    "semiAutomated": {
+      "pushAlertsFrom": "Push alerts from",
+      "description": "Seamlessly push alerts without actively connecting"
+    },
+    "filterLabels": {
+      "alert": "Alert",
+      "topology": "Topology",
+      "messaging": "Messaging",
+      "ticketing": "Ticketing",
+      "data": "Data",
+      "queue": "Queue",
+      "incident": "Incident"
+    }
   },
   "userSidebar": {
     "createUser": "Create User",
@@ -1635,6 +2137,42 @@
     "saving": "Saving...",
     "saveRole": "Save Role",
     "atLeastOneScope": "At least one scope must be selected"
+  },
+  "shared": {
+    "error": {
+      "statusCode": "Status Code:",
+      "message": "Message:",
+      "url": "URL:",
+      "stack": "Stack",
+      "tryAgain": "Try again",
+      "slackUs": "Slack Us",
+      "mailUs": "Mail Us"
+    },
+    "pagination": {
+      "showingOf": "Showing {current} of {total}"
+    },
+    "workflowYaml": {
+      "copiedToClipboard": "Workflow YAML copied to clipboard",
+      "copyFailed": "Failed to copy Workflow YAML. Please check your browser permissions.",
+      "loadingEditor": "Loading YAML editor...",
+      "loadingEditorShort": "Loading editor...",
+      "initializingValidation": "Initializing validation...",
+      "noValidationErrors": "No validation errors",
+      "validationError": "validation error",
+      "validationErrors": "validation errors",
+      "validationErrorCount": "{count} validation error(s)",
+      "editWorkflow": "Edit Workflow",
+      "newWorkflow": "New Workflow"
+    },
+    "traceViewer": {
+      "duration": "Duration:",
+      "service": "Service:",
+      "sqlQuery": "SQL Query:",
+      "name": "Name",
+      "timeline": "Timeline",
+      "durationHeader": "Duration",
+      "status": "Status"
+    }
   },
   "permissionSidebar": {
     "managePermissions": "Manage Permissions",

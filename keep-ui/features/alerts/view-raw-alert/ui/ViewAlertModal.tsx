@@ -12,6 +12,7 @@ import "./ViewAlertModal.css";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { Link } from "@/components/ui/Link";
+import { useI18n } from "@/i18n/hooks/useI18n";
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
   handleClose: () => void;
@@ -67,6 +68,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     []
   );
   const api = useApi();
+  const { t } = useI18n();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -151,7 +153,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
             JSON.stringify(jsonToValidate[field])
         ) {
           errors.push({
-            message: `Cannot modify read-only field: ${field}`,
+            message: t("alerts.rawAlert.cannotModifyReadOnly", { field }),
             field,
             type: "read-only",
           });
@@ -166,9 +168,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         !allowedValues.includes(jsonToValidate[field])
       ) {
         errors.push({
-          message: `Invalid value for "${field}". Allowed values: ${allowedValues.join(
-            ", "
-          )}`,
+          message: t("alerts.rawAlert.invalidEnumValue", { field, values: allowedValues.join(", ") }),
           field,
           type: "enum",
         });
@@ -179,17 +179,17 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   };
 
   const unEnrichAlert = async (key: string) => {
-    if (confirm(`Are you sure you want to un-enrich ${key}?`)) {
+    if (confirm(t("alerts.rawAlert.confirmUnenrich", { key }))) {
       try {
         const requestData = {
           enrichments: [key],
           fingerprint: alert!.fingerprint,
         };
         await api.post(`/alerts/unenrich`, requestData);
-        toast.success(`${key} un-enriched successfully!`);
+        toast.success(t("alerts.rawAlert.unenrichSuccess", { key }));
         await mutate();
       } catch (error) {
-        showErrorToast(error, `Failed to unenrich ${key}`);
+        showErrorToast(error, t("alerts.rawAlert.unenrichFailed", { key }));
       }
     }
   };
@@ -277,7 +277,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (!isEditable) {
       const editorDomNode = editor.getDomNode();
       if (editorDomNode) {
-        editorDomNode.setAttribute("title", "Click the unlock button to edit");
+        editorDomNode.setAttribute("title", t("alerts.rawAlert.clickUnlockToEdit"));
       }
     }
 
@@ -419,7 +419,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
               ),
               options: {
                 inlineClassName: "read-only-field",
-                hoverMessage: { value: "This field cannot be edited" },
+                hoverMessage: { value: t("alerts.rawAlert.fieldCannotBeEdited") },
                 stickiness:
                   monaco.editor.TrackedRangeStickiness
                     .NeverGrowsWhenTypingAtEdges,
@@ -468,7 +468,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
           range: match.range,
           options: {
             inlineClassName: "enriched-field",
-            hoverMessage: { value: "Click to un-enrich" },
+            hoverMessage: { value: t("alerts.rawAlert.clickToUnenrich") },
             stickiness: 1,
           },
         });
@@ -493,7 +493,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       if (hasChanges) {
         if (
           confirm(
-            "You have unsaved changes. Are you sure you want to discard them?"
+            t("alerts.rawAlert.confirmDiscardChanges")
           )
         ) {
           setEditorValue(originalValue);
@@ -578,7 +578,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         });
       }
 
-      toast.success("Alert updated successfully!");
+      toast.success(t("alerts.rawAlert.updateSuccess"));
 
       // Update local state
       setOriginalValue(editorValue);
@@ -587,7 +587,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       // Refresh the data
       await mutate();
     } catch (error) {
-      showErrorToast(error, "Failed to update alert");
+      showErrorToast(error, t("alerts.rawAlert.updateFailed"));
     }
   };
 
@@ -610,17 +610,17 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (alert) {
       try {
         await navigator.clipboard.writeText(editorValue);
-        showSuccessToast("Alert copied to clipboard");
+        showSuccessToast(t("alerts.rawAlert.alertCopied"));
       } catch (err) {
         showErrorToast(
           err,
           <p>
-            Failed to copy alert. Please check your browser permissions.{" "}
+            {t("alerts.rawAlert.copyFailed")}{" "}
             <Link
               target="_blank"
               href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
             >
-              Learn more
+              {t("common.actions.learnMore")}
             </Link>
           </p>
         );
@@ -671,7 +671,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         <div className="flex flex-col flex-1">
           <Text className="text-sm text-gray-500">{alert?.name}</Text>
           <div className="flex items-center">
-            <h2 className="text-lg font-semibold mr-2">Alert Payload</h2>
+            <h2 className="text-lg font-semibold mr-2">{t("alerts.rawAlert.alertPayload")}</h2>
             <Button
               onClick={toggleEditMode}
               color="orange"
@@ -696,7 +696,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
                 isEditable ? "text-gray-400" : "text-gray-500"
               }`}
             >
-              <Text>Enriched Fields Only</Text>
+              <Text>{t("alerts.rawAlert.enrichedFieldsOnly")}</Text>
             </label>
           </div>
           <Button
@@ -704,7 +704,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
             color="orange"
             icon={Save}
             disabled={!hasChanges || validationErrors.length > 0}
-            title={!hasChanges ? "No changes in the alert payload" : ""}
+            title={!hasChanges ? t("alerts.rawAlert.noChanges") : ""}
           ></Button>
           <Button
             onClick={handleCopy}
@@ -724,15 +724,14 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       {isEditable && (
         <Callout
           className="mb-4"
-          title="Edit with caution"
+          title={t("alerts.rawAlert.editWithCaution")}
           color="orange"
           icon={AlertTriangle}
         >
-          Keep in mind that some of the fields are used in ways that editing may
-          break them.
+          {t("alerts.rawAlert.editWithCautionDescription")}
           <br />
           <br />
-          Any changes in the following fields will be ignored:
+          {t("alerts.rawAlert.readOnlyFieldsDescription")}
           <br />
           {READ_ONLY_FIELDS.map((field, index) => (
             <span key={field}>

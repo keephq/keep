@@ -8,6 +8,7 @@ import {
   V2StepStep,
   V2ActionStep,
 } from "@/entities/workflows/model/types";
+import { useI18n } from "@/i18n/hooks/useI18n";
 
 const manualTriggerTemplate: V2StepTrigger = {
   type: "manual",
@@ -110,6 +111,7 @@ export const conditionAssertTemplate: Omit<V2StepConditionAssert, "id"> = {
 export function getToolboxConfiguration(
   providers: Provider[]
 ): ToolboxConfiguration {
+  const { t } = useI18n();
   /**
    * Generates the toolbox items
    */
@@ -144,7 +146,7 @@ export function getToolboxConfiguration(
   return {
     groups: [
       {
-        name: "Triggers",
+        name: t("workflows.builder.groupTriggers"),
         steps: [
           manualTriggerTemplate,
           alertTriggerTemplate,
@@ -153,20 +155,20 @@ export function getToolboxConfiguration(
         ],
       },
       {
-        name: "Steps",
+        name: t("workflows.builder.groupSteps"),
         steps: steps,
       },
       {
-        name: "Actions",
+        name: t("workflows.builder.groupActions"),
         steps: actions,
       },
       {
-        name: "Misc",
+        name: t("workflows.builder.groupMisc"),
         steps: [foreachTemplate],
       },
       // TODO: get conditions from API,
       {
-        name: "Conditions",
+        name: t("workflows.builder.groupConditions"),
         steps: [conditionThresholdTemplate, conditionAssertTemplate],
       },
     ],
