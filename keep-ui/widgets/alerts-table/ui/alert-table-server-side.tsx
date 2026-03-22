@@ -348,7 +348,7 @@ export function AlertTableServerSide({
           const label =
             severityMapping[Number(facetOption.display_name)] ||
             facetOption.display_name;
-          return <span className="capitalize">{label}</span>;
+          return <span>{t(`alerts.severity.${label.toLowerCase()}`)}</span>;
         },
         renderOptionIcon: (facetOption) => (
           <SeverityBorderIcon
@@ -363,6 +363,9 @@ export function AlertTableServerSide({
       },
       ["Status"]: {
         canHitEmptyState: true,
+        renderOptionLabel: (facetOption) => {
+          return <span>{t(`alerts.status.${facetOption.display_name.toLowerCase()}`)}</span>;
+        },
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={getStatusIcon(facetOption.display_name)}
@@ -405,8 +408,8 @@ export function AlertTableServerSide({
       ["Dismissed"]: {
         renderOptionLabel: (facetOption) =>
           facetOption.display_name.toLocaleLowerCase() === "true"
-            ? "Dismissed"
-            : "Not dismissed",
+            ? t("alerts.facets.dismissed")
+            : t("alerts.facets.notDismissed"),
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={
@@ -420,7 +423,7 @@ export function AlertTableServerSide({
         ),
       },
     };
-  }, []);
+  }, [t]);
 
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);

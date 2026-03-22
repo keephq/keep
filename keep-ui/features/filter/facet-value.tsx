@@ -2,6 +2,7 @@ import React from "react";
 import { ShortNumber } from "@/components/ui";
 import { Text } from "@tremor/react";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 
 export interface FacetValueProps {
   label: string;
@@ -30,6 +31,8 @@ export const FacetValue: React.FC<FacetValueProps> = ({
   renderIcon,
   renderLabel,
 }) => {
+  const t = useTranslations("alerts");
+
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelect(label);
@@ -82,7 +85,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           onClick={handleActionClick}
           className="h-full text-xs text-orange-600 hidden hover:text-orange-800 group-hover:block"
         >
-          {isExclusivelySelected ? "All" : "Only"}
+          {isExclusivelySelected ? t("messages.all") : t("messages.only")}
         </button>
         {
           <span data-testid="facet-value-count">
