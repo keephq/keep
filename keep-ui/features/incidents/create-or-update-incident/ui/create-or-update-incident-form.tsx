@@ -124,7 +124,6 @@ export function CreateOrUpdateIncidentForm({
     "italic",
     "underline",
     "list",
-    "bullet",
     "link",
     "align",
     "blockquote",

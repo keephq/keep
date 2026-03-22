@@ -22,37 +22,31 @@ export function NoWorkflowsState({}: {
     <div data-testid="no-workflows-state">
       <div className="mb-3">
         <PageTitle className="mb-3">{t("workflows.messages.createFirstWorkflow")}</PageTitle>
-        <PageSubtitle>
-          <div className="flex flex-col gap-2">
-            <p>
-              {t("workflows.messages.chooseTemplateDescription")}
-            </p>
-            <div className="flex items-center gap-2">
-              <span>{t("workflows.messages.youCanAlso")}</span>
-              <Button
-                color="orange"
-                size="xs"
-                variant="secondary"
-                onClick={() => {
-                  setIsUploadWorkflowsModalOpen(true);
-                }}
-                icon={ArrowUpOnSquareStackIcon}
-                id="uploadWorkflowButton"
-              >
-                {t("workflows.messages.uploadWorkflows")}
-              </Button>
-              <span>{t("workflows.messages.or")}</span>
-              <Button
-                color="orange"
-                size="xs"
-                variant="primary"
-                onClick={() => router.push("/workflows/builder")}
-              >
-                {t("workflows.messages.startFromScratch")}
-              </Button>
-            </div>
-          </div>
-        </PageSubtitle>
+        <PageSubtitle>{t("workflows.messages.chooseTemplateDescription")}</PageSubtitle>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span>{t("workflows.messages.youCanAlso")}</span>
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            onClick={() => {
+              setIsUploadWorkflowsModalOpen(true);
+            }}
+            icon={ArrowUpOnSquareStackIcon}
+            id="uploadWorkflowButton"
+          >
+            {t("workflows.messages.uploadWorkflows")}
+          </Button>
+          <span>{t("workflows.messages.or")}</span>
+          <Button
+            color="orange"
+            size="xs"
+            variant="primary"
+            onClick={() => router.push("/workflows/builder")}
+          >
+            {t("workflows.messages.startFromScratch")}
+          </Button>
+        </div>
       </div>
       <WorkflowTemplates></WorkflowTemplates>
       {isUploadWorkflowsModalOpen && (

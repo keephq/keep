@@ -24,25 +24,18 @@ export const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
       title={t("workflows.createModal.title")}
     >
       <div className="flex flex-col min-h-0 max-w-full max-h-full overflow-hidden">
-        <PageSubtitle>
-          <div className="flex flex-col gap-2 mb-3 h-full w-full">
-            <p>
-              {t("workflows.createModal.chooseTemplate")}
-            </p>
-            <p>
-              {t("workflows.createModal.orSkip")}{" "}
-              <Button
-                className="ml-2"
-                color="orange"
-                size="xs"
-                variant="primary"
-                onClick={() => router.push("/workflows/builder")}
-              >
-                {t("workflows.createModal.startFromScratch")}
-              </Button>
-            </p>
-          </div>
-        </PageSubtitle>
+        <PageSubtitle>{t("workflows.createModal.chooseTemplate")}</PageSubtitle>
+        <div className="mb-3 mt-2 flex flex-wrap items-center gap-2">
+          <span>{t("workflows.createModal.orSkip")}</span>
+          <Button
+            color="orange"
+            size="xs"
+            variant="primary"
+            onClick={() => router.push("/workflows/builder")}
+          >
+            {t("workflows.createModal.startFromScratch")}
+          </Button>
+        </div>
         <WorkflowTemplates></WorkflowTemplates>
       </div>
     </Modal>

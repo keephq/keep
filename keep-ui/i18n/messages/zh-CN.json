@@ -6,19 +6,19 @@
       "testWebhook": "测试 Webhook"
     },
     "providerImages": {
-      "title": "上传提供商图标",
-      "selectProvider": "选择提供商",
-      "selectProviderPlaceholder": "选择提供商",
+      "title": "上传集成图标",
+      "selectProvider": "选择集成",
+      "selectProviderPlaceholder": "选择集成",
       "uploadImage": "上传 PNG 图像",
       "onlyPngSupported": "仅支持 PNG 文件",
       "uploading": "上传中...",
       "messages": {
         "selectPng": "请选择 PNG 图像文件"
       },
-      "provider": "提供商",
+      "provider": "集成",
       "image": "图片",
-      "emptyTitle": "暂无自定义提供商图标",
-      "emptyDescription": "为您的提供商上传自定义图标，便于快速识别"
+      "emptyTitle": "暂无自定义集成图标",
+      "emptyDescription": "为您的集成上传自定义图标，便于快速识别"
     },
     "users": {
       "messages": {
@@ -233,7 +233,7 @@
         "all": "全部"
       },
       "lastReceived": "最后接收",
-      "providerName": "提供商名称"
+      "providerName": "集成名称"
     },
     "widgetModal": {
       "widgetNamePlaceholder": "请输入组件名称",
@@ -285,12 +285,12 @@
       },
       "sidebar": {
         "ruleName": "规则名称",
-        "providerTooltip": "选择此去重规则适用的提供商。这将决定由此规则处理的告警来源。",
+        "providerTooltip": "选择此去重规则适用的集成。这将决定由此规则处理的告警来源。",
         "fullDeduplication": "完全去重",
         "addRule": "添加去重规则",
         "defaultRule": "默认规则",
         "selectFingerprintFields": "选择指纹字段",
-        "selectProvider": "选择提供商",
+        "selectProvider": "选择集成",
         "editRule": "编辑 {name}",
         "editingDefaultDescription": "编辑默认去重规则需要高级知识。默认规则经过精心设计，为特定告警类型提供最佳去重效果。修改这些规则可能影响告警处理效率。如果您不确定如何修改，建议创建新的自定义规则。",
         "fingerprintFieldsRequired": "至少需要一个指纹字段",
@@ -299,10 +299,10 @@
         "fingerprintFields": "用于指纹的字段",
         "ruleNameRequired": "规则名称为必填项",
         "selectIgnoreFields": "选择忽略字段",
-        "providerRequired": "请选择提供商",
+        "providerRequired": "请选择集成",
         "saving": "保存中...",
         "description": "描述",
-        "chooseProviderFirst": "请先选择提供商以查看可用字段",
+        "chooseProviderFirst": "请先选择集成以查看可用字段",
         "save": "保存",
         "errorWhileSaving": "保存规则时出错",
         "editingDefault": "编辑默认规则",
@@ -311,7 +311,7 @@
         "editingProvisioned": "编辑预配置规则",
         "editingProvisionedDescription": "不允许编辑预配置的去重规则。请联系系统管理员了解更多信息。",
         "fullDeduplicationTooltip": "1. 完全去重：如果事件相同（不包括'忽略字段'），Keep 将丢弃重复事件。2. 部分去重（默认）：使用指定字段关联告警。例如，具有相同 'service' 和 'env' 字段的两个告警将被去重为一个。",
-        "provider": "提供商",
+        "provider": "集成",
         "descriptionRequired": "描述为必填项"
       },
       "title": "去重规则",
@@ -554,13 +554,13 @@
       "errorLoadingDescription": "加载拓扑数据时遇到问题，如果问题持续请联系我们",
       "selectServiceOrApplication": "选择一个服务或应用",
       "importedFrom": "从 {providerId} ({providerType}) 拉取的拓扑",
-      "noTopologyDescription": "开始连接支持拓扑的提供商、导入拓扑数据或手动创建新拓扑",
+      "noTopologyDescription": "开始连接支持拓扑的集成、导入拓扑数据或手动创建新拓扑",
       "pullSuccess": "拓扑拉取已启动",
       "fullTopologyMap": "完整拓扑图",
       "serviceOrApplication": "服务或应用",
       "errorUploadingFile": "上传文件出错",
       "errorDeletingService": "删除服务时出错",
-      "connectProviders": "连接提供商",
+      "connectProviders": "连接集成",
       "confirmImport": "当前拓扑将被完全替换，确定要继续吗？",
       "failedToUpdateProtocol": "更新协议失败",
       "errorExporting": "导出拓扑出错",
@@ -668,7 +668,7 @@
       "import": "导入",
       "expandAll": "全部展开",
       "filterByApplication": "按应用筛选",
-      "pullFromProviders": "从提供商拉取",
+      "pullFromProviders": "从集成拉取",
       "filterByService": "按服务筛选",
       "addNode": "添加节点",
       "export": "导出",
@@ -681,8 +681,8 @@
     "description": "描述环境中组件的拓扑数据"
   },
   "providerImages": {
-    "subtitle": "自定义提供商图标",
-    "title": "提供商图标",
+    "subtitle": "自定义集成图标",
+    "title": "集成图标",
     "uploadNewImage": "上传新图标"
   },
   "userSidebar": {
@@ -712,11 +712,11 @@
   },
   "providers": {
     "tiles": {
-      "linkedTooltip": "向 Keep 发送告警但未安装的提供商。"
+      "linkedTooltip": "向 Keep 发送告警但未安装的集成。"
     },
     "layout": {
       "subtitle": "连接监控服务让 Keep 接收告警，并集成其他服务来自动化工作流。",
-      "title": "提供商"
+      "title": "集成"
     },
     "categories": {
       "AI": "AI",
@@ -739,7 +739,7 @@
       "title": "作用域",
       "validate": "验证作用域",
       "installedWithMissing": "安装时缺少作用域",
-      "missingScopesMessage": "提供商已安装。如果不需要相关功能，请忽略缺少的作用域。",
+      "missingScopesMessage": "集成已安装。如果不需要相关功能，请忽略缺少的作用域。",
       "name": "名称",
       "lastStatus": "最后状态",
       "description": "描述",
@@ -747,16 +747,16 @@
       "notChecked": "未检查",
       "mandatoryForWebhook": "Webhook 安装所必需"
     },
-    "installed": "已安装的提供商",
-    "available": "可用的提供商",
-    "linked": "已关联的提供商",
+    "installed": "已安装的集成",
+    "available": "可用的集成",
+    "linked": "已关联的集成",
     "connectTo": "连接到 {providerName}",
-    "title": "提供商",
+    "title": "集成",
     "logs": {
-      "title": "提供商日志",
+      "title": "集成日志",
       "loading": "加载日志中...",
-      "notEnabledTitle": "提供商日志未启用",
-      "notEnabledDescription": "需要在后端启用提供商日志。请查看文档了解如何启用提供商日志的说明。",
+      "notEnabledTitle": "集成日志未启用",
+      "notEnabledDescription": "需要在后端启用集成日志。请查看文档了解如何启用集成日志的说明。",
       "viewDocumentation": "查看文档",
       "noLogsFound": "暂无日志"
     },
@@ -1366,7 +1366,7 @@
     "rules": "规则",
     "search": "搜索",
     "topology": "拓扑图",
-    "providers": "提供商",
+    "providers": "集成",
     "maintenanceWindows": "维护窗口",
     "documentation": "文档",
     "menu": "菜单",
@@ -1384,7 +1384,7 @@
       "placeholderWithShortcut": "搜索（或 ⌘K）",
       "navigate": "导航",
       "externalSources": "外部来源",
-      "goToProviders": "前往提供商页面",
+      "goToProviders": "前往集成页面",
       "goToAlertConsole": "前往告警控制台",
       "goToAlertQuality": "前往告警质量",
       "goToAlertGroups": "前往告警分组",
@@ -1461,12 +1461,12 @@
     },
     "error": "错误",
     "loadFailed": "加载告警质量指标失败",
-    "providerName": "提供商名称",
+    "providerName": "集成名称",
     "alertsReceived": "接收告警数",
     "correlatedPercent": "关联到事件的告警百分比"
   },
   "health": {
-    "title": "提供商",
+    "title": "集成",
     "resultsModal": {
       "everythingOk": "一切正常",
       "signUpToKeep": "注册 Keep",
@@ -1616,7 +1616,7 @@
         "inProgress": "进行中",
         "success": "成功",
         "error": "错误",
-        "providersNotConfigured": "提供商未配置"
+        "providersNotConfigured": "集成未配置"
       },
       "createdBy": "创建者",
       "enablingStatus": "启用状态",
@@ -1752,7 +1752,7 @@
       "avgDuration": "平均耗时",
       "steps": "步骤",
       "executionsGraph": "执行图表",
-      "providers": "提供商",
+      "providers": "集成",
       "executionHistory": "执行历史"
     },
     "templates": {

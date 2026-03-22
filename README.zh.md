@@ -60,7 +60,7 @@
 
 > 在我们的 [文档](https://docs.keephq.dev/providers/documentation) 中查看完整列表
 
-> 缺少某个提供者？[提交新的提供者申请](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=)，我们会尽快添加！
+> 缺少某个集成？[提交新的集成申请](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=)，我们会尽快添加！
 
 ### 用于丰富、关联与事件上下文的 AI 后端
 
