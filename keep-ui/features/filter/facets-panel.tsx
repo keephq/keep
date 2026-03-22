@@ -11,6 +11,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
 import { FacetStoreProvider, useFacetsConfig, useNewFacetStore } from "./store";
 import { useStore } from "zustand";
+import { useTranslations } from "next-intl";
 
 export interface FacetsPanelProps {
   panelId: string;
@@ -54,6 +55,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
 }) => {
+  const t = useTranslations("alerts");
+  const tCommon = useTranslations("common");
   const facetOptionsRef = useRef<Record<string, FacetOptionDto[]>>(facetOptions);
   facetOptionsRef.current = facetOptions;
   const onCelChangeRef = useRef(onCelChange);
@@ -115,14 +118,14 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <PlusIcon className="h-4 w-4" />
-            Add Facet
+            {t("messages.addFacet")}
           </button>
           <button
             onClick={() => clearFilters()}
             className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
           >
             <XMarkIcon className="h-4 w-4" />
-            Reset
+            {tCommon("actions.reset")}
           </button>
         </div>
         <FacetStoreProvider store={store}>
