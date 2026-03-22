@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.49.0"
+version = "0.51.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -114,6 +114,7 @@ pytest-mock = "^3.11.1"
 pytest-docker = "^3.1.1"
 pytest-asyncio = "^0.25.0"
 pytest-timeout = "^2.3.1"
+responses = "^0.25.0"
 docstring-parser = "^0.16"
 
 freezegun = "^1.5.1"

@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import json
 import logging
+import re
 import time
 
 import pydantic
@@ -325,14 +326,17 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
 
             url = alert.get("generatorURL", None)
             image_url = alert.get("imageURL", None)
-            dashboard_url = alert.get("dashboardURL", None)
-            panel_url = alert.get("panelURL", None)
+            # Always set these as "" when absent so workflow templates can
+            # reference them safely without triggering render_context safe=True errors.
+            dashboard_url = alert.get("dashboardURL", "")
+            panel_url = alert.get("panelURL", "")
+            silence_url = alert.get("silenceURL", "")
 
             description = alert.get("annotations", {}).get("description") or alert.get(
                 "annotations", {}
             ).get("summary", "")
 
-            valueString = alert.get("valueString")
+            valueString = alert.get("valueString", "")
 
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
@@ -349,9 +353,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 labels=labels,
                 url=url or None,
                 imageUrl=image_url or None,
-                dashboardUrl=dashboard_url or None,
-                panelUrl=panel_url or None,
+                dashboardUrl=dashboard_url,
+                panelUrl=panel_url,
+                silenceURL=silence_url,
                 valueString=valueString,
+                value="",
+                datasource="",
                 **extra,  # add annotations and values
             )
             # enrich extra payload with labels
@@ -391,7 +398,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         return [alert_dto]
 
     def _get_grafana_version(self) -> str:
-        """Get the Grafana version."""
+        """Get the Grafana version (PEP 440-compatible for comparison).
+
+        Grafana Cloud/Enterprise returns versions like '13.0.0-22843068776.patch2'
+        which packaging.version.Version cannot parse. We extract the base
+        semantic version (e.g. '13.0.0') before returning.
+        """
         try:
             headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
             health_url = f"{self.authentication_config.host}/api/health"
@@ -400,7 +412,11 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
 
             if resp.ok:
                 health_data = resp.json()
-                return health_data.get("version", "unknown")
+                raw_version = health_data.get("version", "unknown")
+                if not raw_version or raw_version == "unknown":
+                    return "0.0.0"
+                match = re.match(r"^(\d+\.\d+(?:\.\d+)?)", raw_version)
+                return match.group(1) if match else "0.0.0"
             else:
                 self.logger.warning(
                     f"Failed to get Grafana version: {resp.status_code}"
@@ -1034,9 +1050,15 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                         source=["grafana"],
                         labels=labels,
                         annotations=annotations,
-                        datasource=alert.get("datasource"),
+                        datasource=alert.get("datasource") or "",
                         datasource_type=alert.get("datasource_type"),
-                        value=alert.get("value"),
+                        value=str(alert.get("value") or ""),
+                        # Always set these so workflow templates can reference
+                        # them safely regardless of which alert path fired.
+                        panelUrl="",
+                        dashboardUrl="",
+                        silenceURL="",
+                        valueString="",
                     )
                     if description:
                         alert_dto.description = description
