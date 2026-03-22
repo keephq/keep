@@ -32,7 +32,7 @@ export function KeepLoader({
       <Title>{loadingText}</Title>
       {slowLoading && (
         <Subtitle>
-          This is taking a bit longer then usual, please wait...
+          This is taking a bit longer than usual, please wait...
         </Subtitle>
       )}
     </main>

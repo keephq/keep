@@ -1238,7 +1238,8 @@
       "incidentId": "事件 ID",
       "affectedServices": "受影响的服务",
       "appName": "应用",
-      "service": "服务"
+      "service": "服务",
+      "linkedIncident": "关联事件"
     },
     "table": {
       "status": "状态",
