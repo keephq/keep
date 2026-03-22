@@ -9,6 +9,7 @@ import { FacetDto, FacetOptionDto } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useExistingFacetsPanelStore } from "./store";
 import { stringToValue, valueToString } from "./store/utils";
+import { useTranslations } from "next-intl";
 
 export interface FacetProps {
   facet: FacetDto;
@@ -26,9 +27,22 @@ export const Facet: React.FC<FacetProps> = ({
   onLoadOptions,
   onDelete,
 }) => {
+  const t = useTranslations("incidents");
+  const tAlerts = useTranslations("alerts");
   const pathname = usePathname();
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
+
+  // Map common English facet names to i18n keys
+  const facetNameMap: Record<string, string> = {
+    "Severity": t("severity.title"),
+    "Status": t("status.title"),
+    "Source": tAlerts("labels.source"),
+    "Assignee": t("labels.assignee"),
+    "Service": t("labels.service"),
+    "Linked incident": t("labels.linkedIncident"),
+  };
+  const displayName = facetNameMap[facet.name] || facet.name;
 
   // Store open/close state in localStorage with a unique key per preset and facet
   const [isOpen, setIsOpen] = useState<boolean>(true);
@@ -252,7 +266,7 @@ export const Facet: React.FC<FacetProps> = ({
         <div className="flex items-center space-x-2">
           <Icon className="size-5 -m-0.5 text-gray-600" />
           {isLoading && <Skeleton containerClassName="h-4 w-20" />}
-          {!isLoading && <Title className="text-sm">{facet.name}</Title>}
+          {!isLoading && <Title className="text-sm">{displayName}</Title>}
         </div>
         {!facet.is_static && (
           <button
