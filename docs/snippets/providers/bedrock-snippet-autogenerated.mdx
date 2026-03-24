@@ -1,0 +1,34 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **region**: AWS region where Bedrock is available (e.g. us-east-1) (required: True, sensitive: False)
+- **access_key**: AWS access key ID (leave empty to use IAM role / instance profile) (required: False, sensitive: True)
+- **secret_access_key**: AWS secret access key (leave empty to use IAM role / instance profile) (required: False, sensitive: True)
+- **session_token**: AWS session token (required only for temporary credentials) (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query bedrock
+      provider: bedrock
+      config: "{{ provider.my_provider_name }}"
+      with:
+        prompt: {value}  # The text prompt.
+        model: {value}  # Bedrock model ID (e.g. 'anthropic.claude-3-sonnet-20240229-v1:0').
+Defaults to amazon.titan-text-express-v1.
+        max_tokens: {value}  # Maximum tokens to generate.
+        structured_output_format: {value}  # Optional JSON schema dict (same format as OpenAI).
+```
+
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).

@@ -156,6 +156,7 @@
             "providers/documentation/axiom-provider",
             "providers/documentation/azuremonitoring-provider",
             "providers/documentation/bash-provider",
+            "providers/documentation/bedrock-provider",
             "providers/documentation/bigquery-provider",
             "providers/documentation/centreon-provider",
             "providers/documentation/checkmk-provider",
