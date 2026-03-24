@@ -173,7 +173,7 @@ class UptimekumaProvider(BaseProvider):
 
         alert = AlertDto(
             id=monitor.get("id"),
-            name=monitor.get("name"),
+            name=monitor.get("name") or "unknown",
             monitor_url=monitor.get("url"),
             status=cls.STATUS_MAP.get(heartbeat.get("status"), "firing"),
             description=event.get("msg") or heartbeat.get("msg", ""),
@@ -195,8 +195,8 @@ class UptimekumaProvider(BaseProvider):
         if isinstance(dt, datetime):
             if isinstance(offset, (int, float)):
                 tz = timezone(timedelta(minutes=int(offset)))
-                return dt.replace(tzinfo=tz)
-            return dt
+                return dt.replace(tzinfo=tz).isoformat()
+            return dt.isoformat()
 
         # String datetime + string offset (e.g. "+05:30" from webhook payload)
         if isinstance(offset, str):
@@ -206,7 +206,7 @@ class UptimekumaProvider(BaseProvider):
         try:
             dt_obj = datetime.strptime(str(dt), "%Y-%m-%d %H:%M:%S")
             tz = timezone(timedelta(minutes=int(offset)))
-            return dt_obj.replace(tzinfo=tz)
+            return dt_obj.replace(tzinfo=tz).isoformat()
         except (ValueError, TypeError):
             return str(dt)
 

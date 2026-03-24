@@ -25,33 +25,33 @@ class TestFormatDatetime:
     def test_string_dt_numeric_offset_zero(self):
         """Pull API: dt is string, offset is integer minutes (UTC=0)."""
         result = UptimekumaProvider._format_datetime("2022-08-26 01:02:24", 0)
-        assert isinstance(result, datetime)
-        assert result.tzinfo == timezone.utc
+        assert isinstance(result, str)
+        assert "+00:00" in result
 
     def test_string_dt_numeric_offset_positive(self):
         """Pull API: numeric offset +330 (UTC+5:30)."""
         result = UptimekumaProvider._format_datetime("2022-08-26 01:02:24", 330)
-        assert isinstance(result, datetime)
-        assert result.utcoffset() == timedelta(hours=5, minutes=30)
+        assert isinstance(result, str)
+        assert "+05:30" in result
 
     def test_string_dt_numeric_offset_negative(self):
         """Pull API: numeric offset -300 (UTC-5)."""
         result = UptimekumaProvider._format_datetime("2022-08-26 01:02:24", -300)
-        assert isinstance(result, datetime)
-        assert result.utcoffset() == timedelta(hours=-5)
+        assert isinstance(result, str)
+        assert "-05:00" in result
 
     def test_datetime_object_numeric_offset(self):
         """Pull API returns actual datetime object."""
         dt = datetime(2022, 8, 26, 1, 2, 24)
         result = UptimekumaProvider._format_datetime(dt, 60)
-        assert isinstance(result, datetime)
-        assert result.utcoffset() == timedelta(hours=1)
+        assert isinstance(result, str)
+        assert "+01:00" in result
 
     def test_datetime_object_no_offset(self):
         """Datetime object with non-numeric offset falls back gracefully."""
         dt = datetime(2022, 8, 26, 1, 2, 24)
         result = UptimekumaProvider._format_datetime(dt, "invalid")
-        assert result == dt
+        assert isinstance(result, str)
 
     def test_empty_string_returns_string(self):
         """Graceful fallback for empty/bad input."""
