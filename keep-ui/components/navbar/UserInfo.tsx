@@ -37,11 +37,13 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
 
   const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
-    <Menu as="li" ref={refs.setReference} className="w-full">
+    <Menu as="li" ref={refs.setReference} className="min-w-0 flex-1">
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
-        <span className="space-x-3 flex items-center w-full">
-          <UserAvatar image={image} name={name ?? email} />{" "}
-          <Subtitle className="truncate">{name ?? email}</Subtitle>
+        <span className="space-x-3 flex items-center min-w-0 flex-1">
+          <span className="flex-shrink-0">
+            <UserAvatar image={image} name={name ?? email} />
+          </span>
+          <Subtitle className="truncate block">{name ?? email}</Subtitle>
         </span>
       </Menu.Button>
 
@@ -116,9 +118,9 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             Docs
           </LinkWithIcon>
         </li>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           {session && <UserDropdown session={session} />}
-          <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
+          <ThemeControl className="text-sm size-10 flex-shrink-0 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
         </div>
       </ul>
     </>
