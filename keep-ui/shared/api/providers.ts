@@ -137,6 +137,7 @@ export interface Provider {
   provider_metadata?: {
     [key: string]: string;
   };
+  docs_slug?: string;
 }
 
 export type Providers = Provider[];

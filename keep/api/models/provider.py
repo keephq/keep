@@ -56,3 +56,4 @@ class Provider(BaseModel):
     provisioned: bool = False
     health: bool = False
     provider_metadata: dict[str, Any] | None = Field(default_factory=dict)
+    docs_slug: str | None = None
