@@ -108,13 +108,12 @@ class UptimekumaProvider(BaseProvider):
         )
 
     def _get_heartbeats(self):
+        api = None
         try:
             api = self._get_api()
             response = api.get_heartbeats()
 
-            length = len(response)
-
-            if length == 0:
+            if not response:
                 return []
 
             heartbeats = []
@@ -124,7 +123,7 @@ class UptimekumaProvider(BaseProvider):
                 monitor_id = heartbeat.get("monitor_id", heartbeat.get("monitorID"))
                 try:
                     name = api.get_monitor(monitor_id)["name"]
-                except BadNamespaceError: # Most likely connection issues
+                except BadNamespaceError:  # Most likely connection issues
                     try:
                         api.disconnect()
                     except Exception:
@@ -132,23 +131,28 @@ class UptimekumaProvider(BaseProvider):
                     # Single retry
                     api = self._get_api()
                     name = api.get_monitor(monitor_id)["name"]
-            heartbeats.append(
-                AlertDto(
-                    id=heartbeat["id"],
-                    name=name,
-                    monitor_id=heartbeat["monitor_id"],
-                    description=heartbeat["msg"],
-                    status=self.STATUS_MAP.get(heartbeat["status"], "firing"),
-                    lastReceived=self._format_datetime(heartbeat["localDateTime"], heartbeat["timezoneOffset"]),
-                    ping=heartbeat["ping"],
-                    source=["uptimekuma"],
+                heartbeats.append(
+                    AlertDto(
+                        id=heartbeat.get("id"),
+                        name=name,
+                        monitor_id=heartbeat.get("monitor_id", heartbeat.get("monitorID")),
+                        description=heartbeat.get("msg", ""),
+                        status=self.STATUS_MAP.get(heartbeat.get("status"), "firing"),
+                        lastReceived=self._format_datetime(heartbeat.get("localDateTime", ""), heartbeat.get("timezoneOffset", 0)),
+                        ping=heartbeat.get("ping"),
+                        source=["uptimekuma"],
+                    )
                 )
-            )
-            api.disconnect()
             return heartbeats
         except Exception as e:
             self.logger.error("Error getting heartbeats from UptimeKuma: %s", e)
             raise Exception(f"Error getting heartbeats from UptimeKuma: {e}")
+        finally:
+            if api is not None:
+                try:
+                    api.disconnect()
+                except Exception:
+                    pass
 
     def _get_alerts(self) -> list[AlertDto]:
         try:
@@ -164,14 +168,20 @@ class UptimekumaProvider(BaseProvider):
     def _format_alert(
         cls, event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        monitor = event.get("monitor", {})
+        heartbeat = event.get("heartbeat", {})
+
         alert = AlertDto(
-            id=event["monitor"]["id"],
-            name=event["monitor"]["name"],
-            monitor_url=event["monitor"]["url"],
-            status=cls.STATUS_MAP.get(event["heartbeat"]["status"], "firing"),
-            description=event["msg"],
-            lastReceived=cls._format_datetime(event["heartbeat"]["localDateTime"], event["heartbeat"]["timezoneOffset"]),
-            msg=event["heartbeat"]["msg"],
+            id=monitor.get("id"),
+            name=monitor.get("name"),
+            monitor_url=monitor.get("url"),
+            status=cls.STATUS_MAP.get(heartbeat.get("status"), "firing"),
+            description=event.get("msg") or heartbeat.get("msg", ""),
+            lastReceived=cls._format_datetime(
+                heartbeat.get("localDateTime", ""),
+                heartbeat.get("timezoneOffset", 0),
+            ),
+            msg=heartbeat.get("msg", ""),
             source=["uptimekuma"],
         )
 
@@ -179,7 +189,26 @@ class UptimekumaProvider(BaseProvider):
 
     @staticmethod
     def _format_datetime(dt, offset):
-        return dt + offset
+        from datetime import datetime, timedelta, timezone
+
+        # Already a datetime object (from pull API)
+        if isinstance(dt, datetime):
+            if isinstance(offset, (int, float)):
+                tz = timezone(timedelta(minutes=int(offset)))
+                return dt.replace(tzinfo=tz)
+            return dt
+
+        # String datetime + string offset (e.g. "+05:30" from webhook payload)
+        if isinstance(offset, str):
+            return str(dt) + offset
+
+        # String datetime + numeric offset in minutes
+        try:
+            dt_obj = datetime.strptime(str(dt), "%Y-%m-%d %H:%M:%S")
+            tz = timezone(timedelta(minutes=int(offset)))
+            return dt_obj.replace(tzinfo=tz)
+        except (ValueError, TypeError):
+            return str(dt)
 
 if __name__ == "__main__":
     import logging
