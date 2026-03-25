@@ -51,6 +51,7 @@ def _bootstrap_keep_stubs():
             self.context_manager = context_manager
             self.provider_id = provider_id
             self.config = config
+            self.validate_config()
 
     class ProviderConfig:
         def __init__(self, authentication=None):
@@ -180,27 +181,23 @@ class TestValidateConfig(unittest.TestCase):
 
     def test_valid_v2c(self):
         p = _make_provider({"version": "2c", "community_string": "public"})
-        p.validate_config()  # must not raise
+        # validate_config called during __init__ — must not raise
 
     def test_valid_v1(self):
-        p = _make_provider({"version": "1"})
-        p.validate_config()
+        _make_provider({"version": "1"})
 
     def test_valid_v3_with_username(self):
-        p = _make_provider({"version": "3", "username": "admin",
-                            "auth_key": "secret", "priv_key": "secret2"})
-        p.validate_config()
+        _make_provider({"version": "3", "username": "admin",
+                        "auth_key": "secret", "priv_key": "secret2"})
 
     def test_invalid_version_raises(self):
-        p = _make_provider({"version": "5"})
         with self.assertRaises(ValueError) as ctx:
-            p.validate_config()
+            _make_provider({"version": "5"})
         self.assertIn("2c", str(ctx.exception))
 
     def test_v3_without_username_raises(self):
-        p = _make_provider({"version": "3", "username": ""})
         with self.assertRaises(ValueError) as ctx:
-            p.validate_config()
+            _make_provider({"version": "3", "username": ""})
         self.assertIn("username", str(ctx.exception))
 
 
@@ -319,7 +316,7 @@ class TestGetAlerts(unittest.TestCase):
         dummy = AlertDto(
             id="x", name="test", severity=AlertSeverity.INFO,
             status=AlertStatus.FIRING, source=["snmp"],
-            description="test", lastReceived=datetime.datetime.utcnow().isoformat(),
+            description="test", lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         )
         with p._alerts_lock:
             p._alerts.append(dummy)

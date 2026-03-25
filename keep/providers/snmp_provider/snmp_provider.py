@@ -82,6 +82,7 @@ class SNMPProviderAuthConfig:
             "required": False,
             "description": "SNMP community string (SNMPv1/v2c)",
             "hint": "Default is 'public'",
+            "sensitive": True,
         },
     )
     version: str = dataclasses.field(
@@ -204,17 +205,14 @@ class SNMPProvider(BaseProvider):
         provider_id: str,
         config: ProviderConfig,
     ):
-        super().__init__(context_manager, provider_id, config)
-        self.authentication_config: SNMPProviderAuthConfig = SNMPProviderAuthConfig(
-            **config.authentication
-        )
         self._alerts: list[AlertDto] = []
         self._alerts_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._listener_thread: Optional[threading.Thread] = None
         self._poll_thread: Optional[threading.Thread] = None
+        super().__init__(context_manager, provider_id, config)
 
-        # Parse JSON configs
+        # Parse JSON configs (authentication_config set by validate_config)
         try:
             self._oids_mapping: dict = json.loads(
                 self.authentication_config.oids_mapping
@@ -233,6 +231,9 @@ class SNMPProvider(BaseProvider):
 
     def validate_config(self):
         """Validate SNMP configuration."""
+        self.authentication_config = SNMPProviderAuthConfig(
+            **self.config.authentication
+        )
         cfg = self.authentication_config
         if cfg.version not in ("1", "2c", "3"):
             raise ValueError(
@@ -403,7 +404,7 @@ class SNMPProvider(BaseProvider):
             status=AlertStatus.FIRING,
             source=["snmp"],
             description="\n".join(values),
-            lastReceived=datetime.datetime.utcnow().isoformat(),
+            lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         )
 
     # ------------------------------------------------------------------
@@ -482,7 +483,7 @@ class SNMPProvider(BaseProvider):
                         status=AlertStatus.FIRING,
                         source=["snmp"],
                         description=f"{oid_str} = {value} (from {host})",
-                        lastReceived=datetime.datetime.utcnow().isoformat(),
+                        lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     )
                     with self._alerts_lock:
                         self._alerts.append(alert)
