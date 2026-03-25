@@ -1,0 +1,21 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+
+To send forwarded SNMP trap data to Keep:
+
+1. Configure your SNMP receiver or forwarder to `POST` JSON to `KEEP_BACKEND_URL/alerts/event/snmp`.
+2. Add an `x-api-key` header with a valid Keep API key.
+3. Forward either a single JSON object per trap or a JSON array for batches.
+4. Include `trap_oid` (or `oid`) and `source_address` in each payload.
+5. Add `entity_id` for interface-level traps so deduplication stays stable across repeated notifications.
