@@ -1,0 +1,182 @@
+---
+title: "SNMP Provider"
+sidebarTitle: "SNMP Provider"
+description: "Receive SNMP traps and convert them into Keep alerts."
+---
+
+## Overview
+
+The SNMP Provider enables Keep to receive SNMP (Simple Network Management Protocol) traps from network devices and convert them into standardized alerts. This integration is essential for monitoring network infrastructure including routers, switches, servers, and IoT devices.
+
+## Authentication Parameters
+
+The SNMP provider supports the following authentication parameters:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `community_string` | string | No | SNMP Community String for trap validation (default: "public") |
+| `allowed_hosts` | string | No | Comma-separated list of allowed source hosts for filtering |
+
+## Provider Configuration
+
+### Setting up SNMP Trap Reception
+
+1. Configure your network devices to send SNMP traps to Keep's webhook endpoint
+2. Set the community string to match your device configuration
+3. Optionally restrict allowed source hosts for security
+
+### Webhook Configuration
+
+The SNMP provider uses webhooks to receive traps. Configure your SNMP sender to POST trap data to:
+
+```
+{keep_webhook_api_url}
+```
+
+With the following JSON payload structure:
+
+```json
+{
+  "source": "192.168.1.100",
+  "trap_oid": "1.3.6.1.4.1.8072.2.3.0.1",
+  "trap_type": "LINKDOWN",
+  "community": "public",
+  "sys_uptime": "12345678",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "varbinds": {
+    "severity": "CRITICAL",
+    "message": "Link down on interface eth0",
+    "host": "router-01",
+    "service": "network",
+    "metric": "ifOperStatus",
+    "value": "2"
+  }
+}
+```
+
+## Alert Mapping
+
+### Severity Mapping
+
+SNMP traps are mapped to Keep alert severities based on standard SNMP conventions:
+
+| SNMP Severity | Keep Severity |
+|---------------|---------------|
+| CRITICAL | Critical |
+| MAJOR | High |
+| MINOR | Warning |
+| WARNING | Warning |
+| INDETERMINATE | Info |
+| CLEARED | Info |
+| INFO | Info |
+| DEBUG | Low |
+
+### Status Mapping
+
+Standard SNMP trap types are mapped to alert statuses:
+
+| Trap Type | Keep Status |
+|-----------|-------------|
+| COLDSTART | Firing |
+| WARMSTART | Firing |
+| LINKDOWN | Firing |
+| LINKUP | Resolved |
+| AUTHENTICATIONFAILURE | Firing |
+| EGPNEIGHBORLOSS | Firing |
+| ENTERPRISE | Firing |
+
+The status is automatically set to **Resolved** if the varbind contains state indicators like "up", "ok", "cleared", or "resolved".
+
+## Alert Fields
+
+SNMP traps populate the following Keep alert fields:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier (fingerprint) |
+| `name` | Alert name from OID or trap type |
+| `description` | Message and description from varbinds |
+| `status` | Alert status (Firing/Resolved) |
+| `severity` | Mapped severity level |
+| `source` | ["snmp"] |
+| `host` | Source host from varbinds |
+| `service` | Service name from varbinds |
+| `fingerprint` | Unique fingerprint for deduplication |
+| `community` | SNMP community string |
+| `trap_oid` | Full SNMP trap OID |
+| `trap_type` | Type of SNMP trap |
+| `sys_uptime` | Device uptime |
+| `varbinds` | All SNMP variables |
+| `metric` | Metric name from varbinds |
+| `metric_value` | Metric value from varbinds |
+
+## Use Cases
+
+### Network Monitoring
+
+Monitor network devices (routers, switches, firewalls) for:
+- Interface up/down events
+- High CPU/memory utilization
+- Temperature thresholds
+- Power supply failures
+
+### Server Monitoring
+
+Receive hardware alerts from servers via SNMP:
+- Disk failures
+- RAID array status changes
+- Fan failures
+- Power supply issues
+
+### IoT Device Monitoring
+
+Collect alerts from IoT devices and sensors:
+- Sensor threshold breaches
+- Connectivity issues
+- Battery level warnings
+
+## Example Configuration
+
+```yaml
+providers:
+  snmp:
+    description: SNMP Trap Receiver
+    authentication:
+      community_string: "public"
+      allowed_hosts: "192.168.1.0/24,10.0.0.0/8"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Traps not received**: Verify webhook URL is correctly configured on the SNMP sender
+2. **Authentication failures**: Check community string matches between sender and Keep
+3. **Missing alerts**: Ensure `allowed_hosts` includes the source device IP
+
+### Testing
+
+Send a test SNMP trap using curl:
+
+```bash
+curl -X POST {keep_webhook_api_url} \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: {api_key}" \
+  -d '{
+    "source": "192.168.1.100",
+    "trap_oid": "1.3.6.1.4.1.8072.2.3.0.1",
+    "trap_type": "LINKDOWN",
+    "community": "public",
+    "varbinds": {
+      "severity": "CRITICAL",
+      "message": "Test alert",
+      "host": "test-device"
+    }
+  }'
+```
+
+## References
+
+- [SNMP RFC 2578](https://datatracker.ietf.org/doc/html/rfc2578)
+- [SNMP Traps Overview](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol#Trap)
+- [Keep Providers Documentation](https://docs.keephq.dev/providers/adding-a-new-provider)
