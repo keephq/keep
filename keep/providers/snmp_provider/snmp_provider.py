@@ -185,6 +185,16 @@ class SNMPProvider(BaseProvider):
     PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_TAGS = ["alert"]
 
+    # OIDs that indicate recovery / normal state → AlertStatus.RESOLVED
+    _RECOVERY_OIDS: set[str] = {
+        "1.3.6.1.6.3.1.1.5.1",  # coldStart
+        "1.3.6.1.6.3.1.1.5.2",  # warmStart
+        "1.3.6.1.6.3.1.1.5.4",  # linkUp
+    }
+
+    # The snmpTrapOID.0 varbind OID
+    _SNMP_TRAP_OID = "1.3.6.1.6.3.1.1.4.1.0"
+
     # Severity mapping for well-known enterprise OID prefixes
     _ENTERPRISE_SEVERITY: dict[str, AlertSeverity] = {
         "1.3.6.1.4.1.9.": AlertSeverity.HIGH,       # Cisco
@@ -373,37 +383,75 @@ class SNMPProvider(BaseProvider):
                        context_name, var_binds, cbCtx):
         """Callback invoked for each received SNMP trap."""
         try:
-            alert = self._varbinds_to_alert(var_binds)
+            # Extract source IP from the transport address via the SNMP engine
+            source_ip = None
+            try:
+                transport_domain, transport_address = snmp_engine.msgAndPduDsp.getTransportInfo(
+                    state_reference
+                )
+                if transport_address:
+                    source_ip = str(transport_address[0])
+            except Exception:
+                logger.debug("Could not extract source IP from transport address")
+
+            alert = self._varbinds_to_alert(var_binds, source_ip=source_ip)
             with self._alerts_lock:
                 self._alerts.append(alert)
             logger.debug("Trap received → alert: %s (severity=%s)", alert.name, alert.severity)
         except Exception as exc:
             logger.warning("Error processing trap: %s", exc)
 
-    def _varbinds_to_alert(self, var_binds) -> AlertDto:
+    def _varbinds_to_alert(self, var_binds, source_ip: Optional[str] = None) -> AlertDto:
         """Convert SNMP trap varbinds to an AlertDto."""
-        oid_str = ""
+        trap_oid = None
+        last_oid = ""
         values: list[str] = []
 
         for oid, val in var_binds:
             oid_str = str(oid)
+            last_oid = oid_str
             values.append(f"{oid} = {val}")
+            # Extract the snmpTrapOID.0 value — this is the actual trap type
+            if oid_str == self._SNMP_TRAP_OID:
+                trap_oid = str(val)
+
+        # Use trap_oid as primary OID for lookups; fall back to last varbind OID
+        primary_oid = trap_oid or last_oid
 
         # Look up OID in mapping
-        mapped = self._map_oid_to_alert_config(oid_str)
-        name = mapped.get("name", f"SNMP Trap: {oid_str}")
+        mapped = self._map_oid_to_alert_config(primary_oid)
+        name = mapped.get("name", f"SNMP Trap: {primary_oid}")
         severity = self._parse_severity(mapped.get("severity", ""))
 
         if not severity:
-            severity = self._infer_severity_from_oid(oid_str)
+            severity = self._infer_severity_from_oid(primary_oid)
+
+        # Determine status: recovery OIDs → RESOLVED, everything else → FIRING
+        status = AlertStatus.FIRING
+        if primary_oid in self._RECOVERY_OIDS:
+            status = AlertStatus.RESOLVED
+
+        # Build fingerprint for deduplication: source_ip + trap_oid
+        fingerprint = None
+        if source_ip and primary_oid:
+            fingerprint = f"{source_ip}:{primary_oid}"
+
+        # Include source_ip and trap_oid in labels for downstream consumers
+        labels = {}
+        if source_ip:
+            labels["source_ip"] = source_ip
+        if trap_oid:
+            labels["trap_oid"] = trap_oid
 
         return AlertDto(
             id=str(uuid.uuid4()),
             name=name,
             severity=severity,
-            status=AlertStatus.FIRING,
+            status=status,
             source=["snmp"],
             description="\n".join(values),
+            fingerprint=fingerprint,
+            labels=labels if labels else None,
             lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         )
 

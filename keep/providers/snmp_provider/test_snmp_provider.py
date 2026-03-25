@@ -344,5 +344,124 @@ class TestInvalidJsonConfig(unittest.TestCase):
         self.assertEqual(p._poll_targets, [])
 
 
+class TestTrapOidExtraction(unittest.TestCase):
+    """trap_oid is extracted from snmpTrapOID.0 varbind."""
+
+    def setUp(self):
+        self.p = _make_provider({})
+
+    def test_trap_oid_extracted_from_varbinds(self):
+        """snmpTrapOID.0 value should be used as primary OID."""
+        var_binds = [
+            ("1.3.6.1.2.1.1.3.0", "12345"),  # sysUpTime
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),  # snmpTrapOID.0 → linkDown
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertIn("1.3.6.1.6.3.1.1.5.3", alert.name)
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
+
+    def test_trap_oid_in_labels(self):
+        """trap_oid should appear in labels."""
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.4"),  # linkUp
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.labels["trap_oid"], "1.3.6.1.6.3.1.1.5.4")
+
+    def test_no_trap_oid_falls_back_to_last_oid(self):
+        """Without snmpTrapOID.0, last varbind OID is used."""
+        var_binds = [
+            ("1.3.6.1.4.1.9.1.2.3", "some value"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertIn("1.3.6.1.4.1.9.1.2.3", alert.name)
+
+
+class TestAlertStatusFromTrapOid(unittest.TestCase):
+    """Recovery OIDs → RESOLVED, firing OIDs → FIRING."""
+
+    def setUp(self):
+        self.p = _make_provider({})
+
+    def test_link_up_is_resolved(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.4"),  # linkUp
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+
+    def test_cold_start_is_resolved(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.1"),  # coldStart
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+
+    def test_warm_start_is_resolved(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.2"),  # warmStart
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+
+    def test_link_down_is_firing(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),  # linkDown
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.status, AlertStatus.FIRING)
+
+    def test_auth_failure_is_firing(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.5"),  # authenticationFailure
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.status, AlertStatus.FIRING)
+
+
+class TestSourceIpAndFingerprint(unittest.TestCase):
+    """Source IP extraction and fingerprint deduplication."""
+
+    def setUp(self):
+        self.p = _make_provider({})
+
+    def test_source_ip_in_labels(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds, source_ip="192.168.1.1")
+        self.assertEqual(alert.labels["source_ip"], "192.168.1.1")
+
+    def test_fingerprint_uses_source_ip_and_trap_oid(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds, source_ip="10.0.0.1")
+        self.assertEqual(alert.fingerprint, "10.0.0.1:1.3.6.1.6.3.1.1.5.3")
+
+    def test_no_source_ip_no_fingerprint(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds, source_ip=None)
+        self.assertIsNone(alert.fingerprint)
+
+    def test_trap_callback_extracts_source_ip(self):
+        """_trap_callback should try to extract source IP from snmp engine."""
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.return_value = (
+            ("udp", "v4"),
+            ("192.168.1.100", 45000),
+        )
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),
+        ]
+        self.p._trap_callback(mock_engine, 42, None, None, var_binds, None)
+        self.assertEqual(len(self.p._alerts), 1)
+        alert = self.p._alerts[0]
+        self.assertEqual(alert.labels["source_ip"], "192.168.1.100")
+        self.assertEqual(alert.fingerprint, "192.168.1.100:1.3.6.1.6.3.1.1.5.3")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
