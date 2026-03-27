@@ -82,6 +82,9 @@ class SnmpProvider(BaseProvider):
                 
         return results
 
+    def listen(self, callback, **kwargs):
+        pass
+
     def dispose(self):
         pass
         
