@@ -22,7 +22,6 @@ class TestSnmpProvider(unittest.TestCase):
 
     @patch("keep.providers.snmp_provider.snmp_provider.getCmd")
     def test_query_success(self, mock_getCmd):
-        # Mocking SNMP response
         mock_iterator = MagicMock()
         mock_iterator.__next__.return_value = (None, 0, 0, [("1.3.6.1.2.1.1.1.0", "System Description")])
         mock_getCmd.return_value = mock_iterator
@@ -33,4 +32,3 @@ class TestSnmpProvider(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-  
