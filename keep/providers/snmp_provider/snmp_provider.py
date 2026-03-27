@@ -9,24 +9,38 @@ class SnmpProvider(BaseProvider):
     def validate_config(self):
         self.host = self.config.authentication.get("host")
         self.port = int(self.config.authentication.get("port", 161))
+        self.version = self.config.authentication.get("version", "v2c")
         self.community = self.config.authentication.get("community", "public")
+        self.username = self.config.authentication.get("username")
+        self.auth_key = self.config.authentication.get("auth_key")
+        self.priv_key = self.config.authentication.get("priv_key")
+
+    def _get_auth_data(self):
+        if self.version == "v3":
+            return UsmUserData(self.username, self.auth_key, self.priv_key)
+        return CommunityData(self.community)
 
     def query(self, **kwargs):
         oid = kwargs.get("oid")
+        auth_data = self._get_auth_data()
+        
         iterator = getCmd(
             SnmpEngine(),
-            CommunityData(self.community),
+            auth_data,
             UdpTransportTarget((self.host, self.port)),
             ContextData(),
             ObjectType(ObjectIdentity(oid))
         )
+        
         error_indication, error_status, error_index, var_binds = next(iterator)
+        
         if error_indication:
-            return str(error_indication)
+            raise Exception(str(error_indication))
         elif error_status:
-            return str(error_status)
-        else:
-            return {str(var_bind[0]): str(var_bind[1]) for var_bind in var_binds}
+            raise Exception(str(error_status))
+        
+        return {str(var_bind[0]): str(var_bind[1]) for var_bind in var_binds}
 
     def dispose(self):
         pass
+        
