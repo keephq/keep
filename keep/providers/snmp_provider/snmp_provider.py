@@ -42,10 +42,9 @@ try:
         getCmd,
         nextCmd,
     )
-    from pysnmp.carrier.asyncio.dgram import udp as asyncio_udp
+    from pysnmp.carrier.asyncore.dgram import udp as snmp_udp
     from pysnmp.entity import engine, config as snmp_config
     from pysnmp.entity.rfc3413 import ntfrcv
-    from pysnmp.proto.api import v2c as pMod
 
     PYSNMP_AVAILABLE = True
 except ImportError:
@@ -185,6 +184,9 @@ class SNMPProvider(BaseProvider):
     PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_TAGS = ["alert"]
 
+    # Maximum number of alerts to retain in memory (oldest are evicted)
+    _MAX_ALERTS = 10_000
+
     # OIDs that indicate recovery / normal state → AlertStatus.RESOLVED
     _RECOVERY_OIDS: set[str] = {
         "1.3.6.1.6.3.1.1.5.1",  # coldStart
@@ -314,11 +316,11 @@ class SNMPProvider(BaseProvider):
         try:
             snmp_engine = engine.SnmpEngine()
 
-            # Transport
+            # Transport — use synchronous (asyncore) UDP for threaded listener
             snmp_config.addTransport(
                 snmp_engine,
-                asyncio_udp.domainName,
-                snmp_engine.transportDispatcher.openServerMode(
+                snmp_udp.domainName,
+                snmp_udp.UdpSocketTransport().openServerMode(
                     (self.authentication_config.host, self.authentication_config.port)
                 ),
             )
@@ -339,19 +341,32 @@ class SNMPProvider(BaseProvider):
 
             try:
                 while not self._stop_event.is_set():
-                    snmp_engine.transportDispatcher.runDispatcher(count=1, timeout=1)
+                    snmp_engine.transportDispatcher.runDispatcher(timeout=1.0)
             except Exception as exc:
                 logger.warning("Trap dispatcher loop error: %s", exc)
             finally:
                 snmp_engine.transportDispatcher.closeDispatcher()
 
+        except PermissionError:
+            logger.exception(
+                "SNMP trap listener failed to bind %s:%d — "
+                "port 162 requires root/elevated privileges. "
+                "Use a port >1024 (e.g. 1620) or run with appropriate permissions.",
+                self.authentication_config.host,
+                self.authentication_config.port,
+            )
+        except OSError as exc:
+            logger.exception(
+                "SNMP trap listener failed to bind %s:%d — %s",
+                self.authentication_config.host,
+                self.authentication_config.port,
+                exc,
+            )
         except Exception as exc:
             logger.exception("SNMP trap listener crashed: %s", exc)
 
     def _configure_v3_listener(self, snmp_engine):
         """Configure SNMPv3 authentication and privacy for the listener."""
-        from pysnmp.entity import config as snmp_config  # noqa: F401
-
         auth_proto_map = {
             "MD5": snmp_config.usmHMACMD5AuthProtocol,
             "SHA": snmp_config.usmHMACSHAAuthProtocol,
@@ -395,8 +410,7 @@ class SNMPProvider(BaseProvider):
                 logger.debug("Could not extract source IP from transport address")
 
             alert = self._varbinds_to_alert(var_binds, source_ip=source_ip)
-            with self._alerts_lock:
-                self._alerts.append(alert)
+            self._append_alert(alert)
             logger.debug("Trap received → alert: %s (severity=%s)", alert.name, alert.severity)
         except Exception as exc:
             logger.warning("Error processing trap: %s", exc)
@@ -420,6 +434,8 @@ class SNMPProvider(BaseProvider):
 
         # Look up OID in mapping
         mapped = self._map_oid_to_alert_config(primary_oid)
+        if not isinstance(mapped, dict):
+            mapped = {}
         name = mapped.get("name", f"SNMP Trap: {primary_oid}")
         severity = self._parse_severity(mapped.get("severity", ""))
 
@@ -520,6 +536,8 @@ class SNMPProvider(BaseProvider):
                 for var_bind in var_binds:
                     oid_str, value = str(var_bind[0]), str(var_bind[1])
                     mapped = self._map_oid_to_alert_config(oid_str)
+                    if not isinstance(mapped, dict):
+                        mapped = {}
                     name = mapped.get("name", f"SNMP Poll: {oid_str}")
                     severity = self._parse_severity(
                         mapped.get("severity", "")
@@ -539,6 +557,13 @@ class SNMPProvider(BaseProvider):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _append_alert(self, alert: AlertDto):
+        """Thread-safe append with bounded list size."""
+        with self._alerts_lock:
+            self._alerts.append(alert)
+            if len(self._alerts) > self._MAX_ALERTS:
+                self._alerts = self._alerts[-self._MAX_ALERTS:]
 
     def _map_oid_to_alert_config(self, oid: str) -> dict:
         """Find the best matching OID prefix in oids_mapping."""

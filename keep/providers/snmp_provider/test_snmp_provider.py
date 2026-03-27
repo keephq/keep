@@ -109,8 +109,9 @@ def _mock_pysnmp():
                 "SnmpEngine", "UdpTransportTarget", "getCmd", "nextCmd"):
         setattr(hlapi, sym, MagicMock())
 
-    udp = _m("pysnmp.carrier.asyncio.dgram.udp")
+    udp = _m("pysnmp.carrier.asyncore.dgram.udp")
     udp.domainName = ("udp", "v4")
+    udp.UdpSocketTransport = MagicMock()
 
     engine_mod = _m("pysnmp.entity.engine")
     engine_mod.SnmpEngine = MagicMock()
@@ -124,8 +125,8 @@ def _mock_pysnmp():
     ntfrcv = _m("pysnmp.entity.rfc3413.ntfrcv")
     ntfrcv.NotificationReceiver = MagicMock()
 
-    for name in ["pysnmp", "pysnmp.carrier", "pysnmp.carrier.asyncio",
-                 "pysnmp.carrier.asyncio.dgram", "pysnmp.entity",
+    for name in ["pysnmp", "pysnmp.carrier", "pysnmp.carrier.asyncore",
+                 "pysnmp.carrier.asyncore.dgram", "pysnmp.entity",
                  "pysnmp.entity.rfc3413", "pysnmp.proto",
                  "pysnmp.proto.api", "pysnmp.proto.api.v2c"]:
         if name not in sys.modules:
@@ -461,6 +462,50 @@ class TestSourceIpAndFingerprint(unittest.TestCase):
         alert = self.p._alerts[0]
         self.assertEqual(alert.labels["source_ip"], "192.168.1.100")
         self.assertEqual(alert.fingerprint, "192.168.1.100:1.3.6.1.6.3.1.1.5.3")
+
+
+class TestAlertsCap(unittest.TestCase):
+    """_append_alert() respects _MAX_ALERTS bound."""
+
+    def test_alerts_capped_at_max(self):
+        import datetime
+        p = _make_provider({})
+        p._MAX_ALERTS = 5  # lower cap for testing
+        for i in range(10):
+            alert = AlertDto(
+                id=str(i), name=f"test-{i}", severity=AlertSeverity.INFO,
+                status=AlertStatus.FIRING, source=["snmp"],
+                description="test",
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            )
+            p._append_alert(alert)
+        self.assertEqual(len(p._alerts), 5)
+        # Should keep the most recent alerts
+        self.assertEqual(p._alerts[0].id, "5")
+        self.assertEqual(p._alerts[-1].id, "9")
+
+
+class TestEdgeCases(unittest.TestCase):
+    """Additional edge-case coverage."""
+
+    def test_empty_varbinds(self):
+        p = _make_provider({})
+        alert = p._varbinds_to_alert([])
+        self.assertEqual(alert.name, "SNMP Trap: ")
+        self.assertEqual(alert.severity, AlertSeverity.INFO)
+
+    def test_oids_mapping_with_non_dict_value(self):
+        """oids_mapping values that aren't dicts should not crash _varbinds_to_alert."""
+        import json
+        p = _make_provider({
+            "oids_mapping": json.dumps({
+                "1.3.6.1.4.1.9": "not a dict",
+            })
+        })
+        var_binds = [("1.3.6.1.4.1.9.1.2.3", "some value")]
+        alert = p._varbinds_to_alert(var_binds)
+        # Should fall back to default name, not crash
+        self.assertIn("1.3.6.1.4.1.9.1.2.3", alert.name)
 
 
 if __name__ == "__main__":
