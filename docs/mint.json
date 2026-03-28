@@ -90,7 +90,10 @@
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview", "incidents/facets"]
+      "pages": [
+        "incidents/overview",
+        "incidents/facets"
+      ]
     },
     {
       "group": "Workflow Automation",
@@ -164,6 +167,7 @@
             "providers/documentation/clickhouse-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
+            "providers/documentation/coroot-provider",
             "providers/documentation/coralogix-provider",
             "providers/documentation/dash0-provider",
             "providers/documentation/databend-provider",
@@ -322,14 +326,19 @@
         },
         {
           "group": "Local LLM",
-          "pages": ["deployment/local-llm/keep-with-litellm"]
+          "pages": [
+            "deployment/local-llm/keep-with-litellm"
+          ]
         },
         "deployment/stress-testing"
       ]
     },
     {
       "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
+      "pages": [
+        "development/getting-started",
+        "development/external-url"
+      ]
     },
     {
       "group": "Keep CLI",
@@ -368,7 +377,10 @@
                 "cli/commands/workflow-runs",
                 {
                   "group": "keep workflow runs",
-                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
                 }
               ]
             },
