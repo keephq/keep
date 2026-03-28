@@ -452,8 +452,16 @@ class TestFormatAlert:
         assert "503" in dto.description
 
     def test_priority_5_stars_maps_to_critical(self):
+        """Down sensor with 5-star priority stays CRITICAL (already max)."""
         event = _webhook_down_event()
         event["priority"] = "*****"
+        dto = PrtgProvider._format_alert(event)
+        assert dto.severity == AlertSeverity.CRITICAL
+
+    def test_priority_5_escalates_warning_to_critical(self):
+        """Warning sensor with priority 5 (critical) should be escalated to CRITICAL."""
+        event = _webhook_warning_event()
+        event["priority"] = "5"
         dto = PrtgProvider._format_alert(event)
         assert dto.severity == AlertSeverity.CRITICAL
 
