@@ -164,6 +164,7 @@
             "providers/documentation/clickhouse-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
+            "providers/documentation/coroot-provider",
             "providers/documentation/coralogix-provider",
             "providers/documentation/dash0-provider",
             "providers/documentation/databend-provider",
