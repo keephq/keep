@@ -201,6 +201,21 @@ class TestValidateConfig(unittest.TestCase):
             _make_provider({"version": "3", "username": ""})
         self.assertIn("username", str(ctx.exception))
 
+    def test_invalid_port_zero_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            _make_provider({"port": 0})
+        self.assertIn("port", str(ctx.exception).lower())
+
+    def test_invalid_port_too_high_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            _make_provider({"port": 70000})
+        self.assertIn("port", str(ctx.exception).lower())
+
+    def test_invalid_poll_interval_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            _make_provider({"poll_interval": 0})
+        self.assertIn("poll_interval", str(ctx.exception).lower())
+
 
 class TestOidMapping(unittest.TestCase):
     """_map_oid_to_alert_config() and longest-prefix matching."""
@@ -302,12 +317,12 @@ class TestDispose(unittest.TestCase):
 
 
 class TestGetAlerts(unittest.TestCase):
-    """get_alerts() behaviour."""
+    """_get_alerts() behaviour."""
 
     def test_returns_list(self):
         p = _make_provider({})
         with patch.object(p, "_start_trap_listener"):
-            result = p.get_alerts()
+            result = p._get_alerts()
         self.assertIsInstance(result, list)
 
     def test_returns_copy_not_reference(self):
@@ -322,14 +337,14 @@ class TestGetAlerts(unittest.TestCase):
         with p._alerts_lock:
             p._alerts.append(dummy)
         with patch.object(p, "_start_trap_listener"):
-            result = p.get_alerts()
+            result = p._get_alerts()
         result.clear()
         self.assertEqual(len(p._alerts), 1, "Internal alert list was mutated via returned copy")
 
     def test_calls_start_listener_when_not_running(self):
         p = _make_provider({})
         with patch.object(p, "_start_trap_listener") as mock_start:
-            p.get_alerts()
+            p._get_alerts()
         mock_start.assert_called_once()
 
 
@@ -506,6 +521,73 @@ class TestEdgeCases(unittest.TestCase):
         alert = p._varbinds_to_alert(var_binds)
         # Should fall back to default name, not crash
         self.assertIn("1.3.6.1.4.1.9.1.2.3", alert.name)
+
+
+class TestTrapCallbackErrorHandling(unittest.TestCase):
+    """_trap_callback gracefully handles malformed data."""
+
+    def test_malformed_varbinds_do_not_crash(self):
+        """If _varbinds_to_alert raises, the callback logs and continues."""
+        p = _make_provider({})
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.side_effect = Exception("bad state")
+        # Even with broken transport info extraction, callback should not raise
+        var_binds = [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")]
+        p._trap_callback(mock_engine, 42, None, None, var_binds, None)
+        # Alert should still be created (source_ip will be None)
+        self.assertEqual(len(p._alerts), 1)
+        self.assertIsNone(p._alerts[0].fingerprint)
+
+    def test_completely_broken_varbinds(self):
+        """Callback handles exception from _varbinds_to_alert itself."""
+        p = _make_provider({})
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.return_value = (None, None)
+        # Pass something that will break iteration in _varbinds_to_alert
+        with patch.object(p, "_varbinds_to_alert", side_effect=Exception("parse error")):
+            p._trap_callback(mock_engine, 42, None, None, [], None)
+        # No alert should be added, but no crash
+        self.assertEqual(len(p._alerts), 0)
+
+
+class TestPollingUsesAppendAlert(unittest.TestCase):
+    """Polling should use _append_alert to respect _MAX_ALERTS cap."""
+
+    def test_poll_alerts_are_bounded(self):
+        import datetime
+        p = _make_provider({})
+        p._MAX_ALERTS = 3
+        # Simulate what _poll_target does by calling _append_alert directly
+        for i in range(5):
+            alert = AlertDto(
+                id=str(i), name=f"poll-{i}", severity=AlertSeverity.INFO,
+                status=AlertStatus.FIRING, source=["snmp"],
+                description="test",
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            )
+            p._append_alert(alert)
+        self.assertEqual(len(p._alerts), 3)
+        self.assertEqual(p._alerts[0].id, "2")
+
+
+class TestSNMPVersionParametrized(unittest.TestCase):
+    """Parametrized tests for all valid SNMP versions."""
+
+    def test_all_valid_versions(self):
+        for version in ("1", "2c"):
+            with self.subTest(version=version):
+                p = _make_provider({"version": version})
+                self.assertEqual(p.authentication_config.version, version)
+
+    def test_v3_valid(self):
+        p = _make_provider({"version": "3", "username": "admin"})
+        self.assertEqual(p.authentication_config.version, "3")
+
+    def test_invalid_versions(self):
+        for version in ("0", "4", "5", "v2c", ""):
+            with self.subTest(version=version):
+                with self.assertRaises(ValueError):
+                    _make_provider({"version": version})
 
 
 if __name__ == "__main__":

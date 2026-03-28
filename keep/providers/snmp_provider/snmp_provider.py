@@ -253,6 +253,14 @@ class SNMPProvider(BaseProvider):
             )
         if cfg.version == "3" and not cfg.username:
             raise ValueError("SNMPv3 requires a username")
+        if not (0 < cfg.port <= 65535):
+            raise ValueError(
+                f"Invalid port {cfg.port}. Must be between 1 and 65535"
+            )
+        if cfg.poll_interval < 1:
+            raise ValueError(
+                f"Invalid poll_interval {cfg.poll_interval}. Must be >= 1 second"
+            )
         if cfg.auth_protocol not in ("MD5", "SHA"):
             logger.warning(
                 "Unknown auth_protocol '%s'. Defaulting to MD5", cfg.auth_protocol
@@ -278,7 +286,7 @@ class SNMPProvider(BaseProvider):
             self._poll_thread.join(timeout=5)
             logger.debug("Poll thread stopped")
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         """Return all alerts captured from SNMP traps and polls."""
         if not self._listener_thread or not self._listener_thread.is_alive():
             self._start_trap_listener()
@@ -551,8 +559,7 @@ class SNMPProvider(BaseProvider):
                         description=f"{oid_str} = {value} (from {host})",
                         lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     )
-                    with self._alerts_lock:
-                        self._alerts.append(alert)
+                    self._append_alert(alert)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -585,15 +592,16 @@ class SNMPProvider(BaseProvider):
                 return severity
         return AlertSeverity.INFO
 
+    _SEVERITY_MAP: dict[str, AlertSeverity] = {
+        "critical": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "warning": AlertSeverity.WARNING,
+        "medium": AlertSeverity.MEDIUM,
+        "info": AlertSeverity.INFO,
+        "low": AlertSeverity.LOW,
+    }
+
     @staticmethod
     def _parse_severity(severity_str: str) -> Optional[AlertSeverity]:
         """Parse a severity string into AlertSeverity enum."""
-        mapping = {
-            "critical": AlertSeverity.CRITICAL,
-            "high": AlertSeverity.HIGH,
-            "warning": AlertSeverity.WARNING,
-            "medium": AlertSeverity.MEDIUM,
-            "info": AlertSeverity.INFO,
-            "low": AlertSeverity.LOW,
-        }
-        return mapping.get(severity_str.lower().strip()) if severity_str else None
+        return SNMPProvider._SEVERITY_MAP.get(severity_str.lower().strip()) if severity_str else None
