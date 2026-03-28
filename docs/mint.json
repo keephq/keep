@@ -229,6 +229,7 @@
             "providers/documentation/posthog-provider",
             "providers/documentation/planner-provider",
             "providers/documentation/postgresql-provider",
+            "providers/documentation/prtg-provider",
             "providers/documentation/prometheus-provider",
             "providers/documentation/pushover-provider",
             "providers/documentation/python-provider",
