@@ -236,6 +236,7 @@
             "providers/documentation/redmine-provider",
             "providers/documentation/resend-provider",
             "providers/documentation/rollbar-provider",
+            "providers/documentation/sematext-provider",
             "providers/documentation/sendgrid-provider",
             "providers/documentation/sentry-provider",
             "providers/documentation/service-now-provider",
