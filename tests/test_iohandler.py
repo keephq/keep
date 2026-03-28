@@ -1038,6 +1038,16 @@ def test_fn_na_on_missing_key(mocked_context_manager):
     assert result == "ts=N/A", f"Expected 'ts=N/A', got '{result}'"
 
 
+def test_fn_na_on_none_environment(mocked_context_manager):
+    """fn.na renders 'N/A' when environment is absent (defaults to None, not 'undefined')."""
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"name": "test-alert"},  # no 'environment' field
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    result = iohandler.render("env={{#fn.na}}{{ alert.environment }}{{/fn.na}}")
+    assert result == "env=N/A", f"Expected 'env=N/A', got '{result}'"
+
+
 def test_fn_default_on_missing_key(mocked_context_manager):
     """fn.default renders an empty string when the wrapped field is absent."""
     mocked_context_manager.get_full_context.return_value = {
