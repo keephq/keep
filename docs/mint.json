@@ -157,6 +157,7 @@
             "providers/documentation/azuremonitoring-provider",
             "providers/documentation/bash-provider",
             "providers/documentation/bigquery-provider",
+            "providers/documentation/bmc-helix-provider",
             "providers/documentation/centreon-provider",
             "providers/documentation/checkmk-provider",
             "providers/documentation/checkly-provider",
