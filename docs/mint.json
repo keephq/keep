@@ -219,6 +219,7 @@
             "providers/documentation/ollama-provider",
             "providers/documentation/openai-provider",
             "providers/documentation/openobserve-provider",
+            "providers/documentation/opensearch-provider",
             "providers/documentation/opensearchserverless-provider",
             "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
