@@ -1,0 +1,79 @@
+---
+title: "Cribl"
+sidebarTitle: "Cribl Provider"
+description: "Cribl provider allows you to receive events and alerts from Cribl Stream or Cribl Edge via webhook push or pull from the REST API."
+---
+
+## Overview
+
+[Cribl](https://cribl.io) is a universal observability pipeline that routes, reduces,
+and enriches machine data — logs, metrics, traces, and security events — from any source
+to any destination.
+
+The Cribl provider for Keep supports **two connection modes**:
+
+- **Push (Webhook)** — Configure a Cribl **HTTP Destination** to forward events to Keep's
+  webhook endpoint in real-time.  No credentials are required for push mode.
+- **Pull** — Keep periodically polls the Cribl REST API to detect unhealthy workers
+  and failed pipeline jobs.
+
+## Connecting with the Provider
+
+### Prerequisites
+
+| Mode | Required credentials |
+|------|---------------------|
+| Push | None (webhook URL configured in Cribl) |
+| Pull | Cribl REST API URL + API token or username/password |
+
+### Creating an API Token (Pull mode only)
+
+1. Log into your Cribl Stream or Cribl Edge instance.
+2. Navigate to **Settings > API**.
+3. Click **Generate Token** and copy the token value.
+
+### Configuration Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `api_url` | No | Base URL of your Cribl instance (e.g. `https://cribl.example.com`) |
+| `api_key` | No | Cribl API bearer token (preferred over username/password) |
+| `username` | No | Cribl username (used when `api_key` is not provided) |
+| `password` | No | Cribl password |
+| `worker_group` | No | Worker group name to query (default: `default`) |
+
+At least one credential (`api_key` or `username`+`password`) is required for pull mode.
+Push mode works without any credentials.
+
+## Setting Up the Webhook (Push Mode)
+
+Follow these steps to forward Cribl events to Keep:
+
+1. In Cribl Stream, navigate to your pipeline in the **Pipelines** editor (or use
+   **Routing > QuickConnect**).
+2. Add an **HTTP Destination** output.
+3. Set **URL** to the Keep webhook URL shown in the provider settings.
+4. Under **Headers**, add:
+   - Key: `X-API-KEY`  Value: *(your Keep API key)*
+5. Set **Method** to `POST` and **Data Format** to `JSON`.
+6. Connect your pipeline sources to this destination and deploy.
+
+Keep will now receive all events routed through this Cribl destination.
+
+## Payload Formats Supported
+
+The Cribl provider handles all common formats that Cribl HTTP Destinations produce:
+
+| Format | Description |
+|--------|-------------|
+| Single JSON object | Standard event forwarded individually |
+| JSON array | Batched events (Cribl batching enabled) |
+| `{"events": [...]}` | Wrapper object with nested events |
+| `{"results": [...]}` | Alternative wrapper format |
+| `{"records": [...]}` | Alternative wrapper format |
+
+## Useful Links
+
+- [Cribl HTTP Destination docs](https://docs.cribl.io/stream/destinations-http/)
+- [Cribl REST API reference](https://docs.cribl.io/stream/api-reference/)
+- [Cribl worker groups](https://docs.cribl.io/stream/worker-groups/)
