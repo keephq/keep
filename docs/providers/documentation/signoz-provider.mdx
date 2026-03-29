@@ -1,0 +1,65 @@
+---
+title: "SigNoz"
+sidebarTitle: "SigNoz Provider"
+description: "SigNoz provider allows you to receive alerts from SigNoz via pull or webhook push."
+---
+
+## Overview
+
+SigNoz is an open-source, OpenTelemetry-native observability platform that provides
+distributed tracing, metrics, and logs in a single pane of glass.  It is a popular
+self-hosted alternative to commercial APM solutions such as New Relic and Datadog,
+and a CNCF Silver Member project.
+
+The SigNoz provider for Keep supports **two connection modes**:
+
+- **Pull** — Keep periodically polls the SigNoz Alert Manager API (`GET /api/v1/alerts`)
+  to fetch currently-firing alerts.
+- **Push (Webhook)** — SigNoz sends alert notifications to Keep whenever an alert
+  transitions to firing or resolved.  The webhook payload follows the standard
+  Prometheus Alertmanager format.
+
+## Connecting with the Provider
+
+### Prerequisites
+
+| Mode | Required credentials |
+|------|---------------------|
+| Pull | SigNoz base URL + optional API key |
+| Push | Keep webhook URL (configured in SigNoz) |
+
+For **SigNoz Cloud** or a self-hosted instance with authentication enabled, you
+will also need a SigNoz API key (`pat-xxxxxxxx-...`).
+
+### Push Mode (Webhook) — Recommended
+
+1. In your **SigNoz** UI, navigate to **Settings** → **Alert Channels**.
+2. Click **New Alert Channel**.
+3. Select **Webhook** as the channel type.
+4. Enter a name (e.g. `keep`) and paste the Keep webhook URL into the **Webhook URL** field.
+5. (Optional) Enable **Send Resolved Alerts** to receive resolution notifications.
+6. Click **Test** to confirm connectivity, then click **Save**.
+7. Go to **Alerts** → **Alert Rules**, edit each rule, and add the new channel under
+   **Notification Channels**.
+
+Keep will now receive SigNoz alert notifications automatically.
+
+### Pull Mode
+
+1. In Keep's provider settings, add a new **SigNoz** provider.
+2. Enter your SigNoz **Base URL** (e.g. `http://localhost:3301` or `https://signoz.example.com`).
+3. If authentication is enabled, supply your **API key**.
+4. (Optional) Disable **Verify SSL** for self-signed certificates.
+5. Save the provider.  Keep will poll `/api/v1/alerts` periodically.
+
+## Fingerprinting
+
+SigNoz alert fingerprints are derived from the `fingerprint` field in the
+Alertmanager payload (identical to Prometheus Alertmanager fingerprinting).
+
+## Useful Links
+
+- [SigNoz Documentation](https://signoz.io/docs/)
+- [SigNoz Alert Management](https://signoz.io/docs/alerts-management/)
+- [SigNoz Webhook Notification Channel](https://signoz.io/docs/alerts-management/notification-channel/webhook/)
+- [SigNoz GitHub](https://github.com/SigNoz/signoz)

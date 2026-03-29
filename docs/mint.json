@@ -90,7 +90,10 @@
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview", "incidents/facets"]
+      "pages": [
+        "incidents/overview",
+        "incidents/facets"
+      ]
     },
     {
       "group": "Workflow Automation",
@@ -165,6 +168,7 @@
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
+            "providers/documentation/cribl-provider",
             "providers/documentation/dash0-provider",
             "providers/documentation/databend-provider",
             "providers/documentation/datadog-provider",
@@ -174,6 +178,7 @@
             "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/flashduty-provider",
+            "providers/documentation/falco-provider",
             "providers/documentation/fluxcd-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gemini-provider",
@@ -240,10 +245,12 @@
             "providers/documentation/sentry-provider",
             "providers/documentation/service-now-provider",
             "providers/documentation/signalfx-provider",
+            "providers/documentation/signoz-provider",
             "providers/documentation/signl4-provider",
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/smtp-provider",
+            "providers/documentation/snmp-provider",
             "providers/documentation/snowflake-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
@@ -322,14 +329,19 @@
         },
         {
           "group": "Local LLM",
-          "pages": ["deployment/local-llm/keep-with-litellm"]
+          "pages": [
+            "deployment/local-llm/keep-with-litellm"
+          ]
         },
         "deployment/stress-testing"
       ]
     },
     {
       "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
+      "pages": [
+        "development/getting-started",
+        "development/external-url"
+      ]
     },
     {
       "group": "Keep CLI",
@@ -368,7 +380,10 @@
                 "cli/commands/workflow-runs",
                 {
                   "group": "keep workflow runs",
-                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
                 }
               ]
             },
