@@ -136,9 +136,9 @@ class TestValidateConfig:
         assert provider.authentication_config.api_token == "test-token"
 
     def test_validate_config_with_user_pass(self):
-        provider = _make_provider(api_token=None, username="admin", password="s3cr3t")
+        provider = _make_provider(api_token=None, username="admin", password="test-password")
         assert provider.authentication_config.username == "admin"
-        assert provider.authentication_config.password == "s3cr3t"
+        assert provider.authentication_config.password == "test-password"
 
 
 # ---------------------------------------------------------------------------
