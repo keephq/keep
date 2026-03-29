@@ -1,0 +1,93 @@
+---
+title: "Falco"
+sidebarTitle: "Falco Provider"
+description: "Falco provider allows you to receive runtime security alerts from Falco via webhook push or pull from a Falcosidekick instance."
+---
+
+## Overview
+
+[Falco](https://falco.org) is a CNCF-hosted, open-source runtime security engine that
+detects anomalous and malicious activity in containers, Kubernetes clusters, and Linux
+hosts by inspecting system calls and kernel events.  It is one of the most widely
+deployed cloud-native security tools.
+
+The Falco provider for Keep supports **two connection modes**:
+
+- **Push (Webhook)** — Falco (via [Falcosidekick](https://github.com/falcosecurity/falcosidekick))
+  sends JSON alert payloads to Keep's webhook endpoint whenever a security rule fires.
+- **Pull** — Keep periodically fetches the alert list from a running Falcosidekick UI
+  instance via its REST API.
+
+## Connecting with the Provider
+
+### Prerequisites
+
+| Mode | Required |
+|------|----------|
+| Push | Falcosidekick or Falco configured with an HTTP output |
+| Pull | Falcosidekick UI running and accessible from Keep |
+
+### Configuration Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `sidekick_url` | No | Base URL of the Falcosidekick UI instance (e.g. `http://falcosidekick:2802`) |
+| `token` | No | Bearer token for Falcosidekick authentication (if configured) |
+| `verify_ssl` | No | Whether to verify SSL certificates (default: `true`) |
+
+> **Tip:** If you are only using push/webhook mode and do not need Keep to poll
+> Falcosidekick, leave `sidekick_url` empty.
+
+## Setting Up the Webhook (Push Mode)
+
+Configure Falcosidekick to forward alerts to Keep by adding the Keep webhook URL as
+an HTTP output:
+
+```yaml
+# falcosidekick config.yaml
+webhook:
+  address: https://api.keephq.dev/alerts/event/falco?api_key=YOUR_API_KEY
+```
+
+Or, if deploying with Helm:
+
+```yaml
+config:
+  webhook:
+    address: "https://api.keephq.dev/alerts/event/falco?api_key=YOUR_API_KEY"
+```
+
+Alternatively, configure Falco's built-in HTTP output plugin directly:
+
+```yaml
+# falco.yaml
+http_output:
+  enabled: true
+  url: "https://api.keephq.dev/alerts/event/falco?api_key=YOUR_API_KEY"
+  user_agent: "falcosecurity/falco"
+```
+
+## Setting Up Pull Mode
+
+1. Ensure [Falcosidekick UI](https://github.com/falcosecurity/falcosidekick-ui) is
+   running (default port: `2802`).
+2. Set `sidekick_url` in the provider configuration to the UI's base URL.
+3. Optionally set `token` if Falcosidekick is configured with authentication.
+
+## Severity Mapping
+
+Falco rule priorities are mapped to Keep severities as follows:
+
+| Falco Priority | Keep Severity |
+|---------------|--------------|
+| Emergency, Alert, Critical, Error | Critical |
+| Warning | Warning |
+| Notice, Informational | Info |
+| Debug | Low |
+
+## Useful Links
+
+- [Falco documentation](https://falco.org/docs/)
+- [Falcosidekick](https://github.com/falcosecurity/falcosidekick)
+- [Falcosidekick outputs configuration](https://github.com/falcosecurity/falcosidekick/blob/master/README.md)
+- [Falco rules reference](https://falco.org/docs/rules/)

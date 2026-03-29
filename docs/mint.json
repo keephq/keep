@@ -90,7 +90,10 @@
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview", "incidents/facets"]
+      "pages": [
+        "incidents/overview",
+        "incidents/facets"
+      ]
     },
     {
       "group": "Workflow Automation",
@@ -174,6 +177,7 @@
             "providers/documentation/eks-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/flashduty-provider",
+            "providers/documentation/falco-provider",
             "providers/documentation/fluxcd-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gemini-provider",
@@ -322,14 +326,19 @@
         },
         {
           "group": "Local LLM",
-          "pages": ["deployment/local-llm/keep-with-litellm"]
+          "pages": [
+            "deployment/local-llm/keep-with-litellm"
+          ]
         },
         "deployment/stress-testing"
       ]
     },
     {
       "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
+      "pages": [
+        "development/getting-started",
+        "development/external-url"
+      ]
     },
     {
       "group": "Keep CLI",
@@ -368,7 +377,10 @@
                 "cli/commands/workflow-runs",
                 {
                   "group": "keep workflow runs",
-                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
                 }
               ]
             },
