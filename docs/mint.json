@@ -165,6 +165,7 @@
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
+        "providers/documentation/cribl-provider",
             "providers/documentation/dash0-provider",
             "providers/documentation/databend-provider",
             "providers/documentation/datadog-provider",
