@@ -118,10 +118,10 @@ def test_validate_config_with_api_key():
 
 
 def test_validate_config_username_password():
-    provider = _make_provider(username="admin", password="s3cret")
+    provider = _make_provider(username="test-user", password="test-placeholder")  # noqa: S106
     cfg = provider.authentication_config
-    assert cfg.username == "admin"
-    assert cfg.password == "s3cret"
+    assert cfg.username == "test-user"
+    assert cfg.password == "test-placeholder"
 
 
 def test_validate_config_worker_group_custom():
@@ -141,7 +141,7 @@ def test_get_auth_headers_api_key():
 
 
 def test_get_auth_headers_calls_login_when_no_api_key():
-    provider = _make_provider(username="admin", password="pass")
+    provider = _make_provider(username="test-user", password="test-placeholder")  # noqa: S106
     with patch.object(provider, "_login", return_value="login-tok") as mock_login:
         headers = provider._get_auth_headers()
     mock_login.assert_called_once()
@@ -149,7 +149,7 @@ def test_get_auth_headers_calls_login_when_no_api_key():
 
 
 def test_get_auth_headers_uses_cached_token():
-    provider = _make_provider(username="admin", password="pass")
+    provider = _make_provider(username="test-user", password="test-placeholder")  # noqa: S106
     provider._access_token = "cached-tok"
     with patch.object(provider, "_login") as mock_login:
         headers = provider._get_auth_headers()
@@ -165,8 +165,8 @@ def test_get_auth_headers_uses_cached_token():
 def test_login_stores_token():
     provider = _make_provider(
         api_url="https://cribl.example.com",
-        username="admin",
-        password="pass",
+        username="test-user",
+        password="test-placeholder",  # noqa: S106
     )
     mock_resp = MagicMock()
     mock_resp.json.return_value = {"token": "login-jwt"}
