@@ -754,7 +754,7 @@ const ProviderForm = ({
             className="text-orange-600 underline"
             href={`${
               config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
-            }/providers/documentation/${provider.type}-provider`}
+            }/providers/documentation/${provider.docs_slug ?? provider.type}-provider`}
             target="_blank"
           >
             {`Provider Documentation`}

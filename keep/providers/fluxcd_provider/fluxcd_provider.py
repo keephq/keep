@@ -405,6 +405,14 @@ class FluxcdProvider(BaseTopologyProvider):
             api_instance.read_custom_resource_definition(name=crd_name)
             self.logger.debug(f"Flux CD CRD {crd_name} found")
             return True
+        except ApiException as e:
+            if e.status == 403:
+                # 403 means the ServiceAccount lacks CRD read permissions,
+                # NOT that FluxCD is absent. Re-raise so validate_scopes can
+                # surface an actionable RBAC error instead of misleading the user.
+                raise
+            self.logger.warning(f"Flux CD does not appear to be installed: {str(e)}")
+            return False
         except Exception as e:
             self.logger.warning(f"Flux CD does not appear to be installed: {str(e)}")
             return False
@@ -434,6 +442,31 @@ class FluxcdProvider(BaseTopologyProvider):
                 else:
                     # Try to list GitRepositories to validate authentication
                     self.__list_git_repositories()
+        except ApiException as e:
+            if e.status == 403:
+                authenticated = (
+                    "Insufficient RBAC permissions: the ServiceAccount cannot read "
+                    "FluxCD CustomResourceDefinitions. "
+                    "Add ClusterRole permissions for "
+                    "apiextensions.k8s.io/customresourcedefinitions (get, list). "
+                    f"Kubernetes error: {e.reason}"
+                )
+                self.logger.warning(
+                    "FluxCD validation failed due to RBAC permissions (403 Forbidden). "
+                    "The ServiceAccount likely lacks 'get' on customresourcedefinitions.",
+                    extra={
+                        "namespace": self.authentication_config.namespace
+                        if hasattr(self, "authentication_config")
+                        else "unknown",
+                    },
+                )
+            else:
+                error_message = str(e)
+                self.logger.error(
+                    f"Kubernetes API error ({e.status}) while validating FluxCD scope",
+                    extra={"exception": error_message},
+                )
+                authenticated = f"Kubernetes API error ({e.status}): {e.reason}"
         except Exception as e:
             error_type = type(e).__name__
             error_message = str(e)
