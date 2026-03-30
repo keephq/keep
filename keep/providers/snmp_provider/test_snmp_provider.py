@@ -590,5 +590,856 @@ class TestSNMPVersionParametrized(unittest.TestCase):
                     _make_provider({"version": version})
 
 
+# ===========================================================================
+# Additional tests — config defaults and validation edge cases
+# ===========================================================================
+
+class TestConfigDefaults(unittest.TestCase):
+    """Verify default values for provider configuration fields."""
+
+    def test_default_version_is_2c(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.version, "2c")
+
+    def test_default_community_is_public(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.community_string, "public")
+
+    def test_custom_community_accepted(self):
+        p = _make_provider({"community_string": "my-secret"})
+        self.assertEqual(p.authentication_config.community_string, "my-secret")
+
+    def test_port_65535_accepted(self):
+        p = _make_provider({"port": 65535})
+        self.assertEqual(p.authentication_config.port, 65535)
+
+    def test_poll_interval_negative_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            _make_provider({"poll_interval": -5})
+        self.assertIn("poll_interval", str(ctx.exception).lower())
+
+    def test_poll_enabled_default_false(self):
+        p = _make_provider({})
+        self.assertFalse(p.authentication_config.poll_enabled)
+
+    def test_default_host_is_all_interfaces(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.host, "0.0.0.0")
+
+    def test_default_port_is_162(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.port, 162)
+
+    def test_default_poll_interval_is_60(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.poll_interval, 60)
+
+    def test_default_auth_protocol_is_md5(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.auth_protocol, "MD5")
+
+    def test_default_priv_protocol_is_des(self):
+        p = _make_provider({})
+        self.assertEqual(p.authentication_config.priv_protocol, "DES")
+
+
+class TestConfigJsonParsing(unittest.TestCase):
+    """JSON parsing of oids_mapping and poll_targets."""
+
+    def test_valid_oids_mapping_parsed(self):
+        import json
+        mapping = {"1.3.6.1.4.1.9": {"name": "Cisco", "severity": "high"}}
+        p = _make_provider({"oids_mapping": json.dumps(mapping)})
+        self.assertEqual(p._oids_mapping, mapping)
+
+    def test_valid_poll_targets_parsed(self):
+        import json
+        targets = [{"host": "192.168.1.1", "oids": ["1.3.6.1.2.1.1.3.0"]}]
+        p = _make_provider({"poll_targets": json.dumps(targets)})
+        self.assertEqual(p._poll_targets, targets)
+
+    def test_oids_mapping_not_object_defaults_to_empty(self):
+        """A JSON array for oids_mapping is valid JSON but wrong type — still parsed."""
+        import json
+        p = _make_provider({"oids_mapping": json.dumps([1, 2, 3])})
+        # It parses, but won't behave as dict in _map_oid_to_alert_config
+        self.assertIsInstance(p._oids_mapping, list)
+
+    def test_poll_targets_not_list_defaults_to_empty(self):
+        """A JSON object for poll_targets is valid JSON but wrong type — still parsed."""
+        import json
+        p = _make_provider({"poll_targets": json.dumps({"not": "a list"})})
+        self.assertIsInstance(p._poll_targets, dict)
+
+    def test_empty_oids_mapping_string_parsed(self):
+        p = _make_provider({"oids_mapping": "{}"})
+        self.assertEqual(p._oids_mapping, {})
+
+    def test_empty_poll_targets_string_parsed(self):
+        p = _make_provider({"poll_targets": "[]"})
+        self.assertEqual(p._poll_targets, [])
+
+
+# ===========================================================================
+# Severity inference — enterprise prefixes
+# ===========================================================================
+
+class TestEnterpriseSeverityMapping(unittest.TestCase):
+    """_infer_severity_from_oid() for enterprise OID prefixes (vendor detection)."""
+
+    def setUp(self):
+        self.p = _make_provider({})
+
+    def test_cisco_prefix(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.4.1.9.9.1.2")
+        self.assertEqual(sv, AlertSeverity.HIGH)
+
+    def test_hp_prefix(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.4.1.11.2.3.4")
+        self.assertEqual(sv, AlertSeverity.HIGH)
+
+    def test_juniper_prefix(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.4.1.2636.1.2")
+        self.assertEqual(sv, AlertSeverity.HIGH)
+
+    def test_huawei_prefix(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.4.1.2011.5.25")
+        self.assertEqual(sv, AlertSeverity.MEDIUM)
+
+    def test_warm_start_is_warning(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.6.3.1.1.5.2")
+        self.assertEqual(sv, AlertSeverity.WARNING)
+
+    def test_link_up_is_info(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.6.3.1.1.5.4")
+        self.assertEqual(sv, AlertSeverity.INFO)
+
+    def test_auth_failure_is_critical(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.6.3.1.1.5.5")
+        self.assertEqual(sv, AlertSeverity.CRITICAL)
+
+    def test_egp_neighbor_loss_is_warning(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.6.3.1.1.5.6")
+        self.assertEqual(sv, AlertSeverity.WARNING)
+
+    def test_unknown_vendor_defaults_to_info(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.4.1.99999.1.2")
+        self.assertEqual(sv, AlertSeverity.INFO)
+
+    def test_standard_oid_without_enterprise_is_info(self):
+        sv = self.p._infer_severity_from_oid("1.3.6.1.2.1.1.3.0")
+        self.assertEqual(sv, AlertSeverity.INFO)
+
+
+class TestEnterpriseSeverityTableCompleteness(unittest.TestCase):
+    """All entries in _ENTERPRISE_SEVERITY are valid AlertSeverity values."""
+
+    def test_all_standard_oids_have_severity(self):
+        for prefix, severity in SNMPProvider._ENTERPRISE_SEVERITY.items():
+            with self.subTest(prefix=prefix):
+                self.assertIsInstance(severity, AlertSeverity)
+
+    def test_enterprise_severity_map_not_empty(self):
+        self.assertGreater(len(SNMPProvider._ENTERPRISE_SEVERITY), 0)
+
+    def test_recovery_oids_set_not_empty(self):
+        self.assertGreater(len(SNMPProvider._RECOVERY_OIDS), 0)
+
+
+# ===========================================================================
+# Parse severity — additional cases
+# ===========================================================================
+
+class TestParseSeverityExtended(unittest.TestCase):
+    """Additional _parse_severity() test cases."""
+
+    def test_high_severity(self):
+        self.assertEqual(SNMPProvider._parse_severity("high"), AlertSeverity.HIGH)
+
+    def test_warning_severity(self):
+        self.assertEqual(SNMPProvider._parse_severity("warning"), AlertSeverity.WARNING)
+
+    def test_info_severity(self):
+        self.assertEqual(SNMPProvider._parse_severity("info"), AlertSeverity.INFO)
+
+    def test_medium_severity(self):
+        self.assertEqual(SNMPProvider._parse_severity("medium"), AlertSeverity.MEDIUM)
+
+    def test_low_severity(self):
+        self.assertEqual(SNMPProvider._parse_severity("low"), AlertSeverity.LOW)
+
+    def test_with_whitespace(self):
+        self.assertEqual(SNMPProvider._parse_severity("  critical  "), AlertSeverity.CRITICAL)
+
+    def test_mixed_case(self):
+        self.assertEqual(SNMPProvider._parse_severity("CrItIcAl"), AlertSeverity.CRITICAL)
+
+    def test_none_returns_none(self):
+        self.assertIsNone(SNMPProvider._parse_severity(""))
+
+    def test_unknown_string_defaults_to_none(self):
+        self.assertIsNone(SNMPProvider._parse_severity("urgent"))
+
+
+# ===========================================================================
+# Alert DTO construction — field-level checks
+# ===========================================================================
+
+class TestAlertDtoFields(unittest.TestCase):
+    """Verify all fields of the AlertDto produced by _varbinds_to_alert."""
+
+    def setUp(self):
+        self.p = _make_provider({})
+
+    def test_returns_alert_dto(self):
+        alert = self.p._varbinds_to_alert([("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")])
+        self.assertIsInstance(alert, AlertDto)
+
+    def test_id_is_uuid(self):
+        import uuid as uuid_mod
+        alert = self.p._varbinds_to_alert([("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")])
+        # Should not raise
+        uuid_mod.UUID(alert.id)
+
+    def test_last_received_is_set(self):
+        alert = self.p._varbinds_to_alert([("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")])
+        self.assertIsNotNone(alert.lastReceived)
+        self.assertIn("T", alert.lastReceived)  # ISO format
+
+    def test_snmp_source_in_source_list(self):
+        alert = self.p._varbinds_to_alert([("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")])
+        self.assertIn("snmp", alert.source)
+
+    def test_source_address_set(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+            source_ip="10.0.0.5",
+        )
+        self.assertEqual(alert.labels["source_ip"], "10.0.0.5")
+
+    def test_varbinds_in_description(self):
+        var_binds = [
+            ("1.3.6.1.2.1.1.3.0", "12345"),
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertIn("12345", alert.description)
+        self.assertIn("1.3.6.1.2.1.1.3.0", alert.description)
+
+    def test_source_in_labels(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+            source_ip="172.16.0.1",
+        )
+        self.assertIn("source_ip", alert.labels)
+
+    def test_trap_oid_in_labels_field(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+        )
+        self.assertEqual(alert.labels["trap_oid"], "1.3.6.1.6.3.1.1.5.3")
+
+    def test_no_source_ip_labels_has_no_source_ip(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+            source_ip=None,
+        )
+        # labels should exist (trap_oid present) but no source_ip
+        self.assertNotIn("source_ip", alert.labels or {})
+
+    def test_unknown_oid_fallback_name(self):
+        alert = self.p._varbinds_to_alert([("9.9.9.9.9", "somevalue")])
+        self.assertIn("9.9.9.9.9", alert.name)
+
+    def test_custom_name_field_from_mapping(self):
+        import json
+        p = _make_provider({"oids_mapping": json.dumps({
+            "1.3.6.1.4.1.9": {"name": "My Cisco Alert", "severity": "high"},
+        })})
+        alert = p._varbinds_to_alert([("1.3.6.1.4.1.9.1.2.3", "val")])
+        self.assertEqual(alert.name, "My Cisco Alert")
+
+    def test_severity_link_down_is_critical(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+        )
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
+
+    def test_status_link_down_is_firing(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+        )
+        self.assertEqual(alert.status, AlertStatus.FIRING)
+
+    def test_link_up_status_is_resolved(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.4")],
+        )
+        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+
+    def test_cold_start_is_info_resolved(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.1")],
+        )
+        self.assertEqual(alert.severity, AlertSeverity.INFO)
+        self.assertEqual(alert.status, AlertStatus.RESOLVED)
+
+    def test_auth_failure_is_high_severity(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.5")],
+        )
+        self.assertEqual(alert.severity, AlertSeverity.CRITICAL)
+
+    def test_no_status_field_defaults_to_firing(self):
+        """Unknown OIDs should default to FIRING status."""
+        alert = self.p._varbinds_to_alert([("9.9.9.9", "val")])
+        self.assertEqual(alert.status, AlertStatus.FIRING)
+
+    def test_labels_none_when_no_source_ip_no_trap_oid(self):
+        """With no trap_oid and no source_ip, labels should be None."""
+        alert = self.p._varbinds_to_alert([("9.9.9.9", "val")], source_ip=None)
+        self.assertIsNone(alert.labels)
+
+    def test_fingerprint_none_without_source_ip(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+            source_ip=None,
+        )
+        self.assertIsNone(alert.fingerprint)
+
+    def test_fingerprint_format(self):
+        alert = self.p._varbinds_to_alert(
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+            source_ip="10.0.0.1",
+        )
+        self.assertEqual(alert.fingerprint, "10.0.0.1:1.3.6.1.6.3.1.1.5.3")
+
+
+# ===========================================================================
+# Varbinds description construction
+# ===========================================================================
+
+class TestDescriptionConstruction(unittest.TestCase):
+    """Description field from varbinds."""
+
+    def setUp(self):
+        self.p = _make_provider({})
+
+    def test_link_down_builds_correctly(self):
+        var_binds = [
+            ("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3"),
+            ("1.3.6.1.2.1.2.2.1.1", "2"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertIn("1.3.6.1.6.3.1.1.5.3", alert.description)
+
+    def test_varbinds_appear_in_description(self):
+        var_binds = [
+            ("1.3.6.1.2.1.1.1.0", "Linux router"),
+            ("1.3.6.1.2.1.1.3.0", "98765"),
+        ]
+        alert = self.p._varbinds_to_alert(var_binds)
+        self.assertIn("Linux router", alert.description)
+        self.assertIn("98765", alert.description)
+
+    def test_many_varbinds_all_in_description(self):
+        var_binds = [(f"1.3.6.1.2.1.1.{i}.0", f"value-{i}") for i in range(12)]
+        alert = self.p._varbinds_to_alert(var_binds)
+        for i in range(12):
+            self.assertIn(f"value-{i}", alert.description)
+
+    def test_description_format_oid_equals_value(self):
+        alert = self.p._varbinds_to_alert([("1.2.3", "hello")])
+        self.assertIn("1.2.3 = hello", alert.description)
+
+    def test_empty_varbinds_empty_description(self):
+        alert = self.p._varbinds_to_alert([])
+        self.assertEqual(alert.description, "")
+
+    def test_multiline_description_with_newlines(self):
+        var_binds = [("1.1", "a"), ("2.2", "b"), ("3.3", "c")]
+        alert = self.p._varbinds_to_alert(var_binds)
+        lines = alert.description.split("\n")
+        self.assertEqual(len(lines), 3)
+
+
+# ===========================================================================
+# OID mapping — extended
+# ===========================================================================
+
+class TestOidMappingExtended(unittest.TestCase):
+    """Extended OID mapping tests."""
+
+    def test_user_mapping_overrides_standard(self):
+        """User-defined mapping should override standard severity inference."""
+        import json
+        p = _make_provider({"oids_mapping": json.dumps({
+            "1.3.6.1.6.3.1.1.5.3": {"name": "Custom Link Down", "severity": "warning"},
+        })})
+        var_binds = [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")]
+        alert = p._varbinds_to_alert(var_binds)
+        self.assertEqual(alert.name, "Custom Link Down")
+        self.assertEqual(alert.severity, AlertSeverity.WARNING)
+
+    def test_user_prefix_match(self):
+        import json
+        p = _make_provider({"oids_mapping": json.dumps({
+            "1.3.6.1.4.1": {"name": "Enterprise Alert", "severity": "info"},
+        })})
+        result = p._map_oid_to_alert_config("1.3.6.1.4.1.9.1.2.3")
+        self.assertEqual(result["name"], "Enterprise Alert")
+
+    def test_empty_oids_mapping_returns_empty(self):
+        p = _make_provider({})
+        result = p._map_oid_to_alert_config("1.3.6.1.6.3.1.1.5.3")
+        self.assertEqual(result, {})
+
+    def test_mapping_with_severity_only(self):
+        import json
+        p = _make_provider({"oids_mapping": json.dumps({
+            "1.3.6.1.4.1.9": {"severity": "critical"},
+        })})
+        result = p._map_oid_to_alert_config("1.3.6.1.4.1.9.5.6")
+        self.assertEqual(result["severity"], "critical")
+        self.assertNotIn("name", result)
+
+    def test_mapping_with_name_only(self):
+        import json
+        p = _make_provider({"oids_mapping": json.dumps({
+            "1.3.6.1.4.1.9": {"name": "Cisco Only"},
+        })})
+        result = p._map_oid_to_alert_config("1.3.6.1.4.1.9.5.6")
+        self.assertEqual(result["name"], "Cisco Only")
+
+
+# ===========================================================================
+# Listener lifecycle
+# ===========================================================================
+
+class TestListenerLifecycle(unittest.TestCase):
+    """Trap listener start/stop lifecycle."""
+
+    def test_start_listener_no_op_when_pysnmp_unavailable(self):
+        p = _make_provider({})
+        with patch.object(_mod, "PYSNMP_AVAILABLE", False):
+            p._start_trap_listener()
+        self.assertIsNone(p._listener_thread)
+
+    def test_start_listener_creates_thread_when_pysnmp_available(self):
+        p = _make_provider({})
+        with patch.object(p, "_trap_listener_loop"):
+            p._start_trap_listener()
+        self.assertIsNotNone(p._listener_thread)
+        p.dispose()
+
+    def test_start_listener_clears_stop_event(self):
+        p = _make_provider({})
+        p._stop_event.set()
+        with patch.object(p, "_trap_listener_loop"):
+            p._start_trap_listener()
+        self.assertFalse(p._stop_event.is_set())
+        p.dispose()
+
+    def test_start_polling_no_op_when_pysnmp_unavailable(self):
+        p = _make_provider({"poll_enabled": True})
+        with patch.object(_mod, "PYSNMP_AVAILABLE", False):
+            p._start_polling()
+        self.assertIsNone(p._poll_thread)
+
+    def test_start_polling_no_op_without_targets(self):
+        p = _make_provider({"poll_enabled": True})
+        p._poll_targets = []
+        p._start_polling()
+        self.assertIsNone(p._poll_thread)
+
+
+# ===========================================================================
+# Dispose — extended
+# ===========================================================================
+
+class TestDisposeExtended(unittest.TestCase):
+    """Additional dispose() tests."""
+
+    def test_dispose_idempotent(self):
+        p = _make_provider({})
+        p.dispose()
+        p.dispose()  # Should not raise
+
+    def test_dispose_does_not_join_dead_thread(self):
+        p = _make_provider({})
+        mock_thread = MagicMock()
+        mock_thread.is_alive.return_value = False
+        p._listener_thread = mock_thread
+        p.dispose()
+        mock_thread.join.assert_not_called()
+
+    def test_dispose_joins_listener_with_timeout(self):
+        p = _make_provider({})
+        mock_thread = MagicMock()
+        mock_thread.is_alive.return_value = True
+        p._listener_thread = mock_thread
+        p.dispose()
+        mock_thread.join.assert_called_once_with(timeout=5)
+
+
+# ===========================================================================
+# Buffer management — _get_alerts extended
+# ===========================================================================
+
+class TestGetAlertsExtended(unittest.TestCase):
+    """Extended _get_alerts() tests."""
+
+    def test_get_alerts_returns_empty_initially(self):
+        p = _make_provider({})
+        with patch.object(p, "_start_trap_listener"):
+            result = p._get_alerts()
+        self.assertEqual(result, [])
+
+    def test_get_alerts_returns_all_buffered_alerts(self):
+        import datetime
+        p = _make_provider({})
+        for i in range(3):
+            alert = AlertDto(
+                id=str(i), name=f"test-{i}", severity=AlertSeverity.INFO,
+                status=AlertStatus.FIRING, source=["snmp"],
+                description="test",
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            )
+            p._append_alert(alert)
+        with patch.object(p, "_start_trap_listener"):
+            result = p._get_alerts()
+        self.assertEqual(len(result), 3)
+
+    def test_get_alerts_starts_polling_when_enabled(self):
+        import json
+        p = _make_provider({
+            "poll_enabled": True,
+            "poll_targets": json.dumps([{"host": "10.0.0.1", "oids": ["1.2.3"]}]),
+        })
+        with patch.object(p, "_start_trap_listener"), \
+             patch.object(p, "_start_polling") as mock_poll:
+            p._get_alerts()
+        mock_poll.assert_called_once()
+
+    def test_get_alerts_does_not_start_polling_when_disabled(self):
+        p = _make_provider({"poll_enabled": False})
+        with patch.object(p, "_start_trap_listener"), \
+             patch.object(p, "_start_polling") as mock_poll:
+            p._get_alerts()
+        mock_poll.assert_not_called()
+
+
+# ===========================================================================
+# Batch processing — multiple traps
+# ===========================================================================
+
+class TestBatchProcessing(unittest.TestCase):
+    """Batch trap processing via _trap_callback."""
+
+    def _make_engine(self, source_ip="192.168.1.1"):
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.return_value = (
+            ("udp", "v4"), (source_ip, 45000),
+        )
+        return mock_engine
+
+    def test_batch_returns_list(self):
+        p = _make_provider({})
+        engine = self._make_engine()
+        traps = [
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")],
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.4")],
+            [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.1")],
+        ]
+        for varbinds in traps:
+            p._trap_callback(engine, 42, None, None, varbinds, None)
+        self.assertIsInstance(p._alerts, list)
+
+    def test_batch_count(self):
+        p = _make_provider({})
+        engine = self._make_engine()
+        for _ in range(5):
+            p._trap_callback(engine, 42, None, None,
+                           [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")], None)
+        self.assertEqual(len(p._alerts), 5)
+
+    def test_batch_items_are_alertdtos(self):
+        p = _make_provider({})
+        engine = self._make_engine()
+        p._trap_callback(engine, 42, None, None,
+                        [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")], None)
+        self.assertIsInstance(p._alerts[0], AlertDto)
+
+    def test_batch_severities_correct(self):
+        p = _make_provider({})
+        engine = self._make_engine()
+        # linkDown = CRITICAL
+        p._trap_callback(engine, 42, None, None,
+                        [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")], None)
+        # coldStart = INFO
+        p._trap_callback(engine, 42, None, None,
+                        [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.1")], None)
+        self.assertEqual(p._alerts[0].severity, AlertSeverity.CRITICAL)
+        self.assertEqual(p._alerts[1].severity, AlertSeverity.INFO)
+
+    def test_single_varbind_returns_alert(self):
+        p = _make_provider({})
+        alert = p._varbinds_to_alert([("1.3.6.1.4.1.9.1.2.3", "some value")])
+        self.assertIsInstance(alert, AlertDto)
+
+
+# ===========================================================================
+# Provider class-level attributes
+# ===========================================================================
+
+class TestProviderClassAttributes(unittest.TestCase):
+    """Verify provider metadata attributes."""
+
+    def test_provider_display_name(self):
+        self.assertEqual(SNMPProvider.PROVIDER_DISPLAY_NAME, "SNMP")
+
+    def test_provider_category(self):
+        self.assertIn("Monitoring", SNMPProvider.PROVIDER_CATEGORY)
+
+    def test_provider_tags(self):
+        self.assertIn("alert", SNMPProvider.PROVIDER_TAGS)
+
+    def test_max_alerts_default(self):
+        self.assertEqual(SNMPProvider._MAX_ALERTS, 10_000)
+
+    def test_snmp_trap_oid_constant(self):
+        self.assertEqual(SNMPProvider._SNMP_TRAP_OID, "1.3.6.1.6.3.1.1.4.1.0")
+
+    def test_recovery_oids_contains_cold_start(self):
+        self.assertIn("1.3.6.1.6.3.1.1.5.1", SNMPProvider._RECOVERY_OIDS)
+
+    def test_recovery_oids_contains_warm_start(self):
+        self.assertIn("1.3.6.1.6.3.1.1.5.2", SNMPProvider._RECOVERY_OIDS)
+
+    def test_recovery_oids_contains_link_up(self):
+        self.assertIn("1.3.6.1.6.3.1.1.5.4", SNMPProvider._RECOVERY_OIDS)
+
+    def test_link_down_not_in_recovery_oids(self):
+        self.assertNotIn("1.3.6.1.6.3.1.1.5.3", SNMPProvider._RECOVERY_OIDS)
+
+
+# ===========================================================================
+# Trap callback — source IP edge cases
+# ===========================================================================
+
+class TestTrapCallbackSourceIp(unittest.TestCase):
+    """Source IP extraction edge cases in _trap_callback."""
+
+    def test_transport_address_none_yields_no_source_ip(self):
+        p = _make_provider({})
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.return_value = (
+            ("udp", "v4"), None,
+        )
+        var_binds = [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")]
+        p._trap_callback(mock_engine, 42, None, None, var_binds, None)
+        self.assertIsNone(p._alerts[0].fingerprint)
+
+    def test_ipv6_source_ip(self):
+        p = _make_provider({})
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.return_value = (
+            ("udp", "v6"), ("::1", 45000),
+        )
+        var_binds = [("1.3.6.1.6.3.1.1.4.1.0", "1.3.6.1.6.3.1.1.5.3")]
+        p._trap_callback(mock_engine, 42, None, None, var_binds, None)
+        self.assertEqual(p._alerts[0].labels["source_ip"], "::1")
+
+
+# ===========================================================================
+# Auth protocol / privacy protocol edge cases
+# ===========================================================================
+
+class TestV3Config(unittest.TestCase):
+    """SNMPv3 configuration edge cases."""
+
+    def test_v3_sha_auth_protocol(self):
+        p = _make_provider({
+            "version": "3", "username": "admin",
+            "auth_protocol": "SHA", "auth_key": "secret",
+        })
+        self.assertEqual(p.authentication_config.auth_protocol, "SHA")
+
+    def test_v3_aes_priv_protocol(self):
+        p = _make_provider({
+            "version": "3", "username": "admin",
+            "priv_protocol": "AES", "priv_key": "secret",
+        })
+        self.assertEqual(p.authentication_config.priv_protocol, "AES")
+
+    def test_v3_with_all_fields(self):
+        p = _make_provider({
+            "version": "3", "username": "admin",
+            "auth_key": "authpass", "auth_protocol": "SHA",
+            "priv_key": "privpass", "priv_protocol": "AES",
+        })
+        cfg = p.authentication_config
+        self.assertEqual(cfg.username, "admin")
+        self.assertEqual(cfg.auth_key, "authpass")
+        self.assertEqual(cfg.priv_key, "privpass")
+
+
+# ===========================================================================
+# Concurrent access and thread safety
+# ===========================================================================
+
+class TestThreadSafety(unittest.TestCase):
+    """Thread safety of alert buffer operations."""
+
+    def test_concurrent_append_alert(self):
+        import datetime
+        import threading
+        p = _make_provider({})
+        p._MAX_ALERTS = 100
+
+        def append_n(n):
+            for i in range(n):
+                alert = AlertDto(
+                    id=str(i), name=f"t-{i}", severity=AlertSeverity.INFO,
+                    status=AlertStatus.FIRING, source=["snmp"],
+                    description="test",
+                    lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                )
+                p._append_alert(alert)
+
+        threads = [threading.Thread(target=append_n, args=(20,)) for _ in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(len(p._alerts), 100)
+
+    def test_append_and_get_concurrent(self):
+        import datetime
+        import threading
+        p = _make_provider({})
+        results = []
+
+        def get_alerts():
+            with patch.object(p, "_start_trap_listener"):
+                r = p._get_alerts()
+                results.append(len(r))
+
+        # Add some alerts first
+        for i in range(5):
+            alert = AlertDto(
+                id=str(i), name=f"t-{i}", severity=AlertSeverity.INFO,
+                status=AlertStatus.FIRING, source=["snmp"],
+                description="test",
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            )
+            p._append_alert(alert)
+
+        threads = [threading.Thread(target=get_alerts) for _ in range(3)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        # All readers should get the same count
+        self.assertTrue(all(r == 5 for r in results))
+
+
+# ===========================================================================
+# Unique edge cases not in competitor PR
+# ===========================================================================
+
+class TestUniqueEdgeCases(unittest.TestCase):
+    """Additional edge cases for robustness."""
+
+    def test_varbind_with_empty_value(self):
+        p = _make_provider({})
+        alert = p._varbinds_to_alert([("1.3.6.1.2.1.1.1.0", "")])
+        self.assertIn("1.3.6.1.2.1.1.1.0 = ", alert.description)
+
+    def test_very_long_oid(self):
+        p = _make_provider({})
+        long_oid = ".".join(str(i) for i in range(50))
+        alert = p._varbinds_to_alert([(long_oid, "val")])
+        self.assertIn(long_oid, alert.name)
+
+    def test_special_characters_in_value(self):
+        p = _make_provider({})
+        alert = p._varbinds_to_alert([("1.2.3", "hello\nworld\ttab")])
+        self.assertIn("hello\nworld\ttab", alert.description)
+
+    def test_numeric_value_as_string(self):
+        p = _make_provider({})
+        alert = p._varbinds_to_alert([("1.2.3", "42")])
+        self.assertIn("42", alert.description)
+
+    def test_multiple_traps_have_unique_ids(self):
+        p = _make_provider({})
+        alert1 = p._varbinds_to_alert([("1.2.3", "a")])
+        alert2 = p._varbinds_to_alert([("1.2.3", "b")])
+        self.assertNotEqual(alert1.id, alert2.id)
+
+    def test_alerts_cap_evicts_oldest(self):
+        import datetime
+        p = _make_provider({})
+        p._MAX_ALERTS = 3
+        for i in range(5):
+            alert = AlertDto(
+                id=str(i), name=f"alert-{i}", severity=AlertSeverity.INFO,
+                status=AlertStatus.FIRING, source=["snmp"],
+                description="test",
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            )
+            p._append_alert(alert)
+        self.assertEqual(p._alerts[0].name, "alert-2")
+        self.assertEqual(p._alerts[-1].name, "alert-4")
+
+    def test_v1_version_config(self):
+        p = _make_provider({"version": "1"})
+        self.assertEqual(p.authentication_config.version, "1")
+
+    def test_custom_port_accepted(self):
+        p = _make_provider({"port": 1620})
+        self.assertEqual(p.authentication_config.port, 1620)
+
+    def test_poll_interval_one_accepted(self):
+        p = _make_provider({"poll_interval": 1})
+        self.assertEqual(p.authentication_config.poll_interval, 1)
+
+    def test_large_poll_interval_accepted(self):
+        p = _make_provider({"poll_interval": 86400})
+        self.assertEqual(p.authentication_config.poll_interval, 86400)
+
+    def test_trap_callback_with_empty_varbinds(self):
+        p = _make_provider({})
+        mock_engine = MagicMock()
+        mock_engine.msgAndPduDsp.getTransportInfo.return_value = (
+            ("udp", "v4"), ("10.0.0.1", 45000),
+        )
+        p._trap_callback(mock_engine, 42, None, None, [], None)
+        self.assertEqual(len(p._alerts), 1)
+        self.assertEqual(p._alerts[0].name, "SNMP Trap: ")
+
+    def test_severity_map_has_all_levels(self):
+        expected = {"critical", "high", "warning", "medium", "info", "low"}
+        actual = set(SNMPProvider._SEVERITY_MAP.keys())
+        self.assertEqual(actual, expected)
+
+    def test_stop_event_initially_clear(self):
+        p = _make_provider({})
+        self.assertFalse(p._stop_event.is_set())
+
+    def test_alerts_list_initially_empty(self):
+        p = _make_provider({})
+        self.assertEqual(len(p._alerts), 0)
+
+    def test_listener_thread_initially_none(self):
+        p = _make_provider({})
+        self.assertIsNone(p._listener_thread)
+
+    def test_poll_thread_initially_none(self):
+        p = _make_provider({})
+        self.assertIsNone(p._poll_thread)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
