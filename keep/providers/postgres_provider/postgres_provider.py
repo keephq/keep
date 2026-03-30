@@ -52,6 +52,7 @@ class PostgresProvider(BaseProvider):
     """Enrich alerts with data from Postgres."""
 
     PROVIDER_DISPLAY_NAME = "PostgreSQL"
+    PROVIDER_DOCS_SLUG = "postgresql"
     PROVIDER_CATEGORY = ["Database"]
     PROVIDER_SCOPES = [
         ProviderScope(

@@ -423,7 +423,7 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   table: Table<AlertDto>;
   presetName: string;
-  a11yContainerRef: RefObject<HTMLDivElement>;
+  a11yContainerRef: RefObject<HTMLDivElement | null>;
   columnTimeFormats: Record<string, TimeFormatOption>;
   setColumnTimeFormats: (formats: Record<string, TimeFormatOption>) => void;
   columnListFormats: Record<string, ListFormatOption>;

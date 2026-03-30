@@ -1,3 +1,4 @@
+import React from "react";
 import { ShortNumber } from "@/components/ui";
 import { Text } from "@tremor/react";
 import clsx from "clsx";
@@ -9,8 +10,8 @@ export interface FacetValueProps {
   isSelected: boolean;
   isSelectable: boolean;
   showIcon: boolean;
-  renderLabel?: () => JSX.Element | string | undefined;
-  renderIcon?: () => JSX.Element | undefined;
+  renderLabel?: () => React.JSX.Element | string | undefined;
+  renderIcon?: () => React.JSX.Element | undefined;
   onSelectOneOption: (value: string) => void;
   onSelectAllOptions: () => void;
   onToggleOption: (value: string) => void;

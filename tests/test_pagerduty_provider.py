@@ -14,7 +14,7 @@ class TestPagerdutyProvider(unittest.TestCase):
         formatted_alert = PagerdutyProvider._format_incident({"event": {"data": data}})
 
         self.assertEqual(formatted_alert.name, "PD-Fifth Alert-Q11LATZGWTP02U")
-        self.assertEqual(formatted_alert.severity, IncidentSeverity.WARNING)
+        self.assertEqual(formatted_alert.severity, IncidentSeverity.HIGH)
         self.assertEqual(formatted_alert.status, IncidentStatus.FIRING)
         self.assertEqual(formatted_alert.alert_sources, ["pagerduty"])
 

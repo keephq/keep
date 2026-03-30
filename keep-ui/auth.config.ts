@@ -17,16 +17,25 @@ import {
   NoAuthUserEmail,
   SINGLE_TENANT,
 } from "@/utils/authenticationType";
+import {authorizeOAuth2Proxy} from "@/shared/lib/oauth2proxy-auth";
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
 }
 
-const authSessionTimeout = process.env.AUTH_SESSION_TIMEOUT
-  ? Number.parseInt(process.env.AUTH_SESSION_TIMEOUT)
+// Read env vars via bracket notation to prevent webpack DefinePlugin from
+// inlining them as `undefined` at build time.  This file is imported by
+// middleware.ts (Edge Runtime) where DefinePlugin replaces direct
+// `process.env.X` references with their build-time values.
+function runtimeEnv(key: string): string | undefined {
+  return process.env[key];
+}
+
+const authSessionTimeout = runtimeEnv("AUTH_SESSION_TIMEOUT")
+  ? Number.parseInt(runtimeEnv("AUTH_SESSION_TIMEOUT")!)
   : 30 * 24 * 60 * 60; // Default to 30 days if not set
 // Determine auth type with backward compatibility
-const authTypeEnv = process.env.AUTH_TYPE;
+const authTypeEnv = runtimeEnv("AUTH_TYPE");
 export const authType =
   authTypeEnv === MULTI_TENANT
     ? AuthType.AUTH0
@@ -111,6 +120,7 @@ async function refreshAccessToken(token: any) {
     };
   }
 }
+
 
 // Base provider configurations without AzureAD
 const baseProviderConfigs = {
@@ -218,6 +228,15 @@ const baseProviderConfigs = {
           tenantId: tenantId,
           role: "user",
         };
+      },
+    }),
+  ],
+  [AuthType.OAUTH2PROXY]: [
+    Credentials({
+      name: "OAuth2Proxy",
+      credentials: {},
+      async authorize(credentials, request): Promise<User | null> {
+        return authorizeOAuth2Proxy(request.headers);
       },
     }),
   ],

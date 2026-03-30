@@ -64,8 +64,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import { useAlertRowStyle, useAlertTableTheme } from "@/entities/alerts/model";
+import { useAlertRowStyle, useAlertTableTheme, useSeverityMapping } from "@/entities/alerts/model";
 import { useIsShiftKeyHeld } from "@/features/keyboard-shortcuts";
+import { SeverityMappingFacet } from "@/features/alerts/severity-mapping";
 import SettingsSelection from "./SettingsSelection";
 import EnhancedDateRangePickerV2, {
   AllTimeFrame,
@@ -140,6 +141,7 @@ export function AlertTableServerSide({
   );
   const [grouping, setGrouping] = useState<GroupingState>([]);
   const [filterCel, setFilterCel] = useState<string | null>(null);
+  const [mappingCel, setMappingCel] = useState<string>("");
   const [searchCel, setSearchCel] = useState<string | null>(null);
 
   const alertsQueryRef = useRef<AlertsQuery | null>(null);
@@ -173,10 +175,11 @@ export function AlertTableServerSide({
     useBackend: !isStaticPreset && !!presetId,
   });
   
-  const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const a11yContainerRef = useRef<HTMLDivElement | null>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
   const { theme } = useAlertTableTheme();
+  const { severityMapping: severityMappingConfig } = useSeverityMapping();
   const [timeFrame, setTimeFrame] = useTimeframeState({
     enableQueryParams: true,
     defaultTimeframe: {
@@ -215,8 +218,11 @@ export function AlertTableServerSide({
       }
 
       if (onQueryChange) {
+        const combinedFilterCel = [filterCel, mappingCel]
+          .filter(Boolean)
+          .join(" && ");
         const query: AlertsTableDataQuery = {
-          filterCel: filterCel,
+          filterCel: combinedFilterCel,
           searchCel: searchCel,
           timeFrame: timeFrame,
           limit: paginationState.limit,
@@ -229,7 +235,7 @@ export function AlertTableServerSide({
         onQueryChange(query);
       }
     },
-    [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange]
+    [filterCel, mappingCel, searchCel, paginationState, sorting, timeFrame, onQueryChange]
   );
 
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
@@ -291,7 +297,7 @@ export function AlertTableServerSide({
         ...paginationStateRef.current,
         offset: 0,
       }),
-    [filterCel, searchCel, setPaginationState]
+    [filterCel, mappingCel, searchCel, setPaginationState]
   );
 
   const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
@@ -712,6 +718,10 @@ export function AlertTableServerSide({
         <div className="flex gap-4">
           {/* Facets sidebar */}
           <div className="w-33 min-w-[12rem] overflow-y-auto">
+            <SeverityMappingFacet
+              config={severityMappingConfig}
+              onCelChange={setMappingCel}
+            />
             <FacetsPanelServerSide
               usePropertyPathsSuggestions={true}
               entityName={"alerts"}

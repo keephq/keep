@@ -72,7 +72,7 @@ function replaceQueryParams(searchParams: URLSearchParams): void {
 }
 
 export function useQueryParams(store: StoreApi<FacetsPanelState>) {
-  const searchParamsRef = useRef<ReadonlyURLSearchParams>();
+  const searchParamsRef = useRef<ReadonlyURLSearchParams | undefined>(undefined);
   searchParamsRef.current = useSearchParams();
   const pathname = usePathname();
   const facets = useStore(store, (state) => state.facets);

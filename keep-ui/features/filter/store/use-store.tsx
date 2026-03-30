@@ -13,7 +13,7 @@ import { useInitialStateHandler } from "./use-initial-state-handler";
 // import { useFacetsStateHandler } from "./use-facets-state-handler";
 
 export function useNewFacetStore(facetsConfig: FacetsConfig | undefined) {
-  const storeRef = useRef<ReturnType<typeof createFacetsPanelStore>>();
+  const storeRef = useRef<ReturnType<typeof createFacetsPanelStore> | undefined>(undefined);
 
   if (!storeRef.current) {
     storeRef.current = createFacetsPanelStore(); // New store per provider

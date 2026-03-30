@@ -3,9 +3,10 @@ Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
-- **api_server**: The kubernetes api server url (required: True, sensitive: False)
-- **token**: Bearer token to access kubernetes (required: True, sensitive: True)
+- **api_server**: The kubernetes api server url (required: False, sensitive: False)
+- **token**: Bearer token to access kubernetes (leave empty for in-cluster auth) (required: False, sensitive: True)
 - **insecure**: Skip TLS verification (required: False, sensitive: False)
+- **use_in_cluster_config**: Use in-cluster configuration (ServiceAccount) (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **connect_to_kubernetes**: Check if the provided token can connect to the kubernetes server (mandatory) 

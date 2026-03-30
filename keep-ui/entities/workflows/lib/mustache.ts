@@ -15,5 +15,8 @@ export function extractMustacheVariables(yamlString: string): string[] {
       .map((match) => match[1])
       // TODO: more sophisticated validation
       .filter((variable) => variable.length > 0 && !variable.endsWith("."))
+      // Skip Mustache sigil tokens: section open (#), close (/), inverted (^),
+      // comment (!), partial (>) — these are not variable references.
+      .filter((variable) => !/^[#/^!>]/.test(variable))
   );
 }

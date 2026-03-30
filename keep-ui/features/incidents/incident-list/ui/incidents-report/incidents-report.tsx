@@ -1,3 +1,4 @@
+import React from "react";
 import { IncidentData } from "./models";
 import { IncidentSeverityMetric } from "./incident-severity-metric";
 import { PieChart } from "./pie-chart";
@@ -50,7 +51,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderTimeMetric(
     metricName: string,
     metricValueInSeconds: number | undefined
-  ): JSX.Element {
+  ): React.JSX.Element {
     return (
       <p className="incidents-time-metric font-medium text-lg">
         <strong>{metricName}:&nbsp;</strong>
@@ -61,7 +62,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     );
   }
 
-  function renderMainReasons(): JSX.Element {
+  function renderMainReasons(): React.JSX.Element {
     return (
       <div className="break-inside-avoid incidents-main-reasons text-lg">
         <p className="font-bold mb-2">Most of the incidents reasons:</p>
@@ -78,7 +79,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     );
   }
 
-  function renderAffectedServices(): JSX.Element {
+  function renderAffectedServices(): React.JSX.Element {
     return (
       <div className="break-inside-avoid text-lg">
         <p className="font-bold mb-2">Affected services:</p>
@@ -95,7 +96,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     );
   }
 
-  function renderRecurringIncidents(): JSX.Element {
+  function renderRecurringIncidents(): React.JSX.Element {
     return (
       <div className="text-lg break-inside-avoid">
         <p className="font-bold mb-2">Recurring incidents:</p>
@@ -112,7 +113,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     );
   }
 
-  function renderTimeMetrics(): JSX.Element {
+  function renderTimeMetrics(): React.JSX.Element {
     return (
       <div className="break-inside-avoid">
         <p className="font-bold text-lg">Incident Metrics:</p>

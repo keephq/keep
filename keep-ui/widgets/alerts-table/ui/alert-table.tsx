@@ -107,7 +107,7 @@ export function AlertTable({
   setDismissModalAlert,
   setChangeStatusAlert,
 }: Props) {
-  const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const a11yContainerRef = useRef<HTMLDivElement | null>(null);
   const { data: configData } = useConfig();
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
