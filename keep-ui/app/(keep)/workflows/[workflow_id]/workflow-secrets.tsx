@@ -16,8 +16,9 @@ const WorkflowSecrets = ({ workflowId }: { workflowId: string }) => {
   const { data: secrets, mutate: mutateSecrets } = getSecrets;
 
   const handleAddSecret = async () => {
-    if (!newSecret.name || !newSecret.value || !secrets) return;
-    await addOrUpdateSecret(secrets, newSecret.name, newSecret.value);
+    const trimmedName = newSecret.name.trim();
+    if (!trimmedName || !newSecret.value || !secrets) return;
+    await addOrUpdateSecret(secrets, trimmedName, newSecret.value);
     setNewSecret({ name: "", value: "" });
     mutateSecrets();
   };
