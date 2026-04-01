@@ -61,9 +61,15 @@ export default function CreateOrUpdateExtractionRule({
       setIsPreFormatting(extractionToEdit.pre);
       setAttribute(extractionToEdit.attribute);
       setRegex(extractionToEdit.regex);
+      // condition is initialized directly from extractionToEdit to ensure
+      // the AlertsRulesBuilder receives it before mounting
       setCondition(extractionToEdit.condition ?? "");
     }
   }, [extractionToEdit]);
+
+  // Derive the condition to pass as defaultQuery so the AlertsRulesBuilder
+  // receives the correct initial value when the edit form opens.
+  const initialCondition = extractionToEdit?.condition ?? "";
 
   const clearForm = () => {
     setExtractionName("");
@@ -261,7 +267,8 @@ export default function CreateOrUpdateExtractionRule({
         </Text>
         <div className="mb-5">
           <AlertsRulesBuilder
-            defaultQuery={condition}
+            key={extractionToEdit?.id ?? "new"}
+            defaultQuery={initialCondition}
             updateOutputCEL={setCondition}
             showSave={false}
             showSqlImport={false}

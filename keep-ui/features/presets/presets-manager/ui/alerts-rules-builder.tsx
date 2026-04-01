@@ -207,7 +207,7 @@ export const AlertsRulesBuilder = ({
 
   const [appliedCel, setAppliedCel] = useCelState({
     enableQueryParams: shouldSetQueryParam,
-    defaultCel: constructCELRules(selectedPreset),
+    defaultCel: constructCELRules(selectedPreset) || defaultQuery || "",
   });
   const [celRules, setCELRules] = useState(appliedCel);
 
