@@ -1,4 +1,4 @@
-"""
+﻿"""
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
 """
 
@@ -861,8 +861,10 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         # TODO - this could be separated into a ServicenowUpdateProvider once we support
         if "ticket_id" in kwargs:
             ticket_id = kwargs.pop("ticket_id")
-            fingerprint = kwargs.pop("fingerprint")
-            return self._notify_update(table_name, ticket_id, fingerprint)
+            fingerprint = kwargs.pop("fingerprint", "")
+            # Merge explicit payload with remaining kwargs as update fields
+            update_payload = {**payload, **kwargs}
+            return self._notify_update(table_name, ticket_id, fingerprint, update_payload)
 
         # In ServiceNow tables are lower case
         table_name = table_name.lower()
@@ -896,7 +898,23 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             self.logger.info(f"Failed to create ticket: {response.text}")
             response.raise_for_status()
 
-    def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
+    def _notify_update(
+        self,
+        table_name: str,
+        ticket_id: str,
+        fingerprint: str,
+        payload: dict = {},
+    ):
+        """
+        Update an existing ServiceNow ticket via PATCH.
+
+        Args:
+            table_name: The ServiceNow table (e.g. "incident").
+            ticket_id: The sys_id of the record to update.
+            fingerprint: Keep fingerprint stored on the result for deduplication.
+            payload: Fields to update (e.g. {"state": "2", "comments": "resolved"}).
+                     An empty dict is a valid no-op PATCH that returns current state.
+        """
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
@@ -904,35 +922,36 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
                 self.authentication_config.username,
                 self.authentication_config.password,
             )
-            if self._access_token
+            if not self._access_token
             else None
         )
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
 
-        response = requests.get(
+        response = requests.patch(
             url,
             auth=auth,
             headers=headers,
+            data=json.dumps(payload),
             verify=False,
         )
         if response.status_code == 200:
             resp = response.text
-            # if the instance is down due to hibranate you'll get 200 instead of 201
             if "Want to find out why instances hibernate?" in resp:
                 raise ProviderException(
                     "ServiceNow instance is down, you need to restart the instance."
                 )
-            # else, we are ok
-            else:
-                resp = json.loads(resp)
+            resp = json.loads(resp)
             self.logger.info("Updated ticket", extra={"resp": resp})
-            resp = resp.get("result")
-            resp["fingerprint"] = fingerprint
-            return resp
+            result = resp.get("result")
+            result["fingerprint"] = fingerprint
+            return result
         else:
-            self.logger.info("Failed to update ticket", extra={"resp": response.text})
-            resp.raise_for_status()
+            self.logger.info(
+                "Failed to update ticket",
+                extra={"status": response.status_code, "resp": response.text},
+            )
+            response.raise_for_status()
 
 
 if __name__ == "__main__":
@@ -1005,3 +1024,4 @@ if __name__ == "__main__":
     else:
         r = provider.pull_topology()
     print(r)
+
