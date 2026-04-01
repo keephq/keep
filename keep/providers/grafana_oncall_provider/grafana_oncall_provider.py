@@ -56,33 +56,6 @@ class GrafanaOncallProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-
-    def dispose(self):
-        """
-        Dispose the provider.
-        """
-        pass
-
-    def validate_config(self):
-        """
-        Validates required configuration for Grafana provider.
-
-        """
-        self.authentication_config = GrafanaOncallProviderAuthConfig(
-            **self.config.authentication
-        )
-
-
-    def clean_url(self, url):
-        parsed = urlparse(url)
-        normalized_path = '/'.join(part for part in parsed.path.split('/') if part)
-        _clean_url = urlunparse(parsed._replace(path=f'/{normalized_path}'))
-        return _clean_url
-
-
-    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
-        
-        super().__init__(context_manager, provider_id, config)
         KEEP_INTEGRATION_NAME = "Keep Integration"
 
         if self.config.authentication.get("oncall_integration_link") is not None:
@@ -93,13 +66,13 @@ class GrafanaOncallProvider(BaseProvider):
             "Authorization": f"{config.authentication['token']}",
             "Content-Type": "application/json",
         }
-        
+
         response = requests.post(
             url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
             headers=headers,
             json={
                 "name": KEEP_INTEGRATION_NAME,
-                "type":"webhook"
+                "type": "webhook"
             },
         )
         existing_integration_link = None
@@ -121,12 +94,31 @@ class GrafanaOncallProvider(BaseProvider):
         else:
             logger.error(f"Error installing the provider: {response.status_code}")
             raise Exception(f"Error installing the provider: {response.status_code}")
-        
+
         if "integrations/v1/" in urlsplit(existing_integration_link).path:
             self.config.authentication["oncall_integration_link"] = existing_integration_link
         else:
             Exception("Error creating the integration link, the URL is not OnCall formatted.")
 
+    def dispose(self):
+        """
+        Dispose the provider.
+        """
+        pass
+
+    def validate_config(self):
+        """
+        Validates required configuration for Grafana provider.
+        """
+        self.authentication_config = GrafanaOncallProviderAuthConfig(
+            **self.config.authentication
+        )
+
+    def clean_url(self, url):
+        parsed = urlparse(url)
+        normalized_path = '/'.join(part for part in parsed.path.split('/') if part)
+        _clean_url = urlunparse(parsed._replace(path=f'/{normalized_path}'))
+        return _clean_url
 
     def _notify(
         self,
@@ -136,35 +128,54 @@ class GrafanaOncallProvider(BaseProvider):
         image_url: str = "",
         state: Literal["alerting", "resolved"] = "alerting",
         link_to_upstream_details: str = "",
+        payload: dict | None = None,
         **kwargs,
     ):
+        """
+        Send a notification to Grafana OnCall.
+
+        Args:
+            title: Alert title.
+            alert_uid: Unique identifier for the alert (used for deduplication).
+            message: Alert message body.
+            image_url: URL to an image to attach.
+            state: Alert state ("alerting" or "resolved").
+            link_to_upstream_details: URL linking back to the alert source.
+            payload: Optional custom JSON payload. If provided, this is sent
+                     directly to the OnCall webhook instead of the default
+                     structured body, allowing full control over the request.
+        """
         headers = {
             "Content-Type": "application/json",
         }
-        response = requests.post(
-            url=self.config.authentication["oncall_integration_link"],
-            headers=headers,
-            json={
+
+        if payload is not None:
+            # Use caller-supplied payload directly for full flexibility
+            json_body = payload
+        else:
+            json_body = {
                 "title": title,
                 "message": message,
                 "alert_uid": alert_uid,
                 "image_url": image_url,
                 "state": state,
                 "link_to_upstream_details": link_to_upstream_details,
-            },
+            }
+
+        response = requests.post(
+            url=self.config.authentication["oncall_integration_link"],
+            headers=headers,
+            json=json_body,
         )
         response.raise_for_status()
         return response.json()
 
 
 if __name__ == "__main__":
-    # Output debug messages
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
-    # Load environment variables
-    import os
 
     host = os.environ.get("GRAFANA_ON_CALL_HOST")
     token = os.environ.get("GRAFANA_ON_CALL_TOKEN")
