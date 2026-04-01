@@ -28,6 +28,20 @@ class PythonProvider(BaseProvider):
         Returns:
             _type_: _description_
         """
+        # Validate Python syntax before rendering to catch user code errors early
+        # and provide a clear, actionable error message (see: #5327)
+        try:
+            compile(code, "<python_step>", "eval")
+        except SyntaxError as e:
+            # Try exec mode (multi-statement) as well
+            try:
+                compile(code, "<python_step>", "exec")
+            except SyntaxError as exec_err:
+                raise ProviderException(
+                    f"SyntaxError in Python step '{self.provider_id}': {exec_err.msg} "
+                    f"(line {exec_err.lineno})"
+                )
+
         modules = imports
         loaded_modules = {}
         if modules:
@@ -47,9 +61,33 @@ class PythonProvider(BaseProvider):
                         f"{self.__class__.__name__} failed to import library: {module}",
                         provider_id=self.provider_id,
                     )
-        parsed_code = self.io_handler.parse(code)
+
+        try:
+            parsed_code = self.io_handler.parse(code)
+        except SyntaxError as e:
+            # SyntaxError during template rendering — report the original user code error
+            # without leaking provider configuration details (e.g. URLs, ports) that
+            # may end up in the rendered string (#5327).
+            raise ProviderException(
+                f"SyntaxError in Python step '{self.provider_id}': {e.msg} "
+                f"(line {e.lineno})"
+            )
+        except Exception as e:
+            # Other rendering errors: surface a concise message without raw token data
+            raise ProviderException(
+                f"Error rendering Python step '{self.provider_id}': {e}"
+            )
+
         try:
             output = eval(parsed_code, loaded_modules)
+        except SyntaxError as e:
+            # SyntaxError after template rendering — show the rendered code snippet
+            # and the exact location so the user can debug quickly (#5327).
+            code_preview = parsed_code[:200] + "..." if len(parsed_code) > 200 else parsed_code
+            raise ProviderException(
+                f"SyntaxError in Python step '{self.provider_id}': {e.msg} "
+                f"(line {e.lineno}). Code preview:\n{code_preview}"
+            )
         except Exception as e:
             raise ProviderException(e)
         return output
