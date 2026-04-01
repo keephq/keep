@@ -1237,7 +1237,9 @@ def write_workflow_secret(
     except Exception:
         existing_secrets = {}
 
-    existing_secrets.update(secret_data)
+    # Strip whitespace from secret keys to prevent issues with trailing/leading spaces
+    stripped_secret_data = {k.strip(): v for k, v in secret_data.items()}
+    existing_secrets.update(stripped_secret_data)
 
     # Write back the updated secret object
     secret_manager.write_secret(
@@ -1303,6 +1305,9 @@ def delete_workflow_secret(
     secret_key = f"{tenant_id}_{workflow_id}_secrets"
 
     secrets = secret_manager.read_secret(secret_key, is_json=True)
+
+    # Strip whitespace from secret_name to match stored keys
+    secret_name = secret_name.strip()
 
     if secret_name not in secrets:
         raise HTTPException(404, f"Secret '{secret_name}' not found")
