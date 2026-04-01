@@ -53,7 +53,6 @@ class WorkflowVersion(SQLModel, table=True):
         sa_column=Column(
             DateTime(timezone=True),
             name="updated_at",
-            onupdate=func.now(),
             server_default=func.now(),
             nullable=False,
         )
