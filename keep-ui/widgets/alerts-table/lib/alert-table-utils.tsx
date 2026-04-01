@@ -286,9 +286,12 @@ export const useAlertTableCols = (
                 ? value
                 : new Date(value as string | number);
             const isoString = date.toISOString();
-            // Get the format from column format settings or use default
+            // Get the format from table meta (backend-synced for custom feeds) or
+            // fall back to local column time formats, defaulting to "timeago"
+            const activeColumnTimeFormats =
+              context.table.options.meta?.columnTimeFormats ?? columnTimeFormats;
             const formatOption =
-              columnTimeFormats[context.column.id] || "timeago";
+              activeColumnTimeFormats[context.column.id] || "timeago";
             return (
               <span title={isoString}>
                 {formatDateTime(date, formatOption)}
@@ -624,8 +627,12 @@ export const useAlertTableCols = (
         const date = value instanceof Date ? value : new Date(value);
         const isoString = date.toISOString();
 
-        // Get the format from column format settings or use default
-        const formatOption = columnTimeFormats[context.column.id] || "timeago";
+        // Get the format from table meta (backend-synced for custom feeds) or
+        // fall back to local column time formats, defaulting to "timeago"
+        const activeColumnTimeFormats =
+          context.table.options.meta?.columnTimeFormats ?? columnTimeFormats;
+        const formatOption =
+          activeColumnTimeFormats[context.column.id] || "timeago";
 
         return (
           <span title={isoString}>{formatDateTime(date, formatOption)}</span>
