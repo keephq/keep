@@ -188,6 +188,15 @@ export const getCellClassName = (
 
 const columnHelper = createColumnHelper<AlertDto>();
 
+/**
+ * Strips HTML tags from a string, returning plain text.
+ * Used to display note values (saved via a rich-text editor) as plain text
+ * in alert table columns.
+ */
+const stripHtml = (html: string): string => {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s{2,}/g, " ").trim();
+};
+
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
@@ -344,6 +353,13 @@ export const useAlertTableCols = (
           }
 
           if (value) {
+            // Strip HTML tags from note values — notes are saved by a rich-text
+            // editor (Quill) which wraps content in HTML tags like <p>...</p>.
+            // Table columns should display plain text only.
+            const displayValue =
+              context.column.id === "note" && typeof value === "string"
+                ? stripHtml(value)
+                : value.toString();
             return (
               <div
                 className={clsx(
@@ -353,7 +369,7 @@ export const useAlertTableCols = (
                     (rowStyle === "default" ? "line-clamp-1" : "line-clamp-3")
                 )}
               >
-                {value.toString()}
+                {displayValue}
               </div>
             );
           }
