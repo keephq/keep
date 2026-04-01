@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from typing import List, Optional
 from uuid import UUID
 
@@ -215,7 +215,7 @@ def get_all_incidents(
 def fetch_inicident_facet_options(
     facet_options_query: FacetOptionsQueryDto,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
     ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
@@ -427,7 +427,7 @@ def update_incident(
 def bulk_delete_incidents(
     incident_ids: List[UUID] = Body(..., embed=True),
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+        IdentityManagerFactory.get_auth_verifier(["delete:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
     session: Session = Depends(get_session),
@@ -445,7 +445,7 @@ def bulk_delete_incidents(
 def delete_incident(
     incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+        IdentityManagerFactory.get_auth_verifier(["delete:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
     session: Session = Depends(get_session),
@@ -718,7 +718,7 @@ def delete_alerts_from_incident(
     incident_id: UUID,
     fingerprints: List[str],
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+        IdentityManagerFactory.get_auth_verifier(["delete:incident"])
     ),
     session=Depends(get_session),
     pusher_client: Pusher | None = Depends(get_pusher_client),
@@ -1155,3 +1155,4 @@ async def unenrich_incident(
             )
 
     return Response(status_code=202)
+
