@@ -9,7 +9,7 @@ from urllib.parse import urlencode, urljoin
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -85,6 +85,12 @@ class Site24X7Provider(BaseProvider):
         "TROUBLE": AlertSeverity.HIGH,
         "UP": AlertSeverity.INFO,
         "CRITICAL": AlertSeverity.CRITICAL,
+    }
+    STATUS_MAP = {
+        "UP": AlertStatus.RESOLVED,
+        "DOWN": AlertStatus.FIRING,
+        "TROUBLE": AlertStatus.FIRING,
+        "CRITICAL": AlertStatus.FIRING,
     }
 
     def __init__(
@@ -217,13 +223,37 @@ class Site24X7Provider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        site24x7_status = event.get("STATUS", "DOWN")
+
+        # Parse TAGS field: Site24x7 sends comma-separated "key:value" pairs
+        # e.g. "env:prod,team:backend" or plain "tagname"
+        tags_raw = event.get("TAGS", "")
+        labels = {}
+        if isinstance(tags_raw, str) and tags_raw:
+            for tag in tags_raw.split(","):
+                tag = tag.strip()
+                if ":" in tag:
+                    key, value = tag.split(":", 1)
+                    labels[key.strip()] = value.strip()
+                elif tag:
+                    labels[tag] = tag
+        elif isinstance(tags_raw, dict):
+            labels = tags_raw
+
         return AlertDto(
             url=event.get("MONITORURL", ""),
             lastReceived=event.get("INCIDENT_TIME_ISO", ""),
             description=event.get("INCIDENT_REASON", ""),
             name=event.get("MONITORNAME", ""),
             id=event.get("MONITOR_ID", ""),
-            severity=Site24X7Provider.SEVERITIES_MAP.get(event.get("STATUS", "DOWN")),
+            severity=Site24X7Provider.SEVERITIES_MAP.get(
+                site24x7_status, AlertSeverity.WARNING
+            ),
+            status=Site24X7Provider.STATUS_MAP.get(
+                site24x7_status, AlertStatus.FIRING
+            ),
+            labels=labels,
+            source=["site24x7"],
         )
 
     def _get_alerts(self) -> list[AlertDto]:
