@@ -35,9 +35,8 @@ services:
   keep-arq-redis:
     image: redis/redis-stack
     ports:
-      - "6379:6379"
-      - "8081:8001"
-
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:8081:8001"
   keep-arq-dashboard:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-arq-dashboard
     ports:
