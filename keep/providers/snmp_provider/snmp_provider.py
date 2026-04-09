@@ -99,10 +99,27 @@ class SnmpProvider(BaseProvider):
         Returns:
             dict: The result of the query.
         """
-        self.logger.info(f"Querying SNMP device {self.authentication_config.host} for OID {oid} using {method}")
-        
-        community_data = CommunityData(self.authentication_config.community, mpModel=1 if self.authentication_config.version == "2c" else 0)
-        transport_target = UdpTransportTarget((self.authentication_config.host, self.authentication_config.port))
+        self.logger.info(
+            "Querying SNMP device %s for OID %s using %s",
+            self.authentication_config.host, oid, method,
+        )
+
+        version = self.authentication_config.version
+        if version == "2c":
+            mp_model = 1
+        elif version == "1":
+            mp_model = 0
+        else:
+            raise ValueError(
+                f"Unsupported SNMP version: '{version}'. Supported versions: '1', '2c'"
+            )
+
+        community_data = CommunityData(
+            self.authentication_config.community, mpModel=mp_model
+        )
+        transport_target = UdpTransportTarget(
+            (self.authentication_config.host, self.authentication_config.port)
+        )
         
         results = {}
         if method.lower() == "get":
@@ -137,14 +154,18 @@ class SnmpProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(event: dict, provider_instance: "BaseProvider" = None) -> AlertDto:
-        # Placeholder for SNMP Trap formatting if implemented in the future
+        # Format incoming SNMP trap data into an AlertDto
+        # Extract known fields and pass remaining as extra kwargs
+        known_keys = {"id", "name", "status", "severity", "source"}
+        extra_kwargs = {k: v for k, v in event.items() if k not in known_keys}
+
         return AlertDto(
             id=event.get("id", "snmp-trap"),
             name=event.get("name", "SNMP Trap"),
             status=AlertStatus.FIRING,
             severity=AlertSeverity.INFO,
             source=["snmp"],
-            **event
+            **extra_kwargs
         )
 
 if __name__ == "__main__":
