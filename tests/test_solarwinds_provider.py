@@ -111,11 +111,11 @@ class TestSolarwindsProviderWebhook:
             "AlertName": "High Latency",
             "Status": "Critical",
             "Message": "Latency exceeds 500ms",
-            "timestamp": 1705312200,  # Unix timestamp (seconds)
+            "timestamp": 1705312200,  # Unix timestamp (seconds) = Jan 15, 2024
         }
         alert = SolarwindsProvider._format_alert(event)
         assert alert.lastReceived is not None
-        assert "2025" in alert.lastReceived
+        assert "2024" in alert.lastReceived
 
     def test_format_alert_with_url_and_ip(self):
         """Test formatting an alert with URL and IP address."""
@@ -235,9 +235,8 @@ class TestSolarwindsProviderPull:
             },
         )
         cm = ContextManager(tenant_id="test", workflow_id="test")
-        provider = SolarwindsProvider(cm, "test-solarwinds", config)
         with pytest.raises(ValueError, match="requires either"):
-            provider.validate_config()
+            SolarwindsProvider(cm, "test-solarwinds", config)
 
     @patch("keep.providers.solarwinds_provider.solarwinds_provider.requests.post")
     def test_get_alerts_success(self, mock_post, provider):
@@ -260,6 +259,7 @@ class TestSolarwindsProviderPull:
                     "AlertDefName": "High CPU Load",
                     "NodeCaption": "server1",
                     "IP_Address": "10.0.0.1",
+                    "NodeIP": "10.0.0.1",
                     "NodeStatus": 2,
                     "NodeGroup": "Production",
                 },
@@ -278,6 +278,7 @@ class TestSolarwindsProviderPull:
                     "AlertDefName": "Node Down",
                     "NodeCaption": "db-server",
                     "IP_Address": "10.0.0.2",
+                    "NodeIP": "10.0.0.2",
                     "NodeStatus": 2,
                     "NodeGroup": "Database",
                 },

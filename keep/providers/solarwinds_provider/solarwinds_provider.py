@@ -410,6 +410,9 @@ If your SolarWinds version supports REST-based alert actions, configure:
             - ip_address / IPAddress: Node IP address
             - url / URL: Link to the alert in SolarWinds
         """
+        # Build lowercase mapping once for case-insensitive lookups
+        _lower_event = {k.lower(): v for k, v in event.items()}
+
         def _get(keys: list[str], default=None):
             """Get a value from the event trying multiple possible key names."""
             for key in keys:
@@ -417,9 +420,8 @@ If your SolarWinds version supports REST-based alert actions, configure:
                 if key in event:
                     return event[key]
                 # Try case-insensitive match
-                lower_event = {k.lower(): v for k, v in event.items()}
-                if key.lower() in lower_event:
-                    return lower_event[key.lower()]
+                if key.lower() in _lower_event:
+                    return _lower_event[key.lower()]
             return default
 
         node_name = _get(["NodeName", "node", "node_name", "Node", "hostname"], "")
@@ -475,7 +477,7 @@ If your SolarWinds version supports REST-based alert actions, configure:
         name = alert_name or node_name or "SolarWinds Alert"
 
         # Build fingerprint-compatible id
-        alert_id = event.get("id") or event.get("AlertObjectID") or event.get("alert_id")
+        alert_id = _get(["id", "AlertObjectID", "alert_id"], None)
         if alert_id:
             alert_id = str(alert_id)
         else:
