@@ -569,6 +569,20 @@ class BaseProvider(metaclass=abc.ABCMeta):
             for alert in alerts:
                 alert.providerId = self.provider_id
                 alert.providerType = self.provider_type
+
+            # Apply custom deduplication rules to pulled alerts
+            # (mirrors the logic in format_alert() for webhook alerts)
+            custom_deduplication_rule = get_custom_deduplication_rule(
+                tenant_id=self.context_manager.tenant_id,
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+            )
+            if custom_deduplication_rule:
+                for alert in alerts:
+                    alert.fingerprint = self.get_alert_fingerprint(
+                        alert, custom_deduplication_rule.fingerprint_fields
+                    )
+
             return alerts
 
     def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
