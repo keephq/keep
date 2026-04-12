@@ -111,7 +111,7 @@ class TestSolarwindsProviderWebhook:
             "AlertName": "High Latency",
             "Status": "Critical",
             "Message": "Latency exceeds 500ms",
-            "timestamp": 1705312200,  # Unix timestamp (seconds) = Jan 15, 2024
+            "timestamp": 1736899200,  # Unix timestamp (seconds) = Jan 15, 2025
         }
         alert = SolarwindsProvider._format_alert(event)
         assert alert.lastReceived is not None

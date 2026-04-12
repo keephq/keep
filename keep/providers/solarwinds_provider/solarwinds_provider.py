@@ -315,7 +315,11 @@ If your SolarWinds version supports REST-based alert actions, configure:
 
         alerts = []
         for row in rows:
-            alert_id = str(row.get("AlertObjectID", ""))
+            # Case-insensitive lookup for alert ID
+            alert_id = str(next(
+                (row.get(k, "") for k in row.keys() if k.lower() == "alertobjectid"),
+                ""
+            ))
             if not alert_id:
                 continue
 
