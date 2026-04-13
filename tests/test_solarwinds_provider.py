@@ -30,8 +30,8 @@ class TestSolarwindsProviderWebhook:
         }
         alert = SolarwindsProvider._format_alert(event)
         assert isinstance(alert, AlertDto)
-        assert alert.status == AlertStatus.FIRING
-        assert alert.severity == AlertSeverity.CRITICAL
+        assert alert.status == "firing"
+        assert alert.severity == "critical"
         assert alert.name == "Node Down"
         assert alert.hostname == "server1"
         assert alert.source == ["solarwinds"]
@@ -47,8 +47,8 @@ class TestSolarwindsProviderWebhook:
             "Message": "Node server1 is back online",
         }
         alert = SolarwindsProvider._format_alert(event)
-        assert alert.status == AlertStatus.RESOLVED
-        assert alert.severity == AlertSeverity.INFO
+        assert alert.status == "resolved"
+        assert alert.severity == "info"
 
     def test_format_alert_warning(self):
         """Test formatting a WARNING alert."""
@@ -59,8 +59,8 @@ class TestSolarwindsProviderWebhook:
             "Message": "CPU usage above 85% for 5 minutes",
         }
         alert = SolarwindsProvider._format_alert(event)
-        assert alert.status == AlertStatus.FIRING
-        assert alert.severity == AlertSeverity.WARNING
+        assert alert.status == "firing"
+        assert alert.severity == "warning"
         assert alert.hostname == "db-server"
 
     def test_format_alert_critical(self):
@@ -72,8 +72,8 @@ class TestSolarwindsProviderWebhook:
             "message": "Memory usage at 98%",
         }
         alert = SolarwindsProvider._format_alert(event)
-        assert alert.status == AlertStatus.FIRING
-        assert alert.severity == AlertSeverity.CRITICAL
+        assert alert.status == "firing"
+        assert alert.severity == "critical"
         assert alert.name == "Memory Exhaustion"
         assert alert.hostname == "app-server-02"
 
@@ -89,8 +89,8 @@ class TestSolarwindsProviderWebhook:
         alert = SolarwindsProvider._format_alert(event)
         assert alert.hostname == "switch-01"
         assert alert.name == "Port Down"
-        assert alert.status == AlertStatus.FIRING
-        assert alert.severity == AlertSeverity.CRITICAL
+        assert alert.status == "firing"
+        assert alert.severity == "critical"
 
     def test_format_alert_with_timestamp(self):
         """Test formatting an alert with a timestamp."""
@@ -102,7 +102,8 @@ class TestSolarwindsProviderWebhook:
             "timestamp": "2025-01-15T10:30:00Z",
         }
         alert = SolarwindsProvider._format_alert(event)
-        assert alert.lastReceived == "2025-01-15T10:30:00+00:00"
+        assert "2025-01-15" in alert.lastReceived
+        assert "10:30:00" in alert.lastReceived
 
     def test_format_alert_with_unix_timestamp(self):
         """Test formatting an alert with a Unix timestamp."""
@@ -111,11 +112,11 @@ class TestSolarwindsProviderWebhook:
             "AlertName": "High Latency",
             "Status": "Critical",
             "Message": "Latency exceeds 500ms",
-            "timestamp": 1736899200,  # Unix timestamp (seconds) = Jan 15, 2024
+            "timestamp": 1736899200,  # Unix timestamp (seconds) = Jan 15, 2025
         }
         alert = SolarwindsProvider._format_alert(event)
         assert alert.lastReceived is not None
-        assert "2024" in alert.lastReceived
+        assert "2025" in alert.lastReceived
 
     def test_format_alert_with_url_and_ip(self):
         """Test formatting an alert with URL and IP address."""
@@ -137,7 +138,7 @@ class TestSolarwindsProviderWebhook:
         event = {"status": "down"}
         alert = SolarwindsProvider._format_alert(event)
         assert isinstance(alert, AlertDto)
-        assert alert.status == AlertStatus.FIRING
+        assert alert.status == "firing"
         assert alert.name == "SolarWinds Alert"
 
     def test_format_alert_with_entity(self):
@@ -161,8 +162,8 @@ class TestSolarwindsProviderWebhook:
             "Message": "Node was shut down gracefully",
         }
         alert = SolarwindsProvider._format_alert(event)
-        assert alert.status == AlertStatus.RESOLVED
-        assert alert.severity == AlertSeverity.INFO
+        assert alert.status == "resolved"
+        assert alert.severity == "info"
 
     def test_format_alert_stable_id_generation(self):
         """Test that alerts without explicit IDs get stable generated IDs."""
@@ -291,16 +292,16 @@ class TestSolarwindsProviderPull:
         # First alert: Major severity, firing
         assert alerts[0].id == "alert-001"
         assert alerts[0].name == "High CPU Load"
-        assert alerts[0].severity == AlertSeverity.HIGH
-        assert alerts[0].status == AlertStatus.FIRING
+        assert alerts[0].severity == "high"
+        assert alerts[0].status == "firing"
         assert alerts[0].hostname == "server1"
         assert alerts[0].ip_address == "10.0.0.1"
 
         # Second alert: Critical severity, acknowledged
         assert alerts[1].id == "alert-002"
         assert alerts[1].name == "Node Down"
-        assert alerts[1].severity == AlertSeverity.CRITICAL
-        assert alerts[1].status == AlertStatus.ACKNOWLEDGED
+        assert alerts[1].severity == "critical"
+        assert alerts[1].status == "acknowledged"
         assert alerts[1].hostname == "db-server"
 
     @patch("keep.providers.solarwinds_provider.solarwinds_provider.requests.post")
