@@ -111,7 +111,7 @@ class TestSolarwindsProviderWebhook:
             "AlertName": "High Latency",
             "Status": "Critical",
             "Message": "Latency exceeds 500ms",
-            "timestamp": 1736899200,  # Unix timestamp (seconds) = Jan 15, 2025
+            "timestamp": 1736899200,  # Unix timestamp (seconds) = Jan 15, 2024
         }
         alert = SolarwindsProvider._format_alert(event)
         assert alert.lastReceived is not None
@@ -258,7 +258,6 @@ class TestSolarwindsProviderPull:
                     "LastNote": "",
                     "AlertDefName": "High CPU Load",
                     "NodeCaption": "server1",
-                    "IP_Address": "10.0.0.1",
                     "NodeIP": "10.0.0.1",
                     "NodeStatus": 2,
                     "NodeGroup": "Production",
@@ -277,7 +276,6 @@ class TestSolarwindsProviderPull:
                     "LastNote": "Investigating",
                     "AlertDefName": "Node Down",
                     "NodeCaption": "db-server",
-                    "IP_Address": "10.0.0.2",
                     "NodeIP": "10.0.0.2",
                     "NodeStatus": 2,
                     "NodeGroup": "Database",
