@@ -471,6 +471,23 @@ def assign_alert(
             "fingerprint": fingerprint,
         },
     )
+
+    # Trigger workflows so that assign/unassign changes are picked up
+    # by workflows with only_on_change: [assignee]
+    try:
+        alert = get_alerts_by_fingerprint(tenant_id, fingerprint, limit=1)
+        if alert:
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_events(
+                tenant_id=tenant_id, events=enriched_alerts_dto
+            )
+    except Exception:
+        logger.exception(
+            "Failed to trigger workflows after alert assignment",
+            extra={"fingerprint": fingerprint, "tenant_id": tenant_id},
+        )
+
     return {"status": "ok"}
 
 
