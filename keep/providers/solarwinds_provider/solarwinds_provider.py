@@ -414,18 +414,23 @@ If your SolarWinds version supports REST-based alert actions, configure:
             - ip_address / IPAddress: Node IP address
             - url / URL: Link to the alert in SolarWinds
         """
-        # Build lowercase mapping once for case-insensitive lookups
+        # Build lowercase mapping once for case-insensitive lookups.
+        # _lower_event is created once per _format_alert call and shared
+        # across all _get() invocations via closure — no per-key rebuild.
         _lower_event = {k.lower(): v for k, v in event.items()}
 
         def _get(keys: list[str], default=None):
-            """Get a value from the event trying multiple possible key names."""
+            """Get a value from the event trying multiple possible key names.
+
+            Checks exact match first, then case-insensitive via _lower_event.
+            """
             for key in keys:
-                # Try exact match first
-                if key in event:
-                    return event[key]
-                # Try case-insensitive match
-                if key.lower() in _lower_event:
-                    return _lower_event[key.lower()]
+                val = event.get(key)
+                if val is not None:
+                    return val
+                val = _lower_event.get(key.lower())
+                if val is not None:
+                    return val
             return default
 
         node_name = _get(["NodeName", "node", "node_name", "Node", "hostname"], "")
