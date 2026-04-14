@@ -59,12 +59,18 @@ def on_starting(server=None):
         IdentityManagerTypes.NOAUTH.value,
         IdentityManagerTypes.OAUTH2PROXY.value,
         IdentityManagerTypes.ONELOGIN.value,
+        IdentityManagerTypes.OKTA.value,
+        IdentityManagerTypes.KEYCLOAK.value,
+        "azuread",  # enterprise-only, no enum entry
         "no_auth",  # backwards compatibility
         "single_tenant",  # backwards compatibility
     ]:
         excluded_from_default_user = [
             IdentityManagerTypes.OAUTH2PROXY.value,
             IdentityManagerTypes.ONELOGIN.value,
+            IdentityManagerTypes.OKTA.value,
+            IdentityManagerTypes.KEYCLOAK.value,
+            "azuread",
         ]
         # for oauth2proxy, we don't want to create the default user
         try_create_single_tenant(
