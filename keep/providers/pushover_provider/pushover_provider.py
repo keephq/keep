@@ -47,30 +47,52 @@ class PushoverProvider(BaseProvider):
         """
         pass
 
-    def _notify(self, message=None, **kwargs: dict):
+    def _notify(
+        self,
+        message: str = "",
+        title: str | None = None,
+        priority: int = 0,
+        sound: str = "pushover",
+        retry: int = 60,
+        expire: int = 3600,
+        **kwargs: dict,
+    ):
         """
         Notify alert message to Pushover using the Pushover API
         https://support.pushover.net/i44-example-code-and-pushover-libraries#python
 
         Args:
             message (str): The content of the message.
+            title (str | None): Optional notification title.
+            priority (int): Message priority (-2 to 2, where 2 is emergency).
+            sound (str): Pushover sound name.
+            retry (int): Retry interval in seconds for emergency priority.
+            expire (int): Expiry in seconds for emergency priority.
         """
         self.logger.debug("Notifying alert message to Pushover")
-        sound = kwargs.get("sound", "pushover")
-        priority = int(kwargs.get("priority", 0))
-        retry = kwargs.get("retry", 60)
-        expire = kwargs.get("expire", 3600)
-        resp = requests.post(
-            "https://api.pushover.net/1/messages.json",
-            data={
-                "token": self.authentication_config.token,
-                "user": self.authentication_config.user_key,
-                "message": message,
-                "sound": sound,
-                "priority": priority,
-                **({"retry": retry, "expire": expire} if priority == 2 else {}),
-            },
-        )
+        sound = kwargs.get("sound", sound)
+        priority = int(kwargs.get("priority", priority))
+        retry = int(kwargs.get("retry", retry))
+        expire = int(kwargs.get("expire", expire))
+        title = kwargs.get("title", title)
+        
+        if isinstance(message, str):
+            message = message.replace("<p>", "").replace("</p>", "")
+
+        data = {
+            "token": self.authentication_config.token,
+            "user": self.authentication_config.user_key,
+            "message": message,
+            "sound": sound,
+            "priority": priority,
+            **({"retry": retry, "expire": expire} if priority == 2 else {}),
+        }
+
+        # Add optional title if provided so Pushover shows incident name as bold title
+        if title:
+            data["title"] = title
+
+        resp = requests.post("https://api.pushover.net/1/messages.json", data=data)
         resp.raise_for_status()
         self.logger.debug("Alert message notified to Pushover")
 
