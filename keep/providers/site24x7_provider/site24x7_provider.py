@@ -9,7 +9,7 @@ from urllib.parse import urlencode, urljoin
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -85,6 +85,12 @@ class Site24X7Provider(BaseProvider):
         "TROUBLE": AlertSeverity.HIGH,
         "UP": AlertSeverity.INFO,
         "CRITICAL": AlertSeverity.CRITICAL,
+    }
+    STATUS_MAP = {
+        "DOWN": AlertStatus.FIRING,
+        "TROUBLE": AlertStatus.FIRING,
+        "CRITICAL": AlertStatus.FIRING,
+        "UP": AlertStatus.RESOLVED,
     }
 
     def __init__(
@@ -217,13 +223,34 @@ class Site24X7Provider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        status_raw = event.get("STATUS", "DOWN")
+        severity = Site24X7Provider.SEVERITIES_MAP.get(status_raw, AlertSeverity.WARNING)
+        status = Site24X7Provider.STATUS_MAP.get(status_raw, AlertStatus.FIRING)
+
+        # Extract tags and labels from webhook payload
+        tags = event.get("TAGS", "")
+        if isinstance(tags, str) and tags:
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+        elif not isinstance(tags, list):
+            tags = []
+
+        labels = event.get("LABELS", "")
+        if isinstance(labels, str) and labels:
+            labels = [part.strip() for part in labels.split(",") if part.strip()]
+        elif not isinstance(labels, list):
+            labels = []
+
         return AlertDto(
             url=event.get("MONITORURL", ""),
             lastReceived=event.get("INCIDENT_TIME_ISO", ""),
             description=event.get("INCIDENT_REASON", ""),
             name=event.get("MONITORNAME", ""),
             id=event.get("MONITOR_ID", ""),
-            severity=Site24X7Provider.SEVERITIES_MAP.get(event.get("STATUS", "DOWN")),
+            status=status,
+            severity=severity,
+            source=["site24x7"],
+            tags=tags,
+            labels=labels,
         )
 
     def _get_alerts(self) -> list[AlertDto]:
