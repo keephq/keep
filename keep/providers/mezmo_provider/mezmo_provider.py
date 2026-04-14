@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 
-# Load env varaibles
+# Load env variables
 load_dotenv()
 
 
@@ -58,17 +58,20 @@ class MezmoProvider:
 
         # Only add Mezmo handler if the key is present
         if self.mezmo_key:
-            logging_config["handlers"]["mezmo"] = {
-                "class": "logdna.LogDNAHandler",
-                "key": self.mezmo_key,
-                "options": {
-                    "app": self.app,
-                    "env": self.env,
-                    "hostname": self.hostname,
-                },
-                "level": "INFO",
-            }
-            logging_config["loggers"]["keep"]["handlers"].append("mezmo")
+            try:
+                logging_config["handlers"]["mezmo"] = {
+                    "class": "logdna.LogDNAHandler",
+                    "key": self.mezmo_key,
+                    "options": {
+                        "app": self.app,
+                        "env": self.env,
+                        "hostname": self.hostname,
+                    },
+                    "level": "INFO",
+                }
+                logging_config["loggers"]["keep"]["handlers"].append("mezmo")
+            except ImportError:
+                logging.warning("logdna package not installed")
     
         return logging_config
 
