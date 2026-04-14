@@ -238,7 +238,7 @@ class SkywalkingProvider(BaseProvider, ProviderHealthMixin):
             return AlertSeverity.INFO
         return AlertSeverity.WARNING
 
-    def _get_topology(self) -> list[dict]:
+    def _get_topology(self) -> dict:
         """Fetch global service topology from SkyWalking."""
         now = datetime.datetime.utcnow()
         one_hour_ago = now - datetime.timedelta(hours=1)
@@ -292,7 +292,11 @@ class SkywalkingProvider(BaseProvider, ProviderHealthMixin):
             if t.get("key")
         }
         severity = SkywalkingProvider._map_severity(tags.get("level", "warning"))
-        service_name = scope_data.get("service", event.get("name", "unknown"))
+        # scope can be a string (webhook) or dict (GraphQL) — handle both
+        if isinstance(scope_data, dict):
+            service_name = scope_data.get("service", event.get("name", "unknown"))
+        else:
+            service_name = event.get("name", "unknown")
 
         alert = AlertDto(
             id=str(event.get("id", event.get("id0", ""))),
@@ -304,7 +308,7 @@ class SkywalkingProvider(BaseProvider, ProviderHealthMixin):
             service=service_name,
             lastReceived=datetime.datetime.utcnow().isoformat(),
             tags=tags,
-            fingerprint=f"skywalking-{event.get('id', '')}",
+            fingerprint=f"skywalking-{event.get('id', event.get('id0', ''))}",
         )
         alerts.append(alert)
         return alerts
