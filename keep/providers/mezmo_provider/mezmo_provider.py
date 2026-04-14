@@ -21,8 +21,8 @@ class MezmoProvider:
         logger.info("Hello from Keep!")
     """
 
-    def __init__(self, mezmo_key: str = "Keep", app: str = "Keep", env: str = "production", hostname: str = "keep-server"):
-        self.mezmo_key = MEZMO_INGESTION_KEY
+    def __init__(self, mezmo_key: str | None = None, app: str = "Keep", env: str = "production", hostname: str = "keep-server"):
+        self.mezmo_key = MEZMO_INGESTION_KEY or os.environ.get("MEZMO_INGESTION_KEY")
         self.app = app
         self.env = env
         self.hostname = hostname
@@ -58,20 +58,17 @@ class MezmoProvider:
 
         # Only add Mezmo handler if the key is present
         if self.mezmo_key:
-            try:
-                logging_config["handlers"]["mezmo"] = {
-                    "class": "logdna.LogDNAHandler",
-                    "key": self.mezmo_key,
-                    "options": {
-                        "app": self.app,
-                        "env": self.env,
-                        "hostname": self.hostname,
-                    },
-                    "level": "INFO",
-                }
-                logging_config["loggers"]["keep"]["handlers"].append("mezmo")
-            except ImportError:
-                logging.warning("logdna package not installed")
+            logging_config["handlers"]["mezmo"] = {
+                "class": "logdna.LogDNAHandler",
+                "key": self.mezmo_key,
+                "options": {
+                    "app": self.app,
+                    "env": self.env,
+                    "hostname": self.hostname,
+                },
+                "level": "INFO",
+            }
+            logging_config["loggers"]["keep"]["handlers"].append("mezmo")
     
         return logging_config
 
@@ -88,11 +85,8 @@ if __name__ == "__main__":
     MEZMO_INGESTION_KEY = os.environ.get("MEZMO_INGESTION_KEY")
 
     # Check Investigation key is correct or not
-    try:
-        if not MEZMO_INGESTION_KEY:
-            raise ValueError("Mezmo ingestion key is empty!")
-    except NameError:
-        raise ValueError("MEZMO_INGESTION_KEY is not defined!")
+    if not MEZMO_INGESTION_KEY:
+        raise ValueError("MEZMO_INGESTION_KEY is missing or empty")
     
     provider = MezmoProvider()
     logger = provider.get_logger()
