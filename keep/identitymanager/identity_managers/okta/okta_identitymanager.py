@@ -114,12 +114,7 @@ class OktaIdentityManager(BaseIdentityManager):
         """Create a role in Okta - disabled"""
         self.logger.info("create_role called but management functions are disabled")
         return ""
-    
-    def get_roles(self) -> list[Role]:
-        """Get all roles from Okta - disabled"""
-        self.logger.info("get_roles called but management functions are disabled")
-        return []
-    
+
     def delete_role(self, role_id: str) -> None:
         """Delete a role from Okta - disabled"""
         self.logger.info("delete_role called but management functions are disabled")
