@@ -53,7 +53,7 @@ class SnmpProvider(BaseProvider):
         )
     ]
 
-    FINGERPRINT_FIELDS = ["name", "agent_address"]
+    FINGERPRINT_FIELDS = ["name", "labels.agent_address"]
 
     webhook_description = ""
     webhook_template = ""
@@ -139,8 +139,8 @@ class SnmpProvider(BaseProvider):
         raw_ts = event.get("timestamp")
         if raw_ts:
             try:
-                last_received = datetime.fromisoformat(raw_ts).isoformat()
-            except ValueError:
+                last_received = datetime.fromisoformat(str(raw_ts)).isoformat()
+            except (ValueError, TypeError):
                 last_received = datetime.now(tz=timezone.utc).isoformat()
         else:
             last_received = datetime.now(tz=timezone.utc).isoformat()
