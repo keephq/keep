@@ -1,0 +1,55 @@
+---
+title: "SNMP"
+sidebarTitle: "SNMP Provider"
+description: "SNMP provider allows you to pull metrics and push SNMP traps as alerts"
+---
+
+<Warning>
+  Please note that we currently support SNMP v1, v2c and v3 via the `pysnmp` library.
+</Warning>
+
+## Connecting with the Provider
+
+The SNMP Provider in Keep can operate in two distinct modes (or both simultaneously):
+
+1. **Trap Receiver (Push/Consumer mode)**: Keep listens on a UDP port (default 1162) and converts any incoming SNMP traps sent by network devices into Keep `AlertDto` instances.
+2. **OID Poller (Pull mode)**: Keep queries specific OIDs from a defined network device on demand or schedule.
+
+### Configuration Parameters
+
+- **community** (required): The SNMP community string (e.g., `public`) used for v1/v2c.
+- **host**: The target SNMP agent IP or hostname (required only for polling).
+- **port**: The UDP port of the target agent (default: 161).
+- **trap_port**: The UDP port Keep binds to for accepting incoming traps (default: 1162).
+- **oids**: Comma-separated list of OIDs to poll automatically.
+
+## Trap Receiver Setup
+
+Configure your external routers, switches, or instances to send traps to the Keep infrastructure.
+
+```bash
+# Example net-snmp trap sending using v2c to Keep on port 1162
+snmptrap -v 2c -c public <keep-ip>:1162 '' 1.3.6.1.6.3.1.1.5.1
+```
+
+Keep will automatically translate the Trap payload and its bindings.
+
+## Setup Configuration Example
+
+Below is a mock `providers.yaml` structure showing how you can bootstrap the SNMP provider using the Keep configuration files:
+
+```yaml
+providers:
+  - id: my-snmp-provider
+    type: snmp
+    authentication:
+      community: "public"
+      host: "10.0.0.12"           # Target agent IP
+      port: 161                   # Agent SNMP UDP Port
+      trap_port: 1162             # Internal listener port for traps
+      oids: "1.3.6.1.2.1.1.1.0"   # Example sysDescr OID to poll
+```
+
+## Useful Links
+
+- [PySNMP Documentation](https://pysnmp.readthedocs.io/en/latest/)
