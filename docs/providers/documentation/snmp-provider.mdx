@@ -1,0 +1,27 @@
+---
+title: "SNMP"
+sidebarTitle: "SNMP Provider"
+description: "Ingest SNMP traps and notifications into Keep as alerts via HTTP JSON webhooks."
+---
+
+## Overview
+
+SNMP traps are typically delivered over UDP with BER encoding. Keep ingests them on the standard **`POST /alerts/event/snmp`** webhook path when your forwarder translates traps into **JSON** (for example `snmptrapd` + shell, SNMPTT, or Telegraf `inputs.snmp_trap`).
+
+Add the **SNMP** provider in Keep, open **Webhook** instructions, and use the generated URL and **`X-API-KEY`** header.
+
+## Payload shape
+
+Send a single trap object, a JSON array of traps, or a batch wrapper:
+
+- `snmp_traps`: array of trap objects
+- `traps`: alias array (same semantics)
+
+Supported field aliases include `trapOid` / `snmpTrapOID` for the trap OID and `agentAddress` for the agent address.
+
+Standard **`1.3.6.1.6.3.1.1.5.*`** (`snmpTrapOID` / `coldStart`, `linkDown`, …) notification OIDs map to default severities; you can override with `severity` / `status` when needed.
+
+## Useful links
+
+- [SNMPv2-MIB (snmpTrapOID)](https://oid-rep.releng.linux-foundation.org/1.3.6.1.6.3.1.1.5)
+- [Keep providers overview](https://docs.keephq.dev/providers/adding-a-new-provider)

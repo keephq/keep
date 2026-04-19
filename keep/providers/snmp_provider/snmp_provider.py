@@ -21,7 +21,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 logger = logging.getLogger(__name__)
 
-# Standard SNMPv2-MIB / SNMPv2-TC notification OIDs (suffix after 1.3.6.1.6.3.1.1.5.)
+# Standard SNMPv2-MIB snmpTrapOID values under prefix 1.3.6.1.6.3.1.1.5.<n>
 _STD_TRAP_SUFFIX_SEVERITY: dict[str, AlertSeverity] = {
     "1": AlertSeverity.INFO,  # coldStart
     "2": AlertSeverity.INFO,  # warmStart
@@ -164,10 +164,18 @@ Optional fields: `varbinds` (list of `{oid,type,value}`), `community`, `uptime`,
                 severity = AlertSeverity(sev.lower())
             except ValueError:
                 severity = SnmpProvider._severity_for_oid(trap_oid)
-        elif isinstance(sev, int):
+        elif isinstance(sev, int) and not isinstance(sev, bool):
             try:
                 severity = AlertSeverity.from_number(sev)
             except ValueError:
+                severity = SnmpProvider._severity_for_oid(trap_oid)
+        elif isinstance(sev, float):
+            if sev.is_integer():
+                try:
+                    severity = AlertSeverity.from_number(int(sev))
+                except ValueError:
+                    severity = SnmpProvider._severity_for_oid(trap_oid)
+            else:
                 severity = SnmpProvider._severity_for_oid(trap_oid)
         else:
             severity = SnmpProvider._severity_for_oid(trap_oid)

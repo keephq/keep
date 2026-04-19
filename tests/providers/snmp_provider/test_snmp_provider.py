@@ -66,3 +66,35 @@ def test_format_alert_explicit_severity_string():
 def test_severity_oid_map(suffix, expected):
     oid = f"1.3.6.1.6.3.1.1.5.{suffix}"
     assert SnmpProvider._severity_for_oid(oid) == expected
+
+
+def test_severity_oid_enterprise_not_std_mib_prefix():
+    """OIDs that end in .5.<n> but are NOT snmpTrapOID under 1.3.6.1.6.3.1.1.5.* must stay INFO."""
+    assert (
+        SnmpProvider._severity_for_oid("1.2.3.4.5.3") == AlertSeverity.INFO
+    )
+
+
+def test_format_alert_traps_must_be_list():
+    with pytest.raises(ValueError, match="traps must be a list"):
+        SnmpProvider._format_alert({"traps": "not-a-list"}, None)
+
+
+def test_severity_int_out_of_range_falls_back_to_oid():
+    event = {
+        "trap_oid": "1.3.6.1.6.3.1.1.5.3",
+        "agent_address": "10.0.0.1",
+        "severity": 99,
+    }
+    alert = SnmpProvider._format_alert(event, None)
+    assert alert.severity == AlertSeverity.HIGH
+
+
+def test_severity_float_integer_json():
+    event = {
+        "trap_oid": "1.3.6.1.4.1.1",
+        "agent_address": "10.0.0.1",
+        "severity": 4.0,
+    }
+    alert = SnmpProvider._format_alert(event, None)
+    assert alert.severity == AlertSeverity.HIGH

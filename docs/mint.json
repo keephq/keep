@@ -243,6 +243,7 @@
             "providers/documentation/signl4-provider",
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
+            "providers/documentation/snmp-provider",
             "providers/documentation/smtp-provider",
             "providers/documentation/snowflake-provider",
             "providers/documentation/splunk-provider",
