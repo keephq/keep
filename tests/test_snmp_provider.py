@@ -71,16 +71,24 @@ class TestSnmpProvider:
     def test_start_consume_logic(self, mock_udp, mock_ntfrcv, mock_transport, mock_v3, mock_v1, snmp_provider):
         snmp_provider.validate_config()
         
-        # Set consume to False quickly to exit the loop
-        snmp_provider.consume = False
+        # Mock asyncio loop and related functions
+        mock_loop = MagicMock()
+        mock_loop.is_running.return_value = False
         
-        # We wrap it in a mock to avoid the loop entirely or just test the setup
-        with patch("asyncio.get_event_loop") as mock_loop:
-            with patch("asyncio.get_running_loop") as mock_running:
-                snmp_provider.start_consume()
-                
-                # Verify setup calls
-                mock_v1.assert_called_with(snmp_provider.snmp_engine, "keep-area", "public")
-                mock_v3.assert_called()
-                mock_transport.assert_called()
-                mock_ntfrcv.assert_called_with(snmp_provider.snmp_engine, snmp_provider._trap_callback)
+        with patch("asyncio.get_event_loop", return_value=mock_loop):
+            # We want to test the setup logic without actually running the infinite loop
+            # setting consume = False here will make start_consume's loop exit immediately 
+            # if we don't overwrite it inside the method, but start_consume does overwrite it.
+            # So we mock run_until_complete to ensure we don't hang.
+            mock_loop.run_until_complete = MagicMock()
+            
+            snmp_provider.start_consume()
+            
+            # Verify setup calls
+            mock_v1.assert_called_with(snmp_provider.snmp_engine, "keep-area", "public")
+            mock_v3.assert_called()
+            mock_transport.assert_called()
+            mock_ntfrcv.assert_called_with(snmp_provider.snmp_engine, snmp_provider._trap_callback)
+            
+            # Verify the loop was attempted
+            mock_loop.run_until_complete.assert_called()
