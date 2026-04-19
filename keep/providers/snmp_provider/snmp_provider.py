@@ -136,9 +136,10 @@ Optional fields: `varbinds` (list of `{oid,type,value}`), `community`, `uptime`,
         if not trap_oid:
             return AlertSeverity.INFO
         trap_oid = trap_oid.strip()
-        parts = trap_oid.split(".")
-        if len(parts) >= 2 and parts[-2] == "5":
-            suffix = parts[-1]
+        prefix = "1.3.6.1.6.3.1.1.5."
+        if trap_oid.startswith(prefix):
+            rest = trap_oid[len(prefix):]
+            suffix = rest.split(".", 1)[0] if rest else ""
             return _STD_TRAP_SUFFIX_SEVERITY.get(suffix, AlertSeverity.INFO)
         return AlertSeverity.INFO
 
@@ -164,7 +165,10 @@ Optional fields: `varbinds` (list of `{oid,type,value}`), `community`, `uptime`,
             except ValueError:
                 severity = SnmpProvider._severity_for_oid(trap_oid)
         elif isinstance(sev, int):
-            severity = AlertSeverity.from_number(sev)
+            try:
+                severity = AlertSeverity.from_number(sev)
+            except ValueError:
+                severity = SnmpProvider._severity_for_oid(trap_oid)
         else:
             severity = SnmpProvider._severity_for_oid(trap_oid)
 
