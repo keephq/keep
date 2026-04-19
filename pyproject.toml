@@ -87,6 +87,8 @@ psycopg = "^3.2.3"
 prometheus-client = "^0.21.1"
 psycopg2-binary = "^2.9.10"
 urllib3 = "<2.7.0"
+pysnmp-lextudio = "^6.1.2"
+
 
 prometheus-fastapi-instrumentator = "^7.0.0"
 slowapi = "^0.1.9"
