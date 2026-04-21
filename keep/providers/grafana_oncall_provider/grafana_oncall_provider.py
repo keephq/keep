@@ -3,6 +3,7 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
 
 import dataclasses
+import json
 import logging
 from typing import Literal
 from urllib.parse import urlparse, urlsplit, urlunparse
@@ -136,22 +137,35 @@ class GrafanaOncallProvider(BaseProvider):
         image_url: str = "",
         state: Literal["alerting", "resolved"] = "alerting",
         link_to_upstream_details: str = "",
+        custom_json: dict | str | None = None,
         **kwargs,
     ):
         headers = {
             "Content-Type": "application/json",
         }
-        response = requests.post(
-            url=self.config.authentication["oncall_integration_link"],
-            headers=headers,
-            json={
+
+        # If a custom JSON payload is provided, use it directly instead of
+        # building the default one.  This allows users to leverage Grafana
+        # OnCall's full templating and key/value pair support.
+        if custom_json is not None:
+            if isinstance(custom_json, str):
+                payload = json.loads(custom_json)
+            else:
+                payload = custom_json
+        else:
+            payload = {
                 "title": title,
                 "message": message,
                 "alert_uid": alert_uid,
                 "image_url": image_url,
                 "state": state,
                 "link_to_upstream_details": link_to_upstream_details,
-            },
+            }
+
+        response = requests.post(
+            url=self.config.authentication["oncall_integration_link"],
+            headers=headers,
+            json=payload,
         )
         response.raise_for_status()
         return response.json()
