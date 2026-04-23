@@ -12,6 +12,7 @@ curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 ```bash start.sh
 #!/bin/bash
 # Keep install script for docker compose
+set -e
 
 echo "Creating state directory."
 mkdir -p state
