@@ -1,5 +1,6 @@
 #!/bin/bash
 # Keep install script for docker compose
+set -e
 
 echo "Creating state directory."
 mkdir -p state
