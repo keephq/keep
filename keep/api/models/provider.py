@@ -45,7 +45,7 @@ class Provider(BaseModel):
     docs: str | None = None
     tags: list[
         Literal[
-            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
+            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident", "maintenance"
         ]
     ] = Field(default_factory=list)
     categories: list[str] = Field(default_factory=lambda: ["Others"])

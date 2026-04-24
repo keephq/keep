@@ -488,8 +488,6 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider, BaseMainten
 
     def _get_maintenance_windows(self) -> list:
         """Pull maintenance windows from ServiceNow."""
-        from keep.api.models.db.maintenance_window import MaintenanceWindowRule
-
         self.logger.info("Pulling maintenance windows from ServiceNow")
         all_windows = []
         offset = 0
