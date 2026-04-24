@@ -1,0 +1,137 @@
+---
+title: 'SNMP'
+sidebarTitle: 'SNMP Provider'
+description: 'SNMP provider allows you to receive SNMP traps/events as alerts in Keep.'
+---
+
+## Overview
+
+The SNMP provider enables integration between Keep and SNMP-based monitoring infrastructure. It allows you to receive SNMP traps and events as alerts in Keep via webhooks, making it easier to centralize alerts from network devices, servers, and other SNMP-capable equipment.
+
+## How It Works
+
+SNMP traps are typically sent as UDP packets. Since Keep uses HTTP webhooks, you need an intermediary to convert SNMP traps into HTTP requests. The provider supports two approaches:
+
+1. **snmptrapd with a shell handler** - Use Net-SNMP's `snmptrapd` with a custom script that forwards traps to Keep's webhook endpoint.
+2. **Python trap receiver** - Use `pysnmp` to build a custom trap receiver that posts to Keep.
+
+## Connecting SNMP to Keep
+
+### Option 1: Using snmptrapd (Recommended)
+
+1. Install Net-SNMP: `apt-get install snmptrapd` or `yum install net-snmp`
+
+2. Create a handler script at `/usr/local/bin/keep-snmp-handler.sh`:
+
+```bash
+#!/bin/bash
+KEEP_WEBHOOK_URL="<your-keep-webhook-url>"
+API_KEY="<your-keep-api-key>"
+
+read -r HOSTNAME
+read -r IP_ADDRESS
+VARBINDS=""
+while IFS= read -r line; do
+    VARBINDS="$VARBINDS$line\n"
+done
+
+TRAP_OID=$(echo -e "$VARBINDS" | grep "snmpTrapOID" | cut -d' ' -f2-)
+
+curl -s -X POST "$KEEP_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: $API_KEY" \
+  -d "{
+    \"hostname\": \"$HOSTNAME\",
+    \"ip_address\": \"$IP_ADDRESS\",
+    \"trap_oid\": \"$TRAP_OID\",
+    \"varbinds_raw\": \"$(echo -e "$VARBINDS" | sed 's/"/\\"/g')\",
+    \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+  }"
+```
+
+3. Make it executable: `chmod +x /usr/local/bin/keep-snmp-handler.sh`
+
+4. Configure `/etc/snmp/snmptrapd.conf`:
+
+```
+authCommunity log,execute,net public
+traphandle default /usr/local/bin/keep-snmp-handler.sh
+```
+
+5. Restart snmptrapd: `systemctl restart snmptrapd`
+
+### Option 2: Using Python with pysnmp
+
+```python
+import json
+import datetime
+import requests
+from pysnmp.entity import engine, config
+from pysnmp.carrier.asyncio.dgram import udp
+from pysnmp.entity.rfc3413 import ntfrcv
+
+KEEP_WEBHOOK_URL = "<your-keep-webhook-url>"
+API_KEY = "<your-keep-api-key>"
+
+snmpEngine = engine.SnmpEngine()
+config.addTransport(snmpEngine, udp.DOMAIN_NAME, udp.UdpTransport().openServerMode(('0.0.0.0', 162)))
+config.addV1System(snmpEngine, 'my-area', 'public')
+
+def trap_callback(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
+    varbinds = {str(name): str(val) for name, val in varBinds}
+    trap_data = {
+        "varbinds": varbinds,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+    }
+    for name, val in varBinds:
+        oid = str(name)
+        if "1.3.6.1.6.3.1.1.4.1" in oid:  # snmpTrapOID
+            trap_data["trap_oid"] = str(val)
+    requests.post(
+        KEEP_WEBHOOK_URL,
+        json=trap_data,
+        headers={"X-API-KEY": API_KEY},
+    )
+
+ntfrcv.NotificationReceiver(snmpEngine, trap_callback)
+snmpEngine.transportDispatcher.jobStarted(1)
+snmpEngine.transportDispatcher.runDispatcher()
+```
+
+## JSON Payload Format
+
+The webhook accepts JSON with these fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `hostname` | string | No | Source host name or address |
+| `ip_address` | string | No | Source IP address |
+| `trap_oid` | string | No | The trap OID identifier |
+| `enterprise` | string | No | Enterprise OID (SNMPv1) |
+| `severity` | string | No | One of: critical, warning, info, low |
+| `status` | string | No | One of: firing, resolved |
+| `description` | string | No | Human-readable trap description |
+| `varbinds` | object | No | Key-value pairs of variable bindings |
+| `varbinds_raw` | string | No | Raw varbind text |
+| `timestamp` | string | No | ISO 8601 timestamp |
+| `generic_trap` | int | No | Generic trap type (SNMPv1: 0-6) |
+| `specific_trap` | int | No | Specific trap type (SNMPv1) |
+| `version` | string | No | SNMP version (v1, v2c, v3) |
+
+## Supported SNMP Generic Trap Types
+
+| Code | Name | Severity | Status |
+|------|------|----------|--------|
+| 0 | coldStart | Warning | Firing |
+| 1 | warmStart | Info | Resolved |
+| 2 | linkDown | Critical | Firing |
+| 3 | linkUp | Info | Resolved |
+| 4 | authenticationFailure | Warning | Firing |
+| 5 | egpNeighborLoss | Warning | Firing |
+| 6 | enterpriseSpecific | Info | Firing |
+
+## Useful Links
+
+- [Net-SNMP snmptrapd Documentation](http://www.net-snmp.org/docs/man/snmptrapd.html)
+- [pysnmp Documentation](https://pysnmp.readthedocs.io/)
+- [SNMP Trap OID Reference (RFC 3418)](https://www.rfc-editor.org/rfc/rfc3418)
