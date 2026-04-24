@@ -9,6 +9,8 @@ This provider requires authentication.
 - **client_id**: The client ID to use OAuth 2.0 based authentication (required: False, sensitive: False)
 - **client_secret**: The client secret to use OAuth 2.0 based authentication (required: False, sensitive: True)
 - **ticket_creation_url**: URL for creating new tickets (required: False, sensitive: False)
+- **maintenance_window_table**: ServiceNow table for maintenance windows (default: cmdb_ci_outage) (required: False, sensitive: False)
+- **maintenance_window_cel_template**: CEL expression template for matching alerts. Use {ci} as placeholder for CI name. (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **itil**: The user can read/write tickets from the table (mandatory) ([Documentation](https://docs.servicenow.com/bundle/sandiego-platform-administration/page/administer/roles/reference/r_BaseSystemRoles.html))
@@ -76,3 +78,5 @@ The provider exposes the following [Provider Methods](/providers/provider-method
     - `incident_id`: The incident number (e.g. INC0010001) or sys_id.
     - `content`: The text content to add.
     - `activity_type`: Either 'work_notes' or 'comments'. Defaults to 'work_notes'.
+- **get_maintenance_windows** Fetch maintenance windows from ServiceNow (view, scopes: itil)
+
