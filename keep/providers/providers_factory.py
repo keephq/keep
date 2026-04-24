@@ -27,6 +27,7 @@ from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import (
     BaseIncidentProvider,
+    BaseMaintenanceWindowProvider,
     BaseProvider,
     BaseTopologyProvider,
 )
@@ -378,8 +379,9 @@ class ProvidersFactory:
                 )
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
                 can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
+                can_fetch_maintenance_windows = issubclass(provider_class, BaseMaintenanceWindowProvider)
                 pulling_available = (
-                    can_fetch_alerts or can_fetch_topology or can_fetch_incidents
+                    can_fetch_alerts or can_fetch_topology or can_fetch_incidents or can_fetch_maintenance_windows
                 )
 
                 provider_tags = set(provider_class.PROVIDER_TAGS)
@@ -397,6 +399,8 @@ class ProvidersFactory:
                     provider_tags.add("messaging")
                 if can_fetch_incidents and "incident" not in provider_tags:
                     provider_tags.add("incident")
+                if can_fetch_maintenance_windows and "maintenance" not in provider_tags:
+                    provider_tags.add("maintenance")
                 provider_tags = list(provider_tags)
 
                 try:

@@ -17,7 +17,7 @@ from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseTopologyProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import BaseTopologyProvider, BaseIncidentProvider, BaseMaintenanceWindowProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.validation.fields import HttpsUrl
@@ -82,8 +82,28 @@ class ServicenowProviderAuthConfig:
         default="",
     )
 
+    maintenance_window_table: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "ServiceNow table for maintenance windows (default: cmdb_ci_outage)",
+            "sensitive": False,
+            "hint": "cmdb_ci_outage",
+        },
+        default="cmdb_ci_outage",
+    )
 
-class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
+    maintenance_window_cel_template: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "CEL expression template for matching alerts. Use {ci} as placeholder for CI name.",
+            "sensitive": False,
+            "hint": 'service == "{ci}"',
+        },
+        default='service == "{ci}"',
+    )
+
+
+class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider, BaseMaintenanceWindowProvider):
     """Manage ServiceNow tickets and incidents with bidirectional activity sync."""
 
     PROVIDER_CATEGORY = ["Ticketing", "Incident Management"]
@@ -96,7 +116,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             alias="Read from datahase",
         )
     ]
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS = ["ticketing", "maintenance"]
     PROVIDER_DISPLAY_NAME = "Service Now"
     FINGERPRINT_FIELDS = ["number"]
 
@@ -139,6 +159,13 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             scopes=["itil"],
             description="Add a work note or comment to a ServiceNow incident",
             type="action",
+        ),
+        ProviderMethod(
+            name="Get Maintenance Windows",
+            func_name="get_maintenance_windows",
+            scopes=["itil"],
+            description="Fetch maintenance windows from ServiceNow",
+            type="view",
         ),
     ]
 
@@ -453,6 +480,93 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             is_predicted=False,
             is_candidate=False,
             fingerprint=number,
+        )
+
+    # -------------------------------------------------------------------------
+    # Maintenance window pulling (BaseMaintenanceWindowProvider)
+    # -------------------------------------------------------------------------
+
+    def _get_maintenance_windows(self) -> list:
+        """Pull maintenance windows from ServiceNow."""
+        from keep.api.models.db.maintenance_window import MaintenanceWindowRule
+
+        self.logger.info("Pulling maintenance windows from ServiceNow")
+        all_windows = []
+        offset = 0
+        limit = 100
+        table = self.authentication_config.maintenance_window_table
+
+        while True:
+            records = self._query(
+                table_name=table,
+                sysparm_limit=limit,
+                sysparm_offset=offset,
+            )
+            if not records:
+                break
+
+            for record in records:
+                try:
+                    rule = self._format_maintenance_window(record)
+                    if rule:
+                        all_windows.append(rule)
+                except Exception:
+                    self.logger.exception(
+                        "Failed to format ServiceNow maintenance window",
+                        extra={"sys_id": record.get("sys_id")},
+                    )
+
+            if len(records) < limit:
+                break
+            offset += limit
+
+        self.logger.info(
+            "Finished pulling maintenance windows from ServiceNow",
+            extra={"count": len(all_windows)},
+        )
+        return all_windows
+
+    def _format_maintenance_window(self, record: dict):
+        """Convert a ServiceNow cmdb_ci_outage record to MaintenanceWindowRule."""
+        from keep.api.models.db.maintenance_window import MaintenanceWindowRule
+
+        begin_date = record.get("begin_date")
+        end_date = record.get("end_date")
+        if not begin_date or not end_date:
+            return None
+
+        start_time = datetime.strptime(begin_date, "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
+        end_time = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
+
+        ci_ref = record.get("cmdb_ci", "")
+        ci_name = (
+            ci_ref.get("display_value", "")
+            if isinstance(ci_ref, dict)
+            else str(ci_ref)
+        )
+
+        cel_query = self.authentication_config.maintenance_window_cel_template.format(
+            ci=ci_name
+        )
+
+        description = record.get("description", "") or f"ServiceNow maintenance: {ci_name}"
+        sys_id = record.get("sys_id", "")
+
+        return MaintenanceWindowRule(
+            name=f"SN-MW-{sys_id[:8] if sys_id else 'unknown'}",
+            description=description,
+            cel_query=cel_query,
+            start_time=start_time,
+            end_time=end_time,
+            duration_seconds=int((end_time - start_time).total_seconds()),
+            suppress=True,
+            enabled=True,
+            created_by="servicenow_provider",
+            tenant_id="",
         )
 
     # -------------------------------------------------------------------------
