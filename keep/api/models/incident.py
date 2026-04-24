@@ -76,6 +76,7 @@ class IncidentDto(IncidentDtoIn):
 
     is_predicted: bool
     is_candidate: bool
+    is_visible: bool = True
 
     generated_summary: str | None
     ai_generated_name: str | None
@@ -190,6 +191,7 @@ class IncidentDto(IncidentDtoIn):
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
             is_candidate=db_incident.is_candidate,
+            is_visible=db_incident.is_visible,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
             last_seen_time=db_incident.last_seen_time,
@@ -245,6 +247,7 @@ class IncidentDto(IncidentDtoIn):
             sources=self.alert_sources,
             is_predicted=self.is_predicted,
             is_candidate=self.is_candidate,
+            is_visible=self.is_visible,
             rule_fingerprint=self.rule_fingerprint,
             fingerprint=self.fingerprint,
             same_incident_in_the_past_id=self.same_incident_in_the_past_id,
