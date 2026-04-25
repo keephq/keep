@@ -2043,7 +2043,7 @@ def test_incident_dto_is_visible_to_db():
     dto = IncidentDto(
         id=uuid4(),
         user_generated_name="Test",
-        severity=IncidentSeverity.INFO.order,
+        severity=IncidentSeverity.INFO,
         status=IncidentStatus.FIRING.value,
         is_predicted=False,
         is_candidate=False,
