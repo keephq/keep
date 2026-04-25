@@ -18,6 +18,12 @@ python "$SCRIPT_DIR/server_jobs_bg.py" &
     echo "Failed to build providers cache, skipping"
 }
 
+PYTHONPATH=$PYTHONPATH
+
+# Run database migration
+# If the user has set SKIP_DB_CREATION, it will catch it in migrate_db().
+python -c "from keep.api.core.db_on_start import migrate_db; migrate_db()" || exit 1
+    
 # Check for REDIS env variable == true
 if [ "$REDIS" != "true" ]; then
     # Just run gunicorn for the API
@@ -32,12 +38,6 @@ else
     ARQ_WORKER_PORT=${ARQ_WORKER_PORT:-8001}
     ARQ_WORKER_TIMEOUT=${ARQ_WORKER_TIMEOUT:-120}
     LOG_LEVEL=${LOG_LEVEL:-INFO}
-
-    PYTHONPATH=$PYTHONPATH
-
-    # Run database migration
-    # If the user has set SKIP_DB_CREATION, it will catch it in migrate_db().
-    python -c "from keep.api.core.db_on_start import migrate_db; migrate_db()" || exit 1
 
     echo "Starting ARQ workers under Gunicorn (workers: $KEEP_WORKERS)"
 
