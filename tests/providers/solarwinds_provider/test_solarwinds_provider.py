@@ -83,9 +83,9 @@ class TestSolarWindsProvider:
         alerts = solarwinds_provider._get_alerts()
         assert len(alerts) == 2
         assert alerts[0].name == "CPU High"
-        assert alerts[0].severity.value == "critical"
+        assert alerts[0].severity == "critical"
         assert alerts[1].name == "Memory Warning"
-        assert alerts[1].severity.value == "warning"
+        assert alerts[1].severity == "warning"
 
     @responses.activate
     def test_get_alerts_empty(self, solarwinds_provider):
@@ -136,6 +136,6 @@ class TestSolarWindsProvider:
 
         alerts = solarwinds_provider._get_alerts()
         assert len(alerts) == 3
-        assert alerts[0].severity.value == "critical"
-        assert alerts[1].severity.value == "high"
-        assert alerts[2].severity.value == "info"
+        assert alerts[0].severity == "critical"
+        assert alerts[1].severity == "high"
+        assert alerts[2].severity == "info"
