@@ -2037,11 +2037,14 @@ def test_incident_dto_is_visible_from_db(db_session, create_alert):
 def test_incident_dto_is_visible_to_db():
     """Test that is_visible is correctly mapped in IncidentDto.to_db_incident()."""
     from keep.api.models.incident import IncidentDto
+    from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
     import datetime
 
     dto = IncidentDto(
         id=uuid4(),
         user_generated_name="Test",
+        severity=IncidentSeverity.INFO.order,
+        status=IncidentStatus.FIRING.value,
         is_predicted=False,
         is_candidate=False,
         is_visible=False,
