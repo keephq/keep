@@ -95,7 +95,7 @@ def test_notify_alert_with_none_alert_results_and_alert_param():
         provider.io_handler = MagicMock()
         provider.io_handler.render_context.return_value = alert_data
 
-        with patch("keep.providers.keep_provider.keep_provider.Pusher"), \
+        with patch("keep.providers.keep_provider.keep_provider.process_event"), \
              patch.object(provider, "logger"):
             # This should work: alert param provides the alert data
             result = provider._notify_alert(alert=alert_data)
