@@ -6,7 +6,7 @@ from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
     provision_deduplication_rules_from_env,
 )
 from keep.api.api import AUTH_TYPE
-from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
+from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.routes.dashboard import provision_dashboards
