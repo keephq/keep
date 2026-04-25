@@ -51,8 +51,8 @@ def test_notify_alert_with_none_alert_results_no_crash():
         provider.io_handler = MagicMock()
         provider.io_handler.render_context.return_value = {}
 
-        # Mock pusher and alert DAO to avoid DB dependency
-        with patch("keep.providers.keep_provider.keep_provider.Pusher"), \
+        # Mock process_event and alert DAO to avoid DB dependency
+        with patch("keep.providers.keep_provider.keep_provider.process_event"), \
              patch.object(provider, "logger"):
             # Before the fix, this would raise:
             # TypeError: object of type 'NoneType' has no len()
