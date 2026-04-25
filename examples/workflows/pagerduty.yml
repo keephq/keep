@@ -30,6 +30,8 @@ workflow:
           component: job_service
           group: job
           class: job
+          client: keep
+          client_url: "https://keep.example.org/incidents/{{ incident.id }}"
           custom_details:
             environment: 'production'
             url: 'https://keep.example.org'

@@ -437,6 +437,12 @@ class PagerdutyProvider(
         if kwargs.get("class"):
             payload["payload"]["class"] = kwargs.get("class")
 
+        if kwargs.get("client"):
+            payload["client"] = kwargs.get("client")
+
+        if kwargs.get("client_url"):
+            payload["client_url"] = kwargs.get("client_url")
+
         if kwargs.get("images"):
             images = kwargs.get("images", [])
             if isinstance(images, str):
