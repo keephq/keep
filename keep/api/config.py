@@ -44,8 +44,6 @@ def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
     logger.info("Keep server starting")
 
-    migrate_db()
-
     # Load this early and use preloading
     # https://www.joelsleppy.com/blog/gunicorn-application-preloading/
     # @tb: 👏 @Matvey-Kuk
