@@ -1,5 +1,6 @@
 import hashlib
 import urllib.parse
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import freezegun
@@ -262,6 +263,48 @@ def test_alert_dismiss_forever():
     with freezegun.freeze_time(now + timedelta(days=365)):
         revalidated_alert = AlertDto(**alert.dict())
         assert revalidated_alert.dismissed is True
+
+
+def test_alert_dto_valid_uuid_id_preserved():
+    """A valid UUID id should be kept as-is."""
+    valid_uuid = str(uuid.uuid4())
+    alert = create_basic_alert(
+        name="UUID Test",
+        last_received="2024-01-01T00:00:00.000Z",
+        id=valid_uuid,
+    )
+    assert alert.id == valid_uuid
+
+
+def test_alert_dto_non_uuid_id_replaced():
+    """Non-UUID ids (e.g. numeric Zabbix event IDs, Grafana fingerprints)
+    should be replaced with a valid UUID to prevent database errors."""
+    non_uuid_ids = [
+        "12345",  # numeric (Zabbix, Checkly, etc.)
+        "JanusHighAudioJitter",  # alert name (Prometheus before #6219)
+        "a1b2c3d4e5f6",  # hex fingerprint (Grafana)
+        "-8718624884464498498",  # negative number (Dynatrace)
+        "P1234ABC",  # alphanumeric (PagerDuty)
+    ]
+    for non_uuid in non_uuid_ids:
+        alert = create_basic_alert(
+            name="Non-UUID Test",
+            last_received="2024-01-01T00:00:00.000Z",
+            id=non_uuid,
+        )
+        assert alert.id != non_uuid, f"Expected {non_uuid!r} to be replaced"
+        # Verify the replacement is a valid UUID
+        uuid.UUID(alert.id)
+
+
+def test_alert_dto_missing_id_gets_uuid():
+    """When no id is provided, a valid UUID should be generated."""
+    alert = create_basic_alert(
+        name="No ID Test",
+        last_received="2024-01-01T00:00:00.000Z",
+    )
+    assert alert.id is not None
+    uuid.UUID(alert.id)
 
 
 def test_alert_dto_environment_default_is_none():
