@@ -1,0 +1,47 @@
+[
+  {
+    "id": "bp-inc-001",
+    "title": "Database connection pool exhausted",
+    "status": "active",
+    "severity": "critical",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "description": "MySQL connection pool has reached 100% capacity on prod-db-01",
+    "assignee": null,
+    "url": "https://app.bigpanda.io/app/incidents/bp-inc-001",
+    "environments": ["production"],
+    "service": "database",
+    "alerts_count": 12,
+    "source": ["cloudwatch", "datadog"]
+  },
+  {
+    "id": "bp-inc-002",
+    "title": "High CPU utilization on web tier",
+    "status": "acknowledged",
+    "severity": "high",
+    "created_at": "2024-01-15T09:00:00Z",
+    "updated_at": "2024-01-15T09:20:00Z",
+    "description": "CPU usage above 90% on 3 of 5 web servers for the past 15 minutes",
+    "assignee": {"name": "ops-team@example.com"},
+    "url": "https://app.bigpanda.io/app/incidents/bp-inc-002",
+    "environments": ["production"],
+    "service": "web",
+    "alerts_count": 7,
+    "source": ["prometheus", "nagios"]
+  },
+  {
+    "id": "bp-inc-003",
+    "title": "SSL certificate expiring soon",
+    "status": "resolved",
+    "severity": "warning",
+    "created_at": "2024-01-14T08:00:00Z",
+    "updated_at": "2024-01-15T07:00:00Z",
+    "description": "SSL certificate for api.example.com expires in 7 days",
+    "assignee": {"name": "security@example.com"},
+    "url": "https://app.bigpanda.io/app/incidents/bp-inc-003",
+    "environments": ["production"],
+    "service": "api",
+    "alerts_count": 1,
+    "source": ["statuscake"]
+  }
+]
