@@ -1,0 +1,44 @@
+[
+  {
+    "id": "inc-001",
+    "title": "API Gateway returning 502 errors",
+    "severity": "SEV1",
+    "status": "active",
+    "created_at": "2024-01-15T14:00:00Z",
+    "updated_at": "2024-01-15T14:05:00Z",
+    "description": "API gateway returning 502 Bad Gateway for 15% of requests to /api/v2/orders",
+    "assignee": {"name": "on-call-engineer", "email": "oncall@example.com"},
+    "url": "https://app.blameless.io/incidents/inc-001",
+    "services": ["api-gateway"],
+    "environments": ["production"],
+    "labels": ["customer-impact", "p0"]
+  },
+  {
+    "id": "inc-002",
+    "title": "Background job queue backlog growing",
+    "severity": "SEV2",
+    "status": "investigating",
+    "created_at": "2024-01-15T13:30:00Z",
+    "updated_at": "2024-01-15T13:45:00Z",
+    "description": "Email delivery queue has grown to 50,000 unprocessed jobs",
+    "assignee": {"name": "backend-team", "email": "backend@example.com"},
+    "url": "https://app.blameless.io/incidents/inc-002",
+    "services": ["email-service"],
+    "environments": ["production"],
+    "labels": ["queue", "delayed-impact"]
+  },
+  {
+    "id": "inc-003",
+    "title": "Memory leak detected in reporting service",
+    "severity": "SEV3",
+    "status": "resolved",
+    "created_at": "2024-01-14T09:00:00Z",
+    "updated_at": "2024-01-14T12:00:00Z",
+    "description": "Reporting service memory usage growing unbounded — restarted to mitigate",
+    "assignee": {"name": "reporting-team", "email": "reporting@example.com"},
+    "url": "https://app.blameless.io/incidents/inc-003",
+    "services": ["reporting"],
+    "environments": ["production"],
+    "labels": ["memory", "resolved"]
+  }
+]
