@@ -1,0 +1,121 @@
+[
+  {
+    "trigger": "exception",
+    "event": {
+      "id": "abc123def456",
+      "exceptions": [
+        {
+          "errorClass": "NullPointerException",
+          "message": "Attempt to invoke virtual method on a null object reference",
+          "stacktrace": [
+            {"file": "MainActivity.java", "lineNumber": 42, "method": "onCreate"},
+            {"file": "AppController.java", "lineNumber": 87, "method": "init"}
+          ]
+        }
+      ],
+      "severity": "error",
+      "context": "/api/v2/users",
+      "app": {"version": "3.2.1", "releaseStage": "production"},
+      "device": {"osName": "android", "osVersion": "13"},
+      "user": {"id": "user-789", "email": "user@example.com"},
+      "metaData": {"request": {"url": "/api/v2/users", "method": "GET"}}
+    },
+    "error": {
+      "id": "err-001",
+      "errorClass": "NullPointerException",
+      "message": "Attempt to invoke virtual method on a null object reference",
+      "firstSeen": "2024-01-15T10:00:00.000Z",
+      "lastSeen": "2024-01-15T14:30:00.000Z",
+      "occurrences": 147,
+      "usersAffected": 23,
+      "projectId": "proj-abc",
+      "status": "open",
+      "severity": "error",
+      "url": "https://app.bugsnag.com/organization/project/errors/err-001"
+    },
+    "project": {
+      "id": "proj-abc",
+      "name": "Android App",
+      "slug": "android-app",
+      "organization_slug": "my-org"
+    }
+  },
+  {
+    "trigger": "firstException",
+    "event": {
+      "id": "xyz789ghi012",
+      "exceptions": [
+        {
+          "errorClass": "TimeoutError",
+          "message": "Request to payment gateway timed out after 30s",
+          "stacktrace": [
+            {"file": "payment_service.py", "lineNumber": 156, "method": "charge_card"},
+            {"file": "checkout.py", "lineNumber": 89, "method": "process_payment"}
+          ]
+        }
+      ],
+      "severity": "warning",
+      "context": "POST /api/checkout",
+      "app": {"version": "2.8.0", "releaseStage": "production"},
+      "device": {"osName": "linux"},
+      "metaData": {"request": {"url": "/api/checkout", "method": "POST"}}
+    },
+    "error": {
+      "id": "err-002",
+      "errorClass": "TimeoutError",
+      "message": "Request to payment gateway timed out after 30s",
+      "firstSeen": "2024-01-15T14:00:00.000Z",
+      "lastSeen": "2024-01-15T14:05:00.000Z",
+      "occurrences": 3,
+      "usersAffected": 3,
+      "projectId": "proj-def",
+      "status": "open",
+      "severity": "warning",
+      "url": "https://app.bugsnag.com/organization/backend/errors/err-002"
+    },
+    "project": {
+      "id": "proj-def",
+      "name": "Backend API",
+      "slug": "backend-api",
+      "organization_slug": "my-org"
+    }
+  },
+  {
+    "trigger": "reopened",
+    "event": {
+      "id": "jkl345mno678",
+      "exceptions": [
+        {
+          "errorClass": "DatabaseConnectionError",
+          "message": "Unable to connect to primary database: connection refused",
+          "stacktrace": [
+            {"file": "db_pool.rb", "lineNumber": 34, "method": "acquire"},
+            {"file": "application.rb", "lineNumber": 12, "method": "connect"}
+          ]
+        }
+      ],
+      "severity": "error",
+      "context": "Background job: SendEmailWorker",
+      "app": {"version": "1.5.0", "releaseStage": "production"}
+    },
+    "error": {
+      "id": "err-003",
+      "errorClass": "DatabaseConnectionError",
+      "message": "Unable to connect to primary database: connection refused",
+      "firstSeen": "2024-01-10T08:00:00.000Z",
+      "lastSeen": "2024-01-15T14:20:00.000Z",
+      "occurrences": 512,
+      "usersAffected": 0,
+      "projectId": "proj-ghi",
+      "status": "open",
+      "severity": "error",
+      "url": "https://app.bugsnag.com/organization/rails-app/errors/err-003"
+    },
+    "project": {
+      "id": "proj-ghi",
+      "name": "Rails App",
+      "slug": "rails-app",
+      "organization_slug": "my-org"
+    }
+  }
+]
