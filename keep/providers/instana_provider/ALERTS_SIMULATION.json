@@ -1,0 +1,51 @@
+[
+  {
+    "id": "event-001",
+    "title": "Erroneous Call Rate too high",
+    "type": "ISSUE",
+    "severity": 10,
+    "entityLabel": "checkout-service",
+    "entityType": "SERVICE",
+    "start": 1705316400000,
+    "end": -1,
+    "state": "OPEN",
+    "triggeredAt": 1705316400000,
+    "problem": "Erroneous call rate is 15.3% (threshold: 5%)",
+    "suggestion": "Investigate recent deployments and error logs for checkout-service",
+    "incidentId": "inc-001",
+    "text": "Erroneous Call Rate too high on checkout-service",
+    "alertChannelIds": ["channel-1"]
+  },
+  {
+    "id": "event-002",
+    "title": "Service latency degraded",
+    "type": "ISSUE",
+    "severity": 5,
+    "entityLabel": "user-auth-service",
+    "entityType": "SERVICE",
+    "start": 1705312800000,
+    "end": 1705316000000,
+    "state": "CLOSED",
+    "triggeredAt": 1705312800000,
+    "problem": "P99 latency is 2,340ms (threshold: 1,000ms)",
+    "suggestion": "Check database query performance and external API dependencies",
+    "incidentId": "inc-002",
+    "text": "Service latency degraded on user-auth-service"
+  },
+  {
+    "id": "event-003",
+    "title": "Infrastructure host unreachable",
+    "type": "INCIDENT",
+    "severity": 10,
+    "entityLabel": "prod-worker-03",
+    "entityType": "HOST",
+    "start": 1705320000000,
+    "end": -1,
+    "state": "OPEN",
+    "triggeredAt": 1705320000000,
+    "problem": "Host prod-worker-03 is not sending metrics (offline for 5 minutes)",
+    "suggestion": "Verify network connectivity and host health",
+    "incidentId": "inc-003",
+    "text": "Infrastructure host prod-worker-03 is unreachable"
+  }
+]
