@@ -1,0 +1,41 @@
+[
+  {
+    "id": 1001,
+    "description": "Payment service response time degraded",
+    "severity": 5,
+    "status": "Open",
+    "created_at": 1705316400,
+    "modified_at": 1705316700,
+    "services": ["payment-service"],
+    "teams": ["platform-team"],
+    "alert_count": 9,
+    "assignee": null,
+    "source_system": "prometheus"
+  },
+  {
+    "id": 1002,
+    "description": "Kubernetes node NotReady — worker-03",
+    "severity": 5,
+    "status": "Acknowledged",
+    "created_at": 1705310000,
+    "modified_at": 1705312000,
+    "services": ["kubernetes"],
+    "teams": ["infra-team"],
+    "alert_count": 4,
+    "assignee": "sre@example.com",
+    "source_system": "datadog"
+  },
+  {
+    "id": 1003,
+    "description": "Disk usage above 85% on storage-01",
+    "severity": 3,
+    "status": "Resolved",
+    "created_at": 1705230000,
+    "modified_at": 1705280000,
+    "services": ["storage"],
+    "teams": ["infra-team"],
+    "alert_count": 2,
+    "assignee": "ops@example.com",
+    "source_system": "zabbix"
+  }
+]
