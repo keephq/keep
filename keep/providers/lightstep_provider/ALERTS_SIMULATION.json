@@ -1,0 +1,56 @@
+[
+  {
+    "data": {
+      "type": "alert",
+      "id": "alert-001",
+      "attributes": {
+        "name": "High error rate on /api/checkout",
+        "status": "triggered",
+        "triggered-at": "2024-01-15T14:30:00.000Z",
+        "resolved-at": null,
+        "condition-label": "error rate > 5%",
+        "thresholds": {"warning": 0.03, "critical": 0.05},
+        "current-value": 0.153,
+        "project-name": "production",
+        "stream-name": "checkout errors",
+        "alert-url": "https://app.lightstep.com/my-org/production/alerts/alert-001"
+      }
+    }
+  },
+  {
+    "data": {
+      "type": "alert",
+      "id": "alert-002",
+      "attributes": {
+        "name": "Latency P99 degraded — user service",
+        "status": "triggered",
+        "triggered-at": "2024-01-15T13:00:00.000Z",
+        "resolved-at": null,
+        "condition-label": "p99 latency > 1000ms",
+        "thresholds": {"warning": 500, "critical": 1000},
+        "current-value": 2340,
+        "project-name": "production",
+        "stream-name": "user-service latency",
+        "alert-url": "https://app.lightstep.com/my-org/production/alerts/alert-002"
+      }
+    }
+  },
+  {
+    "data": {
+      "type": "alert",
+      "id": "alert-003",
+      "attributes": {
+        "name": "Span count drop — payment service",
+        "status": "resolved",
+        "triggered-at": "2024-01-14T08:00:00.000Z",
+        "resolved-at": "2024-01-14T09:15:00.000Z",
+        "condition-label": "span count < 100/min",
+        "thresholds": {"warning": 200, "critical": 100},
+        "current-value": 450,
+        "project-name": "production",
+        "stream-name": "payment-service ops",
+        "alert-url": "https://app.lightstep.com/my-org/production/alerts/alert-003"
+      }
+    }
+  }
+]
