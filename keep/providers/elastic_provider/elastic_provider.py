@@ -1,5 +1,11 @@
 """
 Elasticsearch provider.
+
+Supports Elasticsearch 7.x and 8.x clusters. The official elasticsearch-py v8
+client performs a product-check handshake that rejects ES 7.x servers with an
+``UnsupportedProductError``. This provider catches that error and transparently
+falls back to a requests-based HTTP client so that ES 7.x on-premises deployments
+work out of the box without any extra configuration.
 """
 
 import dataclasses
@@ -7,7 +13,9 @@ import json
 import typing
 
 import pydantic
+import requests as _requests
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import UnsupportedProductError
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_connection_failed import ProviderConnectionFailed
@@ -43,6 +51,14 @@ class ElasticProviderAuthConfig:
             "type": "switch",
         },
         default=True,
+    )
+    legacy_mode: bool = dataclasses.field(
+        metadata={
+            "description": "Enable Elasticsearch 7.x compatibility mode",
+            "hint": "Enable this when connecting to an Elasticsearch 7.x cluster. The elasticsearch-py v8 client performs a strict product-check that rejects 7.x servers; this option bypasses that check.",
+            "type": "switch",
+        },
+        default=False,
     )
     api_key: typing.Optional[str] = dataclasses.field(
         default=None,
@@ -91,8 +107,73 @@ class ElasticProviderAuthConfig:
         return values
 
 
+class _LegacyElasticSession:
+    """
+    Minimal HTTP session used when connecting to Elasticsearch 7.x clusters.
+
+    elasticsearch-py v8 enforces a product-check that rejects responses from
+    ES 7.x servers.  When legacy_mode is True (or auto-detected), we bypass the
+    official client entirely and issue plain HTTP requests instead.
+    """
+
+    def __init__(self, host: str, auth: tuple | None, api_key: str | None, verify: bool):
+        self._host = host.rstrip("/")
+        self._session = _requests.Session()
+        self._session.verify = verify
+
+        if api_key:
+            self._session.headers["Authorization"] = f"ApiKey {api_key}"
+        elif auth:
+            self._session.auth = auth
+
+    # -- Compatibility shims used by ElasticProvider --
+
+    def ping(self) -> bool:
+        try:
+            r = self._session.head(self._host, timeout=10)
+            return r.status_code < 500
+        except Exception:
+            return False
+
+    def info(self) -> dict:
+        r = self._session.get(f"{self._host}/", timeout=10)
+        r.raise_for_status()
+        return r.json()
+
+    def close(self):
+        self._session.close()
+
+    # sql.query shim
+    class _Sql:
+        def __init__(self, session: "_LegacyElasticSession"):
+            self._s = session
+
+        def query(self, body: dict) -> dict:
+            r = self._s._session.post(
+                f"{self._s._host}/_sql",
+                json={"query": body.get("query")},
+                params={"format": "json"},
+                timeout=30,
+            )
+            r.raise_for_status()
+            return r.json()
+
+    @property
+    def sql(self):
+        return self._Sql(self)
+
+    def search(self, index: str, query: dict, size: int = 10) -> dict:
+        r = self._session.post(
+            f"{self._host}/{index}/_search",
+            json={"query": query, "size": size},
+            timeout=30,
+        )
+        r.raise_for_status()
+        return r.json()
+
+
 class ElasticProvider(BaseProvider):
-    """Enrich alerts with data from Elasticsearch."""
+    """Enrich alerts with data from Elasticsearch (7.x and 8.x)."""
 
     PROVIDER_DISPLAY_NAME = "Elastic"
     PROVIDER_CATEGORY = ["Monitoring", "Database"]
@@ -118,63 +199,84 @@ class ElasticProvider(BaseProvider):
             self._client = self.__initialize_client()
         return self._client
 
-    def __initialize_client(self) -> Elasticsearch:
+    def __build_auth_tuple(self):
+        u = self.authentication_config.username
+        p = self.authentication_config.password
+        return (u, p) if u and p else None
+
+    def __initialize_client(self):
         """
-        Initialize the Elasticsearch client for the provider.
+        Initialize the Elasticsearch client.
+
+        When ``legacy_mode`` is True the provider skips the elasticsearch-py v8
+        product-check entirely and uses a lightweight requests-based session that
+        is compatible with ES 7.x clusters.
+
+        Auto-detection: if the standard ES 8 client raises ``UnsupportedProductError``
+        (which ES 7.x servers always trigger), the provider automatically switches
+        to legacy mode and logs an informational message.
         """
         api_key = self.authentication_config.api_key
-        username = self.authentication_config.username
-        password = self.authentication_config.password
-        host = self.authentication_config.host
+        auth = self.__build_auth_tuple()
+        host = str(self.authentication_config.host) if self.authentication_config.host else None
         cloud_id = self.authentication_config.cloud_id
+        verify = self.authentication_config.verify
+        legacy = self.authentication_config.legacy_mode
 
         if host and "cloud.es" in host and not cloud_id:
             raise ValueError(
                 "Cloud ID is required for elastic.co managed elastic search"
             )
 
-        # Elastic.co requires you to connect with cloud_id
+        if legacy:
+            return self.__init_legacy_client(host, auth, api_key, verify)
+
+        # Build the standard ES 8 client
         if cloud_id:
             es = (
-                Elasticsearch(
-                    api_key=api_key,
-                    cloud_id=cloud_id,
-                    verify_certs=self.authentication_config.verify,
-                )
+                Elasticsearch(api_key=api_key, cloud_id=cloud_id, verify_certs=verify)
                 if api_key
-                else Elasticsearch(
-                    cloud_id=cloud_id,
-                    basic_auth=(username, password),
-                    verify_certs=self.authentication_config.verify,
-                )
+                else Elasticsearch(cloud_id=cloud_id, basic_auth=auth, verify_certs=verify)
             )
-        # Otherwise, connect with host
         elif host:
             es = (
-                Elasticsearch(
-                    api_key=api_key,
-                    hosts=host,
-                    verify_certs=self.authentication_config.verify,
-                )
+                Elasticsearch(api_key=api_key, hosts=host, verify_certs=verify)
                 if api_key
-                else Elasticsearch(
-                    hosts=host,
-                    basic_auth=(username, password),
-                    verify_certs=self.authentication_config.verify,
-                )
+                else Elasticsearch(hosts=host, basic_auth=auth, verify_certs=verify)
             )
         else:
             raise ValueError("Missing host or cloud_id in provider config")
 
-        # Check if the connection was successful
         try:
             es.info()
+        except UnsupportedProductError:
+            self.logger.info(
+                "Elasticsearch 7.x detected (UnsupportedProductError from ES8 client). "
+                "Switching to legacy compatibility mode automatically. "
+                "You can also set 'legacy_mode: true' in the provider config to skip this probe."
+            )
+            return self.__init_legacy_client(host, auth, api_key, verify)
         except Exception as e:
             raise ProviderConnectionFailed(
                 f"Failed to connect to Elasticsearch: {str(e)}"
             )
 
         return es
+
+    def __init_legacy_client(self, host, auth, api_key, verify) -> _LegacyElasticSession:
+        """Create and verify a legacy (ES 7.x) HTTP session."""
+        if not host:
+            raise ProviderConnectionFailed(
+                "legacy_mode requires a 'host' URL (cloud_id is not supported for ES 7.x)"
+            )
+        client = _LegacyElasticSession(host, auth, api_key, verify)
+        try:
+            client.info()
+        except Exception as e:
+            raise ProviderConnectionFailed(
+                f"Failed to connect to Elasticsearch (legacy mode): {str(e)}"
+            )
+        return client
 
     def validate_config(self):
         """
