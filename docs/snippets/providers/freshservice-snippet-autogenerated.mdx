@@ -1,0 +1,48 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: Freshservice API Key (required: True, sensitive: True)
+- **domain**: Freshservice domain, e.g. `yourcompany.freshservice.com` (required: True, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **read_tickets**: Read tickets and incidents from Freshservice (mandatory)
+
+## In workflows
+
+This provider can be used as a **step** to pull ticket data or as an **action** to create tickets.
+
+### Example: Create a Freshservice ticket from an alert
+
+```yaml
+workflow:
+  id: create-freshservice-ticket
+  description: Open a Freshservice ticket for critical alerts
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  steps:
+    - name: create-ticket
+      provider:
+        type: freshservice
+        config: "{{ providers.freshservice }}"
+        with:
+          subject: "Critical alert: {{ alert.name }}"
+          description: "{{ alert.description }}\n\nAlert ID: {{ alert.id }}"
+          priority: 4
+          email: "oncall@yourcompany.com"
+```
+
+## Connecting via Webhook
+
+This provider supports incoming webhooks from Freshservice Workflow Automator.
+
+To send ticket events from Freshservice to Keep:
+
+1. In Freshservice, go to **Admin → Workflow Automator**.
+2. Create a new automation triggered by ticket events.
+3. Add a **Trigger Webhook** action with your Keep webhook URL.
+4. Set the header `x-api-key` to your Keep API key.
