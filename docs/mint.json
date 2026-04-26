@@ -196,6 +196,7 @@
             "providers/documentation/incidentmanager-provider",
             "providers/documentation/jira-on-prem-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/kapacitor-provider",
             "providers/documentation/kafka-provider",
             "providers/documentation/keep-provider",
             "providers/documentation/kibana-provider",
