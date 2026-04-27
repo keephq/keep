@@ -368,17 +368,28 @@ class SnmpProvider(BaseProvider):
         if req_pdu is None:
             return None
 
-        # SNMPv1 Trap-PDU has a distinct structure
-        if req_pdu.isSameTypeWith(p_mod.TrapPDU()):
+        # Route by SNMP version first -- p_mod.TrapPDU() maps to the
+        # version-specific PDU class, so checking isSameTypeWith alone
+        # would send v2c traps into the v1 handler.
+        if msg_ver == snmp_api.protoVersion1:
+            if not req_pdu.isSameTypeWith(p_mod.TrapPDU()):
+                self.logger.debug(
+                    "Ignoring non-trap SNMPv1 PDU from %s", addr[0]
+                )
+                return None
             return self._decode_v1_trap(p_mod, req_pdu, addr)
 
-        # Only process SNMPv2c trap/inform PDUs, ignore GET/SET/RESPONSE
+        # SNMPv2c: only process trap/inform PDUs, ignore GET/SET/RESPONSE
         snmpv2_trap_pdu = getattr(p_mod, "SNMPv2TrapPDU", None)
         inform_pdu = getattr(p_mod, "InformRequestPDU", None)
         is_trap = bool(
             (snmpv2_trap_pdu and req_pdu.isSameTypeWith(snmpv2_trap_pdu()))
             or (inform_pdu and req_pdu.isSameTypeWith(inform_pdu()))
         )
+        if not is_trap:
+            # Also check the generic TrapPDU for v2c compat
+            if req_pdu.isSameTypeWith(p_mod.TrapPDU()):
+                is_trap = True
         if not is_trap:
             self.logger.debug("Ignoring non-trap SNMP PDU from %s", addr[0])
             return None
