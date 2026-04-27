@@ -1,20 +1,21 @@
 """
-SNMP Trap Provider receives SNMP traps (v1/v2c/v3) and converts them to Keep alerts.
+SNMP Trap Provider receives SNMP traps (v1/v2c) and converts them to Keep alerts.
 
-This is a push-based (consumer) provider -- it opens a UDP socket on a
-configurable port and listens for incoming SNMP trap/inform PDUs.
+Push-based consumer: opens a UDP socket on a configurable port, decodes
+incoming trap PDUs at the protocol level, and forwards them as Keep alerts.
+No asyncio -- uses a blocking socket with a timeout-based polling loop so
+the consumer thread can be stopped cleanly via the ``consume`` flag.
 """
 
-import asyncio
 import dataclasses
 import datetime
+import socket
 
 import pydantic
-from pysnmp.carrier.asyncio.dgram import udp
-from pysnmp.entity import config as snmp_config
-from pysnmp.entity import engine
-from pysnmp.entity.rfc3413 import ntfrcv
-from pysnmp.smi import view
+from pyasn1.codec.ber import decoder as ber_decoder
+from pysnmp.proto import api as snmp_api
+from pysnmp.smi import builder as mib_builder_mod
+from pysnmp.smi import view as mib_view_mod
 
 from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -64,7 +65,16 @@ _GENERIC_TRAP_NAMES = {
     6: "enterpriseSpecific",
 }
 
-# Severity heuristics based on generic trap types and common OID patterns
+# Standard SNMPv2 notification OIDs (from SNMPv2-MIB)
+_V2_TRAP_OIDS = {
+    "1.3.6.1.6.3.1.1.5.1": "coldStart",
+    "1.3.6.1.6.3.1.1.5.2": "warmStart",
+    "1.3.6.1.6.3.1.1.5.3": "linkDown",
+    "1.3.6.1.6.3.1.1.5.4": "linkUp",
+    "1.3.6.1.6.3.1.1.5.5": "authenticationFailure",
+}
+
+# Severity heuristics keyed by generic trap name
 _SEVERITY_MAP = {
     "coldStart": AlertSeverity.WARNING,
     "warmStart": AlertSeverity.INFO,
@@ -98,9 +108,8 @@ class SnmpProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
         self.consume = False
-        self._snmp_engine = None
-        self._loop = None
-        self._loop_thread = None
+        self._socket = None
+        self._mib_view = None
         self.err = ""
 
     def validate_config(self):
@@ -111,8 +120,6 @@ class SnmpProvider(BaseProvider):
     def validate_scopes(self) -> dict:
         scopes = {"receive_traps": False}
         try:
-            import socket
-
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind(
                 (
@@ -123,7 +130,10 @@ class SnmpProvider(BaseProvider):
             sock.close()
             scopes["receive_traps"] = True
         except OSError as exc:
-            self.err = f"Cannot bind to UDP port {self.authentication_config.listen_port}: {exc}"
+            self.err = (
+                f"Cannot bind to UDP port "
+                f"{self.authentication_config.listen_port}: {exc}"
+            )
             self.logger.warning(self.err)
             scopes["receive_traps"] = self.err
         return scopes
@@ -131,8 +141,8 @@ class SnmpProvider(BaseProvider):
     def dispose(self):
         pass
 
-    def status(self):
-        if self._snmp_engine is None:
+    def status(self) -> dict:
+        if self._socket is None:
             status = "not-initialized"
         elif self.consume:
             status = "listening"
@@ -140,141 +150,236 @@ class SnmpProvider(BaseProvider):
             status = "stopped"
         return {"status": status, "error": self.err}
 
+    # ------------------------------------------------------------------
+    # Consumer lifecycle
+    # ------------------------------------------------------------------
+
     def start_consume(self):
         self.consume = True
-        self._loop = asyncio.new_event_loop()
+        self._init_mib_view()
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(1.0)
         try:
-            self._snmp_engine = self._create_engine()
-            self.logger.info(
-                "SNMP trap receiver listening on %s:%d",
-                self.authentication_config.listen_address,
-                self.authentication_config.listen_port,
-            )
-            self._loop.run_forever()
-        except Exception:
-            self.logger.exception("SNMP trap receiver failed to start")
-        finally:
-            self._cleanup()
-            self.logger.info("SNMP trap receiver stopped")
-
-    def stop_consume(self):
-        self.consume = False
-        if self._loop and self._loop.is_running():
-            self._loop.call_soon_threadsafe(self._loop.stop)
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
-    def _create_engine(self):
-        snmp_eng = engine.SnmpEngine()
-
-        # Load MIB modules for OID resolution
-        mib_builder = snmp_eng.getMibBuilder()
-        mib_builder.loadModules("SNMPv2-MIB", "IF-MIB")
-        self._mib_view = view.MibViewController(mib_builder)
-
-        # Transport -- UDP/IPv4
-        snmp_config.addTransport(
-            snmp_eng,
-            udp.domainName,
-            udp.UdpTransport().openServerMode(
+            sock.bind(
                 (
                     self.authentication_config.listen_address,
                     self.authentication_config.listen_port,
                 )
-            ),
+            )
+        except OSError:
+            self.logger.exception("Failed to bind SNMP trap socket")
+            sock.close()
+            return
+        self._socket = sock
+
+        self.logger.info(
+            "SNMP trap receiver listening on %s:%d",
+            self.authentication_config.listen_address,
+            self.authentication_config.listen_port,
         )
 
-        # SNMPv1/v2c community
-        snmp_config.addV1System(
-            snmp_eng,
-            "keep-area",
-            self.authentication_config.community_string,
-        )
+        while self.consume:
+            try:
+                data, addr = sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                if not self.consume:
+                    break
+                self.logger.exception("Socket error in SNMP trap receiver")
+                break
 
-        # Register callback for incoming notifications
-        ntfrcv.NotificationReceiver(snmp_eng, self._trap_callback)
+            try:
+                alert = self._decode_trap(data, addr)
+                if alert:
+                    self._push_alert(alert)
+            except Exception:
+                self.logger.exception(
+                    "Error processing SNMP trap from %s", addr[0]
+                )
 
-        return snmp_eng
-
-    def _trap_callback(
-        self,
-        snmp_engine,
-        state_reference,
-        context_engine_id,
-        context_name,
-        var_binds,
-        cb_ctx,
-    ):
-        """Called by pysnmp for every incoming trap/inform."""
         try:
-            alert = self._varbinds_to_alert(var_binds)
-            self._push_alert(alert)
+            sock.close()
         except Exception:
-            self.logger.exception("Error processing SNMP trap")
+            self.logger.debug("Error closing SNMP trap socket", exc_info=True)
+        self._socket = None
+        self.logger.info("SNMP trap receiver stopped")
 
-    def _resolve_oid(self, oid):
-        """Resolve a numeric OID to a human-readable MIB name."""
+    def stop_consume(self):
+        self.consume = False
+        if self._socket:
+            try:
+                self._socket.close()
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------------
+    # MIB helpers
+    # ------------------------------------------------------------------
+
+    def _init_mib_view(self) -> None:
+        """Load MIB modules for OID resolution. Falls back to raw OIDs."""
         try:
-            mod_name, sym_name, suffix = self._mib_view.getNodeName(oid)
+            mb = mib_builder_mod.MibBuilder()
+            mb.loadModules("SNMPv2-MIB", "IF-MIB")
+            self._mib_view = mib_view_mod.MibViewController(mb)
+            self.logger.debug("MIB modules loaded for OID resolution")
+        except Exception:
+            self._mib_view = None
+            self.logger.debug(
+                "MIB modules not available, using raw OIDs", exc_info=True
+            )
+
+    def _resolve_oid(self, oid) -> str:
+        """Resolve a numeric OID to a human-readable MIB name."""
+        if self._mib_view is None:
+            return str(oid)
+        try:
+            _mod_name, sym_name, suffix = self._mib_view.getNodeName(oid)
             suffix_str = ".".join(str(s) for s in suffix) if suffix else ""
-            resolved = f"{sym_name}.{suffix_str}" if suffix_str else str(sym_name)
-            return resolved
+            return f"{sym_name}.{suffix_str}" if suffix_str else str(sym_name)
         except Exception:
             return str(oid)
 
-    def _varbinds_to_alert(self, var_binds):
-        """Convert SNMP varbind list to a Keep alert dictionary."""
-        trap_oid = None
-        description_parts = []
-        labels = {}
-        source_address = None
+    # ------------------------------------------------------------------
+    # Trap decoding
+    # ------------------------------------------------------------------
 
+    def _decode_trap(self, data: bytes, addr: tuple) -> dict | None:
+        """Decode a raw SNMP trap datagram into a Keep alert dict.
+
+        Supports SNMPv1 Trap-PDU and SNMPv2c SNMPv2-Trap-PDU formats.
+        Returns ``None`` when the datagram is not a valid trap or the
+        community string does not match the configured value.
+        """
+        try:
+            msg_ver = int(snmp_api.decodeMessageVersion(data))
+        except Exception:
+            self.logger.debug("Cannot determine SNMP version from datagram")
+            return None
+
+        if msg_ver not in snmp_api.protoModules:
+            self.logger.debug("Unsupported SNMP version: %d", msg_ver)
+            return None
+
+        p_mod = snmp_api.protoModules[msg_ver]
+        try:
+            msg, _ = ber_decoder.decode(data, asn1Spec=p_mod.Message())
+        except Exception:
+            self.logger.debug("BER decode failed for SNMP datagram")
+            return None
+
+        # Verify community string
+        community = str(p_mod.apiMessage.getCommunity(msg))
+        if community != self.authentication_config.community_string:
+            self.logger.debug(
+                "Ignoring trap with community '%s' from %s",
+                community,
+                addr[0],
+            )
+            return None
+
+        req_pdu = p_mod.apiMessage.getPDU(msg)
+        if req_pdu is None:
+            return None
+
+        # SNMPv1 Trap-PDU has a distinct structure
+        if req_pdu.isSameTypeWith(p_mod.TrapPDU()):
+            return self._decode_v1_trap(p_mod, req_pdu, addr)
+
+        # SNMPv2c traps use the regular PDU layout
+        var_binds = p_mod.apiPDU.getVarBinds(req_pdu)
+        return self._decode_v2c_trap(var_binds, addr[0])
+
+    def _decode_v1_trap(self, p_mod, pdu, addr: tuple) -> dict:
+        """Build an alert dict from an SNMPv1 Trap-PDU."""
+        generic_trap = int(p_mod.apiTrapPDU.getGenericTrap(pdu))
+        specific_trap = int(p_mod.apiTrapPDU.getSpecificTrap(pdu))
+        enterprise = p_mod.apiTrapPDU.getEnterprise(pdu)
+        agent_addr_raw = p_mod.apiTrapPDU.getAgentAddr(pdu)
+        agent_addr = str(agent_addr_raw) if agent_addr_raw else addr[0]
+        var_binds = p_mod.apiTrapPDU.getVarBinds(pdu)
+
+        trap_name = _GENERIC_TRAP_NAMES.get(generic_trap, f"trap-{generic_trap}")
+        if generic_trap == 6:
+            trap_name = f"{enterprise}.{specific_trap}"
+
+        severity = _SEVERITY_MAP.get(trap_name, AlertSeverity.WARNING)
+
+        labels = {}
+        description_parts = []
         for oid, val in var_binds:
             oid_str = self._resolve_oid(oid)
             val_str = val.prettyPrint() if val else ""
-
-            # Capture the trap OID (snmpTrapOID.0)
-            if "snmpTrapOID" in oid_str or str(oid) == "1.3.6.1.6.3.1.1.4.1.0":
-                trap_oid = self._resolve_oid(val)
-                continue
-
-            # Capture source address if present
-            if "snmpTrapAddress" in oid_str:
-                source_address = val_str
-                continue
-
             labels[oid_str] = val_str
             description_parts.append(f"{oid_str} = {val_str}")
 
-        trap_name = trap_oid or "snmpTrap"
-        severity = _SEVERITY_MAP.get(trap_name, AlertSeverity.WARNING)
-
-        alert = {
+        return {
             "name": trap_name,
             "description": (
                 "; ".join(description_parts) if description_parts else trap_name
             ),
             "status": AlertStatus.FIRING,
             "severity": severity,
-            "lastReceived": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            "lastReceived": datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat(),
             "source": ["snmp"],
             "labels": labels,
-            "service": source_address or "snmp-device",
+            "service": agent_addr,
         }
-        return alert
 
-    def _cleanup(self):
-        if self._snmp_engine:
-            try:
-                self._snmp_engine.transportDispatcher.closeDispatcher()
-            except Exception:
-                self.logger.debug("Error closing SNMP transport", exc_info=True)
-            self._snmp_engine = None
-        if self._loop:
-            try:
-                self._loop.close()
-            except Exception:
-                pass
-            self._loop = None
+    def _decode_v2c_trap(self, var_binds, source_addr: str) -> dict:
+        """Build an alert dict from SNMPv2c trap varbinds."""
+        trap_oid_raw = None
+        labels = {}
+        description_parts = []
+        source_address = None
+
+        for oid, val in var_binds:
+            oid_str = self._resolve_oid(oid)
+            val_str = val.prettyPrint() if val else ""
+
+            # snmpTrapOID.0 (1.3.6.1.6.3.1.1.4.1.0)
+            if "snmpTrapOID" in oid_str or str(oid) == "1.3.6.1.6.3.1.1.4.1.0":
+                trap_oid_raw = val_str
+                continue
+
+            # snmpTrapAddress.0 (1.3.6.1.6.3.18.1.3.0)
+            if (
+                "snmpTrapAddress" in oid_str
+                or str(oid) == "1.3.6.1.6.3.18.1.3.0"
+            ):
+                source_address = val_str
+                continue
+
+            # sysUpTime.0 -- keep as metadata label, skip description
+            if "sysUpTime" in oid_str or str(oid) == "1.3.6.1.2.1.1.3.0":
+                labels["sysUpTime"] = val_str
+                continue
+
+            labels[oid_str] = val_str
+            description_parts.append(f"{oid_str} = {val_str}")
+
+        # Map the trap OID to a human-readable name
+        trap_name = "snmpTrap"
+        if trap_oid_raw:
+            trap_name = _V2_TRAP_OIDS.get(trap_oid_raw, trap_oid_raw)
+
+        severity = _SEVERITY_MAP.get(trap_name, AlertSeverity.WARNING)
+
+        return {
+            "name": trap_name,
+            "description": (
+                "; ".join(description_parts) if description_parts else trap_name
+            ),
+            "status": AlertStatus.FIRING,
+            "severity": severity,
+            "lastReceived": datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat(),
+            "source": ["snmp"],
+            "labels": labels,
+            "service": source_address or source_addr or "snmp-device",
+        }

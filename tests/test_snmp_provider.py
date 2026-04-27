@@ -1,13 +1,19 @@
 """Tests for the SNMP Trap provider."""
 
+import socket
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.providers.models.provider_config import ProviderConfig
-from keep.providers.snmp_provider.snmp_provider import (_SEVERITY_MAP,
-                                                        SnmpProvider,
-                                                        SnmpProviderAuthConfig)
+from keep.providers.snmp_provider.snmp_provider import (
+    SnmpProvider,
+    SnmpProviderAuthConfig,
+    _GENERIC_TRAP_NAMES,
+    _SEVERITY_MAP,
+    _V2_TRAP_OIDS,
+)
 
 
 @pytest.fixture
@@ -43,7 +49,9 @@ class TestSnmpProviderConfig:
     def test_validate_config(self, snmp_provider):
         assert snmp_provider.authentication_config.listen_port == 11162
         assert snmp_provider.authentication_config.listen_address == "127.0.0.1"
-        assert snmp_provider.authentication_config.community_string == "test-community"
+        assert (
+            snmp_provider.authentication_config.community_string == "test-community"
+        )
 
     def test_default_config(self):
         cfg = SnmpProviderAuthConfig()
@@ -51,112 +59,403 @@ class TestSnmpProviderConfig:
         assert cfg.listen_address == "0.0.0.0"
         assert cfg.community_string == "public"
 
+    def test_dispose(self, snmp_provider):
+        """dispose() is a no-op and must not raise."""
+        snmp_provider.dispose()
+
     def test_status_not_initialized(self, snmp_provider):
         status = snmp_provider.status()
         assert status["status"] == "not-initialized"
         assert status["error"] == ""
 
+    def test_status_listening(self, snmp_provider):
+        snmp_provider._socket = MagicMock()
+        snmp_provider.consume = True
+        status = snmp_provider.status()
+        assert status["status"] == "listening"
+
+    def test_status_stopped(self, snmp_provider):
+        snmp_provider._socket = MagicMock()
+        snmp_provider.consume = False
+        status = snmp_provider.status()
+        assert status["status"] == "stopped"
+
 
 class TestSnmpProviderAlertConversion:
-    def test_varbinds_to_alert_basic(self, snmp_provider):
-        """Test converting basic varbinds to an alert dict."""
-        # Create mock OID and value objects
-        trap_oid = MagicMock()
-        trap_oid.__str__ = lambda s: "1.3.6.1.6.3.1.1.4.1.0"
+    def test_decode_v2c_trap_basic(self, snmp_provider):
+        """SNMPv2c varbinds with a snmpTrapOID produce a named alert."""
+        snmp_provider._mib_view = None  # raw OIDs
 
+        trap_oid_obj = MagicMock()
+        trap_oid_obj.__str__ = lambda s: "1.3.6.1.6.3.1.1.4.1.0"
         trap_val = MagicMock()
-        trap_val.prettyPrint.return_value = "1.3.6.1.4.1.99999.1"
+        trap_val.prettyPrint.return_value = "1.3.6.1.6.3.1.1.5.3"
 
         data_oid = MagicMock()
-        data_oid.__str__ = lambda s: "1.3.6.1.4.1.99999.2.1"
-
+        data_oid.__str__ = lambda s: "1.3.6.1.2.1.2.2.1.1.2"
         data_val = MagicMock()
-        data_val.prettyPrint.return_value = "CPU temperature critical"
+        data_val.prettyPrint.return_value = "2"
 
-        # Mock OID resolution
-        snmp_provider._mib_view = MagicMock()
+        var_binds = [(trap_oid_obj, trap_val), (data_oid, data_val)]
+        alert = snmp_provider._decode_v2c_trap(var_binds, "192.168.1.1")
 
-        def resolve_side_effect(oid):
-            oid_str = str(oid)
-            if oid_str == "1.3.6.1.6.3.1.1.4.1.0":
-                return ("SNMPv2-MIB", "snmpTrapOID", (0,))
-            if oid_str == "1.3.6.1.4.1.99999.1":
-                return ("CUSTOM-MIB", "cpuTempCritical", ())
-            if oid_str == "1.3.6.1.4.1.99999.2.1":
-                return ("CUSTOM-MIB", "cpuTempValue", ())
-            return ("", str(oid), ())
-
-        snmp_provider._mib_view.getNodeName.side_effect = resolve_side_effect
-
-        var_binds = [(trap_oid, trap_val), (data_oid, data_val)]
-        alert = snmp_provider._varbinds_to_alert(var_binds)
-
-        assert alert["name"] == "cpuTempCritical"
-        assert "cpuTempValue" in alert["description"]
+        assert alert["name"] == "linkDown"
+        assert alert["severity"] == AlertSeverity.HIGH
+        assert alert["status"] == AlertStatus.FIRING
         assert alert["source"] == ["snmp"]
-        assert alert["status"].value == "firing"
+        assert "1.3.6.1.2.1.2.2.1.1.2" in alert["labels"]
 
-    def test_varbinds_no_trap_oid(self, snmp_provider):
-        """When no snmpTrapOID is present, default name is used."""
+    def test_decode_v2c_trap_no_trap_oid(self, snmp_provider):
+        """When no snmpTrapOID varbind is present, default name is used."""
+        snmp_provider._mib_view = None
+
         data_oid = MagicMock()
         data_oid.__str__ = lambda s: "1.3.6.1.4.1.99999.2.1"
-
         data_val = MagicMock()
         data_val.prettyPrint.return_value = "some value"
 
-        snmp_provider._mib_view = MagicMock()
-        snmp_provider._mib_view.getNodeName.side_effect = lambda oid: (
-            "",
-            str(oid),
-            (),
+        alert = snmp_provider._decode_v2c_trap(
+            [(data_oid, data_val)], "10.0.0.1"
         )
-
-        alert = snmp_provider._varbinds_to_alert([(data_oid, data_val)])
         assert alert["name"] == "snmpTrap"
+        assert alert["service"] == "10.0.0.1"
 
-    def test_severity_mapping(self):
-        """Known trap types map to expected severities."""
-        assert _SEVERITY_MAP["linkDown"].value == ("high", 4)
-        assert _SEVERITY_MAP["linkUp"].value == ("info", 2)
-        assert _SEVERITY_MAP["coldStart"].value == ("warning", 3)
+    def test_decode_v2c_trap_with_source_address(self, snmp_provider):
+        """snmpTrapAddress varbind overrides the UDP source."""
+        snmp_provider._mib_view = None
+
+        addr_oid = MagicMock()
+        addr_oid.__str__ = lambda s: "1.3.6.1.6.3.18.1.3.0"
+        addr_val = MagicMock()
+        addr_val.prettyPrint.return_value = "10.0.0.99"
+
+        alert = snmp_provider._decode_v2c_trap(
+            [(addr_oid, addr_val)], "192.168.1.1"
+        )
+        assert alert["service"] == "10.0.0.99"
+
+    def test_decode_v2c_trap_sysuptime_label(self, snmp_provider):
+        """sysUpTime is stored as a label but excluded from description."""
+        snmp_provider._mib_view = None
+
+        uptime_oid = MagicMock()
+        uptime_oid.__str__ = lambda s: "1.3.6.1.2.1.1.3.0"
+        uptime_val = MagicMock()
+        uptime_val.prettyPrint.return_value = "12345"
+
+        alert = snmp_provider._decode_v2c_trap(
+            [(uptime_oid, uptime_val)], "10.0.0.1"
+        )
+        assert alert["labels"]["sysUpTime"] == "12345"
+        assert "12345" not in alert["description"]
+
+    def test_decode_v1_trap(self, snmp_provider):
+        """SNMPv1 Trap-PDU fields map correctly to alert fields."""
+        snmp_provider._mib_view = None
+
+        p_mod = MagicMock()
+        pdu = MagicMock()
+        p_mod.apiTrapPDU.getGenericTrap.return_value = 2  # linkDown
+        p_mod.apiTrapPDU.getSpecificTrap.return_value = 0
+        p_mod.apiTrapPDU.getEnterprise.return_value = "1.3.6.1.4.1.99999"
+        p_mod.apiTrapPDU.getAgentAddr.return_value = "10.0.0.5"
+        p_mod.apiTrapPDU.getVarBinds.return_value = []
+
+        alert = snmp_provider._decode_v1_trap(p_mod, pdu, ("192.168.1.1", 162))
+        assert alert["name"] == "linkDown"
+        assert alert["severity"] == AlertSeverity.HIGH
+        assert alert["service"] == "10.0.0.5"
+
+    def test_decode_v1_enterprise_specific_trap(self, snmp_provider):
+        """Generic-trap 6 uses enterprise OID + specific-trap as name."""
+        snmp_provider._mib_view = None
+
+        p_mod = MagicMock()
+        pdu = MagicMock()
+        p_mod.apiTrapPDU.getGenericTrap.return_value = 6
+        p_mod.apiTrapPDU.getSpecificTrap.return_value = 42
+        p_mod.apiTrapPDU.getEnterprise.return_value = "1.3.6.1.4.1.99999"
+        p_mod.apiTrapPDU.getAgentAddr.return_value = None
+        p_mod.apiTrapPDU.getVarBinds.return_value = []
+
+        alert = snmp_provider._decode_v1_trap(
+            p_mod, pdu, ("192.168.1.1", 162)
+        )
+        assert alert["name"] == "1.3.6.1.4.1.99999.42"
+        assert alert["service"] == "192.168.1.1"  # falls back to addr
+
+    def test_resolve_oid_with_mib(self, snmp_provider):
+        """When MIB view is available, OIDs resolve to names."""
+        snmp_provider._mib_view = MagicMock()
+        snmp_provider._mib_view.getNodeName.return_value = (
+            "IF-MIB",
+            "ifDescr",
+            (1,),
+        )
+        result = snmp_provider._resolve_oid("1.3.6.1.2.1.2.2.1.2.1")
+        assert result == "ifDescr.1"
+
+    def test_resolve_oid_without_mib(self, snmp_provider):
+        """Without MIB view, raw OID string is returned."""
+        snmp_provider._mib_view = None
+        result = snmp_provider._resolve_oid("1.3.6.1.2.1.2.2.1.2.1")
+        assert result == "1.3.6.1.2.1.2.2.1.2.1"
+
+    def test_resolve_oid_mib_exception(self, snmp_provider):
+        """MIB resolution failure falls back to raw OID."""
+        snmp_provider._mib_view = MagicMock()
+        snmp_provider._mib_view.getNodeName.side_effect = Exception("not found")
+        result = snmp_provider._resolve_oid("1.3.6.1.999")
+        assert result == "1.3.6.1.999"
+
+
+    def test_decode_v1_trap_with_varbind_none_val(self, snmp_provider):
+        """Varbinds where val is None produce empty-string values."""
+        snmp_provider._mib_view = None
+
+        oid_mock = MagicMock()
+        oid_mock.__str__ = lambda s: "1.3.6.1.4.1.99999.3"
+
+        p_mod = MagicMock()
+        pdu = MagicMock()
+        p_mod.apiTrapPDU.getGenericTrap.return_value = 3  # linkUp
+        p_mod.apiTrapPDU.getSpecificTrap.return_value = 0
+        p_mod.apiTrapPDU.getEnterprise.return_value = "1.3.6.1.4.1.99999"
+        p_mod.apiTrapPDU.getAgentAddr.return_value = "10.0.0.1"
+        p_mod.apiTrapPDU.getVarBinds.return_value = [(oid_mock, None)]
+
+        alert = snmp_provider._decode_v1_trap(p_mod, pdu, ("10.0.0.1", 162))
+        assert alert["labels"]["1.3.6.1.4.1.99999.3"] == ""
+
+    def test_decode_v2c_unknown_trap_oid_defaults_to_warning(self, snmp_provider):
+        """Unknown trap OIDs fall back to WARNING severity."""
+        snmp_provider._mib_view = None
+
+        trap_oid = MagicMock()
+        trap_oid.__str__ = lambda s: "1.3.6.1.6.3.1.1.4.1.0"
+        trap_val = MagicMock()
+        trap_val.prettyPrint.return_value = "1.3.6.1.4.1.99999.999"
+
+        alert = snmp_provider._decode_v2c_trap(
+            [(trap_oid, trap_val)], "10.0.0.1"
+        )
+        assert alert["name"] == "1.3.6.1.4.1.99999.999"
+        assert alert["severity"] == AlertSeverity.WARNING
+
+
+class TestSnmpProviderSeverityMapping:
+    def test_standard_trap_severities(self):
+        assert _SEVERITY_MAP["linkDown"] == AlertSeverity.HIGH
+        assert _SEVERITY_MAP["linkUp"] == AlertSeverity.INFO
+        assert _SEVERITY_MAP["coldStart"] == AlertSeverity.WARNING
+        assert _SEVERITY_MAP["warmStart"] == AlertSeverity.INFO
+        assert _SEVERITY_MAP["authenticationFailure"] == AlertSeverity.WARNING
+        assert _SEVERITY_MAP["egpNeighborLoss"] == AlertSeverity.HIGH
+
+    def test_generic_trap_names_complete(self):
+        assert len(_GENERIC_TRAP_NAMES) == 7
+        assert _GENERIC_TRAP_NAMES[0] == "coldStart"
+        assert _GENERIC_TRAP_NAMES[6] == "enterpriseSpecific"
+
+    def test_v2_trap_oids_complete(self):
+        assert _V2_TRAP_OIDS["1.3.6.1.6.3.1.1.5.3"] == "linkDown"
+        assert _V2_TRAP_OIDS["1.3.6.1.6.3.1.1.5.4"] == "linkUp"
 
 
 class TestSnmpProviderConsumer:
     def test_is_consumer(self, snmp_provider):
-        """The provider should be recognized as a consumer."""
         assert snmp_provider.is_consumer is True
 
-    def test_stop_consume(self, snmp_provider):
-        """stop_consume should set the flag to False."""
+    def test_stop_consume_sets_flag(self, snmp_provider):
         snmp_provider.consume = True
-        snmp_provider._loop = MagicMock()
-        snmp_provider._loop.is_running.return_value = True
+        snmp_provider._socket = MagicMock()
         snmp_provider.stop_consume()
         assert snmp_provider.consume is False
-        snmp_provider._loop.call_soon_threadsafe.assert_called_once()
 
-    @patch("keep.providers.snmp_provider.snmp_provider.engine")
-    @patch("keep.providers.snmp_provider.snmp_provider.snmp_config")
-    @patch("keep.providers.snmp_provider.snmp_provider.udp")
-    @patch("keep.providers.snmp_provider.snmp_provider.ntfrcv")
-    def test_trap_callback_pushes_alert(
-        self, mock_ntfrcv, mock_udp, mock_snmp_config, mock_engine, snmp_provider
+    def test_stop_consume_closes_socket(self, snmp_provider):
+        mock_sock = MagicMock()
+        snmp_provider.consume = True
+        snmp_provider._socket = mock_sock
+        snmp_provider.stop_consume()
+        mock_sock.close.assert_called_once()
+
+    def test_stop_consume_no_socket(self, snmp_provider):
+        """stop_consume is safe when socket is None."""
+        snmp_provider.consume = True
+        snmp_provider._socket = None
+        snmp_provider.stop_consume()
+        assert snmp_provider.consume is False
+
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_start_consume_bind_failure(self, mock_socket_cls, snmp_provider):
+        """start_consume exits gracefully when bind fails."""
+        mock_sock = MagicMock()
+        mock_sock.bind.side_effect = OSError("Address in use")
+        mock_socket_cls.return_value = mock_sock
+
+        snmp_provider.start_consume()
+
+        mock_sock.close.assert_called()
+        assert snmp_provider._socket is None
+
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_start_consume_processes_trap(self, mock_socket_cls, snmp_provider):
+        """start_consume receives data and calls _push_alert."""
+        mock_sock = MagicMock()
+        mock_socket_cls.return_value = mock_sock
+
+        # First recvfrom returns data, second raises timeout, third we stop
+        call_count = 0
+
+        def recvfrom_side_effect(bufsize):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (b"\x30\x00", ("10.0.0.1", 162))
+            snmp_provider.consume = False
+            raise socket.timeout
+
+        mock_sock.recvfrom.side_effect = recvfrom_side_effect
+
+        with patch.object(snmp_provider, "_decode_trap", return_value={"name": "test"}) as mock_decode:
+            with patch.object(snmp_provider, "_push_alert") as mock_push:
+                with patch.object(snmp_provider, "_init_mib_view"):
+                    snmp_provider.start_consume()
+
+                    mock_decode.assert_called_once_with(
+                        b"\x30\x00", ("10.0.0.1", 162)
+                    )
+                    mock_push.assert_called_once_with({"name": "test"})
+
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_start_consume_skips_none_alerts(
+        self, mock_socket_cls, snmp_provider
     ):
-        """The trap callback should call _push_alert."""
-        snmp_provider._mib_view = MagicMock()
-        snmp_provider._mib_view.getNodeName.side_effect = lambda oid: (
-            "",
-            str(oid),
-            (),
-        )
+        """Traps that decode to None are not pushed."""
+        mock_sock = MagicMock()
+        mock_socket_cls.return_value = mock_sock
 
-        with patch.object(snmp_provider, "_push_alert") as mock_push:
-            snmp_provider._trap_callback(
-                snmp_engine=MagicMock(),
-                state_reference=None,
-                context_engine_id=None,
-                context_name=None,
-                var_binds=[],
-                cb_ctx=None,
-            )
-            mock_push.assert_called_once()
+        call_count = 0
+
+        def recvfrom_side_effect(bufsize):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (b"\x30\x00", ("10.0.0.1", 162))
+            snmp_provider.consume = False
+            raise socket.timeout
+
+        mock_sock.recvfrom.side_effect = recvfrom_side_effect
+
+        with patch.object(snmp_provider, "_decode_trap", return_value=None):
+            with patch.object(snmp_provider, "_push_alert") as mock_push:
+                with patch.object(snmp_provider, "_init_mib_view"):
+                    snmp_provider.start_consume()
+                    mock_push.assert_not_called()
+
+
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_start_consume_handles_decode_exception(
+        self, mock_socket_cls, snmp_provider
+    ):
+        """Exceptions in _decode_trap do not crash the consumer loop."""
+        mock_sock = MagicMock()
+        mock_socket_cls.return_value = mock_sock
+
+        call_count = 0
+
+        def recvfrom_side_effect(bufsize):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (b"\x30\x00", ("10.0.0.1", 162))
+            snmp_provider.consume = False
+            raise socket.timeout
+
+        mock_sock.recvfrom.side_effect = recvfrom_side_effect
+
+        with patch.object(
+            snmp_provider, "_decode_trap", side_effect=Exception("parse error")
+        ):
+            with patch.object(snmp_provider, "_push_alert") as mock_push:
+                with patch.object(snmp_provider, "_init_mib_view"):
+                    snmp_provider.start_consume()
+                    mock_push.assert_not_called()
+
+
+class TestSnmpProviderTrapDecoding:
+    @patch("keep.providers.snmp_provider.snmp_provider.ber_decoder")
+    @patch("keep.providers.snmp_provider.snmp_provider.snmp_api")
+    def test_decode_trap_wrong_community(
+        self, mock_snmp_api, mock_ber, snmp_provider
+    ):
+        """Traps with wrong community string return None."""
+        mock_snmp_api.decodeMessageVersion.return_value = 1
+        mock_snmp_api.protoModules = {1: MagicMock()}
+
+        p_mod = mock_snmp_api.protoModules[1]
+        mock_msg = MagicMock()
+        mock_ber.decode.return_value = (mock_msg, b"")
+        p_mod.apiMessage.getCommunity.return_value = "wrong-community"
+
+        result = snmp_provider._decode_trap(b"\x30\x00", ("10.0.0.1", 162))
+        assert result is None
+
+    @patch("keep.providers.snmp_provider.snmp_provider.ber_decoder")
+    @patch("keep.providers.snmp_provider.snmp_provider.snmp_api")
+    def test_decode_trap_unsupported_version(
+        self, mock_snmp_api, mock_ber, snmp_provider
+    ):
+        """Unsupported SNMP version returns None."""
+        mock_snmp_api.decodeMessageVersion.return_value = 99
+        mock_snmp_api.protoModules = {0: MagicMock(), 1: MagicMock()}
+
+        result = snmp_provider._decode_trap(b"\x30\x00", ("10.0.0.1", 162))
+        assert result is None
+
+    @patch("keep.providers.snmp_provider.snmp_provider.ber_decoder")
+    @patch("keep.providers.snmp_provider.snmp_provider.snmp_api")
+    def test_decode_trap_ber_failure(
+        self, mock_snmp_api, mock_ber, snmp_provider
+    ):
+        """BER decode failure returns None."""
+        mock_snmp_api.decodeMessageVersion.return_value = 1
+        mock_snmp_api.protoModules = {1: MagicMock()}
+        mock_ber.decode.side_effect = Exception("bad data")
+
+        result = snmp_provider._decode_trap(b"\xff\xff", ("10.0.0.1", 162))
+        assert result is None
+
+    @patch("keep.providers.snmp_provider.snmp_provider.ber_decoder")
+    @patch("keep.providers.snmp_provider.snmp_provider.snmp_api")
+    def test_decode_trap_invalid_version_bytes(
+        self, mock_snmp_api, mock_ber, snmp_provider
+    ):
+        """Garbled version bytes return None."""
+        mock_snmp_api.decodeMessageVersion.side_effect = Exception("bad")
+
+        result = snmp_provider._decode_trap(b"\xff", ("10.0.0.1", 162))
+        assert result is None
+
+
+class TestSnmpProviderScopes:
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_validate_scopes_success(self, mock_socket_cls, snmp_provider):
+        mock_sock = MagicMock()
+        mock_socket_cls.return_value = mock_sock
+
+        scopes = snmp_provider.validate_scopes()
+        assert scopes["receive_traps"] is True
+        mock_sock.close.assert_called_once()
+
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_validate_scopes_bind_failure(
+        self, mock_socket_cls, snmp_provider
+    ):
+        mock_sock = MagicMock()
+        mock_sock.bind.side_effect = OSError("Address in use")
+        mock_socket_cls.return_value = mock_sock
+
+        scopes = snmp_provider.validate_scopes()
+        assert isinstance(scopes["receive_traps"], str)
+        assert "Cannot bind" in scopes["receive_traps"]
