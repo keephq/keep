@@ -119,15 +119,14 @@ class SnmpProvider(BaseProvider):
 
     def validate_scopes(self) -> dict:
         scopes = {"receive_traps": False}
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind(
                 (
                     self.authentication_config.listen_address,
                     self.authentication_config.listen_port,
                 )
             )
-            sock.close()
             scopes["receive_traps"] = True
         except OSError as exc:
             self.err = (
@@ -136,6 +135,8 @@ class SnmpProvider(BaseProvider):
             )
             self.logger.warning(self.err)
             scopes["receive_traps"] = self.err
+        finally:
+            sock.close()
         return scopes
 
     def dispose(self):
@@ -167,8 +168,14 @@ class SnmpProvider(BaseProvider):
                     self.authentication_config.listen_port,
                 )
             )
-        except OSError:
-            self.logger.exception("Failed to bind SNMP trap socket")
+        except OSError as exc:
+            self.err = (
+                f"Failed to bind SNMP trap socket on "
+                f"{self.authentication_config.listen_address}:"
+                f"{self.authentication_config.listen_port}: {exc}"
+            )
+            self.consume = False
+            self.logger.exception(self.err)
             sock.close()
             return
         self._socket = sock
@@ -195,9 +202,7 @@ class SnmpProvider(BaseProvider):
                 if alert:
                     self._push_alert(alert)
             except Exception:
-                self.logger.exception(
-                    "Error processing SNMP trap from %s", addr[0]
-                )
+                self.logger.exception("Error processing SNMP trap from %s", addr[0])
 
         try:
             sock.close()
@@ -288,7 +293,17 @@ class SnmpProvider(BaseProvider):
         if req_pdu.isSameTypeWith(p_mod.TrapPDU()):
             return self._decode_v1_trap(p_mod, req_pdu, addr)
 
-        # SNMPv2c traps use the regular PDU layout
+        # Only process SNMPv2c trap/inform PDUs, ignore GET/SET/RESPONSE
+        snmpv2_trap_pdu = getattr(p_mod, "SNMPv2TrapPDU", None)
+        inform_pdu = getattr(p_mod, "InformRequestPDU", None)
+        is_trap = bool(
+            (snmpv2_trap_pdu and req_pdu.isSameTypeWith(snmpv2_trap_pdu()))
+            or (inform_pdu and req_pdu.isSameTypeWith(inform_pdu()))
+        )
+        if not is_trap:
+            self.logger.debug("Ignoring non-trap SNMP PDU from %s", addr[0])
+            return None
+
         var_binds = p_mod.apiPDU.getVarBinds(req_pdu)
         return self._decode_v2c_trap(var_binds, addr[0])
 
@@ -315,16 +330,14 @@ class SnmpProvider(BaseProvider):
             labels[oid_str] = val_str
             description_parts.append(f"{oid_str} = {val_str}")
 
+        description = "; ".join(description_parts) if description_parts else trap_name
         return {
             "name": trap_name,
-            "description": (
-                "; ".join(description_parts) if description_parts else trap_name
-            ),
+            "description": description,
+            "message": description,
             "status": AlertStatus.FIRING,
             "severity": severity,
-            "lastReceived": datetime.datetime.now(
-                tz=datetime.timezone.utc
-            ).isoformat(),
+            "lastReceived": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
             "source": ["snmp"],
             "labels": labels,
             "service": agent_addr,
@@ -347,10 +360,7 @@ class SnmpProvider(BaseProvider):
                 continue
 
             # snmpTrapAddress.0 (1.3.6.1.6.3.18.1.3.0)
-            if (
-                "snmpTrapAddress" in oid_str
-                or str(oid) == "1.3.6.1.6.3.18.1.3.0"
-            ):
+            if "snmpTrapAddress" in oid_str or str(oid) == "1.3.6.1.6.3.18.1.3.0":
                 source_address = val_str
                 continue
 
@@ -369,16 +379,14 @@ class SnmpProvider(BaseProvider):
 
         severity = _SEVERITY_MAP.get(trap_name, AlertSeverity.WARNING)
 
+        description = "; ".join(description_parts) if description_parts else trap_name
         return {
             "name": trap_name,
-            "description": (
-                "; ".join(description_parts) if description_parts else trap_name
-            ),
+            "description": description,
+            "message": description,
             "status": AlertStatus.FIRING,
             "severity": severity,
-            "lastReceived": datetime.datetime.now(
-                tz=datetime.timezone.utc
-            ).isoformat(),
+            "lastReceived": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
             "source": ["snmp"],
             "labels": labels,
             "service": source_address or source_addr or "snmp-device",
