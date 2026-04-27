@@ -17,7 +17,7 @@ from pysnmp.proto import api as snmp_api
 from pysnmp.smi import builder as mib_builder_mod
 from pysnmp.smi import view as mib_view_mod
 
-from keep.api.models.alert import AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -142,6 +142,68 @@ class SnmpProvider(BaseProvider):
     def dispose(self):
         pass
 
+    # ------------------------------------------------------------------
+    # Alert formatting (webhook / simulate path)
+    # ------------------------------------------------------------------
+
+    SEVERITY_MAP_STR = {
+        "critical": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+        "low": AlertSeverity.LOW,
+    }
+
+    STATUS_MAP_STR = {
+        "firing": AlertStatus.FIRING,
+        "resolved": AlertStatus.RESOLVED,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+    }
+
+    @staticmethod
+    def _format_alert(
+        event: dict | list[dict], provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
+        events = event if isinstance(event, list) else [event]
+        alerts: list[AlertDto] = []
+        for e in events:
+            severity_raw = e.get("severity", "info")
+            if isinstance(severity_raw, str):
+                severity = SnmpProvider.SEVERITY_MAP_STR.get(
+                    severity_raw.lower(), AlertSeverity.INFO
+                )
+            else:
+                severity = severity_raw
+
+            status_raw = e.get("status", "firing")
+            if isinstance(status_raw, str):
+                status = SnmpProvider.STATUS_MAP_STR.get(
+                    status_raw.lower(), AlertStatus.FIRING
+                )
+            else:
+                status = status_raw
+
+            alerts.append(
+                AlertDto(
+                    id=e.get("id", e.get("name", "")),
+                    name=e.get("name", "SNMP Trap"),
+                    description=e.get("description"),
+                    message=e.get("message"),
+                    status=status,
+                    severity=severity,
+                    lastReceived=e.get(
+                        "lastReceived",
+                        datetime.datetime.now(
+                            tz=datetime.timezone.utc
+                        ).isoformat(),
+                    ),
+                    source=e.get("source", ["snmp"]),
+                    service=e.get("service"),
+                    labels=e.get("labels", {}),
+                )
+            )
+        return alerts[0] if len(alerts) == 1 else alerts
+
     def status(self) -> dict:
         if self._socket is None:
             status = "not-initialized"
@@ -197,6 +259,10 @@ class SnmpProvider(BaseProvider):
                 self.logger.exception("Socket error in SNMP trap receiver")
                 break
 
+            if len(data) < 2:
+                # Ignore wake-up / stray packets too small to be SNMP.
+                continue
+
             try:
                 alert = self._decode_trap(data, addr)
                 if alert:
@@ -214,6 +280,19 @@ class SnmpProvider(BaseProvider):
     def stop_consume(self):
         self.consume = False
         if self._socket:
+            # Send a dummy packet to unblock the recvfrom() call.
+            # On Linux, closing a socket from another thread does not
+            # reliably wake a blocking recvfrom.  A tiny UDP packet makes
+            # the consumer loop iterate, see ``self.consume is False``,
+            # and exit.
+            try:
+                addr = self.authentication_config.listen_address or "127.0.0.1"
+                port = self.authentication_config.listen_port
+                wake = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                wake.sendto(b"\x00", (addr, port))
+                wake.close()
+            except Exception:
+                pass
             try:
                 self._socket.close()
             except Exception:

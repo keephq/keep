@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from keep.api.models.alert import AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.snmp_provider.snmp_provider import (
     SnmpProvider,
@@ -261,12 +261,27 @@ class TestSnmpProviderConsumer:
         snmp_provider.stop_consume()
         assert snmp_provider.consume is False
 
-    def test_stop_consume_closes_socket(self, snmp_provider):
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_stop_consume_closes_socket(self, mock_socket_cls, snmp_provider):
         mock_sock = MagicMock()
         snmp_provider.consume = True
         snmp_provider._socket = mock_sock
         snmp_provider.stop_consume()
         mock_sock.close.assert_called_once()
+
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_stop_consume_sends_wakeup(self, mock_socket_cls, snmp_provider):
+        """stop_consume sends a wake-up packet to unblock recvfrom."""
+        mock_sock = MagicMock()
+        wake_sock = MagicMock()
+        mock_socket_cls.return_value = wake_sock
+        snmp_provider.consume = True
+        snmp_provider._socket = mock_sock
+        snmp_provider.stop_consume()
+        wake_sock.sendto.assert_called_once_with(
+            b"\x00", ("127.0.0.1", 11162)
+        )
+        wake_sock.close.assert_called_once()
 
     def test_stop_consume_no_socket(self, snmp_provider):
         """stop_consume is safe when socket is None."""
@@ -371,6 +386,31 @@ class TestSnmpProviderConsumer:
                     snmp_provider.start_consume()
                     mock_push.assert_not_called()
 
+    @patch("keep.providers.snmp_provider.snmp_provider.socket.socket")
+    def test_start_consume_ignores_tiny_packets(self, mock_socket_cls, snmp_provider):
+        """Packets smaller than 2 bytes (e.g. wake-up signals) are silently discarded."""
+        mock_sock = MagicMock()
+        mock_socket_cls.return_value = mock_sock
+
+        call_count = 0
+
+        def recvfrom_side_effect(bufsize):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return (b"\x00", ("127.0.0.1", 12345))
+            snmp_provider.consume = False
+            raise socket.timeout
+
+        mock_sock.recvfrom.side_effect = recvfrom_side_effect
+
+        with patch.object(snmp_provider, "_decode_trap") as mock_decode:
+            with patch.object(snmp_provider, "_push_alert") as mock_push:
+                with patch.object(snmp_provider, "_init_mib_view"):
+                    snmp_provider.start_consume()
+                    mock_decode.assert_not_called()
+                    mock_push.assert_not_called()
+
 
 class TestSnmpProviderTrapDecoding:
     @patch("keep.providers.snmp_provider.snmp_provider.ber_decoder")
@@ -468,3 +508,55 @@ class TestSnmpProviderScopes:
         assert isinstance(scopes["receive_traps"], str)
         assert "Cannot bind" in scopes["receive_traps"]
         mock_sock.close.assert_called_once()
+
+
+class TestSnmpProviderFormatAlert:
+    def test_format_single_alert(self):
+        event = {
+            "name": "linkDown",
+            "description": "GigabitEthernet0/1 down",
+            "message": "GigabitEthernet0/1 down",
+            "status": "firing",
+            "severity": "high",
+            "source": ["snmp"],
+            "service": "10.0.0.1",
+            "labels": {"ifIndex": "2"},
+        }
+        result = SnmpProvider._format_alert(event)
+        assert isinstance(result, AlertDto)
+        assert result.name == "linkDown"
+        assert result.severity == AlertSeverity.HIGH.value
+        assert result.status == AlertStatus.FIRING.value
+        assert result.source == ["snmp"]
+        assert result.service == "10.0.0.1"
+        assert result.labels == {"ifIndex": "2"}
+
+    def test_format_alert_list(self):
+        events = [
+            {"name": "coldStart", "status": "firing", "severity": "warning"},
+            {"name": "linkUp", "status": "firing", "severity": "info"},
+        ]
+        result = SnmpProvider._format_alert(events)
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0].name == "coldStart"
+        assert result[1].name == "linkUp"
+
+    def test_format_alert_defaults(self):
+        result = SnmpProvider._format_alert({})
+        assert isinstance(result, AlertDto)
+        assert result.name == "SNMP Trap"
+        assert result.severity == AlertSeverity.INFO.value
+        assert result.status == AlertStatus.FIRING.value
+        assert result.source == ["snmp"]
+
+    def test_format_alert_enum_passthrough(self):
+        """When severity/status are already enums, pass them through."""
+        event = {
+            "name": "test",
+            "severity": AlertSeverity.CRITICAL,
+            "status": AlertStatus.RESOLVED,
+        }
+        result = SnmpProvider._format_alert(event)
+        assert result.severity == AlertSeverity.CRITICAL.value
+        assert result.status == AlertStatus.RESOLVED.value
