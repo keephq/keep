@@ -1,3 +1,4 @@
+// File: keep/providers/snmp-prov/snmp-prov.test.ts
 import { sendSnmpTraps } from './snmp-prov';
 import { Provider } from '@/shared/api/providers';
 
@@ -14,8 +15,7 @@ describe('snmp-prov', () => {
       };
       const providers: Provider[] = [provider];
 
-      await sendSnmpTraps(providers);
-      expect(true).toBe(true); // This test should pass
+      await expect(sendSnmpTraps(providers)).resolves.not.toThrow();
     });
   });
 });
