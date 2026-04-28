@@ -1,25 +1,15 @@
-import { Provider } from "@/shared/api/providers";
+import { Provider } from '@/shared/api/providers';
 
-/**
- * Determines whether a provider is properly installed and available for use.
- * 
- * A provider is considered installed if:
- * 1. It has the 'installed' flag set to true, OR
- * 2. There are NO other providers of the same type with a non-empty config
- * 
- * @param provider The provider to check
- * @param providers Array of all available providers
- * @returns boolean indicating if the provider is installed
- */
-export function isProviderInstalled(
-  provider: Pick<Provider, "type" | "installed">,
-  providers: Provider[]
-) {
-  return (
-    provider.installed ||
-    !Object.values(providers || {}).some(
-      (p) =>
-        p.type === provider.type && p.config && Object.keys(p.config).length > 0
-    )
-  );
+export function isProviderInstalled(provider: Provider, providers: Provider[]): boolean {
+    return providers.includes(provider);
+}
+
+export function sendSNMPTrap(trap: { oid: string, value: string }, providers: Provider[]): void {
+    const snmpProvider = providers.find(p => p.type === 'snmp');
+    if (snmpProvider && snmpProvider.installed) {
+        const snmp = require('snmp');
+        snmp.send_trap(trap.oid, trap.value);
+    } else {
+        throw new Error("SNMP provider is not installed or configured");
+    }
 }
