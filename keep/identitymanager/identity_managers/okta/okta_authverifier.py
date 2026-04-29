@@ -10,7 +10,7 @@ from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_schem
 logger = logging.getLogger(__name__)
 
 # Define constant locally instead of importing it
-DEFAULT_ROLE_NAME = "user"  # Default role name for user access
+DEFAULT_ROLE_NAME = "noc"  # Default role name for user access
 
 class OktaAuthVerifier(AuthVerifierBase):
     """Handles authentication and authorization for Okta"""
