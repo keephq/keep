@@ -5939,6 +5939,53 @@ def create_single_tenant_for_e2e(tenant_id: str) -> None:
             logger.exception("Failed to create single tenant")
             pass
 
+def upsert_maintenance_window_from_provider(
+    tenant_id: str,
+    name: str,
+    cel_query: str,
+    start_time: datetime,
+    end_time: datetime,
+    provider_type: str,
+    session: Optional[Session] = None,
+) -> MaintenanceWindowRule:
+    """Create or update a maintenance window rule from a provider.
+
+    Uses name + created_by as the dedup key.
+    """
+    with existed_or_new_session(session) as session:
+        created_by = f"{provider_type}_provider"
+        existing = session.query(MaintenanceWindowRule).filter(
+            MaintenanceWindowRule.tenant_id == tenant_id,
+            MaintenanceWindowRule.name == name,
+            MaintenanceWindowRule.created_by == created_by,
+        ).first()
+
+        if existing:
+            existing.cel_query = cel_query
+            existing.start_time = start_time
+            existing.end_time = end_time
+            existing.duration_seconds = int((end_time - start_time).total_seconds())
+            session.commit()
+            session.refresh(existing)
+            return existing
+
+        rule = MaintenanceWindowRule(
+            name=name,
+            tenant_id=tenant_id,
+            cel_query=cel_query,
+            start_time=start_time,
+            end_time=end_time,
+            duration_seconds=int((end_time - start_time).total_seconds()),
+            suppress=True,
+            enabled=True,
+            created_by=created_by,
+        )
+        session.add(rule)
+        session.commit()
+        session.refresh(rule)
+        return rule
+
+
 def get_maintenance_windows_started(session: Optional[Session] = None) -> List[MaintenanceWindowRule]:
     """
     It will return all windows started, i.e start_time < currentTime

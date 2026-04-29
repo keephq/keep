@@ -21,6 +21,7 @@ from keep.api.core.db import (
     get_session,
     update_preset_options,
     update_provider_last_pull_time,
+    upsert_maintenance_window_from_provider,
 )
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import (
@@ -37,7 +38,7 @@ from keep.api.tasks.process_incident_task import process_incident
 from keep.api.tasks.process_topology_task import process_topology
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider, BaseMaintenanceWindowProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -170,6 +171,30 @@ def pull_data_from_providers(
                     f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
                     extra={**extra, "exception": str(e)},
                 )
+
+            if isinstance(provider_class, BaseMaintenanceWindowProvider):
+                try:
+                    windows = provider_class.get_maintenance_windows()
+                    for window in windows:
+                        window.tenant_id = tenant_id
+                        upsert_maintenance_window_from_provider(
+                            tenant_id=tenant_id,
+                            name=window.name,
+                            cel_query=window.cel_query,
+                            start_time=window.start_time,
+                            end_time=window.end_time,
+                            provider_type=provider.type,
+                        )
+                except NotImplementedError:
+                    logger.debug(
+                        f"Provider {provider.type} ({provider.id}) does not implement pulling maintenance windows",
+                        extra=extra,
+                    )
+                except Exception:
+                    logger.exception(
+                        f"Unknown error pulling maintenance windows from provider {provider.type} ({provider.id})",
+                        extra={**extra, "trace_id": trace_id},
+                    )
 
             for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
                 process_event(

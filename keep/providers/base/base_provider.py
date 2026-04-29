@@ -74,7 +74,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
         Literal[
-            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
+            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident", "maintenance"
         ]
     ] = []
     WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
@@ -939,6 +939,14 @@ class BaseIncidentProvider(BaseProvider):
             NotImplementedError: _description_
         """
         raise NotImplementedError("setup_webhook() method not implemented")
+
+
+class BaseMaintenanceWindowProvider(BaseProvider):
+    def _get_maintenance_windows(self) -> list:
+        raise NotImplementedError("_get_maintenance_windows() not implemented")
+
+    def get_maintenance_windows(self) -> list:
+        return self._get_maintenance_windows()
 
 
 class ProviderHealthMixin:

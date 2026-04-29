@@ -1,0 +1,28 @@
+{
+  "result": [
+    {
+      "sys_id": "abc123def456",
+      "cmdb_ci": {"display_value": "Production Server", "value": "ci001"},
+      "begin_date": "2025-03-20 02:00:00",
+      "end_date": "2025-03-20 06:00:00",
+      "type": "planned",
+      "description": "Scheduled maintenance for Production Server"
+    },
+    {
+      "sys_id": "def789ghi012",
+      "cmdb_ci": {"display_value": "DB Cluster", "value": "ci002"},
+      "begin_date": "2025-04-01 00:00:00",
+      "end_date": "2025-04-01 02:00:00",
+      "type": "unplanned",
+      "description": "Emergency DB maintenance"
+    },
+    {
+      "sys_id": "jkl345mno678",
+      "cmdb_ci": "Web Server",
+      "begin_date": "2025-05-10 08:00:00",
+      "end_date": "2025-05-10 10:00:00",
+      "type": "planned",
+      "description": "Web server upgrade"
+    }
+  ]
+}

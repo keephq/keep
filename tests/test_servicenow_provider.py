@@ -321,6 +321,7 @@ class TestProviderConfig:
         assert "Get Incidents" in method_names
         assert "Get Incident Activities" in method_names
         assert "Add Incident Activity" in method_names
+        assert "Get Maintenance Windows" in method_names
 
     def test_status_mapping_coverage(self):
         """Test that all common ServiceNow states are mapped."""
@@ -332,3 +333,185 @@ class TestProviderConfig:
         """Test that all ServiceNow impact levels are mapped."""
         for impact in ["1", "2", "3"]:
             assert impact in ServicenowProvider.INCIDENT_SEVERITY_MAP
+
+
+class TestFormatMaintenanceWindow:
+    """Tests for _format_maintenance_window method."""
+
+    def test_format_maintenance_window_basic(self, servicenow_provider):
+        """Test basic cmdb_ci_outage record formatting."""
+        record = {
+            "sys_id": "abc123def456",
+            "cmdb_ci": {"display_value": "Production Server", "value": "ci001"},
+            "begin_date": "2025-03-20 02:00:00",
+            "end_date": "2025-03-20 06:00:00",
+            "type": "planned",
+            "description": "Scheduled maintenance for Production Server",
+        }
+
+        result = servicenow_provider._format_maintenance_window(record)
+
+        assert result is not None
+        assert result.name == "SN-MW-abc123de"
+        assert result.cel_query == 'service == "Production Server"'
+        assert result.suppress is True
+        assert result.enabled is True
+        assert result.created_by == "servicenow_provider"
+        assert result.description == "Scheduled maintenance for Production Server"
+        assert result.duration_seconds == 4 * 3600  # 4 hours
+
+    def test_format_maintenance_window_missing_dates(self, servicenow_provider):
+        """Test that missing begin_date/end_date returns None."""
+        record_no_begin = {
+            "sys_id": "abc123",
+            "end_date": "2025-03-20 06:00:00",
+            "cmdb_ci": "Server",
+        }
+        assert servicenow_provider._format_maintenance_window(record_no_begin) is None
+
+        record_no_end = {
+            "sys_id": "abc123",
+            "begin_date": "2025-03-20 02:00:00",
+            "cmdb_ci": "Server",
+        }
+        assert servicenow_provider._format_maintenance_window(record_no_end) is None
+
+    def test_format_maintenance_window_ci_reference(self, servicenow_provider):
+        """Test cmdb_ci as a reference object extracts display_value."""
+        record = {
+            "sys_id": "ref123456789",
+            "cmdb_ci": {"display_value": "DB Cluster", "value": "ci002"},
+            "begin_date": "2025-04-01 00:00:00",
+            "end_date": "2025-04-01 02:00:00",
+        }
+
+        result = servicenow_provider._format_maintenance_window(record)
+        assert result is not None
+        assert 'service == "DB Cluster"' == result.cel_query
+
+    def test_format_maintenance_window_ci_string(self, servicenow_provider):
+        """Test cmdb_ci as a plain string."""
+        record = {
+            "sys_id": "str123456789",
+            "cmdb_ci": "Web Server",
+            "begin_date": "2025-05-10 08:00:00",
+            "end_date": "2025-05-10 10:00:00",
+        }
+
+        result = servicenow_provider._format_maintenance_window(record)
+        assert result is not None
+        assert 'service == "Web Server"' == result.cel_query
+
+    def test_format_maintenance_window_cel_template(self, servicenow_provider):
+        """Test custom CEL template."""
+        servicenow_provider.authentication_config.maintenance_window_cel_template = (
+            'source == "{ci}"'
+        )
+        record = {
+            "sys_id": "tmpl12345678",
+            "cmdb_ci": "API Gateway",
+            "begin_date": "2025-06-01 12:00:00",
+            "end_date": "2025-06-01 14:00:00",
+        }
+
+        result = servicenow_provider._format_maintenance_window(record)
+        assert result is not None
+        assert result.cel_query == 'source == "API Gateway"'
+
+    def test_format_maintenance_window_fallback_description(self, servicenow_provider):
+        """Test fallback description when record has none."""
+        record = {
+            "sys_id": "nodesc123456",
+            "cmdb_ci": "Cache Server",
+            "begin_date": "2025-07-01 00:00:00",
+            "end_date": "2025-07-01 01:00:00",
+        }
+
+        result = servicenow_provider._format_maintenance_window(record)
+        assert result is not None
+        assert result.description == "ServiceNow maintenance: Cache Server"
+
+
+class TestGetMaintenanceWindows:
+    """Tests for _get_maintenance_windows method."""
+
+    def test_get_maintenance_windows_success(self, servicenow_provider):
+        """Test successful maintenance window pulling."""
+        mock_records = [
+            {
+                "sys_id": "abc123def456",
+                "cmdb_ci": {"display_value": "Production Server", "value": "ci001"},
+                "begin_date": "2025-03-20 02:00:00",
+                "end_date": "2025-03-20 06:00:00",
+                "description": "Scheduled maintenance",
+            },
+        ]
+
+        with patch.object(
+            servicenow_provider, "_query", return_value=mock_records
+        ):
+            windows = servicenow_provider._get_maintenance_windows()
+
+        assert len(windows) == 1
+        assert windows[0].name == "SN-MW-abc123de"
+
+    def test_get_maintenance_windows_empty(self, servicenow_provider):
+        """Test pulling when no maintenance windows exist."""
+        with patch.object(servicenow_provider, "_query", return_value=[]):
+            windows = servicenow_provider._get_maintenance_windows()
+
+        assert windows == []
+
+    def test_get_maintenance_windows_pagination(self, servicenow_provider):
+        """Test pagination: two pages of results."""
+        page1 = [
+            {
+                "sys_id": f"page1{i:012d}",
+                "cmdb_ci": f"Server {i}",
+                "begin_date": "2025-01-01 00:00:00",
+                "end_date": "2025-01-01 01:00:00",
+            }
+            for i in range(100)
+        ]
+        page2 = [
+            {
+                "sys_id": f"page2{i:012d}",
+                "cmdb_ci": f"Server {100 + i}",
+                "begin_date": "2025-01-01 00:00:00",
+                "end_date": "2025-01-01 01:00:00",
+            }
+            for i in range(50)
+        ]
+
+        with patch.object(
+            servicenow_provider,
+            "_query",
+            side_effect=[page1, page2],
+        ):
+            windows = servicenow_provider._get_maintenance_windows()
+
+        assert len(windows) == 150
+
+    def test_get_maintenance_windows_skips_invalid(self, servicenow_provider):
+        """Test that records with missing dates are skipped."""
+        mock_records = [
+            {
+                "sys_id": "valid12345678",
+                "cmdb_ci": "Good Server",
+                "begin_date": "2025-03-20 02:00:00",
+                "end_date": "2025-03-20 06:00:00",
+            },
+            {
+                "sys_id": "invalid1234567",
+                "cmdb_ci": "Bad Server",
+                # missing dates
+            },
+        ]
+
+        with patch.object(
+            servicenow_provider, "_query", return_value=mock_records
+        ):
+            windows = servicenow_provider._get_maintenance_windows()
+
+        assert len(windows) == 1
+        assert windows[0].name == "SN-MW-valid123"
