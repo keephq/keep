@@ -1,0 +1,208 @@
+---
+title: "SNMP"
+sidebarTitle: "SNMP Provider"
+description: "SNMP Trap Receiver Provider allows Keep to receive and process SNMP traps from network devices and convert them to alerts."
+---
+
+## Overview
+
+The SNMP (Simple Network Management Protocol) Provider enables Keep to act as an SNMP trap receiver. It listens for SNMP traps (v1, v2c, and v3) from network devices like routers, switches, servers, and other SNMP-enabled equipment, and converts them into Keep alerts.
+
+## Features
+
+- **SNMP v1/v2c/v3 Support**: Receive traps from devices using any SNMP version
+- **SNMPv3 Security**: Full support for authentication (MD5, SHA family) and privacy (DES, 3DES, AES family) protocols
+- **Automatic Alert Conversion**: SNMP traps are automatically converted to Keep alerts with appropriate severity levels
+- **Standard Trap Recognition**: Built-in recognition of standard traps (coldStart, warmStart, linkDown, linkUp, etc.)
+- **Enterprise Trap Support**: Handle vendor-specific enterprise traps
+- **Source Tracking**: Track which device sent each trap
+
+## Authentication Parameters
+
+The SNMP provider supports the following configuration options:
+
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `listen_port` | UDP port to listen for SNMP traps | Yes | 162 |
+| `listen_address` | IP address to bind the trap receiver | No | 0.0.0.0 |
+| `community_string` | SNMP community string (v1/v2c) | No | public |
+| `snmp_version` | SNMP version to accept (1, 2c, 3) | No | 2c |
+
+### SNMPv3 Parameters
+
+For SNMPv3 authentication and encryption:
+
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `snmpv3_user` | SNMPv3 username | For v3 |
+| `snmpv3_auth_protocol` | Authentication protocol (MD5, SHA, SHA224, SHA256, SHA384, SHA512) | No |
+| `snmpv3_auth_password` | Authentication password | No |
+| `snmpv3_priv_protocol` | Privacy protocol (DES, 3DES, AES128, AES192, AES256) | No |
+| `snmpv3_priv_password` | Privacy password | No |
+
+## Connecting with the Provider
+
+### Using Port 1162 (Non-Root)
+
+For testing or when running without root privileges:
+
+```yaml
+providers:
+  - name: snmp-receiver
+    type: snmp
+    authentication:
+      listen_port: 1162
+      listen_address: "0.0.0.0"
+      community_string: "public"
+      snmp_version: "2c"
+```
+
+### Using Standard Port 162 (Requires Root)
+
+For production deployments using the standard SNMP trap port:
+
+```yaml
+providers:
+  - name: snmp-receiver
+    type: snmp
+    authentication:
+      listen_port: 162
+      listen_address: "0.0.0.0"
+      community_string: "your_community_string"
+      snmp_version: "2c"
+```
+
+### SNMPv3 Configuration
+
+For secure SNMPv3 trap reception:
+
+```yaml
+providers:
+  - name: snmp-v3-receiver
+    type: snmp
+    authentication:
+      listen_port: 162
+      snmp_version: "3"
+      snmpv3_user: "keepuser"
+      snmpv3_auth_protocol: "SHA256"
+      snmpv3_auth_password: "authpassword123"
+      snmpv3_priv_protocol: "AES256"
+      snmpv3_priv_password: "privpassword123"
+```
+
+## Webhook Integration
+
+You can also send SNMP trap data to Keep via the webhook endpoint. Configure your SNMP trap handler to forward traps to Keep:
+
+```bash
+curl -X POST https://your-keep-instance/alerts/event/snmp \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: your-api-key" \
+  -d '{
+    "trap_oid": "1.3.6.1.6.3.1.1.5.3",
+    "source_ip": "192.168.1.1",
+    "message": "Interface eth0 is down",
+    "var_binds": {
+      "ifIndex": "1",
+      "ifDescr": "eth0",
+      "ifOperStatus": "down"
+    }
+  }'
+```
+
+## Standard Trap Types
+
+The provider recognizes these standard SNMP traps:
+
+| Trap | OID | Default Severity |
+|------|-----|-----------------|
+| coldStart | 1.3.6.1.6.3.1.1.5.1 | Warning |
+| warmStart | 1.3.6.1.6.3.1.1.5.2 | Info |
+| linkDown | 1.3.6.1.6.3.1.1.5.3 | High |
+| linkUp | 1.3.6.1.6.3.1.1.5.4 | Info |
+| authenticationFailure | 1.3.6.1.6.3.1.1.5.5 | Warning |
+| egpNeighborLoss | 1.3.6.1.6.3.1.1.5.6 | High |
+
+## Alert Format
+
+SNMP traps are converted to alerts with the following mapping:
+
+- **Name**: Derived from trap OID or standard trap name
+- **Severity**: Based on trap type and content analysis
+- **Source**: Always "snmp"
+- **Service**: Set to the source IP address of the trap sender
+- **Labels**: Contains trap OID, source IP, and all variable bindings
+- **Fingerprint**: Generated from trap OID and source IP for deduplication
+
+## Example Alerts
+
+### Link Down Alert
+
+```json
+{
+  "name": "linkDown",
+  "severity": "high",
+  "source": ["snmp"],
+  "message": "SNMP trap from 192.168.1.1: linkDown",
+  "description": "ifIndex: 1\nifDescr: eth0\nifOperStatus: down",
+  "labels": {
+    "source_ip": "192.168.1.1",
+    "trap_oid": "1.3.6.1.6.3.1.1.5.3",
+    "ifIndex": "1",
+    "ifDescr": "eth0",
+    "ifOperStatus": "down"
+  }
+}
+```
+
+## Testing
+
+### Sending Test Traps
+
+Use `snmptrap` command to test your configuration:
+
+```bash
+# SNMPv2c linkDown trap
+snmptrap -v 2c -c public localhost:1162 '' 1.3.6.1.6.3.1.1.5.3 \
+  1.3.6.1.2.1.2.2.1.1 i 1 \
+  1.3.6.1.2.1.2.2.1.2 s "eth0" \
+  1.3.6.1.2.1.2.2.1.8 i 2
+
+# SNMPv2c coldStart trap
+snmptrap -v 2c -c public localhost:1162 '' 1.3.6.1.6.3.1.1.5.1
+```
+
+## Troubleshooting
+
+### Port Binding Issues
+
+If you see "Permission denied" errors when using port 162:
+
+1. Use a non-privileged port (e.g., 1162)
+2. Run Keep with elevated privileges
+3. Use `setcap` to allow binding to privileged ports:
+   ```bash
+   sudo setcap 'cap_net_bind_service=+ep' /path/to/python
+   ```
+
+### No Traps Received
+
+1. Verify the SNMP trap is being sent to the correct IP and port
+2. Check firewall rules allow UDP traffic on the configured port
+3. Verify the community string matches (for v1/v2c)
+4. Check SNMPv3 credentials if using v3
+
+### Dependencies
+
+The SNMP provider requires the `pysnmp-lextudio` package:
+
+```bash
+pip install pysnmp-lextudio
+```
+
+## Notes
+
+- The SNMP provider runs as a consumer, listening continuously for traps
+- Each trap is processed immediately and pushed as an alert
+- Duplicate detection is based on trap OID and source IP combination
+- The provider supports IPv4 only (IPv6 support planned)
