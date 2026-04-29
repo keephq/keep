@@ -343,16 +343,22 @@ class Parser:
                 provider_name = (
                     env.replace("KEEP_PROVIDER_", "").replace("_", "-").lower()
                 )
+                env_value = os.environ.get(env)
+                if not env_value or not env_value.strip():
+                    self.logger.warning(
+                        f"Environment variable {env} is empty or undefined, skipping"
+                    )
+                    continue
                 try:
                     self.logger.debug(f"Parsing provider {provider_name} from {env}")
                     # {'authentication': {'webhook_url': 'https://hooks.slack.com/services/...'}}
-                    provider_config = json.loads(os.environ.get(env))
+                    provider_config = json.loads(env_value)
                     self._inject_env_variables(provider_config)
                     context_manager.providers_context[provider_name] = provider_config
                     self.logger.debug(
                         f"Provider {provider_name} parsed successfully from {env}"
                     )
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, TypeError):
                     self.logger.error(
                         f"Error parsing provider config from environment variable {env}"
                     )
