@@ -52,6 +52,8 @@ actions:
         priority: {value}  # Priority reference ID for incidents
         status: {value}  # Status for incident updates (resolved/acknowledged)
         resolution: {value}  # Resolution note for resolved incidents
+        client: {value}  # Name of the monitoring client triggering this event (Events API v2 only)
+        client_url: {value}  # URL of the monitoring client triggering this event (Events API v2 only)
         body: {value}  # Body of the incident as per https://developer.pagerduty.com/api-reference/a7d81b0e9200f-create-an-incident#request-body
         kwargs: {value}  # Additional event/incident fields
 ```

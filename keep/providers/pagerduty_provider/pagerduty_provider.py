@@ -364,6 +364,8 @@ class PagerdutyProvider(
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
         source: str | None = None,
+        client: str | None = None,
+        client_url: str | None = None,
         **kwargs,
     ) -> typing.Dict[str, typing.Any]:
         """
@@ -437,6 +439,12 @@ class PagerdutyProvider(
         if kwargs.get("class"):
             payload["payload"]["class"] = kwargs.get("class")
 
+        if client:
+            payload["client"] = client
+
+        if client_url:
+            payload["client_url"] = client_url
+
         if kwargs.get("images"):
             images = kwargs.get("images", [])
             if isinstance(images, str):
@@ -458,6 +466,8 @@ class PagerdutyProvider(
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
         source: str | None = None,
+        client: str | None = None,
+        client_url: str | None = None,
         **kwargs,
     ):
         """
@@ -468,11 +478,14 @@ class PagerdutyProvider(
             alert_body: UTF-8 string of custom message for alert. Shown in incident body
             dedup: Any string, max 255, characters used to deduplicate alerts
             event_type: The type of event to send to PagerDuty
+            client: Name of the monitoring client triggering this event
+            client_url: URL of the monitoring client triggering this event
         """
         url = "https://events.pagerduty.com/v2/enqueue"
 
         payload = self._build_alert(
-            title, routing_key, dedup, severity, event_type, source, **kwargs
+            title, routing_key, dedup, severity, event_type, source,
+            client=client, client_url=client_url, **kwargs
         )
         result = requests.post(url, json=payload)
         result.raise_for_status()
@@ -708,6 +721,8 @@ class PagerdutyProvider(
         priority: str = "",
         status: typing.Literal["resolved", "acknowledged"] = "",
         resolution: str = "",
+        client: str = "",
+        client_url: str = "",
         **kwargs: dict,
     ):
         """
@@ -729,6 +744,8 @@ class PagerdutyProvider(
             source (str): Source field for events API
             status (str): Status for incident updates (resolved/acknowledged)
             resolution (str): Resolution note for resolved incidents
+            client (str): Name of the monitoring client triggering this event (Events API v2 only)
+            client_url (str): URL of the monitoring client triggering this event (Events API v2 only)
             kwargs (dict): Additional event/incident fields
         """
         if not routing_key: # If routing_key not specified in workflow, fallback to config routing_key
@@ -741,6 +758,8 @@ class PagerdutyProvider(
                 routing_key=routing_key,
                 source=source,
                 severity=severity,
+                client=client or None,
+                client_url=client_url or None,
                 **kwargs,
             )
         else:
