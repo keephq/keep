@@ -1,0 +1,16 @@
+@pydantic.dataclasses.dataclass
+class SNMPProviderAuthConfig:
+    listen_host: str = dataclasses.field(
+        default="0.0.0.0",
+        metadata={"required": False, "description": "SNMP listen address"},
+    )
+    
+    listen_port: int = dataclasses.field(
+        default=162,
+        metadata={"required": False, "description": "SNMP trap port"},
+    )
+
+    community: str = dataclasses.field(
+        default="public",
+        metadata={"required": False, "description": "SNMP community string"},
+    )
