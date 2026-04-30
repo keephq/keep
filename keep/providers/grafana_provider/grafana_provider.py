@@ -1575,6 +1575,106 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 value_index += 1
         return client_server_data
 
+    # ------------------------------------------------------------------
+    # Query interface — run ad-hoc datasource queries from workflows
+    # ------------------------------------------------------------------
+
+    def _query(
+        self,
+        expr: str = "",
+        datasource_uid: str = "",
+        query_type: str = "range",
+        from_time: str = "now-1h",
+        to_time: str = "now",
+        step: str = "60s",
+        limit: int = 1000,
+        **kwargs,
+    ) -> dict:
+        """
+        Execute an ad-hoc query against a Grafana-managed datasource
+        (Prometheus, Loki, Mimir, etc.) using the unified ``/api/ds/query``
+        endpoint.
+
+        Args:
+            expr: The query expression (PromQL, LogQL, etc.).
+            datasource_uid: UID of the datasource to query. Falls back to
+                ``datasource_uid`` from the provider config.
+            query_type: ``"range"`` (default) or ``"instant"``.
+            from_time: Start time for range queries (Grafana-style, e.g.
+                ``"now-1h"``, ``"2024-01-01T00:00:00Z"``, or Unix ms).
+            to_time: End time (same format as ``from_time``).
+            step: Step interval for range queries (e.g. ``"60s"``).
+            limit: Maximum number of log lines to return for Loki queries.
+
+        Returns:
+            The raw ``results`` dict from the Grafana ``/api/ds/query``
+            response, keyed by ``refId``.
+        """
+        if not expr:
+            raise ProviderException(
+                "GrafanaProvider._query: 'expr' is required"
+            )
+
+        uid = datasource_uid or self.authentication_config.datasource_uid
+        if not uid:
+            raise ProviderException(
+                "GrafanaProvider._query: 'datasource_uid' is required — "
+                "either pass it as a parameter or set it in the provider config"
+            )
+
+        headers = {
+            "Authorization": f"Bearer {self.authentication_config.token}",
+            "Content-Type": "application/json",
+        }
+
+        is_instant = query_type.lower() == "instant"
+        query_obj: dict = {
+            "refId": "A",
+            "expr": expr,
+            "datasource": {"uid": uid},
+            "instant": is_instant,
+            "range": not is_instant,
+        }
+        if not is_instant:
+            query_obj["step"] = step
+        # Loki-specific limit
+        query_obj["maxLines"] = limit
+
+        payload = {
+            "queries": [query_obj],
+            "from": from_time,
+            "to": to_time,
+        }
+
+        self.logger.info(
+            "GrafanaProvider: executing datasource query",
+            extra={"datasource_uid": uid, "expr": expr, "query_type": query_type},
+        )
+
+        response = requests.post(
+            f"{self.authentication_config.host}/api/ds/query",
+            headers=headers,
+            json=payload,
+            timeout=30,
+            verify=False,
+        )
+
+        if response.status_code != 200:
+            raise ProviderException(
+                f"GrafanaProvider._query: request failed with "
+                f"HTTP {response.status_code} — {response.text[:500]}"
+            )
+
+        result = response.json()
+        return {
+            "results": result.get("results", {}),
+            "datasource_uid": uid,
+            "expr": expr,
+            "query_type": query_type,
+            "from": from_time,
+            "to": to_time,
+        }
+
     def pull_topology(self):
         self.logger.info("Pulling Topology data from Grafana...")
         if not self.authentication_config.datasource_uid:
