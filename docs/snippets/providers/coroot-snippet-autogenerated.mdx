@@ -1,0 +1,33 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Get alerts from Coroot
+      provider: coroot
+      config: "{{ provider.my_coroot_provider }}"
+```
+
+
+
+
+
+
+## Authentication Parameters
+
+The `api_key` is optional. If your Coroot instance has authentication enabled, you need to provide it.
+
+
+## Provider Configuration
+
+- `url` (required): Coroot server URL, e.g., `https://coroot.example.com`
+- `api_key` (optional): Coroot API key if authentication is enabled
+- `project_id` (optional): Coroot project ID (leave empty for default project)
+- `verify` (optional): Verify SSL certificates (default: `true`, set to `false` to allow self-signed certificates)
