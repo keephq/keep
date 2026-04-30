@@ -63,6 +63,41 @@ Keep is highly configurable through environment variables. This allows you to cu
 |     **DB_SERVICE_ACCOUNT**     |    Service account for database impersonation     |    No    |               None                |    Valid service account email     |
 |         **DB_IP_TYPE**         |          Specifies the Cloud SQL IP type          |    No    |             "public"              |    "public", "private" or "psc"    |
 |      **SKIP_DB_CREATION**      |      Skips database creation and migrations       |    No    |              "false"              |         "true" or "false"          |
+|      **POSTGRES_SCHEMA**       |     PostgreSQL schema name for database objects    |    No    |               None                |      Valid schema name (e.g., "keep_prod")         |
+
+#### PostgreSQL Schema Configuration
+
+<Note>
+  Keep supports organizing database objects within a specific PostgreSQL schema, which is useful for multi-tenant deployments or when sharing a database with other applications.
+</Note>
+
+When using PostgreSQL, you can configure Keep to use a specific schema instead of the default 'public' schema:
+
+**Environment Variable Method:**
+```bash
+export POSTGRES_SCHEMA=keep_prod
+export DATABASE_CONNECTION_STRING="postgresql+psycopg2://username:password@host:port/database"
+```
+
+The schema will be automatically set in the connection's search_path, allowing all Keep tables to be created and accessed within the specified schema.
+
+**Prerequisites:**
+1. Create the schema in your PostgreSQL database:
+   ```sql
+   CREATE SCHEMA IF NOT EXISTS keep_prod;
+   ```
+
+2. Grant necessary permissions to the Keep database user:
+   ```sql
+   GRANT USAGE, CREATE ON SCHEMA keep_prod TO keep_user;
+   -- After tables are created, you may also need:
+   GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA keep_prod TO keep_user;
+   GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA keep_prod TO keep_user;
+   ```
+
+<Info>
+  When `POSTGRES_SCHEMA` is set, Keep will automatically configure the PostgreSQL search_path to use your schema with 'public' as a fallback for system extensions. All migrations and database operations will use the configured schema.
+</Info>
 
 ### Resource Provisioning
 
