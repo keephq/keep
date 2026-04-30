@@ -1,0 +1,43 @@
+workflow:
+  id: feishu-servicedesk-advanced
+  name: Feishu Service Desk Advanced Configuration
+  description: Example with custom fields, categories, and manual description override
+  disabled: false
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-advanced-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Urgent Alert: {{ alert.name }}"
+          user_email: "user@example.com"
+          agent_email: "agent@example.com"
+          priority: 4
+          tags: ["production", "database", "critical"]
+          category_id: "category_123"
+          description: |
+            Custom description for this alert.
+            
+            Additional context:
+            - Environment: {{ alert.environment }}
+            - Service: {{ alert.service }}
+            - Source: {{ alert.source }}
+          auto_enrich: false
+          customized_fields:
+            - id: "field_12345"
+              value: "high"
+            - id: "field_67890"
+              value: "{{ alert.service }}"
+      enrich_alert:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+

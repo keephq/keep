@@ -1,0 +1,27 @@
+workflow:
+  id: feishu-servicedesk-simple
+  name: Create Feishu Service Desk Ticket (Simple)
+  description: Minimal configuration example - creates a ticket with auto-enrichment enabled
+  disabled: false
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-feishu-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ alert.name }}"
+          user_email: "{{ alert.assignee }}"
+          agent_email: "oncall@example.com"
+      enrich_alert:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+

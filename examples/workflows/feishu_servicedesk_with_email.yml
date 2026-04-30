@@ -1,0 +1,29 @@
+workflow:
+  id: feishu-servicedesk-with-email
+  name: Create Feishu Ticket with Email Conversion
+  description: Example using email addresses that are automatically converted to Feishu User IDs
+  disabled: false
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-ticket-with-email
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Critical Alert: {{ alert.name }}"
+          user_email: "reporter@example.com"
+          agent_email: "handler@example.com"
+          priority: 4
+          tags: ["{{ alert.environment }}", "{{ alert.service }}"]
+      enrich_alert:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+

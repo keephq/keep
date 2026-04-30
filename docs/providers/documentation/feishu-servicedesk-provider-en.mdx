@@ -1,0 +1,340 @@
+---
+title: "Feishu Service Desk"
+sidebarTitle: "Feishu Service Desk"
+description: "How to configure and use the Feishu Service Desk provider in Keep."
+---
+
+## Overview
+
+The Feishu Service Desk provider lets a workflow create, update, and enrich Feishu Service Desk tickets directly from alerts or incidents in Keep. This guide focuses on the exact steps required to configure the integration and use it inside workflows.
+
+## Prerequisites
+
+1. **Create a Feishu app**
+   - Visit the [Feishu Open Platform](https://open.feishu.cn/app).
+   - Click **Create Enterprise Self-built App** and fill in the basic information.
+   - On the **Credentials & Basic Info** page record the **App ID** and **App Secret**.
+2. **Configure app permissions**
+   - Open the app management page, select **Permission Management**, and add the following scopes.
+   - Required: `helpdesk:ticket`, `helpdesk:ticket:create`, `helpdesk:ticket:update`, `helpdesk:agent`.
+   - Recommended: `contact:user.base:readonly` (needed for email to user-id conversion).
+   - Publish the app version and add it to your enterprise.
+3. **Collect service desk credentials**
+   - In the Feishu admin console open **Service Desk > Settings > API Settings**.
+   - Record the **Helpdesk ID** and **Helpdesk Token**.
+
+## Configuration Parameters
+
+### Required parameters
+
+<ParamField path="app_id" type="string" required>
+  Feishu App ID from the Open Platform credentials page.
+</ParamField>
+
+<ParamField path="app_secret" type="string" required>
+  Feishu App Secret from the Open Platform credentials page.
+</ParamField>
+
+<ParamField path="helpdesk_token" type="string" required>
+  Service Desk token from the Feishu Service Desk API settings page.
+</ParamField>
+
+### Optional parameters
+
+<ParamField path="host" type="string" default="https://open.feishu.cn">
+  Feishu API host. Use `https://open.larksuite.com` for the international (Lark) deployment.
+</ParamField>
+
+<ParamField path="helpdesk_id" type="string">
+  Service Desk ID. When omitted the default service desk is used.
+</ParamField>
+
+<ParamField path="default_open_id" type="string">
+  Default reporter open_id that is used when the workflow does not supply `user_email` or `open_id`.
+</ParamField>
+
+## Workflow Usage
+
+### Minimal workflow
+
+Create tickets with three parameters; enrichment and rich-card messaging run automatically.
+
+```yaml
+workflow:
+  id: create-feishu-ticket-simple
+  description: Minimal configuration
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ alert.name }}"
+          user_email: "{{ alert.assignee }}"
+          agent_email: "oncall@example.com"
+```
+
+### Advanced options
+
+```yaml
+workflow:
+  id: create-feishu-ticket-advanced
+  description: Advanced configuration
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Urgent Alert: {{ alert.name }}"
+          user_email: "user@example.com"
+          agent_email: "agent@example.com"
+          priority: 4
+          tags: ["production", "database"]
+          category_id: "category_123"
+          description: "Custom description"
+          auto_enrich: false
+          customized_fields:
+            - id: "field_12345"
+              value: "Affects all users"
+```
+
+### Creating tickets from incidents
+
+```yaml
+workflow:
+  id: create-feishu-ticket-from-incident
+  description: Create ticket from incident context
+  triggers:
+    - type: incident
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ incident.user_generated_name }}"
+          user_email: "{{ incident.assignee }}"
+          agent_email: "sre-team@example.com"
+```
+
+### Updating an existing ticket
+
+```yaml
+workflow:
+  id: update-feishu-ticket-on-resolve
+  description: Update ticket when alert resolves
+  triggers:
+    - type: alert
+      filters:
+        - key: status
+          value: resolved
+  actions:
+    - name: complete-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          ticket_id: "{{ alert.ticket_id }}"
+          status: 50
+          add_comment: "Alert automatically resolved"
+```
+
+### Email-based assignment
+
+```yaml
+with:
+  title: "{{ alert.name }}"
+  user_email: "reporter@example.com"
+  agent_email: "handler@example.com"
+```
+
+Using email addresses avoids hard-coding open_id values and works with workflow variables.
+
+## Auto-Enrichment Details
+
+When `auto_enrich` is kept at its default value (`true`), the provider builds the ticket description with:
+
+- Title, severity, status, and timing data (last received, first triggered, trigger count).
+- Source, environment, and service metadata.
+- Links to the Keep alert or incident page and to the original monitoring system when available.
+- Associated incident information and assignee details when present.
+- A follow-up rich text message card containing the same structured information.
+
+Disable enrichment by setting `auto_enrich: false` and providing your own `description`.
+
+## Ticket Status Values
+
+| Status Code | Status Name | Description |
+|-------------|-------------|-------------|
+| 1           | Pending     | Ticket was created and is waiting to be handled. |
+| 2           | Processing  | Ticket is being processed. |
+| 3           | Confirming  | Work is complete and waiting for confirmation. |
+| 50          | Completed   | Ticket is closed. |
+
+## Troubleshooting
+
+### Authentication fails
+
+1. Confirm the App ID and App Secret are correct.
+2. Ensure the app is published and installed in the enterprise.
+3. Verify all required permissions are enabled.
+4. Double-check the Helpdesk Token value.
+
+### Ticket creation fails
+
+1. Confirm the app includes `helpdesk:ticket:create`.
+2. Verify the Helpdesk ID is valid (when provided).
+3. Check that any custom fields match the Service Desk configuration.
+4. Provide either `user_email`, `open_id`, or `default_open_id`.
+
+### Email conversion fails
+
+1. Enable the `contact:user.base:readonly` permission.
+2. Confirm the email address exists in the Feishu organization.
+3. Validate the email address format.
+4. Use an explicit `open_id` as a fallback.
+
+### Rich text card is missing
+
+1. Confirm the ticket was created successfully.
+2. Make sure the Helpdesk Token is correct.
+3. Ensure the app has permission to send messages.
+4. Remember that the card is sent as a separate API call immediately after creation.
+
+## Useful Links
+
+<Card title="Feishu Open Platform Documentation" icon="book" href="https://open.feishu.cn/document/">
+  Full Feishu Open Platform reference.
+</Card>
+
+<Card title="Service Desk API Reference" icon="code" href="https://open.feishu.cn/document/ukTMukTMukTM/ucDOyYjL3gjM24yN4IjN">
+  Detailed Service Desk API specification.
+</Card>
+
+<Card title="Create Feishu App" icon="key" href="https://open.feishu.cn/app">
+  Manage Feishu apps and obtain credentials.
+</Card>
+
+<Card title="International (Lark) Platform" icon="globe" href="https://open.larksuite.com/">
+  Documentation for the Lark deployment.
+</Card>
+
+## Workflow Examples
+
+Complete workflow examples are available in the `examples/workflows/` directory:
+
+### Simple Example
+
+`feishu_servicedesk_simple.yml` - Minimal configuration with auto-enrichment:
+
+```yaml
+workflow:
+  id: feishu-servicedesk-simple
+  name: Create Feishu Service Desk Ticket (Simple)
+  description: Minimal configuration example
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: [critical, high]
+  actions:
+    - name: create-feishu-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "{{ alert.name }}"
+          user_email: "{{ alert.assignee }}"
+          agent_email: "oncall@example.com"
+      enrich_alert:
+        - key: ticket_type
+          value: feishu_servicedesk
+        - key: ticket_id
+          value: results.ticket_id
+        - key: ticket_url
+          value: results.ticket_url
+```
+
+### Email Conversion Example
+
+`feishu_servicedesk_with_email.yml` - Using email addresses with automatic conversion:
+
+```yaml
+workflow:
+  id: feishu-servicedesk-with-email
+  name: Create Feishu Ticket with Email Conversion
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-ticket-with-email
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Critical Alert: {{ alert.name }}"
+          user_email: "reporter@example.com"
+          agent_email: "handler@example.com"
+          priority: 4
+          tags: ["{{ alert.environment }}", "{{ alert.service }}"]
+```
+
+### Best Practices Example
+
+`feishu_servicedesk_best_practice.yml` - Complete workflow with ticket creation and status updates:
+
+- Creates tickets for high-severity alerts
+- Updates ticket status when alerts are resolved
+- Supports incident-triggered ticket creation
+
+### Advanced Configuration Example
+
+`feishu_servicedesk_advanced.yml` - Advanced features including custom fields and manual description:
+
+```yaml
+workflow:
+  id: feishu-servicedesk-advanced
+  name: Feishu Service Desk Advanced Configuration
+  triggers:
+    - type: alert
+      filters:
+        - key: severity
+          value: critical
+  actions:
+    - name: create-advanced-ticket
+      provider:
+        type: feishu_servicedesk
+        config: "{{ providers.feishu_servicedesk }}"
+        with:
+          title: "Urgent Alert: {{ alert.name }}"
+          user_email: "user@example.com"
+          agent_email: "agent@example.com"
+          priority: 4
+          tags: ["production", "database"]
+          category_id: "category_123"
+          customized_fields:
+            - id: "field_12345"
+              value: "high"
+            - id: "field_67890"
+              value: "{{ alert.service }}"
+          auto_enrich: false
+          description: "Custom description override"
+```
+
+All examples are available in the `examples/workflows/` directory.
