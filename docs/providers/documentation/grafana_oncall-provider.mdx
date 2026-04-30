@@ -35,6 +35,39 @@ Payload example:
 }
 ```
 
+## Custom JSON Payload
+
+You can pass a `custom_json` parameter to send a fully custom payload to Grafana OnCall, bypassing the default field mapping. This is useful when you need to leverage Grafana OnCall's custom templating or include arbitrary key/value pairs.
+
+**Using a dict:**
+
+```yaml
+actions:
+    - name: Custom alert
+      provider: grafana_oncall
+      config: "{{ provider.my_provider_name }}"
+      with:
+        custom_json:
+          alert_uid: "custom-123"
+          title: "Custom Alert"
+          state: "alerting"
+          message: "Custom message"
+          my_custom_field: "custom value"
+```
+
+**Using a JSON string:**
+
+```yaml
+actions:
+    - name: Custom alert
+      provider: grafana_oncall
+      config: "{{ provider.my_provider_name }}"
+      with:
+        custom_json: '{"alert_uid":"custom-123","title":"Custom Alert","state":"alerting","my_field":"value"}'
+```
+
+When `custom_json` is provided, all other parameters (`title`, `message`, `state`, etc.) are ignored and the custom payload is sent as-is.
+
 ## Useful Links
 
 - [Grafana OnCall Inbound Webhook Integration](https://grafana.com/docs/oncall/latest/configure/integrations/references/webhook/)
