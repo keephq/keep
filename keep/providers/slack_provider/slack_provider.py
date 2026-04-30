@@ -5,7 +5,7 @@ Slack provider is an interface for Slack messages.
 import dataclasses
 import json
 import os
-from typing import OrderedDict
+from typing import Optional, OrderedDict
 
 import pydantic
 import requests
@@ -284,6 +284,111 @@ class SlackProvider(BaseProvider):
             notify_data = {"slack_timestamp": response_json["ts"]}
         self.logger.info("Message notified to Slack")
         return notify_data
+
+    # ------------------------------------------------------------------
+    # Query interface — fetch messages from a Slack channel
+    # ------------------------------------------------------------------
+
+    def _query(
+        self,
+        channel: str = "",
+        limit: int = 100,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
+        thread_ts: Optional[str] = None,
+        include_replies: bool = False,
+        **kwargs,
+    ) -> dict:
+        """
+        Retrieve messages from a Slack channel (or thread) for use in
+        incident context and workflow steps.
+
+        Requires an OAuth ``access_token`` with the ``channels:history``
+        (public) or ``groups:history`` (private) scope.
+
+        Args:
+            channel: Slack channel ID (e.g. ``C04P7QSG692``).
+            limit: Maximum number of messages to return (default 100, max 1000).
+            oldest: Unix timestamp — only include messages after this time.
+            latest: Unix timestamp — only include messages before this time.
+            thread_ts: Parent message timestamp — when provided, replies for
+                       that thread are returned instead of top-level messages.
+            include_replies: If ``True`` and ``thread_ts`` is omitted, also
+                             fetch the first reply batch for every threaded
+                             message (expensive for busy channels).
+
+        Returns:
+            A dict with ``messages`` (list), ``channel``, and ``has_more``.
+        """
+        if not self.authentication_config.access_token:
+            raise ProviderException(
+                "SlackProvider: an access_token is required to query messages. "
+                "Connect Slack via OAuth in the Keep UI."
+            )
+        if not channel:
+            raise ProviderException("SlackProvider: 'channel' is required for _query")
+
+        headers = {
+            "Authorization": f"Bearer {self.authentication_config.access_token}",
+            "Content-Type": "application/json",
+        }
+
+        if thread_ts:
+            # Fetch thread replies
+            method = "conversations.replies"
+            params: dict = {"channel": channel, "ts": thread_ts, "limit": limit}
+        else:
+            # Fetch channel history
+            method = "conversations.history"
+            params = {"channel": channel, "limit": min(limit, 1000)}
+
+        if oldest:
+            params["oldest"] = oldest
+        if latest:
+            params["latest"] = latest
+
+        response = requests.get(
+            f"{self.SLACK_API}/{method}",
+            headers=headers,
+            params=params,
+        )
+        resp_json = response.json()
+        if not response.ok or not resp_json.get("ok"):
+            raise ProviderException(
+                f"SlackProvider: failed to fetch messages — "
+                f"{resp_json.get('error', response.text)}"
+            )
+
+        messages: list = resp_json.get("messages", [])
+        has_more: bool = resp_json.get("has_more", False)
+
+        if include_replies and not thread_ts:
+            # Optionally enrich each threaded message with its replies
+            for msg in messages:
+                if msg.get("reply_count", 0) > 0:
+                    try:
+                        reply_resp = requests.get(
+                            f"{self.SLACK_API}/conversations.replies",
+                            headers=headers,
+                            params={"channel": channel, "ts": msg["ts"], "limit": 50},
+                        )
+                        reply_json = reply_resp.json()
+                        if reply_json.get("ok"):
+                            # First item is the parent message itself — skip it
+                            msg["replies"] = reply_json.get("messages", [])[1:]
+                    except Exception as exc:
+                        self.logger.warning(
+                            "SlackProvider: failed to fetch replies for ts=%s: %s",
+                            msg.get("ts"),
+                            exc,
+                        )
+
+        return {
+            "channel": channel,
+            "messages": messages,
+            "has_more": has_more,
+            "count": len(messages),
+        }
 
 
 if __name__ == "__main__":
