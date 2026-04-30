@@ -580,7 +580,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
 
 @pytest.mark.parametrize(
     "direction,second_fire_order",
-    [(ResolveOn.FIRST.value, ("fp2", "fp1")), (ResolveOn.LAST.value, ("fp2", "fp1"))],
+    [(ResolveOn.FIRST.value, ("fp2", "fp1")), (ResolveOn.LAST.value, ("fp1", "fp2"))],
 )
 def test_incident_resolution_on_edge(
     db_session, create_alert, direction, second_fire_order
