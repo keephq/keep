@@ -52,7 +52,7 @@ class AlertStatus(Enum):
     SUPPRESSED = "suppressed"
     # No Data
     PENDING = "pending"
-    #Affected by Maintenance Windows
+    # Affected by Maintenance Windows
     MAINTENANCE = "maintenance"
 
 
@@ -243,8 +243,18 @@ class AlertDto(BaseModel):
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        # Check and set id:
-        if not values.get("id"):
+        # Check and set id -- must be a valid UUID for database compatibility.
+        # Many providers pass their external numeric/string IDs (e.g. Zabbix
+        # event IDs, Datadog numeric IDs, Grafana fingerprints) which cause
+        # "invalid input syntax for type uuid" errors when queried via CEL
+        # filters.  Generate a proper UUID in those cases.
+        alert_id = values.get("id")
+        if alert_id:
+            try:
+                uuid.UUID(str(alert_id))
+            except (ValueError, AttributeError):
+                values["id"] = str(uuid.uuid4())
+        else:
             values["id"] = str(uuid.uuid4())
 
         # Check and set default severity
