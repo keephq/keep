@@ -1,0 +1,46 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: UptimeRobot API Key (Main or Monitor-specific) (required: True, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **read_monitors**: Read monitor statuses from UptimeRobot (mandatory)
+
+## In workflows
+
+This provider can be used as a **step** in workflows to check monitor status.
+
+### Example: Alert on UptimeRobot downtime
+
+```yaml
+workflow:
+  id: uptimerobot-downtime-alert
+  description: Notify Slack when UptimeRobot detects a monitor is down
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: uptimerobot
+        - key: status
+          value: firing
+  steps:
+    - name: notify-slack
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Monitor down: {{ alert.name }} ({{ alert.monitor_url }})"
+```
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+To send alerts from UptimeRobot to Keep:
+
+1. In UptimeRobot, go to **My Settings → Alert Contacts**.
+2. Create a new **Webhook** alert contact.
+3. Set the **URL to Notify** field to `KEEP_BACKEND_URL/alerts/event/uptimerobot`.
+4. Add the header `x-api-key` with your Keep API key.
+5. Assign the alert contact to your monitors.
