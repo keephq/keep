@@ -1,0 +1,49 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: Honeycomb API Key (required: True, sensitive: True)
+- **dataset**: Honeycomb dataset name (required: False, sensitive: False) — leave blank to query all datasets
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **read_triggers**: Read triggered alerts from Honeycomb (mandatory)
+
+## In workflows
+
+This provider can be used as a **step** in workflows to inspect Honeycomb trigger state.
+
+### Example: Route Honeycomb trigger alerts to PagerDuty
+
+```yaml
+workflow:
+  id: honeycomb-to-pagerduty
+  description: Create a PagerDuty incident when a Honeycomb trigger fires
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: honeycomb
+        - key: status
+          value: firing
+  steps:
+    - name: create-incident
+      provider:
+        type: pagerduty
+        config: "{{ providers.pagerduty }}"
+        with:
+          summary: "Honeycomb trigger fired: {{ alert.name }}"
+          severity: warning
+          source: "{{ alert.dataset }}"
+```
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+To send trigger notifications from Honeycomb to Keep:
+
+1. In Honeycomb, open the trigger you want to connect.
+2. In the **Recipients** section, add a **Webhook** recipient.
+3. Set the Webhook URL to `KEEP_BACKEND_URL/alerts/event/honeycomb`.
+4. Add a custom header `x-api-key` with your Keep API key.
+5. Save the trigger — Honeycomb will now notify Keep on every state change.
