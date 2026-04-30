@@ -129,7 +129,13 @@ The high-level provisioning mechanism:
 
 Provider configurations can be updated dynamically by changing the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory.
 
-On every restart, Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory and determines which providers need to be added or removed.
+Provider provisioning is done on every restart. It can also be triggered without a restart via the `/providers/provision` endpoint of the API.
+
+```
+curl -XPOST http://localhost:8080/providers/provision
+```
+
+Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory and determines which providers need to be added or removed.
 
 The high-level provisioning mechanism:
 1. Keep reads the YAML files in the `KEEP_PROVIDERS_DIRECTORY` directory.
