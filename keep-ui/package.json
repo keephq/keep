@@ -102,7 +102,7 @@
     "undici": "^6.21.2",
     "unified": "^11.0.5",
     "uuid": "^11.1.0",
-    "yaml": "^2.7.0",
+    "yaml": "^2.8.3",
     "zod": "^3.24.4",
     "zod-to-json-schema": "^3.24.3",
     "zod-validation-error": "^3.4.1",
