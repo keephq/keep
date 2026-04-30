@@ -245,6 +245,7 @@
             "providers/documentation/slack-provider",
             "providers/documentation/smtp-provider",
             "providers/documentation/snowflake-provider",
+            "providers/documentation/solarwinds-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
