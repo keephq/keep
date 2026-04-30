@@ -521,6 +521,104 @@ def apply(info: Info, file: str, full_sync: bool, lookup_by_name: bool):
             )
 
 
+
+
+@workflow.command(name="validate")
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(exists=True),
+    help="Path to the workflow YAML file to validate",
+    required=True,
+)
+@pass_info
+def validate(info: Info, file: str):
+    """Validate workflow syntax and structure"""
+    try:
+        with open(file, "r", encoding="utf-8") as f:
+            workflow_data = cyaml.safe_load(f)
+        
+        # Workflows should have a top-level 'workflow' key
+        if "workflow" not in workflow_data:
+            raise ValueError("Missing top-level 'workflow' key")
+        
+        workflow_config = workflow_data["workflow"]
+        
+        # Check required top-level fields
+        required_fields = ["id", "name", "triggers"]
+        for field in required_fields:
+            if field not in workflow_config:
+                raise ValueError(f"Missing required field: {field}")
+        
+        # Validate id format (should be a string)
+        if not isinstance(workflow_config.get("id"), str) or not workflow_config.get("id").strip():
+            raise ValueError("Field 'id' must be a non-empty string")
+        
+        # Validate name format
+        if not isinstance(workflow_config.get("name"), str) or not workflow_config.get("name").strip():
+            raise ValueError("Field 'name' must be a non-empty string")
+        
+        # Check triggers configuration
+        triggers = workflow_config.get("triggers", [])
+        if not isinstance(triggers, list) or len(triggers) == 0:
+            raise ValueError("Workflow must contain at least one trigger")
+        
+        # Validate each trigger has a type
+        for idx, trigger in enumerate(triggers):
+            if not isinstance(trigger, dict):
+                raise ValueError(f"Trigger at index {idx} must be a dictionary")
+            if "type" not in trigger:
+                raise ValueError(f"Trigger at index {idx} is missing 'type' field")
+        
+        # Check that workflow has either steps or actions (or both)
+        steps = workflow_config.get("steps", [])
+        actions = workflow_config.get("actions", [])
+        
+        if not isinstance(steps, list):
+            raise ValueError("Field 'steps' must be a list")
+        if not isinstance(actions, list):
+            raise ValueError("Field 'actions' must be a list")
+        
+        if len(steps) == 0 and len(actions) == 0:
+            raise ValueError("Workflow must contain at least one step or action")
+        
+        # Validate steps structure
+        for idx, step in enumerate(steps):
+            if not isinstance(step, dict):
+                raise ValueError(f"Step at index {idx} must be a dictionary")
+            if "name" not in step:
+                raise ValueError(f"Step at index {idx} is missing 'name' field")
+        
+        # Validate actions structure
+        for idx, action in enumerate(actions):
+            if not isinstance(action, dict):
+                raise ValueError(f"Action at index {idx} must be a dictionary")
+            if "name" not in action:
+                raise ValueError(f"Action at index {idx} is missing 'name' field")
+        
+        # Success output
+        click.echo(click.style("? Workflow syntax is valid", fg="green", bold=True))
+        click.echo(click.style(f"  ID: {workflow_config['id']}", fg="green"))
+        click.echo(click.style(f"  Name: {workflow_config['name']}", fg="green"))
+        click.echo(click.style(f"  Triggers: {len(triggers)}", fg="green"))
+        if len(steps) > 0:
+            click.echo(click.style(f"  Steps: {len(steps)}", fg="green"))
+        if len(actions) > 0:
+            click.echo(click.style(f"  Actions: {len(actions)}", fg="green"))
+        
+    except FileNotFoundError:
+        click.echo(click.style(f"? File not found: {file}", fg="red", bold=True))
+        sys.exit(1)
+    except cyaml.YAMLError as e:
+        click.echo(click.style(f"? Invalid YAML syntax: {str(e)}", fg="red", bold=True))
+        sys.exit(1)
+    except ValueError as e:
+        click.echo(click.style(f"? Invalid workflow: {str(e)}", fg="red", bold=True))
+        sys.exit(1)
+    except Exception as e:
+        click.echo(click.style(f"? Unexpected error: {str(e)}", fg="red", bold=True))
+        sys.exit(1)
+
 @workflow.command(name="run")
 @click.option(
     "--workflow-id",
