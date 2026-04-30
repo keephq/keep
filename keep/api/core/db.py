@@ -2708,11 +2708,13 @@ def create_deduplication_event(
             ),
         )
         session.add(deduplication_event)
+        session.flush()
+        deduplication_event_id = deduplication_event.id
         session.commit()
         logger.debug(
             "Deduplication event added",
             extra={
-                "deduplication_event_id": deduplication_event.id,
+                "deduplication_event_id": deduplication_event_id,
                 "tenant_id": tenant_id,
             },
         )
