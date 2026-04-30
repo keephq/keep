@@ -8,6 +8,7 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.db.topology import (
     TopologyApplicationDtoIn,
     TopologyService,
+    TopologyServiceApplication,
     TopologyServiceDependency,
     TopologyServiceDtoIn,
     TopologyServiceInDto,
@@ -45,6 +46,17 @@ def process_topology(
         # delete dependencies
         session.query(TopologyServiceDependency).filter(
             TopologyServiceDependency.service.has(
+                and_(
+                    TopologyService.source_provider_id == provider_id,
+                    TopologyService.tenant_id == tenant_id,
+                )
+            )
+        ).delete(synchronize_session=False)
+
+        # delete service-application links before deleting services to avoid
+        # ForeignKeyViolation on topologyserviceapplication.service_id (fixes #5439)
+        session.query(TopologyServiceApplication).filter(
+            TopologyServiceApplication.service.has(
                 and_(
                     TopologyService.source_provider_id == provider_id,
                     TopologyService.tenant_id == tenant_id,

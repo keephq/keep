@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
 import pytest
+from unittest.mock import patch
 from sqlmodel import select
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -8,8 +9,10 @@ from keep.api.models.db.topology import (
     TopologyApplication,
     TopologyApplicationDtoIn,
     TopologyService,
+    TopologyServiceApplication,
     TopologyServiceDependency,
     TopologyServiceDtoIn,
+    TopologyServiceInDto,
 )
 from keep.topologies.topologies_service import (
     TopologiesService,
@@ -17,6 +20,7 @@ from keep.topologies.topologies_service import (
     InvalidApplicationDataException,
     ServiceNotFoundException,
 )
+from keep.api.tasks.process_topology_task import process_topology
 from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
 
 
@@ -387,3 +391,77 @@ def test_import_to_db(db_session):
         assert len(dependencies) == 1
         assert dependencies[0].service_id == 1
         assert dependencies[0].depends_on_service_id == 2
+
+
+def test_process_topology_no_foreignkey_violation_when_service_has_application(
+    db_session,
+):
+    """Regression test: process_topology must delete TopologyServiceApplication rows
+    before deleting TopologyService rows, otherwise a ForeignKeyViolation is raised
+    when the services belong to an application (issue #5439).
+    """
+    tenant_id = SINGLE_TENANT_UUID
+    provider_id = "test-provider"
+
+    # Create services belonging to an application
+    service_1 = TopologyService(
+        tenant_id=tenant_id,
+        service="svc-a",
+        display_name="Service A",
+        source_provider_id=provider_id,
+        updated_at=datetime.now(),
+    )
+    service_2 = TopologyService(
+        tenant_id=tenant_id,
+        service="svc-b",
+        display_name="Service B",
+        source_provider_id=provider_id,
+        updated_at=datetime.now(),
+    )
+    db_session.add(service_1)
+    db_session.add(service_2)
+    db_session.flush()
+
+    # Link them to an application (this creates TopologyServiceApplication rows)
+    application = TopologyApplication(
+        tenant_id=tenant_id,
+        name="My App",
+        services=[service_1, service_2],
+    )
+    db_session.add(application)
+    db_session.commit()
+
+    # Verify setup: service-application links exist
+    assert db_session.exec(select(TopologyServiceApplication)).all()
+
+    # Reimport topology via process_topology — must NOT raise ForeignKeyViolation
+    new_topology = [
+        TopologyServiceInDto(
+            service="svc-a",
+            display_name="Service A",
+            source_provider_id=provider_id,
+            dependencies={},
+        ),
+    ]
+
+    with patch(
+        "keep.api.tasks.process_topology_task.get_session_sync",
+        return_value=db_session,
+    ), patch(
+        "keep.api.tasks.process_topology_task.get_pusher_client",
+        return_value=None,
+    ):
+        # Before the fix this raised:
+        # sqlalchemy.exc.IntegrityError: ForeignKeyViolation on topologyserviceapplication
+        process_topology(tenant_id, new_topology, provider_id, "test")
+
+    # Services should be replaced with only the new one
+    services = db_session.exec(
+        select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+    ).all()
+    assert len(services) == 1
+    assert services[0].service == "svc-a"
+
+    # Stale service-application links for deleted services should be gone
+    service_apps = db_session.exec(select(TopologyServiceApplication)).all()
+    assert all(sa.service_id == services[0].id for sa in service_apps)
