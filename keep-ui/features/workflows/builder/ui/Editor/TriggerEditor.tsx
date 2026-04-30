@@ -199,7 +199,7 @@ export function TriggerEditor() {
         return (
           <>
             <Subtitle className="mt-2.5">Incident events</Subtitle>
-            {Array("created", "updated", "deleted").map((event) => (
+            {Array("created", "updated", "deleted", "alert_association_changed").map((event) => (
               <div key={`incident-${event}`} className="flex">
                 <Switch
                   id={event}

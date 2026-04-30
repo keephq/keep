@@ -208,6 +208,10 @@ class RulesEngine:
                                     self.tenant_id, session, incident_dto, "updated"
                                 )
 
+                            RulesEngine.send_workflow_event(
+                                self.tenant_id, session, incident_dto, "alert_association_changed"
+                            )
+
                             incidents_dto[incident.id] = incident_dto
 
                 else:

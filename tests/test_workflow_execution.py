@@ -766,6 +766,26 @@ actions:
         "deleted incident: {{ incident.name }}"
 """
 
+workflow_definition_6 = """workflow:
+id: incident-triggers-test-alert-association-changed
+description: test incident alert association change
+triggers:
+- type: incident
+  events:
+  - alert_association_changed
+name: alert_association_changed
+owners: []
+services: []
+steps: []
+actions:
+- name: mock-action
+  provider:
+    type: console
+    with:
+      message: |
+        "linked_alerts: keep.len({{ incident.linked_alerts }})"
+"""
+
 
 @pytest.mark.timeout(15)
 @pytest.mark.parametrize(
@@ -792,6 +812,15 @@ def test_workflow_incident_triggers(
     db_session.add(workflow_created)
     db_session.commit()
 
+    alert_1 = AlertDto(
+        id="alert-1",
+        name="Test Alert 1",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.HIGH,
+        lastReceived="2025-01-30T10:00:00Z",
+        description="Test alert 1 description\nThis is a multiline description\nWith multiple lines of content\nTo test the split behavior"
+    )
+
     # Create the current alert
     incident = IncidentDto(
         id="ba9ddbb9-3a83-40fc-9ace-1e026e08ca2b",
@@ -802,6 +831,7 @@ def test_workflow_incident_triggers(
         severity="critical",
         is_predicted=False,
         is_candidate=False,
+        alerts=[alert_1]
     )
 
     # Insert the current alert into the workflow manager
@@ -860,6 +890,31 @@ def test_workflow_incident_triggers(
     assert workflow_execution_deleted.results["mock-action"] == [
         '"deleted incident: incident"\n'
     ]
+
+    workflow_deleted = Workflow(
+        id="incident-triggers-test-alert-association-changed",
+        name="incident-triggers-test-alert-association-changed",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Check that incident triggers works",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_6,
+    )
+    db_session.add(workflow_deleted)
+    db_session.commit()
+
+    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "alert_association_changed")
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
+
+    workflow_execution_alert_association_changed = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "incident-triggers-test-alert-association-changed"
+    )
+    assert workflow_execution_alert_association_changed is not None
+    assert workflow_execution_alert_association_changed.status == "success"
+    assert workflow_execution_alert_association_changed.results["mock-action"] == [
+        '"linked_alerts: 1"\n'
+    ]
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
 
 
 # @pytest.mark.parametrize(
