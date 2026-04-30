@@ -232,6 +232,7 @@
             "providers/documentation/prometheus-provider",
             "providers/documentation/pushover-provider",
             "providers/documentation/python-provider",
+            "providers/documentation/qualitorque-provider",
             "providers/documentation/quickchart-provider",
             "providers/documentation/redmine-provider",
             "providers/documentation/resend-provider",
