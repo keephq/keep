@@ -207,6 +207,7 @@
             "providers/documentation/llamacpp-provider",
             "providers/documentation/mailgun-provider",
             "providers/documentation/mattermost-provider",
+            "providers/documentation/mimir-provider",
             "providers/documentation/microsoft-planner-provider",
             "providers/documentation/mock-provider",
             "providers/documentation/monday-provider",
