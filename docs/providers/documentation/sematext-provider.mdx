@@ -1,0 +1,97 @@
+---
+title: "Sematext Provider"
+sidebarTitle: "Sematext Provider"
+description: "Sematext Cloud provider allows you to receive alerts from Sematext Cloud via webhook into Keep."
+---
+
+## Overview
+
+[Sematext Cloud](https://sematext.com/) is an all-in-one observability platform providing infrastructure monitoring, log management, real-user monitoring, and synthetic monitoring.
+
+This provider connects Keep to Sematext Cloud using Sematext's **Custom Notification Hook** (webhook). When an alert fires or resolves in Sematext, a POST request is sent to Keep with the alert details.
+
+## How It Works
+
+Sematext Cloud → Custom Webhook → Keep
+
+**No API credentials are needed.** The integration works entirely through Sematext's outbound webhook mechanism.
+
+## Connect Sematext to Keep
+
+### In Sematext
+
+1. Go to **Alerts → Notification Hooks** and click **New Notification Hook**.
+2. Select the **Custom** webhook type.
+3. Configure:
+   - **Name**: `Keep`
+   - **URL**: Your Keep webhook URL
+   - **HTTP Method**: `POST`
+   - **Send data as**: `JSON`
+4. Add a custom header:
+   - **Name**: `X-API-KEY`
+   - **Value**: Your Keep API key
+5. In the **Parameters** section, use the following JSON body:
+
+```json
+{
+  "backToNormal": "$backToNormal",
+  "ruleType": "$ruleType",
+  "description": "$description",
+  "title": "$title",
+  "applicationId": "$applicationId",
+  "url": "$url",
+  "createTimestamp": "$createTimestamp",
+  "troubleshootUrl": "$troubleshootUrl"
+}
+```
+
+6. Click **Test** to verify the connection, then click **Save Notification Hook**.
+7. Attach the hook to your alert rules via **Notifications → Send to**.
+
+### Supported Alert Types
+
+| Sematext Rule Type          | Description                      |
+| --------------------------- | -------------------------------- |
+| `HEARTBEAT`                 | Host/service heartbeat failure   |
+| `AF_VALUE`                  | Infrastructure metric threshold  |
+| `AF_ANOMALY_VALUE`          | Infrastructure metric anomaly    |
+| `LOGSENE_VALUE`             | Log-based metric threshold       |
+| `LOGSENE_ANOMALY_VALUE`     | Log-based metric anomaly         |
+| `RUM_VALUE`                 | Real-user monitoring threshold   |
+| `RUM_ANOMALY_VALUE`         | RUM anomaly                      |
+| `SYNTHETICS_RESULT_VALUE`   | Synthetic monitor result         |
+
+### Alert Status Mapping
+
+| Sematext Condition       | Keep Status |
+| ------------------------ | ----------- |
+| `backToNormal: true`     | Resolved    |
+| All other active alerts  | Firing      |
+
+### Severity Mapping
+
+If the webhook payload includes a `priority` field:
+
+| Sematext Priority       | Keep Severity |
+| ----------------------- | ------------- |
+| `CRITICAL` / `5`        | Critical      |
+| `ERROR` / `4`           | High          |
+| `WARNING` / `3`         | Warning       |
+| `INFO` / `2`            | Info          |
+| `LOW` / `1`             | Low           |
+
+Without explicit priority:
+
+- Recovery (`backToNormal: true`) → Info
+- Anomaly rule types → Warning
+- All others → High
+
+### Group-By Alerts
+
+If your Sematext alert rule uses **Group by** (e.g., grouped by `os.host`), the tag values that triggered the alert are automatically included in the webhook payload within the `filters` field. These are mapped to Keep alert labels with a `filter_` prefix.
+
+## Useful Links
+
+- [Sematext Webhooks Integration](https://sematext.com/docs/integration/alerts-webhooks-integration/)
+- [Sematext Custom Webhook Parameters](https://sematext.com/docs/integration/alerts-webhooks-custom-params/)
+- [Sematext Alert Notifications](https://sematext.com/docs/alerts/alert-notifications/)
