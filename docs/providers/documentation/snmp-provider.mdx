@@ -1,0 +1,71 @@
+---
+title: "SNMP"
+description: "Receive SNMP v1/v2c traps from network devices as Keep alerts"
+---
+
+## Overview
+
+SNMP (Simple Network Management Protocol) is the standard protocol for
+monitoring and managing network infrastructure. Keep's SNMP provider
+listens for SNMP v1/v2c traps sent by routers, switches, servers, and
+firewalls, and converts each trap into a native Keep alert.
+
+## Connecting SNMP to Keep
+
+### Prerequisites
+
+- A running Keep instance reachable over UDP from your network devices
+- Network devices configured to forward SNMP traps to your Keep instance
+- `snmp-utils` or equivalent installed locally for verification
+
+### Configuration
+
+| Parameter | Required | Default | Description |
+|---|---|---|---|
+| listen_address | No | 0.0.0.0 | IP address to bind the trap listener |
+| listen_port | No | 1162 | UDP port for incoming traps |
+| community_string | No | public | SNMPv1/v2c community string |
+
+> **Production note:** Port 162 is the standard SNMP trap port but requires
+> root or `CAP_NET_BIND_SERVICE` privileges. Port 1162 is recommended for
+> development and Docker. Map 1162→162 via docker-compose ports if needed.
+
+### Setup Steps
+
+1. Add the SNMP provider in Keep UI
+2. Set `listen_port` (default `1162` for dev, `162` for production)
+3. Set `community_string` to match your network device configuration
+4. Configure your network devices to send traps to `<KEEP_HOST>:<PORT>`
+
+### Sending a Test Trap
+
+```bash
+snmptrap -v 2c -c public <KEEP_HOST>:<PORT> '' 1.3.6.1.6.3.1.1.5.3
+```
+
+The alert should appear in Keep UI within seconds.
+
+## Alert Field Mapping
+
+| Keep Field | Source |
+|---|---|
+| name | `SNMP Trap: {trap_oid}` |
+| source | `["snmp"]` |
+| severity | `info` (default for all traps) |
+| source_address | Sending device IP address |
+| trap_oid | Value of snmpTrapOID.0 (numeric string) |
+| description | `SNMP trap received from {source_address}` |
+
+> **OID format:** OIDs are stored as numeric strings
+> (e.g. `1.3.6.1.6.3.1.1.5.3`). MIB name resolution is not performed
+> in this version.
+
+## Out of Scope — Future Work
+
+The following are intentionally excluded from this version:
+
+- SNMPv3 (authentication, privacy, USM, engine ID)
+- MIB file loading and OID-to-name resolution
+- Per-trap-type severity mapping
+- Trap filtering and routing rules
+- SNMP GET / SNMP WALK (query direction)

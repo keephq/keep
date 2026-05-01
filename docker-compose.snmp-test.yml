@@ -1,0 +1,12 @@
+services:
+  keep-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "1162:1162/udp"
+    environment:
+      - SECRET_MANAGER_TYPE=file
+      - SECRET_MANAGER_DIRECTORY=/app/secret_manager_directory
+      - PORT=8080
