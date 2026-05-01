@@ -140,6 +140,19 @@ export interface Provider {
   docs_slug?: string;
 }
 
+/**
+ * Whether a provider appears in the Connect Provider catalog.
+ * Stateless workflow/action providers (e.g. http, bash, python, console) have
+ * empty auth config and no `alert` tag but expose notify + query — include those.
+ */
+export function isConnectCatalogVisible(provider: Provider): boolean {
+  return (
+    Object.keys(provider.config || {}).length > 0 ||
+    (provider.tags?.includes("alert") ?? false) ||
+    (provider.can_notify && provider.can_query)
+  );
+}
+
 export type Providers = Provider[];
 
 export const defaultProvider: Provider = {

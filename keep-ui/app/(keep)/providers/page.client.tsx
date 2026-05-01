@@ -1,5 +1,9 @@
 "use client";
-import { defaultProvider, Provider } from "@/shared/api/providers";
+import {
+  defaultProvider,
+  Provider,
+  isConnectCatalogVisible,
+} from "@/shared/api/providers";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
@@ -196,11 +200,8 @@ export default function ProvidersPage({
       searchCategories(provider)
   );
 
-  const displayableProviders = filteredProviders.filter(
-    (provider) =>
-      Object.keys(provider.config || {}).length > 0 ||
-      (provider.tags && provider.tags.includes("alert"))
-  );
+  const displayableProviders =
+    filteredProviders.filter(isConnectCatalogVisible);
 
   return (
     <>

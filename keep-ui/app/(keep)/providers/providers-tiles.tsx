@@ -1,6 +1,6 @@
 "use client";
 import { Title } from "@tremor/react";
-import { Providers, Provider } from "@/shared/api/providers";
+import { Providers, Provider, isConnectCatalogVisible } from "@/shared/api/providers";
 import { useEffect, useState } from "react";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
@@ -85,11 +85,7 @@ const ProvidersTiles = ({
   };
 
   const sortedProviders = providers
-    .filter(
-      (provider) =>
-        Object.keys(provider.config || {}).length > 0 ||
-        (provider.tags && provider.tags.includes("alert"))
-    )
+    .filter(isConnectCatalogVisible)
     .sort(
       (a, b) =>
         // Put coming_soon providers at the end
