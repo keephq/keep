@@ -5,7 +5,6 @@ Typical setup: snmptrapd (net-snmp) with a handler script that POSTs trap data t
 webhook endpoint. See webhook_markdown for setup instructions.
 """
 
-import dataclasses
 import datetime
 import logging
 
@@ -244,10 +243,10 @@ systemctl restart snmptrapd
             last_received = (
                 datetime.datetime.fromisoformat(ts_raw.rstrip("Z")).isoformat()
                 if ts_raw
-                else datetime.datetime.utcnow().isoformat()
+                else datetime.datetime.now(datetime.timezone.utc).isoformat()
             )
         except (ValueError, AttributeError):
-            last_received = datetime.datetime.utcnow().isoformat()
+            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         return AlertDto(
             id=f"{source_host}-{trap_oid or generic_trap or 'unknown'}",
