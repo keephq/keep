@@ -5,6 +5,7 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 import dataclasses
 import datetime
 import os
+import uuid as uuid_module
 
 import pydantic
 import requests
@@ -179,7 +180,16 @@ receivers:
             alerts = event.get("alerts", [event])
 
         for alert in alerts:
-            alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
+            raw_id = alert.get("id")
+            if raw_id:
+                try:
+                    uuid_module.UUID(str(raw_id))
+                    alert_id = raw_id
+                except (ValueError, AttributeError):
+                    alert_id = str(uuid_module.uuid4())
+            else:
+                alert_name = alert.get("labels", {}).get("alertname")
+                alert_id = alert_name if alert_name else str(uuid_module.uuid4())
             description = alert.get("annotations", {}).pop(
                 "description", None
             ) or alert.get("annotations", {}).get("summary", alert_id)

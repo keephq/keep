@@ -262,3 +262,22 @@ def test_alert_dismiss_forever():
     with freezegun.freeze_time(now + timedelta(days=365)):
         revalidated_alert = AlertDto(**alert.dict())
         assert revalidated_alert.dismissed is True
+
+
+def test_alert_dto_environment_default_is_none():
+    """environment should default to None, not a literal string like 'undefined'."""
+    alert = create_basic_alert(
+        name="Env Default Test",
+        last_received="2024-01-01T00:00:00.000Z",
+    )
+    assert alert.environment is None
+
+
+def test_alert_dto_environment_explicit_value():
+    """Explicitly set environment should be preserved."""
+    alert = create_basic_alert(
+        name="Env Explicit Test",
+        last_received="2024-01-01T00:00:00.000Z",
+        environment="production",
+    )
+    assert alert.environment == "production"

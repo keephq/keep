@@ -78,7 +78,7 @@ class AlertDto(BaseModel):
     firingStartTimeSinceLastResolved: str | None = None
     firingCounter: int = 0
     unresolvedCounter: int = 0
-    environment: str = "undefined"
+    environment: str | None = None
     isFullDuplicate: bool | None = False
     isPartialDuplicate: bool | None = False
     duplicateReason: str | None = None

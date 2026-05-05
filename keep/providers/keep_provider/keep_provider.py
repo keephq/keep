@@ -538,7 +538,7 @@ class KeepProvider(BaseProvider):
         # if no if_condition, trigger all alerts
         else:
             self.logger.info("No 'if' condition - triggering all alerts")
-            trigger_alerts = alert_results
+            trigger_alerts = alert_results or []
 
         # build the alert dtos
         alert_dtos = []
