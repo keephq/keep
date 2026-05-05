@@ -14,6 +14,13 @@ import uuid
 from pysnmp.carrier.asyncio.dgram import udp
 from pysnmp.entity import config, engine
 from pysnmp.entity.rfc3413 import ntfrcv
+from pysnmp.proto import rfc1902
+from pysnmp.hlapi.v3arch.asyncio import (
+    usmHMACMD5AuthProtocol, usmHMACSHAAuthProtocol,
+    usmDESPrivProtocol, usmAesCfb128Protocol,
+    usmNoAuthProtocol, usmNoPrivProtocol,
+)
+import pyasn1.codec.ber.decoder
 
 import pydantic
 import dataclasses
@@ -58,14 +65,58 @@ class SnmpProviderAuthConfig:
     severity_mapping: Optional[str] = dataclasses.field(
         metadata={
             "required": False,
-            "description": "JSON mapping of OID patterns to Keep severity levels",
+            "description": "JSON mapping of OID patterns to Keep severity levels [Optional]",
             "config_main_group": "authentication",
         },
         default=None,
     )
 
-    # TODO: SNMPv3 not yet supported. Future fields: username, auth_protocol,
-    # auth_key, priv_protocol, priv_key
+    username: Optional[str] = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "SNMPv3 username",
+            "config_main_group": "authentication",
+        },
+        default=None,
+    )
+
+    auth_protocol: Optional[str] = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Authentication protocol (MD5 or SHA)",
+            "config_main_group": "authentication",
+        },
+        default=None,
+    )
+
+    auth_key: Optional[str] = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "SNMPv3 authentication password",
+            "config_main_group": "authentication",
+            "sensitive": True,
+        },
+        default=None,
+    )
+
+    priv_protocol: Optional[str] = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Privacy protocol (DES or AES)",
+            "config_main_group": "authentication",
+        },
+        default=None,
+    )
+
+    priv_key: Optional[str] = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "SNMPv3 privacy password",
+            "config_main_group": "authentication",
+            "sensitive": True,
+        },
+        default=None,
+    )
 
 
 class SnmpProvider(BaseProvider):
@@ -85,6 +136,35 @@ class SnmpProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "SNMP"
     PROVIDER_TAGS = ["alert"]
     FINGERPRINT_FIELDS = ["fingerprint"]
+
+    DEFAULT_OID_SEVERITY_MAP = {
+        # Standard SNMPv2 trap types
+        "1.3.6.1.6.3.1.1.5.1": AlertSeverity.INFO,       # coldStart
+        "1.3.6.1.6.3.1.1.5.2": AlertSeverity.INFO,       # warmStart
+        "1.3.6.1.6.3.1.1.5.3": AlertSeverity.HIGH,       # linkDown
+        "1.3.6.1.6.3.1.1.5.4": AlertSeverity.INFO,       # linkUp
+        "1.3.6.1.6.3.1.1.5.5": AlertSeverity.WARNING,    # authenticationFailure
+        "1.3.6.1.6.3.1.1.5.6": AlertSeverity.WARNING,    # egpNeighborLoss
+        # UPS / Power
+        "1.3.6.1.2.1.33.2.0.1": AlertSeverity.CRITICAL,  # UPS on battery
+        "1.3.6.1.2.1.33.2.0.2": AlertSeverity.CRITICAL,  # UPS battery low
+        "1.3.6.1.2.1.33.2.0.3": AlertSeverity.CRITICAL,  # UPS battery depleted
+        "1.3.6.1.2.1.33.2.0.4": AlertSeverity.INFO,      # UPS power restored
+        # Cisco
+        "1.3.6.1.4.1.9.9.43.2.0.1": AlertSeverity.CRITICAL,  # Cisco config change
+        "1.3.6.1.4.1.9.2.1.56":     AlertSeverity.CRITICAL,  # Cisco reload
+        # Interface / Network
+        "1.3.6.1.2.1.10.166.3":     AlertSeverity.HIGH,   # MPLS tunnel down
+        "1.3.6.1.4.1.9.9.187.1.2.0.1": AlertSeverity.HIGH,  # BGP backward transition
+    }
+
+    # Auto-detect severity from trap value keywords
+    SEVERITY_KEYWORDS = {
+        AlertSeverity.CRITICAL: ["critical", "fatal", "emergency", "down", "fail", "crash", "unreachable"],
+        AlertSeverity.HIGH:     ["error", "major", "high", "unavailable", "lost"],
+        AlertSeverity.WARNING:  ["warning", "warn", "minor", "degraded", "slow"],
+        AlertSeverity.INFO:     ["info", "notice", "up", "clear", "normal", "ok", "restored", "success"],
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -106,6 +186,31 @@ class SnmpProvider(BaseProvider):
     def validate_config(self):
         """Validate the provider configuration."""
         self.authentication_config = SnmpProviderAuthConfig(**self.config.authentication)
+
+        auth = self.authentication_config
+        if auth.username:
+            valid_auth_protocols = {None, "MD5", "SHA"}
+            if auth.auth_protocol not in valid_auth_protocols:
+                raise ValueError("auth_protocol must be one of: MD5, SHA")
+
+            valid_priv_protocols = {None, "DES", "AES"}
+            if auth.priv_protocol not in valid_priv_protocols:
+                raise ValueError("priv_protocol must be one of: DES, AES")
+
+            if auth.auth_protocol and not auth.auth_key:
+                raise ValueError("auth_key required when auth_protocol is set")
+
+            if auth.auth_key and not auth.auth_protocol:
+                raise ValueError("auth_protocol required when auth_key is set")
+
+            if auth.priv_protocol and not auth.auth_protocol:
+                raise ValueError("auth_protocol must be set when priv_protocol is used")
+
+            if auth.priv_protocol and not auth.priv_key:
+                raise ValueError("priv_key required when priv_protocol is set")
+
+            if auth.priv_key and not auth.priv_protocol:
+                raise ValueError("priv_protocol required when priv_key is set")
 
     def _query(self, **kwargs):
         """Query method for provider - not applicable for SNMP trap receiver."""
@@ -160,8 +265,144 @@ class SnmpProvider(BaseProvider):
             config.addV1System(
                 self.snmp_engine,
                 'keep-snmp-security-domain',
-                self.authentication_config.community
+                self.authentication_config.community or "public"
             )
+
+            # Add v3 ONLY if configured
+            auth = self.authentication_config
+
+            if auth.username:
+                auth_map = {
+                    "MD5": usmHMACMD5AuthProtocol,
+                    "SHA": usmHMACSHAAuthProtocol,
+                }
+                priv_map = {
+                    "DES": usmDESPrivProtocol,
+                    "AES": usmAesCfb128Protocol,
+                }
+
+                auth_proto = auth_map.get(auth.auth_protocol, usmNoAuthProtocol)
+                priv_proto = priv_map.get(auth.priv_protocol, usmNoPrivProtocol)
+
+                if auth.auth_protocol and auth.priv_protocol:
+                    security_level = 'authPriv'
+                elif auth.auth_protocol:
+                    security_level = 'authNoPriv'
+                else:
+                    security_level = 'noAuthNoPriv'
+
+                try:
+                    # Register under local engine with passphrase
+                    config.add_v3_user(
+                        self.snmp_engine,
+                        auth.username,
+                        auth_proto,
+                        auth.auth_key,
+                        priv_proto,
+                        auth.priv_key,
+                    )
+                    self.logger.info("addV3User local engine success")
+
+                    # Register under wildcard with passphrase
+                    # When trap arrives, dynamically re-register under sender's real engine ID
+                    config.add_v3_user(
+                        self.snmp_engine,
+                        auth.username,
+                        auth_proto,
+                        auth.auth_key,
+                        priv_proto,
+                        auth.priv_key,
+                        securityEngineId=rfc1902.OctetString(hexValue="0000000000"),
+                    )
+                    self.logger.info(" addV3User wildcard engine success")
+
+                    config.addVacmUser(
+                        self.snmp_engine,
+                        3,
+                        auth.username,
+                        security_level,
+                        (1, 3, 6),
+                        (1, 3, 6),
+                        (1, 3, 6),
+                        contextName=b''
+                    )
+
+                    # Patch USM to auto-register user under sender's engine ID on first trap
+                    _auth_username = auth.username
+                    _auth_key = auth.auth_key
+                    _priv_key = auth.priv_key
+                    _auth_proto = auth_proto
+                    _priv_proto = priv_proto
+                    _snmp_engine = self.snmp_engine
+                    _registered_engine_ids = set()
+                    _logger = self.logger
+
+                    usm = _snmp_engine.security_models[
+                        list(_snmp_engine.security_models.keys())[0]
+                        if not hasattr(_snmp_engine, 'security_models')
+                        else 3
+                    ]
+
+                    # Get the actual USM security model
+                    from pysnmp.proto.secmod.rfc3414 import service as usm_service
+                    original_process = None
+                    for model_id, model in _snmp_engine.security_models.items():
+                        if isinstance(model, usm_service.SnmpUSMSecurityModel):
+                            original_process = model.process_incoming_message
+                            
+                            def patched_process(snmpEngine, messageProcessingModel, maxMessageSize,
+                                              securityParameters, securityModel, securityLevel,
+                                              wholeMsg, msg, _original=original_process):
+                                try:
+                                    return _original(snmpEngine, messageProcessingModel, maxMessageSize,
+                                                    securityParameters, securityModel, securityLevel,
+                                                    wholeMsg, msg)
+                                except Exception as e:
+                                    # Extract sender engine ID from security parameters
+                                    try:
+                                        from pysnmp.proto.secmod.rfc3414.service import UsmSecurityParameters
+                                        params = UsmSecurityParameters()
+                                        params.setComponentByPosition(0)
+                                        decoded, _ = pyasn1.codec.ber.decoder.decode(
+                                            securityParameters, asn1Spec=params
+                                        )
+                                        sender_engine_id = decoded.getComponentByPosition(0)
+                                        engine_id_hex = sender_engine_id.prettyPrint().replace('0x', '')
+                                        
+                                        if engine_id_hex not in _registered_engine_ids:
+                                            _logger.info(f" Auto-registering user under engine ID: {engine_id_hex}")
+                                            config.add_v3_user(
+                                                _snmp_engine,
+                                                _auth_username,
+                                                _auth_proto,
+                                                _auth_key,
+                                                _priv_proto,
+                                                _priv_key,
+                                                securityEngineId=rfc1902.OctetString(
+                                                    bytes.fromhex(engine_id_hex)
+                                                ),
+                                            )
+                                            _registered_engine_ids.add(engine_id_hex)
+                                            # Retry
+                                            return _original(snmpEngine, messageProcessingModel, maxMessageSize,
+                                                          securityParameters, securityModel, securityLevel,
+                                                          wholeMsg, msg)
+                                    except Exception as inner_e:
+                                        _logger.error(f" Auto-register failed: {inner_e}")
+                                    raise
+
+                            model.process_incoming_message = patched_process
+                            _logger.info(" USM process_incoming_message patched for dynamic engine ID registration")
+                            break
+
+                    self.logger.info(
+                        f"SNMPv3 user '{auth.username}' registered successfully "
+                        f"with security level '{security_level}'"
+                    )
+                except Exception as e:
+                    self.logger.error(f"Failed to register SNMPv3 user: {e}")
+                    self.logger.error(traceback.format_exc())
+                    
 
             ntfrcv.NotificationReceiver(self.snmp_engine, self._handle_trap)
 
@@ -208,7 +449,11 @@ class SnmpProvider(BaseProvider):
 
             severity = self._determine_severity(trap_oids, trap_data)
 
-            raw_fingerprint = "-".join(trap_oids)
+            raw_fingerprint = "-".join([
+                "-".join(trap_oids),                          
+                str(context_engine_id),                        
+                datetime.utcnow().strftime("%Y%m%d%H%M%S%f"), 
+            ])
             fingerprint = hashlib.md5(raw_fingerprint.encode()).hexdigest()
 
             alert_title = "SNMP Trap Received"
@@ -236,21 +481,35 @@ class SnmpProvider(BaseProvider):
             self.logger.error(traceback.format_exc())
 
     def _determine_severity(self, oids: List[str], data: Dict[str, str]) -> AlertSeverity:
-        """Determine alert severity based on the configured mapping."""
-        default_severity = AlertSeverity.WARNING
+        """Determine alert severity using 4-level priority chain."""
 
-        if not self._severity_mapping:
-            return default_severity
+        # Priority 1 — User-provided manual JSON mapping (highest priority)
+        if self._severity_mapping:
+            for pattern, severity_str in self._severity_mapping.items():
+                for oid in oids:
+                    if pattern in oid:
+                        return self._parse_severity(severity_str)
+                for value in data.values():
+                    if pattern in value:
+                        return self._parse_severity(severity_str)
 
-        for pattern, severity_str in self._severity_mapping.items():
-            for oid in oids:
-                if pattern in oid:
-                    return self._parse_severity(severity_str)
-            for value in data.values():
-                if pattern in value:
-                    return self._parse_severity(severity_str)
+        # Priority 2 — Built-in OID map (standard well-known trap OIDs)
+        for oid in oids:
+            for known_oid, severity in self.DEFAULT_OID_SEVERITY_MAP.items():
+                if known_oid in oid:
+                    self.logger.info(f"Severity '{severity.value}' matched OID pattern '{known_oid}'")
+                    return severity
 
-        return default_severity
+        # Priority 3 — Auto-detect from trap value keywords
+        for val in data.values():
+            val_lower = val.lower()
+            for severity, keywords in self.SEVERITY_KEYWORDS.items():
+                if any(kw in val_lower for kw in keywords):
+                    self.logger.info(f"Severity '{severity.value}' auto-detected from value '{val}'")
+                    return severity
+
+        # Priority 4 — Default fallback
+        return AlertSeverity.WARNING
 
     def _parse_severity(self, severity_str: str) -> AlertSeverity:
         """Parse severity string into AlertSeverity enum value."""
