@@ -1,0 +1,20 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **listen_host**: Interface to bind the SNMP trap listener on (required: False, sensitive: False)
+- **listen_port**: UDP port to listen for SNMP traps on (required: False, sensitive: False)
+- **community_string**: SNMPv1/v2c community string used to authenticate incoming traps (required: False, sensitive: True)
+- **snmp_version**: SNMP protocol version to accept (v1 or v2c) (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **receive_traps**: The provider is able to bind to the configured UDP port and accept SNMP traps. (mandatory) 
+
+
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
