@@ -155,6 +155,7 @@
             "providers/documentation/auth0-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/azuremonitoring-provider",
+            "providers/documentation/bark-provider",
             "providers/documentation/bash-provider",
             "providers/documentation/bigquery-provider",
             "providers/documentation/centreon-provider",
