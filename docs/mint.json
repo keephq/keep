@@ -267,7 +267,8 @@
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider",
             "providers/documentation/zoom-provider",
-            "providers/documentation/zoom_chat-provider"
+            "providers/documentation/zoom_chat-provider",
+            "providers/documentation/zulip-provider"
           ]
         },
         "providers/adding-a-new-provider"
