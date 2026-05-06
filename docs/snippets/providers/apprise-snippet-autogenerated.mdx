@@ -1,0 +1,35 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **server_url**: Apprise API server URL (e.g. http://apprise:8000) (required: True, sensitive: False)
+- **tag**: Apprise tag/group to notify (default: all) (required: False, sensitive: False)
+- **api_key**: Apprise API key (if authentication is enabled) (required: False, sensitive: True)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **notify**:  (mandatory) 
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query apprise
+      provider: apprise
+      config: "{{ provider.my_provider_name }}"
+      with:
+        message: {value}  # The notification body (required).
+        title: {value}  # The notification title (default: "Keep Alert").
+        notification_type: {value}  # Apprise type - info, success, warning, or failure (default: info).
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
