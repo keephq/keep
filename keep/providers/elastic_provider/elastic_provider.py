@@ -8,6 +8,7 @@ import typing
 
 import pydantic
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import UnsupportedProductError
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_connection_failed import ProviderConnectionFailed
@@ -169,6 +170,13 @@ class ElasticProvider(BaseProvider):
         # Check if the connection was successful
         try:
             es.info()
+        except UnsupportedProductError:
+            raise ProviderConnectionFailed(
+                "Failed to connect to Elasticsearch: the server did not identify itself as "
+                "Elasticsearch (UnsupportedProductError). This typically happens when connecting "
+                "to Elasticsearch 7.x with the elasticsearch-py 8.x client. "
+                "Please upgrade to Elasticsearch 8.x or use elasticsearch-py < 8.0."
+            )
         except Exception as e:
             raise ProviderConnectionFailed(
                 f"Failed to connect to Elasticsearch: {str(e)}"
