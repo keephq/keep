@@ -169,6 +169,7 @@
             "providers/documentation/databend-provider",
             "providers/documentation/datadog-provider",
             "providers/documentation/deepseek-provider",
+            "providers/documentation/dingtalk-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/dynatrace-provider",
             "providers/documentation/eks-provider",
