@@ -201,6 +201,7 @@
             "providers/documentation/kibana-provider",
             "providers/documentation/kubernetes-provider",
             "providers/documentation/libre_nms-provider",
+            "providers/documentation/line-notify-provider",
             "providers/documentation/linear_provider",
             "providers/documentation/linearb-provider",
             "providers/documentation/litellm-provider",
