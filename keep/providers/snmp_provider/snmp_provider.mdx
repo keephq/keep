@@ -1,0 +1,38 @@
+---
+title: SNMP
+description: SNMP v2c provider for Keep (basic polling + trap support)
+---
+
+# SNMP Provider
+
+Keep's SNMP provider allows you to ingest alerts from any SNMP-enabled device via **SNMP v2c**.
+
+## Configuration
+
+| Field      | Required | Description                          | Example                          |
+|------------|----------|--------------------------------------|----------------------------------|
+| community  | Yes      | SNMP community string                | `public`                        |
+| host       | Yes      | Device IP / hostname                 | `192.168.1.100`                 |
+| port       | No       | SNMP port (default 161)              | `161`                           |
+
+## Supported Features
+
+- **Polling** – Basic SNMP GET for device status
+- **Traps** – Ready for SNMP trap reception (future slice)
+- **Severity Mapping** – Basic trap OID → Keep severity
+
+## Example Alert
+
+```json
+{
+  "id": "snmp-test-alert",
+  "name": "SNMP Device Status",
+  "status": "firing",
+  "severity": "info",
+  "lastReceived": "2026-05-08T14:30:00Z",
+  "description": "SNMP provider test alert (trap/polling ready)",
+  "source": "snmp",
+  "labels": {
+    "host": "192.168.1.100"
+  }
+}
