@@ -1,0 +1,39 @@
+---
+title: Nagios
+description: Nagios Core and Nagios XI provider for Keep
+---
+
+# Nagios Provider
+
+Keep's Nagios provider allows you to ingest alerts from both **Nagios Core** (via `statusjson.cgi`) and **Nagios XI** (via REST API).
+
+## Configuration
+
+| Field      | Required | Description                          | Example                          |
+|------------|----------|--------------------------------------|----------------------------------|
+| url        | Yes      | Nagios server base URL               | `http://nagios.example.com`     |
+| username   | Yes      | Basic Auth username                  | `nagiosadmin`                   |
+| password   | Yes      | Basic Auth password                  | `••••••••`                      |
+
+## Supported Features
+
+- **Polling** – Pulls current host/service status from Nagios Core or XI
+- **Webhook** – Supports Nagios webhook notifications (future)
+- **Severity Mapping** – CRITICAL/DOWN → critical, WARNING → warning, OK/UP → resolved
+
+## Example Alert
+
+```json
+{
+  "id": "nagios-core-webserver-http",
+  "name": "HTTP",
+  "status": "firing",
+  "severity": "critical",
+  "lastReceived": "2026-05-08T13:00:00Z",
+  "description": "HTTP CRITICAL - Socket timeout after 10 seconds",
+  "source": "nagios-core",
+  "labels": {
+    "host": "webserver01",
+    "service": "HTTP"
+  }
+}
