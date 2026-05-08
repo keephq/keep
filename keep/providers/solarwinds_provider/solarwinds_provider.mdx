@@ -1,0 +1,39 @@
+---
+title: SolarWinds
+description: SolarWinds Orion (SWIS) provider for Keep
+---
+
+# SolarWinds Provider
+
+Keep's SolarWinds provider allows you to ingest alerts from **SolarWinds Orion Platform** via the SWIS REST API.
+
+## Configuration
+
+| Field      | Required | Description                          | Example                          |
+|------------|----------|--------------------------------------|----------------------------------|
+| url        | Yes      | SolarWinds Orion server URL          | `https://your-solarwinds-server` |
+| username   | Yes      | Orion username (Basic Auth)          | `admin`                         |
+| password   | Yes      | Orion password                       | `••••••••`                      |
+
+## Supported Features
+
+- **Polling** – Pulls active alerts from `Orion.AlertActive`
+- **Severity Mapping** – Maps SolarWinds severity codes correctly
+- **Webhook** – Ready for future webhook support
+
+## Example Alert
+
+```json
+{
+  "id": "solarwinds-12345",
+  "name": "High CPU on Database Server",
+  "status": "firing",
+  "severity": "critical",
+  "lastReceived": "2026-05-08T14:00:00Z",
+  "description": "CPU Utilization is above threshold",
+  "source": "solarwinds",
+  "labels": {
+    "object": "DB-SERVER-01",
+    "object_type": "Node"
+  }
+}
