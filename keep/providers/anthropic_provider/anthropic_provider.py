@@ -1,7 +1,7 @@
 import json
 import dataclasses
 import pydantic
-from anthropic import Anthropic
+from anthropic import Anthropic, AuthenticationError
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -15,6 +15,29 @@ class AnthropicProviderAuthConfig:
             "required": True,
             "description": "Anthropic API Key",
             "sensitive": True,
+            "hint": "sk-ant-...",
+        },
+    )
+
+    model: str = dataclasses.field(
+        default="claude-sonnet-4-6",
+        metadata={
+            "required": False,
+            "description": "Claude model to use",
+            "type": "select",
+            "options": [
+                "claude-opus-4-5",
+                "claude-sonnet-4-6",
+                "claude-haiku-4-5-20251001",
+            ],
+        },
+    )
+
+    system_prompt: str = dataclasses.field(
+        default="You are an expert SRE and security analyst. Analyze alerts and provide concise, actionable insights.",
+        metadata={
+            "required": False,
+            "description": "System prompt that sets Claude's role for all requests in this provider.",
         },
     )
 
@@ -37,42 +60,54 @@ class AnthropicProvider(BaseProvider):
         pass
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        scopes = {}
-        return scopes
+        try:
+            client = Anthropic(api_key=self.authentication_config.api_key)
+            client.messages.create(
+                model=self.authentication_config.model,
+                max_tokens=10,
+                messages=[{"role": "user", "content": "ping"}],
+            )
+            return {"api_key_valid": True}
+        except AuthenticationError:
+            return {"api_key_valid": "Invalid API key — check your Anthropic console."}
+        except Exception as e:
+            return {"api_key_valid": str(e)}
 
     def _query(
         self,
         prompt,
-        model="claude-3-sonnet-20240229",
+        model=None,
         max_tokens=1024,
+        system_prompt=None,
         structured_output_format=None,
     ):
         """
         Query the Anthropic API with the given prompt and model.
         Args:
             prompt (str): The prompt to query the model with.
-            model (str): The model to query.
+            model (str): The model to query (overrides provider config).
             max_tokens (int): The maximum number of tokens to generate.
+            system_prompt (str): System prompt override for this call.
             structured_output_format (dict): The structured output format to use.
         """
-        client = Anthropic(api_key=self.authentication_config.api_key)
+      client = Anthropic(api_key=self.authentication_config.api_key)
 
         messages = [{"role": "user", "content": prompt}]
 
-        # Handle structured output with system prompt if needed
-        system_prompt = ""
+        # Resolve system prompt: call-level override > structured output schema > provider config
+        resolved_system = system_prompt or self.authentication_config.system_prompt
         if structured_output_format:
             schema = structured_output_format.get("json_schema", {})
-            system_prompt = (
+            resolved_system = (
                 f"You must respond with valid JSON that matches this schema: {json.dumps(schema)}\n"
                 "Your response must be parseable JSON and nothing else."
             )
 
         response = client.messages.create(
-            model=model,
+            model=model or self.authentication_config.model,
             max_tokens=max_tokens,
             messages=messages,
-            system=system_prompt if system_prompt else None,
+            system=resolved_system,
         )
 
         content = response.content[0].text
@@ -115,7 +150,6 @@ if __name__ == "__main__":
     print(
         provider.query(
             prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
-            model="claude-3-sonnet-20240229",
             structured_output_format={
                 "type": "json_schema",
                 "json_schema": {
