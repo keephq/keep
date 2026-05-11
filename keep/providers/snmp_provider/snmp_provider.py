@@ -8,10 +8,29 @@ and pushed via ``BaseProvider._push_alert``.
 This is a *push* / *consumer* style provider in the same family as the Kafka
 provider: ``start_consume`` blocks while traps are received and ``stop_consume``
 flips the flag to stop the listener thread.
+
+Architecture note — queue-based decoupling
+------------------------------------------
+The AsyncoreDispatcher runs in a single-threaded loop.  Calling ``_push_alert``
+(which does HTTP I/O) directly inside the trap callback would block that loop
+under load.  To keep trap reception non-blocking we use a bounded ``queue.Queue``
+and a background worker thread:
+
+* ``_on_trap`` decodes the incoming PDU and puts an ``AlertDto``-shaped dict on
+  ``_alert_queue``.  No I/O happens on the dispatcher thread.
+* The worker thread (``_alert_worker``) drains the queue and calls
+  ``_push_alert``.  It is a daemon thread so it never prevents process exit.
+* The queue is bounded (``maxsize=10 000``) so a flood of traps cannot grow the
+  process without limit.  Once full, new items are dropped with a warning rather
+  than blocking the dispatcher.
+* ``stop_consume`` sends a sentinel ``None`` to drain the queue and waits for
+  the worker to finish before returning.
 """
 
 import dataclasses
 import logging
+import queue
+import threading
 from typing import Optional
 
 import pydantic
@@ -20,6 +39,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+
+_QUEUE_SENTINEL = None  # signals the worker to stop
 
 
 @pydantic.dataclasses.dataclass
@@ -97,6 +118,10 @@ class SnmpProvider(BaseProvider):
         "low": "low",
     }
 
+    # Maximum number of decoded alerts to buffer before dropping.  This caps
+    # memory use if ``_push_alert`` falls behind during a trap flood.
+    _QUEUE_MAXSIZE = 10_000
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -104,6 +129,9 @@ class SnmpProvider(BaseProvider):
         self.consume = False
         self._dispatcher = None
         self._err = ""
+        # Queue + worker are created fresh each time start_consume is called.
+        self._alert_queue: Optional[queue.Queue] = None
+        self._worker_thread: Optional[threading.Thread] = None
 
     def validate_config(self):
         """Validate the provider configuration."""
@@ -210,7 +238,12 @@ class SnmpProvider(BaseProvider):
 
     def _on_trap(self, snmp_engine, state_reference, context_engine_id, context_name,
                  var_binds, cb_ctx):  # pragma: no cover - exercised via integration
-        """pysnmp callback invoked for each received trap."""
+        """pysnmp callback invoked for each received trap.
+
+        This method runs on the AsyncoreDispatcher thread.  It must return as
+        quickly as possible — all I/O (``_push_alert``) is offloaded to the
+        background worker via ``_alert_queue``.
+        """
         try:
             from pysnmp.proto.api import v2c as v2c_api
 
@@ -237,12 +270,34 @@ class SnmpProvider(BaseProvider):
                 "Received SNMP trap",
                 extra={"trap_oid": trap_oid, "var_binds": decoded},
             )
+            # Enqueue without blocking. Drop with a warning if the queue is full
+            # (bounded at _QUEUE_MAXSIZE) rather than stalling trap reception.
             try:
-                self._push_alert(alert)
-            except Exception:
-                self.logger.exception("Error pushing SNMP-trap alert to API")
+                self._alert_queue.put_nowait(alert)
+            except queue.Full:
+                self.logger.warning(
+                    "SNMP alert queue full — dropping trap %s", trap_oid
+                )
         except Exception:
             self.logger.exception("Error processing SNMP trap")
+
+    def _alert_worker(self):
+        """Background daemon thread: drains ``_alert_queue`` and calls ``_push_alert``.
+
+        Runs until it receives the ``_QUEUE_SENTINEL`` (``None``) value which
+        ``stop_consume`` places on the queue after closing the dispatcher.
+        """
+        while True:
+            item = self._alert_queue.get()
+            if item is _QUEUE_SENTINEL:
+                self._alert_queue.task_done()
+                break
+            try:
+                self._push_alert(item)
+            except Exception:
+                self.logger.exception("Error pushing SNMP-trap alert to API")
+            finally:
+                self._alert_queue.task_done()
 
     def start_consume(self):
         """Block in the SNMP trap dispatcher until ``stop_consume`` is called."""
@@ -256,6 +311,16 @@ class SnmpProvider(BaseProvider):
 
         self.consume = True
         self._err = ""
+
+        # Stand up the alert queue and worker thread before the dispatcher so
+        # ``_on_trap`` always has a queue to push to.
+        self._alert_queue = queue.Queue(maxsize=self._QUEUE_MAXSIZE)
+        self._worker_thread = threading.Thread(
+            target=self._alert_worker,
+            name="snmp-alert-worker",
+            daemon=True,
+        )
+        self._worker_thread.start()
 
         snmp_engine = engine.SnmpEngine()
         # Bind to the requested host/port.
@@ -278,6 +343,9 @@ class SnmpProvider(BaseProvider):
             )
             self.logger.exception(self._err)
             self.consume = False
+            # Stop the worker we already started.
+            self._alert_queue.put(_QUEUE_SENTINEL)
+            self._worker_thread.join(timeout=5)
             return
 
         # SNMPv1 + SNMPv2c communities. We register both so a single listener
@@ -315,6 +383,9 @@ class SnmpProvider(BaseProvider):
                 pass
             self._dispatcher = None
             self.consume = False
+            # Signal the worker to drain remaining items and exit.
+            self._alert_queue.put(_QUEUE_SENTINEL)
+            self._worker_thread.join(timeout=10)
             self.logger.info("SNMP trap listener stopped")
 
     def stop_consume(self):

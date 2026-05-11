@@ -8,13 +8,18 @@ remain fast and hermetic. They cover:
 * trap-to-AlertDto mapping
 * validate_scopes binding behavior
 * stop_consume flips the consume flag
+* queue-worker decoupling (burst throughput + slow push non-blocking)
 
 The actual dispatcher loop is exercised via integration in production; here
 we mock the bind-to-port path so tests do not require root or SNMP libraries
 to be running on the host.
 """
 
+import queue
 import socket
+import threading
+import time
+from unittest.mock import patch
 
 import pytest
 
@@ -166,3 +171,95 @@ class TestLifecycle:
         provider.consume = True
         provider.stop_consume()
         assert provider.consume is False
+
+
+class TestQueueWorkerDecoupling:
+    """Regression tests for the queue-based dispatcher / push-alert decoupling.
+
+    These tests exercise the ``_alert_queue`` + ``_alert_worker`` path directly
+    without needing a live SNMP socket or pysnmp dispatcher.
+    """
+
+    def _start_worker(self, provider):
+        """Wire up a fresh queue + worker thread and return them."""
+        import queue as _queue
+
+        provider._alert_queue = _queue.Queue(maxsize=provider._QUEUE_MAXSIZE)
+        worker = threading.Thread(
+            target=provider._alert_worker,
+            name="test-snmp-alert-worker",
+            daemon=True,
+        )
+        worker.start()
+        return worker
+
+    def _stop_worker(self, provider, worker):
+        """Send sentinel and wait for the worker to finish."""
+        provider._alert_queue.put(None)  # sentinel
+        worker.join(timeout=5)
+
+    def test_burst_of_traps_all_reach_push_alert(self, context_manager):
+        """A burst of N traps enqueued in rapid succession must all be pushed."""
+        provider = _make_provider(context_manager)
+        provider.validate_config()
+
+        pushed = []
+
+        def fake_push(alert):
+            pushed.append(alert)
+
+        provider._push_alert = fake_push
+
+        worker = self._start_worker(provider)
+        N = 200
+        for i in range(N):
+            alert = provider._trap_to_alert(
+                trap_oid=f"1.3.6.1.4.1.{i}",
+                var_binds={},
+            )
+            provider._alert_queue.put(alert)
+
+        self._stop_worker(provider, worker)
+
+        assert len(pushed) == N, (
+            f"Expected {N} alerts pushed, got {len(pushed)}"
+        )
+
+    def test_slow_push_alert_does_not_block_trap_reception(self, context_manager):
+        """Trap reception (enqueueing) must complete in near-zero time even when
+        ``_push_alert`` is artificially slow (100 ms per call).
+
+        We measure how long it takes to enqueue 10 traps; the worker running
+        slowly in a separate thread should not add to that wall-clock time.
+        """
+        provider = _make_provider(context_manager)
+        provider.validate_config()
+
+        SLOW_PUSH_SECONDS = 0.1
+        TRAP_COUNT = 10
+
+        def slow_push(alert):
+            time.sleep(SLOW_PUSH_SECONDS)
+
+        provider._push_alert = slow_push
+
+        worker = self._start_worker(provider)
+
+        start = time.monotonic()
+        for i in range(TRAP_COUNT):
+            alert = provider._trap_to_alert(
+                trap_oid=f"1.3.6.1.4.1.{i}",
+                var_binds={},
+            )
+            provider._alert_queue.put(alert)
+        enqueue_elapsed = time.monotonic() - start
+
+        # Enqueueing 10 items should take well under the time a synchronous
+        # implementation would spend (10 * 100 ms = 1 s).  Use 200 ms as a
+        # generous upper bound for CI noise.
+        assert enqueue_elapsed < 0.2, (
+            f"Enqueueing {TRAP_COUNT} traps took {enqueue_elapsed:.3f}s — "
+            "looks like trap reception is blocking on _push_alert"
+        )
+
+        self._stop_worker(provider, worker)
