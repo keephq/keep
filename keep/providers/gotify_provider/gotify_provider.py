@@ -17,7 +17,7 @@ from keep.providers.models.provider_config import ProviderConfig
 class GotifyProviderAuthConfig:
     """Gotify authentication configuration."""
 
-    gotify_url: str = dataclasses.field(
+    url: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Gotify server URL (e.g. https://gotify.example.com)",
@@ -25,7 +25,7 @@ class GotifyProviderAuthConfig:
         }
     )
 
-    app_token: str = dataclasses.field(
+    token: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Gotify application token",
@@ -60,7 +60,7 @@ class GotifyProvider(BaseProvider):
 
     def validate_scopes(self):
         """
-        Validate that the app token is valid by making a test request.
+        Validate that the token is valid by making a test request.
         """
         try:
             self._send_message("Keep test message", priority=0)
@@ -71,15 +71,15 @@ class GotifyProvider(BaseProvider):
     def _send_message(
         self,
         message: str,
-        title: str = "Keep Alert",
+        title: str = None,
         priority: int = 5,
     ):
         """
         Send a message to Gotify.
         https://gotify.net/docs/pushmsg
         """
-        gotify_url = self.authentication_config.gotify_url.rstrip("/")
-        app_token = self.authentication_config.app_token
+        url = self.authentication_config.url.rstrip("/")
+        token = self.authentication_config.token
 
         if not message:
             raise ProviderException(
@@ -87,28 +87,29 @@ class GotifyProvider(BaseProvider):
             )
 
         headers = {
-            "X-Gotify-Key": app_token,
-            "Content-Type": "application/json",
+            "X-Gotify-Key": token,
         }
 
         payload = {
-            "title": title,
             "message": message,
             "priority": priority,
         }
 
+        if title:
+            payload["title"] = title
+
         response = requests.post(
-            f"{gotify_url}/message",
+            f"{url}/message",
             headers=headers,
             json=payload,
             timeout=30,
         )
 
-        if response.status_code in [200, 201]:
+        if response.status_code == 200:
             return response.json()
         elif response.status_code == 401:
             raise ProviderException(
-                f"{self.__class__.__name__} unauthorized - invalid app token"
+                f"{self.__class__.__name__} unauthorized - invalid token"
             )
         else:
             raise ProviderException(
@@ -118,7 +119,7 @@ class GotifyProvider(BaseProvider):
     def _notify(
         self,
         message: str = "",
-        title: str = "Keep Alert",
+        title: str = None,
         priority: int = 5,
         **kwargs: dict,
     ):
@@ -158,18 +159,18 @@ if __name__ == "__main__":
 
     import os
 
-    gotify_url = os.environ.get("GOTIFY_URL")
-    app_token = os.environ.get("GOTIFY_TOKEN")
+    url = os.environ.get("GOTIFY_URL")
+    token = os.environ.get("GOTIFY_TOKEN")
 
-    if not gotify_url or not app_token:
+    if not url or not token:
         raise Exception("GOTIFY_URL and GOTIFY_TOKEN are required")
 
     config = ProviderConfig(
         description="Gotify Output Provider",
-        authentication={"gotify_url": gotify_url, "app_token": app_token},
+        authentication={"url": url, "token": token},
     )
     provider = GotifyProvider(
         context_manager, provider_id="gotify-test", config=config
     )
 
-    provider.notify(message="Hello from Keep!", title="Test Alert")
+    provider.notify(message="Hello from Keep!")
