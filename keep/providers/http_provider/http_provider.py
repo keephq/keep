@@ -63,7 +63,7 @@ class HttpProvider(BaseProvider):
         """
         Send a HTTP request to the given url.
         """
-        return self.query(
+        return self._query(
             url=url,
             method=method,
             headers=headers,
