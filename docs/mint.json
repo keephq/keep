@@ -183,6 +183,7 @@
             "providers/documentation/gitlabpipelines-provider",
             "providers/documentation/gke-provider",
             "providers/documentation/google_chat-provider",
+            "providers/documentation/gotify-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/grafana_incident-provider",
             "providers/documentation/grafana_loki-provider",
@@ -236,6 +237,7 @@
             "providers/documentation/quickchart-provider",
             "providers/documentation/redmine-provider",
             "providers/documentation/resend-provider",
+            "providers/documentation/rocketchat-provider",
             "providers/documentation/rollbar-provider",
             "providers/documentation/sendgrid-provider",
             "providers/documentation/sentry-provider",
@@ -267,6 +269,7 @@
             "providers/documentation/youtrack-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider",
+            "providers/documentation/zulip-provider",
             "providers/documentation/zoom-provider",
             "providers/documentation/zoom_chat-provider"
           ]
