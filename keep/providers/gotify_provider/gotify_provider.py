@@ -1,5 +1,5 @@
 """
-Gotify Provider is a class that implements the BaseOutputProvider interface for Gotify push notifications.
+Gotify Provider is a class that implements the BaseOutputProvider interface for Gotify self-hosted push notifications.
 """
 
 import dataclasses
@@ -17,17 +17,18 @@ from keep.providers.models.provider_config import ProviderConfig
 class GotifyProviderAuthConfig:
     """Gotify authentication configuration."""
 
-    url: str = dataclasses.field(
+    gotify_url: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Gotify server URL (e.g., https://gotify.example.com)",
+            "description": "Gotify server URL (e.g. https://gotify.example.com)",
             "config_main_group": "authentication",
         }
     )
-    token: str = dataclasses.field(
+
+    app_token: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Gotify Application Token",
+            "description": "Gotify application token",
             "sensitive": True,
             "config_main_group": "authentication",
         }
@@ -35,7 +36,7 @@ class GotifyProviderAuthConfig:
 
 
 class GotifyProvider(BaseProvider):
-    """Send alert message to Gotify."""
+    """Send alert message to Gotify self-hosted push notification server."""
 
     PROVIDER_DISPLAY_NAME = "Gotify"
     PROVIDER_CATEGORY = ["Collaboration"]
@@ -59,7 +60,7 @@ class GotifyProvider(BaseProvider):
 
     def validate_scopes(self):
         """
-        Validate that the token is valid by making a test request.
+        Validate that the app token is valid by making a test request.
         """
         try:
             self._send_message("Keep test message", priority=0)
@@ -70,15 +71,15 @@ class GotifyProvider(BaseProvider):
     def _send_message(
         self,
         message: str,
-        title: str = None,
+        title: str = "Keep Alert",
         priority: int = 5,
     ):
         """
         Send a message to Gotify.
         https://gotify.net/docs/pushmsg
         """
-        url = self.authentication_config.url.rstrip("/")
-        token = self.authentication_config.token
+        gotify_url = self.authentication_config.gotify_url.rstrip("/")
+        app_token = self.authentication_config.app_token
 
         if not message:
             raise ProviderException(
@@ -86,33 +87,28 @@ class GotifyProvider(BaseProvider):
             )
 
         headers = {
-            "X-Gotify-Key": token,
+            "X-Gotify-Key": app_token,
+            "Content-Type": "application/json",
         }
 
         payload = {
+            "title": title,
             "message": message,
             "priority": priority,
         }
 
-        if title:
-            payload["title"] = title
-
         response = requests.post(
-            f"{url}/message",
+            f"{gotify_url}/message",
             headers=headers,
-           json=payload,
+            json=payload,
             timeout=30,
         )
 
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             return response.json()
         elif response.status_code == 401:
             raise ProviderException(
-                f"{self.__class__.__name__} unauthorized - invalid token"
-            )
-        elif response.status_code == 400:
-            raise ProviderException(
-                f"{self.__class__.__name__} bad request - {response.text}"
+                f"{self.__class__.__name__} unauthorized - invalid app token"
             )
         else:
             raise ProviderException(
@@ -122,7 +118,7 @@ class GotifyProvider(BaseProvider):
     def _notify(
         self,
         message: str = "",
-        title: str = None,
+        title: str = "Keep Alert",
         priority: int = 5,
         **kwargs: dict,
     ):
@@ -130,9 +126,9 @@ class GotifyProvider(BaseProvider):
         Notify alert message to Gotify.
 
         Args:
-            message (str): The message to send.
-            title (str): The message title.
-            priority (int): Message priority (0=low, 5=normal, 10=high).
+            message (str): The message body.
+            title (str): The notification title.
+            priority (int): Priority level (0=low, 5=normal, 10=high).
         """
         self.logger.debug("Notifying alert message to Gotify")
 
@@ -163,17 +159,17 @@ if __name__ == "__main__":
     import os
 
     gotify_url = os.environ.get("GOTIFY_URL")
-    gotify_token = os.environ.get("GOTIFY_TOKEN")
+    app_token = os.environ.get("GOTIFY_TOKEN")
 
-    if gotify_url is None or gotify_token is None:
+    if not gotify_url or not app_token:
         raise Exception("GOTIFY_URL and GOTIFY_TOKEN are required")
 
     config = ProviderConfig(
         description="Gotify Output Provider",
-        authentication={"url": gotify_url, "token": gotify_token},
+        authentication={"gotify_url": gotify_url, "app_token": app_token},
     )
     provider = GotifyProvider(
         context_manager, provider_id="gotify-test", config=config
     )
 
-    provider.notify(message="Hello from Keep!")
+    provider.notify(message="Hello from Keep!", title="Test Alert")
