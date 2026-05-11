@@ -265,6 +265,7 @@
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/vllm-provider",
             "providers/documentation/wazuh-provider",
+            "providers/documentation/webex-provider",
             "providers/documentation/webhook-provider",
             "providers/documentation/websocket-provider",
             "providers/documentation/youtrack-provider",
