@@ -8,8 +8,8 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel, func
 
 
 class TopologyServiceApplication(SQLModel, table=True):
-    service_id: int = Field(foreign_key="topologyservice.id", primary_key=True)
-    application_id: UUID = Field(foreign_key="topologyapplication.id", primary_key=True)
+    service_id: int = Field(foreign_key="topologyservice.id", primary_key=True, ondelete="CASCADE")
+    application_id: UUID = Field(foreign_key="topologyapplication.id", primary_key=True, ondelete="CASCADE")
 
     service: "TopologyService" = Relationship(
         sa_relationship_kwargs={
