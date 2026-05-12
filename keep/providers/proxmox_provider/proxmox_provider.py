@@ -113,7 +113,7 @@ class ProxmoxProvider(BaseProvider):
         """
         try:
             response = self.session.get(
-                f"{self.authentication_config.host}/api2/json/access/ticket",
+                f"{self.authentication_config.host}/api2/json/version",
                 headers=self._get_auth_headers(),
                 verify=self.authentication_config.verify_ssl,
             )
@@ -154,43 +154,55 @@ class ProxmoxProvider(BaseProvider):
             raise Exception(f"Error getting node status from Proxmox: {e}")
 
     def _get_vms(self):
-        try:
-            response = self.session.get(
-                f"{self.authentication_config.host}/api2/json/nodes/*/qemu",
-                headers=self._get_auth_headers(),
-                verify=self.authentication_config.verify_ssl,
-            )
-            response.raise_for_status()
-            return response.json()["data"]
-        except Exception as e:
-            self.logger.error("Error getting VMs from Proxmox: %s", e)
-            raise Exception(f"Error getting VMs from Proxmox: {e}")
+        vms = []
+        nodes = self._get_nodes()
+        for node in nodes:
+            try:
+                response = self.session.get(
+                    f"{self.authentication_config.host}/api2/json/nodes/{node['node']}/qemu",
+                    headers=self._get_auth_headers(),
+                    verify=self.authentication_config.verify_ssl,
+                )
+                response.raise_for_status()
+                node_vms = response.json()["data"]
+                vms.extend(node_vms)
+            except Exception as e:
+                self.logger.error("Error getting VMs from node %s: %s", node["node"], e)
+        return vms
 
     def _get_containers(self):
-        try:
-            response = self.session.get(
-                f"{self.authentication_config.host}/api2/json/nodes/*/lxc",
-                headers=self._get_auth_headers(),
-                verify=self.authentication_config.verify_ssl,
-            )
-            response.raise_for_status()
-            return response.json()["data"]
-        except Exception as e:
-            self.logger.error("Error getting containers from Proxmox: %s", e)
-            raise Exception(f"Error getting containers from Proxmox: {e}")
+        containers = []
+        nodes = self._get_nodes()
+        for node in nodes:
+            try:
+                response = self.session.get(
+                    f"{self.authentication_config.host}/api2/json/nodes/{node['node']}/lxc",
+                    headers=self._get_auth_headers(),
+                    verify=self.authentication_config.verify_ssl,
+                )
+                response.raise_for_status()
+                node_containers = response.json()["data"]
+                containers.extend(node_containers)
+            except Exception as e:
+                self.logger.error("Error getting containers from node %s: %s", node["node"], e)
+        return containers
 
     def _get_storage(self):
-        try:
-            response = self.session.get(
-                f"{self.authentication_config.host}/api2/json/nodes/*/storage",
-                headers=self._get_auth_headers(),
-                verify=self.authentication_config.verify_ssl,
-            )
-            response.raise_for_status()
-            return response.json()["data"]
-        except Exception as e:
-            self.logger.error("Error getting storage from Proxmox: %s", e)
-            raise Exception(f"Error getting storage from Proxmox: {e}")
+        storage = []
+        nodes = self._get_nodes()
+        for node in nodes:
+            try:
+                response = self.session.get(
+                    f"{self.authentication_config.host}/api2/json/nodes/{node['node']}/storage",
+                    headers=self._get_auth_headers(),
+                    verify=self.authentication_config.verify_ssl,
+                )
+                response.raise_for_status()
+                node_storage = response.json()["data"]
+                storage.extend(node_storage)
+            except Exception as e:
+                self.logger.error("Error getting storage from node %s: %s", node["node"], e)
+        return storage
 
     def _get_alerts(self) -> List[AlertDto]:
         alerts = []
@@ -276,17 +288,21 @@ class ProxmoxProvider(BaseProvider):
                         source=["proxmox"],
                     )
                     alerts.append(alert)
-                elif storage_item.get("type") == "dir" and storage_item.get("used") > storage_item.get("total", 0) * 0.9:
-                    alert = AlertDto(
-                        id=f"storage_low_space_{storage_item['storage']}",
-                        name=f"Storage pool {storage_item['storage']} is running low on space",
-                        description=f"Storage pool {storage_item['storage']} is running low on space",
-                        status=AlertStatus.FIRING.value,
-                        severity=AlertSeverity.WARNING,
-                        lastReceived=datetime.now().isoformat(),
-                        source=["proxmox"],
-                    )
-                    alerts.append(alert)
+                elif storage_item.get("type") in ["zfspool", "lvmthin", "dir", "lvm"]:
+                    # Check if used/total ratio > 0.9 for all storage types
+                    used = storage_item.get("used", 0)
+                    total = storage_item.get("total", 0)
+                    if total > 0 and (used / total) > 0.9:
+                        alert = AlertDto(
+                            id=f"storage_low_space_{storage_item['storage']}",
+                            name=f"Storage pool {storage_item['storage']} is running low on space",
+                            description=f"Storage pool {storage_item['storage']} is running low on space",
+                            status=AlertStatus.FIRING.value,
+                            severity=AlertSeverity.WARNING,
+                            lastReceived=datetime.now().isoformat(),
+                            source=["proxmox"],
+                        )
+                        alerts.append(alert)
         except Exception as e:
             self.logger.error("Error getting storage alerts from Proxmox: %s", e)
 
