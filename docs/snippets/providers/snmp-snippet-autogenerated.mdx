@@ -1,0 +1,17 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **listen_host**: UDP address to bind the SNMP trap listener to (required: False, sensitive: False)
+- **listen_port**: UDP port to receive SNMP traps on (required: False, sensitive: False)
+- **community**: Accepted SNMP v1/v2c community string (required: False, sensitive: True)
+- **queue_size**: Maximum decoded traps to queue before dropping new traps (required: False, sensitive: False)
+- **socket_timeout_seconds**: Socket timeout used to check shutdown state (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **trap_receive**: Trap Receive (mandatory)
+
+## Receiving traps
+
+This provider can run as a consumer and receive SNMP traps directly over UDP.
