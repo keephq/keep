@@ -1,0 +1,63 @@
+"""Mock SNMP trap alerts for Keep UI preview."""
+
+import uuid
+from datetime import datetime, timezone
+
+ALERTS_MOCK = [
+    {
+        "id": str(uuid.uuid4()),
+        "name": "linkDown",
+        "severity": "high",
+        "status": "firing",
+        "source": ["snmp"],
+        "message": "A network link has gone down",
+        "description": "enterprise=1.3.6.1.6.3.1.1.5.3; ifIndex=2",
+        "pushed": True,
+        "pdu_type": "SNMPv2-Trap",
+        "source_ip": "192.168.1.10",
+        "trap_oid": "1.3.6.1.6.3.1.1.5.3",
+        "lastReceived": datetime.now(tz=timezone.utc).isoformat(),
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "name": "authenticationFailure",
+        "severity": "critical",
+        "status": "firing",
+        "source": ["snmp"],
+        "message": "SNMP authentication failure detected",
+        "description": "enterprise=1.3.6.1.6.3.1.1.5.5",
+        "pushed": True,
+        "pdu_type": "SNMPv2-Trap",
+        "source_ip": "10.0.0.5",
+        "trap_oid": "1.3.6.1.6.3.1.1.5.5",
+        "lastReceived": datetime.now(tz=timezone.utc).isoformat(),
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "name": "coldStart",
+        "severity": "warning",
+        "status": "firing",
+        "source": ["snmp"],
+        "message": "Agent has reinitialized its configuration",
+        "description": "enterprise=1.3.6.1.6.3.1.1.5.1",
+        "pushed": True,
+        "pdu_type": "TrapPDU-v1",
+        "source_ip": "172.16.0.1",
+        "trap_oid": "1.3.6.1.6.3.1.1.5.1",
+        "lastReceived": datetime.now(tz=timezone.utc).isoformat(),
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "name": "linkUp",
+        "severity": "info",
+        "status": "resolved",
+        "source": ["snmp"],
+        "message": "A network link has come up",
+        "description": "enterprise=1.3.6.1.6.3.1.1.5.4; ifIndex=2",
+        "pushed": True,
+        "pdu_type": "SNMPv2-Trap",
+        "source_ip": "192.168.1.10",
+        "trap_oid": "1.3.6.1.6.3.1.1.5.4",
+        "lastReceived": datetime.now(tz=timezone.utc).isoformat(),
+    },
+]
