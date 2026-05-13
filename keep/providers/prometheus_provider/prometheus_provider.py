@@ -117,12 +117,23 @@ receivers:
             validated_scopes["connectivity"] = str(e)
         return validated_scopes
 
-    def _query(self, query):
+    def query(self, query: str):
         """
-        Executes a query against the Prometheus server.
+        Executes a PromQL query against the Prometheus server.
+
+        This method allows executing arbitrary PromQL queries to retrieve
+        time series data from Prometheus for analysis by AI agents.
+
+        Args:
+            query: A PromQL query string (e.g., "up", "rate(http_requests_total[5m])")
 
         Returns:
-            list | tuple: list of results or single result if single_row is True
+            dict: Prometheus query response containing results
+
+        Example:
+            >>> provider = PrometheusProvider(...)
+            >>> result = provider.query("up{job='prometheus'}")
+            >>> print(result['data']['result'])
         """
         if not query:
             raise ValueError("Query is required")
