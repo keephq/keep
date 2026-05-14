@@ -195,7 +195,9 @@ export default function IncidentsTable({
             {summary ? (
               <FormattedContent
                 content={summary}
-                format="html"
+                format={
+                  /<[a-z][\s\S]*>/i.test(summary) ? "html" : "markdown"
+                }
                 plain
                 className="line-clamp-2 text-sm text-gray-500"
               />
