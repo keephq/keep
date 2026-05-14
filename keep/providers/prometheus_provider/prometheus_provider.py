@@ -126,7 +126,7 @@ receivers:
             validated_scopes["connectivity"] = str(e)
         return validated_scopes
 
-    def execute_query(self, query: str):
+    def execute_query(self, query: str) -> dict:
         """
         Public wrapper around _query — exposes PromQL instant queries as an
         invokable provider method so AI agents and Keep workflows can query
@@ -138,7 +138,12 @@ receivers:
         Returns:
             dict: The raw ``data`` object from the Prometheus API response.
         """
-        return self._query(query)
+        try:
+            return self._query(query)
+        except requests.HTTPError as e:
+            raise Exception(
+                f"Prometheus query failed ({e.response.status_code}): {e.response.text[:200]}"
+            ) from e
 
     def _query(self, query):
         """
