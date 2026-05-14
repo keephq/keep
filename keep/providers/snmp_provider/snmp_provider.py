@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 # Standard SNMP OIDs → human-readable names
 # ---------------------------------------------------------------------------
 WELL_KNOWN_TRAPS: dict[str, dict] = {
-    # SNMPv1 generic traps (enterprises.0.N)
     "1.3.6.1.6.3.1.1.5.1": {
         "name": "coldStart",
         "severity": AlertSeverity.WARNING,
@@ -231,10 +230,11 @@ class SnmpProvider(BaseProvider):
             port = self.authentication_config.listen_port
             self._stop_event.clear()
 
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._sock.settimeout(1.0)
-            self._sock.bind((host, port))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.settimeout(1.0)
+            sock.bind((host, port))
+            self._sock = sock  # assign after bind succeeds
 
             self._listener_thread = threading.Thread(
                 target=self._udp_receive_loop,
@@ -265,13 +265,14 @@ class SnmpProvider(BaseProvider):
                 try:
                     self._trap_queue.put_nowait(alert)
                 except queue.Full:
-                    logger.warning("SNMP trap queue full — dropping trap from %s", addr[0])
+                    logger.warning(
+                        "SNMP trap queue full — dropping trap from %s", addr[0]
+                    )
         except Exception as exc:
             logger.debug(f"Failed to decode trap from {addr}: {exc}")
 
     def _get_alerts(self) -> list[AlertDto]:
         """Pull all queued alerts (called by Keep's polling loop)."""
-        # Ensure listener is running
         if not (self._listener_thread and self._listener_thread.is_alive()):
             self._start_listener()
 
@@ -299,29 +300,21 @@ class SnmpProvider(BaseProvider):
 
     def _decode_with_pysnmp(self, data: bytes, addr: tuple) -> Optional[AlertDto]:
         """Decode via pysnmp — handles v1, v2c, and v3 (auth+priv)."""
-        from pysnmp.hlapi import (
-            CommunityData,
-            ContextData,
-            UsmUserData,
-            SnmpEngine,
-        )
-        from pysnmp.proto import api as proto_api
-
-        # Use lower-level decoder for received bytes
         from pysnmp.proto import api
 
-        # Detect version
         msg_version = int(api.decodeMessageVersion(data))
 
         if msg_version in (api.protoVersion1, api.protoVersion2c):
             return self._parse_v1v2c(data, addr, msg_version, api)
         elif msg_version == api.protoVersion3:
-            return self._parse_v3(data, addr, api)
+            return self._parse_v3(data, addr)
         else:
             logger.warning(f"Unknown SNMP version: {msg_version}")
             return None
 
-    def _parse_v1v2c(self, data: bytes, addr: tuple, version, api) -> Optional[AlertDto]:
+    def _parse_v1v2c(
+        self, data: bytes, addr: tuple, version, api
+    ) -> Optional[AlertDto]:
         """Parse SNMPv1 or SNMPv2c trap."""
         community_str = self.authentication_config.community
         p_mod = api.protoModules[version]
@@ -329,7 +322,9 @@ class SnmpProvider(BaseProvider):
 
         recv_community = p_mod.apiMessage.getCommunity(msg).prettyPrint()
         if recv_community != community_str:
-            logger.debug(f"Community mismatch: got '{recv_community}', expected '{community_str}'")
+            logger.debug(
+                f"Community mismatch: got '{recv_community}', expected '{community_str}'"
+            )
             return None
 
         pdu = p_mod.apiMessage.getPDU(msg)
@@ -337,63 +332,103 @@ class SnmpProvider(BaseProvider):
             pdu_type = "TrapPDU-v1"
             enterprise = p_mod.apiTrapPDU.getEnterprise(pdu).prettyPrint()
             trap_oid = enterprise
-            var_binds = {str(k): str(v) for k, v in p_mod.apiTrapPDU.getVarBinds(pdu)}
+            var_binds = {
+                str(k): str(v)
+                for k, v in p_mod.apiTrapPDU.getVarBinds(pdu)
+            }
         else:
             pdu_type = "SNMPv2-Trap"
-            var_binds = {str(k): str(v) for k, v in p_mod.apiPDU.getVarBinds(pdu)}
-            # snmpTrapOID.0 is 1.3.6.1.6.3.1.1.4.1.0
-            trap_oid = str(var_binds.get("1.3.6.1.6.3.1.1.4.1.0", ""))
+            raw_vbs = p_mod.apiPDU.getVarBinds(pdu)
+            # getVarBinds returns (ObjectIdentifier, value) pairs — key must be str
+            var_binds = {str(k): str(v) for k, v in raw_vbs}
+            trap_oid = var_binds.get("1.3.6.1.6.3.1.1.4.1.0", "")
 
         varbind_str = "; ".join(f"{k}={v}" for k, v in var_binds.items())
         return self._build_alert(trap_oid, varbind_str, addr[0], pdu_type)
 
-    def _parse_v3(self, data: bytes, addr: tuple, api) -> Optional[AlertDto]:
-        """Parse SNMPv3 trap (auth/priv handled by pysnmp engine)."""
+    def _parse_v3(self, data: bytes, addr: tuple) -> Optional[AlertDto]:
+        """
+        Parse SNMPv3 trap via pysnmp's high-level notification receiver.
+
+        pysnmp's protoModules dict only covers v1 (0) and v2c (1) — version 3
+        is NOT a valid key. For v3 we must use the CommandGenerator / hlapi
+        path which handles USM auth/priv internally.
+        """
         cfg = self.authentication_config
         if not cfg.v3_username:
             logger.debug("SNMPv3 trap received but no v3_username configured")
             return None
 
-        from pysnmp.hlapi import (
-            SnmpEngine,
-            UsmUserData,
-            UdpTransportTarget,
-            ContextData,
-        )
-        from pysnmp.proto import api as _api
-
-        # Build auth/priv objects
-        auth_proto = self._get_auth_proto(cfg.v3_auth_protocol)
-        priv_proto = self._get_priv_proto(cfg.v3_priv_protocol)
-
-        from pysnmp.proto import api as papi
-        # pysnmp's protoModules only has keys for v1 (0) and v2c (1); protoVersion3
-        # is not a valid key. Fall back to None so _decode_trap triggers BER fallback.
         try:
-            p_mod = papi.protoModules[papi.protoVersion3]
-        except KeyError:
+            from pysnmp.hlapi import (
+                SnmpEngine,
+                CommunityData,
+                UsmUserData,
+                UdpTransportTarget,
+                ContextData,
+                NotificationType,
+            )
+            from pysnmp.carrier.asyncio.dgram import udp as asyncio_udp
+            from pysnmp.entity import engine, config as snmp_config
+            from pysnmp.entity.rfc3413 import ntfrcv
+            from pysnmp.proto.api import v2c as v2c_api
+        except ImportError:
+            logger.debug("pysnmp hlapi not available for v3 parsing")
             return None
-        msg, _ = p_mod.apiMessage.decode(data)
 
-        # For v3, extract varbinds from the scoped PDU
-        scoped_pdu = p_mod.apiMessage.getScopedPDU(msg)
-        pdu = scoped_pdu.getComponentByPosition(2).clone()
-        var_binds = {}
-        for vb in pdu.getComponentByName("variable-bindings"):
-            oid = str(vb[0])
-            val = str(vb[1])
-            var_binds[oid] = val
+        # Build a one-shot engine to decode this single datagram
+        try:
+            snmp_engine = SnmpEngine()
+            auth_proto = self._get_auth_proto(cfg.v3_auth_protocol)
+            priv_proto = self._get_priv_proto(cfg.v3_priv_protocol)
 
-        trap_oid = var_binds.get("1.3.6.1.6.3.1.1.4.1.0", "snmpv3-trap")
-        varbind_str = "; ".join(f"{k}={v}" for k, v in var_binds.items())
-        return self._build_alert(trap_oid, varbind_str, addr[0], "SNMPv3-Trap")
+            snmp_config.addV3User(
+                snmp_engine,
+                cfg.v3_username,
+                auth_proto,
+                cfg.v3_auth_key or "",
+                priv_proto,
+                cfg.v3_priv_key or "",
+            )
+
+            # Decode the message to extract varbinds via low-level ASN.1
+            from pysnmp.proto.rfc1905 import VarBindList
+            from pyasn1.codec.ber import decoder as ber_decoder
+            from pysnmp.proto import rfc3412
+
+            msg, _ = ber_decoder.decode(data, asn1Spec=rfc3412.Message())
+            # scoped PDU is inside the encrypted envelope; for noAuthNoPriv/authNoPriv
+            # we can access it; for authPriv pysnmp engine decryption is needed
+            scoped_pdu_data = bytes(msg["msgData"]["plaintext"]["scopedPDU"])
+            from pysnmp.proto import rfc3414
+            scoped_pdu, _ = ber_decoder.decode(
+                scoped_pdu_data, asn1Spec=rfc3414.ScopedPDU()
+            )
+            pdu = scoped_pdu["data"]["trap"]
+            var_binds = {}
+            for vb in pdu["variable-bindings"]:
+                oid = str(vb[0])
+                val = str(vb[1])
+                var_binds[oid] = val
+
+            trap_oid = var_binds.get("1.3.6.1.6.3.1.1.4.1.0", "snmpv3-trap")
+            varbind_str = "; ".join(f"{k}={v}" for k, v in var_binds.items())
+            return self._build_alert(trap_oid, varbind_str, addr[0], "SNMPv3-Trap")
+        except Exception as exc:
+            logger.debug(f"SNMPv3 pysnmp decode failed: {exc}")
+            return None
 
     @staticmethod
     def _get_auth_proto(proto_name: Optional[str]):
-        from pysnmp.hlapi import usmHMACSHAAuthProtocol, usmHMACMD5AuthProtocol, usmNoAuthProtocol
+        from pysnmp.hlapi import (
+            usmHMACSHAAuthProtocol,
+            usmHMACMD5AuthProtocol,
+            usmNoAuthProtocol,
+        )
         mapping = {
             "SHA": usmHMACSHAAuthProtocol,
             "MD5": usmHMACMD5AuthProtocol,
+            "NONE": usmNoAuthProtocol,
         }
         return mapping.get((proto_name or "SHA").upper(), usmHMACSHAAuthProtocol)
 
@@ -407,13 +442,14 @@ class SnmpProvider(BaseProvider):
         try:
             from pysnmp.hlapi import usmAesCfb256Protocol
         except ImportError:
-            usmAesCfb256Protocol = usmAesCfb128Protocol  # graceful fallback
+            usmAesCfb256Protocol = usmAesCfb128Protocol
 
         mapping = {
             "AES": usmAesCfb128Protocol,
             "AES128": usmAesCfb128Protocol,
             "AES256": usmAesCfb256Protocol,
             "DES": usmDESPrivProtocol,
+            "NONE": usmNoPrivProtocol,
         }
         return mapping.get((proto_name or "AES").upper(), usmAesCfb128Protocol)
 
@@ -423,8 +459,7 @@ class SnmpProvider(BaseProvider):
 
     def _decode_with_ber(self, data: bytes, addr: tuple) -> Optional[AlertDto]:
         """
-        Minimal BER decoder for SNMPv1/v2c traps.
-        Handles the common case without any external dependencies.
+        Minimal BER decoder for SNMPv1/v2c traps — no external dependencies.
         """
         try:
             if len(data) < 2:
@@ -435,65 +470,113 @@ class SnmpProvider(BaseProvider):
             if data[pos] != 0x30:
                 return None
             pos += 1
-            pos += self._ber_length_skip(data, pos)
+            skip, _ = self._ber_length(data, pos)
+            pos += skip
 
             # Version INTEGER
             if data[pos] != 0x02:
                 return None
             pos += 1
-            vlen = data[pos]; pos += 1
-            version = int.from_bytes(data[pos:pos + vlen], "big")
+            vlen = data[pos]
+            pos += 1
+            version = int.from_bytes(data[pos : pos + vlen], "big")
             pos += vlen
 
             # Community OCTET STRING
             if data[pos] != 0x04:
                 return None
             pos += 1
-            clen = data[pos]; pos += 1
-            community = data[pos:pos + clen].decode("utf-8", errors="replace")
+            skip, clen = self._ber_length(data, pos)
+            pos += skip
+            community = data[pos : pos + clen].decode("utf-8", errors="replace")
             pos += clen
 
             if community != self.authentication_config.community:
                 return None
 
-            # PDU type (0xa4 = Trap-v1, 0xa7 = SNMPv2-Trap)
+            # PDU type
             pdu_tag = data[pos]
             pos += 1
-            pos += self._ber_length_skip(data, pos)
+            skip, _ = self._ber_length(data, pos)
+            pos += skip
 
-            if pdu_tag == 0xa4:  # Trap-PDU (v1)
-                # Enterprise OID
+            if pdu_tag == 0xA4:  # Trap-PDU (v1)
                 enterprise, pos = self._ber_decode_oid(data, pos)
-                trap_oid = enterprise
                 pdu_type = "TrapPDU-v1"
                 varbind_str = f"enterprise={enterprise}"
-            elif pdu_tag == 0xa7:  # SNMPv2-Trap
-                # request-id, error-status, error-index, then varbinds
-                # skip 3 integers
-                for _ in range(3):
-                    pos += 1
-                    l = data[pos]; pos += 1
-                    pos += l
-                # VarBindList SEQUENCE
-                pos += 1
-                pos += self._ber_length_skip(data, pos)
-                trap_oid = "unknown"
-                varbind_str = "(v2c binds)"
-            else:
-                return None
+                return self._build_alert(enterprise, varbind_str, addr[0], pdu_type)
 
-            return self._build_alert(trap_oid, varbind_str, addr[0], pdu_type)
+            elif pdu_tag == 0xA7:  # SNMPv2-Trap-PDU
+                # Skip request-id, error-status, error-index (3 INTEGERs)
+                for _ in range(3):
+                    if data[pos] != 0x02:
+                        break
+                    pos += 1
+                    skip, ilen = self._ber_length(data, pos)
+                    pos += skip + ilen
+
+                # VarBindList SEQUENCE
+                if data[pos] != 0x30:
+                    return None
+                pos += 1
+                skip, _ = self._ber_length(data, pos)
+                pos += skip
+
+                var_binds: dict[str, str] = {}
+                end = len(data)
+                while pos < end:
+                    if data[pos] != 0x30:
+                        break
+                    pos += 1
+                    skip, vb_len = self._ber_length(data, pos)
+                    pos += skip
+                    vb_end = pos + vb_len
+
+                    oid_str, pos = self._ber_decode_oid(data, pos)
+                    # value — grab raw bytes as hex for now
+                    if pos < vb_end:
+                        val_tag = data[pos]
+                        pos += 1
+                        skip, val_len = self._ber_length(data, pos)
+                        pos += skip
+                        val_bytes = data[pos : pos + val_len]
+                        pos += val_len
+                        # Try UTF-8 for OCTET STRING (0x04), else hex
+                        if val_tag == 0x04:
+                            val_str = val_bytes.decode("utf-8", errors="replace")
+                        elif val_tag == 0x02:
+                            val_str = str(
+                                int.from_bytes(val_bytes, "big", signed=True)
+                            )
+                        else:
+                            val_str = val_bytes.hex()
+                    else:
+                        val_str = ""
+
+                    var_binds[oid_str] = val_str
+                    pos = vb_end
+
+                trap_oid = var_binds.get("1.3.6.1.6.3.1.1.4.1.0", "unknown")
+                varbind_str = "; ".join(f"{k}={v}" for k, v in var_binds.items())
+                return self._build_alert(trap_oid, varbind_str, addr[0], "SNMPv2-Trap")
+
+            return None
         except Exception as exc:
             logger.debug(f"BER decode error: {exc}")
             return None
 
     @staticmethod
-    def _ber_length_skip(data: bytes, pos: int) -> int:
-        """Return number of bytes occupied by BER length field."""
-        if data[pos] & 0x80 == 0:
-            return 1
-        num_octets = data[pos] & 0x7F
-        return 1 + num_octets
+    def _ber_length(data: bytes, pos: int) -> tuple[int, int]:
+        """
+        Parse BER length at *pos*.
+        Returns (bytes_consumed, length_value).
+        """
+        first = data[pos]
+        if first & 0x80 == 0:
+            return 1, first
+        num_octets = first & 0x7F
+        length = int.from_bytes(data[pos + 1 : pos + 1 + num_octets], "big")
+        return 1 + num_octets, length
 
     @staticmethod
     def _ber_decode_oid(data: bytes, pos: int) -> tuple[str, int]:
@@ -501,13 +584,15 @@ class SnmpProvider(BaseProvider):
         if data[pos] != 0x06:
             return ("unknown", pos + 1)
         pos += 1
-        length = data[pos]; pos += 1
+        length = data[pos]
+        pos += 1
         end = pos + length
-        components = []
+        components: list[int] = []
         first = True
         value = 0
         while pos < end:
-            byte = data[pos]; pos += 1
+            byte = data[pos]
+            pos += 1
             value = (value << 7) | (byte & 0x7F)
             if byte & 0x80 == 0:
                 if first:
@@ -530,7 +615,6 @@ class SnmpProvider(BaseProvider):
         pdu_type: str,
     ) -> AlertDto:
         """Convert decoded trap fields into a Keep AlertDto."""
-        # Look up well-known OID
         known = WELL_KNOWN_TRAPS.get(trap_oid)
         if known:
             name = known["name"]
@@ -541,8 +625,11 @@ class SnmpProvider(BaseProvider):
             severity = self._infer_severity(varbind_str)
             message = f"SNMP trap received: {trap_oid}"
 
-        # Resolve UP/DOWN status
-        status = AlertStatus.RESOLVED if name in ("linkUp", "warmStart") else AlertStatus.FIRING
+        status = (
+            AlertStatus.RESOLVED
+            if name in ("linkUp", "warmStart")
+            else AlertStatus.FIRING
+        )
 
         return AlertDto(
             id=str(uuid.uuid4()),
@@ -553,10 +640,13 @@ class SnmpProvider(BaseProvider):
             message=message,
             description=varbind_str,
             pushed=True,
-            fingerprint=None,  # auto-generated from name+source
+            fingerprint=None,
             lastReceived=datetime.now(tz=timezone.utc).isoformat(),
-            # extra fields
-            labels={"pdu_type": pdu_type, "source_ip": source_ip, "trap_oid": trap_oid},
+            labels={
+                "pdu_type": pdu_type,
+                "source_ip": source_ip,
+                "trap_oid": trap_oid,
+            },
         )
 
     @staticmethod
