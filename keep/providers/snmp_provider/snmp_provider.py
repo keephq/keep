@@ -21,7 +21,6 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
-
 @pydantic.dataclasses.dataclass
 class SnmpProviderAuthConfig:
     """SNMP authentication / listener configuration."""
@@ -56,10 +55,58 @@ class SnmpProviderAuthConfig:
         metadata={
             "required": False,
             "description": "SNMP protocol version to accept (v1 or v2c)",
-            "hint": "v2c is the default; v3 is not yet supported",
+            "hint": "v1, v2c, or v3",
         },
     )
 
+    # SNMPv3 USM Fields
+    v3_user: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "SNMPv3 Username (Security Name)",
+        },
+    )
+    v3_auth_key: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "SNMPv3 Authentication Key / Password",
+            "sensitive": True,
+        },
+    )
+    v3_auth_protocol: str = dataclasses.field(
+        default="usmHMACMD5AuthProtocol",
+        metadata={
+            "required": False,
+            "description": "SNMPv3 Authentication Protocol",
+            "hint": "usmHMACMD5AuthProtocol, usmHMACSHAAuthProtocol, etc.",
+        },
+    )
+    v3_priv_key: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "SNMPv3 Privacy Key (Encryption Key)",
+            "sensitive": True,
+        },
+    )
+    v3_priv_protocol: str = dataclasses.field(
+        default="usmDESPrivProtocol",
+        metadata={
+            "required": False,
+            "description": "SNMPv3 Privacy Protocol",
+            "hint": "usmDESPrivProtocol, usmAesCfb128Protocol, usmAesCfb256Protocol",
+        },
+    )
+    v3_engine_id: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Persistent SNMP Engine ID (Hex string)",
+            "hint": "Recommended for stability in enterprise environments",
+        },
+    )
 
 class SnmpProvider(BaseProvider):
     """SNMP trap listener provider.
@@ -104,6 +151,7 @@ class SnmpProvider(BaseProvider):
         self.consume = False
         self._dispatcher = None
         self._err = ""
+        self.authentication_config = None
 
     def validate_config(self):
         """Validate the provider configuration."""
@@ -111,10 +159,14 @@ class SnmpProvider(BaseProvider):
             **self.config.authentication
         )
         version = (self.authentication_config.snmp_version or "").lower()
-        if version not in ("v1", "v2c"):
+        if version not in ("v1", "v2c", "v3"):
             raise ValueError(
                 f"Unsupported SNMP version '{self.authentication_config.snmp_version}'. "
-                "Supported versions: v1, v2c."
+                "Supported versions: v1, v2c, v3."
+            )
+        if version == "v3" and not self.authentication_config.v3_user:
+            raise ValueError(
+                "SNMPv3 requires 'v3_user' to be configured."
             )
         if not (0 < int(self.authentication_config.listen_port) < 65536):
             raise ValueError(
@@ -243,24 +295,52 @@ class SnmpProvider(BaseProvider):
                 self.logger.exception("Error pushing SNMP-trap alert to API")
         except Exception:
             self.logger.exception("Error processing SNMP trap")
-
     def start_consume(self):
         """Block in the SNMP trap dispatcher until ``stop_consume`` is called."""
-        # Imported lazily so test environments without pysnmp installed can
-        # still import the module (e.g. for unit-testing the mapping helpers).
-        from pysnmp.carrier.asyncore.dispatch import AsyncoreDispatcher
-        from pysnmp.carrier.asyncore.dgram import udp
+        import asyncio
+        from pysnmp.carrier.asyncio.dispatch import AsyncioDispatcher
+        from pysnmp.carrier.asyncio.dgram import udp
         from pysnmp.entity import config as snmp_config
         from pysnmp.entity import engine
+        from pysnmp.entity.config import (
+            usmHMACMD5AuthProtocol, usmHMACSHAAuthProtocol, 
+            usmHMAC128SHA224AuthProtocol, usmHMAC192SHA256AuthProtocol,
+            usmHMAC256SHA384AuthProtocol, usmHMAC384SHA512AuthProtocol,
+            usmDESPrivProtocol, usm3DESEDEPrivProtocol,
+            usmAesCfb128Protocol, usmAesCfb192Protocol, usmAesCfb256Protocol
+        )
         from pysnmp.entity.rfc3413 import ntfrcv
+        from pysnmp.proto import rfc1902
+
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
         self.consume = True
         self._err = ""
 
         snmp_engine = engine.SnmpEngine()
+        # Set persistent EngineID if configured
+        if self.authentication_config.v3_engine_id:
+            try:
+                # pysnmp internally sets the engine ID via this method
+                from pyasn1.type import univ
+                engine_id = univ.OctetString(
+                    hexValue=self.authentication_config.v3_engine_id
+                )
+                snmp_engine.snmp_engine_id = engine_id
+            except Exception as exc:
+                self.logger.warning(
+                    f"Failed to set custom EngineID {self.authentication_config.v3_engine_id}: {exc}"
+                )
+        self.logger.info(f"Engine initialized with ID: {snmp_engine.snmp_engine_id.prettyPrint()}")
+
         # Bind to the requested host/port.
         try:
-            snmp_config.addTransport(
+            snmp_engine.register_transport_dispatcher(AsyncioDispatcher())
+            snmp_config.add_transport(
                 snmp_engine,
                 udp.domainName + (1,),
                 udp.UdpTransport().openServerMode(
@@ -280,14 +360,55 @@ class SnmpProvider(BaseProvider):
             self.consume = False
             return
 
-        # SNMPv1 + SNMPv2c communities. We register both so a single listener
-        # can accept either; the configured ``snmp_version`` is used purely
-        # for labeling in the alert payload.
-        snmp_config.addV1System(
-            snmp_engine,
-            "keep-area",
-            self.authentication_config.community_string,
-        )
+        if self.authentication_config.snmp_version == "v3":
+            # Map the protocol strings to pysnmp constants
+            protocols_map = {
+                "usmHMACMD5AuthProtocol": usmHMACMD5AuthProtocol,
+                "usmHMACSHAAuthProtocol": usmHMACSHAAuthProtocol,
+                "usmHMAC128SHA224AuthProtocol": usmHMAC128SHA224AuthProtocol,
+                "usmHMAC192SHA256AuthProtocol": usmHMAC192SHA256AuthProtocol,
+                "usmHMAC256SHA384AuthProtocol": usmHMAC256SHA384AuthProtocol,
+                "usmHMAC384SHA512AuthProtocol": usmHMAC384SHA512AuthProtocol,
+                "usmDESPrivProtocol": usmDESPrivProtocol,
+                "usm3DESEDEPrivProtocol": usm3DESEDEPrivProtocol,
+                "usmAesCfb128Protocol": usmAesCfb128Protocol,
+                "usmAesCfb192Protocol": usmAesCfb192Protocol,
+                "usmAesCfb256Protocol": usmAesCfb256Protocol,
+            }
+
+            auth_proto = protocols_map.get(
+                self.authentication_config.v3_auth_protocol,
+                usmHMACMD5AuthProtocol
+            )
+            priv_proto = protocols_map.get(
+                self.authentication_config.v3_priv_protocol,
+                usmDESPrivProtocol
+            )
+
+            snmp_config.add_v3_user(
+                snmp_engine,
+                self.authentication_config.v3_user,
+                auth_proto,
+                self.authentication_config.v3_auth_key,
+                priv_proto,
+                self.authentication_config.v3_priv_key,
+            )
+            self.logger.info(
+                "SNMPv3 USM user registered",
+                extra={
+                    "engine_id": snmp_engine.snmp_engine_id.prettyPrint(),
+                    "user": self.authentication_config.v3_user,
+                    "auth": self.authentication_config.v3_auth_protocol,
+                    "priv": self.authentication_config.v3_priv_protocol,
+                }
+            )
+        else:
+            # SNMPv1 + SNMPv2c communities.
+            snmp_config.add_v1_system(
+                snmp_engine,
+                "keep-area",
+                self.authentication_config.community_string,
+            )
 
         ntfrcv.NotificationReceiver(snmp_engine, self._on_trap)
 
@@ -300,17 +421,17 @@ class SnmpProvider(BaseProvider):
             },
         )
 
-        self._dispatcher = snmp_engine.transportDispatcher
+        self._dispatcher = snmp_engine.transport_dispatcher
         # ``jobStarted`` keeps the dispatcher loop running until we explicitly
-        # close it; ``stop_consume`` calls ``closeDispatcher`` to break out.
-        self._dispatcher.jobStarted(1)
+        # close it; ``stop_consume`` calls ``close_dispatcher`` to break out.
+        self._dispatcher.job_started(1)
         try:
-            self._dispatcher.runDispatcher()
+            self._dispatcher.run_dispatcher()
         except Exception:
             self.logger.exception("SNMP dispatcher exited unexpectedly")
         finally:
             try:
-                self._dispatcher.closeDispatcher()
+                self._dispatcher.close_dispatcher()
             except Exception:
                 pass
             self._dispatcher = None
@@ -322,7 +443,7 @@ class SnmpProvider(BaseProvider):
         self.consume = False
         if self._dispatcher is not None:
             try:
-                self._dispatcher.closeDispatcher()
+                self._dispatcher.close_dispatcher()
             except Exception:
                 self.logger.exception("Error closing SNMP dispatcher")
 
