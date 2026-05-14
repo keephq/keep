@@ -5,3 +5,20 @@ Do not edit it manually, as it will be overwritten */}
 ## In workflows
 
 This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
+
+## Connecting via Webhook (omnidirectional)
+
+Forward decoded SNMP trap JSON to Keep's SNMP webhook endpoint.
+
+```
+
+curl -X POST "KEEP_BACKEND_URL/alerts/event/snmp"   -H "Content-Type: application/json"   -H "X-API-KEY: {api_key}"   -d '{"source_ip":"10.0.0.15","generic_trap":"linkDown","trap_oid":"1.3.6.1.6.3.1.1.5.3"}'
+
+```
+
+
+Configure an SNMP trap receiver such as snmptrapd, snmptt, Telegraf, or a small
+bridge script to decode UDP traps and POST JSON to `KEEP_BACKEND_URL/alerts/event/snmp` with
+the `X-API-KEY` header set to `{api_key}`.
