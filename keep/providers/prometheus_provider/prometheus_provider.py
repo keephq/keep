@@ -49,6 +49,14 @@ class PrometheusProviderAuthConfig:
         },
         default=True,
     )
+    thanos_compatible: bool = dataclasses.field(
+        metadata={
+            "description": "Enable Thanos compatibility mode",
+            "hint": "Set to true when connecting to a Thanos Querier — disables the /api/v1/alerts endpoint which Thanos does not support",
+            "sensitive": False,
+        },
+        default=False,
+    )
 
 
 class PrometheusProvider(BaseProvider, ProviderHealthMixin):
@@ -112,7 +120,11 @@ receivers:
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {"connectivity": True}
         try:
-            self._get_alerts()
+            if self.authentication_config.thanos_compatible:
+                # Thanos doesn't support /api/v1/alerts; verify connectivity via instant query instead
+                self._query("up")
+            else:
+                self._get_alerts()
         except Exception as e:
             validated_scopes["connectivity"] = str(e)
         return validated_scopes
@@ -156,15 +168,42 @@ receivers:
             auth = HTTPBasicAuth(
                 self.authentication_config.username, self.authentication_config.password
             )
-        response = requests.get(
-            f"{self.authentication_config.url}/api/v1/alerts",
-            auth=auth,
-            verify=self.authentication_config.verify,
-        )
-        response.raise_for_status()
-        if not response.ok:
-            return []
-        alerts_data = response.json().get("data", {})
+
+        if self.authentication_config.thanos_compatible:
+            # Thanos does not expose /api/v1/alerts (Alertmanager endpoint).
+            # Fall back to querying active ALERTS{} via PromQL which works on both
+            # Thanos Querier and regular Prometheus.
+            response = requests.get(
+                f"{self.authentication_config.url}/api/v1/query",
+                params={"query": "ALERTS{alertstate='firing'}"},
+                auth=auth,
+                verify=self.authentication_config.verify,
+            )
+            response.raise_for_status()
+            results = response.json().get("data", {}).get("result", [])
+            # Convert instant-query vector results into alert-shaped dicts
+            alerts_data = {"alerts": []}
+            for r in results:
+                metric = r.get("metric", {})
+                alerts_data["alerts"].append(
+                    {
+                        "labels": metric,
+                        "annotations": {},
+                        "state": metric.get("alertstate", "firing"),
+                        "fingerprint": None,
+                    }
+                )
+        else:
+            response = requests.get(
+                f"{self.authentication_config.url}/api/v1/alerts",
+                auth=auth,
+                verify=self.authentication_config.verify,
+            )
+            response.raise_for_status()
+            if not response.ok:
+                return []
+            alerts_data = response.json().get("data", {})
+
         alert_dtos = self._format_alert(alerts_data)
         return alert_dtos
 
