@@ -121,8 +121,22 @@ receivers:
         validated_scopes = {"connectivity": True}
         try:
             if self.authentication_config.thanos_compatible:
-                # Thanos doesn't support /api/v1/alerts; verify connectivity via instant query instead
-                self._query("up")
+                # Thanos doesn't support /api/v1/alerts; verify via /api/v1/rules instead
+                base_url = str(self.authentication_config.url).rstrip("/")
+                requests.get(
+                    f"{base_url}/api/v1/rules",
+                    params={"type": "alert"},
+                    auth=(
+                        HTTPBasicAuth(
+                            self.authentication_config.username,
+                            self.authentication_config.password,
+                        )
+                        if self.authentication_config.username
+                        and self.authentication_config.password
+                        else None
+                    ),
+                    verify=self.authentication_config.verify,
+                ).raise_for_status()
             else:
                 self._get_alerts()
         except Exception as e:
@@ -170,29 +184,39 @@ receivers:
             )
 
         if self.authentication_config.thanos_compatible:
-            # Thanos does not expose /api/v1/alerts (Alertmanager endpoint).
-            # Fall back to querying active ALERTS{} via PromQL which works on both
-            # Thanos Querier and regular Prometheus.
+            # Thanos Querier does not expose /api/v1/alerts (that endpoint only exists
+            # on Prometheus's rules evaluator). Use /api/v1/rules?type=alert instead —
+            # it is supported by Thanos and returns annotations, state, and activeAt.
+            import hashlib
+            import json as _json
+
+            base_url = str(self.authentication_config.url).rstrip("/")
             response = requests.get(
-                f"{self.authentication_config.url}/api/v1/query",
-                params={"query": "ALERTS{alertstate='firing'}"},
+                f"{base_url}/api/v1/rules",
+                params={"type": "alert"},
                 auth=auth,
                 verify=self.authentication_config.verify,
             )
             response.raise_for_status()
-            results = response.json().get("data", {}).get("result", [])
-            # Convert instant-query vector results into alert-shaped dicts
+            rule_groups = response.json().get("data", {}).get("groups", [])
             alerts_data = {"alerts": []}
-            for r in results:
-                metric = r.get("metric", {})
-                alerts_data["alerts"].append(
-                    {
-                        "labels": metric,
-                        "annotations": {},
-                        "state": metric.get("alertstate", "firing"),
-                        "fingerprint": None,
-                    }
-                )
+            for group in rule_groups:
+                for rule in group.get("rules", []):
+                    if rule.get("type") != "alerting":
+                        continue
+                    for alert in rule.get("alerts", []):
+                        labels = alert.get("labels", {})
+                        fp_src = _json.dumps(labels, sort_keys=True)
+                        fingerprint = hashlib.md5(fp_src.encode()).hexdigest()
+                        alerts_data["alerts"].append(
+                            {
+                                "labels": labels,
+                                "annotations": alert.get("annotations", {}),
+                                "state": alert.get("state", "firing"),
+                                "activeAt": alert.get("activeAt"),
+                                "fingerprint": fingerprint,
+                            }
+                        )
         else:
             response = requests.get(
                 f"{self.authentication_config.url}/api/v1/alerts",
