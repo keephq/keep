@@ -1,0 +1,193 @@
+---
+title: "SNMP"
+sidebarTitle: "SNMP Provider"
+description: "SNMP provider receives SNMP traps (v1/v2c/v3) via a native UDP listener and pushes them into Keep as alerts."
+---
+
+## Overview
+
+The SNMP provider is a **consumer provider** that runs a native UDP trap listener, receiving SNMP traps directly from network devices, without requiring an external `snmptrapd` daemon or HTTP forwarder. Received traps are parsed, mapped to Keep's alert model, and pushed through the normal alert ingestion pipeline.
+
+Supported SNMP versions:
+- **v1** — community-based, legacy trap PDU format
+- **v2c** — community-based, modern notification PDU format
+- **v3** — USM (User-based Security Model) with authentication and privacy
+
+## How It Works
+
+1. Keep binds a UDP socket on the configured `listen_address:listen_port`.
+2. Network devices send SNMP traps to this address.
+3. The provider decodes each trap, extracts the trap OID and varbinds.
+4. The trap OID is mapped to a severity level using default or custom mappings.
+5. An `AlertDto` is constructed and pushed via Keep's internal alert pipeline.
+6. For `linkUp` traps following a `linkDown` on the same interface, the alert status is automatically set to `RESOLVED`.
+
+## Configuration
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `snmp_version` | select | No | `v2c` | SNMP version: `v1`, `v2c`, or `v3` |
+| `listen_address` | string | No | `0.0.0.0` | Address to bind the trap listener |
+| `listen_port` | integer | No | `162` | UDP port (1-65535) |
+| `community_string` | string | No | `public` | Community string for v1/v2c (sensitive) |
+| `security_name` | string | v3 only | — | SNMPv3 USM username |
+| `auth_protocol` | select | No | `none` | Auth protocol: `none`, `MD5`, `SHA`, `SHA256`, `SHA512` |
+| `auth_key` | string | v3+auth | — | Authentication passphrase (sensitive) |
+| `priv_protocol` | select | No | `none` | Privacy protocol: `none`, `DES`, `AES`, `AES192`, `AES256` |
+| `priv_key` | string | v3+priv | — | Privacy passphrase (sensitive) |
+| `oid_severity_map` | dict | No | — | Custom OID-to-severity overrides |
+
+### v2c Example
+
+```json
+{
+  "snmp_version": "v2c",
+  "listen_address": "0.0.0.0",
+  "listen_port": 1162,
+  "community_string": "my-community"
+}
+```
+
+### v3 Example
+
+```json
+{
+  "snmp_version": "v3",
+  "listen_address": "0.0.0.0",
+  "listen_port": 1162,
+  "security_name": "keepuser",
+  "auth_protocol": "SHA",
+  "auth_key": "my-auth-passphrase",
+  "priv_protocol": "AES",
+  "priv_key": "my-priv-passphrase"
+}
+```
+
+## Deployment Notes
+
+### Port 162 and Privileges
+
+The default SNMP trap port is **162**, which is a privileged port (below 1024). Running Keep on port 162 requires one of:
+
+- **Linux capabilities**: Grant `CAP_NET_BIND_SERVICE` to the process or container:
+  ```bash
+  # For a binary
+  sudo setcap 'cap_net_bind_service=+ep' /path/to/keep
+
+  # For Docker
+  docker run --cap-add NET_BIND_SERVICE ...
+  ```
+
+- **Non-privileged port**: Use a higher port like `1162` and configure your network devices to send traps there, or use iptables/nftables to redirect port 162 to 1162:
+  ```bash
+  sudo iptables -t nat -A PREROUTING -p udp --dport 162 -j REDIRECT --to-port 1162
+  ```
+
+### Firewall
+
+Ensure UDP port `listen_port` is open on the host firewall for inbound traffic from your SNMP-managed devices.
+
+## Severity Mapping
+
+Default OID-to-severity mapping for standard SNMPv2-MIB generic traps (RFC 3418):
+
+| Trap OID | Name | Severity |
+|----------|------|----------|
+| `1.3.6.1.6.3.1.1.5.1` | coldStart | INFO |
+| `1.3.6.1.6.3.1.1.5.2` | warmStart | INFO |
+| `1.3.6.1.6.3.1.1.5.3` | linkDown | CRITICAL |
+| `1.3.6.1.6.3.1.1.5.4` | linkUp | INFO |
+| `1.3.6.1.6.3.1.1.5.5` | authenticationFailure | WARNING |
+| `1.3.6.1.6.3.1.1.5.6` | egpNeighborLoss | WARNING |
+
+Unknown OIDs default to **INFO** severity.
+
+### Custom OID Map
+
+Override or extend the default mapping via the `oid_severity_map` config field:
+
+```json
+{
+  "oid_severity_map": {
+    "1.3.6.1.4.1.9.9.1": "critical",
+    "1.3.6.1.4.1.2636.4.1.1": "high"
+  }
+}
+```
+
+Valid severity values: `critical`, `high`, `warning`, `info`, `low`.
+
+## Fingerprinting
+
+Alert fingerprints are computed from the source address, trap family, and interface index.
+For most traps this is equivalent to `SHA-256(source_address | trap_oid | ifIndex)`.
+For interface state transitions, `linkDown` and `linkUp` on the same `ifIndex` are normalized onto the same lifecycle fingerprint so Keep can resolve the active `linkDown` alert with the later `linkUp`.
+
+This ensures:
+- Same device + same trap family + same interface = same fingerprint
+- Different interfaces on the same device = different fingerprints
+- `linkDown` and `linkUp` on the same interface share a fingerprint
+
+## Live Smoke Test
+
+Use the dev stack and a local SNMP listener on `127.0.0.1:1162`.
+
+### 1. Start Keep
+
+```bash
+docker compose -f docker-compose.yml up -d db redis
+poetry run uvicorn keep.main:app --port 8080 &
+```
+
+### 2. Register the provider
+
+Keep's local install endpoint is `/providers/install`:
+
+```bash
+curl -sS -X POST http://localhost:8080/providers/install \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: $KEEP_API_KEY" \
+  -d '{
+    "provider_id": "snmp-test",
+    "provider_name": "snmp-test",
+    "provider_type": "snmp",
+    "pulling_enabled": false,
+    "listen_address": "127.0.0.1",
+    "listen_port": 1162,
+    "snmp_version": "v2c",
+    "community_string": "public"
+  }'
+```
+
+### 3. Fire traps and verify end-to-end
+
+The committed smoke-test helper sends `linkDown`, `linkUp`, `coldStart`, and
+`authFailure` traps, verifies the resulting alert state through the Keep alerts
+API, sends a junk UDP packet, and then confirms the listener is still running.
+
+```bash
+python3 scripts/test_snmp_trap.py \
+  --base-url http://localhost:8080 \
+  --api-key "$KEEP_API_KEY" \
+  --provider-status-id snmp-test
+```
+
+Notes:
+- `/alerts` returns the latest alert per fingerprint, so after a successful run you should expect the current view to show `coldStart`, `authenticationFailure`, and a resolved `linkUp`.
+- The script uses `/alerts/<fingerprint>/history` to confirm both the `linkDown` and `linkUp` events landed under the same fingerprint.
+- The script prints a ready-to-paste Markdown block with the relevant `curl` output for the PR description.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| No traps received | Firewall blocking UDP | Open the configured port |
+| Permission denied on port 162 | Missing capabilities | Use `CAP_NET_BIND_SERVICE` or port 1162 |
+| v3 auth errors | Mismatched credentials | Verify `security_name`, `auth_key`, `priv_key` match the device config |
+| Unknown trap names | Enterprise-specific OIDs | Add entries to `oid_severity_map` |
+
+## Useful Links
+
+- [RFC 3418 - SNMP MIB](https://www.rfc-editor.org/rfc/rfc3418)
+- [RFC 3414 - USM for SNMPv3](https://www.rfc-editor.org/rfc/rfc3414)
+- [pysnmp Documentation](https://pysnmp.readthedocs.io/)
