@@ -137,16 +137,39 @@ class ContextManager:
 
         secret_manager = SecretManagerFactory.get_secret_manager(self)
 
-        secret_key = f"{self.tenant_id}_{self.workflow_id}_secrets"
+        # 1. Load tenant-global secrets
+        global_secret_key = f"{self.tenant_id}_global_secrets"
+        global_secrets = {}
         try:
-            secret = secret_manager.read_secret(secret_name=secret_key, is_json=True)
-            self.secret_context = secret or {}
-        except Exception:
-            self.logger.warning(
-                "Could not load secrets for workflow",
-                extra={"workflow_id": self.workflow_id, "tenant_id": self.tenant_id},
+            global_secrets = (
+                secret_manager.read_secret(secret_name=global_secret_key, is_json=True)
+                or {}
             )
-            self.secret_context = {}
+        except Exception:
+            self.logger.debug(
+                "Could not load global secrets for tenant",
+                extra={"tenant_id": self.tenant_id},
+            )
+
+        # 2. Load workflow-specific secrets
+        workflow_secret_key = f"{self.tenant_id}_{self.workflow_id}_secrets"
+        workflow_secrets = {}
+        if self.workflow_id:
+            try:
+                workflow_secrets = (
+                    secret_manager.read_secret(
+                        secret_name=workflow_secret_key, is_json=True
+                    )
+                    or {}
+                )
+            except Exception:
+                self.logger.debug(
+                    "Could not load workflow-specific secrets",
+                    extra={"workflow_id": self.workflow_id, "tenant_id": self.tenant_id},
+                )
+
+        # Merge them (workflow-specific takes precedence)
+        self.secret_context = {**global_secrets, **workflow_secrets}
 
     def get_full_context(self, exclude_providers=False, exclude_env=False):
         """

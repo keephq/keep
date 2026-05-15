@@ -435,3 +435,72 @@ def get_tenant_configuration(
     tenant_configuration = TenantConfiguration()
     config_value = tenant_configuration.get_configuration(tenant_id=tenant_id)
     return JSONResponse(status_code=200, content=config_value)
+
+
+@router.get("/secrets", description="Get tenant global secrets")
+async def get_global_secrets(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:settings"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_key = f"{tenant_id}_global_secrets"
+    try:
+        secrets = secret_manager.read_secret(secret_name=secret_key, is_json=True)
+        return JSONResponse(status_code=200, content=secrets or {})
+    except Exception:
+        return JSONResponse(status_code=200, content={})
+
+
+@router.post("/secrets", description="Write or update tenant global secrets")
+async def write_global_secrets(
+    secret_data: dict,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:settings"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_key = f"{tenant_id}_global_secrets"
+
+    try:
+        existing_secrets = secret_manager.read_secret(secret_key, is_json=True)
+        if not isinstance(existing_secrets, dict):
+            existing_secrets = {}
+    except Exception:
+        existing_secrets = {}
+
+    existing_secrets.update(secret_data)
+    secret_manager.write_secret(
+        secret_name=secret_key, secret_value=json.dumps(existing_secrets)
+    )
+    return JSONResponse(status_code=201, content={"status": "success"})
+
+
+@router.delete("/secrets/{secret_name}", description="Delete a tenant global secret key")
+async def delete_global_secret(
+    secret_name: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:settings"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_key = f"{tenant_id}_global_secrets"
+
+    try:
+        secrets = secret_manager.read_secret(secret_key, is_json=True)
+        if secrets and secret_name in secrets:
+            del secrets[secret_name]
+            secret_manager.write_secret(
+                secret_name=secret_key, secret_value=json.dumps(secrets)
+            )
+            return JSONResponse(status_code=200, content={"status": "success"})
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=404, detail=f"Secret '{secret_name}' not found")
