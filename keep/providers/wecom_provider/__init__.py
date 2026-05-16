@@ -1,0 +1,1 @@
+from keep.providers.wecom_provider.wecom_provider import WeComProvider
