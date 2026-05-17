@@ -52,9 +52,8 @@ class NagiosProvider(BaseProvider):
 
     HOST_STATE_LABELS = {
         0: "UP",
-        1: "WARNING",
-        2: "DOWN",
-        3: "UNKNOWN",
+        1: "DOWN",
+        2: "UNREACHABLE",
     }
     SERVICE_STATE_LABELS = {
         0: "OK",
@@ -62,13 +61,23 @@ class NagiosProvider(BaseProvider):
         2: "CRITICAL",
         3: "UNKNOWN",
     }
-    STATUS_MAP = {
+    HOST_STATUS_MAP = {
+        0: AlertStatus.RESOLVED,
+        1: AlertStatus.FIRING,
+        2: AlertStatus.FIRING,
+    }
+    HOST_SEVERITY_MAP = {
+        0: AlertSeverity.LOW,
+        1: AlertSeverity.CRITICAL,
+        2: AlertSeverity.CRITICAL,
+    }
+    SERVICE_STATUS_MAP = {
         0: AlertStatus.RESOLVED,
         1: AlertStatus.FIRING,
         2: AlertStatus.FIRING,
         3: AlertStatus.FIRING,
     }
-    SEVERITY_MAP = {
+    SERVICE_SEVERITY_MAP = {
         0: AlertSeverity.LOW,
         1: AlertSeverity.WARNING,
         2: AlertSeverity.CRITICAL,
@@ -178,7 +187,7 @@ class NagiosProvider(BaseProvider):
         hostname = host.get("host_name") or host.get("name") or host.get("host_id")
         acknowledged = self.__coerce_bool(host.get("problem_has_been_acknowledged"))
         state_label = self.HOST_STATE_LABELS.get(state, "UNKNOWN")
-        status = self.STATUS_MAP.get(state, AlertStatus.FIRING)
+        status = self.HOST_STATUS_MAP.get(state, AlertStatus.FIRING)
         if acknowledged and status == AlertStatus.FIRING:
             status = AlertStatus.ACKNOWLEDGED
 
@@ -187,7 +196,7 @@ class NagiosProvider(BaseProvider):
             name=f"Nagios host {hostname} is {state_label}",
             description=host.get("plugin_output") or host.get("status_text") or "",
             status=status,
-            severity=self.SEVERITY_MAP.get(state, AlertSeverity.INFO),
+            severity=self.HOST_SEVERITY_MAP.get(state, AlertSeverity.INFO),
             lastReceived=self.__coerce_timestamp(host.get("last_check")),
             source=["nagios"],
             service=str(hostname) if hostname else None,
@@ -211,7 +220,7 @@ class NagiosProvider(BaseProvider):
         )
         acknowledged = self.__coerce_bool(service.get("problem_has_been_acknowledged"))
         state_label = self.SERVICE_STATE_LABELS.get(state, "UNKNOWN")
-        status = self.STATUS_MAP.get(state, AlertStatus.FIRING)
+        status = self.SERVICE_STATUS_MAP.get(state, AlertStatus.FIRING)
         if acknowledged and status == AlertStatus.FIRING:
             status = AlertStatus.ACKNOWLEDGED
 
@@ -222,7 +231,7 @@ class NagiosProvider(BaseProvider):
             or service.get("status_text")
             or "",
             status=status,
-            severity=self.SEVERITY_MAP.get(state, AlertSeverity.INFO),
+            severity=self.SERVICE_SEVERITY_MAP.get(state, AlertSeverity.INFO),
             lastReceived=self.__coerce_timestamp(service.get("last_check")),
             source=["nagios"],
             service=str(service_name) if service_name else None,

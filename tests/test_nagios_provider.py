@@ -40,7 +40,7 @@ def test_get_alerts_polls_hosts_and_services(mock_get):
                     {
                         "host_id": "101",
                         "host_name": "db-01",
-                        "current_state": "2",
+                        "current_state": "1",
                         "plugin_output": "CRITICAL - host is down",
                         "last_check": 1710000000,
                         "problem_has_been_acknowledged": "0",
@@ -83,6 +83,35 @@ def test_get_alerts_polls_hosts_and_services(mock_get):
         "https://nagios.example.com/nagiosxi/api/v1/objects/servicestatus"
     )
     assert mock_get.call_args_list[0].kwargs["params"] == {"apikey": "test-api-key"}
+
+
+@patch("keep.providers.nagios_provider.nagios_provider.requests.get")
+def test_host_unreachable_maps_to_critical_firing(mock_get):
+    mock_get.side_effect = [
+        mock_response(
+            {
+                "hoststatus": [
+                    {
+                        "host_id": "102",
+                        "host_name": "cache-01",
+                        "current_state": "2",
+                        "plugin_output": "CRITICAL - host is unreachable",
+                        "last_check": 1710000100,
+                    }
+                ]
+            }
+        ),
+        mock_response({"servicestatus": []}),
+    ]
+
+    alerts = create_provider()._get_alerts()
+
+    assert len(alerts) == 1
+    assert alerts[0].id == "nagios-host-102"
+    assert alerts[0].status == AlertStatus.FIRING.value
+    assert alerts[0].severity == AlertSeverity.CRITICAL.value
+    assert alerts[0].labels["nagios_state"] == "UNREACHABLE"
+    assert alerts[0].name == "Nagios host cache-01 is UNREACHABLE"
 
 
 @patch("keep.providers.nagios_provider.nagios_provider.requests.get")

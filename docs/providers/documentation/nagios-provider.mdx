@@ -17,13 +17,21 @@ The Nagios provider supports Nagios XI REST API polling.
 
 The `host_url` can be either the server root, such as `https://nagios.example.com`, or the Nagios XI base path, such as `https://nagios.example.com/nagiosxi`.
 
-## State Mapping
+## Host State Mapping
 
-| Nagios state | Keep status | Keep severity |
+| Nagios host state | Keep status | Keep severity |
 | --- | --- | --- |
-| 0 OK / UP | resolved | low |
+| 0 UP | resolved | low |
+| 1 DOWN | firing | critical |
+| 2 UNREACHABLE | firing | critical |
+
+## Service State Mapping
+
+| Nagios service state | Keep status | Keep severity |
+| --- | --- | --- |
+| 0 OK | resolved | low |
 | 1 WARNING | firing | warning |
-| 2 CRITICAL / DOWN | firing | critical |
+| 2 CRITICAL | firing | critical |
 | 3 UNKNOWN | firing | info |
 
 Acknowledged Nagios problems are ingested with Keep's acknowledged status.

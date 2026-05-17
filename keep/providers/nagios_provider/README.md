@@ -15,13 +15,21 @@ The Nagios provider polls the Nagios XI REST API for host and service status.
    - `/nagiosxi/api/v1/objects/hoststatus`
    - `/nagiosxi/api/v1/objects/servicestatus`
 
-## State Mapping
+## Host State Mapping
 
-| Nagios state | Keep status | Keep severity |
+| Nagios host state | Keep status | Keep severity |
 | --- | --- | --- |
-| 0 OK / UP | resolved | low |
+| 0 UP | resolved | low |
+| 1 DOWN | firing | critical |
+| 2 UNREACHABLE | firing | critical |
+
+## Service State Mapping
+
+| Nagios service state | Keep status | Keep severity |
+| --- | --- | --- |
+| 0 OK | resolved | low |
 | 1 WARNING | firing | warning |
-| 2 CRITICAL / DOWN | firing | critical |
+| 2 CRITICAL | firing | critical |
 | 3 UNKNOWN | firing | info |
 
 Acknowledged Nagios problems are returned with Keep's `acknowledged` status while preserving the original Nagios state in labels.
