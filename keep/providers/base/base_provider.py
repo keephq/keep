@@ -222,6 +222,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
             if isinstance(foreach_context, AlertDto):
                 fingerprint = foreach_context.fingerprint
+                event = foreach_context
             # if we are in a dict context, use the fingerprint from the dict
             elif isinstance(foreach_context, dict) and "fingerprint" in foreach_context:
                 fingerprint = foreach_context.get("fingerprint")
