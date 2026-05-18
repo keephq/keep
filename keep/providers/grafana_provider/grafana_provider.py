@@ -9,6 +9,7 @@ import json
 import logging
 import re
 import time
+import urllib.parse
 
 import pydantic
 import requests
@@ -289,6 +290,16 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         return fingerprint
 
     @staticmethod
+    def _resolve_alert_url(url: str | None, external_url: str | None) -> str | None:
+        if not url or not isinstance(url, str):
+            return None
+        if url.startswith(("http://", "https://")):
+            return url
+        if not external_url or not isinstance(external_url, str):
+            return None
+        return urllib.parse.urljoin(external_url, url)
+
+    @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
@@ -324,8 +335,13 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             if values:
                 extra["values"] = values
 
-            url = alert.get("generatorURL", None)
-            image_url = alert.get("imageURL", None)
+            external_url = event.get("externalURL")
+            url = GrafanaProvider._resolve_alert_url(
+                alert.get("generatorURL"), external_url
+            )
+            image_url = GrafanaProvider._resolve_alert_url(
+                alert.get("imageURL"), external_url
+            )
             # Always set these as "" when absent so workflow templates can
             # reference them safely without triggering render_context safe=True errors.
             dashboard_url = alert.get("dashboardURL", "")
