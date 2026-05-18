@@ -90,7 +90,7 @@ class AnthropicProvider(BaseProvider):
             system_prompt (str): System prompt override for this call.
             structured_output_format (dict): The structured output format to use.
         """
-      client = Anthropic(api_key=self.authentication_config.api_key)
+        client = Anthropic(api_key=self.authentication_config.api_key)
 
         messages = [{"role": "user", "content": prompt}]
 
