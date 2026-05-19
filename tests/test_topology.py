@@ -17,8 +17,9 @@ from keep.topologies.topologies_service import (
     InvalidApplicationDataException,
     ServiceNotFoundException,
 )
+from keep.api.models.db.alert import Incident
+from keep.topologies.topology_processor import TopologyProcessor
 from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
-
 
 VALID_API_KEY = "valid_api_key"
 
@@ -94,6 +95,7 @@ def test_get_applications_by_tenant_id(db_session):
     assert len(result[0].services) == 2
     assert result[1].name == "Test Application 2"
     assert len(result[1].services) == 1
+
 
 def test_create_application_by_tenant_id(db_session):
     application_dto = TopologyApplicationDtoIn(name="New Application", services=[])
@@ -378,7 +380,8 @@ def test_import_to_db(db_session):
         assert services[0].service == "test_service_1"
         assert services[1].service == "test_service_2"
 
-        applications = db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
+        applications = db_session.exec(
+            select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
         assert len(applications) == 2
         assert applications[0].name == "Test Application 1"
         assert applications[1].name == "Test Application 2"
@@ -387,3 +390,29 @@ def test_import_to_db(db_session):
         assert len(dependencies) == 1
         assert dependencies[0].service_id == 1
         assert dependencies[0].depends_on_service_id == 2
+
+
+def test_create_application_based_incident_sets_is_predicted(db_session):
+    service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+    application = TopologyApplication(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test App",
+        services=[service],
+    )
+    db_session.add(application)
+    db_session.commit()
+
+    processor = TopologyProcessor()
+    processor._create_application_based_incident(
+        SINGLE_TENANT_UUID, application, {}
+    )
+
+    incident = db_session.exec(
+        select(Incident).where(Incident.incident_application == application.id)
+    ).first()
+
+    assert incident is not None
+    assert incident.incident_type == "topology"
+    assert incident.is_predicted is True
+    assert incident.is_visible is True
+    assert incident.is_candidate is False
