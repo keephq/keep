@@ -21,6 +21,7 @@ from keep.api.models.db.alert import Incident
 from keep.topologies.topology_processor import TopologyProcessor
 from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
 
+
 VALID_API_KEY = "valid_api_key"
 
 
@@ -380,8 +381,7 @@ def test_import_to_db(db_session):
         assert services[0].service == "test_service_1"
         assert services[1].service == "test_service_2"
 
-        applications = db_session.exec(
-            select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
+        applications = db_session.exec(select(TopologyApplication).where(TopologyApplication.tenant_id == tenant_id)).all()
         assert len(applications) == 2
         assert applications[0].name == "Test Application 1"
         assert applications[1].name == "Test Application 2"
