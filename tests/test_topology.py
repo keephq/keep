@@ -97,7 +97,6 @@ def test_get_applications_by_tenant_id(db_session):
     assert result[1].name == "Test Application 2"
     assert len(result[1].services) == 1
 
-
 def test_create_application_by_tenant_id(db_session):
     application_dto = TopologyApplicationDtoIn(name="New Application", services=[])
 
