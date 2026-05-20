@@ -316,7 +316,6 @@
                 "deployment/kubernetes/openshift"
               ]
             },
-            "deployment/openshift",
             "deployment/ecs"
           ]
         },
