@@ -109,9 +109,14 @@ function Summary({
     setGeneratingSummary(false);
   };
 
+  const isHtml = (content: string) => /<[a-z][\s\S]*>/i.test(content);
+
   const formatedSummary = (
     <div className="prose prose-slate max-w-2xl [&>p]:!my-1 [&>ul]:!my-1 [&>ol]:!my-1">
-      <FormattedContent content={summary ?? generatedSummary} format="html" />
+      <FormattedContent
+        content={summary ?? generatedSummary}
+        format={isHtml(summary ?? generatedSummary ?? "") ? "html" : "markdown"}
+      />
     </div>
   );
 
