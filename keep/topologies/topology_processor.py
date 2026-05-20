@@ -357,6 +357,7 @@ class TopologyProcessor:
                 incident_application=application.id,
                 is_candidate=False,  # Topology-based incidents are always confirmed
                 is_visible=True,  # Topology-based incidents are always confirmed
+                is_predicted=True,  # Topology-based incidents are algorithmically generated
             )
 
             # Persist incident to database before adding alerts
