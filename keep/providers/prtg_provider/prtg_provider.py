@@ -31,6 +31,7 @@ class PrtgProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "PRTG"
     PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_TAGS = ["alert"]
+    FINGERPRINT_FIELDS = ["id"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connected",
@@ -108,10 +109,12 @@ To send alerts from PRTG to Keep, configure an HTTP Action notification in PRTG:
     def validate_config(self):
         """
         Validates required configuration for PRTG provider.
+        PRTG is a webhook-only provider with no required auth fields.
         """
-        self.authentication_config = PrtgProviderAuthConfig(
-            **self.config.authentication
-        )
+        if self.config.authentication:
+            self.authentication_config = PrtgProviderAuthConfig(
+                **self.config.authentication
+            )
 
     def validate_scopes(self) -> dict[str, bool | str]:
         """
@@ -152,7 +155,14 @@ To send alerts from PRTG to Keep, configure an HTTP Action notification in PRTG:
         message = event.get("message") or ""
         status = event.get("status") or "Unknown"
         link = event.get("link") or ""
-        sensor_id = event.get("sensorid") or event.get("id") or ""
+        # PRTG may send unresolved placeholders (e.g. "%%link") when not configured
+        # These are not valid URLs and will cause ValidationError on AlertDto.url
+        if link.startswith("%%"):
+            link = None
+        sensor_id = (
+            event.get("sensorid") if event.get("sensorid") is not None
+            else event.get("id") or ""
+        )
         priority = event.get("priority") or ""
 
         # Build alert name: "Device - Sensor"
