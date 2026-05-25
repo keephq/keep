@@ -348,7 +348,7 @@ class AlertWithIncidentLinkMetadataDto(AlertDto):
 
 class DeleteRequestBody(BaseModel):
     fingerprint: str
-    lastReceived: str
+    lastReceived: Optional[str] = None
     restore: bool = False
 
 
