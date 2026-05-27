@@ -1,270 +1,233 @@
-"""
-PagetreeProvider is a class that provides a way to read get alerts from Pagetree.
-"""
-
 import dataclasses
-from typing import Literal
+import datetime
+import logging
+import typing
+import uuid
 
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.db.topology import TopologyServiceInDto
+from keep.api.models.incident import IncidentDto
+from keep.api.models.db.incident import IncidentStatus, IncidentSeverity
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.exceptions.provider_config_exception import ProviderConfigException
+from keep.providers.base.base_provider import (
+    BaseIncidentProvider,
+    BaseProvider,
+    BaseTopologyProvider,
+    ProviderHealthMixin,
+)
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
-class PagertreeProviderAuthConfig:
-    api_token: str = dataclasses.field(
+class PagerTreeProviderAuthConfig:
+    api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Your pagertree APIToken",
+            "description": "PagerTree API Key",
             "sensitive": True,
-        },
-        default=None,
+        }
     )
 
 
-class PagertreeProvider(BaseProvider):
-    """Get all alerts from pagertree"""
-
-    PROVIDER_DISPLAY_NAME = "PagerTree"
-    PROVIDER_CATEGORY = ["Incident Management"]
+class PagerTreeProvider(
+    BaseTopologyProvider, BaseIncidentProvider, ProviderHealthMixin
+):
+    """Pull alerts and query incidents from PagerTree."""
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="authenticated",
-            description="The user can connect to the server and is authenticated using their API_Key",
+            name="incidents_read",
+            description="Read incidents data.",
             mandatory=True,
-            alias="Authenticated with pagertree",
-        )
+            alias="Incidents Data Read",
+        ),
+        ProviderScope(
+            name="services_read",
+            description="Read teams data for topology.",
+            mandatory=False,
+            alias="Teams Data Read",
+        ),
     ]
+    BASE_API_URL = "https://api.pagertree.com/api/v4"
+    PROVIDER_DISPLAY_NAME = "PagerTree"
+    PROVIDER_CATEGORY = ["Incident Management"]
+
+    # PagerTree Incident Status Mapping
+    # open, acknowledged, resolved
+    INCIDENT_STATUS_MAP = {
+        "open": IncidentStatus.FIRING,
+        "acknowledged": IncidentStatus.ACKNOWLEDGED,
+        "resolved": IncidentStatus.RESOLVED,
+    }
+
+    # PagerTree Alert Status Mapping for Keep
+    ALERT_STATUS_MAP = {
+        "open": AlertStatus.FIRING,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+        "resolved": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def __get_headers(self):
-        return {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {self.authentication_config.api_token}",
-        }
-
-    def validate_scopes(self):
-        """
-        Validates that the user has the required scopes to use the provider.
-        """
-        try:
-            response = requests.get(
-                "https://api.pagertree.com/api/v4/alerts", headers=self.__get_headers()
-            )
-
-            if response.status_code == 200:
-                scopes = {
-                    "authenticated": True,
-                }
-            else:
-                self.logger.error("Unable to authenticate user")
-                scopes = {
-                    "authenticated": f"User not authorized, StatusCode: {response.status_code}",
-                }
-        except Exception as e:
-            self.logger.error("Error validating scopes", extra={"error": str(e)})
-            scopes = {
-                "authenticated": str(e),
-            }
-        return scopes
-
-    def dispose(self):
-        pass
-
     def validate_config(self):
-        """
-        Validates required configuration for pgartree's provider.
-        """
-        self.authentication_config = PagertreeProviderAuthConfig(
+        self.authentication_config = PagerTreeProviderAuthConfig(
             **self.config.authentication
         )
-
-    def _get_alerts(self) -> list[AlertDto]:
-        try:
-            response = requests.get(
-                "https://api.pagertree.com/api/v4/alerts", headers=self.__get_headers()
+        if not self.authentication_config.api_key:
+            raise ProviderConfigException(
+                "PagerTreeProvider requires an api_key",
+                provider_id=self.provider_id,
             )
-            if not response.ok:
-                self.logger.error("Failed to get alerts", extra=response.json())
-                raise Exception("Could not get alerts")
-            return [
-                AlertDto(
-                    id=alert["id"],
-                    status=alert["status"],
-                    severity=alert["urgency"],
-                    source=alert["source"],
-                    message=alert["title"],
-                    startedAt=alert["created_at"],
-                    description=alert["description"],
-                )
-                for alert in response.json()["alerts"]
-            ]
 
-        except Exception as e:
-            self.logger.error(
-                "Error while getting PagerTree alerts", extra={"error": str(e)}
-            )
-            raise e
-
-    def __send_alert(
-        self,
-        title: str,
-        description: str,
-        urgency: Literal["low", "medium", "high", "critical"],
-        destination_team_ids: list[str],
-        destination_router_ids: list[str],
-        destination_account_user_ids: list[str],
-        status: Literal["queued", "open", "acknowledged", "resolved", "dropped"],
-        **kwargs: dict,
-    ):
-        """
-        Sends PagerDuty Alert
-
-        Args:
-            title: Title of the alert.
-            description: UTF-8 string of custom message for alert. Shown in incident description
-            urgency: low|medium|high|critical
-            destination_team_ids: destination team_ids to send alert to
-            destination_router_ids: destination router_ids to send alert to
-            destination_account_user_ids: destination account_users_ids to send alert to
-            status: alert status to send
-        """
-        response = requests.post(
-            "https://api.pagertree.com/api/v4/alerts",
-            headers=self.__get_headers(),
-            data={
-                "title": title,
-                "description": description,
-                "urgency": urgency,
-                "destination_team_ids": destination_team_ids,
-                "destination_router_ids": destination_router_ids,
-                "destination_account_user_ids": destination_account_user_ids,
-                "status": status,
-                **kwargs,
-            },
-        )
-        if not response.ok:
-            self.logger.error("Failed to send alert", extra={"error": response.json()})
-        self.logger.info("Alert status: %s", response.status_code)
-        self.logger.info("Alert created successfully", response.json())
-
-    def __send_incident(
-        self,
-        title: str,
-        incident_severity: str,
-        incident_message: str,
-        urgency: Literal["low", "medium", "high", "critical"],
-        destination_team_ids: list[str],
-        destination_router_ids: list[str],
-        destination_account_user_ids: list[str],
-        **kwargs: dict,
-    ):
-        """
-        Marking an alert as an incident communicates to your team members this alert is a greater degree of severity than a normal alert.
-
-        Args:
-            title: Title of the alert.
-            description: UTF-8 string of custom message for alert. Shown in incident description
-            urgency: low|medium|high|critical
-            destination_team_ids: destination team_ids to send alert to
-            destination_router_ids: destination router_ids to send alert to
-            destination_account_user_ids: destination account_users_ids to send alert to
-
-        """
-        response = requests.post(
-            "https://api.pagertree.com/api/v4/alerts",
-            headers=self.__get_headers(),
-            data={
-                "title": title,
-                "meta": {
-                    "incident": True,
-                    "incident_severity": incident_severity,
-                    "incident_message": incident_message,
-                },
-                "urgency": urgency,
-                "destination_team_ids": destination_team_ids,
-                "destination_router_ids": destination_router_ids,
-                "destination_account_user_ids": destination_account_user_ids,
-                **kwargs,
-            },
-        )
-        if not response.ok:
-            self.logger.error(
-                "Failed to send incident", extra={"error": response.json()}
-            )
-        self.logger.info("Incident status: %s", response.status_code)
-        self.logger.info("Incident created successfully", response.json())
+    def __get_headers(self):
+        return {
+            "x-api-key": self.authentication_config.api_key,
+            "Content-Type": "application/json",
+        }
 
     def _notify(
         self,
         title: str,
-        urgency: Literal["low", "medium", "high", "critical"],
-        incident: bool = False,
-        severities: Literal[
-            "SEV-1", "SEV-2", "SEV-3", "SEV-4", "SEV-5", "SEV_UNKNOWN"
-        ] = "SEV-5",
-        incident_message: str = "",
+        urgency: str = "high",
         description: str = "",
-        status: Literal[
-            "queued", "open", "acknowledged", "resolved", "dropped"
-        ] = "queued",
-        destination_team_ids: list[str] = [],
-        destination_router_ids: list[str] = [],
-        destination_account_user_ids: list[str] = [],
-        **kwargs: dict,
+        destinations: list = None,
+        **kwargs,
     ):
         """
-        Sends an alert or incident to PagerTree
-        Args:
-            title: Title of the alert.
-            urgency: low|medium|high|critical
-            incident: True if the alert is an incident
-            severities: SEV-1|SEV-2|SEV-3|SEV-4|SEV-5|SEV_UNKNOWN
-            incident_message: Message to be displayed in the incident
-            description: UTF-8 string of custom message for alert. Shown in incident description
-            status: alert status to send
-            destination_team_ids: destination team_ids to send alert to
-            destination_router_ids: destination router_ids to send alert to
-            destination_account_user_ids: destination account_users_ids to send alert to
-            **kwargs: Additional parameters to be passed
+        Send an alert to PagerTree.
         """
-        if (
-            len(destination_team_ids)
-            + len(destination_router_ids)
-            + len(destination_account_user_ids)
-            == 0
-        ):
-            raise Exception(
-                "at least 1 destination (Team, Router, or Account User) is required"
-            )
-        if not incident:
-            self.__send_alert(
-                title,
-                description,
-                urgency,
-                destination_team_ids,
-                destination_router_ids,
-                destination_account_user_ids,
-                status,
-                **kwargs,
-            )
+        url = f"{self.BASE_API_URL}/alerts"
+        payload = {
+            "title": title,
+            "urgency": urgency,
+            "description": description or title,
+            "destination_team_ids": destinations or [],
+            "meta": {
+                "incident": True,
+                "incident_severity": "SEV-2",
+                "incident_message": title
+            }
+        }
+        response = requests.post(url, json=payload, headers=self.__get_headers())
+        response.raise_for_status()
+        return response.json()
+
+    def _get_all_incidents(self):
+        url = f"{self.BASE_API_URL}/incidents"
+        response = requests.get(url, headers=self.__get_headers())
+        response.raise_for_status()
+        return response.json()
+
+    def _get_incidents(self) -> list[IncidentDto]:
+        raw_incidents = self._get_all_incidents()
+        incidents = []
+        for incident in raw_incidents:
+            incidents.append(self._format_incident(incident))
+        return incidents
+
+    @staticmethod
+    def _format_incident(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> IncidentDto:
+        incident_id = event.get("id")
+        status = PagerTreeProvider.INCIDENT_STATUS_MAP.get(
+            event.get("status"), IncidentStatus.FIRING
+        )
+        
+        severity_map = {
+            "SEV-1": IncidentSeverity.CRITICAL,
+            "SEV-2": IncidentSeverity.HIGH,
+            "SEV-3": IncidentSeverity.MEDIUM,
+            "SEV-4": IncidentSeverity.LOW,
+            "SEV-5": IncidentSeverity.INFO,
+        }
+        severity = severity_map.get(event.get("severity"), IncidentSeverity.INFO)
+        
+        created_at_str = event.get("created_at")
+        if created_at_str:
+            created_at = datetime.datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
         else:
-            self.__send_incident(
-                incident_message,
-                severities,
-                title,
-                urgency,
-                destination_team_ids,
-                destination_router_ids,
-                destination_account_user_ids,
-                **kwargs,
+            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        return IncidentDto(
+            id=str(incident_id),
+            creation_time=created_at,
+            user_generated_name=f'PT-{event.get("title", "unknown")}-{incident_id}',
+            status=status,
+            severity=severity,
+            alert_sources=["pagertree"],
+            services=[event.get("team_name", "unknown")],
+            is_predicted=False,
+            is_candidate=False,
+            fingerprint=str(incident_id),
+        )
+
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
+        """
+        Fetch teams from PagerTree to build topology.
+        """
+        url = f"{self.BASE_API_URL}/teams"
+        response = requests.get(url, headers=self.__get_headers())
+        response.raise_for_status()
+        teams = response.json()
+        
+        topology = []
+        for team in teams:
+            topology.append(
+                TopologyServiceInDto(
+                    source_provider_id=self.provider_id,
+                    service=team["id"],
+                    display_name=team["name"],
+                    description=team.get("description", ""),
+                    team=team["name"],
+                )
             )
+        return topology, {}
+
+    def get_alerts(self) -> list[AlertDto]:
+        raw_incidents = self._get_all_incidents()
+        alerts = []
+        for incident in raw_incidents:
+            alerts.append(self._format_alert(incident))
+        return alerts
+
+    @staticmethod
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
+        """
+        Format a PagerTree incident into a Keep AlertDto.
+        """
+        incident_id = event.get("id")
+        
+        severity_map = {
+            "SEV-1": AlertSeverity.CRITICAL,
+            "SEV-2": AlertSeverity.HIGH,
+            "SEV-3": AlertSeverity.WARNING,
+            "SEV-4": AlertSeverity.INFO,
+            "SEV-5": AlertSeverity.INFO,
+        }
+        severity = severity_map.get(event.get("severity"), AlertSeverity.INFO)
+
+        return AlertDto(
+            id=str(incident_id),
+            name=event.get("title"),
+            status=PagerTreeProvider.ALERT_STATUS_MAP.get(event.get("status"), AlertStatus.FIRING),
+            severity=severity,
+            lastReceived=event.get("created_at"),
+            source=["pagertree"],
+            original_alert=event,
+            fingerprint=str(incident_id),
+        )
+
+    def dispose(self):
+        pass
