@@ -70,7 +70,7 @@ export function IncidentHeader({
             <Subtitle className="text-sm">
               <Link href="/incidents">All Incidents</Link>{" "}
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_candidate ? "" : "Possible "}
+              {incident.is_candidate ? "Possible " : ""}
               {getIncidentName(incident)}
               {pathNameCapitalized && (
                 <>
