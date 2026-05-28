@@ -84,7 +84,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [OpenSearch Serverless](/providers/documentation/opensearchserverless-provider)
 - [Openshift](/providers/documentation/openshift-provider)
 - [Opsgenie](/providers/documentation/opsgenie-provider)
-- [Pagerduty](/providers/documentation/pagerduty-provider)
+- [PagerDuty](/providers/documentation/pagerduty-provider)
 - [Pagertree](/providers/documentation/pagertree-provider)
 - [Parseable](/providers/documentation/parseable-provider)
 - [Pingdom](/providers/documentation/pingdom-provider)
