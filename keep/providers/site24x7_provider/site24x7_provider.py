@@ -234,20 +234,8 @@ class Site24X7Provider(BaseProvider):
         elif not isinstance(tags, list):
             tags = []
 
-        labels_raw = event.get("LABELS", "")
-        if isinstance(labels_raw, dict):
-            labels = labels_raw
-        elif isinstance(labels_raw, str) and labels_raw:
-            labels = {}
-            for part in labels_raw.split(","):
-                part = part.strip()
-                if ":" in part:
-                    k, _, v = part.partition(":")
-                    labels[k.strip()] = v.strip()
-                elif part:
-                    labels[part] = ""
-        else:
-            labels = {}
+        # Site24x7 sends incident parameters as top-level fields, not a "LABELS" key.
+        labels = {k: str(v) for k, v in event.items() if v is not None}
 
         return AlertDto(
             url=event.get("MONITORURL", ""),
