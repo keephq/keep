@@ -80,7 +80,7 @@ You can check that the Grafana Provider works by testing Keep's contact point (w
   height="200">
   <img height="10" src="/images/grafana_sa_5.png" />
 </Frame>
-5. Go to Keep – you should see an alert from Grafana!
+5. Go to Keep - you should see an alert from Grafana!
 
 **Alternative Validation Methods (When Keep is Not Accessible Externally):**
 
@@ -92,7 +92,7 @@ If Keep is not accessible externally and the webhook cannot be created, you can 
    - Trigger the alert and check Grafana's logs for errors or confirmation that the alert was sent.
 
 2. **Check Logs in Grafana:**
-   - Access Grafana’s log files or use the **Explore** feature to query logs related to the alerting mechanism.
+   - Access Grafana's log files or use the **Explore** feature to query logs related to the alerting mechanism.
    - Ensure there are no errors related to the webhook integration and that alerts are processed correctly.
 
 3. **Verify Integration Status:**
@@ -103,11 +103,16 @@ If Keep is not accessible externally and the webhook cannot be created, you can 
 4. **Network and Connectivity Check:**
    - Use network monitoring tools to ensure Grafana can reach Keep or any alternative endpoint configured for alerts.
 
+## Service Topology
+
+Grafana can contribute data to Keep's Service Topology map when the provider is configured with a topology datasource UID. Keep queries Grafana service graph metrics from that datasource and uses the `client` and `server` labels to build services and dependencies.
+
 <Note>
-**Topology Map** is generated from the traces collect by Tempo.
+The Topology Map is generated from traces collected by Tempo and exposed through a Prometheus-compatible datasource.
+
 To get the Datasource UID, go to:
 1. Connections > Data Sources.
-2. Click the Prometheus instance which is scraping data from Tempo > Your URL is in the format `https://host/connections/datasources/edit/<DATASOURCE_UID>`
+2. Click the Prometheus instance that is scraping data from Tempo. The URL is in the format `https://host/connections/datasources/edit/<DATASOURCE_UID>`.
 3. Copy that DATASOURCE_UID and use it while installing the provider.
 </Note>
 
