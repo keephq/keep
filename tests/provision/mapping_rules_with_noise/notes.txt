@@ -1,0 +1,1 @@
+This is not a YAML file. The provisioner should skip it without erroring.
