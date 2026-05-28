@@ -24,6 +24,7 @@ import Alerts from "../alerts";
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
   useSearchParams: jest.fn(),
+  usePathname: jest.fn().mockReturnValue("/alerts/feed"),
 }));
 
 // ─── Mock data hooks ─────────────────────────────────────────────────────────

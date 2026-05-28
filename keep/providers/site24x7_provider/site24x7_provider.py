@@ -234,11 +234,20 @@ class Site24X7Provider(BaseProvider):
         elif not isinstance(tags, list):
             tags = []
 
-        labels = event.get("LABELS", "")
-        if isinstance(labels, str) and labels:
-            labels = [lbl.strip() for lbl in labels.split(",") if lbl.strip()]
-        elif not isinstance(labels, list):
-            labels = []
+        labels_raw = event.get("LABELS", "")
+        if isinstance(labels_raw, dict):
+            labels = labels_raw
+        elif isinstance(labels_raw, str) and labels_raw:
+            labels = {}
+            for part in labels_raw.split(","):
+                part = part.strip()
+                if ":" in part:
+                    k, _, v = part.partition(":")
+                    labels[k.strip()] = v.strip()
+                elif part:
+                    labels[part] = ""
+        else:
+            labels = {}
 
         return AlertDto(
             url=event.get("MONITORURL", ""),

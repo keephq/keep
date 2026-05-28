@@ -39,7 +39,14 @@ export function usePresetActions() {
   );
   const revalidateMultiple = useRevalidateMultiple();
   const mutatePresetsList = useCallback(
-    () => revalidateMultiple(["/preset", "/preset?"]),
+    () => {
+      // Use exact match for /preset (list without filters) and prefix match only
+      // for /preset? (filtered queries like /preset?filters=...).
+      // Do NOT use a broad /preset prefix — that would accidentally match
+      // /preset/{id}/column-config and wipe the user's column configuration.
+      revalidateMultiple(["/preset"], { isExact: true });
+      revalidateMultiple(["/preset?"]);
+    },
     [revalidateMultiple]
   );
   const mutateTags = useCallback(
@@ -88,7 +95,7 @@ export function usePresetActions() {
         return;
       }
       try {
-        const response = await api.delete(`/preset/${presetId}`);
+        await api.delete(`/preset/${presetId}`);
         showSuccessToast(`Preset ${presetName} deleted!`);
         mutatePresetsList();
         setLocalDynamicPresets((oldOrder) =>
