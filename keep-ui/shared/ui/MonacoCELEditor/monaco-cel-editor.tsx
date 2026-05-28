@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ErrorComponent } from "../ErrorComponent/ErrorComponent";
 import { setupCustomCellanguage } from "./cel-support";
 import { MonacoCelBase } from "./MonacoCel";
-import { editor, Token } from "monaco-editor";
+import type { editor, Token } from "monaco-editor";
 import "./editor.scss";
 import { useCelValidation } from "./validation-hook";
 

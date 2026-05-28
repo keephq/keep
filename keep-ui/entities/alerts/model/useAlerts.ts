@@ -108,6 +108,17 @@ export const useAlerts = () => {
     );
   };
 
+  const useAlertByFingerprint = (
+    fingerprint: string | null | undefined,
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    return useSWR<AlertDto>(
+      () => (api.isReady() && fingerprint ? `/alerts/${fingerprint}` : null),
+      (url) => api.get(url),
+      options
+    );
+  };
+
   const useErrorAlerts = (
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
@@ -220,6 +231,7 @@ export const useAlerts = () => {
     useAllAlerts,
     usePresetAlerts,
     useAlertAudit,
+    useAlertByFingerprint,
     useMultipleFingerprintsAlertAudit,
     useErrorAlerts,
     useLastAlerts,
