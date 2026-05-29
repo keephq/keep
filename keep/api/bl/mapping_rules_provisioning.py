@@ -103,21 +103,24 @@ def provision_mapping_rules_from_env(tenant_id: str):
             try:
                 _provision_one(session, tenant_id, path)
                 session.commit()
-            except Exception as exc:
-                logger.error(
-                    "Failed to provision mapping rule from %s",
-                    path,
-                    extra={"exception": exc},
-                )
+            except Exception:
+                logger.exception("Failed to provision mapping rule from %s", path)
                 session.rollback()
 
 
 def _collect_manifest_paths(mappings_dir: str) -> list[str]:
-    """Return sorted absolute paths of YAML manifests in the directory."""
+    """Return sorted absolute paths of YAML manifests in the directory.
+
+    Paths are normalized via os.path.abspath so set-membership comparison
+    against MappingRule.provisioned_file (also stored as abspath) stays stable
+    across runs even if cwd or KEEP_MAPPINGS_DIRECTORY shape (relative vs
+    absolute) changes between restarts.
+    """
+    abs_dir = os.path.abspath(mappings_dir)
     paths = []
-    for filename in sorted(os.listdir(mappings_dir)):
+    for filename in sorted(os.listdir(abs_dir)):
         if filename.endswith((".yaml", ".yml")):
-            paths.append(os.path.join(mappings_dir, filename))
+            paths.append(os.path.join(abs_dir, filename))
         else:
             logger.info("Skipping non-YAML file %s in mappings directory", filename)
     return paths

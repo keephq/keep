@@ -293,6 +293,31 @@ def test_empty_directory_deprovisions_existing(monkeypatch, db_session):
     assert len(_provisioned_mapping_rules()) == 0
 
 
+def test_provisioned_file_is_absolute_and_stable_across_dir_form_changes(
+    monkeypatch, db_session
+):
+    """Stored provisioned_file is absolute; switching env var from relative to
+    absolute form between runs does not cause spurious deprovisioning."""
+    # First run with a RELATIVE directory
+    monkeypatch.setenv("KEEP_MAPPINGS_DIRECTORY", FIXTURE_DIR_ONE)
+    provision_mapping_rules_from_env(SINGLE_TENANT_UUID)
+
+    rules = _provisioned_mapping_rules()
+    assert len(rules) == 1
+    original_id = rules[0].id
+    assert os.path.isabs(rules[0].provisioned_file), (
+        f"provisioned_file should be absolute, got {rules[0].provisioned_file}"
+    )
+
+    # Second run with the SAME directory expressed as an absolute path
+    monkeypatch.setenv("KEEP_MAPPINGS_DIRECTORY", os.path.abspath(FIXTURE_DIR_ONE))
+    provision_mapping_rules_from_env(SINGLE_TENANT_UUID)
+
+    rules = _provisioned_mapping_rules()
+    assert len(rules) == 1, "rule should not have been deprovisioned"
+    assert rules[0].id == original_id, "rule id should be preserved"
+
+
 def _seed_provisioned_rule(session: Session) -> MappingRule:
     """Insert a provisioned MappingRule directly so REST guard tests don't depend on the directory loop."""
     rule = MappingRule(
