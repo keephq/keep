@@ -6,15 +6,19 @@ patching DB helpers, because the provisioning module operates on SQLModel
 sessions directly (same pattern as the existing MappingRule REST routes).
 """
 
+import datetime
 import os
 
 import pytest
+from fastapi import HTTPException
 from sqlmodel import Session, select
 
 import keep.api.core.db as db
 from keep.api.bl.mapping_rules_provisioning import provision_mapping_rules_from_env
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.db.mapping import MappingRule
+from keep.api.models.db.mapping import MappingRule, MappingRuleUpdateDtoIn
+from keep.api.routes.mapping import delete_rule, update_rule
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 
 FIXTURE_DIR_ONE = "./tests/provision/mapping_rules_1"
 FIXTURE_DIR_TWO = "./tests/provision/mapping_rules_2"
@@ -287,3 +291,76 @@ def test_empty_directory_deprovisions_existing(monkeypatch, db_session):
     monkeypatch.setenv("KEEP_MAPPINGS_DIRECTORY", FIXTURE_DIR_EMPTY)
     provision_mapping_rules_from_env(SINGLE_TENANT_UUID)
     assert len(_provisioned_mapping_rules()) == 0
+
+
+def _seed_provisioned_rule(session: Session) -> MappingRule:
+    """Insert a provisioned MappingRule directly so REST guard tests don't depend on the directory loop."""
+    rule = MappingRule(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="example-prometheus-mapping",
+        description="seeded for REST guard test",
+        priority=0,
+        matchers=[["namespace"]],
+        rows=[{"namespace": "monitoring", "team": "platform"}],
+        type="csv",
+        created_by="system",
+        created_at=datetime.datetime.now(tz=datetime.timezone.utc),
+        is_provisioned=True,
+        provisioned_file="/path/to/manifest.yaml",
+    )
+    session.add(rule)
+    session.commit()
+    session.refresh(rule)
+    return rule
+
+
+def _entity() -> AuthenticatedEntity:
+    return AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test@example.com")
+
+
+def test_delete_route_rejects_provisioned_rule(db_session):
+    """REST DELETE on a provisioned rule returns 409, mirroring the dedupe guard."""
+    rule = _seed_provisioned_rule(db_session)
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_rule(
+            rule_id=rule.id,
+            authenticated_entity=_entity(),
+            session=db_session,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert "Provisioned mapping rule cannot be deleted" in exc_info.value.detail
+
+    # rule is still in DB — guard short-circuited before delete
+    assert db_session.get(MappingRule, rule.id) is not None
+
+
+def test_update_route_rejects_provisioned_rule(db_session):
+    """REST PUT on a provisioned rule returns 409, mirroring the dedupe guard."""
+    rule = _seed_provisioned_rule(db_session)
+    original_name = rule.name
+
+    update_payload = MappingRuleUpdateDtoIn(
+        name="renamed-by-ui",
+        description="ui edit attempt",
+        priority=99,
+        matchers=[["namespace"]],
+        type="csv",
+        rows=[{"namespace": "default", "team": "data"}],
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        update_rule(
+            rule_id=rule.id,
+            rule=update_payload,
+            authenticated_entity=_entity(),
+            session=db_session,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert "Provisioned mapping rule cannot be updated" in exc_info.value.detail
+
+    # rule is unchanged — guard short-circuited before mutation
+    db_session.refresh(rule)
+    assert rule.name == original_name
