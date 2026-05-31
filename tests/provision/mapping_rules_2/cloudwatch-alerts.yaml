@@ -1,0 +1,13 @@
+name: example-cloudwatch-mapping
+description: Example CloudWatch-by-team mapping
+priority: 10
+type: csv
+matchers:
+  - [team]
+rows:
+  - team: platform
+    slack_warning: platform-warning
+    slack_critical: platform-critical
+  - team: data
+    slack_warning: data-alerts
+    slack_critical: data-alerts

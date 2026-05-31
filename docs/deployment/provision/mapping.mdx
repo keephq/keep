@@ -1,0 +1,75 @@
+---
+title: "Mapping Rule Provisioning"
+---
+
+<Tip>For any questions or issues related to mapping rule provisioning, please join our [Slack](https://slack.keephq.dev) community.</Tip>
+
+Mapping rule provisioning in Keep allows you to manage CSV-style alert enrichment rules in version control rather than the UI. This is useful when you want to track mapping changes alongside the rest of your infrastructure-as-code.
+
+### Configuring Mapping Rules
+
+To provision mapping rules, follow these steps:
+
+1. Set the `KEEP_MAPPINGS_DIRECTORY` environment variable to the path of your mapping configuration directory.
+2. Create one YAML manifest per mapping rule in that directory.
+
+Example directory structure:
+```
+/path/to/mappings/
+├── prometheus-by-namespace.yaml
+├── cloudwatch-by-team.yaml
+└── service-topology.yaml
+```
+
+### Manifest format
+
+Each YAML manifest describes one mapping rule. Fields mirror the fields accepted by the REST `POST /mapping` endpoint:
+
+```yaml
+name: example-prometheus-mapping
+description: optional description
+priority: 0
+type: csv
+matchers:
+  - [namespace]
+rows:
+  - { namespace: monitoring, team: platform }
+  - { namespace: default, team: platform }
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `name` | yes | Lookup key — must be unique across the tenant |
+| `description` | no | Human-readable description |
+| `priority` | no | Integer, default `0`. Higher = evaluated first |
+| `type` | no | `csv` (default) or `topology` |
+| `matchers` | yes | List of attribute groups. Within a list: AND. Between lists: OR |
+| `rows` | yes for `csv` | List of `{key: value}` dicts; rows match against incoming alert attributes |
+| `is_multi_level` | no | Default `false` |
+| `new_property_name` | no | Required if `is_multi_level` is `true` |
+| `prefix_to_remove` | no | Optional, used with multi-level mappings |
+
+### Update Provisioned Mapping Rules
+
+On every restart, Keep reads the `KEEP_MAPPINGS_DIRECTORY` environment variable and determines which mapping rules need to be added, removed, or updated.
+
+The high-level provisioning mechanism:
+1. Keep reads the `KEEP_MAPPINGS_DIRECTORY` value.
+2. Keep lists all `.yaml`/`.yml` files under the directory (other files are skipped).
+3. For each manifest: lookup an existing rule by `name`. If found, update it and mark `is_provisioned=True`. If not, create a new provisioned rule.
+4. Provisioned rules whose source file is no longer present in the directory are deprovisioned (deleted).
+5. UI-created rules (`is_provisioned=False`) whose name does not appear in any manifest are untouched.
+
+### Adoption of existing UI rules
+
+If a mapping rule already exists in the UI with the same `name` as one of your manifests, the next provisioning run **adopts** it: `is_provisioned` flips to `True`, the rule's `provisioned_file` is recorded, and its content is overwritten from the manifest. The database id is preserved, so any external references to that rule (URLs, dashboards) continue to work.
+
+Fields not present in the manifest schema (`disabled`, `override`, `condition`) are reset to their model defaults on adoption — the manifest is the source of truth, so a rule that was disabled via the UI will be re-enabled when adopted.
+
+### Removing all provisioned mapping rules
+
+If `KEEP_MAPPINGS_DIRECTORY` is unset on a Keep instance that previously had provisioned rules, all of them are deprovisioned (deleted) on the next restart. UI-only rules are unaffected.
+
+### Per-manifest failures
+
+A malformed manifest (invalid YAML, missing required fields, validation errors) is logged and skipped. Other manifests in the directory still process normally. Each successful manifest is committed in its own transaction, so a later failure does not roll back earlier work.
