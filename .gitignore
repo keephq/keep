@@ -221,6 +221,7 @@ workflow-yaml-json-schema.json
 
 tests/provision/*
 !tests/provision/workflows*
+!tests/provision/mapping_rules*
 grafana/*
 !grafana/provisioning/
 !grafana/dashboards/
