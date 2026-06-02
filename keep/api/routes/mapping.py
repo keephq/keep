@@ -141,6 +141,12 @@ def delete_rule(
     if rule is None:
         raise HTTPException(status_code=404, detail="Rule not found")
 
+    if rule.is_provisioned:
+        raise HTTPException(
+            status_code=409,
+            detail="Provisioned mapping rule cannot be deleted",
+        )
+
     session.delete(rule)
     session.commit()
     logger.info("Deleted a mapping rule", extra={"rule_id": rule_id})
@@ -167,6 +173,11 @@ def update_rule(
     )
     if existing_rule is None:
         raise HTTPException(status_code=404, detail="Rule not found")
+    if existing_rule.is_provisioned:
+        raise HTTPException(
+            status_code=409,
+            detail="Provisioned mapping rule cannot be updated",
+        )
     existing_rule.name = rule.name
     existing_rule.description = rule.description
     existing_rule.matchers = rule.matchers
