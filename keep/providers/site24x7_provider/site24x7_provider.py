@@ -92,7 +92,6 @@ class Site24X7Provider(BaseProvider):
         "CRITICAL": AlertStatus.FIRING,
         "UP": AlertStatus.RESOLVED,
     }
-
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -220,6 +219,29 @@ class Site24X7Provider(BaseProvider):
             self.logger.info("Webhook created successfully")
 
     @staticmethod
+    def _parse_labels(event: dict) -> dict:
+        labels_raw = event.get("LABELS")
+        if labels_raw is None:
+            return {
+                k: ", ".join(str(i) for i in v) if isinstance(v, list) else str(v)
+                for k, v in event.items()
+                if v is not None
+            }
+        if isinstance(labels_raw, dict):
+            return labels_raw
+        if isinstance(labels_raw, str) and labels_raw:
+            labels = {}
+            for part in labels_raw.split(","):
+                part = part.strip()
+                if ":" in part:
+                    k, _, v = part.partition(":")
+                    labels[k.strip()] = v.strip()
+                elif part:
+                    labels[part] = ""
+            return labels
+        return {}
+
+    @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
@@ -234,8 +256,7 @@ class Site24X7Provider(BaseProvider):
         elif not isinstance(tags, list):
             tags = []
 
-        # Site24x7 sends incident parameters as top-level fields, not a "LABELS" key.
-        labels = {k: str(v) for k, v in event.items() if v is not None}
+        labels = Site24X7Provider._parse_labels(event)
 
         return AlertDto(
             url=event.get("MONITORURL", ""),
