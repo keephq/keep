@@ -342,22 +342,32 @@ def delete_alert(
         deleted_last_received = enrichment.enrichments.get("deletedAt", [])
         assignees_last_receievd = enrichment.enrichments.get("assignees", {})
 
-    if (
-        delete_alert.restore is True
-        and delete_alert.lastReceived in deleted_last_received
-    ):
-        # Restore deleted alert
-        deleted_last_received.remove(delete_alert.lastReceived)
-    elif (
-        delete_alert.restore is False
-        and delete_alert.lastReceived not in deleted_last_received
-    ):
-        # Delete the alert if it's not already deleted (wtf basically, shouldn't happen)
-        deleted_last_received.append(delete_alert.lastReceived)
+    last_received_values = [delete_alert.lastReceived]
+    if delete_alert.lastReceived is None:
+        alerts_history = get_alerts_by_fingerprint(
+            tenant_id=tenant_id,
+            fingerprint=delete_alert.fingerprint,
+            limit=None,
+        )
+        last_received_values = [
+            alert.event["lastReceived"]
+            for alert in alerts_history
+            if alert.event.get("lastReceived")
+        ]
 
-    if delete_alert.lastReceived not in assignees_last_receievd:
-        # auto-assign the deleting user to the alert
-        assignees_last_receievd[delete_alert.lastReceived] = user_email
+    for last_received in last_received_values:
+        if delete_alert.restore is True and last_received in deleted_last_received:
+            # Restore deleted alert
+            deleted_last_received.remove(last_received)
+        elif (
+            delete_alert.restore is False and last_received not in deleted_last_received
+        ):
+            # Delete the alert if it's not already deleted (wtf basically, shouldn't happen)
+            deleted_last_received.append(last_received)
+
+        if last_received not in assignees_last_receievd:
+            # auto-assign the deleting user to the alert
+            assignees_last_receievd[last_received] = user_email
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
