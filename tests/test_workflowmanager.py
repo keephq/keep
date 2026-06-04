@@ -8,6 +8,7 @@ from keep.api.routes.workflows import get_event_from_body
 from keep.parser.parser import Parser
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
+from keep.exceptions.action_error import ActionError
 from keep.step.step import StepError
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -242,6 +243,16 @@ def test_run_steps_continue_on_error_swallows_failure_and_continues():
     next_step.run.assert_called_once()
 
 
+def test_run_steps_continue_on_error_swallows_action_error():
+    """step.run() raises ActionError in practice — continue_on_error must catch it too."""
+    failing = _mock_step("failing", continue_on_error=True, run_raises=ActionError("boom"))
+    next_step = _mock_step("next")
+
+    _make_workflow(steps=[failing, next_step]).run_steps()
+
+    next_step.run.assert_called_once()
+
+
 def test_run_steps_without_continue_on_error_raises_step_error():
     """A failing step without continue_on_error should propagate StepError and stop execution."""
     failing = _mock_step("failing", continue_on_error=False, run_raises=StepError("boom"))
@@ -253,10 +264,21 @@ def test_run_steps_without_continue_on_error_raises_step_error():
     next_step.run.assert_not_called()
 
 
+def test_run_steps_without_continue_on_error_raises_action_error():
+    """A failing step without continue_on_error should propagate ActionError and stop execution."""
+    failing = _mock_step("failing", continue_on_error=False, run_raises=ActionError("boom"))
+    next_step = _mock_step("next")
+
+    with pytest.raises(ActionError):
+        _make_workflow(steps=[failing, next_step]).run_steps()
+
+    next_step.run.assert_not_called()
+
+
 def test_run_steps_only_failed_step_is_skipped():
     """With continue_on_error, only the failing step is skipped; subsequent steps still run."""
     step1 = _mock_step("step1")
-    step2 = _mock_step("step2", continue_on_error=True, run_raises=StepError("mid-fail"))
+    step2 = _mock_step("step2", continue_on_error=True, run_raises=ActionError("mid-fail"))
     step3 = _mock_step("step3")
 
     _make_workflow(steps=[step1, step2, step3]).run_steps()

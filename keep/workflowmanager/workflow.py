@@ -6,6 +6,7 @@ import typing
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.rbac import Roles
 from keep.iohandler.iohandler import IOHandler
+from keep.exceptions.action_error import ActionError
 from keep.step.step import Step, StepError
 
 
@@ -93,7 +94,7 @@ class Workflow:
                         extra={"step_id": step.step_id},
                     )
                     break
-            except StepError as e:
+            except (StepError, ActionError) as e:
                 threading.current_thread().step_id = None
                 if step.continue_on_error:
                     self.logger.warning(
