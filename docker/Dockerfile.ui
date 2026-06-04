@@ -22,9 +22,12 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
+ARG KEEP_DEBUG=false
+ENV KEEP_DEBUG=${KEEP_DEBUG}
+
 # If using npm comment out above and use below instead
 ENV API_URL http://localhost:8080
-RUN NODE_OPTIONS=--max-old-space-size=8192  npm run build
+RUN NODE_OPTIONS=--max-old-space-size=5120  npm run build
 
 
 # Production image, copy all the files and run next

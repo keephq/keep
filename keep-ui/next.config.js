@@ -108,7 +108,9 @@ const nextConfig = {
     ],
   },
   compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
+    removeConsole:
+      process.env.NODE_ENV === "production" &&
+      process.env.KEEP_DEBUG !== "true",
   },
   output: "standalone",
   productionBrowserSourceMaps: !isSentryDisabled,
