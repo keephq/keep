@@ -8,6 +8,7 @@ on:
 
 env:
   REGISTRY: europe-west3-docker.pkg.dev/hoprassociation/docker-images
+  NODE_ENV: development
 
 jobs:
   build-frontend:
