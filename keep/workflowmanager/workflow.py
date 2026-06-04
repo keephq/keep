@@ -94,8 +94,15 @@ class Workflow:
                     )
                     break
             except StepError as e:
-                self.logger.error(f"Step {step.step_id} failed: {e}")
                 threading.current_thread().step_id = None
+                if step.continue_on_error:
+                    self.logger.warning(
+                        "Step %s failed but continue_on_error is True, continuing",
+                        step.step_id,
+                        extra={"step_id": step.step_id},
+                    )
+                    continue
+                self.logger.error(f"Step {step.step_id} failed: {e}")
                 raise
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
@@ -146,8 +153,15 @@ class Workflow:
             action_status, action_error, action_stop = self.run_action(action)
             threading.current_thread().step_id = None
             if action_error:
-                actions_firing.append(action_status)
-                actions_errors.append(action_error)
+                if action.continue_on_error:
+                    self.logger.warning(
+                        "Action %s failed but continue_on_error is True, continuing",
+                        action.name,
+                        extra={"step_id": action.step_id},
+                    )
+                else:
+                    actions_firing.append(action_status)
+                    actions_errors.append(action_error)
             # if the action ran + the action configured to stop the workflow:
             elif action_status and action_stop:
                 self.logger.info("Action stop, stopping the workflow")
