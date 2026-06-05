@@ -162,6 +162,34 @@ class WorkflowManager:
                 for k, v in incident_enrichment.enrichments.items():
                     setattr(incident, k, v)
 
+            if trigger == "alert_association_changed":
+                try:
+                    alerts = incident.alerts
+
+                    processed_alerts = []
+                    # Iterate over the alerts and process them as needed
+                    for alert in alerts:
+                        # Handle multiline description
+                        alert_description = alert.description.split("\n")[0]
+
+                        processed_alert = f"{alert.status.capitalize()} {alert.lastReceived} [{alert.severity}] {alert_description}"
+                        processed_alerts.append(processed_alert)
+
+                    # Add the linked alerts to the incident object for use in the workflow
+                    setattr(incident, 'linked_alerts', processed_alerts)
+
+                except Exception as e:
+                    self.logger.error(
+                        f"Failed to fetch alerts linked to incident {incident.id}",
+                        extra={
+                            "incident_id": incident.id,
+                            "tenant_id": tenant_id,
+                            "exception": str(e)
+                        }
+                    )
+                    # Set empty list if fetch fails
+                    setattr(incident, 'linked_alerts', [])
+
             self.logger.info("Adding workflow to run")
             with self.scheduler.lock:
                 self.scheduler.workflows_to_run.append(

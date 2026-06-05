@@ -48,7 +48,7 @@ export const V2StepAlertTriggerSchema = TriggerSchemaBase.extend({
     .optional(),
 });
 
-export const IncidentEventEnum = z.enum(["created", "updated", "deleted"]);
+export const IncidentEventEnum = z.enum(["created", "updated", "deleted", "alert_association_changed"]);
 
 const IncidentTriggerValueSchema = z.object({
   events: z.array(IncidentEventEnum),
