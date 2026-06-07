@@ -106,3 +106,42 @@ def test_run_single_exception(sample_step):
 
     # _run_single should take around RETRY_COUNT*RETRT_INTERVAL time due to retries
     assert execution_time >= RETRY_COUNT * RETRY_INTERVAL
+
+
+def test_continue_on_error_default_is_false():
+    context_manager = Mock()
+    step = Step(
+        context_manager,
+        "test_step",
+        {},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    assert step.continue_on_error is False
+
+
+def test_continue_on_error_set_to_true():
+    context_manager = Mock()
+    step = Step(
+        context_manager,
+        "test_step",
+        {"continue_on_error": True},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    assert step.continue_on_error is True
+
+
+def test_continue_on_error_explicit_false():
+    context_manager = Mock()
+    step = Step(
+        context_manager,
+        "test_step",
+        {"continue_on_error": False},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    assert step.continue_on_error is False
