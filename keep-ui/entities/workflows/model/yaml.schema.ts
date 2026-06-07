@@ -203,6 +203,7 @@ export const YamlStepOrActionSchema = z
       .optional(),
     foreach: z.string().optional(),
     continue: z.boolean().optional(),
+    continue_on_error: z.boolean().optional(),
     "on-failure": OnFailureSchema.optional(),
   })
   .strict();

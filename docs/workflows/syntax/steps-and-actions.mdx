@@ -211,3 +211,51 @@ steps:
         # Retry every 5 seconds
         interval: 5
 ```
+
+### Continue on error
+
+By default, if a step or action fails the workflow stops immediately and reports a failure. Set `continue_on_error: true` on any step or action to swallow its failure and continue executing the remaining steps/actions — similar to `continue-on-error` in GitHub Actions.
+
+```yaml
+steps:
+  - name: optional-enrichment
+    continue_on_error: true
+    provider:
+      type: http
+      config: "{{ providers.some-api }}"
+      with:
+        url: "https://api.example.com/optional-data"
+
+  - name: always-runs
+    provider:
+      type: slack
+      config: "{{ providers.slack-demo }}"
+      with:
+        message: "Runs even if optional-enrichment failed"
+```
+
+The same attribute works on actions:
+
+```yaml
+actions:
+  - name: best-effort-ticket
+    continue_on_error: true
+    provider:
+      type: servicenow
+      config: "{{ providers.servicenow }}"
+      with:
+        table_name: INCIDENT
+        payload:
+          short_description: "Automated incident"
+
+  - name: fallback-slack
+    provider:
+      type: slack
+      config: "{{ providers.slack-demo }}"
+      with:
+        message: "Ticket creation may have failed, check ServiceNow"
+```
+
+<Note>
+When `continue_on_error: true` is set, the step/action failure is logged as a warning but does **not** mark the overall workflow execution as failed.
+</Note>

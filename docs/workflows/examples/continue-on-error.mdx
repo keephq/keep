@@ -1,0 +1,75 @@
+---
+title: "Continue on Error"
+---
+
+This workflow demonstrates `continue_on_error`, which lets a step or action fail without stopping the rest of the workflow — similar to `continue-on-error` in GitHub Actions.
+
+**Use case:** enrich an alert with optional data from an external API, then always send a Slack notification regardless of whether the enrichment succeeded.
+
+```yaml
+workflow:
+  id: continue-on-error-example
+  description: "Fetch optional enrichment data and always notify via Slack"
+  triggers:
+    - type: alert
+      cel: source.contains("grafana")
+
+  steps:
+    - name: fetch-optional-enrichment
+      continue_on_error: true
+      provider:
+        type: http
+        config: "{{ providers.internal-api }}"
+        with:
+          url: "https://api.example.com/enrich/{{ alert.fingerprint }}"
+          method: GET
+
+  actions:
+    - name: notify-slack
+      provider:
+        type: slack
+        config: "{{ providers.slack-demo }}"
+        with:
+          message: >
+            Alert: {{ alert.name }}
+            Enrichment: {{ steps.fetch-optional-enrichment.results | default('unavailable') }}
+```
+
+**How it works:**
+
+1. The `fetch-optional-enrichment` step calls an external API. If the API is down or returns an error, the failure is logged as a warning and execution continues.
+2. The `notify-slack` action always runs, using the enrichment results if available or falling back gracefully if not.
+
+The same flag works on actions. In the example below, a best-effort ticket is created in ServiceNow and a Slack message is sent regardless of whether the ticket creation succeeded:
+
+```yaml
+workflow:
+  id: best-effort-ticket
+  description: "Create a ServiceNow ticket (best-effort) and always notify Slack"
+  triggers:
+    - type: alert
+      cel: severity == "critical"
+
+  actions:
+    - name: create-ticket
+      continue_on_error: true
+      provider:
+        type: servicenow
+        config: "{{ providers.servicenow }}"
+        with:
+          table_name: INCIDENT
+          payload:
+            short_description: "{{ alert.name }}"
+            description: "{{ alert.description }}"
+
+    - name: notify-slack
+      provider:
+        type: slack
+        config: "{{ providers.slack-demo }}"
+        with:
+          message: "Critical alert: {{ alert.name }}. A ServiceNow ticket was attempted."
+```
+
+<Note>
+When `continue_on_error: true` is set, the step or action failure is logged as a warning but does **not** mark the overall workflow execution as failed.
+</Note>
