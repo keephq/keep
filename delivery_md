@@ -1,0 +1,12 @@
+# Squadcast Provider for Keep
+
+This package adds a Squadcast provider to Keep for incident management integration.
+
+## How to Run
+
+1. Install dependencies:
+   - `pip install requests pytest`
+2. Run tests:
+   - `make verify`
+
+The provider can be used by importing `SquadcastProvider` and initializing with your Squadcast API key.

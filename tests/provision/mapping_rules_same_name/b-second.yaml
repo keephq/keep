@@ -1,8 +1,0 @@
-name: duplicate-name-mapping
-priority: 99
-type: csv
-matchers:
-  - [namespace]
-rows:
-  - namespace: default
-    team: data

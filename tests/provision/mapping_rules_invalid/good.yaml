@@ -1,8 +1,0 @@
-name: valid-mapping
-priority: 0
-type: csv
-matchers:
-  - [namespace]
-rows:
-  - namespace: monitoring
-    team: devops
