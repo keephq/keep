@@ -5703,12 +5703,17 @@ def get_last_alert_by_fingerprint(
 def get_last_alert_by_correlation_fingerprint(
     tenant_id: str, correlation_fingerprint: str
 ) -> Optional[str]:
-    """Return the fingerprint of the representative alert for a correlation group, or None."""
+    """Return the fingerprint of the representative (oldest) alert for a correlation group.
+
+    Ordering by first_timestamp ASC ensures the same representative is returned
+    even after subsequent alerts in the group are stored in LastAlert.
+    """
     with Session(engine) as session:
         last_alert = session.exec(
             select(LastAlert)
             .where(LastAlert.tenant_id == tenant_id)
             .where(LastAlert.correlation_fingerprint == correlation_fingerprint)
+            .order_by(LastAlert.first_timestamp)
             .limit(1)
         ).first()
     return last_alert.fingerprint if last_alert else None
