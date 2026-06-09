@@ -71,11 +71,11 @@ echo ""
 
 wait
 
-# Backend
+# Build Backend
 # docker build --platform linux/amd64 -f docker/Dockerfile.api -t europe-west3-docker.pkg.dev/hoprassociation/docker-images/keep-api:latest .
 # docker push europe-west3-docker.pkg.dev/hoprassociation/docker-images/keep-api:latest
 
-# Frontend
+# Build Frontend
 # cd /Users/ausias/Documents/github/open-source/keep/keep-ui && npm install 2>&1
 # docker build --platform linux/amd64 -f docker/Dockerfile.ui -t europe-west3-docker.pkg.dev/hoprassociation/docker-images/keep-ui:latest ./keep-ui/
 # docker push europe-west3-docker.pkg.dev/hoprassociation/docker-images/keep-ui:latest
