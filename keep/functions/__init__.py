@@ -604,3 +604,56 @@ def dictget(data: str | dict, key: str, default: any = None) -> any:
         return default
 
     return data.get(key, default)
+
+
+def dict_set(data: str | dict, key: str, value: any) -> dict:
+    """
+    Sets a key-value pair in a dictionary, returning a new dictionary.
+    
+    Args:
+        data (str | dict): The dictionary to update. Can be a JSON string or dict.
+        key (str): The key to set.
+        value (any): The value to set.
+        
+    Returns:
+        dict: A new dictionary with the key set to the value.
+    """
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            data = {}
+
+    if not isinstance(data, dict):
+        data = {}
+
+    import copy
+    dict_copy = copy.deepcopy(data)
+    dict_copy[key] = value
+    return dict_copy
+
+
+def dict_merge(*args) -> dict:
+    """
+    Merges multiple dictionaries into one, returning a new dictionary.
+    Dictionaries passed later override earlier ones.
+    
+    Args:
+        *args: Dictionaries or JSON strings to merge.
+        
+    Returns:
+        dict: A new dictionary containing all merged keys and values.
+    """
+    result = {}
+    for data in args:
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception:
+                continue
+
+        if isinstance(data, dict):
+            result.update(data)
+            
+    return result
+
