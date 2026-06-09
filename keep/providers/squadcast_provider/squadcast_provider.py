@@ -1,258 +1,417 @@
-"""
-SquadcastProvider is a class that implements the Squadcast API and allows creating incidents and notes.
-"""
+"""SquadcastProvider - Squadcast incident management integration for Keep."""
 
 import dataclasses
-import json
+import typing
 
 import pydantic
 import requests
-from requests import HTTPError
 
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class SquadcastProviderAuthConfig:
-    service_region: str = dataclasses.field(
+    """Squadcast authentication configuration."""
+
+    api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Service region: EU/US",
-            "hint": "https://apidocs.squadcast.com/#intro",
-            "sensitive": False,
+            "description": "Squadcast API Refresh Token",
+            "sensitive": True,
+            "hint": "Obtain from Squadcast Settings > API Tokens",
         }
     )
-    refresh_token: str | None = dataclasses.field(
+    webhook_url: str = dataclasses.field(
+        default="",
         metadata={
             "required": False,
-            "description": "Squadcast Refresh Token",
-            "hint": "https://support.squadcast.com/docs/squadcast-public-api",
+            "description": "Squadcast Incident Webhook URL (for creating incidents without full API)",
             "sensitive": True,
+            "hint": "e.g. https://api.squadcast.com/v2/incidents/api/...",
         },
-        default=None,
     )
-    webhook_url: HttpsUrl | None = dataclasses.field(
+    api_url: str = dataclasses.field(
+        default="https://api.squadcast.com",
         metadata={
             "required": False,
-            "description": "Incident webhook url",
-            "hint": "https://support.squadcast.com/integrations/incident-webhook-incident-webhook-api",
-            "sensitive": True,
-            "validation": "https_url",
+            "description": "Squadcast API Base URL",
         },
-        default=None,
     )
 
 
 class SquadcastProvider(BaseProvider):
-    """Create incidents and notes using the Squadcast API."""
+    """Manage incidents and alerts in Squadcast."""
 
     PROVIDER_DISPLAY_NAME = "Squadcast"
-    PROVIDER_TAGS = ["alert"]
     PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_TAGS = ["alert", "incident-management", "oncall"]
+    PROVIDER_COMING_SOON = False
 
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
-            description="The user can connect to the client",
-            mandatory=False,
-            alias="Connect to the client",
+            description="User is authenticated to Squadcast",
+            mandatory=True,
+            alias="Authenticated",
         ),
     ]
 
+    SEVERITIES_MAP = {
+        "P1": AlertSeverity.CRITICAL,
+        "P2": AlertSeverity.HIGH,
+        "P3": AlertSeverity.WARNING,
+        "P4": AlertSeverity.INFO,
+        "P5": AlertSeverity.LOW,
+    }
+
+    STATUS_MAP = {
+        "triggered": AlertStatus.FIRING,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+        "resolved": AlertStatus.RESOLVED,
+        "suppressed": AlertStatus.SUPPRESSED,
+    }
+
     def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self,
+        context_manager: ContextManager,
+        provider_id: str,
+        config: ProviderConfig,
     ):
         super().__init__(context_manager, provider_id, config)
+        self._access_token = None
 
-    def validate_scopes(self):
-        """
-        Validates that the user has the required scopes to use the provider.
-        """
-        refresh_headers = {
-            "content-type": "application/json",
-            "X-Refresh-Token": f"{self.authentication_config.refresh_token}",
-        }
-        resp = requests.get(
-            f"{self.__get_endpoint('auth')}/oauth/access-token", headers=refresh_headers
+    @property
+    def access_token(self) -> str:
+        if self._access_token is None:
+            self._access_token = self._get_access_token()
+        return self._access_token
+
+    def _get_access_token(self) -> str:
+        """Exchange refresh token for an access token."""
+        url = f"{self.authentication_config.api_url}/v3/oauth/access-token"
+        response = requests.get(
+            url,
+            headers={"X-Refresh-Token": self.authentication_config.api_key},
+            timeout=10,
         )
-        try:
-            resp.raise_for_status()
-            scopes = {
-                "authenticated": True,
-            }
-        except Exception as e:
-            self.logger.exception("Error validating scopes")
-            scopes = {
-                "authenticated": str(e),
-            }
-        return scopes
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to obtain Squadcast access token: {response.status_code} {response.text}"
+            )
+        data = response.json()
+        token = data.get("data", {}).get("access_token", "")
+        if not token:
+            raise Exception("Empty access token received from Squadcast")
+        return token
 
-    def __get_endpoint(self, endpoint: str):
-        if endpoint == "auth":
-            return ("https://auth.eu.squadcast.com", "https://auth.squadcast.com")[
-                self.authentication_config.service_region == "US"
-            ]
-        elif endpoint == "api":
-            return ("https://api.eu.squadcast.com", "https://api.squadcast.com")[
-                self.authentication_config.service_region == "US"
-            ]
+    def _get_headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+        }
 
     def validate_config(self):
         self.authentication_config = SquadcastProviderAuthConfig(
             **self.config.authentication
         )
-        if (
-            not self.authentication_config.refresh_token
-            and not self.authentication_config.webhook_url
-        ):
-            raise ProviderConfigException(
-                "SquadcastProvider requires either refresh_token or webhook_url",
-                provider_id=self.provider_id,
-            )
 
-    def _create_incidents(
-        self,
-        headers: dict,
-        message: str,
-        description: str,
-        tags: dict = {},
-        priority: str = "",
-        status: str = "",
-        event_id: str = "",
-        additional_json: str = "",
-    ):
-        body = json.dumps(
-            {
-                "message": message,
-                "description": description,
-                "tags": tags,
-                "priority": priority,
-                "status": status,
-                "event_id": event_id,
-            }
-        )
-
-        # append body to additional_json we are doing this way because we don't want to override the core body fields
+    def validate_scopes(self) -> dict[str, bool | str]:
+        """Validate provider scopes/authentication."""
         try:
-            additional_fields = json.loads(additional_json) if additional_json else {}
-            core_fields = json.loads(body)
-            body = json.dumps({**additional_fields, **core_fields})
-        except json.JSONDecodeError as e:
-            raise ProviderConfigException(
-                f"Invalid additional_json format: {str(e)}",
-                provider_id=self.provider_id
-            )
+            self._get_access_token()
+            return {"authenticated": True}
+        except Exception as e:
+            self.logger.exception("Error validating Squadcast scopes")
+            return {"authenticated": str(e)}
 
-        return requests.post(
-            self.authentication_config.webhook_url, data=body, headers=headers
-        )
-
-    def _crete_notes(
-        self, headers: dict, message: str, incident_id: str, attachments: list = []
-    ):
-        body = json.dumps({"message": message, "attachments": attachments})
-        return requests.post(
-            f"{self.__get_endpoint('api')}/v3/incidents/{incident_id}/warroom",
-            data=body,
-            headers=headers,
-        )
+    def dispose(self):
+        pass
 
     def _notify(
         self,
-        notify_type: str,
         message: str = "",
         description: str = "",
-        incident_id: str = "",
+        tags: typing.Optional[dict] = None,
         priority: str = "",
-        tags: dict = {},
-        status: str = "",
+        status: str = "trigger",
         event_id: str = "",
-        attachments: list = [],
-        additional_json: str = "",
-        **kwargs,
+        service_id: str = "",
+        escalation_policy_id: str = "",
+        **kwargs: typing.Any,
     ) -> dict:
-        """
-        Create an incident or notes using the Squadcast API.
-        """
+        """Create or update an incident in Squadcast.
 
+        Args:
+            message: Short summary of the incident.
+            description: Detailed description.
+            tags: Key-value tags to attach.
+            priority: Priority level (P1-P5).
+            status: One of trigger, acknowledge, resolve.
+            event_id: Unique event ID for deduplication.
+            service_id: Squadcast service ID (required for API mode).
+            escalation_policy_id: Escalcast escalation policy ID (required for API mode).
+        """
         self.logger.info(
-            f"Creating {notify_type} using SquadcastProvider",
-            extra={notify_type: notify_type},
+            "Notifying Squadcast",
+            extra={"message": message, "status": status},
         )
-        refresh_headers = {
-            "content-type": "application/json",
-            "X-Refresh-Token": f"{self.authentication_config.refresh_token}",
-        }
-        api_key_resp = requests.get(
-            f"{self.__get_endpoint('auth')}/oauth/access-token", headers=refresh_headers
-        )
-        headers = {
-            "content-type": "application/json",
-            "Authorization": f"Bearer {api_key_resp.json()['data']['access_token']}",
-        }
-        if notify_type == "incident":
-            if message == "" or description == "":
-                raise Exception(
-                    f'message: "{message}" and description: "{description}" cannot be empty'
-                )
-            resp = self._create_incidents(
-                headers=headers,
+
+        # Prefer webhook URL if configured (simpler integration)
+        if self.authentication_config.webhook_url:
+            return self._notify_via_webhook(
                 message=message,
                 description=description,
                 tags=tags,
                 priority=priority,
                 status=status,
                 event_id=event_id,
-                additional_json=additional_json,
             )
-        elif notify_type == "notes":
-            if message == "" or incident_id == "":
-                raise Exception(
-                    f'message: "{message}" and incident_id: "{incident_id}" cannot be empty'
-                )
-            resp = self._crete_notes(
-                headers=headers,
-                message=message,
-                incident_id=incident_id,
-                attachments=attachments,
-            )
-        else:
-            raise Exception(
-                "notify_type is a mandatory field, expected: incident | notes"
-            )
-        try:
-            resp.raise_for_status()
-            return resp.json()
-        except HTTPError as e:
-            raise Exception(f"Failed to create issue: {str(e)}")
 
-    def dispose(self):
+        return self._notify_via_api(
+            message=message,
+            description=description,
+            tags=tags,
+            priority=priority,
+            status=status,
+            event_id=event_id,
+            service_id=service_id,
+            escalation_policy_id=escalation_policy_id,
+        )
+
+    def _notify_via_webhook(
+        self,
+        message: str,
+        description: str,
+        tags: typing.Optional[dict],
+        priority: str,
+        status: str,
+        event_id: str,
+    ) -> dict:
+        """Send incident via Squadcast incident webhook."""
+        payload: dict[str, typing.Any] = {
+            "message": message,
+            "description": description or message,
+        }
+        if tags:
+            payload["tags"] = tags
+        if priority:
+            payload["priority"] = priority
+        if event_id:
+            payload["event_id"] = event_id
+        if status:
+            payload["status"] = status
+
+        response = requests.post(
+            self.authentication_config.webhook_url,
+            json=payload,
+            timeout=10,
+        )
+        if response.status_code not in (200, 201, 202):
+            raise Exception(
+                f"Failed to create Squadcast incident via webhook: "
+                f"{response.status_code} {response.text}"
+            )
+        self.logger.info("Successfully notified Squadcast via webhook")
+        return response.json() if response.text else {"status": "ok"}
+
+    def _notify_via_api(
+        self,
+        message: str,
+        description: str,
+        tags: typing.Optional[dict],
+        priority: str,
+        status: str,
+        event_id: str,
+        service_id: str,
+        escalation_policy_id: str,
+    ) -> dict:
+        """Create incident via Squadcast REST API."""
+        if not service_id:
+            raise Exception(
+                "service_id is required when using API mode (no webhook_url configured)"
+            )
+        if not escalation_policy_id:
+            raise Exception(
+                "escalation_policy_id is required when using API mode"
+            )
+
+        payload: dict[str, typing.Any] = {
+            "message": message,
+            "description": description or message,
+            "service_id": service_id,
+            "escalation_policy_id": escalation_policy_id,
+        }
+        if tags:
+            payload["tags"] = tags
+        if priority:
+            payload["priority"] = priority
+        if event_id:
+            payload["event_id"] = event_id
+        if status:
+            payload["status"] = status
+
+        response = requests.post(
+            f"{self.authentication_config.api_url}/v3/incidents",
+            headers=self._get_headers(),
+            json=payload,
+            timeout=10,
+        )
+        if response.status_code not in (200, 201, 202):
+            raise Exception(
+                f"Failed to create Squadcast incident via API: "
+                f"{response.status_code} {response.text}"
+            )
+        self.logger.info("Successfully notified Squadcast via API")
+        return response.json()
+
+    def _query(
+        self,
+        query_type: str = "incidents",
+        **kwargs: typing.Any,
+    ) -> list[dict]:
+        """Query Squadcast resources.
+
+        Args:
+            query_type: One of 'incidents', 'services', 'escalation_policies'.
         """
-        No need to dispose of anything, so just do nothing.
-        """
-        pass
+        if query_type == "incidents":
+            return self._get_incidents(**kwargs)
+        elif query_type == "services":
+            return self._get_services(**kwargs)
+        elif query_type == "escalation_policies":
+            return self._get_escalation_policies(**kwargs)
+        else:
+            raise Exception(f"Unknown query type: {query_type}")
+
+    def _get_incidents(self, **kwargs: typing.Any) -> list[dict]:
+        """Retrieve incidents from Squadcast."""
+        response = requests.get(
+            f"{self.authentication_config.api_url}/v3/incidents",
+            headers=self._get_headers(),
+            params=kwargs,
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to get incidents: {response.status_code} {response.text}"
+            )
+        return response.json().get("data", [])
+
+    def _get_services(self, **kwargs: typing.Any) -> list[dict]:
+        """Retrieve services from Squadcast."""
+        response = requests.get(
+            f"{self.authentication_config.api_url}/v3/services",
+            headers=self._get_headers(),
+            params=kwargs,
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to get services: {response.status_code} {response.text}"
+            )
+        return response.json().get("data", [])
+
+    def _get_escalation_policies(self, **kwargs: typing.Any) -> list[dict]:
+        """Retrieve escalation policies from Squadcast."""
+        response = requests.get(
+            f"{self.authentication_config.api_url}/v3/escalation-policies",
+            headers=self._get_headers(),
+            params=kwargs,
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to get escalation policies: {response.status_code} {response.text}"
+            )
+        return response.json().get("data", [])
+
+    @staticmethod
+    def _format_alert(
+        event: dict,
+        provider_instance: typing.Optional["SquadcastProvider"] = None,
+    ) -> AlertDto:
+        """Format a Squadcast webhook event into a Keep AlertDto."""
+        # Determine status from event
+        event_type = event.get("event_type", event.get("status", "triggered"))
+        status = SquadcastProvider.STATUS_MAP.get(
+            event_type.replace("incident_", ""),
+            AlertStatus.FIRING,
+        )
+
+        # Determine severity from priority
+        priority = event.get("priority", event.get("event", {}).get("priority", ""))
+        severity = SquadcastProvider.SEVERITIES_MAP.get(priority, AlertSeverity.INFO)
+
+        # Extract service info
+        service = event.get("service", {})
+        service_name = service.get("name", "") if isinstance(service, dict) else str(service)
+
+        # Build tags
+        tags = event.get("tags", {})
+        if isinstance(tags, list):
+            tags_dict = {}
+            for tag in tags:
+                if isinstance(tag, dict):
+                    key = tag.get("key", tag.get("label", ""))
+                    value = tag.get("value", "")
+                    if key:
+                        tags_dict[key] = value
+            tags = tags_dict
+
+        alert = AlertDto(
+            id=event.get("id", event.get("incident_id", "")),
+            name=event.get("message", event.get("title", "Squadcast Incident")),
+            status=status,
+            severity=severity,
+            description=event.get("description", ""),
+            source=["squadcast"],
+            url=event.get("url", event.get("incident_url", "")),
+            service=service_name,
+            tags=tags if tags else {},
+            lastReceived=event.get("created_at", event.get("timestamp", "")),
+        )
+        return alert
+
+    @classmethod
+    def webhook_example(cls) -> dict:
+        return {
+            "id": "60c6b0a4e4b0a2001c9a1234",
+            "event_type": "incident_triggered",
+            "message": "High CPU usage on prod-web-01",
+            "description": "CPU has been above 95% for 5 minutes",
+            "priority": "P2",
+            "status": "triggered",
+            "service": {
+                "id": "svc123",
+                "name": "Production Web",
+            },
+            "tags": [
+                {"key": "environment", "value": "production"},
+                {"key": "host", "value": "prod-web-01"},
+            ],
+            "created_at": "2023-10-01T12:00:00Z",
+            "url": "https://app.squadcast.com/incident/60c6b0a4e4b0a2001c9a1234",
+        }
 
 
 if __name__ == "__main__":
-    import os
+    import logging
 
-    squadcast_api_key = os.environ.get("SQUADCAST_API_KEY")
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
     )
-    # Initalize the provider and provider config
+
     config = ProviderConfig(
-        authentication={"api_key": squadcast_api_key},
+        description="Squadcast Provider Test",
+        authentication={
+            "api_key": "test-refresh-token",
+        },
     )
-    provider = SquadcastProvider(
-        context_manager, provider_id="squadcast-test", config=config
-    )
-    response = provider.notify(
-        description="test",
-    )
-    print(response)
+
+    provider = SquadcastProvider(context_manager, "squadcast-test", config)
+    print("Provider created successfully")
