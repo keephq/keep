@@ -447,6 +447,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         selectedDeduplicationRule={selectedDeduplicationRule}
         onSubmit={handleSubmitDeduplicationRule}
         providers={providers}
+        deduplicationRules={deduplicationRules}
       />
     </div>
   );

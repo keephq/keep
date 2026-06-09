@@ -2568,6 +2568,19 @@ def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
             .where(AlertDeduplicationRule.tenant_id == tenant_id)
             .where(AlertDeduplicationRule.provider_id == provider_id)
             .where(AlertDeduplicationRule.provider_type == provider_type)
+            .where(AlertDeduplicationRule.rule_type == "split")
+        ).first()
+    return rule
+
+
+def get_correlation_deduplication_rule(tenant_id, provider_id, provider_type):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(AlertDeduplicationRule)
+            .where(AlertDeduplicationRule.tenant_id == tenant_id)
+            .where(AlertDeduplicationRule.provider_id == provider_id)
+            .where(AlertDeduplicationRule.provider_type == provider_type)
+            .where(AlertDeduplicationRule.rule_type == "correlate")
         ).first()
     return rule
 
@@ -2585,6 +2598,7 @@ def create_deduplication_rule(
     ignore_fields: list[str] = [],
     priority: int = 0,
     is_provisioned: bool = False,
+    rule_type: str = "split",
 ):
     with Session(engine) as session:
         new_rule = AlertDeduplicationRule(
@@ -2601,6 +2615,7 @@ def create_deduplication_rule(
             ignore_fields=ignore_fields,
             priority=priority,
             is_provisioned=is_provisioned,
+            rule_type=rule_type,
         )
         session.add(new_rule)
         session.commit()
@@ -2621,6 +2636,7 @@ def update_deduplication_rule(
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
     priority: int = 0,
+    rule_type: str = "split",
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -2645,6 +2661,7 @@ def update_deduplication_rule(
         rule.full_deduplication = full_deduplication
         rule.ignore_fields = ignore_fields
         rule.priority = priority
+        rule.rule_type = rule_type
 
         session.add(rule)
         session.commit()
@@ -5683,6 +5700,20 @@ def get_last_alert_by_fingerprint(
         return session.exec(query).first()
 
 
+def get_last_alert_by_correlation_fingerprint(
+    tenant_id: str, correlation_fingerprint: str
+) -> Optional[str]:
+    """Return the fingerprint of the representative alert for a correlation group, or None."""
+    with Session(engine) as session:
+        last_alert = session.exec(
+            select(LastAlert)
+            .where(LastAlert.tenant_id == tenant_id)
+            .where(LastAlert.correlation_fingerprint == correlation_fingerprint)
+            .limit(1)
+        ).first()
+    return last_alert.fingerprint if last_alert else None
+
+
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
@@ -5721,6 +5752,9 @@ def set_last_alert(
                     last_alert.timestamp = alert.timestamp
                     last_alert.alert_id = alert.id
                     last_alert.alert_hash = alert.alert_hash
+                    last_alert.correlation_fingerprint = alert.event.get(
+                        "correlation_fingerprint"
+                    )
                     session.add(last_alert)
 
                 elif not last_alert:
@@ -5732,6 +5766,9 @@ def set_last_alert(
                         first_timestamp=alert.timestamp,
                         alert_id=alert.id,
                         alert_hash=alert.alert_hash,
+                        correlation_fingerprint=alert.event.get(
+                            "correlation_fingerprint"
+                        ),
                     )
 
                 session.add(last_alert)
