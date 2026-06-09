@@ -5703,16 +5703,20 @@ def get_last_alert_by_fingerprint(
 def get_last_alert_by_correlation_fingerprint(
     tenant_id: str, correlation_fingerprint: str
 ) -> Optional[str]:
-    """Return the fingerprint of the representative (oldest) alert for a correlation group.
+    """Return the fingerprint of the oldest active (non-resolved) alert in a correlation group.
 
-    Ordering by first_timestamp ASC ensures the same representative is returned
-    even after subsequent alerts in the group are stored in LastAlert.
+    Ordering by first_timestamp ASC gives a stable representative even after
+    subsequent group members are stored. Resolved alerts are excluded so they
+    don't block new firings from starting a fresh group.
     """
     with Session(engine) as session:
+        status_field = get_json_extract_field(session, Alert.event, "status")
         last_alert = session.exec(
             select(LastAlert)
+            .join(Alert, Alert.id == LastAlert.alert_id)
             .where(LastAlert.tenant_id == tenant_id)
             .where(LastAlert.correlation_fingerprint == correlation_fingerprint)
+            .where(status_field != "resolved")
             .order_by(LastAlert.first_timestamp)
             .limit(1)
         ).first()

@@ -171,6 +171,31 @@ def test_split_and_correlate_rules_are_independent(db_session, create_alert):
     assert second.event.get("correlated_to") == first.event["fingerprint"]
 
 
+def test_resolved_representative_does_not_block_new_group(db_session, create_alert):
+    """
+    When the representative alert resolves, the next firing alert with the same
+    correlation_fingerprint should start a fresh group (is_correlated=False), not
+    be correlated to the stale resolved entry.
+    """
+    _add_rule(db_session, "correlate", ["name"])
+
+    # First alert fires and becomes the representative
+    create_alert("fp-old-rep", AlertStatus.FIRING, datetime.utcnow(), _alert_details("same-alert"))
+
+    old_rep = db_session.query(Alert).filter(Alert.fingerprint == "fp-old-rep").first()
+    assert old_rep.event.get("is_correlated") == False
+
+    # The representative alert resolves
+    create_alert("fp-old-rep", AlertStatus.RESOLVED, datetime.utcnow(), _alert_details("same-alert"))
+
+    # A new alert with the same name fires — the resolved representative must NOT be returned
+    create_alert("fp-new", AlertStatus.FIRING, datetime.utcnow(), _alert_details("same-alert"))
+
+    new_alert = db_session.query(Alert).filter(Alert.fingerprint == "fp-new").first()
+    assert new_alert.event.get("is_correlated") == False
+    assert new_alert.event.get("correlated_to") is None
+
+
 def test_no_correlate_rule_no_correlation_fingerprint(db_session, create_alert):
     """Without a correlate rule, correlation_fingerprint is not set on the alert."""
     # No correlate rule added
