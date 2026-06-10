@@ -6,8 +6,12 @@ import { useMemo, useRef, useSyncExternalStore } from "react";
 const STORAGE_EVENT = "keephq";
 
 function getSnapshot(key: string): string | null {
-  // Check if we're in a browser environment
-  if (typeof window === "undefined" || typeof localStorage === "undefined") {
+  // Check if we're in a browser environment with a fully functional localStorage
+  if (
+    typeof window === "undefined" ||
+    typeof localStorage === "undefined" ||
+    typeof localStorage.getItem !== "function"
+  ) {
     return null;
   }
 
@@ -45,8 +49,12 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
    * @param value
    */
   const setLocalStorageValue = (value: T | ((val: T) => T)) => {
-    // Check if we're in a browser environment
-    if (typeof window === "undefined" || typeof localStorage === "undefined") {
+    // Check if we're in a browser environment with a fully functional localStorage
+    if (
+      typeof window === "undefined" ||
+      typeof localStorage === "undefined" ||
+      typeof localStorage.setItem !== "function"
+    ) {
       return;
     }
 
