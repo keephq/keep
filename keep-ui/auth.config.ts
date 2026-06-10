@@ -258,7 +258,7 @@ const baseProviderConfigs = {
       clientId: process.env.OKTA_CLIENT_ID!,
       clientSecret: process.env.OKTA_CLIENT_SECRET!,
       issuer: process.env.OKTA_ISSUER!,
-      authorization: { params: { scope: "openid email profile" } },
+      authorization: { params: { scope: "openid email profile groups" } },
     }),
   ],
   [AuthType.ONELOGIN]: [
@@ -362,10 +362,33 @@ export const config = {
           role = (profile as any).keep_role;
           accessToken = account.access_token;
         } else if (authType === AuthType.OKTA) {
-          // Extract tenant and role from Okta token
           tenantId = (profile as any).keep_tenant_id || "keep";
-          role = (profile as any).keep_role || "user";
           accessToken = account.access_token;
+          // Explicit claim takes priority
+          role = (profile as any).keep_role || (profile as any).role;
+          // If no explicit claim, resolve from groups via OKTA_*_GROUPS mappings
+          if (!role) {
+            const groups: string[] = (profile as any).groups || [];
+            const groupMappings: Record<string, string> = {};
+            for (const [envVar, targetRole] of [
+              ["OKTA_ADMIN_GROUPS", "admin"],
+              ["OKTA_NOC_GROUPS", "noc"],
+              ["OKTA_WEBHOOK_GROUPS", "webhook"],
+            ] as const) {
+              const val = runtimeEnv(envVar) || "";
+              for (const g of val.split(",").map((s) => s.trim()).filter(Boolean)) {
+                groupMappings[g] = targetRole;
+              }
+            }
+            for (const priority of ["admin", "noc", "webhook"] as const) {
+              const match = groups.find((g) => groupMappings[g] === priority);
+              if (match) {
+                role = priority;
+                break;
+              }
+            }
+          }
+          role = role || "noc";
         } else if (authType === AuthType.ONELOGIN) {
           // Extract tenant and role from OneLogin token - use ID token for user data
           tenantId = (profile as any).keep_tenant_id || "keep";
