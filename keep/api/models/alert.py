@@ -96,6 +96,9 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
+    correlation_fingerprint: str | None = None  # Set when a "correlate" deduplication rule matches
+    is_correlated: bool = False  # True when another alert with the same correlation_fingerprint already exists
+    correlated_to: str | None = None  # fingerprint of the representative alert in the correlation group
     deleted: bool = (
         False  # @tal: Obselete field since we have dismissed, but kept for backwards compatibility
     )
@@ -399,6 +402,7 @@ class DeduplicationRuleDto(BaseModel):
     full_deduplication: bool
     ignore_fields: list[str]
     is_provisioned: bool
+    rule_type: str = "split"  # "split" or "correlate"
 
 
 class DeduplicationRuleRequestDto(BaseModel):
@@ -409,6 +413,7 @@ class DeduplicationRuleRequestDto(BaseModel):
     fingerprint_fields: list[str]
     full_deduplication: bool = False
     ignore_fields: Optional[list[str]] = None
+    rule_type: str = "split"  # "split" or "correlate"
 
 
 class EnrichIncidentRequestBody(BaseModel):
