@@ -300,7 +300,8 @@
             "deployment/provision/overview",
             "deployment/provision/provider",
             "deployment/provision/workflow",
-            "deployment/provision/dashboard"
+            "deployment/provision/dashboard",
+            "deployment/provision/mapping"
           ]
         },
         "deployment/secret-store",
