@@ -201,6 +201,34 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         return results if results else None
 
+
+    @staticmethod
+    def _safe_results_access(expression, results):
+        """Safely access nested indices/keys on results without dynamic code execution.
+
+        Supports expressions like: results[0]["key"]["nested"]
+        After dot-to-bracket conversion, all access should be bracket-based.
+        """
+        if not expression.startswith("results"):
+            raise ValueError("Expression must start with results")
+        remainder = expression[len("results"):]
+        obj = results
+        bracket_pattern = re.compile(r'^\[(\d+|"[^"]*"|\'[^\']*\')\]')
+        while remainder:
+            m = bracket_pattern.match(remainder)
+            if not m:
+                raise ValueError(
+                    f"Invalid access pattern in expression: {expression}"
+                )
+            key = m.group(1)
+            if key.startswith('"') or key.startswith("'"):
+                key = key[1:-1]
+            else:
+                key = int(key)
+            obj = obj[key]
+            remainder = remainder[m.end():]
+        return obj
+
     def _enrich(self, enrichments, results, audit_enabled=True):
         """
         Enrich alert with provider specific data.
@@ -289,9 +317,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
                         bracket_pattern, convert_dot_to_bracket, converted_value
                     )
                     try:
-                        # this is secured since if we are here it means converted_value starts with results[
-                        value = eval(
-                            converted_value, {"__builtins__": {}}, {"results": results}
+                        # Safe index/key access without dynamic code execution
+                        value = self._safe_results_access(
+                            converted_value, results
                         )
                     except Exception:
                         self.logger.exception(
