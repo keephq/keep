@@ -417,7 +417,11 @@ def assign_alert(
     else:
         assignees_last_receievd[last_received] = user_email
 
-    enrichments = {"assignees": assignees_last_receievd}
+    # Store the most recent assignee as a flat field so the facet/filter system
+    # can query it directly (the nested "assignees" dict is not queryable by facets).
+    flat_assignee = next(iter(reversed(assignees_last_receievd.values())), None) if assignees_last_receievd else None
+
+    enrichments = {"assignees": assignees_last_receievd, "assignee": flat_assignee}
     if not status:
         enrichments["status"] = "acknowledged"
 
