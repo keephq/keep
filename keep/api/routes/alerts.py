@@ -357,7 +357,7 @@ def delete_alert(
 
     if delete_alert.lastReceived not in assignees_last_receievd:
         # auto-assign the deleting user to the alert
-        assignees_last_receievd[delete_alert.lastReceived] = user_email
+        assignees_last_receievd[delete_alert.lastReceived] = user_email.lower()
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
@@ -415,7 +415,7 @@ def assign_alert(
     if unassign:
         assignees_last_receievd.pop(last_received, None)
     else:
-        assignees_last_receievd[last_received] = user_email
+        assignees_last_receievd[last_received] = user_email.lower()
 
     # Store the most recent assignee as a flat field so the facet/filter system
     # can query it directly (the nested "assignees" dict is not queryable by facets).

@@ -161,6 +161,16 @@ def test_assign_writes_flat_assignee():
     assert enrichments["assignees"] == {"2024-01-01T00:00:00": "alice@example.com"}
 
 
+def test_assign_normalizes_email_to_lowercase():
+    enrichments = _call_assign_alert(
+        fingerprint="abc123",
+        last_received="2024-01-01T00:00:00",
+        user_email="Alice@Example.Com",
+    )
+    assert enrichments["assignee"] == "alice@example.com"
+    assert enrichments["assignees"] == {"2024-01-01T00:00:00": "alice@example.com"}
+
+
 def test_assign_flat_assignee_reflects_most_recent():
     existing = {
         "assignees": {
