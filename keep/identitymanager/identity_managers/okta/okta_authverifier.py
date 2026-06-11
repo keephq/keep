@@ -138,9 +138,13 @@ class OktaAuthVerifier(AuthVerifierBase):
                     if role_name:
                         break
 
-            # Final fallback: first group as-is, then default role
+            # Final fallback: use first group as-is only when no mappings are
+            # configured (raw-group mode), otherwise fall back to the default role.
             if not role_name:
-                role_name = (groups[0] if groups else None) or DEFAULT_ROLE_NAME
+                if not self.group_mappings and groups:
+                    role_name = groups[0]
+                else:
+                    role_name = DEFAULT_ROLE_NAME
 
             logger.info(f"Resolved role='{role_name}' for {email}")
 
