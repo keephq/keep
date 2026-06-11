@@ -55,6 +55,12 @@ COPY --from=builder /app/public ./public
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# sharp is required for Next.js image optimization in standalone mode.
+# The standalone output does not include native modules automatically.
+# sharp v0.33+ uses @img/* packages for its native bindings.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/sharp ./node_modules/sharp
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@img ./node_modules/@img
 COPY entrypoint.sh /app/entrypoint.sh
 
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
