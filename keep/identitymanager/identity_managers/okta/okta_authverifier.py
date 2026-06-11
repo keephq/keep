@@ -2,6 +2,7 @@ import logging
 import os
 
 import jwt
+import requests
 from fastapi import Depends, HTTPException
 
 from keep.api.core.config import config
@@ -47,6 +48,12 @@ class OktaAuthVerifier(AuthVerifierBase):
         self.jwks_client = jwt.PyJWKClient(self.jwks_url)
         logger.info(f"Initialized JWKS client with URL: {self.jwks_url}")
 
+        # Userinfo endpoint for fetching group claims not present in the access token
+        self.userinfo_url = os.environ.get(
+            "OKTA_USERINFO_URL",
+            f"{self.okta_issuer}/v1/userinfo" if self.okta_issuer else None,
+        )
+
         # Build group → Keep role mapping from environment variables.
         # OKTA_ADMIN_GROUPS, OKTA_NOC_GROUPS, OKTA_WEBHOOK_GROUPS accept
         # comma-separated Okta group names.
@@ -63,6 +70,23 @@ class OktaAuthVerifier(AuthVerifierBase):
             logger.info(f"Okta group mappings loaded: {self.group_mappings}")
 
         self.auto_create_user = config("OKTA_AUTO_CREATE_USER", default=True, cast=bool)
+
+    def _get_userinfo(self, token: str) -> dict:
+        """Call Okta's userinfo endpoint to retrieve claims not present in the access token (e.g. groups)."""
+        if not self.userinfo_url:
+            return {}
+        try:
+            resp = requests.get(
+                self.userinfo_url,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            logger.warning(f"Userinfo endpoint returned {resp.status_code}")
+        except Exception:
+            logger.exception("Failed to call userinfo endpoint")
+        return {}
 
     def _verify_bearer_token(self, token: str = Depends(oauth2_scheme)) -> AuthenticatedEntity:
         if not token:
@@ -82,10 +106,20 @@ class OktaAuthVerifier(AuthVerifierBase):
                 options={"verify_exp": True}
             )
             
+            # Enrich with userinfo claims (groups, name, etc. may not be in the access token)
+            userinfo = self._get_userinfo(token)
+
             tenant_id = payload.get("keep_tenant_id", "keep")
-            email = payload.get("email") or payload.get("sub") or payload.get("preferred_username")
-            name = payload.get("name") or payload.get("displayName") or email
-            groups = payload.get("groups", [])
+            email = (
+                payload.get("email") or userinfo.get("email")
+                or payload.get("sub") or payload.get("preferred_username")
+            )
+            name = (
+                userinfo.get("name") or userinfo.get("displayName")
+                or payload.get("name") or payload.get("displayName")
+                or email
+            )
+            groups = userinfo.get("groups", []) or payload.get("groups", [])
 
             logger.info(f"Token claims — email={email}, name={name}, groups={groups}, group_mappings={self.group_mappings}")
 
