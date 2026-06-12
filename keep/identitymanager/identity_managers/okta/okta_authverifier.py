@@ -82,7 +82,9 @@ class OktaAuthVerifier(AuthVerifierBase):
                 timeout=5,
             )
             if resp.status_code == 200:
-                return resp.json()
+                data = resp.json()
+                logger.debug(f"Userinfo response keys: {list(data.keys())}")
+                return data
             logger.warning(f"Userinfo endpoint returned {resp.status_code}")
         except Exception:
             logger.exception("Failed to call userinfo endpoint")
@@ -106,8 +108,14 @@ class OktaAuthVerifier(AuthVerifierBase):
                 options={"verify_exp": True}
             )
             
-            # Enrich with userinfo claims (groups, name, etc. may not be in the access token)
-            userinfo = self._get_userinfo(token)
+            # Only call userinfo when the groups claim is absent from the token.
+            # When the frontend sends the Okta ID token (which carries app-level
+            # group claims directly), calling userinfo with it would return 401
+            # because the userinfo endpoint expects an access token, not an ID token.
+            if "groups" not in payload:
+                userinfo = self._get_userinfo(token)
+            else:
+                userinfo = {}
 
             tenant_id = payload.get("keep_tenant_id", "keep")
             email = (
@@ -121,7 +129,7 @@ class OktaAuthVerifier(AuthVerifierBase):
             )
             groups = userinfo.get("groups", []) or payload.get("groups", [])
 
-            logger.info(f"Token claims — email={email}, name={name}, groups={groups}, group_mappings={self.group_mappings}")
+            logger.info(f"Token claims — email={email}, groups={groups}, group_mappings={self.group_mappings}")
 
             # Explicit claim overrides always take priority
             role_name = payload.get("keep_role") or payload.get("role")

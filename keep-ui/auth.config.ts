@@ -106,9 +106,14 @@ async function refreshAccessToken(token: any) {
       );
     }
 
+    // For Okta, prefer id_token so the backend can read app-level claims (groups).
+    const newAccessToken =
+      authType === AuthType.OKTA
+        ? (refreshedTokens.id_token ?? refreshedTokens.access_token)
+        : refreshedTokens.access_token;
     return {
       ...token,
-      accessToken: refreshedTokens.access_token,
+      accessToken: newAccessToken,
       accessTokenExpires: Date.now() + (refreshedTokens.expires_in || 3600) * 1000,
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     };
@@ -258,7 +263,6 @@ const baseProviderConfigs = {
       clientId: process.env.OKTA_CLIENT_ID!,
       clientSecret: process.env.OKTA_CLIENT_SECRET!,
       issuer: process.env.OKTA_ISSUER!,
-      authorization: { params: { scope: "openid email profile groups" } },
     }),
   ],
   [AuthType.ONELOGIN]: [
@@ -363,7 +367,10 @@ export const config = {
           accessToken = account.access_token;
         } else if (authType === AuthType.OKTA) {
           tenantId = (profile as any).keep_tenant_id || "keep";
-          accessToken = account.access_token;
+          // Use the ID token so the backend can see app-level claims (e.g. groups).
+          // App-level Okta group claims are embedded in the ID token only, not the
+          // access token or userinfo response.
+          accessToken = account.id_token ?? account.access_token;
           // Explicit claim takes priority
           role = (profile as any).keep_role || (profile as any).role;
           // If no explicit claim, resolve from groups via OKTA_*_GROUPS mappings
