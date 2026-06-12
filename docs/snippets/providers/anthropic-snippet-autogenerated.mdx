@@ -1,9 +1,11 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
 - **api_key**: Anthropic API Key (required: True, sensitive: True)
+- **model**: Claude model to use (required: False, sensitive: False)
+- **system_prompt**: System prompt that sets Claude's role for all requests in this provider. (required: False, sensitive: False)
 
 
 ## In workflows
@@ -19,8 +21,9 @@ steps:
       config: "{{ provider.my_provider_name }}"
       with:
         prompt: {value}  # The prompt to query the model with.
-        model: {value}  # The model to query.
+        model: {value}  # The model to query (overrides provider config).
         max_tokens: {value}  # The maximum number of tokens to generate.
+        system_prompt: {value}  # System prompt override for this call.
         structured_output_format: {value}  # The structured output format to use.
 ```
 
