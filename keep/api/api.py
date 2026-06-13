@@ -117,7 +117,7 @@ async def check_pending_tasks(background_tasks: set):
         await asyncio.sleep(1)
 
 
-async def startup():
+async def startup(background_tasks: set | None = None):
     """
     This runs for every worker on startup.
     Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
@@ -180,7 +180,10 @@ async def startup():
             except Exception:
                 logger.exception("Failed to start the maintenance windows")
         else:
-            asyncio.create_task(process_watcher_task.async_process_watcher())
+            task = asyncio.create_task(process_watcher_task.async_process_watcher())
+            if background_tasks is not None:
+                background_tasks.add(task)
+                task.add_done_callback(background_tasks.discard)
             logger.info(
                 "Added task",
                 extra={
@@ -227,14 +230,16 @@ async def lifespan(app: FastAPI):
     """
     app.state.limiter = limiter
     # create a set of background tasks
-    background_tasks = set()
+    background_tasks: set[asyncio.Task] = set()
     # if debug tasks are enabled, create a task to check for pending tasks
     if KEEP_DEBUG_TASKS:
         logger.info("Starting background task to check for pending tasks")
-        asyncio.create_task(check_pending_tasks(background_tasks))
+        debug_task = asyncio.create_task(check_pending_tasks(background_tasks))
+        background_tasks.add(debug_task)
+        debug_task.add_done_callback(background_tasks.discard)
 
     # Startup
-    await startup()
+    await startup(background_tasks=background_tasks)
 
     # yield the background tasks, this is available for the app to use in request context
     yield {"background_tasks": background_tasks}
