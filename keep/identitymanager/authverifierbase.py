@@ -79,6 +79,9 @@ class AuthVerifierBase:
         self.impersonation_auto_provision = (
             config("KEEP_IMPERSONATION_AUTO_PROVISION", default="false") == "true"
         )
+        self.allow_mesh_alert_ingestion = (
+            config("KEEP_ALLOW_MESH_ALERT_INGESTION", default="false") == "true"
+        )
         # hold a cache of the last time an API key was used
         # the key is the f{tenant_id}:{reference_id} and the value is the last time it was updated
         self.update_key_interval = config("KEEP_UPDATE_KEY_INTERVAL", default=60)
@@ -256,6 +259,22 @@ class AuthVerifierBase:
         self.logger.debug("Extracting API key")
         api_key = api_key or request.query_params.get("api_key", None)
         if not api_key:
+            if self.allow_mesh_alert_ingestion and "/alerts/event" in request.url.path:
+                service_name = request.headers.get(
+                    "X-Service-Name", "unknown"
+                )
+                self.logger.info(
+                    "Allowing service alert ingestion from %s on %s",
+                    service_name,
+                    request.url.path,
+                )
+                return AuthenticatedEntity(
+                    tenant_id="keep",
+                    email=f"service:{service_name}",
+                    api_key_name="service",
+                    role="webhook",
+                )
+
             # A special treatment for CloudWatch SNS Confirmation requests
             if (
                 not authorization

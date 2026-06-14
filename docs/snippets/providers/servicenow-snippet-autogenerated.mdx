@@ -61,3 +61,18 @@ Check the following workflow examples:
 This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
 and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
 for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **get_incidents** Fetch all incidents from ServiceNow (view, scopes: itil)
+
+- **get_incident_activities** Get work notes and comments from a ServiceNow incident (view, scopes: itil)
+
+    - `incident_id`: The incident number (e.g. INC0010001) or sys_id.
+    - `limit`: Maximum number of activity records to return.
+- **add_incident_activity** Add a work note or comment to a ServiceNow incident (action, scopes: itil)
+
+    - `incident_id`: The incident number (e.g. INC0010001) or sys_id.
+    - `content`: The text content to add.
+    - `activity_type`: Either 'work_notes' or 'comments'. Defaults to 'work_notes'.

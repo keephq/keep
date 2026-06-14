@@ -1,12 +1,11 @@
 import ast
 import copy
 import html
-
-# TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
 import io
 import json
 import logging
+import os
 import re
 import sys
 
@@ -17,6 +16,53 @@ import requests
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
 from keep.step.step_provider_parameter import StepProviderParameter
+
+_MANAGED_AUTH_TYPES = {"auth0", "multi_tenant"}
+_auth_type = os.environ.get("AUTH_TYPE", "noauth").lower()
+
+KEEP_SECURE_EVAL = (
+    _auth_type in _MANAGED_AUTH_TYPES
+    or os.environ.get("KEEP_SECURE_EVAL", "false").lower() == "true"
+)
+
+# Mustache lambda helpers injected into every render context.
+# Usage in workflow YAML:  {{#fn.na}}{{ alert.someOptionalField }}{{/fn.na}}
+# When a referenced field is missing or empty the helper returns the default
+# instead of raising RenderException (safe mode is disabled automatically
+# when fn.* sections are detected — see _render()).
+WORKFLOW_HELPERS = {
+    "fn": {
+        "default": lambda text, render: render(text) or "",
+        "na":      lambda text, render: render(text) or "N/A",
+        "upper":   lambda text, render: render(text).upper(),
+        "lower":   lambda text, render: render(text).lower(),
+        "strip":   lambda text, render: render(text).strip(),
+    }
+}
+
+
+def _safe_eval_literal(value: str, dependencies=None):
+    """Evaluate a string as a Python literal (list, tuple, set, dict).
+
+    On the managed platform (AUTH_TYPE=auth0/multi_tenant) or when
+    KEEP_SECURE_EVAL=true, only safe literals are allowed via
+    ast.literal_eval.  On OSS installs the legacy eval() is preserved
+    for backward compatibility with provider result types that contain
+    non-literal objects (e.g. BigQuery Row).
+    """
+    if KEEP_SECURE_EVAL:
+        return ast.literal_eval(value)
+
+    import datetime
+    from dateutil.tz import tzutc
+
+    g = {"__builtins__": {}}
+    if dependencies:
+        for dep in dependencies:
+            g[dep.__name__] = dep
+    g["tzutc"] = tzutc
+    g["datetime"] = datetime
+    return eval(value, g)  # noqa: S307
 
 
 class RenderException(Exception):
@@ -277,19 +323,11 @@ class IOHandler:
                             or (_arg.startswith("(") and _arg.endswith(")"))
                         ):
                             try:
-                                import datetime
-
-                                from dateutil.tz import tzutc
-
-                                g = globals()
-                                # we need to pass the classes of the dependencies to the eval
-                                for dependency in self.context_manager.dependencies:
-                                    g[dependency.__name__] = dependency
-
-                                g["tzutc"] = tzutc
-                                g["datetime"] = datetime
-                                _arg = eval(_arg, g)
-                            except ValueError:
+                                _arg = _safe_eval_literal(
+                                    _arg,
+                                    self.context_manager.dependencies,
+                                )
+                            except (ValueError, SyntaxError):
                                 pass
                     else:
                         _arg = arg.id
@@ -337,18 +375,11 @@ class IOHandler:
                             )
                         ):
                             try:
-                                import datetime
-
-                                from dateutil.tz import tzutc
-
-                                g = globals()
-                                for dependency in self.context_manager.dependencies:
-                                    g[dependency.__name__] = dependency
-
-                                g["tzutc"] = tzutc
-                                g["datetime"] = datetime
-                                _kwargs[key] = eval(parsed_value, g)
-                            except ValueError:
+                                _kwargs[key] = _safe_eval_literal(
+                                    parsed_value,
+                                    self.context_manager.dependencies,
+                                )
+                            except (ValueError, SyntaxError):
                                 pass
                     else:
                         _kwargs[key] = value.id
@@ -429,19 +460,29 @@ class IOHandler:
             )
             safe = False
 
+        # fn.* helper sections explicitly handle missing/empty keys — the lambda
+        # returns a default value so RenderException must not be raised.
+        if "{{#fn." in key or "{{ #fn." in key:
+            safe = False
+
         context = self.context_manager.get_full_context(exclude_providers=True)
 
         if additional_context:
             context.update(additional_context)
 
-        # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
+        # Inject workflow helper lambdas so fn.* sections are resolvable.
+        context.update(WORKFLOW_HELPERS)
+
+        stderr_capture = io.StringIO()
         original_stderr = sys.stderr
-        sys.stderr = io.StringIO()
-        rendered = self.render_recursively(key, context)
-        # chevron.render will escape the quotes, we need to unescape them
-        rendered = rendered.replace("&quot;", '"')
-        stderr_output = sys.stderr.getvalue()
-        sys.stderr = original_stderr
+        sys.stderr = stderr_capture
+        try:
+            rendered = self.render_recursively(key, context)
+            # chevron.render will escape the quotes, we need to unescape them
+            rendered = rendered.replace("&quot;", '"')
+            stderr_output = stderr_capture.getvalue()
+        finally:
+            sys.stderr = original_stderr
         # If render should failed if value does not exists
         if safe and "Could not find key" in stderr_output:
             # if more than one keys missing, pretiffy the error

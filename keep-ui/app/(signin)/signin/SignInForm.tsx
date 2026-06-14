@@ -87,6 +87,12 @@ export default function SignInForm({
         signIn("onelogin", { callbackUrl: "/" });
       } else if (
         providers.credentials &&
+        providers.credentials.name === "OAuth2Proxy"
+      ) {
+        console.log("Signing in with OAuth2Proxy provider");
+        signIn("credentials", { callbackUrl: "/" });
+      } else if (
+        providers.credentials &&
         providers.credentials.name == "NoAuth"
       ) {
         console.log("Signing in with no auth provider");

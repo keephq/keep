@@ -196,11 +196,15 @@ export default function IncidentsTable({
               <FormattedContent
                 content={summary}
                 format="html"
-                className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3"
+                plain
+                className="line-clamp-2 text-sm text-gray-500"
               />
             ) : null}
           </div>
         );
+      },
+      meta: {
+        tdClassName: "overflow-hidden",
       },
     }),
     columnHelper.accessor("alerts_count", {

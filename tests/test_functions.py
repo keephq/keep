@@ -1217,3 +1217,48 @@ def test_from_timestamp_with_timezone():
     timestamp = dt.timestamp()
     result = functions.from_timestamp(timestamp, "Europe/Berlin")
     assert result == dt
+
+
+def test_dict_set():
+    """
+    Test dict_set function
+    """
+    # dict input
+    d = {"a": 1, "b": 2}
+    result = functions.dict_set(d, "c", 3)
+    assert result == {"a": 1, "b": 2, "c": 3}
+    # original dict should not be mutated
+    assert d == {"a": 1, "b": 2}
+
+    # string input
+    d_str = '{"a": 1, "b": 2}'
+    result = functions.dict_set(d_str, "c", 3)
+    assert result == {"a": 1, "b": 2, "c": 3}
+
+    # override existing key
+    result = functions.dict_set(d, "b", 4)
+    assert result == {"a": 1, "b": 4}
+
+    # invalid string input
+    result = functions.dict_set("invalid", "a", 1)
+    assert result == {"a": 1}
+
+
+def test_dict_merge():
+    """
+    Test dict_merge function
+    """
+    d1 = {"a": 1, "b": 2}
+    d2 = {"b": 3, "c": 4}
+    d3 = '{"c": 5, "d": 6}'
+    
+    result = functions.dict_merge(d1, d2, d3)
+    assert result == {"a": 1, "b": 3, "c": 5, "d": 6}
+
+    # original dicts should not be mutated
+    assert d1 == {"a": 1, "b": 2}
+
+    # invalid inputs
+    result = functions.dict_merge(d1, "invalid", {"e": 7})
+    assert result == {"a": 1, "b": 2, "e": 7}
+

@@ -41,6 +41,10 @@ import {
   useAlertRowStyle,
 } from "@/entities/alerts/model/useAlertRowStyle";
 import {
+  getMappedColor,
+  useSeverityMapping,
+} from "@/entities/alerts/model/useSeverityMapping";
+import {
   formatDateTime,
   TimeFormatOption,
   isDateTimeColumn,
@@ -233,6 +237,7 @@ export const useAlertTableCols = (
     `column-rename-mapping-${presetName}`,
     {}
   );
+  const { severityMapping: severityMappingConfig } = useSeverityMapping();
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
@@ -364,11 +369,30 @@ export const useAlertTableCols = (
       id: "severity",
       maxSize: 2,
       header: () => <></>,
-      cell: (context) => (
-        <TableSeverityCell
-          severity={context.row.original.severity as unknown as UISeverity}
-        />
-      ),
+      cell: (context) => {
+        const customColor = getMappedColor(
+          context.row.original,
+          severityMappingConfig
+        );
+        if (customColor) {
+          return (
+            <>
+              <div
+                className="absolute w-1 h-full top-0 left-0"
+                style={{ backgroundColor: customColor }}
+              />
+              <div className="pl-1" />
+            </>
+          );
+        }
+        return (
+          <TableSeverityCell
+            severity={
+              context.row.original.severity as unknown as UISeverity
+            }
+          />
+        );
+      },
       meta: {
         tdClassName: "w-1 !p-0",
         thClassName: "w-1 !p-0",

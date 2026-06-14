@@ -35,6 +35,11 @@ export const validateMustacheVariableForYAMLStep = (
   if (!cleanedVariableName) {
     return ["Empty mustache variable.", "warning"];
   }
+  // Mustache sigil tokens (#, /, ^, !, >) are section/lambda syntax, not
+  // variable references — skip validation entirely.
+  if (/^[#/^!>]/.test(cleanedVariableName)) {
+    return null;
+  }
   if (cleanedVariableName === ".") {
     if (currentStep.foreach) {
       return null;

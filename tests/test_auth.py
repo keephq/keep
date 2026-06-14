@@ -431,3 +431,81 @@ def test_deleted_api_key_authentication(db_session, client, test_app):
     found_key = get_api_key(valid_api_key, include_deleted=True)
     assert found_key is not None
     assert found_key.is_deleted == True
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_ALLOW_MESH_ALERT_INGESTION": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_mesh_alert_ingestion_with_service_name(db_session, client, test_app):
+    """Mesh alert ingestion accepts POST /alerts/event without API key when enabled"""
+    response = client.post(
+        "/alerts/event",
+        json=[{"id": "test-1", "name": "Test", "severity": "info", "status": "firing", "source": ["test-svc"]}],
+        headers={"X-Service-Name": "test-service"},
+    )
+    assert response.status_code == 202
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_ALLOW_MESH_ALERT_INGESTION": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_mesh_alert_ingestion_without_service_name(db_session, client, test_app):
+    """Mesh alert ingestion works without X-Service-Name header (falls back to 'unknown')"""
+    response = client.post(
+        "/alerts/event",
+        json=[{"id": "test-2", "name": "Test", "severity": "info", "status": "firing", "source": ["test"]}],
+    )
+    assert response.status_code == 202
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_ALLOW_MESH_ALERT_INGESTION": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_mesh_alert_ingestion_blocked_on_non_alert_endpoints(db_session, client, test_app):
+    """Non-alert endpoints remain protected even when mesh ingestion is enabled"""
+    response = client.get("/providers")
+    assert response.status_code == 401
+
+    response = client.get("/incidents")
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_ALLOW_MESH_ALERT_INGESTION": "false",
+        },
+    ],
+    indirect=True,
+)
+def test_mesh_alert_ingestion_disabled(db_session, client, test_app):
+    """POST /alerts/event without API key is rejected when mesh ingestion is disabled"""
+    response = client.post(
+        "/alerts/event",
+        json=[{"id": "test-3", "name": "Test", "severity": "info", "status": "firing", "source": ["test"]}],
+        headers={"X-Service-Name": "test-service"},
+    )
+    assert response.status_code == 401

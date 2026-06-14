@@ -1,9 +1,10 @@
 #!/bin/bash
 # Keep install script for docker compose
+set -e
 
 echo "Creating state directory."
 mkdir -p state
-test -e state
+test -e state || echo "Unable to create folder"
 echo "Changing directory ownership to non-privileged user."
 chown -R 999:999 state || echo "Unable to change directory ownership, changing permissions instead." && chmod -R 0777 state
 which curl &> /dev/null || echo "curl not installed" 

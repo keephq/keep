@@ -28,8 +28,9 @@ def get_redis_settings() -> RedisSettings:
     """
     sentinel_enabled = config("REDIS_SENTINEL_ENABLED", cast=bool, default=False)
 
+    ssl_enabled = config("REDIS_SSL", cast=bool, default=False)
+
     if sentinel_enabled:
-        # Parse sentinel hosts from comma-separated string
         sentinel_hosts_str = config("REDIS_SENTINEL_HOSTS", default="localhost:26379")
         sentinel_hosts = []
         for host_port in sentinel_hosts_str.split(","):
@@ -48,6 +49,7 @@ def get_redis_settings() -> RedisSettings:
             sentinel_master=service_name,
             username=config("REDIS_USERNAME", default=None),
             password=config("REDIS_PASSWORD", default=None),
+            ssl=ssl_enabled,
             conn_timeout=60,
             conn_retries=10,
             conn_retry_delay=10,
@@ -58,6 +60,7 @@ def get_redis_settings() -> RedisSettings:
             port=config("REDIS_PORT", cast=int, default=6379),
             username=config("REDIS_USERNAME", default=None),
             password=config("REDIS_PASSWORD", default=None),
+            ssl=ssl_enabled,
             conn_timeout=60,
             conn_retries=10,
             conn_retry_delay=10,

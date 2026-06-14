@@ -9,7 +9,7 @@ from urllib.parse import urlencode, urljoin
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -86,7 +86,12 @@ class Site24X7Provider(BaseProvider):
         "UP": AlertSeverity.INFO,
         "CRITICAL": AlertSeverity.CRITICAL,
     }
-
+    STATUS_MAP = {
+        "DOWN": AlertStatus.FIRING,
+        "TROUBLE": AlertStatus.FIRING,
+        "CRITICAL": AlertStatus.FIRING,
+        "UP": AlertStatus.RESOLVED,
+    }
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -214,16 +219,56 @@ class Site24X7Provider(BaseProvider):
             self.logger.info("Webhook created successfully")
 
     @staticmethod
+    def _parse_labels(event: dict) -> dict:
+        labels_raw = event.get("LABELS")
+        if labels_raw is None:
+            return {
+                k: ", ".join(str(i) for i in v) if isinstance(v, list) else str(v)
+                for k, v in event.items()
+                if v is not None
+            }
+        if isinstance(labels_raw, dict):
+            return labels_raw
+        if isinstance(labels_raw, str) and labels_raw:
+            labels = {}
+            for part in labels_raw.split(","):
+                part = part.strip()
+                if ":" in part:
+                    k, _, v = part.partition(":")
+                    labels[k.strip()] = v.strip()
+                elif part:
+                    labels[part] = ""
+            return labels
+        return {}
+
+    @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
+        status_raw = event.get("STATUS", "DOWN")
+        severity = Site24X7Provider.SEVERITIES_MAP.get(status_raw, AlertSeverity.WARNING)
+        status = Site24X7Provider.STATUS_MAP.get(status_raw, AlertStatus.FIRING)
+
+        # Extract tags and labels from webhook payload
+        tags = event.get("TAGS", "")
+        if isinstance(tags, str) and tags:
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+        elif not isinstance(tags, list):
+            tags = []
+
+        labels = Site24X7Provider._parse_labels(event)
+
         return AlertDto(
             url=event.get("MONITORURL", ""),
             lastReceived=event.get("INCIDENT_TIME_ISO", ""),
             description=event.get("INCIDENT_REASON", ""),
             name=event.get("MONITORNAME", ""),
             id=event.get("MONITOR_ID", ""),
-            severity=Site24X7Provider.SEVERITIES_MAP.get(event.get("STATUS", "DOWN")),
+            status=status,
+            severity=severity,
+            source=["site24x7"],
+            tags=tags,
+            labels=labels,
         )
 
     def _get_alerts(self) -> list[AlertDto]:

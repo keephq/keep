@@ -93,16 +93,16 @@ try:
 except Exception:
     KEEP_VERSION = config("KEEP_VERSION", default="unknown")
 
-# Monkey patch requests to disable redirects
-original_request = requests.Session.request
+# Monkey patch requests to disable redirects (guard against re-patching on reload)
+if not getattr(requests.Session.request, "_keep_no_redirect", False):
+    _original_request = requests.Session.request
 
+    def no_redirect_request(self, method, url, **kwargs):
+        kwargs["allow_redirects"] = False
+        return _original_request(self, method, url, **kwargs)
 
-def no_redirect_request(self, method, url, **kwargs):
-    kwargs["allow_redirects"] = False
-    return original_request(self, method, url, **kwargs)
-
-
-requests.Session.request = no_redirect_request
+    no_redirect_request._keep_no_redirect = True
+    requests.Session.request = no_redirect_request
 
 
 async def check_pending_tasks(background_tasks: set):

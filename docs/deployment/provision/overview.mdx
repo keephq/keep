@@ -6,11 +6,12 @@ Keep supports various deployment and provisioning strategies to accommodate diff
 
 ### Provisioning Options
 
-Keep offers three main provisioning options:
+Keep offers four main provisioning options:
 
 1. [**Provider Provisioning**](/deployment/provision/provider) - Set up and manage data providers with their deduplication rules for Keep.
 2. [**Workflow Provisioning**](/deployment/provision/workflow) - Configure and manage workflows within Keep.
 3. [**Dashboard Provisioning**](/deployment/provision/dashboard) - Configure and manage dashboards within Keep.
+4. [**Mapping Rule Provisioning**](/deployment/provision/mapping) - Configure and manage CSV-style alert enrichment rules within Keep.
 
 
 Choosing the right provisioning strategy depends on your specific use case, deployment environment, and scalability requirements. You can read more about each provisioning option in their respective sections.
@@ -30,6 +31,7 @@ Provisioning in Keep is controlled through environment variables and configurati
 | **Workflow**           | `KEEP_WORKFLOW`                | One workflow to provision right from the env variable.                    |
 | **Workflows**          | `KEEP_WORKFLOWS_DIRECTORY`     | Directory path containing workflow configuration files                    |
 | **Dashboard**          | `KEEP_DASHBOARDS`              | JSON string containing dashboard configurations                           |
+| **Mapping Rules**      | `KEEP_MAPPINGS_DIRECTORY`      | Directory path containing mapping rule YAML manifests                     |
 
 Hint: use the script to get 1-liner from the workflow file for KEEP_WORKFLOW:
 ```

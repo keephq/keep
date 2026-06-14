@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -21,6 +21,11 @@ actions:
       config: "{{ provider.my_provider_name }}"
       with:
         message: {value}  # The content of the message.
+        title: {value}  # Optional notification title.
+        priority: {value}  # Message priority (-2 to 2, where 2 is emergency).
+        sound: {value}  # Pushover sound name.
+        retry: {value}  # Retry interval in seconds for emergency priority.
+        expire: {value}  # Expiry in seconds for emergency priority.
 ```
 
 

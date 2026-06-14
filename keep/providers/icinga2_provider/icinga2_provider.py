@@ -115,6 +115,12 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
     ):
         super().__init__(context_manager, provider_id, config)
 
+    def dispose(self):
+        """
+        Dispose of the provider.
+        """
+        pass
+
     def validate_config(self):
         """
         Validates required configuration for Icinga2 provider.

@@ -346,6 +346,10 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         if self.keycloak_multi_org:
             return super()._authorize(authenticated_entity)
 
+        # API key auth does not carry a Keycloak token; fall back to RBAC
+        if not getattr(authenticated_entity, "token", None):
+            return super()._authorize(authenticated_entity)
+
         # for single tenant Keycloaks, use Keycloak's UMA to authorize
         try:
             permission = UMAPermission(
@@ -369,6 +373,10 @@ class KeycloakAuthVerifier(AuthVerifierBase):
     def authorize_resource(
         self, resource_type, resource_id, authenticated_entity: AuthenticatedEntity
     ) -> None:
+        # API key auth does not carry a Keycloak token; skip per-resource UMA check
+        if not getattr(authenticated_entity, "token", None):
+            return
+
         # use Keycloak's UMA to authorize
         try:
             permission = UMAPermission(

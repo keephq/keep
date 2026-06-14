@@ -187,14 +187,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Args:
             **kwargs (dict): The provider context (with statement)
         """
-        # TODO: pop enrich_event from kwargs to handle it more elegantly then in every provider (http, webhook, etc.)
+        # Pop Keep-internal fields before passing kwargs to the provider
+        enrich_alert = kwargs.pop("enrich_alert", [])
+        enrich_incident = kwargs.pop("enrich_incident", [])
+        audit_enabled = bool(kwargs.pop("audit_enabled", True))
         # trigger the provider
         results = self._notify(**kwargs)
         self.results.append(results)
         # if the alert should be enriched, enrich it
-        enrich_event = kwargs.get("enrich_alert", kwargs.get("enrich_incident", []))
+        enrich_event = enrich_alert or enrich_incident
         if enrich_event:
-            audit_enabled = bool(kwargs.get("audit_enabled", True))
             self._enrich(enrich_event, results, audit_enabled=audit_enabled)
 
         return results if results else None
@@ -220,6 +222,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
             if isinstance(foreach_context, AlertDto):
                 fingerprint = foreach_context.fingerprint
+                event = foreach_context
             # if we are in a dict context, use the fingerprint from the dict
             elif isinstance(foreach_context, dict) and "fingerprint" in foreach_context:
                 fingerprint = foreach_context.get("fingerprint")
@@ -384,6 +387,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("query() method not implemented")
 
     def query(self, **kwargs: dict):
+        # Pop Keep-internal fields before passing kwargs to the provider
+        enrich_alert = kwargs.pop("enrich_alert", [])
+        audit_enabled = bool(kwargs.pop("audit_enabled", True))
         # just run the query
         results = self._query(**kwargs)
         self.results.append(results)
@@ -393,9 +399,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         elif results:
             self.context_manager.dependencies.add(results.__class__)
 
-        enrich_alert = kwargs.get("enrich_alert", [])
         if enrich_alert:
-            audit_enabled = bool(kwargs.get("audit_enabled", True))
             self._enrich(enrich_alert, results, audit_enabled=audit_enabled)
         # and return the results
         return results
@@ -566,6 +570,20 @@ class BaseProvider(metaclass=abc.ABCMeta):
             for alert in alerts:
                 alert.providerId = self.provider_id
                 alert.providerType = self.provider_type
+
+            # Apply custom deduplication rules to pulled alerts
+            # (mirrors the logic in format_alert() for webhook alerts)
+            custom_deduplication_rule = get_custom_deduplication_rule(
+                tenant_id=self.context_manager.tenant_id,
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+            )
+            if custom_deduplication_rule:
+                for alert in alerts:
+                    alert.fingerprint = self.get_alert_fingerprint(
+                        alert, custom_deduplication_rule.fingerprint_fields
+                    )
+
             return alerts
 
     def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:

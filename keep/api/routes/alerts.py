@@ -357,7 +357,7 @@ def delete_alert(
 
     if delete_alert.lastReceived not in assignees_last_receievd:
         # auto-assign the deleting user to the alert
-        assignees_last_receievd[delete_alert.lastReceived] = user_email
+        assignees_last_receievd[delete_alert.lastReceived] = user_email.lower()
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
@@ -415,9 +415,13 @@ def assign_alert(
     if unassign:
         assignees_last_receievd.pop(last_received, None)
     else:
-        assignees_last_receievd[last_received] = user_email
+        assignees_last_receievd[last_received] = user_email.lower()
 
-    enrichments = {"assignees": assignees_last_receievd}
+    # Store the most recent assignee as a flat field so the facet/filter system
+    # can query it directly (the nested "assignees" dict is not queryable by facets).
+    flat_assignee = next(iter(reversed(assignees_last_receievd.values())), None) if assignees_last_receievd else None
+
+    enrichments = {"assignees": assignees_last_receievd, "assignee": flat_assignee}
     if not status:
         enrichments["status"] = "acknowledged"
 
@@ -462,6 +466,23 @@ def assign_alert(
             "fingerprint": fingerprint,
         },
     )
+
+    # Trigger workflows so that assign/unassign changes are picked up
+    # by workflows with only_on_change: [assignee]
+    try:
+        alert = get_alerts_by_fingerprint(tenant_id, fingerprint, limit=1)
+        if alert:
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
+            workflow_manager = WorkflowManager.get_instance()
+            workflow_manager.insert_events(
+                tenant_id=tenant_id, events=enriched_alerts_dto
+            )
+    except Exception:
+        logger.exception(
+            "Failed to trigger workflows after alert assignment",
+            extra={"fingerprint": fingerprint, "tenant_id": tenant_id},
+        )
+
     return {"status": "ok"}
 
 
@@ -618,9 +639,9 @@ async def receive_generic_event(
     "/event/netdata",
     description="Helper function to complete Netdata webhook challenge",
 )
-async def webhook_challenge():
+async def webhook_challenge(request: Request):
     try:
-        token = Request.query_params.get("token").encode("ascii")
+        token = request.query_params.get("token").encode("ascii")
     except Exception as e:
         logger.exception("Failed to get token", extra={"error": str(e)})
         raise HTTPException(status_code=400, detail="Bad request: failed to get token")

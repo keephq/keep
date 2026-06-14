@@ -110,11 +110,25 @@ class PagerdutyProvider(
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
     }
+    URGENCY_TO_ALERT_SEVERITY = {
+        "high": AlertSeverity.HIGH,
+        "low": AlertSeverity.INFO,
+    }
+    URGENCY_TO_INCIDENT_SEVERITY = {
+        "high": IncidentSeverity.HIGH,
+        "low": IncidentSeverity.INFO,
+    }
     INCIDENT_SEVERITIES_MAP = {
         "P1": IncidentSeverity.CRITICAL,
         "P2": IncidentSeverity.HIGH,
         "P3": IncidentSeverity.WARNING,
         "P4": IncidentSeverity.INFO,
+    }
+    PRIORITY_TO_ALERT_SEVERITY = {
+        "P1": AlertSeverity.CRITICAL,
+        "P2": AlertSeverity.HIGH,
+        "P3": AlertSeverity.WARNING,
+        "P4": AlertSeverity.INFO,
     }
     ALERT_STATUS_MAP = {
         "triggered": AlertStatus.FIRING,
@@ -350,6 +364,8 @@ class PagerdutyProvider(
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
         source: str | None = None,
+        client: str | None = None,
+        client_url: str | None = None,
         **kwargs,
     ) -> typing.Dict[str, typing.Any]:
         """
@@ -423,6 +439,12 @@ class PagerdutyProvider(
         if kwargs.get("class"):
             payload["payload"]["class"] = kwargs.get("class")
 
+        if client:
+            payload["client"] = client
+
+        if client_url:
+            payload["client_url"] = client_url
+
         if kwargs.get("images"):
             images = kwargs.get("images", [])
             if isinstance(images, str):
@@ -444,6 +466,8 @@ class PagerdutyProvider(
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
         source: str | None = None,
+        client: str | None = None,
+        client_url: str | None = None,
         **kwargs,
     ):
         """
@@ -454,11 +478,14 @@ class PagerdutyProvider(
             alert_body: UTF-8 string of custom message for alert. Shown in incident body
             dedup: Any string, max 255, characters used to deduplicate alerts
             event_type: The type of event to send to PagerDuty
+            client: Name of the monitoring client triggering this event
+            client_url: URL of the monitoring client triggering this event
         """
         url = "https://events.pagerduty.com/v2/enqueue"
 
         payload = self._build_alert(
-            title, routing_key, dedup, severity, event_type, source, **kwargs
+            title, routing_key, dedup, severity, event_type, source,
+            client=client, client_url=client_url, **kwargs
         )
         result = requests.post(url, json=payload)
         result.raise_for_status()
@@ -694,6 +721,8 @@ class PagerdutyProvider(
         priority: str = "",
         status: typing.Literal["resolved", "acknowledged"] = "",
         resolution: str = "",
+        client: str = "",
+        client_url: str = "",
         **kwargs: dict,
     ):
         """
@@ -715,6 +744,8 @@ class PagerdutyProvider(
             source (str): Source field for events API
             status (str): Status for incident updates (resolved/acknowledged)
             resolution (str): Resolution note for resolved incidents
+            client (str): Name of the monitoring client triggering this event (Events API v2 only)
+            client_url (str): URL of the monitoring client triggering this event (Events API v2 only)
             kwargs (dict): Additional event/incident fields
         """
         if not routing_key: # If routing_key not specified in workflow, fallback to config routing_key
@@ -727,6 +758,8 @@ class PagerdutyProvider(
                 routing_key=routing_key,
                 source=source,
                 severity=severity,
+                client=client or None,
+                client_url=client_url or None,
                 **kwargs,
             )
         else:
@@ -801,8 +834,18 @@ class PagerdutyProvider(
         url = data.pop("self", data.pop("html_url", None))
         # format status and severity to Keep format
         status = PagerdutyProvider.ALERT_STATUS_MAP.get(data.pop("status", "firing"))
+        urgency = data.get("urgency")
         priority_summary = (data.get("priority", {}) or {}).get("summary")
-        priority = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(priority_summary, "P4")
+        if urgency is not None:
+            priority = PagerdutyProvider.URGENCY_TO_ALERT_SEVERITY.get(
+                urgency, AlertSeverity.INFO
+            )
+        elif priority_summary:
+            priority = PagerdutyProvider.PRIORITY_TO_ALERT_SEVERITY.get(
+                priority_summary, AlertSeverity.INFO
+            )
+        else:
+            priority = AlertSeverity.INFO
         last_received = data.pop(
             "created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         )
@@ -1139,10 +1182,18 @@ class PagerdutyProvider(
         status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
             event.get("status", "firing"), IncidentStatus.FIRING
         )
-        priority_summary = (event.get("priority", {}) or {}).get("summary", "P4")
-        severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
-            priority_summary, IncidentSeverity.INFO
-        )
+        urgency = event.get("urgency")
+        priority_summary = (event.get("priority", {}) or {}).get("summary")
+        if urgency is not None:
+            severity = PagerdutyProvider.URGENCY_TO_INCIDENT_SEVERITY.get(
+                urgency, IncidentSeverity.INFO
+            )
+        elif priority_summary:
+            severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
+                priority_summary, IncidentSeverity.INFO
+            )
+        else:
+            severity = IncidentSeverity.INFO
         service = event.pop("service", {}).get("summary", "unknown")
 
         created_at = event.get("created_at")

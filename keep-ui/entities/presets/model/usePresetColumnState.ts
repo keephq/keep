@@ -151,24 +151,19 @@ export const usePresetColumnState = ({
       columnListFormats?: Record<string, ListFormatOption>;
     }) => {
       if (shouldUseBackend && !error) {
-        // Batch all updates into a single API call
-        const batchedUpdate: Partial<ColumnConfiguration> = {};
-
-        if (updates.columnVisibility !== undefined) {
-          batchedUpdate.column_visibility = updates.columnVisibility;
-        }
-        if (updates.columnOrder !== undefined) {
-          batchedUpdate.column_order = updates.columnOrder;
-        }
-        if (updates.columnRenameMapping !== undefined) {
-          batchedUpdate.column_rename_mapping = updates.columnRenameMapping;
-        }
-        if (updates.columnTimeFormats !== undefined) {
-          batchedUpdate.column_time_formats = updates.columnTimeFormats;
-        }
-        if (updates.columnListFormats !== undefined) {
-          batchedUpdate.column_list_formats = updates.columnListFormats;
-        }
+        // Always send the FULL current config to the backend.
+        // The backend PUT replaces the entire config object, so sending only
+        // a partial update (e.g. just column_rename_mapping) would wipe out
+        // all other fields (column_visibility, column_order, etc.) causing
+        // custom columns to disappear after a rename or format change.
+        const batchedUpdate: ColumnConfiguration = {
+          column_visibility: updates.columnVisibility ?? columnVisibility,
+          column_order: updates.columnOrder ?? columnOrder,
+          column_rename_mapping:
+            updates.columnRenameMapping ?? columnRenameMapping,
+          column_time_formats: updates.columnTimeFormats ?? columnTimeFormats,
+          column_list_formats: updates.columnListFormats ?? columnListFormats,
+        };
 
         try {
           return await updateColumnConfig(batchedUpdate);
@@ -209,6 +204,12 @@ export const usePresetColumnState = ({
       setLocalColumnTimeFormats,
       setLocalColumnListFormats,
       error,
+      // Current state values needed as baseline for full-config PUT
+      columnVisibility,
+      columnOrder,
+      columnRenameMapping,
+      columnTimeFormats,
+      columnListFormats,
     ]
   );
 

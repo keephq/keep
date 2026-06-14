@@ -3,7 +3,6 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCallback } from "react";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { ColumnConfiguration } from "./types";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 type UsePresetColumnConfigOptions = {
   presetId?: string;
@@ -24,7 +23,6 @@ export const usePresetColumnConfig = ({
   ...options
 }: UsePresetColumnConfigOptions = {}) => {
   const api = useApi();
-  const revalidateMultiple = useRevalidateMultiple();
 
   const {
     data: columnConfig = DEFAULT_COLUMN_CONFIG,
@@ -82,16 +80,15 @@ export const usePresetColumnConfig = ({
           config
         );
         showSuccessToast("Column configuration saved!");
+        // mutate() already revalidates /preset/${presetId}/column-config
         mutate();
-        // Also revalidate preset list to update any cached data
-        revalidateMultiple(["/preset", "/preset?"]);
         return response;
       } catch (error) {
         showErrorToast(error, "Failed to save column configuration");
         throw error;
       }
     },
-    [api, presetId, mutate, revalidateMultiple]
+    [api, presetId, mutate]
   );
 
   return {

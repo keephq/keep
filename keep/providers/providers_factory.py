@@ -412,6 +412,11 @@ class ProvidersFactory:
                     "PROVIDER_DISPLAY_NAME",
                     provider_type,
                 )
+                provider_docs_slug = getattr(
+                    provider_class,
+                    "PROVIDER_DOCS_SLUG",
+                    None,
+                )
 
                 # Load alert examples if available
                 try:
@@ -452,6 +457,7 @@ class ProvidersFactory:
                         pulling_available=pulling_available,
                         # pulling can't be enabled if it's not available
                         pulling_enabled=pulling_available,
+                        docs_slug=provider_docs_slug,
                     )
                 )
             except ModuleNotFoundError:

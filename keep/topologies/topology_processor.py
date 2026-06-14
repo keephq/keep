@@ -357,7 +357,14 @@ class TopologyProcessor:
                 incident_application=application.id,
                 is_candidate=False,  # Topology-based incidents are always confirmed
                 is_visible=True,  # Topology-based incidents are always confirmed
+                is_predicted=True,  # Topology-based incidents are algorithmically generated
             )
+
+            # Persist incident to database before adding alerts
+            # This is required because assign_alert_to_incident creates LastAlertToIncident
+            # records that reference incident.id via foreign key
+            session.add(incident)
+            session.flush()  # Flush to get the incident.id without committing
 
             # Get all alerts for the services and find max severity
             for service in services_with_alerts:

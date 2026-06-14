@@ -46,6 +46,7 @@ class Step:
         self.__retry_count = self.__retry.get("count", 0)
         self.__retry_interval = self.__retry.get("interval", 0)
         self.__continue_to_next_step = self.config.get("continue", True)
+        self.__continue_on_error = self.config.get("continue_on_error", False)
 
     @property
     def foreach(self):
@@ -58,6 +59,10 @@ class Step:
     @property
     def continue_to_next_step(self):
         return self.__continue_to_next_step
+
+    @property
+    def continue_on_error(self):
+        return self.__continue_on_error
 
     def _dont_render(self):
         # special case for Keep provider on _notify with "if" - it should render the parameters itself

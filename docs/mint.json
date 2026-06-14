@@ -115,6 +115,7 @@
           "pages": [
             "workflows/examples/autosupress",
             "workflows/examples/buisnesshours",
+            "workflows/examples/continue-on-error",
             "workflows/examples/create-servicenow-tickets",
             "workflows/examples/highsev",
             "workflows/examples/update-servicenow-tickets"
@@ -289,6 +290,7 @@
             "deployment/authentication/keycloak-auth",
             "deployment/authentication/oauth2proxy-auth",
             "deployment/authentication/oauth2-proxy-gitlab",
+            "deployment/authentication/okta-auth",
             "deployment/authentication/onelogin-auth"
           ]
         },
