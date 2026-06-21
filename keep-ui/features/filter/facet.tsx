@@ -8,7 +8,7 @@ import { FacetValue } from "./facet-value";
 import { FacetDto, FacetOptionDto } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useExistingFacetsPanelStore } from "./store";
-import { stringToValue, valueToString } from "./store/utils";
+import { isLazyFacet, stringToValue, valueToString } from "./store/utils";
 
 export interface FacetProps {
   facet: FacetDto;
@@ -30,11 +30,12 @@ export const Facet: React.FC<FacetProps> = ({
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
 
-  // Lazy facets (e.g. high-cardinality user-defined facets) start collapsed and
-  // only fetch their options when the user expands them. Eagerly mounting and
-  // loading options for every lazy facet is what froze the alerts page when many
-  // (200+) facets existed (see issue #6577).
-  const isLazy = !!facet.is_lazy;
+  // Lazy facets (high-cardinality user-defined facets) start collapsed and only
+  // fetch their options when the user expands them. Static facets (severity,
+  // status, source, ...) always render eagerly. Eagerly mounting and loading
+  // options for every lazy facet is what froze the alerts page when many (200+)
+  // facets existed (see issue #6577).
+  const isLazy = isLazyFacet(facet);
   const [isOpen, setIsOpen] = useState<boolean>(!isLazy);
   const [isLoaded, setIsLoaded] = useState<boolean>(!!options?.length);
   const [isLoading, setIsLoading] = useState<boolean>(false);

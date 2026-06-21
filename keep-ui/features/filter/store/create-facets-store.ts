@@ -1,7 +1,7 @@
 import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
 import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "../models";
-import { toFacetState, valueToString } from "./utils";
+import { isLazyFacet, toFacetState, valueToString } from "./utils";
 
 export type FacetsPanelState = {
   facetsConfig: FacetsConfig | null;
@@ -73,9 +73,12 @@ export const createFacetsPanelStore = () =>
     setFacets: (facets: FacetDto[]) => {
       const previousActive = state().activeFacetIds || {};
       const activeFacetIds: Record<string, boolean> = { ...previousActive };
-      // Non-lazy facets are always active and load options eagerly.
+      // Eager facets load options immediately. A facet is eager unless it is
+      // explicitly lazy AND not static; static facets (severity/status/source)
+      // must always render their values on load. Only non-static lazy facets
+      // (high-cardinality user-defined facets) are deferred (#6577).
       facets.forEach((facet) => {
-        if (!facet.is_lazy) {
+        if (!isLazyFacet(facet)) {
           activeFacetIds[facet.id] = true;
         }
       });
@@ -218,11 +221,11 @@ export const createFacetsPanelStore = () =>
       set({ isInitialStateHandled }),
 
     clearFilters: () => {
-      // Keep only non-lazy facets active so we don't re-load every lazy facet
+      // Keep only eager facets active so we don't re-load every lazy facet
       // after a reset (#6577).
       const activeFacetIds: Record<string, boolean> = {};
       (state().facets || []).forEach((facet) => {
-        if (!facet.is_lazy) {
+        if (!isLazyFacet(facet)) {
           activeFacetIds[facet.id] = true;
         }
       });

@@ -121,6 +121,30 @@ describe("useInitialStateHandler", () => {
     });
   });
 
+  it("should keep static facets active even when is_lazy is true", () => {
+    // The backend marks every facet is_lazy: true by default, so static facets
+    // (severity/status/source) must still be active/eager (#6577 regression).
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      {
+        id: "severityFacet",
+        name: "Severity",
+        is_static: true,
+        is_lazy: true,
+      } as FacetDto,
+      {
+        id: "userFacet",
+        name: "Custom Env",
+        is_static: false,
+        is_lazy: true,
+      } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      severityFacet: true,
+    });
+  });
+
   it("should mark a lazy facet active via setFacetActive", () => {
     const freshStore = createFacetsPanelStore();
     freshStore.getState().setFacets([
