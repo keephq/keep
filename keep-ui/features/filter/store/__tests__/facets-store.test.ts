@@ -109,6 +109,48 @@ describe("useInitialStateHandler", () => {
     });
   });
 
+  it("should activate only non-lazy facets when facets are set", () => {
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      { id: "staticFacet", name: "Static", is_lazy: false } as FacetDto,
+      { id: "lazyFacet", name: "Lazy", is_lazy: true } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      staticFacet: true,
+    });
+  });
+
+  it("should mark a lazy facet active via setFacetActive", () => {
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      { id: "lazyFacet", name: "Lazy", is_lazy: true } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({});
+
+    freshStore.getState().setFacetActive("lazyFacet");
+    expect(freshStore.getState().activeFacetIds).toEqual({ lazyFacet: true });
+  });
+
+  it("should keep only non-lazy facets active after clearFilters", () => {
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      { id: "staticFacet", name: "Static", is_lazy: false } as FacetDto,
+      { id: "lazyFacet", name: "Lazy", is_lazy: true } as FacetDto,
+    ]);
+    freshStore.getState().setFacetActive("lazyFacet");
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      staticFacet: true,
+      lazyFacet: true,
+    });
+
+    freshStore.getState().clearFilters();
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      staticFacet: true,
+    });
+  });
+
   it("should select all facet options correctly", () => {
     const selectAllFacetOptions = store.getState().selectAllFacetOptions;
 
