@@ -71,14 +71,24 @@ export const createFacetsPanelStore = () =>
 
     facets: null,
     setFacets: (facets: FacetDto[]) => {
+      const previousFacets = state().facets;
       const previousActive = state().activeFacetIds || {};
       const activeFacetIds: Record<string, boolean> = { ...previousActive };
+      const previousFacetIds = new Set(
+        (previousFacets || []).map((facet) => facet.id)
+      );
+      // Whether this is the very first time facets are loaded. On subsequent
+      // updates, any facet not seen before is treated as newly added by the
+      // user (via "Add Facet") and should be active/expanded immediately.
+      const isInitialLoad = previousFacets === null;
+
       // Eager facets load options immediately. A facet is eager unless it is
       // explicitly lazy AND not static; static facets (severity/status/source)
       // must always render their values on load. Only non-static lazy facets
       // (high-cardinality user-defined facets) are deferred (#6577).
       facets.forEach((facet) => {
-        if (!isLazyFacet(facet)) {
+        const isNewlyAdded = !isInitialLoad && !previousFacetIds.has(facet.id);
+        if (!isLazyFacet(facet) || isNewlyAdded) {
           activeFacetIds[facet.id] = true;
         }
       });

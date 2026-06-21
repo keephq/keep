@@ -74,18 +74,23 @@ export const Facet: React.FC<FacetProps> = ({
     (state) => state.facetsConfig?.[facet.id]
   );
 
+  const isFacetActive = useExistingFacetsPanelStore(
+    (state) => !!state.activeFacetIds?.[facet.id]
+  );
+
   const facetStateRef = useRef(facetState);
   facetStateRef.current = facetState;
 
-  // Auto-open a lazy facet once it receives a selection (e.g. restored from URL
-  // query params after mount) so the user can see the active filter.
+  // Auto-open a lazy facet once it becomes active — either it received a
+  // selection (e.g. restored from URL query params after mount) or it was just
+  // added by the user via "Add Facet" — so the user can see its values.
   const didAutoOpenRef = useRef(false);
   useEffect(() => {
-    if (isLazy && !didAutoOpenRef.current && facetState) {
+    if (isLazy && !didAutoOpenRef.current && (facetState || isFacetActive)) {
       didAutoOpenRef.current = true;
       setIsOpen(true);
     }
-  }, [isLazy, facetState]);
+  }, [isLazy, facetState, isFacetActive]);
 
   function getSelectedValues(): string[] {
     return Object.keys(facetStateRef.current || {});
