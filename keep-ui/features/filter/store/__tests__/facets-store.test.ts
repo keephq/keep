@@ -109,6 +109,122 @@ describe("useInitialStateHandler", () => {
     });
   });
 
+  it("should activate only non-lazy facets when facets are set", () => {
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      { id: "staticFacet", name: "Static", is_lazy: false } as FacetDto,
+      { id: "lazyFacet", name: "Lazy", is_lazy: true } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      staticFacet: true,
+    });
+  });
+
+  it("should keep static facets active even when is_lazy is true", () => {
+    // The backend marks every facet is_lazy: true by default, so static facets
+    // (severity/status/source) must still be active/eager (#6577 regression).
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      {
+        id: "severityFacet",
+        name: "Severity",
+        is_static: true,
+        is_lazy: true,
+      } as FacetDto,
+      {
+        id: "userFacet",
+        name: "Custom Env",
+        is_static: false,
+        is_lazy: true,
+      } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      severityFacet: true,
+    });
+  });
+
+  it("should activate a newly added lazy facet on subsequent setFacets", () => {
+    const freshStore = createFacetsPanelStore();
+    // Initial load: one static + one lazy facet.
+    freshStore.getState().setFacets([
+      {
+        id: "severityFacet",
+        name: "Severity",
+        is_static: true,
+        is_lazy: true,
+      } as FacetDto,
+      {
+        id: "existingLazy",
+        name: "Existing",
+        is_static: false,
+        is_lazy: true,
+      } as FacetDto,
+    ]);
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      severityFacet: true,
+    });
+
+    // User adds a new custom facet -> it should be active immediately, while the
+    // pre-existing lazy facet stays inactive.
+    freshStore.getState().setFacets([
+      {
+        id: "severityFacet",
+        name: "Severity",
+        is_static: true,
+        is_lazy: true,
+      } as FacetDto,
+      {
+        id: "existingLazy",
+        name: "Existing",
+        is_static: false,
+        is_lazy: true,
+      } as FacetDto,
+      {
+        id: "newCustomFacet",
+        name: "Custom Env",
+        is_static: false,
+        is_lazy: true,
+      } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      severityFacet: true,
+      newCustomFacet: true,
+    });
+  });
+
+  it("should mark a lazy facet active via setFacetActive", () => {
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      { id: "lazyFacet", name: "Lazy", is_lazy: true } as FacetDto,
+    ]);
+
+    expect(freshStore.getState().activeFacetIds).toEqual({});
+
+    freshStore.getState().setFacetActive("lazyFacet");
+    expect(freshStore.getState().activeFacetIds).toEqual({ lazyFacet: true });
+  });
+
+  it("should keep only non-lazy facets active after clearFilters", () => {
+    const freshStore = createFacetsPanelStore();
+    freshStore.getState().setFacets([
+      { id: "staticFacet", name: "Static", is_lazy: false } as FacetDto,
+      { id: "lazyFacet", name: "Lazy", is_lazy: true } as FacetDto,
+    ]);
+    freshStore.getState().setFacetActive("lazyFacet");
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      staticFacet: true,
+      lazyFacet: true,
+    });
+
+    freshStore.getState().clearFilters();
+    expect(freshStore.getState().activeFacetIds).toEqual({
+      staticFacet: true,
+    });
+  });
+
   it("should select all facet options correctly", () => {
     const selectAllFacetOptions = store.getState().selectAllFacetOptions;
 

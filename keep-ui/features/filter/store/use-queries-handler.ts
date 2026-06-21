@@ -56,6 +56,9 @@ export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
   const facets = useStore(store, (state) => state.facets);
   const facetsRef = useRef(facets);
   facetsRef.current = facets;
+  const activeFacetIds = useStore(store, (state) => state.activeFacetIds);
+  const activeFacetIdsRef = useRef(activeFacetIds);
+  activeFacetIdsRef.current = activeFacetIds;
   const allFacetOptions = useStore(store, (state) => state.facetOptions);
   const allFacetOptionsRef = useRef(allFacetOptions);
   allFacetOptionsRef.current = allFacetOptions;
@@ -93,7 +96,14 @@ export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
       return;
     }
 
-    facets.forEach((facet) => {
+    const activeFacets = facets.filter(
+      (facet) => activeFacetIdsRef.current?.[facet.id]
+    );
+
+    // Only build option queries for active facets. Lazy facets that haven't
+    // been expanded (and have no selection) are skipped so we don't fetch
+    // options for hundreds of facets at once (#6577).
+    activeFacets.forEach((facet) => {
       const otherFacetCels = facets
         .filter((f) => f.id !== facet.id)
         .map((f) => facetsCelState?.[f.id])
@@ -110,5 +120,10 @@ export function useQueriesHandler(store: StoreApi<FacetsPanelState>) {
       .join(" && ");
 
     setQueriesState(filterCel, facetOptionQueries);
-  }, [facetsCelState, facets, isFacetsStateInitializedFromQueryParams]);
+  }, [
+    facetsCelState,
+    facets,
+    activeFacetIds,
+    isFacetsStateInitializedFromQueryParams,
+  ]);
 }
