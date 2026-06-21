@@ -8,6 +8,20 @@ interface MonacoCelProps extends EditorProps {
   onMonacoLoadFailure?: (error: Error) => void;
 }
 
+// Monaco Editor - imported as an npm package instead of loading from the
+// CDN to support air-gapped environments.
+// https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
+//
+// The dynamic import is started at module evaluation (not inside useEffect) so
+// that it does not interfere with React's render cycle.  A typeof-window guard
+// makes it SSR-safe without causing "window is not defined" crashes.
+const monacoConfigPromise: Promise<void> | null =
+  typeof window !== "undefined"
+    ? import("monaco-editor").then((monaco) => {
+        loader.config({ monaco });
+      })
+    : null;
+
 export function MonacoCelBase(props: MonacoCelProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const onMonacoLoadedRef = useRef<MonacoCelProps["onMonacoLoaded"] | null>(
@@ -20,14 +34,8 @@ export function MonacoCelBase(props: MonacoCelProps) {
   onMonacoLoadFailureRef.current = props.onMonacoLoadFailure;
 
   useEffect(() => {
-    // Monaco Editor - imported as an npm package instead of loading from the
-    // CDN to support air-gapped environments.
-    // https://github.com/suren-atoyan/monaco-react?tab=readme-ov-file#use-monaco-editor-as-an-npm-package
-    import("monaco-editor")
-      .then((monaco) => {
-        loader.config({ monaco });
-        return loader.init();
-      })
+    (monacoConfigPromise ?? Promise.resolve())
+      .then(() => loader.init())
       .then((monacoInstance) => {
         onMonacoLoadedRef.current?.(monacoInstance);
         setIsLoaded(true);
