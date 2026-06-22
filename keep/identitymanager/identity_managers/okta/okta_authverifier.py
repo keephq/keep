@@ -134,7 +134,7 @@ class OktaAuthVerifier(AuthVerifierBase):
             )
             groups = userinfo.get("groups", []) or payload.get("groups", [])
 
-            logger.info(f"Token claims — email={email}, groups={groups}, group_mappings={self.group_mappings}")
+            logger.debug(f"Token claims — email={email}, groups={groups}, group_mappings={self.group_mappings}")
 
             # Explicit claim overrides always take priority
             role_name = payload.get("keep_role") or payload.get("role")
@@ -159,27 +159,20 @@ class OktaAuthVerifier(AuthVerifierBase):
                 else:
                     role_name = DEFAULT_ROLE_NAME
 
-            logger.info(f"Resolved role='{role_name}' for {email}")
+            logger.debug(f"Resolved role='{role_name}' for {email}")
 
             org_id = payload.get("org_id")
             org_realm = payload.get("org_realm")
-            
+
             if not email:
                 raise HTTPException(status_code=401, detail="No email in token")
 
-            # Auto-provision user in Keep's DB on first login, update role/last-login on subsequent ones
             tenant_id_for_db = SINGLE_TENANT_UUID
-            logger.info(
-                f"User provisioning check — auto_create_user={self.auto_create_user}, "
-                f"email={email}, tenant={tenant_id_for_db}, role={role_name}"
-            )
             exists = user_exists(tenant_id=tenant_id_for_db, username=email)
-            logger.info(f"user_exists({email}) = {exists}")
             if self.auto_create_user and not exists:
-                logger.info(f"Auto provisioning Okta user: {email}")
+                logger.info(f"Auto-provisioning Okta user: {email} with role={role_name}")
                 try:
                     create_user(tenant_id=tenant_id_for_db, username=email, password="", role=role_name)
-                    logger.info(f"User {email} created in DB with role {role_name}")
                 except Exception:
                     logger.exception(f"Failed to auto-create user {email}")
             elif exists:
@@ -188,8 +181,6 @@ class OktaAuthVerifier(AuthVerifierBase):
                     update_user_role(tenant_id=tenant_id_for_db, username=email, role=role_name)
                 except Exception:
                     logger.exception(f"Failed to update user {email}")
-
-            logger.info(f"Successfully verified token for user with email: {email}")
             return AuthenticatedEntity(
                 tenant_id=tenant_id,
                 email=email,
