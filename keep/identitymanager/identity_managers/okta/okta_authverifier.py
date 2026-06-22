@@ -98,12 +98,17 @@ class OktaAuthVerifier(AuthVerifierBase):
             # Get the signing key directly from the JWT
             signing_key = self.jwks_client.get_signing_key_from_jwt(token).key
             
+            # Build accepted audiences: always include client_id (ID token aud)
+            # and optionally the configured OKTA_AUDIENCE (access token aud).
+            audiences = [self.okta_client_id] if self.okta_client_id else []
+            if self.okta_audience and self.okta_audience != self.okta_client_id:
+                audiences.append(self.okta_audience)
             # Decode and verify the token
             payload = jwt.decode(
                 token,
                 key=signing_key,
                 algorithms=["RS256"],
-                audience=self.okta_audience or self.okta_client_id,
+                audience=audiences or None,
                 issuer=self.okta_issuer,
                 options={"verify_exp": True}
             )
