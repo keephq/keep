@@ -263,6 +263,7 @@ const baseProviderConfigs = {
       clientId: process.env.OKTA_CLIENT_ID!,
       clientSecret: process.env.OKTA_CLIENT_SECRET!,
       issuer: process.env.OKTA_ISSUER!,
+      authorization: { params: { scope: "openid email profile groups" } },
     }),
   ],
   [AuthType.ONELOGIN]: [
