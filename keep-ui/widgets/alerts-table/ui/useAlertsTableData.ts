@@ -34,11 +34,59 @@ function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
   return "";
 }
 
-function mergeAlertsByFingerprint(
-  existing: AlertDto[],
-  incoming: AlertDto[]
+function getAlertSortValue(
+  alert: AlertDto,
+  sortBy: string
+): string | number {
+  const value = (alert as Record<string, unknown>)[sortBy];
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (typeof value === "string") {
+    return value.toLowerCase();
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  return "";
+}
+
+function sortAlerts(
+  alerts: AlertDto[],
+  sortOptions?: { sortBy: string; sortDirection?: "ASC" | "DESC" }[]
 ): AlertDto[] {
-  const merged = new Map(existing.map((alert) => [alert.fingerprint, alert]));
+  if (!sortOptions?.length) {
+    return alerts;
+  }
+
+  const [{ sortBy, sortDirection = "ASC" }] = sortOptions;
+  const direction = sortDirection === "DESC" ? -1 : 1;
+
+  return [...alerts].sort((left, right) => {
+    const leftValue = getAlertSortValue(left, sortBy);
+    const rightValue = getAlertSortValue(right, sortBy);
+
+    if (leftValue < rightValue) {
+      return -1 * direction;
+    }
+    if (leftValue > rightValue) {
+      return 1 * direction;
+    }
+    return 0;
+  });
+}
+
+function mergeAndEvict(
+  existing: AlertDto[],
+  incoming: AlertDto[],
+  evictedFingerprints: string[]
+): AlertDto[] {
+  const evicted = new Set(evictedFingerprints);
+  const merged = new Map(
+    existing
+      .filter((alert) => !evicted.has(alert.fingerprint))
+      .map((alert) => [alert.fingerprint, alert])
+  );
 
   for (const alert of incoming) {
     merged.set(alert.fingerprint, alert);
@@ -126,44 +174,42 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   alertsToReturnRef.current = alertsToReturn;
 
   const patchVisibleAlerts = useCallback(
-    async (fingerprints: string[], visibleAlerts: AlertDto[]) => {
+    async (
+      fingerprints: string[],
+      visibleAlerts: AlertDto[],
+      sortOptions?: AlertsTableDataQuery["sortOptions"]
+    ) => {
       if (!api.isReady() || fingerprints.length === 0 || visibleAlerts.length === 0) {
         return;
       }
 
-      const visibleFingerprints = new Set(
-        visibleAlerts.map((alert) => alert.fingerprint)
-      );
-      const fingerprintsToPatch = fingerprints.filter((fingerprint) =>
-        visibleFingerprints.has(fingerprint)
-      );
+      try {
+        const batchAlerts = (await api.post(
+          "/alerts/batch",
+          fingerprints
+        )) as AlertDto[];
+        const updates = batchAlerts.map((alert) => ({
+          ...alert,
+          lastReceived: toDateObjectWithFallback(alert.lastReceived),
+        }));
 
-      if (fingerprintsToPatch.length === 0) {
-        return;
+        const returnedFingerprints = new Set(
+          updates.map((alert) => alert.fingerprint)
+        );
+        const evicted = fingerprints.filter(
+          (fingerprint) => !returnedFingerprints.has(fingerprint)
+        );
+
+        setAlertsToReturn((current) =>
+          sortAlerts(
+            mergeAndEvict(current ?? visibleAlerts, updates, evicted),
+            sortOptions
+          )
+        );
+        setFacetsPanelRefreshToken(uuidv4());
+      } catch {
+        setShouldRefreshDate(true);
       }
-
-      const patchedAlerts = await Promise.all(
-        fingerprintsToPatch.map(async (fingerprint) => {
-          try {
-            const alert = await api.get(`/alerts/${fingerprint}`);
-            return {
-              ...alert,
-              lastReceived: toDateObjectWithFallback(alert.lastReceived),
-            };
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      const updates = patchedAlerts.filter(Boolean) as AlertDto[];
-      if (updates.length === 0) {
-        return;
-      }
-
-      setAlertsToReturn((current) =>
-        mergeAlertsByFingerprint(current ?? visibleAlerts, updates)
-      );
     },
     [api]
   );
@@ -261,10 +307,21 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
 
     if (polledFingerprints.length > 0 && !isPaused) {
       const visibleAlerts = alertsToReturnRef.current ?? alerts;
-      if (visibleAlerts?.length) {
-        void patchVisibleAlerts(polledFingerprints, visibleAlerts);
+      const visibleFingerprints = new Set(
+        (visibleAlerts ?? []).map((alert) => alert.fingerprint)
+      );
+      const allVisible = polledFingerprints.every((fingerprint) =>
+        visibleFingerprints.has(fingerprint)
+      );
+
+      if (allVisible && visibleAlerts?.length) {
+        void patchVisibleAlerts(
+          polledFingerprints,
+          visibleAlerts,
+          query?.sortOptions
+        );
+        return;
       }
-      return;
     }
 
     setShouldRefreshDate(true);
@@ -278,6 +335,7 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     isPaused,
     alerts,
     patchVisibleAlerts,
+    query?.sortOptions,
   ]);
 
   return {

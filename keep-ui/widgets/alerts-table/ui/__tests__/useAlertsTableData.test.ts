@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import {
   useAlertsTableData,
   AlertsTableDataQuery,
@@ -25,10 +25,12 @@ jest.mock("uuid", () => ({ v4: () => "mock-uuid" }));
 
 const mockUseLastAlerts = jest.fn();
 const mockApiGet = jest.fn();
+const mockApiPost = jest.fn();
 (useAlerts as jest.Mock).mockReturnValue({ useLastAlerts: mockUseLastAlerts });
 (useApi as jest.Mock).mockReturnValue({
   isReady: () => true,
   get: mockApiGet,
+  post: mockApiPost,
 });
 
 const mockMutate = jest.fn();
@@ -47,6 +49,7 @@ const defaultQuery: AlertsTableDataQuery = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.useFakeTimers();
   mockUseLastAlerts.mockReturnValue({
     data: defaultAlerts,
     totalCount: 1,
@@ -56,12 +59,14 @@ beforeEach(() => {
     queryTimeInSeconds: 1,
   });
   (useAlertPolling as jest.Mock).mockReturnValue({ data: null, fingerprints: [] });
-  mockApiGet.mockResolvedValue({
-    id: 1,
-    fingerprint: "fp-1",
-    name: "Updated Alert",
-    lastReceived: "2025-01-01T00:00:00.000Z",
-  });
+  mockApiPost.mockResolvedValue([
+    {
+      id: 1,
+      fingerprint: "fp-1",
+      name: "Updated Alert",
+      lastReceived: "2025-01-01T00:00:00.000Z",
+    },
+  ]);
 });
 
 describe("useAlertsTableData", () => {
@@ -105,32 +110,95 @@ describe("useAlertsTableData", () => {
     expect(result.current.alertsChangeToken).toBe("token");
   });
 
-  it("patches only visible alerts when polling includes fingerprints", async () => {
-    jest.useRealTimers();
+  it("patches visible alerts via batch when all polled fingerprints are visible", async () => {
     (useAlertPolling as jest.Mock).mockReturnValue({
       data: "token-with-fingerprints",
+      fingerprints: ["fp-1"],
+    });
+
+    const { result, unmount } = renderHook(() =>
+      useAlertsTableData(defaultQuery)
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockApiPost).toHaveBeenCalledTimes(1);
+    expect(mockApiPost).toHaveBeenCalledWith("/alerts/batch", ["fp-1"]);
+    expect(result.current.alerts).toEqual([
+      {
+        id: 1,
+        fingerprint: "fp-1",
+        name: "Updated Alert",
+        lastReceived: new Date("2025-01-01T00:00:00.000Z"),
+      },
+    ]);
+    expect(result.current.facetsPanelRefreshToken).toBe("mock-uuid");
+
+    unmount();
+  });
+
+  it("falls back to full refresh when any polled fingerprint is not visible", async () => {
+    (useAlertPolling as jest.Mock).mockReturnValue({
+      data: "token-with-hidden",
       fingerprints: ["fp-1", "fp-hidden"],
     });
 
-    const { result } = renderHook(() => useAlertsTableData(defaultQuery));
+    const { unmount } = renderHook(() => useAlertsTableData(defaultQuery));
 
-    await waitFor(() => {
-      expect(mockApiGet).toHaveBeenCalledTimes(1);
-      expect(mockApiGet).toHaveBeenCalledWith("/alerts/fp-1");
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(result.current.alerts).toEqual([
-        {
-          id: 1,
-          fingerprint: "fp-1",
-          name: "Updated Alert",
-          lastReceived: new Date("2025-01-01T00:00:00.000Z"),
-        },
-      ]);
+    expect(mockApiPost).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("removes rows for fingerprints absent from batch response", async () => {
+    const twoAlerts = [
+      { id: 1, fingerprint: "fp-1", name: "Alert 1" },
+      { id: 2, fingerprint: "fp-2", name: "Alert 2" },
+    ];
+    mockUseLastAlerts.mockReturnValue({
+      data: twoAlerts,
+      totalCount: 2,
+      isLoading: false,
+      mutate: mockMutate,
+      error: null,
+      queryTimeInSeconds: 1,
+    });
+    (useAlertPolling as jest.Mock).mockReturnValue({
+      data: "token-evict",
+      fingerprints: ["fp-1", "fp-2"],
+    });
+    mockApiPost.mockResolvedValue([
+      {
+        id: 1,
+        fingerprint: "fp-1",
+        name: "Updated Alert 1",
+        lastReceived: "2025-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    const { result, unmount } = renderHook(() =>
+      useAlertsTableData(defaultQuery)
+    );
+
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    jest.useFakeTimers();
+    expect(result.current.alerts).toEqual([
+      {
+        id: 1,
+        fingerprint: "fp-1",
+        name: "Updated Alert 1",
+        lastReceived: new Date("2025-01-01T00:00:00.000Z"),
+      },
+    ]);
+
+    unmount();
   });
 
   it("generates correct facetsCel for absolute timeFrame", () => {
