@@ -23,14 +23,6 @@ if PUSHER_ROOT_CA:
     pusher_requests.CERT_PATH = PUSHER_ROOT_CA
 
 
-def parse_env_bool(value: str | bool | None, default: bool = False) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
 async def extract_generic_body(request: Request) -> dict | bytes | FormData:
     """
     Extracts the body of the request based on the content type.
@@ -59,7 +51,7 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
 
 def get_pusher_client() -> Pusher | None:
     logger.debug("Getting pusher client")
-    pusher_disabled = parse_env_bool(os.environ.get("PUSHER_DISABLED"), default=False)
+    pusher_disabled = config("PUSHER_DISABLED", cast=bool, default=False)
     pusher_host = os.environ.get("PUSHER_HOST")
     pusher_app_id = os.environ.get("PUSHER_APP_ID")
     pusher_app_key = os.environ.get("PUSHER_APP_KEY")
@@ -85,7 +77,7 @@ def get_pusher_client() -> Pusher | None:
             app_id=pusher_app_id,
             key=pusher_app_key,
             secret=pusher_app_secret,
-            ssl=parse_env_bool(os.environ.get("PUSHER_USE_SSL"), default=False),
+            ssl=config("PUSHER_USE_SSL", cast=bool, default=False),
             cluster=os.environ.get("PUSHER_CLUSTER"),
         )
     except ValueError:
