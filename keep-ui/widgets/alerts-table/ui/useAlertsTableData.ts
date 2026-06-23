@@ -38,7 +38,7 @@ function getAlertSortValue(
   alert: AlertDto,
   sortBy: string
 ): string | number {
-  const value = (alert as Record<string, unknown>)[sortBy];
+  const value = (alert as unknown as Record<string, unknown>)[sortBy];
   if (value instanceof Date) {
     return value.getTime();
   }

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import pytest
 
 from keep.api.models.alert import AlertStatus
+from tests.fixtures.client import client, test_app  # noqa: F401
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
