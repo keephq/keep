@@ -972,7 +972,7 @@ def batch_enrich_alerts(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {"fingerprints": fingerprints},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
@@ -1121,7 +1121,7 @@ def _enrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {"fingerprints": [enrich_data.fingerprint]},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
@@ -1238,7 +1238,7 @@ def unenrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {"fingerprints": [enrich_data.fingerprint]},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:

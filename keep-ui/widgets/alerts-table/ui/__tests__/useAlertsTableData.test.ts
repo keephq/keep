@@ -1,10 +1,11 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import {
   useAlertsTableData,
   AlertsTableDataQuery,
 } from "../useAlertsTableData";
 import { AlertsQuery, useAlerts } from "@/entities/alerts/model";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import {
   AbsoluteTimeFrame,
   AllTimeFrame,
@@ -17,14 +18,24 @@ jest.mock("@/entities/alerts/model", () => ({
 jest.mock("@/utils/hooks/useAlertPolling", () => ({
   useAlertPolling: jest.fn(),
 }));
+jest.mock("@/shared/lib/hooks/useApi", () => ({
+  useApi: jest.fn(),
+}));
 jest.mock("uuid", () => ({ v4: () => "mock-uuid" }));
 
 const mockUseLastAlerts = jest.fn();
+const mockApiGet = jest.fn();
 (useAlerts as jest.Mock).mockReturnValue({ useLastAlerts: mockUseLastAlerts });
+(useApi as jest.Mock).mockReturnValue({
+  isReady: () => true,
+  get: mockApiGet,
+});
 
 const mockMutate = jest.fn();
 
-const defaultAlerts = [{ id: 1, name: "Alert 1" }];
+const defaultAlerts = [
+  { id: 1, fingerprint: "fp-1", name: "Alert 1" },
+];
 const defaultQuery: AlertsTableDataQuery = {
   searchCel: "test",
   filterCel: "filter",
@@ -44,7 +55,13 @@ beforeEach(() => {
     error: null,
     queryTimeInSeconds: 1,
   });
-  (useAlertPolling as jest.Mock).mockReturnValue({ data: null });
+  (useAlertPolling as jest.Mock).mockReturnValue({ data: null, fingerprints: [] });
+  mockApiGet.mockResolvedValue({
+    id: 1,
+    fingerprint: "fp-1",
+    name: "Updated Alert",
+    lastReceived: "2025-01-01T00:00:00.000Z",
+  });
 });
 
 describe("useAlertsTableData", () => {
@@ -80,9 +97,40 @@ describe("useAlertsTableData", () => {
   });
 
   it("updates alerts when polling token changes", () => {
-    (useAlertPolling as jest.Mock).mockReturnValue({ data: "token" });
+    (useAlertPolling as jest.Mock).mockReturnValue({
+      data: "token",
+      fingerprints: [],
+    });
     const { result } = renderHook(() => useAlertsTableData(defaultQuery));
     expect(result.current.alertsChangeToken).toBe("token");
+  });
+
+  it("patches only visible alerts when polling includes fingerprints", async () => {
+    jest.useRealTimers();
+    (useAlertPolling as jest.Mock).mockReturnValue({
+      data: "token-with-fingerprints",
+      fingerprints: ["fp-1", "fp-hidden"],
+    });
+
+    const { result } = renderHook(() => useAlertsTableData(defaultQuery));
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledTimes(1);
+      expect(mockApiGet).toHaveBeenCalledWith("/alerts/fp-1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.alerts).toEqual([
+        {
+          id: 1,
+          fingerprint: "fp-1",
+          name: "Updated Alert",
+          lastReceived: new Date("2025-01-01T00:00:00.000Z"),
+        },
+      ]);
+    });
+
+    jest.useFakeTimers();
   });
 
   it("generates correct facetsCel for absolute timeFrame", () => {
@@ -221,6 +269,7 @@ describe("useAlertsTableData", () => {
     });
     (useAlertPolling as jest.Mock).mockReturnValueOnce({
       data: "polling-token",
+      fingerprints: [],
     });
     const { result } = renderHook(() => useAlertsTableData(defaultQuery));
 
@@ -241,7 +290,10 @@ describe("useAlertsTableData", () => {
       error: null,
       queryTimeInSeconds: 1,
     });
-    (useAlertPolling as jest.Mock).mockReturnValue({ data: "polling-token" });
+    (useAlertPolling as jest.Mock).mockReturnValue({
+      data: "polling-token",
+      fingerprints: [],
+    });
     const { result, rerender } = renderHook(
       ({ query }) => useAlertsTableData(query),
       {

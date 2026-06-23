@@ -1,8 +1,10 @@
 import { TimeFrameV2 } from "@/components/ui/DateRangePickerV2";
 import { AlertDto, AlertsQuery, useAlerts } from "@/entities/alerts/model";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import { toDateObjectWithFallback } from "@/utils/helpers";
 import { v4 as uuidv4 } from "uuid";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface AlertsTableDataQuery {
   searchCel: string;
@@ -32,7 +34,21 @@ function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
   return "";
 }
 
+function mergeAlertsByFingerprint(
+  existing: AlertDto[],
+  incoming: AlertDto[]
+): AlertDto[] {
+  const merged = new Map(existing.map((alert) => [alert.fingerprint, alert]));
+
+  for (const alert of incoming) {
+    merged.set(alert.fingerprint, alert);
+  }
+
+  return Array.from(merged.values());
+}
+
 export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
+  const api = useApi();
   const { useLastAlerts } = useAlerts();
   const [shouldRefreshDate, setShouldRefreshDate] = useState<boolean>(false);
 
@@ -100,21 +116,57 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
 
   useEffect(() => updateAlertsCelDateRange(), [query?.timeFrame]);
 
-  const { data: alertsChangeToken } = useAlertPolling(!isPaused);
+  const { data: alertsChangeToken, fingerprints: polledFingerprints } =
+    useAlertPolling(!isPaused);
 
-  useEffect(() => {
-    // When refresh token comes, this code allows polling for certain time and then stops.
-    // Will start polling again when new refresh token comes.
-    // Why? Because events are throttled on BE side but we want to refresh the data frequently
-    // when keep gets ingested with data, and it requires control when to refresh from the UI side.
-    if (alertsChangeToken) {
-      setShouldRefreshDate(true);
-      const timeout = setTimeout(() => {
-        setShouldRefreshDate(false);
-      }, 15000);
-      return () => clearTimeout(timeout);
-    }
-  }, [alertsChangeToken]);
+  const [alertsToReturn, setAlertsToReturn] = useState<
+    AlertDto[] | undefined
+  >();
+  const alertsToReturnRef = useRef(alertsToReturn);
+  alertsToReturnRef.current = alertsToReturn;
+
+  const patchVisibleAlerts = useCallback(
+    async (fingerprints: string[], visibleAlerts: AlertDto[]) => {
+      if (!api.isReady() || fingerprints.length === 0 || visibleAlerts.length === 0) {
+        return;
+      }
+
+      const visibleFingerprints = new Set(
+        visibleAlerts.map((alert) => alert.fingerprint)
+      );
+      const fingerprintsToPatch = fingerprints.filter((fingerprint) =>
+        visibleFingerprints.has(fingerprint)
+      );
+
+      if (fingerprintsToPatch.length === 0) {
+        return;
+      }
+
+      const patchedAlerts = await Promise.all(
+        fingerprintsToPatch.map(async (fingerprint) => {
+          try {
+            const alert = await api.get(`/alerts/${fingerprint}`);
+            return {
+              ...alert,
+              lastReceived: toDateObjectWithFallback(alert.lastReceived),
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const updates = patchedAlerts.filter(Boolean) as AlertDto[];
+      if (updates.length === 0) {
+        return;
+      }
+
+      setAlertsToReturn((current) =>
+        mergeAlertsByFingerprint(current ?? visibleAlerts, updates)
+      );
+    },
+    [api]
+  );
 
   useEffect(() => {
     if (isPaused) {
@@ -182,9 +234,6 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     revalidateOnMount: true,
   });
 
-  const [alertsToReturn, setAlertsToReturn] = useState<
-    AlertDto[] | undefined
-  >();
   useEffect(() => {
     if (!alerts) {
       return;
@@ -200,6 +249,36 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
 
     setAlertsToReturn(alertsLoading ? undefined : alerts);
   }, [isPaused, alertsLoading, alerts]);
+
+  useEffect(() => {
+    // When refresh token comes, this code allows polling for certain time and then stops.
+    // Will start polling again when new refresh token comes.
+    // Why? Because events are throttled on BE side but we want to refresh the data frequently
+    // when keep gets ingested with data, and it requires control when to refresh from the UI side.
+    if (!alertsChangeToken) {
+      return;
+    }
+
+    if (polledFingerprints.length > 0 && !isPaused) {
+      const visibleAlerts = alertsToReturnRef.current ?? alerts;
+      if (visibleAlerts?.length) {
+        void patchVisibleAlerts(polledFingerprints, visibleAlerts);
+      }
+      return;
+    }
+
+    setShouldRefreshDate(true);
+    const timeout = setTimeout(() => {
+      setShouldRefreshDate(false);
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [
+    alertsChangeToken,
+    polledFingerprints,
+    isPaused,
+    alerts,
+    patchVisibleAlerts,
+  ]);
 
   return {
     alerts: alertsToReturn,

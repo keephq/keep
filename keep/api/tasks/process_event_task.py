@@ -589,10 +589,15 @@ def __handle_formatted_events(
         # Tell the client to poll alerts
         if pusher_cache.should_notify(tenant_id, "poll-alerts"):
             try:
+                alert_fingerprints = [
+                    event.fingerprint
+                    for event in enriched_formatted_events
+                    if event.fingerprint
+                ]
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {"fingerprints": alert_fingerprints},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
