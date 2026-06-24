@@ -9,6 +9,7 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/shared/ui";
 import ProviderHealthResultsModal from "@/app/(health)/health/modal";
 import { Drawer } from "@/shared/ui/Drawer";
+import { useTranslations } from "next-intl";
 
 const ProvidersTiles = ({
   title,
@@ -27,6 +28,7 @@ const ProvidersTiles = ({
   isHealthCheck?: boolean;
   mutate: () => void;
 }) => {
+  const t = useTranslations("providers");
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
   const [openHealthModal, setOpenHealthModal] = useState(false);
@@ -109,7 +111,7 @@ const ProvidersTiles = ({
           <div className="relative">
             <Tooltip
               content={
-                <>Providers that send alerts to Keep and are not installed.</>
+                <>{t("linkedProvidersTooltip")}</>
               }
             >
               <QuestionMarkCircleIcon className="w-4 h-4" />
@@ -129,7 +131,7 @@ const ProvidersTiles = ({
       </div>
 
       <Drawer
-        title={`Connect to ${selectedProvider?.display_name}`}
+        title={t("connectTo", { name: selectedProvider?.display_name || "" })}
         isOpen={openPanel}
         onClose={handleCloseModal}
       >

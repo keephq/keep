@@ -18,8 +18,10 @@ import { useDashboards } from "utils/hooks/useDashboards";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { DashboardLink } from "./DashboardLink";
+import { useTranslations } from "next-intl";
 
 export const DashboardLinks = () => {
+  const t = useTranslations("nav");
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
   const api = useApi();
   const router = useRouter();
@@ -42,9 +44,7 @@ export const DashboardLinks = () => {
   };
 
   const deleteDashboard = async (id: string) => {
-    const isDeleteConfirmed = confirm(
-      "You are about to delete this dashboard. Are you sure?"
-    );
+    const isDeleteConfirmed = confirm(t("deleteDashboardConfirm"));
     if (isDeleteConfirmed) {
       try {
         await api.delete(`/dashboard/${id}`);
@@ -77,7 +77,7 @@ export const DashboardLinks = () => {
   };
 
   const handleCreateDashboard = () => {
-    const uniqueName = generateUniqueName("My Dashboard");
+    const uniqueName = generateUniqueName(t("myDashboard"));
     router.push(`/dashboard/${encodeURIComponent(uniqueName)}`);
   };
 
@@ -88,11 +88,11 @@ export const DashboardLinks = () => {
           <>
             <div className="flex justify-between items-center w-full">
               <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                Dashboards
+                {t("dashboards")}
               </Subtitle>
               <div className="flex items-center">
                 <Badge color="orange" size="xs" className="ml-2 mr-2">
-                  Beta
+                  {t("beta")}
                 </Badge>
                 <IoChevronUp
                   className={clsx(
@@ -128,7 +128,7 @@ export const DashboardLinks = () => {
               ))
             ) : (
               <Text className="text-xs max-w-[200px] px-2">
-                Dashboards will appear here when saved.
+                {t("dashboardsEmpty")}
               </Text>
             )}
           </SortableContext>
@@ -142,7 +142,7 @@ export const DashboardLinks = () => {
           onClick={handleCreateDashboard}
           icon={PlusIcon}
         >
-          Add Dashboard
+          {t("addDashboard")}
         </Button>
       </Disclosure.Panel>
     </Disclosure>

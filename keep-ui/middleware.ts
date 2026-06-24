@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import { getApiURL } from "@/utils/apiUrl";
 import { config as authConfig } from "@/auth.config";
 import NextAuth from "next-auth";
+import { defaultLocale, isValidLocale, type Locale } from "@/i18n/config";
 
 const { auth } = NextAuth(authConfig);
+
+function detectLocale(acceptLanguage: string | null): Locale {
+  if (!acceptLanguage) return defaultLocale;
+  const preferred = acceptLanguage.split(",")[0]?.split(";")[0]?.trim().toLowerCase();
+  if (preferred?.startsWith("zh")) return "zh";
+  if (preferred?.startsWith("en")) return "en";
+  return defaultLocale;
+}
 
 // Helper function to detect mobile devices
 function isMobileDevice(userAgent: string): boolean {
@@ -31,6 +40,15 @@ export const middleware = auth(async (request) => {
   // Keep it on header so it can be used in server components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
+
+  // Locale detection: check cookie first, then Accept-Language header
+  const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+  let locale: Locale = defaultLocale;
+  if (cookieLocale && isValidLocale(cookieLocale)) {
+    locale = cookieLocale;
+  } else {
+    locale = detectLocale(request.headers.get("accept-language"));
+  }
   // Handle legacy /backend/ redirects (when API_URL is not set and frontend act as a proxy)
   if (pathname.startsWith("/backend/")) {
     const apiUrl = getApiURL();
@@ -83,12 +101,22 @@ export const middleware = auth(async (request) => {
   console.log("Allowing request to pass through", request.url);
   console.log("Request URL: ", request.url);
 
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: {
       // Apply new request headers
       headers: requestHeaders,
     },
   });
+
+  // Set locale cookie if not present
+  if (!cookieLocale) {
+    response.cookies.set("NEXT_LOCALE", locale, {
+      maxAge: 365 * 24 * 60 * 60,
+      path: "/",
+    });
+  }
+
+  return response;
 });
 
 // Update the matcher to handle static files and public routes

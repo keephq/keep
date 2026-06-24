@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Menu } from "@headlessui/react";
 import {
   useCallback,
@@ -83,6 +86,7 @@ export function AlertMenu({
   setIsIncidentSelectorOpen,
   toggleSidebar,
 }: Props) {
+  const t = useTranslations("alerts.menu");
   const api = useApi();
   const router = useRouter();
   const { data: appConfig } = useConfig();
@@ -245,11 +249,13 @@ export function AlertMenu({
         )}
         tooltip={
           viewedAlert
-            ? `Viewed ${format(
-                new Date(viewedAlert.viewedAt),
-                "MMM d, yyyy HH:mm"
-              )}`
-            : "View Alert Payload"
+            ? t("viewedAt", {
+                date: format(
+                  new Date(viewedAlert.viewedAt),
+                  "MMM d, yyyy HH:mm"
+                ),
+              })
+            : t("viewAlertPayload")
         }
       />
       {/* Expand button */}
@@ -269,7 +275,7 @@ export function AlertMenu({
             )}
           />
         )}
-        tooltip={expanded ? "Collapse Row" : "Expand Row"}
+        tooltip={expanded ? t("collapseRow") : t("expandRow")}
       />
       {imageUrl && !imageError && (
         <div
@@ -278,7 +284,7 @@ export function AlertMenu({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleImageClick}
-          title="View Image"
+          title={t("viewImage")}
         >
           {/* because we'll have to start managing every external static asset url (datadog/grafana/etc.) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -298,7 +304,7 @@ export function AlertMenu({
             window.open(url || generatorURL, "_blank");
           }}
           className={actionIconButtonClassName}
-          tooltip="Open Original Alert"
+          tooltip={t("openOriginalAlert")}
           icon={() => (
             <Icon icon={LinkIcon} className="w-4 h-4 text-gray-500" />
           )}
@@ -318,10 +324,10 @@ export function AlertMenu({
           className={actionIconButtonClassName}
           tooltip={
             ticketUrl
-              ? `Ticket Assigned ${
-                  ticketStatus ? `(status: ${ticketStatus})` : ""
-                }`
-              : "Assign Ticket"
+              ? t("ticketAssigned", {
+                  status: ticketStatus ? ` (status: ${ticketStatus})` : "",
+                })
+              : t("assignTicket")
           }
           icon={() => (
             <Icon
@@ -341,7 +347,7 @@ export function AlertMenu({
             window.open(playbook_url, "_blank");
           }}
           className={actionIconButtonClassName}
-          tooltip="View Playbook"
+          tooltip={t("viewPlaybook")}
           icon={() => (
             <Icon icon={BookOpenIcon} className="w-4 h-4 text-gray-500" />
           )}
@@ -355,7 +361,7 @@ export function AlertMenu({
             setNoteModalAlert(alert);
           }}
           className={actionIconButtonClassName}
-          tooltip={note ? "Edit Note" : "Add Note"}
+          tooltip={note ? t("editNote") : t("addNote")}
           icon={() => (
             <Icon
               icon={note ? RiStickyNoteLine : RiStickyNoteAddLine}
@@ -375,12 +381,13 @@ export function AlertMenu({
             );
           }}
           className={actionIconButtonClassName}
-          tooltip={`Workflow ${
-            relevantWorkflowExecution.workflow_status
-          } at ${format(
-            new Date(relevantWorkflowExecution.workflow_started),
-            "MMM d, yyyy HH:mm"
-          )}`}
+          tooltip={t("workflowStatus", {
+            status: relevantWorkflowExecution.workflow_status,
+            date: format(
+              new Date(relevantWorkflowExecution.workflow_started),
+              "MMM d, yyyy HH:mm"
+            ),
+          })}
           icon={() => (
             <Icon
               icon={
@@ -415,9 +422,7 @@ export function AlertMenu({
   const callAssignEndpoint = useCallback(
     async (unassign: boolean = false) => {
       if (
-        confirm(
-          "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
-        )
+        confirm(t("selfAssignConfirm"))
       ) {
         const lastReceived =
           typeof alert.lastReceived === "string"
@@ -463,12 +468,12 @@ export function AlertMenu({
     () => [
       {
         icon: PlayIcon,
-        label: "Run Workflow",
+        label: t("runWorkflow"),
         onClick: () => setRunWorkflowModalAlert?.(alert),
       },
       {
         icon: PlusIcon,
-        label: "Workflow",
+        label: t("workflow"),
         onClick: () =>
           router.push(
             `/workflows/builder?alertName=${encodeURIComponent(
@@ -479,13 +484,13 @@ export function AlertMenu({
       },
       {
         icon: ArchiveBoxIcon,
-        label: "History",
+        label: t("history"),
         onClick: () =>
           updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
       },
       {
         icon: AdjustmentsHorizontalIcon,
-        label: "Enrich",
+        label: t("enrich"),
         onClick: () =>
           updateUrl({
             newParams: {
@@ -496,13 +501,13 @@ export function AlertMenu({
       },
       {
         icon: UserPlusIcon,
-        label: "Self-Assign",
+        label: t("selfAssign"),
         onClick: () => callAssignEndpoint(),
         show: canAssign,
       },
       {
         icon: EyeIcon,
-        label: "View Alert",
+        label: t("viewAlert"),
         onClick: openAlertPayloadModal,
       },
       ...(provider?.methods?.map((method) => ({
@@ -521,17 +526,17 @@ export function AlertMenu({
       })) ?? []),
       {
         icon: IoNotificationsOffOutline,
-        label: alert.dismissed ? "Restore" : "Dismiss",
+        label: alert.dismissed ? t("restore") : t("dismiss"),
         onClick: onDismiss,
       },
       {
         icon: ChevronDoubleRightIcon,
-        label: "Change Status",
+        label: t("changeStatus"),
         onClick: () => setChangeStatusAlert?.(alert),
       },
       {
         icon: PlusIcon,
-        label: "Correlate Incident",
+        label: t("correlateIncident"),
         onClick: () => setIsIncidentSelectorOpen?.(true),
         show: !!setIsIncidentSelectorOpen,
       },

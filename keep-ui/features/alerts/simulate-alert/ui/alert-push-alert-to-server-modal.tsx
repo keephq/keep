@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import React, { useState, useEffect } from "react";
 import { Button, Textarea, Callout } from "@tremor/react";
 import {
@@ -33,6 +36,7 @@ export const PushAlertToServerModal = ({
   handleClose,
   presetName,
 }: PushAlertToServerModalProps) => {
+  const t = useTranslations("alerts.simulate");
   const [alertSources, setAlertSources] = useState<AlertSource[]>([]);
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -95,12 +99,12 @@ export const PushAlertToServerModal = ({
       if (error instanceof KeepApiError) {
         setError("apiError", {
           type: "manual",
-          message: error.message || "Failed to push alert",
+          message: error.message || t("failedToPushAlert"),
         });
       } else {
         setError("apiError", {
           type: "manual",
-          message: "An unexpected error occurred",
+          message: t("unexpectedError"),
         });
       }
     }
@@ -110,7 +114,7 @@ export const PushAlertToServerModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Simulate Alert"
+      title={t("simulateAlert")}
       className="w-[600px]"
     >
       <form
@@ -118,12 +122,12 @@ export const PushAlertToServerModal = ({
         className="flex flex-col gap-2 mt-4"
       >
         <label className="block text-sm font-medium text-gray-700">
-          Alert Source
+          {t("alertSource")}
         </label>
         <Controller
           name="source"
           control={control}
-          rules={{ required: "Alert source is required" }}
+          rules={{ required: t("alertSourceRequired") }}
           render={({ field: { value, onChange, ...field } }) => (
             // FIX: Select prevent modal from closing on Escape key
             <Select
@@ -148,7 +152,7 @@ export const PushAlertToServerModal = ({
                 </div>
               )}
               getOptionValue={(source) => source.type}
-              placeholder="Select alert source"
+              placeholder={t("selectAlertSource")}
             />
           )}
         />
@@ -161,29 +165,28 @@ export const PushAlertToServerModal = ({
         {selectedSource && (
           <>
             <Callout
-              title="About alert payload"
+              title={t("aboutAlertPayload")}
               color="orange"
               className="break-words mt-4"
             >
-              Feel free to edit the payload as you want. However, some of the
-              providers expects specific fields, so be careful.
+              {t("aboutAlertPayloadDescription")}
             </Callout>
 
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700">
-                Alert Payload
+                {t("alertPayload")}
               </label>
               <Controller
                 name="alertJson"
                 control={control}
                 rules={{
-                  required: "Alert payload is required",
+                  required: t("alertPayloadRequired"),
                   validate: (value) => {
                     try {
                       JSON.parse(value);
                       return true;
                     } catch (e) {
-                      return "Invalid JSON format";
+                      return t("invalidJsonFormat");
                     }
                   },
                 }}
@@ -202,7 +205,7 @@ export const PushAlertToServerModal = ({
 
         {errors.apiError && (
           <div className="text-sm text-rose-500 mt-4">
-            <Callout title="Error" color="rose">
+            <Callout title={t("error")} color="rose">
               {errors.apiError.message?.toString()}
             </Callout>
           </div>
@@ -210,10 +213,10 @@ export const PushAlertToServerModal = ({
 
         <div className="mt-6 flex gap-2 justify-end">
           <Button color="orange" onClick={handleClose} variant="secondary">
-            Cancel
+            {t("cancel")}
           </Button>
           <Button color="orange" variant="primary" type="submit">
-            Submit
+            {t("submit")}
           </Button>
         </div>
       </form>

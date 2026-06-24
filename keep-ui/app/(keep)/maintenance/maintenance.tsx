@@ -10,8 +10,10 @@ import MaintenanceRulesTable from "./maintenance-rules-table";
 import { useRouter } from "next/navigation";
 import { EmptyStateCard } from "@/shared/ui";
 import { FaVolumeMute } from "react-icons/fa";
+import { useTranslations } from "next-intl";
 
 export default function Maintenance() {
+  const t = useTranslations("maintenance");
   const { data: maintenanceRules, isLoading } = useMaintenanceRules();
   const [maintenanceToEdit, setMaintenanceToEdit] =
     useState<MaintenanceRule | null>(null);
@@ -42,8 +44,8 @@ export default function Maintenance() {
               <EmptyStateCard
                 noCard
                 icon={FaVolumeMute}
-                title="No maintenance rules yet"
-                description="Create a new maintenance rule using the maintenance rules wizard"
+                title={t("noMaintenanceRulesYet")}
+                description={t("createMaintenanceRuleWizard")}
               />
             </div>
           )}

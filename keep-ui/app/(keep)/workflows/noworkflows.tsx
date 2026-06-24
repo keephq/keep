@@ -1,6 +1,7 @@
 import React from "react";
 import { Button, Icon } from "@tremor/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { MdArrowForwardIos } from "react-icons/md";
 import { useConfig } from "utils/hooks/useConfig";
 import { DynamicImageProviderIcon } from "@/components/ui";
@@ -12,6 +13,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/20/solid";
 const WorkflowsEmptyState = () => {
+  const t = useTranslations("workflows");
   const router = useRouter();
   const { data: configData } = useConfig();
   const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
@@ -19,17 +21,17 @@ const WorkflowsEmptyState = () => {
   const links = [
     {
       href: `${docsUrl}/platform/workflows`,
-      label: "Learn more about Workflows",
+      label: t("learnMoreAboutWorkflows"),
       icon: AcademicCapIcon,
     },
     {
       href: `${docsUrl}/workflows/overview`,
-      label: "How to create a basic notification flow",
+      label: t("howToCreateBasicNotification"),
       icon: BellAlertIcon,
     },
     {
       href: "https://slack.keephq.dev",
-      label: "Get support on your Workflow",
+      label: t("getSupportOnWorkflow"),
       icon: FaSlack,
     },
   ];
@@ -39,8 +41,8 @@ const WorkflowsEmptyState = () => {
       <section className="flex flex-col items-center justify-center mb-10">
         <EmptyStateCard
           noCard
-          title="No Workflows Added Yet"
-          description="Start from scratch, or browse through workflow templates"
+          title={t("noWorkflowsAddedYet")}
+          description={t("startFromScratchOrBrowse")}
           icon={() => (
             <DynamicImageProviderIcon
               src="/icons/workflow-icon.png"
@@ -59,7 +61,7 @@ const WorkflowsEmptyState = () => {
               router.push("/workflows/builder");
             }}
           >
-            Create New Workflow
+            {t("createNewWorkflow")}
           </Button>
           <div className="mt-10 divide-y flex flex-col border border-gray-200 rounded bg-white shadow text-sm">
             {links.map((link) => (

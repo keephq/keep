@@ -3,6 +3,7 @@
 import { Button, Callout, Text, Title } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { IncidentDto } from "@/entities/incidents/model";
 import { AlertDto } from "@/entities/alerts/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -43,6 +44,7 @@ export function ManualRunWorkflowModal({
   isOpen: propIsOpen,
   onSubmit,
 }: Props) {
+  const t = useTranslations("workflows.manualRun");
   const [selectedWorkflow, setSelectedWorkflow] = useState<
     Workflow | undefined
   >(undefined);
@@ -148,7 +150,7 @@ export function ManualRunWorkflowModal({
 
         showSuccessToast(
           <div>
-            Workflow started successfully.{" "}
+            {t("workflowStartedSuccessfully")}{" "}
             <Link
               href={executionUrl}
               className="text-orange-500 hover:text-orange-600 underline"
@@ -156,13 +158,13 @@ export function ManualRunWorkflowModal({
                 e.stopPropagation();
               }}
             >
-              View execution
+              {t("viewExecution")}
             </Link>
           </div>
         );
       }
     } catch (error) {
-      showErrorToast(error, "Failed to start workflow");
+      showErrorToast(error, t("failedToStartWorkflow"));
     }
     clearAndClose();
   };
@@ -180,7 +182,7 @@ export function ManualRunWorkflowModal({
           <Title className="max-w-[300px] overflow-ellipsis">
             {workflow.name}
           </Title>
-          <small>by {workflow.created_by}</small>
+          <small>{t("byUser", { user: workflow.created_by })}</small>
         </div>
         <Text>{workflow.description}</Text>
         <div className="pt-2 flex gap-1">
@@ -218,9 +220,9 @@ export function ManualRunWorkflowModal({
       className="overflow-visible max-w-xl w-full"
       beforeTitle={
         alert?.name ||
-        (effectiveWorkflow?.name ? `Run: ${effectiveWorkflow.name}` : undefined)
+        (effectiveWorkflow?.name ? t("runWorkflowWithName", { name: effectiveWorkflow.name }) : undefined)
       }
-      title={workflow ? "Run Workflow with Inputs" : "Run Workflow"}
+      title={workflow ? t("runWorkflowWithInputs") : t("runWorkflow")}
       data-testid="manual-run-workflow-modal"
     >
       {/* Only show workflow selector when no workflow is directly provided */}
@@ -230,17 +232,16 @@ export function ManualRunWorkflowModal({
             <div>
               {filteredWorkflows.length !== workflows?.length && (
                 <Callout
-                  title="For your information"
+                  title={t("forYourInformation")}
                   color="yellow"
                   className="mb-2 text-xs"
                   icon={InfoCircledIcon}
                 >
-                  Some workflows are not visible to you because you lack
-                  permissions.
+                  {t("someWorkflowsNotVisible")}
                 </Callout>
               )}
               <WorkflowSelect
-                placeholder="Select workflow"
+                placeholder={t("selectWorkflow")}
                 value={selectedWorkflow}
                 getOptionValue={(w: any) => w.id}
                 getOptionLabel={(workflow: Workflow) =>
@@ -271,7 +272,7 @@ export function ManualRunWorkflowModal({
               />
             </div>
           ) : (
-            <span className="text-gray-500 text-sm">No workflows found</span>
+            <span className="text-gray-500 text-sm">{t("noWorkflowsFound")}</span>
           )}
         </>
       )}
@@ -279,7 +280,7 @@ export function ManualRunWorkflowModal({
       {/* Always show workflow inputs when available - whether from direct workflow or selected workflow */}
       {workflowInputs.length > 0 ? (
         <div className="mt-4 flex flex-col gap-2">
-          <Text className="font-bold">Inputs required to run the workflow</Text>
+          <Text className="font-bold">{t("inputsRequired")}</Text>
           <WorkflowInputFields
             workflowInputs={workflowInputs}
             inputValues={inputValues}
@@ -288,13 +289,13 @@ export function ManualRunWorkflowModal({
         </div>
       ) : effectiveWorkflow ? (
         <div className="mt-4 text-center py-4">
-          <Text>This workflow does not require any inputs</Text>
+          <Text>{t("noInputsRequired")}</Text>
         </div>
       ) : null}
 
       <div className="flex justify-end gap-2 mt-4">
         <Button onClick={clearAndClose} color="orange" variant="secondary">
-          Cancel
+          {t("cancel")}
         </Button>
         <Button
           onClick={handleRun}
@@ -305,7 +306,7 @@ export function ManualRunWorkflowModal({
               !areRequiredInputsFilled(workflowInputs, inputValues))
           }
         >
-          Run
+          {t("run")}
         </Button>
       </div>
     </Modal>

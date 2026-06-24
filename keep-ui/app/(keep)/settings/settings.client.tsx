@@ -10,6 +10,7 @@ import {
   ShieldCheckIcon,
   LockClosedIcon,
   PhotoIcon,
+  LanguageIcon,
 } from "@heroicons/react/24/outline";
 import { MdOutlineSecurity } from "react-icons/md";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
@@ -36,6 +37,7 @@ import { RolesTable } from "./auth/roles-table";
 import { APIKeysTable } from "./auth/api-key-table";
 import { User } from "@/app/(keep)/settings/models";
 import ProviderImagesSettings from "./provider-images/provider-images-settings";
+import LanguageSettings from "./language-settings";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -81,6 +83,8 @@ export default function SettingsPage() {
         ? 2
         : newSelectedTab === "provider-images"
         ? 3
+        : newSelectedTab === "language"
+        ? 4
         : 0;
     const userSubTabIndex =
       newUserSubTab === "users"
@@ -384,6 +388,12 @@ export default function SettingsPage() {
           >
             Provider Icons
           </Tab>
+          <Tab
+            icon={LanguageIcon}
+            onClick={() => handleTabChange("language")}
+          >
+            Language
+          </Tab>
         </TabList>
         <TabPanels className="flex-grow overflow-hidden p-px">
           <TabPanel className="h-full">
@@ -459,6 +469,9 @@ export default function SettingsPage() {
           </TabPanel>
           <TabPanel className="h-full pt-4">
             <ProviderImagesSettings />
+          </TabPanel>
+          <TabPanel className="h-full pt-4">
+            <LanguageSettings />
           </TabPanel>
         </TabPanels>
       </TabGroup>

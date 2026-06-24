@@ -29,6 +29,7 @@ import {
 import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
 import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { RootCauseAnalysis } from "@/components/ui/RootCauseAnalysis";
 import { IncidentChangeSeveritySelect } from "features/incidents/change-incident-severity";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -69,6 +70,7 @@ function Summary({
   alerts: AlertDto[];
   incident: IncidentDto;
 }) {
+  const t = useTranslations("incidents.overview");
   const [generatedSummary, setGeneratedSummary] = useState("");
   const { data: config } = useConfig();
   const { updateIncident } = useIncidentActions();
@@ -149,11 +151,11 @@ function Summary({
         size="xs"
         tooltip={
           !config?.OPEN_AI_API_KEY_SET
-            ? "AI is not configured"
-            : "Generate AI summary"
+            ? t("aiNotConfigured")
+            : t("generateAiSummary")
         }
       >
-        AI Summary
+        {t("aiSummary")}
       </Button>
     </div>
   );
@@ -166,6 +168,7 @@ function MergedCallout({
   merged_into_incident_id: string;
   className?: string;
 }) {
+  const t = useTranslations("incidents.overview");
   const { data: merged_incident } = useIncident(merged_into_incident_id);
 
   if (!merged_incident) {
@@ -177,7 +180,7 @@ function MergedCallout({
       // @ts-ignore
       title={
         <div>
-          <p>This incident was merged into</p>
+          <p>{t("mergedInto")}</p>
           <Link
             icon={() => (
               <StatusIcon className="!p-0" status={merged_incident.status} />
@@ -195,6 +198,7 @@ function MergedCallout({
 }
 
 export function IncidentOverview({ incident: initialIncidentData }: Props) {
+  const t = useTranslations("incidents.overview");
   const router = useRouter();
   const { data: fetchedIncident, mutate } = useIncident(
     initialIncidentData.id,
@@ -297,9 +301,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       <div className="basis-2/3 grow">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="max-w-2xl">
-            <FieldHeader>Summary</FieldHeader>
+            <FieldHeader>{t("summary")}</FieldHeader>
             <Summary
-              title="Summary"
+              title={t("summary")}
               summary={summary}
               alerts={alerts.items}
               incident={incident}
@@ -327,7 +331,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           <div className="flex flex-col gap-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <FieldHeader>Services</FieldHeader>
+                <FieldHeader>{t("services")}</FieldHeader>
                 <EnrichmentEditableField
                   name="services"
                   value={notNullServices}
@@ -341,7 +345,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               </div>
 
               <div>
-                <FieldHeader>Environments</FieldHeader>
+                <FieldHeader>{t("environments")}</FieldHeader>
                 <EnrichmentEditableField
                   name="environments"
                   value={environments}
@@ -355,7 +359,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               </div>
 
               <div>
-                <FieldHeader>External incident</FieldHeader>
+                <FieldHeader>{t("externalIncident")}</FieldHeader>
 
                 <EnrichmentEditableForm
                   fields={{
@@ -364,7 +368,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                     incident_provider: incident.enrichments?.incident_provider,
                     incident_title: incident.enrichments?.incident_title,
                   }}
-                  title="External incident"
+                  title={t("externalIncident")}
                   onUpdate={handleBulkEnrichmentChange}
                   onDelete={handleBulkUnEnrichment}
                 >
@@ -403,14 +407,14 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                         </Badge>
                       </div>
                     ) : (
-                      "No external incidents"
+                      t("noExternalIncidents")
                     )}
                   </>
                 </EnrichmentEditableForm>
               </div>
 
               <div>
-                <FieldHeader>Repositories</FieldHeader>
+                <FieldHeader>{t("repositories")}</FieldHeader>
 
                 <EnrichmentEditableField
                   name="repositories"
@@ -449,17 +453,17 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       })}
                     </div>
                   ) : (
-                    "No environments involved"
+                    t("noEnvironments")
                   )}
                 </EnrichmentEditableField>
               </div>
               <div>
-                <FieldHeader>Assignee</FieldHeader>
+                <FieldHeader>{t("assignee")}</FieldHeader>
                 <div className="flex flex-col gap-1">
                   {incident.assignee ? (
                     <p>{incident.assignee}</p>
                   ) : (
-                    <p>No assignee yet</p>
+                    <p>{t("noAssignee")}</p>
                   )}
                   <div>
                     <span
@@ -467,14 +471,14 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
                       onClick={() => {
                         if (
                           confirm(
-                            "Are you sure you want to assign this incident to yourself?"
+                            t("assignToMeConfirm")
                           )
                         ) {
                           assignIncident(incident.id);
                         }
                       }}
                     >
-                      Assign to me
+                      {t("assignToMe")}
                     </span>
                   </div>
                 </div>
@@ -482,7 +486,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
               {incident.rule_fingerprint !== "none" &&
                 !!incident.rule_fingerprint && (
                   <div>
-                    <FieldHeader>Grouped by</FieldHeader>
+                    <FieldHeader>{t("groupedBy")}</FieldHeader>
                     <div className="flex flex-wrap gap-1">
                       <Badge
                         color="orange"
@@ -526,14 +530,14 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       </div>
       <div className="pr-10 grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div>
-          <FieldHeader>Status</FieldHeader>
+          <FieldHeader>{t("status")}</FieldHeader>
           <IncidentChangeStatusSelect
             incidentId={incident.id}
             value={incident.status}
           />
         </div>
         <div>
-          <FieldHeader>Severity</FieldHeader>
+          <FieldHeader>{t("severity")}</FieldHeader>
           <IncidentChangeSeveritySelect
             incidentId={incident.id}
             value={incident.severity}
@@ -541,13 +545,13 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
         </div>
         {!!incident.last_seen_time && (
           <div>
-            <FieldHeader>Last seen at</FieldHeader>
+            <FieldHeader>{t("lastSeenAt")}</FieldHeader>
             <DateTimeField date={incident.last_seen_time} />
           </div>
         )}
         {!!incident.start_time && (
           <div>
-            <FieldHeader>Started at</FieldHeader>
+            <FieldHeader>{t("startedAt")}</FieldHeader>
             <DateTimeField date={incident.start_time} />
           </div>
         )}
@@ -555,15 +559,15 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           <RootCauseAnalysis points={incident.enrichments.rca_points} />
         )}
         <div>
-          <FieldHeader>Resolve on</FieldHeader>
+          <FieldHeader>{t("resolveOn")}</FieldHeader>
           <Badge
             size="sm"
             color="orange"
             className="cursor-help"
             tooltip={
               incident.resolve_on === "all_resolved"
-                ? "Incident will be resolved when all its alerts are resolved"
-                : "Incident will resolve only when manually set to resolved"
+                ? t("resolveWhenAlertsResolved")
+                : t("resolveManually")
             }
           >
             {incident.resolve_on}

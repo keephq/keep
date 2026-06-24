@@ -11,6 +11,7 @@ import { showSuccessToast, showErrorToast } from "@/shared/ui";
 import { type IncidentDto } from "@/entities/incidents/model";
 import { type Provider } from "@/shared/api/providers";
 import { getProviderBaseUrl } from "@/entities/incidents/lib/ticketing-utils";
+import { useTranslations } from "next-intl";
 
 interface LinkTicketModalProps {
   incident: IncidentDto;
@@ -25,6 +26,8 @@ export function LinkTicketModal({
   onClose,
   onSuccess,
 }: LinkTicketModalProps) {
+  const t = useTranslations("incidents.linkTicket");
+  const tCommon = useTranslations("common");
   const [ticketId, setTicketId] = useState("");
   const [ticketUrl, setTicketUrl] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
@@ -55,12 +58,12 @@ export function LinkTicketModal({
     e.preventDefault();
 
     if (!ticketUrl.trim()) {
-      showErrorToast(new Error("Please enter a ticket URL"));
+      showErrorToast(new Error(t("enterUrlError")));
       return;
     }
 
     if (ticketingProviders.length > 1 && !selectedProviderId) {
-      showErrorToast(new Error("Please select a ticketing provider"));
+      showErrorToast(new Error(t("selectProviderError")));
       return;
     }
 
@@ -87,14 +90,14 @@ export function LinkTicketModal({
         enrichments,
       });
 
-      showSuccessToast("Successfully linked incident to ticket");
+      showSuccessToast(t("linkSuccess"));
       setTicketId("");
       setTicketUrl("");
       setSelectedProviderId("");
       onSuccess?.();
       onClose();
     } catch (error) {
-      showErrorToast(error, "Failed to link incident to ticket");
+      showErrorToast(error, t("linkError"));
     } finally {
       setIsLoading(false);
     }
@@ -113,16 +116,16 @@ export function LinkTicketModal({
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title="Link to Existing Ticket"
+        title={t("title")}
         className="w-[500px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-gray-500">
-            Loading ticketing providers...
+            {t("loadingProviders")}
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
-              Close
+              {tCommon("close")}
             </Button>
           </div>
         </div>
@@ -136,16 +139,16 @@ export function LinkTicketModal({
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title="Link to Existing Ticket"
+        title={t("title")}
         className="w-[500px]"
       >
         <div className="flex flex-col gap-4">
           <Text className="text-red-500">
-            No ticketing providers are configured. Please configure a ticketing provider first.
+            {t("noProviders")}
           </Text>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={handleCancel}>
-              Close
+              {tCommon("close")}
             </Button>
           </div>
         </div>
@@ -157,17 +160,17 @@ export function LinkTicketModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Link to Existing Ticket"
+      title={t("title")}
       className="w-[500px]"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {ticketingProviders.length > 1 && (
           <div>
             <Text className="mb-2">
-              Ticketing Provider <span className="text-red-500">*</span>
+              {t("ticketingProvider")} <span className="text-red-500">*</span>
             </Text>
             <Select
-              placeholder="Select a ticketing provider"
+              placeholder={t("selectProviderPlaceholder")}
               value={selectedProviderId}
               onValueChange={setSelectedProviderId}
               disabled={isLoading}
@@ -202,7 +205,7 @@ export function LinkTicketModal({
         {/* Show selected provider info if there's a single ticketing provider or provider is selected */}
         {(ticketingProviders.length === 1 || selectedProviderId) && (
           <>
-            <Text className="text-sm font-medium mb-1">Selected Provider</Text>
+            <Text className="text-sm font-medium mb-1">{t("selectedProvider")}</Text>
             <div className="bg-gray-50 p-3 rounded-md space-y-2">
               <div className="flex items-center gap-3">
                 {selectedProvider && (
@@ -229,10 +232,10 @@ export function LinkTicketModal({
 
         <div>
           <Text className="mb-2">
-            Ticket ID <span className="text-gray-500">(optional)</span>
+            {t("ticketId")} <span className="text-gray-500">{t("optional")}</span>
           </Text>
           <TextInput
-            placeholder={`Enter ${selectedProvider?.display_name || 'ticketing'} ticket ID`}
+            placeholder={t("enterTicketId", { provider: selectedProvider?.display_name || 'ticketing' })}
             value={ticketId}
             onChange={(e) => setTicketId(e.target.value)}
             disabled={isLoading}
@@ -241,10 +244,10 @@ export function LinkTicketModal({
 
         <div>
           <Text className="mb-2">
-            Ticket URL <span className="text-red-500">*</span>
+            {t("ticketUrl")} <span className="text-red-500">*</span>
           </Text>
           <TextInput
-            placeholder="Enter the full URL to the ticket (e.g., https://company.atlassian.net/browse/PROJ-123)"
+            placeholder={t("enterUrl")}
             value={ticketUrl}
             onChange={(e) => setTicketUrl(e.target.value)}
             required
@@ -258,7 +261,7 @@ export function LinkTicketModal({
             onClick={handleCancel}
             disabled={isLoading}
           >
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             variant="primary"
@@ -266,7 +269,7 @@ export function LinkTicketModal({
             type="submit"
             disabled={isLoading || !ticketUrl.trim() || (ticketingProviders.length > 1 && !selectedProviderId)}
           >
-            {isLoading ? "Linking..." : "Link Ticket"}
+            {isLoading ? t("linking") : t("linkTicket")}
           </Button>
         </div>
       </form>

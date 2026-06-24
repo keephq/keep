@@ -22,6 +22,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { extractNamedGroups } from "@/shared/lib/regex-utils";
+import { useTranslations } from "next-intl";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;
@@ -32,6 +33,7 @@ export default function CreateOrUpdateExtractionRule({
   extractionToEdit,
   editCallback,
 }: Props) {
+  const t = useTranslations("extraction");
   const api = useApi();
   const { mutate } = useExtractions();
   const [extractionName, setExtractionName] = useState<string>("");
@@ -91,9 +93,9 @@ export default function CreateOrUpdateExtractionRule({
       exitEditOrCreateMode();
       clearForm();
       mutate();
-      toast.success("Extraction rule created successfully");
+      toast.success(t("ruleCreatedSuccessfully"));
     } catch (error) {
-      showErrorToast(error, "Failed to create extraction rule");
+      showErrorToast(error, t("failedToCreateRule"));
     }
   };
 
@@ -112,9 +114,9 @@ export default function CreateOrUpdateExtractionRule({
       });
       exitEditOrCreateMode();
       mutate();
-      toast.success("Extraction updated successfully");
+      toast.success(t("extractionUpdatedSuccessfully"));
     } catch (error) {
-      showErrorToast(error, "Failed to update extraction");
+      showErrorToast(error, t("failedToUpdateExtraction"));
     }
   };
 
@@ -137,38 +139,38 @@ export default function CreateOrUpdateExtractionRule({
       className="py-2 h-full overflow-y-auto"
       onSubmit={editMode ? updateExtraction : addExtraction}
     >
-      <Subtitle>Extraction Metadata</Subtitle>
+      <Subtitle>{t("extractionMetadata")}</Subtitle>
       <div className="mt-2.5">
         <Text>
-          Name<span className="text-red-500 text-xs">*</span>
+          {t("name")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
-          placeholder="Extraction Name"
+          placeholder={t("extractionName")}
           required={true}
           value={extractionName}
           onValueChange={setExtractionName}
         />
       </div>
       <div className="mt-2.5">
-        <Text>Description</Text>
+        <Text>{t("description")}</Text>
         <Textarea
-          placeholder="Extraction Description"
+          placeholder={t("extractionDescription")}
           value={mapDescription}
           onValueChange={setMapDescription}
         />
       </div>
       <div className="mt-2.5">
         <Text>
-          Priority
+          {t("priority")}
           <Icon
             icon={InformationCircleIcon}
             size="xs"
             color="gray"
-            tooltip="Higher priority will be executed first"
+            tooltip={t("priorityTooltip")}
           />
         </Text>
         <NumberInput
-          placeholder="Priority"
+          placeholder={t("priority")}
           required={true}
           value={priority}
           onValueChange={setPriority}
@@ -178,19 +180,19 @@ export default function CreateOrUpdateExtractionRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          Pre-formatting
+          {t("preFormatting")}
           <Icon
             icon={InformationCircleIcon}
             size="xs"
             color="gray"
-            tooltip="Whether this rule should be applied before or after the alert is standardized."
+            tooltip={t("preFormattingTooltip")}
           />
         </Text>
         <Switch checked={isPreFormatting} onChange={setIsPreFormatting} />
       </div>
       <Divider />
       <Subtitle className="mt-2.5 flex items-center">
-        Extraction Definition{" "}
+        {t("extractionDefinition")}{" "}
         <a
           href={`${
             config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
@@ -202,16 +204,16 @@ export default function CreateOrUpdateExtractionRule({
             variant="simple"
             color="gray"
             size="sm"
-            tooltip="See extractions documentation for more information"
+            tooltip={t("seeExtractionDocs")}
           />
         </a>
       </Subtitle>
       <div className="mt-2.5">
         <Text>
-          Attribute<span className="text-red-500 text-xs">*</span>
+          {t("attribute")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
-          placeholder="Event attribute name to extract from"
+          placeholder={t("attributePlaceholder")}
           required={true}
           value={attribute}
           onValueChange={setAttribute}
@@ -219,7 +221,7 @@ export default function CreateOrUpdateExtractionRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          Regex<span className="text-red-500 text-xs">*</span>
+          {t("regex")}<span className="text-red-500 text-xs">*</span>
           <a
             href="https://docs.python.org/3.11/library/re.html#match-objects"
             target="_blank"
@@ -228,22 +230,22 @@ export default function CreateOrUpdateExtractionRule({
               icon={InformationCircleIcon}
               size="xs"
               color="gray"
-              tooltip="Python regex pattern for group matching"
+              tooltip={t("pythonRegexTooltip")}
             />
           </a>
         </Text>
         <TextInput
-          placeholder="The regex rule to extract by"
+          placeholder={t("regexPlaceholder")}
           required={true}
           value={regex}
           error={extractedAttributes.length === 0 && regex !== ""}
-          errorMessage="Invalid regex pattern. Must contain named groups."
+          errorMessage={t("invalidRegexPattern")}
           onValueChange={setRegex}
         />
       </div>
       <div className="mt-2.5">
         <Text>
-          Condition
+          {t("condition")}
           <a
             href={`${
               config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
@@ -255,7 +257,7 @@ export default function CreateOrUpdateExtractionRule({
               variant="simple"
               color="gray"
               size="xs"
-              tooltip="CEL based condition"
+              tooltip={t("celBasedCondition")}
             />
           </a>
         </Text>
@@ -271,9 +273,9 @@ export default function CreateOrUpdateExtractionRule({
         </div>
       </div>
       <div className="mt-2.5">
-        <Text>Extracted Attributes</Text>
+        <Text>{t("extractedAttributes")}</Text>
         <Text className="text-xs">
-          (I.e., attributes that will be added to matching incoming events)
+          {t("extractedAttributesDescription")}
         </Text>
         <div className="flex flex-col gap-1 py-1">
           {extractedAttributes.length === 0 ? (
@@ -294,7 +296,7 @@ export default function CreateOrUpdateExtractionRule({
           variant="secondary"
           onClick={exitEditOrCreateMode}
         >
-          Cancel
+          {t("cancel")}
         </Button>
         <Button
           disabled={!submitEnabled()}
@@ -302,7 +304,7 @@ export default function CreateOrUpdateExtractionRule({
           size="xs"
           type="submit"
         >
-          {editMode ? "Update" : "Create"}
+          {editMode ? t("update") : t("create")}
         </Button>
       </div>
     </form>

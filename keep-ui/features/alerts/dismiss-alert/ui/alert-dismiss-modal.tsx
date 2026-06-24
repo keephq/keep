@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import {
   Button,
@@ -38,6 +41,7 @@ export function AlertDismissModal({
   alert: alerts,
   handleClose,
 }: Props) {
+  const t = useTranslations("alerts.dismiss");
   const [dismissComment, setDismissComment] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState<number>(0);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
@@ -109,13 +113,13 @@ export function AlertDismissModal({
         `/alerts/batch_enrich?dispose_on_new_alert=true`,
         requestData
       );
-      toast.success(`${alerts.length} alerts dismissed successfully!`, {
+      toast.success(t("dismissSuccess", { count: alerts.length }), {
         position: "top-right",
       });
       await alertsMutator();
       await presetsMutator();
     } catch (error) {
-      showErrorToast(error, "Failed to dismiss alerts");
+      showErrorToast(error, t("dismissFailed"));
     } finally {
       clearAndClose();
       setIsLoading(false);
@@ -147,25 +151,25 @@ export function AlertDismissModal({
       isOpen={isOpen}
       className="overflow-visible"
       beforeTitle={alerts?.[0]?.name}
-      title="Dismiss Alert"
+      title={t("dismissAlert")}
     >
       {alerts && alerts.length == 1 && alerts[0].dismissed ? (
         <>
           <Subtitle className="text-center">
-            Are you sure you want to restore this alert?
+            {t("restoreConfirm")}
           </Subtitle>
           <div className="flex justify-center mt-4 space-x-2">
             <Button onClick={handleDismissChange} color="orange">
-              Restore
+              {t("restore")}
             </Button>
           </div>
         </>
       ) : (
         <>
-          <Callout color="orange" title="Dismissing Alerts" className="mb-2.5">
-            {`This will dismiss the alert until an alert with the same fingerprint comes in${
-              selectedTab === 1 ? ` or until ${selectedDateTime}.` : "."
-            }`}
+          <Callout color="orange" title={t("dismissingAlerts")} className="mb-2.5">
+            {t("dismissCallout", {
+              until: selectedTab === 1 ? ` ${t("until")} ${selectedDateTime}.` : ".",
+            })}
           </Callout>
           <TabGroup
             index={selectedTab}
@@ -173,8 +177,8 @@ export function AlertDismissModal({
             className="mb-4"
           >
             <TabList>
-              <Tab>Dismiss Forever</Tab>
-              <Tab>Dismiss Until</Tab>
+              <Tab>{t("dismissForever")}</Tab>
+              <Tab>{t("dismissUntil")}</Tab>
             </TabList>
             <TabPanels>
               <TabPanel></TabPanel>
@@ -206,7 +210,7 @@ export function AlertDismissModal({
                     />
                     {showError && (
                       <div className="text-red-500 mt-2">
-                        Must choose a date
+                        {t("mustChooseDate")}
                       </div>
                     )}
                   </div>
@@ -214,25 +218,25 @@ export function AlertDismissModal({
               </TabPanel>
             </TabPanels>
           </TabGroup>
-          <Title>Dismiss Comment</Title>
+          <Title>{t("dismissComment")}</Title>
           <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
             <ReactQuill
               value={dismissComment}
               onChange={(value: string) => setDismissComment(value)}
               theme="snow"
-              placeholder="Add your dismiss comment here..."
+              placeholder={t("dismissCommentPlaceholder")}
             />
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="secondary" color="orange" onClick={clearAndClose}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleDismissChange}
               color="orange"
               loading={isLoading}
             >
-              Dismiss
+              {t("dismiss")}
             </Button>
           </div>
         </>

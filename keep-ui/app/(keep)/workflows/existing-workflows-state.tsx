@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@tremor/react";
 import { ArrowUpOnSquareStackIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import {
   EmptyStateCard,
   ErrorComponent,
@@ -48,6 +49,7 @@ export function ExistingWorkflowsState({
 }: {
   initialFacetsData?: InitialFacetsData;
 }) {
+  const t = useTranslations("workflows");
   const [isUploadWorkflowsModalOpen, setIsUploadWorkflowsModalOpen] =
     useState(false);
   const [isCreateWorkflowModalOpen, setIsCreateWorkflowModalOpen] =
@@ -150,18 +152,18 @@ export function ExistingWorkflowsState({
         renderOptionLabel: (facetOption) => {
           switch (facetOption.value) {
             case "success": {
-              return "Success";
+              return t("facetStatus.success");
             }
             case "error": {
-              return "Error";
+              return t("facetStatus.error");
             }
             case "in_progress": {
-              return "In progress";
+              return t("facetStatus.inProgress");
             }
             case "":
             case null:
             case undefined: {
-              return "Not run yet";
+              return t("facetStatus.notRunYet");
             }
             default: {
               return facetOption.value;
@@ -175,7 +177,7 @@ export function ExistingWorkflowsState({
         ),
         renderOptionLabel: (facetOption) => {
           if (facetOption.display_name === "null") {
-            return "Not assigned";
+            return t("facetNotAssigned");
           }
           return <AssigneeLabel email={facetOption.display_name} />;
         },
@@ -183,8 +185,8 @@ export function ExistingWorkflowsState({
       ["Enabling status"]: {
         renderOptionLabel: (facetOption) =>
           ["true", "1"].includes(facetOption.display_name.toLocaleLowerCase())
-            ? "Disabled"
-            : "Enabled",
+            ? t("facetDisabled")
+            : t("facetEnabled"),
       },
     };
   }, []);
@@ -195,7 +197,7 @@ export function ExistingWorkflowsState({
         <div className="flex items-center h-full w-full">
           <div className="flex flex-col justify-center items-center w-full">
             <EmptyStateCard
-              title="No workflows to display matching your filter"
+              title={t("noWorkflowsMatchingFilter")}
               icon={FunnelIcon}
             >
               <Button
@@ -203,7 +205,7 @@ export function ExistingWorkflowsState({
                 variant="secondary"
                 onClick={() => setClearFiltersToken(uuidV4())}
               >
-                Reset filter
+                {t("resetFilter")}
               </Button>
             </EmptyStateCard>
           </div>
@@ -218,7 +220,7 @@ export function ExistingWorkflowsState({
         <div className="flex items-center h-full w-full">
           <div className="flex flex-col justify-center items-center w-full">
             <EmptyStateCard
-              title="No workflows to display matching your search"
+              title={t("noWorkflowsMatchingSearch")}
               icon={MagnifyingGlassIcon}
             >
               <Button
@@ -226,7 +228,7 @@ export function ExistingWorkflowsState({
                 variant="secondary"
                 onClick={() => setSearchedValue(null)}
               >
-                Clear search
+                {t("clearSearch")}
               </Button>
             </EmptyStateCard>
           </div>
@@ -261,9 +263,9 @@ export function ExistingWorkflowsState({
         <div className="flex flex-col gap-6">
           <div className="flex justify-between items-end">
             <div>
-              <PageTitle>Workflows</PageTitle>
+              <PageTitle>{t("workflows")}</PageTitle>
               <PageSubtitle>
-                Automate alert management with workflows
+                {t("automateAlertManagement")}
               </PageSubtitle>
             </div>
             <div className="flex gap-2">
@@ -277,7 +279,7 @@ export function ExistingWorkflowsState({
                 icon={ArrowUpOnSquareStackIcon}
                 id="uploadWorkflowButton"
               >
-                Upload Workflows
+                {t("uploadWorkflows")}
               </Button>
               <Button
                 color="orange"
@@ -286,7 +288,7 @@ export function ExistingWorkflowsState({
                 onClick={() => setIsCreateWorkflowModalOpen(true)}
                 icon={PlusIcon}
               >
-                Create Workflow
+                {t("createWorkflow")}
               </Button>
             </div>
           </div>
@@ -296,7 +298,7 @@ export function ExistingWorkflowsState({
             <div className="flex flex-col gap-6">
               <SearchInput
                 className="flex-1"
-                placeholder="Search workflows"
+                placeholder={t("searchWorkflows")}
                 value={searchedValue as string}
                 onValueChange={setSearchedValue}
               />

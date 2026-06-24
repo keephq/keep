@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import React, { useEffect, useState } from "react";
 import "react-quill-new/dist/quill.snow.css";
 import { Button } from "@tremor/react";
@@ -22,6 +23,7 @@ export const AlertNoteModal = ({
   alert,
   readOnly = false,
 }: AlertNoteModalProps) => {
+  const t = useTranslations("alerts.note");
   const api = useApi();
   const [noteContent, setNoteContent] = useState<string>("");
 
@@ -71,7 +73,7 @@ export const AlertNoteModal = ({
 
       handleNoteClose();
     } catch (error) {
-      showErrorToast(error, "Failed to save note");
+      showErrorToast(error, t("saveNoteFailed"));
     }
   };
 
@@ -88,7 +90,7 @@ export const AlertNoteModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       beforeTitle={alert?.name}
-      title="Add Note"
+      title={t("addNote")}
     >
       <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
         {/* WYSIWYG editor */}
@@ -96,7 +98,7 @@ export const AlertNoteModal = ({
           value={noteContent}
           onChange={(value: string) => setNoteContent(value)}
           theme="snow" // Use the Snow theme
-          placeholder="Add your note here..."
+          placeholder={t("addNotePlaceholder")}
           modules={readOnly ? { toolbar: [] } : modules}
           readOnly={readOnly}
           formats={formats} // Add formats
@@ -108,14 +110,14 @@ export const AlertNoteModal = ({
           variant="secondary"
           color="orange"
         >
-          {readOnly ? "Close" : "Cancel"}
+          {readOnly ? t("close") : t("cancel")}
         </Button>
         {!readOnly && (
           <Button // Use Tremor button for Save
             onClick={saveNote}
             color="orange"
           >
-            Save
+            {t("save")}
           </Button>
         )}
       </div>

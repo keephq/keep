@@ -18,6 +18,7 @@ import {
   PageTitle,
   PageSubtitle,
 } from "@/shared/ui";
+import { useTranslations } from "next-intl";
 
 interface Props {
   currentUser?: AuthUser;
@@ -34,6 +35,7 @@ export default function UsersSettings({
   groupsAllowed,
   userCreationAllowed,
 }: Props) {
+  const t = useTranslations("settings.users");
   const api = useApi();
   const { data: users, isLoading, error, mutate: mutateUsers } = useUsers();
   const { data: roles = [] } = useRoles();
@@ -104,13 +106,13 @@ export default function UsersSettings({
     event: React.MouseEvent
   ) => {
     event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this user?")) {
+    if (window.confirm(t("confirmDeleteUser"))) {
       try {
         await api.delete(`/auth/users/${userEmail}`);
 
         await mutateUsers();
       } catch (error) {
-        showErrorToast(error, "Failed to delete user");
+        showErrorToast(error, t("failedToDeleteUser"));
       }
     }
   };
@@ -119,8 +121,8 @@ export default function UsersSettings({
     <div className="h-full flex flex-col">
       <header className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <PageTitle>Users Management</PageTitle>
-          <PageSubtitle>Add or remove users from your tenant</PageSubtitle>
+          <PageTitle>{t("usersManagement")}</PageTitle>
+          <PageSubtitle>{t("addOrRemoveUsers")}</PageSubtitle>
         </div>
         <div className="flex space-x-2 items-center">
           <Button
@@ -131,16 +133,16 @@ export default function UsersSettings({
             disabled={!userCreationAllowed}
             title={
               !userCreationAllowed
-                ? "Users are managed externally and cannot be created from Keep"
+                ? t("usersManagedExternally")
                 : undefined
             }
           >
-            Add User
+            {t("addUser")}
           </Button>
         </div>
       </header>
       <TextInput
-        placeholder="Search by username"
+        placeholder={t("searchByUsername")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"

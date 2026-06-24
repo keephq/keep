@@ -31,6 +31,7 @@ import { useConfig } from "@/utils/hooks/useConfig";
 import { useRouter } from "next/navigation";
 import RunExtractionModal from "./run-extraction-modal";
 import { extractNamedGroups } from "@/shared/lib/regex-utils";
+import { useTranslations } from "next-intl";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
 
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export default function ExtractionsTable({ extractions, editCallback }: Props) {
+  const t = useTranslations("extraction");
   const api = useApi();
   const { data: config } = useConfig();
   const { mutate } = useExtractions();
@@ -50,22 +52,22 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
   const columns = [
     columnHelper.display({
       id: "priority",
-      header: "Priority",
+      header: t("priority"),
       cell: (context) => context.row.original.priority,
     }),
     columnHelper.display({
       id: "name",
-      header: "Name",
+      header: t("name"),
       cell: ({ row }) => row.original.name,
     }),
     columnHelper.display({
       id: "description",
-      header: "Description",
+      header: t("description"),
       cell: (context) => context.row.original.description,
     }),
     columnHelper.display({
       id: "pre",
-      header: "Pre-formatting",
+      header: t("preFormatting"),
       cell: (context) =>
         context.row.original.pre ? (
           <Icon icon={IoCheckmark} size="md" color="orange" />
@@ -75,14 +77,14 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
     }),
     columnHelper.display({
       id: "attribute",
-      header: "Attribute",
+      header: t("attribute"),
       cell: (context) => context.row.original.attribute,
     }),
     columnHelper.display({
       id: "regex",
       header: () => (
         <div className="flex items-center">
-          Regex{" "}
+          {t("regex")}{" "}
           <a
             href="https://docs.python.org/3.11/library/re.html#match-objects"
             target="_blank"
@@ -92,7 +94,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
               variant="simple"
               color="gray"
               size="sm"
-              tooltip="Python regex pattern for group matching"
+              tooltip={t("pythonRegexTooltip")}
             />
           </a>
         </div>
@@ -103,7 +105,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
       id: "conditon",
       header: () => (
         <div className="flex items-center">
-          Condition{" "}
+          {t("condition")}{" "}
           <a
             href={`${
               config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
@@ -115,7 +117,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
               variant="simple"
               color="gray"
               size="sm"
-              tooltip="See extractions documentation for more information"
+              tooltip={t("seeExtractionDocs")}
             />
           </a>
         </div>
@@ -124,7 +126,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
     }),
     columnHelper.display({
       id: "newAttributes",
-      header: "Extracted Attributes",
+      header: t("extractedAttributes"),
       cell: (context) => (
         <div className="flex flex-wrap">
           {extractNamedGroups(context.row.original.regex).map((attr) => (
@@ -144,7 +146,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
             color="orange"
             size="xs"
             icon={MdPlayArrow}
-            tooltip="Run"
+            tooltip={t("run")}
             onClick={(event) => {
               event.stopPropagation();
               setRunModalRule(context.row.original.id!);
@@ -155,7 +157,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
             size="xs"
             variant="secondary"
             icon={MdModeEdit}
-            tooltip="Edit"
+            tooltip={t("edit")}
             onClick={(event) => {
               event.stopPropagation();
               editCallback(context.row.original!);
@@ -166,7 +168,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
             size="xs"
             variant="secondary"
             icon={MdRemoveCircle}
-            tooltip="Delete"
+            tooltip={t("delete")}
             onClick={(event) => {
               event.stopPropagation();
               deleteExtraction(context.row.original.id!);
@@ -190,15 +192,15 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
   });
 
   const deleteExtraction = (extractionId: number) => {
-    if (confirm("Are you sure you want to delete this rule?")) {
+    if (confirm(t("confirmDeleteRule"))) {
       api
         .delete(`/extraction/${extractionId}`)
         .then(() => {
           mutate();
-          toast.success("Extraction deleted successfully");
+          toast.success(t("extractionDeletedSuccessfully"));
         })
         .catch((error: any) => {
-          showErrorToast(error, "Failed to delete extraction rule");
+          showErrorToast(error, t("failedToDeleteRule"));
         });
     }
   };
@@ -241,7 +243,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
                   <TableCell colSpan={columns.length}>
                     <div className="flex space-x-2 divide-x">
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold">Created At:</span>
+                        <span className="font-bold">{t("createdAt")}:</span>
                         <span>
                           {new Date(
                             row.original.created_at + "Z"
@@ -249,13 +251,13 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
                         </span>
                       </div>
                       <div className="flex items-center space-x-2 pl-2.5">
-                        <span className="font-bold">Created By:</span>
+                        <span className="font-bold">{t("createdBy")}:</span>
                         <span>{row.original.created_by}</span>
                       </div>
                       {row.original.updated_at && (
                         <>
                           <div className="flex items-center space-x-2 pl-2.5">
-                            <span className="font-bold">Updated At:</span>
+                            <span className="font-bold">{t("updatedAt")}:</span>
                             <span>
                               {new Date(
                                 row.original.updated_at + "Z"
@@ -263,7 +265,7 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
                             </span>
                           </div>
                           <div className="flex items-center space-x-2 pl-2.5">
-                            <span className="font-bold">Updated By:</span>
+                            <span className="font-bold">{t("updatedBy")}:</span>
                             <span>{row.original.updated_by}</span>
                           </div>
                         </>

@@ -1,6 +1,7 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import React, { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -64,6 +65,8 @@ export function IncidentList({
   initialData?: PaginatedIncidentsDto;
   initialFacetsData?: InitialFacetsData;
 }) {
+  const t = useTranslations("incidents");
+  const tCommon = useTranslations("common");
   const [incidentsPagination, setIncidentsPagination] =
     useState<PaginationState>({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
@@ -185,14 +188,14 @@ export function IncidentList({
         ),
         renderOptionLabel: (facetOption) => {
           if (!facetOption.display_name) {
-            return "Not assigned";
+            return tCommon("notAssigned");
           }
           return <AssigneeLabel email={facetOption.display_name} />;
         },
       },
       ["Dismissed"]: {
         renderOptionLabel: (facetOption) =>
-          facetOption.display_name === "true" ? "Dismissed" : "Not dismissed",
+          facetOption.display_name === "true" ? tCommon("dismissed") : tCommon("notDismissed"),
         renderOptionIcon: (facetOption) => (
           <Icon
             icon={
@@ -212,8 +215,8 @@ export function IncidentList({
         renderOptionLabel: (facetOption) =>
           facetOption.display_name == "1" ||
           facetOption.display_name.toLocaleLowerCase() == "true"
-            ? "Yes"
-            : "No",
+            ? tCommon("yes")
+            : tCommon("no"),
       },
     };
   }, []);
@@ -296,10 +299,10 @@ export function IncidentList({
         predictedIncidents &&
         predictedIncidents.items.length > 0 ? (
           <Card className="mt-10 mb-10 flex-grow">
-            <Title>Incident Predictions</Title>
+            <Title>{t("incidentPredictions")}</Title>
             <Subtitle>
-              Possible problems predicted by Keep AI & Correlation Rules{" "}
-              <Badge color="orange">Beta</Badge>
+              {t("incidentPredictionsDesc")}{" "}
+              <Badge color="orange">{tCommon("beta")}</Badge>
             </Subtitle>
             <PredictedIncidentsTable
               incidents={predictedIncidents}
@@ -311,8 +314,8 @@ export function IncidentList({
         <div className="h-full flex flex-col gap-5">
           <div className="flex justify-between items-center">
             <div>
-              <PageTitle>Incidents</PageTitle>
-              <PageSubtitle>Group alerts into incidents</PageSubtitle>
+              <PageTitle>{t("title")}</PageTitle>
+              <PageSubtitle>{t("groupAlerts")}</PageSubtitle>
             </div>
 
             <div className="flex gap-2">
@@ -324,7 +327,7 @@ export function IncidentList({
                 variant="primary"
                 onClick={() => setIsFormOpen(true)}
               >
-                Create Incident
+                {t("createIncident")}
               </Button>
             </div>
           </div>
@@ -357,7 +360,7 @@ export function IncidentList({
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         className="w-[600px]"
-        title="Add Incident"
+        title={t("addIncident")}
       >
         <CreateOrUpdateIncidentForm
           incidentToEdit={incidentToEdit}

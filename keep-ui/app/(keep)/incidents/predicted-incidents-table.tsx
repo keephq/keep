@@ -1,3 +1,5 @@
+"use client";
+
 import { Button, Badge } from "@tremor/react";
 import {
   DisplayColumnDef,
@@ -15,6 +17,7 @@ import {
 import React, { useState } from "react";
 import { IncidentTableComponent } from "@/features/incidents/incident-list";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -27,32 +30,34 @@ interface Props {
 export default function PredictedIncidentsTable({
   incidents: incidents,
 }: Props) {
+  const t = useTranslations("incidents");
+  const tCommon = useTranslations("common");
   const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
     columnHelper.display({
       id: "ai_generated_name",
-      header: "Name",
+      header: tCommon("name"),
       cell: ({ row }) => (
         <div className="text-wrap">{row.original.ai_generated_name}</div>
       ),
     }),
     columnHelper.display({
       id: "user_summary",
-      header: "Summary",
+      header: t("summary"),
       cell: ({ row }) => (
         <div className="text-wrap">{row.original.generated_summary}</div>
       ),
     }),
     columnHelper.display({
       id: "alerts_count",
-      header: "Number of Alerts",
+      header: t("numberAlerts"),
       cell: (context) => context.row.original.alerts_count,
     }),
     columnHelper.display({
       id: "alert_sources",
-      header: "Alert Sources",
+      header: t("alertSources"),
       cell: (context) =>
         context.row.original.alert_sources.map((alert_sources, index) => (
           <DynamicImageProviderIcon
@@ -68,7 +73,7 @@ export default function PredictedIncidentsTable({
     }),
     columnHelper.display({
       id: "services",
-      header: "Involved Services",
+      header: t("involvedServices"),
       cell: ({ row }) => (
         <div className="text-wrap">
           {row.original.services.map((service) => (
@@ -88,7 +93,7 @@ export default function PredictedIncidentsTable({
           <Button
             color="orange"
             size="xs"
-            tooltip="Confirm incident"
+            tooltip={t("confirmIncident")}
             variant="secondary"
             icon={MdDone}
             onClick={async (e: React.MouseEvent) => {
@@ -101,7 +106,7 @@ export default function PredictedIncidentsTable({
             color="red"
             size="xs"
             variant="secondary"
-            tooltip={"Discard"}
+            tooltip={t("discard")}
             icon={MdBlock}
             onClick={async (e: React.MouseEvent) => {
               e.preventDefault();

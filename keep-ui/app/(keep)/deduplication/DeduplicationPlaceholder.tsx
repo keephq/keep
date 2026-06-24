@@ -2,23 +2,24 @@ import { Card, Subtitle, Title } from "@tremor/react";
 import Link from "next/link";
 import Image from "next/image";
 import deduplicationPlaceholder from "./deduplication-placeholder.svg";
+import { useTranslations } from "next-intl";
 
 export const DeduplicationPlaceholder = () => {
+  const t = useTranslations("deduplication");
   return (
     <>
       <Card className="flex flex-col items-center justify-center gap-y-8 h-full">
         <div className="text-center space-y-3">
-          <Title className="text-2xl">No Deduplications Yet</Title>
+          <Title className="text-2xl">{t("noDeduplicationsYet")}</Title>
           <Subtitle className="text-gray-400">
-            Alert deduplication is the first layer of denoising. It groups
-            similar alerts from one source.
-            <br /> To connect alerts across sources into incidents, check{" "}
+            {t("deduplicationDescription")}
+            <br /> {t("checkCorrelations")}{" "}
             <Link href="/rules" className="underline text-orange-500">
-              Correlations
+              {t("correlations")}
             </Link>
           </Subtitle>
           <Subtitle className="text-gray-400">
-            This page will become active once the first alerts are registered.
+            {t("pageWillBecomeActive")}
           </Subtitle>
         </div>
         <Image

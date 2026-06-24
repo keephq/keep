@@ -3,6 +3,7 @@ import { ChangeEvent, useRef, useState } from "react";
 import { Button } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Modal from "@/components/ui/Modal";
 import { Input } from "@/shared/ui";
 import { Textarea } from "@/components/ui";
@@ -56,6 +57,7 @@ interface UploadWorkflowsModalProps {
 export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
   onClose,
 }) => {
+  const t = useTranslations("workflows.uploadModal");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [workflowDefinition, setWorkflowDefinition] = useState("");
   const { uploadWorkflowFiles } = useWorkflowActions();
@@ -113,7 +115,7 @@ export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
   }
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Upload Workflow files">
+    <Modal isOpen={true} onClose={onClose} title={t("uploadWorkflowFiles")}>
       <div className="bg-white rounded max-w-lg max-h-fit	 mx-auto z-20">
         <div className="space-y-2">
           <Input
@@ -130,11 +132,11 @@ export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
             }}
           />
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-            Only .yml and .yaml files are supported.
+            {t("onlyYamlSupported")}
           </p>
         </div>
         <div className="mt-4">
-          <h3>Or paste the YAML definition:</h3>
+          <h3>{t("orPasteYaml")}</h3>
           <Textarea
             id="workflowDefinition"
             onChange={(e) => {
@@ -150,11 +152,11 @@ export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
             variant="primary"
             onClick={() => handleWorkflowDefinitionString(workflowDefinition)}
           >
-            Load
+            {t("load")}
           </Button>
         </div>
         <div className="mt-4 text-sm">
-          <h3>Or just try some from Keep examples:</h3>
+          <h3>{t("orTryExamples")}</h3>
           <Button
             className="mt-2"
             color="orange"
@@ -163,7 +165,7 @@ export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
             icon={ArrowRightIcon}
             onClick={() => handleStaticExampleSelect("slack")}
           >
-            Send a Slack message for every alert or manually
+            {t("slackExample")}
           </Button>
 
           <Button
@@ -174,16 +176,16 @@ export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
             icon={ArrowRightIcon}
             onClick={() => handleStaticExampleSelect("sql")}
           >
-            Run SQL query and send the results as a Slack message
+            {t("sqlExample")}
           </Button>
 
           <p className="mt-2">
-            More examples at{" "}
+            {t("moreExamplesAt")}{" "}
             <a
               href="https://github.com/keephq/keep/tree/main/examples/workflows"
               target="_blank"
             >
-              Keep GitHub repo
+              {t("keepGithubRepo")}
             </a>
           </p>
         </div>
@@ -195,7 +197,7 @@ export const UploadWorkflowsModal: React.FC<UploadWorkflowsModalProps> = ({
             variant="secondary"
             onClick={() => onClose()}
           >
-            Cancel
+            {t("cancel")}
           </Button>
         </div>
       </div>

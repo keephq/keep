@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { AlertDto, Status, Severity } from "@/entities/alerts/model"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
 import { Button, Switch, Text, Callout } from "@tremor/react";
@@ -57,6 +60,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   handleClose,
   mutate,
 }) => {
+  const t = useTranslations("alerts.viewRaw");
   const isOpen = !!alert;
   const [showHighlightedOnly, setShowHighlightedOnly] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
@@ -179,17 +183,17 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   };
 
   const unEnrichAlert = async (key: string) => {
-    if (confirm(`Are you sure you want to un-enrich ${key}?`)) {
+    if (confirm(t("unEnrichConfirm", { key: key }))) {
       try {
         const requestData = {
           enrichments: [key],
           fingerprint: alert!.fingerprint,
         };
         await api.post(`/alerts/unenrich`, requestData);
-        toast.success(`${key} un-enriched successfully!`);
+        toast.success(t("unEnrichSuccess", { key: key }));
         await mutate();
       } catch (error) {
-        showErrorToast(error, `Failed to unenrich ${key}`);
+        showErrorToast(error, t("unEnrichFailed", { key: key }));
       }
     }
   };
@@ -277,7 +281,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (!isEditable) {
       const editorDomNode = editor.getDomNode();
       if (editorDomNode) {
-        editorDomNode.setAttribute("title", "Click the unlock button to edit");
+        editorDomNode.setAttribute("title", t("clickUnlockToEdit"));
       }
     }
 
@@ -419,7 +423,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
               ),
               options: {
                 inlineClassName: "read-only-field",
-                hoverMessage: { value: "This field cannot be edited" },
+                hoverMessage: { value: t("fieldCannotBeEdited") },
                 stickiness:
                   monaco.editor.TrackedRangeStickiness
                     .NeverGrowsWhenTypingAtEdges,
@@ -468,7 +472,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
           range: match.range,
           options: {
             inlineClassName: "enriched-field",
-            hoverMessage: { value: "Click to un-enrich" },
+            hoverMessage: { value: t("clickToUnEnrich") },
             stickiness: 1,
           },
         });
@@ -492,9 +496,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       // If there were unsaved changes, ask for confirmation
       if (hasChanges) {
         if (
-          confirm(
-            "You have unsaved changes. Are you sure you want to discard them?"
-          )
+          confirm(t("unsavedChangesConfirm"))
         ) {
           setEditorValue(originalValue);
           setHasChanges(false);
@@ -578,7 +580,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         });
       }
 
-      toast.success("Alert updated successfully!");
+      toast.success(t("alertUpdatedSuccess"));
 
       // Update local state
       setOriginalValue(editorValue);
@@ -587,7 +589,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       // Refresh the data
       await mutate();
     } catch (error) {
-      showErrorToast(error, "Failed to update alert");
+      showErrorToast(error, t("alertUpdateFailed"));
     }
   };
 
@@ -610,12 +612,12 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     if (alert) {
       try {
         await navigator.clipboard.writeText(editorValue);
-        showSuccessToast("Alert copied to clipboard");
+        showSuccessToast(t("alertCopied"));
       } catch (err) {
         showErrorToast(
           err,
           <p>
-            Failed to copy alert. Please check your browser permissions.{" "}
+            {t("copyFailed")}{" "}
             <Link
               target="_blank"
               href={`${config?.KEEP_DOCS_URL}${DOCS_CLIPBOARD_COPY_ERROR_PATH}`}
@@ -671,7 +673,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         <div className="flex flex-col flex-1">
           <Text className="text-sm text-gray-500">{alert?.name}</Text>
           <div className="flex items-center">
-            <h2 className="text-lg font-semibold mr-2">Alert Payload</h2>
+            <h2 className="text-lg font-semibold mr-2">{t("alertPayload")}</h2>
             <Button
               onClick={toggleEditMode}
               color="orange"
@@ -696,7 +698,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
                 isEditable ? "text-gray-400" : "text-gray-500"
               }`}
             >
-              <Text>Enriched Fields Only</Text>
+              <Text>{t("enrichedFieldsOnly")}</Text>
             </label>
           </div>
           <Button
@@ -704,7 +706,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
             color="orange"
             icon={Save}
             disabled={!hasChanges || validationErrors.length > 0}
-            title={!hasChanges ? "No changes in the alert payload" : ""}
+            title={!hasChanges ? t("noChanges") : ""}
           ></Button>
           <Button
             onClick={handleCopy}
@@ -724,15 +726,14 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
       {isEditable && (
         <Callout
           className="mb-4"
-          title="Edit with caution"
+          title={t("editWithCaution")}
           color="orange"
           icon={AlertTriangle}
         >
-          Keep in mind that some of the fields are used in ways that editing may
-          break them.
+          {t("editCautionDescription")}
           <br />
           <br />
-          Any changes in the following fields will be ignored:
+          {t("readOnlyFieldsIgnored")}
           <br />
           {READ_ONLY_FIELDS.map((field, index) => (
             <span key={field}>

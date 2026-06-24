@@ -6,6 +6,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { PageTitle } from "@/shared/ui";
 import { PageSubtitle } from "@/shared/ui";
+import { useTranslations } from "next-intl";
 
 interface SMTPSettings {
   host: string;
@@ -41,6 +42,7 @@ const isValidPort = (port: number) => {
 };
 
 export default function SMTPSettingsForm({ selectedTab }: Props) {
+  const t = useTranslations("settings.smtp");
   const [settings, setSettings] = useState<SMTPSettings>({
     host: "",
     port: 25,
@@ -61,9 +63,9 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
 
   const validateSaveFields = () => {
     const newErrors: SMTPSettingsErrors = {};
-    if (!settings.host) newErrors.host = "Host is required";
-    if (!isValidPort(settings.port)) newErrors.port = "Port is invalid";
-    if (!settings.from_email) newErrors.from_email = "From is required";
+    if (!settings.host) newErrors.host = t("hostRequired");
+    if (!isValidPort(settings.port)) newErrors.port = t("portInvalid");
+    if (!settings.from_email) newErrors.from_email = t("fromRequired");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -73,7 +75,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
     if (!settings.to_email)
       setErrors((errors) => ({
         ...errors,
-        to_email: "To is required for testing",
+        to_email: t("toRequiredForTesting"),
       }));
     return validSave && settings.to_email;
   };
@@ -134,9 +136,9 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
       // If the delete failed
       setDeleteSuccessful(false);
       if (error instanceof KeepApiError) {
-        setErrorMessage(error.message || "An error occurred while deleting.");
+        setErrorMessage(error.message || t("errorDeleting"));
       } else {
-        setErrorMessage("An unexpected error occurred");
+        setErrorMessage(t("unexpectedError"));
       }
     }
   };
@@ -158,9 +160,9 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
       // If the save failed
       setSaveSuccessful(false);
       if (error instanceof KeepApiError) {
-        setErrorMessage(error.message || "An error occurred while saving.");
+        setErrorMessage(error.message || t("errorSaving"));
       } else {
-        setErrorMessage("An unexpected error occurred");
+        setErrorMessage(t("unexpectedError"));
       }
     }
   };
@@ -180,7 +182,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
 
       setTestResult({
         status: true,
-        message: "Success!",
+        message: t("success"),
         logs: result.logs || [],
       });
     } catch (error) {
@@ -190,14 +192,14 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
           const result = error.responseJson;
           setTestResult({
             status: false,
-            message: result.message || "Error occurred.",
+            message: result.message || t("errorOccurred"),
             logs: result.logs || [],
           });
         } else {
           // For any other status, show a static message
           setTestResult({
             status: false,
-            message: "Failed to connect to server or process the request.",
+            message: t("failedToConnect"),
             logs: [],
           });
         }
@@ -205,7 +207,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
         // If the request fails to reach the server or there's a network error
         setTestResult({
           status: false,
-          message: "Failed to connect to server or process the request.",
+          message: t("failedToConnect"),
           logs: [],
         });
       }
@@ -228,13 +230,13 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <header>
-        <PageTitle>SMTP Settings</PageTitle>
-        <PageSubtitle>Configure your SMTP server to send emails</PageSubtitle>
+        <PageTitle>{t("smtpSettings")}</PageTitle>
+        <PageSubtitle>{t("configureSmtp")}</PageSubtitle>
       </header>
       <Card className="p-4">
         <div className="mb-4">
           <label htmlFor="host" className="block text-sm font-medium mb-1">
-            Host
+            {t("host")}
           </label>
           <TextInput
             type="text"
@@ -247,7 +249,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             error={!!errors.host}
           />
           <label className="block text-sm font-medium mb-1 text-gray-500">
-            The SMTP host name of your mail server.
+            {t("hostDescription")}
           </label>
           {errors.host && (
             <p className="mt-1 text-sm text-red-500">{errors.host}</p>
@@ -256,7 +258,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
 
         <div className="mb-4">
           <label htmlFor="port" className="block text-sm font-medium mb-1">
-            Port
+            {t("port")}
           </label>
           <TextInput
             type="text"
@@ -268,7 +270,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             error={!!errors.port}
           />
           <label className="block text-sm font-medium mb-1 text-gray-500">
-            SMTP port number to use. Default is 25.
+            {t("portDescription")}
           </label>
           {errors.port && (
             <p className="mt-1 text-sm text-red-500">{errors.port}</p>
@@ -280,7 +282,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             htmlFor="from_email"
             className="block text-sm font-medium mb-1"
           >
-            From address
+            {t("fromAddress")}
           </label>
           <TextInput
             type="text"
@@ -293,7 +295,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             placeholder="keepserver@example.com"
           />
           <label className="block text-sm font-medium mb-1 text-gray-500">
-            The default address this server will use to send the emails from.
+            {t("fromAddressDescription")}
           </label>
           {errors.from_email && (
             <p className="mt-1 text-sm text-red-500">{errors.from_email}</p>
@@ -302,7 +304,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
 
         <div className="mb-4">
           <label htmlFor="username" className="block text-sm font-medium mb-1">
-            Username
+            {t("username")}
           </label>
           <TextInput
             type="text"
@@ -314,13 +316,13 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             error={!!errors.username}
           />
           <label className="block text-sm font-medium mb-1 text-gray-500">
-            Optional - if you use authenticated SMTP, enter your username.
+            {t("usernameDescription")}
           </label>
         </div>
 
         <div className="mb-4">
           <label htmlFor="password" className="block text-sm font-medium mb-1">
-            Password
+            {t("password")}
           </label>
           <TextInput
             type="password"
@@ -332,7 +334,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             error={!!errors.password}
           />
           <label className="block text-sm font-medium mb-1 text-gray-500">
-            Optional - if you use authenticated SMTP, enter your password.
+            {t("passwordDescription")}
           </label>
         </div>
 
@@ -346,14 +348,14 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
               checked={settings.secure}
               onChange={handleChange}
             />
-            <span className="ml-2 text-sm font-medium">Use TLS</span>
+            <span className="ml-2 text-sm font-medium">{t("useTls")}</span>
           </label>
         </div>
 
         <div className="flex flex-col justify-end space-y-2 mt-6">
           <div className="flex justify-end space-x-2">
             <Button onClick={onSave} color="orange" className="px-4 py-2">
-              Save
+              {t("save")}
             </Button>
             <Button
               onClick={onDelete}
@@ -361,7 +363,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
               className="px-4 py-2"
               disabled={!smtpInstalled}
             >
-              Delete
+              {t("delete")}
             </Button>
           </div>
           {(isSaveSuccessful === false || deleteSuccessful === false) && (
@@ -369,12 +371,12 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
           )}
           {isSaveSuccessful === true && (
             <div className="text-green-500 text-sm mt-2">
-              SMTP settings saved successfully.
+              {t("settingsSaved")}
             </div>
           )}
           {deleteSuccessful === true && (
             <div className="text-green-500 text-sm mt-2">
-              SMTP settings deleted successfully.
+              {t("settingsDeleted")}
             </div>
           )}
         </div>
@@ -383,7 +385,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
       <Card className="p-4">
         <div className="mb-4">
           <label htmlFor="to_email" className="block text-sm font-medium mb-1">
-            To:
+            {t("to")}
           </label>
           <TextInput
             type="text"
@@ -396,7 +398,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
             error={!!errors.to_email}
           />
           <label className="block text-sm font-medium mb-1 text-gray-500">
-            A test mail address. Keep will try to send email to this address.
+            {t("toDescription")}
           </label>
           {errors.to_email && (
             <p className="mt-1 text-sm text-red-500">{errors.to_email}</p>
@@ -404,7 +406,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
         </div>
         <div className="flex justify-end space-x-2 mt-6">
           <Button onClick={onTest} color="orange" className="px-4 py-2">
-            Test
+            {t("test")}
           </Button>
         </div>
       </Card>
@@ -412,20 +414,20 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
         <Card
           className={`p-4 ${testResult.status ? "bg-green-100" : "bg-red-100"}`}
         >
-          <Title>{testResult.status ? "Success" : "Failure"}</Title>
+          <Title>{testResult.status ? t("success") : t("failure")}</Title>
           <div
             className="mt-2 whitespace-pre-wrap"
             style={{ overflowX: "auto" }}
           >
-            <strong>Message:</strong>
+            <strong>{t("message")}</strong>
             <br />
             {testResult.message}
             <br />
-            <strong>Logs:</strong>
+            <strong>{t("logs")}</strong>
             <pre style={{ overflowX: "auto" }}>
               {testResult.logs
                 ? testResult.logs.join("\n")
-                : "No logs available."}
+                : t("noLogsAvailable")}
             </pre>
           </div>
         </Card>

@@ -62,6 +62,7 @@
     "monaco-yaml": "^5.3.1",
     "next": "15.5.9",
     "next-auth": "^5.0.0-beta.27",
+    "next-intl": "^4.13.0",
     "openai": "^4.86.2",
     "posthog-js": "^1.229.5",
     "pusher-js": "^8.4.0",

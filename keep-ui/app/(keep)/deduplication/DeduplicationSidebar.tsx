@@ -26,6 +26,7 @@ import { KeepApiError } from "@/shared/api";
 import { Providers } from "@/shared/api/providers";
 import SidePanel from "@/components/SidePanel";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useTranslations } from "next-intl";
 
 interface ProviderOption {
   value: string;
@@ -50,6 +51,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   mutateDeduplicationRules,
   providers,
 }) => {
+  const t = useTranslations("deduplication");
   const {
     control,
     handleSubmit,
@@ -176,12 +178,12 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
       if (error instanceof KeepApiError) {
         setError("root.serverError", {
           type: "manual",
-          message: error.message || "Failed to save deduplication rule",
+          message: error.message || t("failedToSaveRule"),
         });
       } else {
         setError("root.serverError", {
           type: "manual",
-          message: "An unexpected error occurred",
+          message: t("unexpectedError"),
         });
       }
     } finally {
@@ -195,11 +197,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         <div>
           <Dialog.Title className="font-bold" as={Title}>
             {selectedDeduplicationRule
-              ? `Edit ${selectedDeduplicationRule.name}`
-              : "Add deduplication rule"}
+              ? t("editRule", { name: selectedDeduplicationRule.name })
+              : t("addDeduplicationRule")}
             {selectedDeduplicationRule?.default && (
               <Badge className="ml-2" color="orange">
-                Default Rule
+                {t("defaultRule")}
               </Badge>
             )}
           </Dialog.Title>
@@ -215,16 +217,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         <div className="flex flex-col">
           <Callout
             className="mb-4 py-8"
-            title="Editing a Default Rule"
+            title={t("editingDefaultRule")}
             icon={ExclamationTriangleIcon}
             color="orange"
           >
-            Editing a default deduplication rule requires advanced knowledge.
-            Default rules are carefully designed to provide optimal
-            deduplication for specific alert types. Modifying these rules may
-            impact the efficiency of your alert processing. If you&apos;re
-            unsure about making changes, we recommend creating a new custom rule
-            instead of modifying the default one.
+            {t("editingDefaultRuleDescription")}
             <br></br>
             <a
               href={`${
@@ -233,7 +230,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
               target="_blank"
               className="text-orange-600 hover:underline mt-4"
             >
-              Learn more about deduplication rules
+              {t("learnMoreDeduplication")}
             </a>
           </Callout>
         </div>
@@ -243,13 +240,12 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         <div className="flex flex-col">
           <Callout
             className="mb-4 py-8"
-            title="Editing a Provisioned Rule"
+            title={t("editingProvisionedRule")}
             icon={ExclamationTriangleIcon}
             color="orange"
           >
             <Text>
-              Editing a provisioned deduplication rule is not allowed. Please
-              contact your system administrator for more information.
+              {t("editingProvisionedRuleDescription")}
             </Text>
           </Callout>
         </div>
@@ -264,12 +260,12 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             <div className="space-y-4">
               <div>
                 <Text className="block text-sm font-medium text-gray-700 mb-2">
-                  Rule name
+                  {t("ruleName")}
                 </Text>
                 <Controller
                   name="name"
                   control={control}
-                  rules={{ required: "Rule name is required" }}
+                  rules={{ required: t("ruleNameRequired") }}
                   disabled={!!selectedDeduplicationRule?.is_provisioned}
                   render={({ field }) => (
                     <TextInput
@@ -282,12 +278,12 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
               </div>
               <div>
                 <Text className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  {t("description")}
                 </Text>
                 <Controller
                   name="description"
                   control={control}
-                  rules={{ required: "Description is required" }}
+                  rules={{ required: t("descriptionRequired") }}
                   disabled={!!selectedDeduplicationRule?.is_provisioned}
                   render={({ field }) => (
                     <TextInput
@@ -300,7 +296,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700 flex items-center mb-2">
-                  Provider
+                  {t("provider")}
                   <span className="ml-1 relative inline-flex items-center">
                     <span className="group relative flex items-center">
                       <Icon
@@ -308,9 +304,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         className="w-[1em] h-[1em] text-gray-500"
                       />
                       <span className="absolute bottom-full left-full p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
-                        Select the provider for which this deduplication rule
-                        will apply. This determines the source of alerts that
-                        will be processed by this rule.
+                        {t("providerTooltip")}
                       </span>
                     </span>
                   </span>
@@ -318,7 +312,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                 <Controller
                   name="provider_type"
                   control={control}
-                  rules={{ required: "Provider is required" }}
+                  rules={{ required: t("providerRequired") }}
                   render={({ field }) => (
                     <Select
                       {...field}
@@ -334,7 +328,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                             provider.details?.name || provider.id || "main",
                           logoUrl: `/icons/${provider.type}-icon.png`,
                         }))}
-                      placeholder="Select provider"
+                      placeholder={t("selectProvider")}
                       onChange={(selectedOption) => {
                         if (selectedOption) {
                           const [providerType, providerId] =
@@ -376,7 +370,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700 flex items-center mb-2">
-                  Fields to use for fingerprint
+                  {t("fingerprintFields")}
                   <span className="ml-1 relative inline-flex items-center">
                     <span className="group relative flex items-center">
                       <Icon
@@ -384,11 +378,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         className="w-[1em] h-[1em] text-gray-500"
                       />
                       <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
-                        Fingerprint fields are used to identify and group
-                        similar alerts. Choose fields that uniquely identify an
-                        alert type, such as &apos;service&apos;,
-                        &apos;error_type&apos;, or
-                        &apos;affected_component&apos;.
+                        {t("fingerprintFieldsTooltip")}
                       </span>
                     </span>
                   </span>
@@ -397,7 +387,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   name="fingerprint_fields"
                   control={control}
                   rules={{
-                    required: "At least one fingerprint field is required",
+                    required: t("fingerprintFieldsRequired"),
                   }}
                   render={({ field }) => (
                     <Select
@@ -408,7 +398,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         value: fieldName,
                         label: fieldName,
                       }))}
-                      placeholder="Select fingerprint fields"
+                      placeholder={t("selectFingerprintFields")}
                       value={field.value?.map((value: string) => ({
                         value,
                         label: value,
@@ -422,8 +412,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                       }}
                       noOptionsMessage={() =>
                         selectedProviderType
-                          ? "No options"
-                          : "Please choose provider to see available fields"
+                          ? t("noOptions")
+                          : t("chooseProviderFirst")
                       }
                     />
                   )}
@@ -448,7 +438,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     )}
                   />
                   <Text className="text-sm font-medium text-gray-700 flex items-center">
-                    Full deduplication
+                    {t("fullDeduplication")}
                     <span className="ml-1 relative inline-flex items-center">
                       <span className="group relative flex items-center">
                         <Icon
@@ -456,14 +446,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                           className="w-[1em] h-[1em] text-gray-500"
                         />
                         <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
-                          1. Full deduplication: Keep will discard events if
-                          they are the same (excluding the &apos;Ignore
-                          Fields&apos;).
-                          <br />
-                          2. Partial deduplication (default): Uses specified
-                          fields to correlate alerts. E.g., two alerts with same
-                          &apos;service&apos; and &apos;env&apos; fields will be
-                          deduped into one alert.
+                          {t("fullDeduplicationTooltip")}
                         </span>
                       </span>
                     </span>
@@ -473,9 +456,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
 
               {fullDeduplication && (
                 <div>
-                  <Text className="block text-sm font-medium text-gray-700 mb-2">
-                    Ignore fields
-                  </Text>
+                <Text className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("ignoreFields")}
+                </Text>
                   <Controller
                     name="ignore_fields"
                     control={control}
@@ -488,7 +471,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                           value: fieldName,
                           label: fieldName,
                         }))}
-                        placeholder="Select ignore fields"
+                        placeholder={t("selectIgnoreFields")}
                         value={field.value?.map((value: string) => ({
                           value,
                           label: value,
@@ -515,7 +498,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           {errors.root?.serverError && (
             <Callout
               className="mt-4"
-              title="Error while saving rule"
+              title={t("errorSavingRule")}
               color="rose"
             >
               {errors.root.serverError.message}
@@ -530,14 +513,14 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             type="button"
             className="border border-orange-500 text-orange-500"
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             color="orange"
             type="submit"
             disabled={isSubmitting || selectedDeduplicationRule?.is_provisioned}
           >
-            {isSubmitting ? "Saving..." : "Save"}
+            {isSubmitting ? t("saving") : t("save")}
           </Button>
         </div>
       </form>

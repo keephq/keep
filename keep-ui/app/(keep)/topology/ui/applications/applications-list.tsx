@@ -15,6 +15,7 @@ import {
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
 import { EmptyStateCard, showErrorToast } from "@/shared/ui";
 import { PlusIcon, RectangleGroupIcon } from "@heroicons/react/20/solid";
+import { useTranslations } from "next-intl";
 
 type ModalState = {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export function ApplicationsList({
 }: {
   applications?: TopologyApplication[];
 }) {
+  const t = useTranslations("topology.applications");
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications({
       initialData: initialApplications,
@@ -67,7 +69,7 @@ export function ApplicationsList({
       updateApplication(updatedApplication).then(
         () => {},
         (error) => {
-          showErrorToast(error, "Failed to update application");
+          showErrorToast(error, t("failedToUpdateApplication"));
         }
       );
     },
@@ -80,7 +82,7 @@ export function ApplicationsList({
         removeApplication(applicationId);
         setModalState(initialModalState);
       } catch (error) {
-        showErrorToast(error, "Failed to delete application");
+        showErrorToast(error, t("failedToDeleteApplication"));
       }
     },
     [removeApplication]
@@ -91,8 +93,8 @@ export function ApplicationsList({
       <>
         <EmptyStateCard
           icon={RectangleGroupIcon}
-          title="No applications yet"
-          description="Group services that work together into applications for easier management and monitoring"
+          title={t("noApplicationsYet")}
+          description={t("groupServicesDescription")}
         >
           <Button
             variant="primary"
@@ -105,7 +107,7 @@ export function ApplicationsList({
               });
             }}
           >
-            Create Application
+            {t("createApplication")}
           </Button>
         </EmptyStateCard>
       </>
@@ -120,10 +122,9 @@ export function ApplicationsList({
         <>
           <div className="flex w-full items-center justify-between mb-4">
             <div>
-              <Title>Applications</Title>
+              <Title>{t("applications")}</Title>
               <Subtitle>
-                Group services that work together into applications for easier
-                management and monitoring
+                {t("groupServicesDescription")}
               </Subtitle>
             </div>
             <div>
@@ -135,7 +136,7 @@ export function ApplicationsList({
                 }}
                 icon={PlusIcon}
               >
-                Add Application
+                {t("addApplication")}
               </Button>
             </div>
           </div>
@@ -154,14 +155,14 @@ export function ApplicationsList({
                         setSelectedObjectId(application.id);
                       }}
                     >
-                      Show on map
+                      {t("showOnMap")}
                     </Button>
                     <Button
                       variant="secondary"
                       color="orange"
                       onClick={() => handleEditApplication(application)}
                     >
-                      Edit
+                      {t("edit")}
                     </Button>
                   </div>
                 }

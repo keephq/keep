@@ -20,6 +20,7 @@ import { useUsers } from "@/entities/users/model/useUsers";
 import "./multiselect.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { useTranslations } from "next-intl";
 
 interface GroupSidebarProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const GroupsSidebar = ({
   isNewGroup,
   mutateGroups,
 }: GroupSidebarProps) => {
+  const t = useTranslations("settings.groupsSidebar");
   const {
     control,
     handleSubmit,
@@ -89,11 +91,11 @@ const GroupsSidebar = ({
     } catch (error) {
       if (error instanceof KeepApiError) {
         setError("root.serverError", {
-          message: error.message || "Failed to save group",
+          message: error.message || t("failedToSaveGroup"),
         });
       } else {
         setError("root.serverError", {
-          message: "An unexpected error occurred",
+          message: t("unexpectedError"),
         });
       }
     } finally {
@@ -140,7 +142,7 @@ const GroupsSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {isNewGroup ? "Create Group" : "Group Details"}
+                {isNewGroup ? t("createGroup") : t("groupDetails")}
               </Dialog.Title>
               <Button onClick={handleClose} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
@@ -153,12 +155,12 @@ const GroupsSidebar = ({
               <div className="flex-grow">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Group Name
+                    {t("groupName")}
                   </label>
                   <Controller
                     name="name"
                     control={control}
-                    rules={{ required: "Group name is required" }}
+                    rules={{ required: t("groupNameRequired") }}
                     render={({ field }) => (
                       <TextInput
                         {...field}
@@ -172,7 +174,7 @@ const GroupsSidebar = ({
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Members
+                    {t("members")}
                   </label>
                   <Controller
                     name="members"
@@ -195,7 +197,7 @@ const GroupsSidebar = ({
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Roles
+                    {t("roles")}
                   </label>
                   <Controller
                     name="roles"
@@ -220,7 +222,7 @@ const GroupsSidebar = ({
               {errors.root?.serverError && (
                 <Callout
                   className="mt-4"
-                  title="Error while saving group"
+                  title={t("errorSavingGroup")}
                   color="rose"
                 >
                   {errors.root.serverError.message}
@@ -236,7 +238,7 @@ const GroupsSidebar = ({
                   }}
                   className="border border-orange-500 text-orange-500"
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button
                   color="orange"
@@ -244,10 +246,10 @@ const GroupsSidebar = ({
                   disabled={isSubmitting || (isNewGroup ? false : !isDirty)}
                 >
                   {isSubmitting
-                    ? "Saving..."
+                    ? t("saving")
                     : isNewGroup
-                      ? "Create Group"
-                      : "Save"}
+                      ? t("createGroup")
+                      : t("save")}
                 </Button>
               </div>
             </form>

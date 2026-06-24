@@ -17,6 +17,7 @@ import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 import { ReactNode } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { useTranslations } from "next-intl";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -50,6 +51,7 @@ const TogglableLink = ({ children, disabledConfigKey }: TogglableLinkProps) => {
 };
 
 export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
+  const t = useTranslations("nav");
   const isNOCRole = session?.userRole === "noc";
   const { topologyData } = useTopology();
   const { data: tenantConfig, isLoading } = useTenantConfiguration();
@@ -80,7 +82,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             {tenantConfig && (
               <>
                 <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                  NOISE REDUCTION
+                  {t("noiseReduction")}
                 </Subtitle>
                 <IoChevronUp
                   className={clsx(
@@ -109,7 +111,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               icon={IoMdGitMerge}
               testId="deduplication"
             >
-              <Subtitle className="text-xs">Deduplication</Subtitle>
+              <Subtitle className="text-xs">{t("deduplication")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -118,7 +120,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         >
           <li>
             <LinkWithIcon href="/rules" icon={Rules} testId="rules">
-              <Subtitle className="text-xs">Correlations</Subtitle>
+              <Subtitle className="text-xs">{t("correlations")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -127,7 +129,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         >
           <li>
             <LinkWithIcon href="/workflows" icon={Workflows} testId="workflows">
-              <Subtitle className="text-xs">Workflows</Subtitle>
+              <Subtitle className="text-xs">{t("workflows")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -145,7 +147,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               }
               testId="service-topology"
             >
-              <Subtitle className="text-xs">Service Topology</Subtitle>
+              <Subtitle className="text-xs">{t("serviceTopology")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -154,7 +156,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         >
           <li>
             <LinkWithIcon href="/mapping" icon={Mapping} testId="mapping">
-              <Subtitle className="text-xs">Mapping</Subtitle>
+              <Subtitle className="text-xs">{t("mapping")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -167,7 +169,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               icon={ExportIcon}
               testId="extraction"
             >
-              <Subtitle className="text-xs">Extraction</Subtitle>
+              <Subtitle className="text-xs">{t("extraction")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>
@@ -180,7 +182,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
               icon={FaVolumeMute}
               testId="maintenance"
             >
-              <Subtitle className="text-xs">Maintenance Windows</Subtitle>
+              <Subtitle className="text-xs">{t("maintenanceWindows")}</Subtitle>
             </LinkWithIcon>
           </li>
         </TogglableLink>

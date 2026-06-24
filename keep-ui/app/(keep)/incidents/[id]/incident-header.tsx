@@ -10,6 +10,7 @@ import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import { CreateOrUpdateIncidentForm } from "features/incidents/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
@@ -33,6 +34,7 @@ export function IncidentHeader({
   const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
   const incident = fetchedIncident || initialIncidentData;
   const { data: config } = useConfig();
+  const t = useTranslations("incidents");
 
   const router = useRouter();
   const pathname = usePathname();
@@ -68,9 +70,9 @@ export function IncidentHeader({
         <div className="flex flex-row justify-between items-end mb-2.5">
           <div>
             <Subtitle className="text-sm">
-              <Link href="/incidents">All Incidents</Link>{" "}
+              <Link href="/incidents">{t("allIncidents")}</Link>{" "}
               <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
-              {incident.is_candidate ? "Possible " : ""}
+              {incident.is_candidate ? t("possible") + " " : ""}
               {getIncidentName(incident)}
               {pathNameCapitalized && (
                 <>
@@ -100,7 +102,7 @@ export function IncidentHeader({
                   handleRunWorkflow();
                 }}
               >
-                Run Workflow
+                {t("runWorkflow")}
               </Button>
               <Button
                 color="orange"
@@ -114,7 +116,7 @@ export function IncidentHeader({
                   handleStartEdit();
                 }}
               >
-                Edit Incident
+                {t("editIncident")}
               </Button>
             </div>
           )}
@@ -126,9 +128,9 @@ export function IncidentHeader({
                 color="blue"
                 size="xs"
                 icon={TbTopologyStar3}
-                tooltip="Created by topology correlation"
+                tooltip={t("createdByTopology")}
               >
-                Topology
+                {t("topology")}
               </Badge>
             )}
             {incident.rule_is_deleted && (
@@ -136,9 +138,9 @@ export function IncidentHeader({
                 color="orange"
                 size="xs"
                 icon={TbInfoCircle}
-                tooltip={`Created by deleted rule ${incident.rule_name}`}
+                tooltip={`${t("createdByDeletedRule")} ${incident.rule_name}`}
               >
-                Orphaned
+                {t("orphaned")}
               </Badge>
             )}
           </div>
@@ -147,9 +149,9 @@ export function IncidentHeader({
               <Button
                 color="orange"
                 size="xs"
-                tooltip="Confirm incident"
+                tooltip={t("confirmIncident")}
                 variant="secondary"
-                title="Confirm"
+                title={t("confirmIncident")}
                 icon={MdDone}
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
@@ -157,13 +159,13 @@ export function IncidentHeader({
                   confirmPredictedIncident(incident.id!);
                 }}
               >
-                Confirm
+                {t("confirmIncident")}
               </Button>
               <Button
                 color="red"
                 size="xs"
                 variant="secondary"
-                tooltip={"Discard"}
+                tooltip={t("discard")}
                 icon={MdBlock}
                 onClick={async (e: React.MouseEvent) => {
                   e.preventDefault();
@@ -183,7 +185,7 @@ export function IncidentHeader({
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         className="w-[600px]"
-        title="Edit Incident"
+        title={t("editIncident")}
       >
         <CreateOrUpdateIncidentForm
           incidentToEdit={incident}

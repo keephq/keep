@@ -71,6 +71,7 @@ import {
   TrashIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
+import { useTranslations } from "next-intl";
 
 type HealthResults = {
   spammy: any[];
@@ -144,6 +145,7 @@ const ProviderForm = ({
   isHealthCheck,
   mutate,
 }: ProviderFormProps) => {
+  const t = useTranslations("providers.form");
   console.log("Loading the ProviderForm component");
   const searchParams = useSearchParams();
   const [formValues, setFormValues] = useState<ProviderFormData>(() =>
@@ -186,14 +188,14 @@ const ProviderForm = ({
         .post(`/providers/install/webhook/${provider.type}/${provider.id}`)
         .catch((error) => Promise.reject({ data: error })),
       {
-        pending: "Webhook installing 🤞",
-        success: `${provider.type} webhook installed 👌`,
+        pending: t("webhookInstalling"),
+        success: t("webhookInstalled", { type: provider.type }),
         error: {
           render({ data }) {
             // When the promise reject, data will contains the error
-            return `Webhook installation failed 😢 Error: ${
-              (data as any).data.responseJson.detail
-            }`;
+            return t("webhookInstallationFailed", {
+              error: (data as any).data.responseJson.detail,
+            });
           },
         },
       },
@@ -251,7 +253,7 @@ const ProviderForm = ({
   }
 
   async function deleteProvider() {
-    if (confirm("Are you sure you want to delete this provider?")) {
+    if (confirm(t("confirmDeleteProvider"))) {
       api
         .delete(`/providers/${provider.type}/${provider.id}`)
         .then(() => {
@@ -259,7 +261,7 @@ const ProviderForm = ({
           closeModal();
         })
         .catch((error: any) => {
-          showErrorToast(error, `Failed to delete ${provider.type} 😢`);
+          showErrorToast(error, t("failedToDeleteProvider", { type: provider.type }));
         });
     }
   }
@@ -370,7 +372,7 @@ const ProviderForm = ({
 
   async function handleSubmitError(apiError: unknown) {
     if (apiError instanceof KeepApiReadOnlyError) {
-      setFormErrors("You're in read-only mode");
+      setFormErrors(t("readOnlyMode"));
       return;
     }
     if (apiError instanceof KeepApiError === false) return;
@@ -380,12 +382,15 @@ const ProviderForm = ({
       "detail" in data ? data.detail : "message" in data ? data.message : data;
     if (status === 409) {
       setFormErrors(
-        `Provider with name ${formValues.provider_name} already exists`
+        t("nameExists", { name: String(formValues.provider_name) })
       );
     } else if (status === 412) {
       setProviderValidatedScopes(error);
       setFormErrors(
-        `${provider.type} scopes are invalid: ${JSON.stringify(error, null, 4)}`
+        t("scopesInvalid", {
+          type: provider.type,
+          error: JSON.stringify(error, null, 4),
+        })
       );
     } else {
       setApiError(
@@ -397,11 +402,11 @@ const ProviderForm = ({
   function setApiError(error: string) {
     if (error.includes("SyntaxError")) {
       setFormErrors(
-        "Bad response from API: Check the backend logs for more details"
+        t("badApiResponse")
       );
     } else if (error.includes("Failed to fetch")) {
       setFormErrors(
-        "Failed to connect to API: Check provider settings and your internet connection"
+        t("failedToConnectApi")
       );
     } else {
       setFormErrors(error);
@@ -418,7 +423,7 @@ const ProviderForm = ({
           validatedScopes: { [key: string]: boolean | string };
         }) => {
           setIsLoading(false);
-          toast.success("Updated provider successfully", {
+          toast.success(t("updatedProviderSuccessfully"), {
             position: "top-left",
           });
           setProviderValidatedScopes(responseJson.validatedScopes);
@@ -426,7 +431,7 @@ const ProviderForm = ({
         }
       )
       .catch((error) => {
-        showErrorToast("Failed to update provider");
+        showErrorToast(t("failedToUpdateProvider"));
         handleSubmitError(error);
         setIsLoading(false);
       });
@@ -475,7 +480,7 @@ const ProviderForm = ({
               icon={ArrowTopRightOnSquareIcon}
               onClick={handleOauth}
             >
-              Install with OAuth2
+              {t("installWithOAuth2")}
             </Button>
             <Divider />
           </>
@@ -529,8 +534,8 @@ const ProviderForm = ({
 
       {/* Render optional fields in a card */}
       {Object.keys(optionalConfigs).length > 0 && (
-        <Accordion className="mt-4" defaultOpen={true}>
-          <AccordionHeader>Provider Optional Settings</AccordionHeader>
+          <Accordion className="mt-4" defaultOpen={true}>
+          <AccordionHeader>{t("providerOptionalSettings")}</AccordionHeader>
           <AccordionBody>
             <Card>
               {Object.entries(optionalConfigs).map(([field, config]) => (
@@ -575,7 +580,7 @@ const ProviderForm = ({
                   disabled={isLocalhost || provider.webhook_required}
                 />
                 <label htmlFor="install_webhook" className="flex items-center">
-                  <Text className="capitalize">Install Webhook</Text>
+                  <Text className="capitalize">{t("installWebhook")}</Text>
                   <Icon
                     icon={QuestionMarkCircleIcon}
                     variant="simple"
@@ -598,7 +603,7 @@ const ProviderForm = ({
                       htmlFor="pulling_enabled"
                       className="flex items-center"
                     >
-                      <Text className="capitalize">Pulling Enabled</Text>
+                      <Text className="capitalize">{t("pullingEnabled")}</Text>
                       <Icon
                         icon={QuestionMarkCircleIcon}
                         variant="simple"
@@ -656,7 +661,7 @@ const ProviderForm = ({
                   checked={Boolean(formValues["pulling_enabled"])}
                 />
                 <label htmlFor="pulling_enabled" className="flex items-center">
-                  <Text className="capitalize">Pulling Enabled</Text>
+                    <Text className="capitalize">{t("pullingEnabled")}</Text>
                   <Icon
                     icon={QuestionMarkCircleIcon}
                     variant="simple"
@@ -708,7 +713,7 @@ const ProviderForm = ({
                   : "This uses server saved credentials. If needed, please use the `Update` button first"
               }
             >
-              Install/Update Webhook
+              {t("installUpdateWebhook")}
             </Button>
           </>
         )}
@@ -726,10 +731,10 @@ const ProviderForm = ({
       <div className="flex-grow p-5">
         <div className="flex flex-row w-full">
           <div className="flex-grow flex gap-1">
-            <Title>Connect to {provider.display_name}</Title>
+            <Title>{t("connectTo", { name: provider.display_name })}</Title>
             {provider.provisioned && (
               <Badge color="orange" className="ml-2">
-                Provisioned
+                {t("provisioned")}
               </Badge>
             )}
           </div>
@@ -749,7 +754,7 @@ const ProviderForm = ({
           <Subtitle>Id: {provider.id}</Subtitle>
         )}
         <Subtitle>
-          Need help? Check out the{" "}
+          {t("needHelp")}{" "}
           <Link
             className="text-orange-600 underline"
             href={`${
@@ -757,20 +762,20 @@ const ProviderForm = ({
             }/providers/documentation/${provider.docs_slug ?? provider.type}-provider`}
             target="_blank"
           >
-            {`Provider Documentation`}
+            {t("providerDocumentation")}
           </Link>
-          , or ask{" "}
+          , {t("orAsk")}{" "}
           <Link
             className="text-orange-600 underline"
             href={`https://getkeep.slack.com/join/shared_invite/zt-2leydxr6s-XmuQtBttgxZ0GOv8MJu6rQ#/shared-invite/email`}
             target="_blank"
           >
-            Slack Community
+            {t("slackCommunity")}
           </Link>
         </Subtitle>
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
-            Provider last pull time:{" "}
+            {t("providerLastPullTime")}{" "}
             <TimeAgo date={provider.last_pull_time + "Z"} />
           </Subtitle>
         )}
@@ -784,7 +789,7 @@ const ProviderForm = ({
               className="w-full"
             >
               <Text>
-                Editing provisioned providers is not possible from UI.
+                {t("editingProvisionedNotPossible")}
               </Text>
             </Callout>
           </div>
@@ -850,8 +855,8 @@ const ProviderForm = ({
         {installedProvidersMode ? (
           <TabGroup className="mt-4">
             <TabList>
-              <Tab>Configuration</Tab>
-              <Tab>Logs</Tab>
+              <Tab>{t("configuration")}</Tab>
+              <Tab>{t("logs")}</Tab>
             </TabList>
             <TabPanels>
               <TabPanel>
@@ -879,7 +884,7 @@ const ProviderForm = ({
             variant="secondary"
             icon={TrashIcon}
           >
-            Disconnect
+            {t("disconnect")}
           </Button>
         ) : (
           <div></div>
@@ -892,7 +897,7 @@ const ProviderForm = ({
             className="mr-2.5"
             disabled={isLoading}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           {inInstalledMode && (
             <Button
@@ -903,7 +908,7 @@ const ProviderForm = ({
               disabled={provider.provisioned}
               variant="primary"
             >
-              Update
+              {t("update")}
             </Button>
           )}
           {!inInstalledMode && (
@@ -913,7 +918,7 @@ const ProviderForm = ({
               color="orange"
               icon={LightningBoltIcon}
             >
-              {isHealthCheck ? `Check health` : `Connect`}
+              {isHealthCheck ? t("checkHealth") : t("connect")}
             </Button>
           )}
         </div>

@@ -32,69 +32,14 @@ import { useConfig } from "utils/hooks/useConfig";
 import { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
-
-const NAVIGATION_OPTIONS = [
-  {
-    icon: VscDebugDisconnect,
-    label: "Go to the providers page",
-    shortcut: ["p"],
-    navigate: "/providers",
-  },
-  {
-    icon: AiOutlineAlert,
-    label: "Go to alert console",
-    shortcut: ["g"],
-    navigate: "/alerts/feed",
-  },
-  {
-    icon: AiOutlineGroup,
-    label: "Go to alert quality",
-    shortcut: ["q"],
-    navigate: "/alerts/quality",
-  },
-  {
-    icon: MdOutlineEngineering,
-    label: "Go to alert groups",
-    shortcut: ["g"],
-    navigate: "/rules",
-  },
-  {
-    icon: LuWorkflow,
-    label: "Go to the workflows page",
-    shortcut: ["wf"],
-    navigate: "/workflows",
-  },
-  {
-    icon: UserGroupIcon,
-    label: "Go to users management",
-    shortcut: ["u"],
-    navigate: "/settings?selectedTab=users",
-  },
-  {
-    icon: GlobeAltIcon,
-    label: "Go to generic webhook",
-    shortcut: ["w"],
-    navigate: "/settings?selectedTab=webhook",
-  },
-  {
-    icon: EnvelopeIcon,
-    label: "Go to SMTP settings",
-    shortcut: ["s"],
-    navigate: "/settings?selectedTab=smtp",
-  },
-  {
-    icon: KeyIcon,
-    label: "Go to API key",
-    shortcut: ["a"],
-    navigate: "/settings?selectedTab=users&userSubTab=api-keys",
-  },
-];
+import { useTranslations } from "next-intl";
 
 interface SearchProps {
   session: Session | null;
 }
 
 export const Search = ({ session }: SearchProps) => {
+  const t = useTranslations("nav");
   const [query, setQuery] = useState<string>("");
   const [, setSelectedOption] = useState<string | null>(null);
   const router = useRouter();
@@ -108,22 +53,79 @@ export const Search = ({ session }: SearchProps) => {
     console.log("Search component session:", session);
   }, [session]);
 
+  const NAVIGATION_OPTIONS = [
+    {
+      icon: VscDebugDisconnect,
+      label: t("goToProviders"),
+      shortcut: ["p"],
+      navigate: "/providers",
+    },
+    {
+      icon: AiOutlineAlert,
+      label: t("goToAlertConsole"),
+      shortcut: ["g"],
+      navigate: "/alerts/feed",
+    },
+    {
+      icon: AiOutlineGroup,
+      label: t("goToAlertQuality"),
+      shortcut: ["q"],
+      navigate: "/alerts/quality",
+    },
+    {
+      icon: MdOutlineEngineering,
+      label: t("goToAlertGroups"),
+      shortcut: ["g"],
+      navigate: "/rules",
+    },
+    {
+      icon: LuWorkflow,
+      label: t("goToWorkflows"),
+      shortcut: ["wf"],
+      navigate: "/workflows",
+    },
+    {
+      icon: UserGroupIcon,
+      label: t("goToUsers"),
+      shortcut: ["u"],
+      navigate: "/settings?selectedTab=users",
+    },
+    {
+      icon: GlobeAltIcon,
+      label: t("goToWebhook"),
+      shortcut: ["w"],
+      navigate: "/settings?selectedTab=webhook",
+    },
+    {
+      icon: EnvelopeIcon,
+      label: t("goToSmtp"),
+      shortcut: ["s"],
+      navigate: "/settings?selectedTab=smtp",
+    },
+    {
+      icon: KeyIcon,
+      label: t("goToApiKey"),
+      shortcut: ["a"],
+      navigate: "/settings?selectedTab=users&userSubTab=api-keys",
+    },
+  ];
+
   const EXTERNAL_OPTIONS = [
     {
       icon: FileTextIcon,
-      label: "Keep Docs",
+      label: t("keepDocs"),
       shortcut: ["⇧", "D"],
       navigate: docsUrl,
     },
     {
       icon: GitHubLogoIcon,
-      label: "Keep Source code",
+      label: t("keepSource"),
       shortcut: ["⇧", "C"],
       navigate: "https://github.com/keephq/keep",
     },
     {
       icon: TwitterLogoIcon,
-      label: "Keep Twitter",
+      label: t("keepTwitter"),
       shortcut: ["⇧", "T"],
       navigate: "https://twitter.com/keepalerting",
     },
@@ -200,7 +202,7 @@ export const Search = ({ session }: SearchProps) => {
       return (
         <ListItem className="flex flex-col items-center justify-center cursor-default select-none px-4 py-2 text-gray-700 h-72">
           <Icon color="orange" size="xl" icon={MdOutlineSearchOff} />
-          Nothing found.
+          {t("nothingFound")}
         </ListItem>
       );
     }
@@ -248,7 +250,7 @@ export const Search = ({ session }: SearchProps) => {
       <ListItem className="flex flex-col">
         <List>
           <ListItem className="pl-2">
-            <Subtitle>Navigate</Subtitle>
+            <Subtitle>{t("navigate")}</Subtitle>
           </ListItem>
           {NAVIGATION_OPTIONS.map((option) => (
             <ComboboxOption
@@ -273,7 +275,7 @@ export const Search = ({ session }: SearchProps) => {
         </List>
         <List>
           <ListItem className="pl-2">
-            <Subtitle>External Sources</Subtitle>
+            <Subtitle>{t("externalSources")}</Subtitle>
           </ListItem>
           {EXTERNAL_OPTIONS.map((option) => (
             <ComboboxOption
@@ -309,14 +311,14 @@ export const Search = ({ session }: SearchProps) => {
     );
   };
 
-  const [placeholderText, setPlaceholderText] = useState("Search");
+  const [placeholderText, setPlaceholderText] = useState(t("search"));
 
   // Using effect to avoid mismatch on hydration. TODO: context provider for user agent
   useEffect(function updatePlaceholderText() {
     if (!isMac()) {
       return;
     }
-    setPlaceholderText("Search (or ⌘K)");
+    setPlaceholderText(t("searchMac"));
   }, []);
 
   // Check if tenant switching is available - with null/undefined check safety
@@ -359,7 +361,7 @@ export const Search = ({ session }: SearchProps) => {
                 <Popover.Panel className="absolute z-10 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                   <div className="py-1 divide-y divide-gray-200">
                     <div className="px-3 py-2 text-xs font-medium text-gray-500">
-                      Switch Tenant
+                      {t("switchTenant")}
                     </div>
                     {session.user.tenantIds?.map((tenant) => (
                       <button

@@ -73,6 +73,7 @@ import { downloadFileFromString } from "@/shared/lib/downloadFileFromString";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { TbTopologyRing } from "react-icons/tb";
 import { useAlerts } from "@/entities/alerts/model";
+import { useTranslations } from "next-intl";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -106,6 +107,7 @@ export function TopologyMap({
   isVisible = true,
   standalone = false,
 }: TopologyMapProps) {
+  const t = useTranslations("topology");
   const [initiallyFitted, setInitiallyFitted] = useState(false);
 
   const {
@@ -182,17 +184,17 @@ export function TopologyMap({
         method: "POST",
         body: formData,
       });
-      showSuccessToast("Topology imported Successfully!");
+      showSuccessToast(t("topologyImportedSuccessfully"));
       mutateApplications();
       mutateTopologyData();
     } catch (error) {
-      showErrorToast(error, "Error uploading file");
+      showErrorToast(error, t("errorUploadingFile"));
     }
   };
 
   const handleImportTopology = () => {
     const confirm = window.confirm(
-      "Current topology will be completely replaced. Do you want to continue?"
+      t("confirmReplaceTopology")
     );
     if (confirm) {
       document.getElementById("fileInput")?.click();
@@ -201,12 +203,12 @@ export function TopologyMap({
 
   const menuItems: MenuItem[] = [
     {
-      label: "Import",
+      label: t("import"),
       icon: ArrowUpTrayIcon,
       onClick: handleImportTopology,
     },
     {
-      label: "Export",
+      label: t("export"),
       icon: ArrowDownTrayIcon,
       onClick: async () => {
         try {
@@ -221,7 +223,7 @@ export function TopologyMap({
             contentType: "application/x-yaml",
           });
         } catch (error) {
-          showErrorToast(error, "Error exporting topology");
+          showErrorToast(error, t("errorExportingTopology"));
         }
       },
     },
@@ -282,7 +284,7 @@ export function TopologyMap({
           setEdges((eds) => eds.filter((e) => e.id !== edgeIdToRevert));
           showErrorToast(
             error,
-            `Error while adding connection from ${params.source} to ${params.target}: ${error}`
+            t("addConnectionError", { source: params.source, target: params.target, error: String(error) })
           );
         }
       }
@@ -324,7 +326,7 @@ export function TopologyMap({
           setEdges((eds) => addEdge(oldEdge, eds));
           showErrorToast(
             error,
-            `Error while adding (re)connection from ${newConnection.source} to ${newConnection.target}`
+            t("errorReconnecting", { source: newConnection.source, target: newConnection.target })
           );
         }
       }
@@ -363,7 +365,7 @@ export function TopologyMap({
           setEdges((eds) => addEdge(edge, eds));
           showErrorToast(
             error,
-            `Failed to delete connection from ${edge.source} to ${edge.target}`
+            t("failedToDeleteConnection", { source: edge.source, target: edge.target })
           );
         }
       }
@@ -581,13 +583,13 @@ export function TopologyMap({
             providerIds={providerIds}
             services={services}
             environment={environment}
-            placeholder="Search for a service or application"
+            placeholder={t("searchServiceOrApplication")}
             onSelect={handleSelectFromSearch}
           />
           {/* Using z-index to overflow the manage selection component */}
           <div className="basis-1/3 relative z-30">
             <MultiSelect
-              placeholder="Show application"
+              placeholder={t("showApplication")}
               value={selectedApplicationIds}
               onValueChange={setSelectedApplicationIds}
               disabled={!applications.length}
@@ -607,7 +609,7 @@ export function TopologyMap({
               size="md"
               icon={PlusIcon}
             >
-              Add Node
+              {t("addNode")}
             </Button>
             <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
               {menuItems.map((item, index) => (
@@ -685,8 +687,8 @@ export function TopologyMap({
                     <EmptyStateCard
                       className="mb-20 max-w-3xl min-h-72"
                       icon={TbTopologyRing}
-                      title="No Topology Yet"
-                      description="Start by connecting providers that support topology, import topology data or create a new topology manually"
+                      title={t("noTopologyYet")}
+                      description={t("noTopologyDescription")}
                     >
                       <div className="flex gap-2">
                         <Button
@@ -695,7 +697,7 @@ export function TopologyMap({
                           size="md"
                           onClick={handleImportTopology}
                         >
-                          Import
+                          {t("import")}
                         </Button>
                         <Button
                           color="orange"
@@ -705,7 +707,7 @@ export function TopologyMap({
                             router.push("/providers?labels=topology")
                           }
                         >
-                          Connect Providers
+                          {t("connectProviders")}
                         </Button>
                       </div>
                     </EmptyStateCard>
