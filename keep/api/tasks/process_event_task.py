@@ -21,7 +21,7 @@ from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
-from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY
+from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY, fingerprints_for_poll_payload
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     enrich_alerts_with_incidents,
@@ -589,10 +589,19 @@ def __handle_formatted_events(
         # Tell the client to poll alerts
         if pusher_cache.should_notify(tenant_id, "poll-alerts"):
             try:
+                alert_fingerprints = [
+                    event.fingerprint
+                    for event in enriched_formatted_events
+                    if event.fingerprint
+                ]
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {
+                        "fingerprints": fingerprints_for_poll_payload(
+                            alert_fingerprints
+                        )
+                    },
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
