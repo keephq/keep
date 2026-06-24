@@ -4,6 +4,7 @@ import { Button } from "@tremor/react";
 import { EmptyStateCard } from "@/shared/ui/EmptyState/EmptyStateCard";
 import { MdFlashOn } from "react-icons/md";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface Props {
   onClearFilters: () => void;
@@ -12,24 +13,26 @@ interface Props {
 export const IncidentsNotFoundForFiltersPlaceholder = ({
   onClearFilters,
 }: Props) => {
+  const t = useTranslations("incidents");
   return (
     <EmptyStateCard
       icon={MdFlashOn}
-      title="No Incidents Matching the Filter"
-      description="Clear filters to see all incidents"
+      title={t("noIncidentsMatchingFilter")}
+      description={t("clearFiltersDesc")}
     >
-      <Button onClick={() => onClearFilters()}>Clear filters</Button>
+      <Button onClick={() => onClearFilters()}>{t("clearFilters")}</Button>
     </EmptyStateCard>
   );
 };
 
 export const IncidentsNotFoundPlaceholder = () => {
+  const t = useTranslations("incidents");
   const router = useRouter();
   return (
     <EmptyStateCard
       icon={MdFlashOn}
-      title="No Incidents Found"
-      description="No active incidents found"
+      title={t("noIncidentsFound")}
+      description={t("noActiveIncidents")}
     >
       <div className="flex gap-2">
         <Button
@@ -40,7 +43,7 @@ export const IncidentsNotFoundPlaceholder = () => {
             router.push(`/alerts/feed`);
           }}
         >
-          Correlate Alerts Manually
+          {t("correlateManually")}
         </Button>
         <Button
           color="orange"
@@ -50,7 +53,7 @@ export const IncidentsNotFoundPlaceholder = () => {
             router.push(`/alerts/feed?createIncidentsFromLastAlerts=50`);
           }}
         >
-          Try AI Correlation
+          {t("tryAiCorrelation")}
         </Button>
       </div>
     </EmptyStateCard>

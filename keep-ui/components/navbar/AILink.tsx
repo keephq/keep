@@ -6,13 +6,15 @@ import { RiSparkling2Line } from "react-icons/ri";
 
 import { useEffect, useState } from "react";
 import { usePollAILogs } from "utils/hooks/useAI";
+import { useTranslations } from "next-intl";
 
 export const AILink = () => {
+  const t = useTranslations("nav");
   const [text, setText] = useState("");
-  const [newText, setNewText] = useState("AI Plugins");
+  const [newText, setNewText] = useState(t("aiPlugins"));
 
   const mutateAILogs = (logs: any) => {
-    setNewText("AI iterated 🎉");
+    setNewText(t("aiIterated"));
   };
 
   usePollAILogs(mutateAILogs);

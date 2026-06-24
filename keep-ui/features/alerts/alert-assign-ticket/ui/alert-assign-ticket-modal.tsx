@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import React from "react";
 import Select, { components } from "react-select";
 import { Button, TextInput, Text, Icon } from "@tremor/react";
@@ -39,6 +42,7 @@ export const AlertAssignTicketModal = ({
   ticketingProviders,
   alert,
 }: AlertAssignTicketModalProps) => {
+  const t = useTranslations("alerts.assignTicket");
   const api = useApi();
   const {
     handleSubmit,
@@ -86,7 +90,7 @@ export const AlertAssignTicketModal = ({
     ...providerOptions,
     {
       value: "add_provider",
-      label: "Add another ticketing provider",
+      label: t("addAnotherTicketingProvider"),
       icon: "plus",
       isAddProvider: true,
       id: "add_provider",
@@ -156,7 +160,7 @@ export const AlertAssignTicketModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title="Assign Ticket"
+      title={t("assignTicket")}
       beforeTitle={alert?.name}
       className="w-[400px]"
     >
@@ -166,18 +170,18 @@ export const AlertAssignTicketModal = ({
             <div className="mt-4">
               <div className="flex flex-row items-center mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Ticket Provider
+                  {t("ticketProvider")}
                 </label>
                 <Icon
                   icon={QuestionMarkCircleIcon}
-                  tooltip="Select a Ticketing provider from the list below, Keep will use the select provider and Ticket URL to enrich your alert."
+                  tooltip={t("ticketProviderTooltip")}
                   className="w-2 h-2 ml-2 z-[60]"
                 />
               </div>
               <Controller
                 name="provider"
                 control={control}
-                rules={{ required: "Provider is required" }}
+                rules={{ required: t("providerRequired") }}
                 render={({ field }) => (
                   // FIX: Select prevent modal from closing on Escape key
                   <Select
@@ -194,16 +198,16 @@ export const AlertAssignTicketModal = ({
             </div>
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700">
-                Ticket URL
+                {t("ticketUrl")}
               </label>
               <Controller
                 name="ticket_url"
                 control={control}
                 rules={{
-                  required: "URL is required",
+                  required: t("urlRequired"),
                   pattern: {
                     value: /^(https?|http):\/\/[^\s/$.?#].[^\s]*$/i,
-                    message: "Invalid URL format",
+                    message: t("invalidUrlFormat"),
                   },
                 }}
                 render={({ field }) => (
@@ -211,7 +215,7 @@ export const AlertAssignTicketModal = ({
                     <TextInput
                       {...field}
                       className="w-full mt-1"
-                      placeholder="Ticket URL"
+                      placeholder={t("ticketUrlPlaceholder")}
                     />
                     {errors.ticket_url && (
                       <span className="text-red-500">
@@ -228,7 +232,7 @@ export const AlertAssignTicketModal = ({
                 variant="secondary"
                 color="orange"
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 color="orange"
@@ -236,15 +240,14 @@ export const AlertAssignTicketModal = ({
                 type="submit"
                 disabled={isSubmitting}
               >
-                Assign Ticket
+                {t("assignTicket")}
               </Button>
             </div>
           </form>
         ) : (
           <div className="text-center mt-4">
             <Text className="text-gray-700 text-sm">
-              Please connect at least one ticketing provider to use this
-              feature.
+              {t("connectTicketingProviderMessage")}
             </Text>
             <Button
               onClick={() =>
@@ -253,7 +256,7 @@ export const AlertAssignTicketModal = ({
               color="orange"
               className="mt-4 mr-4"
             >
-              <Text>Connect Ticketing Provider</Text>
+              <Text>{t("connectTicketingProvider")}</Text>
             </Button>
             <Button
               onClick={handleModalClose}
@@ -261,7 +264,7 @@ export const AlertAssignTicketModal = ({
               variant="secondary"
               className="mt-4 border border-orange-500 text-orange-500"
             >
-              Close
+              {t("close")}
             </Button>
           </div>
         )}

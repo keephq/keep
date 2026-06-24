@@ -1,5 +1,6 @@
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
 import { Title } from "@tremor/react";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 
 interface WorkflowYamlEditorHeaderProps {
@@ -17,11 +18,12 @@ export function WorkflowYamlEditorHeader({
   lastDeployedAt,
   children,
 }: WorkflowYamlEditorHeaderProps) {
+  const t = useTranslations("workflows.editor");
   return (
     <div className="flex items-baseline justify-between p-2 border-b border-gray-200">
       <div className="flex items-center gap-2">
         <Title className={clsx(workflowId ? "mx-2" : "mx-0")}>
-          {workflowId ? "Edit" : "New"} Workflow
+          {workflowId ? t("editWorkflow") : t("newWorkflow")}
         </Title>
         <WorkflowSyncStatus
           workflowId={workflowId}

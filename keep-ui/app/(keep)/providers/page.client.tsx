@@ -9,6 +9,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { showErrorToast } from "@/shared/ui";
 import { Link } from "@/components/ui";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useTranslations } from "next-intl";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -117,6 +118,7 @@ export default function ProvidersPage({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  const t = useTranslations("providers");
   const {
     providers,
     installedProviders,
@@ -207,27 +209,26 @@ export default function ProvidersPage({
       {isFilteringActive && (
         <div className="mb-4">
           <ProvidersTiles
-            title="Available Providers"
+            title={t("availableProviders")}
             providers={filteredProviders}
             isLocalhost={isLocalhost}
             mutate={mutate}
           />
           {displayableProviders.length > 0 && (
             <p className="text-m text-gray-500">
-              {displayableProviders.length} provider
-              {displayableProviders.length > 1 ? "s" : ""} found
+              {t("providersFound", { count: displayableProviders.length })}
             </p>
           )}
           {displayableProviders.length === 0 && (
             <p className="text-m text-gray-500">
-              No providers found matching your filters.
+              {t("noProvidersFound")}
             </p>
           )}
         </div>
       )}
       {installedProviders.length > 0 && (
         <ProvidersTiles
-          title="Installed Providers"
+          title={t("installedProviders")}
           providers={installedProviders}
           installedProvidersMode={true}
           mutate={mutate}
@@ -235,7 +236,7 @@ export default function ProvidersPage({
       )}
       {linkedProviders?.length > 0 && (
         <ProvidersTiles
-          title="Linked Providers"
+          title={t("linkedProviders")}
           providers={linkedProviders}
           linkedProvidersMode={true}
           isLocalhost={isLocalhost}
@@ -244,7 +245,7 @@ export default function ProvidersPage({
       )}
       {!isFilteringActive && (
         <ProvidersTiles
-          title="Available Providers"
+          title={t("availableProviders")}
           providers={filteredProviders}
           isLocalhost={isLocalhost}
           mutate={mutate}

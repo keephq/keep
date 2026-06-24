@@ -3,8 +3,10 @@ import { MultiSelect, MultiSelectItem } from "@tremor/react";
 import { TagIcon } from "@heroicons/react/20/solid";
 import { useFilterContext, PROVIDER_LABELS } from "../../filter-context";
 import type { TProviderLabels } from "@/shared/api/providers";
+import { useTranslations } from "next-intl";
 
 export const ProvidersFilterByLabel: FC = (props) => {
+  const t = useTranslations("providers");
   const { setProvidersSelectedTags, providersSelectedTags } =
     useFilterContext();
 
@@ -18,7 +20,7 @@ export const ProvidersFilterByLabel: FC = (props) => {
     <MultiSelect
       onValueChange={headerSelect}
       value={providersSelectedTags}
-      placeholder="All Labels"
+      placeholder={t("allLabels")}
       className="w-64 ml-2.5"
       icon={TagIcon}
     >

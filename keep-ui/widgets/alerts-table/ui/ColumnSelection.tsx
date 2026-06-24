@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import React, { FormEvent, useState } from "react";
 import { Table } from "@tanstack/table-core";
 import { Button, TextInput } from "@tremor/react";
@@ -19,6 +22,7 @@ export default function ColumnSelection({
   presetId,
   onClose,
 }: AlertColumnsSelectProps) {
+  const t = useTranslations("alerts.columnSelection");
   const tableColumns = table.getAllColumns();
 
   // Use the unified column state hook - it will automatically determine
@@ -183,16 +187,16 @@ export default function ColumnSelection({
     <form onSubmit={onMultiSelectChange} className="flex flex-col h-full">
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-400 text-sm">Set table fields</span>
+          <span className="text-gray-400 text-sm">{t("setTableFields")}</span>
           {useBackend && (
             <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-              Synced across devices
+              {t("syncedAcrossDevices")}
             </span>
           )}
         </div>
         <TextInput
           icon={FiSearch}
-          placeholder="Search fields..."
+          placeholder={t("searchFields")}
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="mb-3"
@@ -201,12 +205,12 @@ export default function ColumnSelection({
           {isLoading && useBackend ? (
             <div className="flex items-center justify-center py-8 text-gray-400">
               <span data-testid="columns-loading">
-                Loading column configuration...
+                {t("loadingColumnConfig")}
               </span>
             </div>
           ) : isSearching ? (
             <div className="flex items-center justify-center py-8 text-gray-400">
-              <span data-testid="columns-searching">Searching...</span>
+              <span data-testid="columns-searching">{t("searching")}</span>
             </div>
           ) : (
             <ul
@@ -237,7 +241,7 @@ export default function ColumnSelection({
                   className="text-gray-400 p-2"
                   data-testid="no-columns-found"
                 >
-                  No columns found matching &ldquo;{searchTerm}&rdquo;
+                  {t("noColumnsFound", { searchTerm: searchTerm })}
                 </li>
               )}
             </ul>
@@ -251,7 +255,7 @@ export default function ColumnSelection({
         loading={useBackend && isLoading}
         disabled={useBackend && isLoading}
       >
-        {useBackend && isLoading ? "Saving..." : "Save changes"}
+        {useBackend && isLoading ? t("saving") : t("saveChanges")}
       </Button>
     </form>
   );

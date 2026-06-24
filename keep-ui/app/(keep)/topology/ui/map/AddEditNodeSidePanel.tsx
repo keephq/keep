@@ -5,6 +5,7 @@ import React, { useState, ChangeEvent } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
 import { TopologyService } from "../../model";
+import { useTranslations } from "next-intl";
 
 interface AddNodeSidePanelProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export function AddEditNodeSidePanel({
   editData,
   topologyMutator,
 }: AddNodeSidePanelProps) {
+  const t = useTranslations("topology.addEditNode");
   const api = useApi();
 
   const handleSave = async () => {
@@ -47,9 +49,9 @@ export function AddEditNodeSidePanel({
           .map((tag) => tag.trim()) // Trim whitespace from each tag
           .filter((tag) => tag !== ""),
       });
-      toast.success(`Service added successfully`, { position: "top-right" });
+      toast.success(t("serviceAddedSuccessfully"), { position: "top-right" });
     } catch (error) {
-      toast.error(`Failed to add service: ${error}`, { position: "top-right" });
+      toast.error(t("addError", { error: String(error) }), { position: "top-right" });
     }
     topologyMutator();
     handleClosePanel();
@@ -65,9 +67,9 @@ export function AddEditNodeSidePanel({
           .filter((tag) => tag !== ""),
         id: formData.id,
       });
-      toast.success(`Service updated successfully`, { position: "top-right" });
+      toast.success(t("serviceUpdatedSuccessfully"), { position: "top-right" });
     } catch (error) {
-      toast.error(`Failed to update service: ${error}`, {
+      toast.error(t("updateError", { error: String(error) }), {
         position: "top-right",
       });
     }
@@ -121,12 +123,12 @@ export function AddEditNodeSidePanel({
         <div className="flex flex-col gap-y-3">
           <div>
             <label htmlFor="service">
-              Service<sup className="text-red-500">*</sup>
+              {t("service")}<sup className="text-red-500">*</sup>
             </label>
             <TextInput
               id="service"
               name="service"
-              placeholder="Enter service here..."
+              placeholder={t("enterService")}
               value={formData.service}
               onChange={handleChange}
               required
@@ -134,123 +136,123 @@ export function AddEditNodeSidePanel({
           </div>
           <div>
             <label htmlFor="display_name">
-              Display Name<sup className="text-red-500">*</sup>
+              {t("displayName")}<sup className="text-red-500">*</sup>
             </label>
             <TextInput
               id="display_name"
               name="display_name"
-              placeholder="Enter display name here..."
+              placeholder={t("enterDisplayName")}
               value={formData.display_name}
               onChange={handleChange}
               required
             />
           </div>
           <div>
-            <label htmlFor="description">Description</label>
+            <label htmlFor="description">{t("description")}</label>
             <TextInput
               id="description"
               name="description"
-              placeholder="Enter description here..."
+              placeholder={t("enterDescription")}
               value={formData.description || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="repository">Repository</label>
+            <label htmlFor="repository">{t("repository")}</label>
             <TextInput
               id="repository"
               name="repository"
-              placeholder="Enter repository here..."
+              placeholder={t("enterRepository")}
               value={formData.repository || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="tags">Tags</label>
+            <label htmlFor="tags">{t("tags")}</label>
             <TextInput
               id="tags"
               name="tags"
-              placeholder="Enter tags here (comma-separated)..."
+              placeholder={t("enterTags")}
               value={formData.tags || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="team">Team</label>
+            <label htmlFor="team">{t("team")}</label>
             <TextInput
               id="team"
               name="team"
-              placeholder="Enter team here..."
+              placeholder={t("enterTeam")}
               value={formData.team || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t("email")}</label>
             <TextInput
               id="email"
               name="email"
-              placeholder="Enter email here..."
+              placeholder={t("enterEmail")}
               value={formData.email || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="slack">Slack</label>
+            <label htmlFor="slack">{t("slack")}</label>
             <TextInput
               id="slack"
               name="slack"
-              placeholder="Enter Slack channel here..."
+              placeholder={t("enterSlack")}
               value={formData.slack || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="ip_address">IP Address</label>
+            <label htmlFor="ip_address">{t("ipAddress")}</label>
             <TextInput
               id="ip_address"
               name="ip_address"
-              placeholder="Enter IP address here..."
+              placeholder={t("enterIpAddress")}
               value={formData.ip_address || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="mac_address">MAC Address</label>
+            <label htmlFor="mac_address">{t("macAddress")}</label>
             <TextInput
               id="mac_address"
               name="mac_address"
-              placeholder="Enter MAC address here..."
+              placeholder={t("enterMacAddress")}
               value={formData.mac_address || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="category">Category</label>
+            <label htmlFor="category">{t("category")}</label>
             <TextInput
               id="category"
               name="category"
-              placeholder="Enter category here..."
+              placeholder={t("enterCategory")}
               value={formData.category || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="manufacturer">Manufacturer</label>
+            <label htmlFor="manufacturer">{t("manufacturer")}</label>
             <TextInput
               id="manufacturer"
               name="manufacturer"
-              placeholder="Enter manufacturer here..."
+              placeholder={t("enterManufacturer")}
               value={formData.manufacturer || ""}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label htmlFor="namespace">Namespace</label>
+            <label htmlFor="namespace">{t("namespace")}</label>
             <TextInput
               id="namespace"
               name="namespace"
-              placeholder="Enter namespace here..."
+              placeholder={t("enterNamespace")}
               value={formData.namespace || ""}
               onChange={handleChange}
             />
@@ -260,7 +262,7 @@ export function AddEditNodeSidePanel({
       <div className="sticky bottom-0 p-4 border-t border-gray-200 bg-white flex justify-end gap-2">
         {editData ? (
           <Button onClick={handleUpdate} color="orange" variant="primary">
-            Update
+            {t("update")}
           </Button>
         ) : (
           <Button
@@ -269,11 +271,11 @@ export function AddEditNodeSidePanel({
             variant="primary"
             disabled={!handleSaveValidation()}
           >
-            Save
+            {t("save")}
           </Button>
         )}
         <Button onClick={handleClosePanel} color="orange" variant="secondary">
-          Close
+          {t("close")}
         </Button>
       </div>
     </SidePanel>

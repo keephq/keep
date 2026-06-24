@@ -22,8 +22,10 @@ import GroupsSidebar from "./groups-sidebar";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdGroupAdd } from "react-icons/md";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useTranslations } from "next-intl";
 
 export default function GroupsTab() {
+  const t = useTranslations("settings.groups");
   const api = useApi();
   const {
     data: groups = [],
@@ -88,7 +90,7 @@ export default function GroupsTab() {
     event: React.MouseEvent
   ) => {
     event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this group?")) {
+    if (window.confirm(t("confirmDeleteGroup"))) {
       try {
         await api.delete(`/auth/groups/${groupName}`);
 
@@ -104,8 +106,8 @@ export default function GroupsTab() {
     <div className="h-full flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <Title>Groups Management</Title>
-          <Subtitle>Manage user groups</Subtitle>
+          <Title>{t("groupsManagement")}</Title>
+          <Subtitle>{t("manageUserGroups")}</Subtitle>
         </div>
         <div className="flex space-x-2">
           <Button
@@ -114,12 +116,12 @@ export default function GroupsTab() {
             onClick={handleAddGroupClick}
             icon={MdGroupAdd}
           >
-            Add Group
+            {t("addGroup")}
           </Button>
         </div>
       </div>
       <TextInput
-        placeholder="Search by group name"
+        placeholder={t("searchByGroupName")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
@@ -129,9 +131,9 @@ export default function GroupsTab() {
           <Table className="h-full">
             <TableHead>
               <TableRow>
-                <TableHeaderCell className="w-3/24">Group Name</TableHeaderCell>
-                <TableHeaderCell className="w-5/12">Members</TableHeaderCell>
-                <TableHeaderCell className="w-5/12">Roles</TableHeaderCell>
+                <TableHeaderCell className="w-3/24">{t("groupName")}</TableHeaderCell>
+                <TableHeaderCell className="w-5/12">{t("members")}</TableHeaderCell>
+                <TableHeaderCell className="w-5/12">{t("roles")}</TableHeaderCell>
                 <TableHeaderCell className="w-1/24"></TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -152,7 +154,7 @@ export default function GroupsTab() {
                       ))}
                       {group.members.length > 4 && (
                         <Badge color="orange" className="text-xs">
-                          +{group.members.length - 4} more
+                          +{group.members.length - 4} {t("more")}
                         </Badge>
                       )}
                     </div>
@@ -166,7 +168,7 @@ export default function GroupsTab() {
                       ))}
                       {group.roles.length > 4 && (
                         <Badge color="orange" className="text-xs">
-                          +{group.roles.length - 4} more
+                          +{group.roles.length - 4} {t("more")}
                         </Badge>
                       )}
                     </div>

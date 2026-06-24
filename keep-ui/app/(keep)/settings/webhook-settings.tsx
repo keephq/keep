@@ -26,6 +26,7 @@ import { PageTitle } from "@/shared/ui";
 import { MonacoEditor } from "@/shared/ui";
 import { Link } from "@/components/ui/Link";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
+import { useTranslations } from "next-intl";
 
 interface Webhook {
   webhookApi: string;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export default function WebhookSettings({ selectedTab }: Props) {
+  const t = useTranslations("settings.webhook");
   const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
 
   const api = useApi();
@@ -169,7 +171,7 @@ req.end();
 
     try {
       await navigator.clipboard.writeText(currentCode.code);
-      showSuccessToast("Code copied to clipboard!");
+      showSuccessToast(t("codeCopied"));
     } catch (err) {
       showErrorToast(
         err,
@@ -189,8 +191,8 @@ req.end();
   return (
     <div className="flex flex-col gap-4">
       <header>
-        <PageTitle>Webhook Settings</PageTitle>
-        <PageSubtitle>View your tenant webhook settings</PageSubtitle>
+        <PageTitle>{t("webhookSettings")}</PageTitle>
+        <PageSubtitle>{t("viewWebhookSettings")}</PageSubtitle>
       </header>
       <Card>
         <div className="flex divide-x">
@@ -204,7 +206,7 @@ req.end();
                 onClick={tryNow}
                 id="tooltip-select-0"
               >
-                Click to create an example Alert
+                {t("clickToCreateAlert")}
               </Button>
             </div>
           </div>
@@ -226,7 +228,7 @@ req.end();
                 color="orange"
                 onClick={onCopyCode}
               >
-                Copy code
+                {t("copyCode")}
               </Button>
             </div>
             <TabPanels>

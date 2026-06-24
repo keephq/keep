@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   Table,
@@ -13,6 +15,7 @@ import {
 import { TrashIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { CopyBlock, a11yLight } from "react-code-blocks";
+import { useTranslations } from "next-intl";
 
 interface APIKey {
   reference_id: string;
@@ -36,6 +39,7 @@ export function APIKeysTable({
   onDelete,
   isDisabled = false,
 }: APIKeysTableProps) {
+  const t = useTranslations("settings.apiKeys");
   const getCopyBlockProps = (secret: string) => ({
     theme: { ...a11yLight },
     language: "text",
@@ -48,12 +52,12 @@ export function APIKeysTable({
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell className="text-left">Name</TableHeaderCell>
-          <TableHeaderCell className="text-left w-1/4">Key</TableHeaderCell>
-          <TableHeaderCell className="text-left">Role</TableHeaderCell>
-          <TableHeaderCell className="text-left">Created By</TableHeaderCell>
-          <TableHeaderCell className="text-left">Created At</TableHeaderCell>
-          <TableHeaderCell className="text-left">Last Used</TableHeaderCell>
+          <TableHeaderCell className="text-left">{t("name")}</TableHeaderCell>
+          <TableHeaderCell className="text-left w-1/4">{t("key")}</TableHeaderCell>
+          <TableHeaderCell className="text-left">{t("role")}</TableHeaderCell>
+          <TableHeaderCell className="text-left">{t("createdBy")}</TableHeaderCell>
+          <TableHeaderCell className="text-left">{t("createdAt")}</TableHeaderCell>
+          <TableHeaderCell className="text-left">{t("lastUsed")}</TableHeaderCell>
           <TableHeaderCell className="w-1/12"></TableHeaderCell>
         </TableRow>
       </TableHead>
@@ -77,12 +81,12 @@ export function APIKeysTable({
               <Text>{key.created_at}</Text>
             </TableCell>
             <TableCell className="text-left">
-              <Text>{key.last_used ?? "Never"}</Text>
+              <Text>{key.last_used ?? t("never")}</Text>
             </TableCell>
             <TableCell className="w-1/12">
               <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
-                  tooltip="Regenerate key"
+                  tooltip={t("regenerateKey")}
                   icon={UpdateIcon}
                   variant="light"
                   color="orange"
@@ -92,7 +96,7 @@ export function APIKeysTable({
                   disabled={isDisabled}
                 />
                 <Button
-                  tooltip="Delete key"
+                  tooltip={t("deleteKey")}
                   icon={TrashIcon}
                   variant="light"
                   color="orange"

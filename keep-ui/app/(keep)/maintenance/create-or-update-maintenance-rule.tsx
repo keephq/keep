@@ -24,6 +24,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { Status } from "@/entities/alerts/model";
 import { capitalize } from "@/utils/helpers";
+import { useTranslations } from "next-intl";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -39,6 +40,7 @@ export default function CreateOrUpdateMaintenanceRule({
   maintenanceToEdit,
   editCallback,
 }: Props) {
+  const t = useTranslations("maintenance");
   const api = useApi();
   const { mutate } = useMaintenanceRules();
   const [maintenanceName, setMaintenanceName] = useState<string>("");
@@ -115,9 +117,9 @@ export default function CreateOrUpdateMaintenanceRule({
       });
       clearForm();
       mutate();
-      toast.success("Maintenance rule created successfully");
+      toast.success(t("ruleCreatedSuccessfully"));
     } catch (error) {
-      showErrorToast(error, "Failed to create maintenance rule");
+      showErrorToast(error, t("failedToCreateRule"));
     }
   };
 
@@ -140,9 +142,9 @@ export default function CreateOrUpdateMaintenanceRule({
       });
       exitEditMode();
       mutate();
-      toast.success("Maintenance rule updated successfully");
+      toast.success(t("ruleUpdatedSuccessfully"));
     } catch (error) {
-      showErrorToast(error, "Failed to update maintenance rule");
+      showErrorToast(error, t("failedToUpdateRule"));
     }
   };
 
@@ -156,30 +158,30 @@ export default function CreateOrUpdateMaintenanceRule({
   };
 
   const ignoreText = !suppress
-    ? "Alerts will not show in feed"
-    : "Alerts will show in suppressed status";
+    ? t("alertsWillNotShow")
+    : t("alertsWillShowSuppressed");
 
   return (
     <form
       className="py-2"
       onSubmit={editMode ? updateMaintenanceRule : addMaintenanceRule}
     >
-      <Subtitle>Maintenance Rule Metadata</Subtitle>
+      <Subtitle>{t("maintenanceRuleMetadata")}</Subtitle>
       <div className="mt-2.5">
         <Text>
-          Name<span className="text-red-500 text-xs">*</span>
+          {t("name")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
-          placeholder="Maintenance Name"
+          placeholder={t("maintenanceName")}
           required={true}
           value={maintenanceName}
           onValueChange={setMaintenanceName}
         />
       </div>
       <div className="mt-2.5">
-        <Text>Description</Text>
+        <Text>{t("description")}</Text>
         <Textarea
-          placeholder="Maintenance Description"
+          placeholder={t("maintenanceDescription")}
           value={description}
           onValueChange={setDescription}
         />
@@ -202,7 +204,7 @@ export default function CreateOrUpdateMaintenanceRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          Start At<span className="text-red-500 text-xs">*</span>
+          {t("startAt")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <DatePicker
           onChange={(date) => setStartTime(date)}
@@ -218,7 +220,7 @@ export default function CreateOrUpdateMaintenanceRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          End After<span className="text-red-500 text-xs">*</span>
+          {t("endAfter")}<span className="text-red-500 text-xs">*</span>
         </Text>
         <div className="flex gap-2">
           <NumberInput
@@ -227,14 +229,13 @@ export default function CreateOrUpdateMaintenanceRule({
             min={1}
           />
           <Select value={intervalType} onValueChange={setIntervalType}>
-            <SelectItem value="minutes">Minutes</SelectItem>
-            <SelectItem value="hours">Hours</SelectItem>
-            <SelectItem value="days">Days</SelectItem>
+            <SelectItem value="minutes">{t("minutes")}</SelectItem>
+            <SelectItem value="hours">{t("hours")}</SelectItem>
+            <SelectItem value="days">{t("days")}</SelectItem>
           </Select>
         </div>
         <Text className="text-xs text-red-400">
-          * Please adjust when editing existing maintenance rule, as this is
-          calculated upon submit.
+          {t("adjustDurationWarning")}
         </Text>
       </div>
       <div className="flex items-center space-x-3 mt-2.5 w-[300px] justify-between">
@@ -251,7 +252,7 @@ export default function CreateOrUpdateMaintenanceRule({
           htmlFor="enabledSwitch"
           className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
         >
-          Whether this rule is enabled or not
+          {t("whetherRuleEnabled")}
         </label>
         <Switch id="enabledSwitch" checked={enabled} onChange={setEnabled} />
       </div>
@@ -264,7 +265,7 @@ export default function CreateOrUpdateMaintenanceRule({
             variant="secondary"
             onClick={exitEditMode}
           >
-            Cancel
+            {t("cancel")}
           </Button>
         ) : null}
         <Button
@@ -273,7 +274,7 @@ export default function CreateOrUpdateMaintenanceRule({
           size="xs"
           type="submit"
         >
-          {editMode ? "Update" : "Create"}
+          {editMode ? t("update") : t("create")}
         </Button>
       </div>
     </form>

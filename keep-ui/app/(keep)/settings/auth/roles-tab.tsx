@@ -23,12 +23,14 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdAddModerator } from "react-icons/md";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { PageTitle } from "@/shared/ui";
+import { useTranslations } from "next-intl";
 
 interface RolesTabProps {
   customRolesAllowed: boolean;
 }
 
 export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
+  const t = useTranslations("settings.roles");
   const api = useApi();
   const { data: scopes = [], isLoading: scopesLoading } = useScopes();
   const {
@@ -70,7 +72,7 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
 
   const handleDeleteRole = async (roleId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this role?")) {
+    if (window.confirm(t("confirmDeleteRole"))) {
       try {
         await api.delete(`/auth/roles/${roleId}`);
         await mutateRoles();
@@ -84,7 +86,7 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
     <div className="h-full flex flex-col">
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
-          <PageTitle>Roles Management</PageTitle>
+          <PageTitle>{t("rolesManagement")}</PageTitle>
         </div>
         <div className="flex space-x-2 items-center">
           <Button
@@ -99,15 +101,15 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
             tooltip={
               customRolesAllowed
                 ? undefined
-                : "This feature is not available in your authentication mode."
+                : t("featureNotAvailable")
             }
           >
-            Create Custom Role
+            {t("createCustomRole")}
           </Button>
         </div>
       </div>
       <TextInput
-        placeholder="Search by role name"
+        placeholder={t("searchByRoleName")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
@@ -116,9 +118,9 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
         <Table className="h-full">
           <TableHead>
             <TableRow className="border-b border-tremor-border dark:border-dark-tremor-border">
-              <TableHeaderCell className="w-4/24">Role Name</TableHeaderCell>
-              <TableHeaderCell className="w-4/24">Description</TableHeaderCell>
-              <TableHeaderCell className="w-15/24">Scopes</TableHeaderCell>
+              <TableHeaderCell className="w-4/24">{t("roleName")}</TableHeaderCell>
+              <TableHeaderCell className="w-4/24">{t("description")}</TableHeaderCell>
+              <TableHeaderCell className="w-15/24">{t("scopes")}</TableHeaderCell>
               <TableHeaderCell className="w-1/24"></TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -142,14 +144,14 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
                             color="orange"
                             className="ml-2 w-24 text-center"
                           >
-                            Predefined
+                            {t("predefined")}
                           </Badge>
                         ) : (
                           <Badge
                             color="orange"
                             className="ml-2 w-24 text-center"
                           >
-                            Custom
+                            {t("custom")}
                           </Badge>
                         )}
                       </div>
@@ -167,7 +169,7 @@ export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
                       ))}
                       {role.scopes.length > 4 && (
                         <Badge color="orange" className="text-xs">
-                          +{role.scopes.length - 4} more
+                          +{role.scopes.length - 4} {t("more")}
                         </Badge>
                       )}
                     </div>

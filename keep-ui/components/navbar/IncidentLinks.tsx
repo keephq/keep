@@ -13,10 +13,12 @@ import {
   DEFAULT_INCIDENTS_CEL,
   DEFAULT_INCIDENTS_SORTING,
 } from "@/entities/incidents/model/models";
+import { useTranslations } from "next-intl";
 
 type IncidentsLinksProps = { session: Session | null };
 
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
+  const t = useTranslations("nav");
   const isNOCRole = session?.userRole === "noc";
   const { data: incidents, mutate } = useIncidents(
     {
@@ -41,7 +43,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         {({ open }) => (
           <>
             <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-              INCIDENTS
+              {t("incidentsSection")}
             </Subtitle>
             <IoChevronUp
               className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
@@ -58,7 +60,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
             count={incidents?.count}
             testId="incidents"
           >
-            <Subtitle className="text-xs">Incidents</Subtitle>
+            <Subtitle className="text-xs">{t("incidents")}</Subtitle>
           </LinkWithIcon>
         </li>
       </Disclosure.Panel>

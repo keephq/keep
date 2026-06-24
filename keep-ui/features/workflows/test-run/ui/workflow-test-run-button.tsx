@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { DefinitionV2 } from "@/entities/workflows";
 import { KeepLoader, showErrorToast, Tooltip } from "@/shared/ui";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Modal from "@/components/ui/Modal";
 import { getYamlWorkflowDefinition } from "@/entities/workflows/lib/parser";
 import { extractWorkflowYamlDependencies } from "@/entities/workflows/lib/extractWorkflowYamlDependencies";
@@ -33,6 +34,7 @@ export function WorkflowTestRunButton({
   isValid,
   ...props
 }: WorkflowTestRunButtonProps & ButtonProps) {
+  const t = useTranslations("workflows.testRun");
   const [isTestRunModalOpen, setIsTestRunModalOpen] = useState(false);
   const [workflowExecutionId, setWorkflowExecutionId] = useState<string | null>(
     null
@@ -112,7 +114,7 @@ export function WorkflowTestRunButton({
         });
       }
       if (!result) {
-        setError(new Error("Failed to test run workflow"));
+        setError(new Error(t("failedToTestRunWorkflow")));
         return;
       }
       setWorkflowExecutionId(result.workflow_execution_id);
@@ -120,9 +122,7 @@ export function WorkflowTestRunButton({
       setError(
         error instanceof Error
           ? error
-          : new Error(
-              "An unknown error occurred during test run. Please try again."
-            )
+          : new Error(t("unknownErrorDuringTestRun"))
       );
     }
   };
@@ -190,7 +190,7 @@ export function WorkflowTestRunButton({
     if (error !== null) {
       return (
         <div className="flex justify-center">
-          <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
+          <Callout title={t("error")} icon={ExclamationCircleIcon} color="rose">
             {error.message}
           </Callout>
         </div>
@@ -201,7 +201,7 @@ export function WorkflowTestRunButton({
         <div className="flex flex-col gap-4" data-testid="wf-test-run-results">
           <div className="flex justify-between items-center">
             <div>
-              <Title>Workflow Execution Results</Title>
+              <Title>{t("workflowExecutionResults")}</Title>
             </div>
             <div></div>
           </div>
@@ -218,8 +218,8 @@ export function WorkflowTestRunButton({
     if (dependencies) {
       if (dependencies.alert.length > 0 && dependencies.incident.length > 0) {
         return (
-          <Callout title="Error" icon={ExclamationCircleIcon} color="rose">
-            Alert and incident dependencies cannot be used together
+          <Callout title={t("error")} icon={ExclamationCircleIcon} color="rose">
+            {t("alertIncidentDependenciesConflict")}
           </Callout>
         );
       }
@@ -250,7 +250,7 @@ export function WorkflowTestRunButton({
                 inputsValues,
               })
             }
-            submitLabel="Test Run with Payload"
+            submitLabel={t("testRunWithPayload")}
           />
         );
       }
@@ -267,30 +267,30 @@ export function WorkflowTestRunButton({
                 inputsValues,
               })
             }
-            submitLabel="Test Run with Payload"
+            submitLabel={t("testRunWithPayload")}
           />
         );
       }
     }
     return (
       <div className="flex justify-center">
-        <KeepLoader loadingText="Waiting for workflow execution results..." />
+        <KeepLoader loadingText={t("waitingForResults")} />
       </div>
     );
   };
 
   const testRunDescription = useMemo(() => {
     if (!isValid) {
-      return "Workflow is not valid";
+      return t("workflowNotValid");
     }
-    return `Test run with current changes${
-      dependencies ? " and provided payload" : ""
-    }. Will not be saved in history`;
+    return t("testRunDescription", {
+      hasPayload: dependencies ? t("andProvidedPayload") : ""
+    });
   }, [isValid, dependencies]);
 
   return (
     <>
-      <Tooltip content={testRunDescription}>
+      <Tooltip content={testRunDescription} asChild>
         <Button
           variant="primary"
           color="orange"
@@ -302,14 +302,14 @@ export function WorkflowTestRunButton({
           onClick={handleClickTestRun}
           {...props}
         >
-          Test Run
+          {t("testRun")}
         </Button>
       </Tooltip>
       {isTestRunModalOpen && (
         <Modal
           isOpen={isTestRunModalOpen}
           onClose={closeWorkflowExecutionResultsModal}
-          title="Test Run"
+          title={t("testRun")}
           description={testRunDescription}
           className="max-w-7xl"
         >

@@ -1,7 +1,10 @@
+"use client";
+
 import React from "react";
 import { IncidentData } from "./models";
 import { IncidentSeverityMetric } from "./incident-severity-metric";
 import { PieChart } from "./pie-chart";
+import { useTranslations } from "next-intl";
 
 interface IncidentsReportProps {
   incidentsReportData: IncidentData;
@@ -10,6 +13,8 @@ interface IncidentsReportProps {
 export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   incidentsReportData,
 }) => {
+  const t = useTranslations("incidents.report");
+
   function convertSeconds(secondsValue: number): string {
     const result = [];
 
@@ -34,18 +39,18 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
     const minutes = Math.floor(secondsValue / secondsInMinute);
     const seconds = secondsValue % secondsInMinute;
 
-    if (months > 0) result.push(`${months} month${months > 1 ? "s" : ""}`);
-    if (weeks > 0) result.push(`${weeks} week${weeks > 1 ? "s" : ""}`);
-    if (days > 0) result.push(`${days} day${days > 1 ? "s" : ""}`);
-    if (hours > 0) result.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-    if (minutes > 0) result.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-    if (seconds > 0) result.push(`${seconds} second${seconds > 1 ? "s" : ""}`);
+    if (months > 0) result.push(`${months} ${months > 1 ? t("months") : t("month")}`);
+    if (weeks > 0) result.push(`${weeks} ${weeks > 1 ? t("weeks") : t("week")}`);
+    if (days > 0) result.push(`${days} ${days > 1 ? t("days") : t("day")}`);
+    if (hours > 0) result.push(`${hours} ${hours > 1 ? t("hours") : t("hour")}`);
+    if (minutes > 0) result.push(`${minutes} ${minutes > 1 ? t("minutes") : t("minute")}`);
+    if (seconds > 0) result.push(`${seconds} ${seconds > 1 ? t("seconds") : t("second")}`);
 
     return result.join(" ");
   }
 
   function formatIncidentsCount(count: number): string {
-    return count > 1 ? `${count} incidents` : `${count} incident`;
+    return count > 1 ? `${count} ${t("incidents")}` : `${count} ${t("incident")}`;
   }
 
   function renderTimeMetric(
@@ -65,7 +70,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderMainReasons(): React.JSX.Element {
     return (
       <div className="break-inside-avoid incidents-main-reasons text-lg">
-        <p className="font-bold mb-2">Most of the incidents reasons:</p>
+        <p className="font-bold mb-2">{t("mostReasons")}</p>
         <PieChart
           formatCount={formatIncidentsCount}
           data={Object.entries(
@@ -82,7 +87,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderAffectedServices(): React.JSX.Element {
     return (
       <div className="break-inside-avoid text-lg">
-        <p className="font-bold mb-2">Affected services:</p>
+        <p className="font-bold mb-2">{t("affectedServices")}</p>
         <PieChart
           formatCount={formatIncidentsCount}
           data={Object.entries(
@@ -99,7 +104,7 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderRecurringIncidents(): React.JSX.Element {
     return (
       <div className="text-lg break-inside-avoid">
-        <p className="font-bold mb-2">Recurring incidents:</p>
+        <p className="font-bold mb-2">{t("recurringIncidents")}</p>
         <PieChart
           formatCount={formatIncidentsCount}
           data={incidentsReportData?.recurring_incidents.map(
@@ -116,24 +121,24 @@ export const IncidentsReport: React.FC<IncidentsReportProps> = ({
   function renderTimeMetrics(): React.JSX.Element {
     return (
       <div className="break-inside-avoid">
-        <p className="font-bold text-lg">Incident Metrics:</p>
+        <p className="font-bold text-lg">{t("incidentMetrics")}</p>
         <div className="pl-4">
           {renderTimeMetric(
-            "Mean Time To Detect (MTTD)",
+            t("mttd"),
             incidentsReportData?.mean_time_to_detect_seconds
           )}
           {renderTimeMetric(
-            "Mean Time To Resolve (MTTR)",
+            t("mttr"),
             incidentsReportData?.mean_time_to_resolve_seconds
           )}
           {incidentsReportData?.incident_durations &&
             renderTimeMetric(
-              "Shortest Incident Duration",
+              t("shortestDuration"),
               incidentsReportData?.incident_durations?.shortest_duration_seconds
             )}
           {incidentsReportData?.incident_durations &&
             renderTimeMetric(
-              "Longest Incident Duration",
+              t("longestDuration"),
               incidentsReportData?.incident_durations?.longest_duration_seconds
             )}
         </div>

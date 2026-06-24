@@ -3,6 +3,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { WorkflowTemplates } from "./workflow-templates";
 import { useRouter } from "next/navigation";
 import { Button } from "@tremor/react";
+import { useTranslations } from "next-intl";
 import { PageSubtitle } from "@/shared/ui";
 
 interface CreateWorkflowModalProps {
@@ -12,6 +13,7 @@ interface CreateWorkflowModalProps {
 export const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
   onClose,
 }) => {
+  const t = useTranslations("workflows.createModal");
   const router = useRouter();
 
   return (
@@ -19,17 +21,16 @@ export const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
       isOpen={true}
       onClose={onClose}
       className="min-w-[80vw] min-h-[90vh] max-h-[90vh]"
-      title="Create workflow"
+      title={t("createWorkflow")}
     >
       <div className="flex flex-col min-h-0 max-w-full max-h-full overflow-hidden">
         <PageSubtitle>
           <div className="flex flex-col gap-2 mb-3 h-full w-full">
             <p>
-              Choose a workflow template to start building the automation for
-              your alerts and incidents.
+              {t("chooseWorkflowTemplate")}
             </p>
             <p>
-              Or skip this, and{" "}
+              {t("orSkipAnd")}{" "}
               <Button
                 className="ml-2"
                 color="orange"
@@ -37,7 +38,7 @@ export const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
                 variant="primary"
                 onClick={() => router.push("/workflows/builder")}
               >
-                Start from scratch
+                {t("startFromScratch")}
               </Button>
             </p>
           </div>

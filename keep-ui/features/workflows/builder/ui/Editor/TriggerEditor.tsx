@@ -1,4 +1,5 @@
 import { Button, TextInput } from "@/components/ui";
+import { useTranslations } from "next-intl";
 import { useWorkflowStore } from "@/entities/workflows";
 import {
   BackspaceIcon,
@@ -17,6 +18,7 @@ import { AlertsCountBadge } from "@/features/presets/create-or-update-preset/ui/
 import { useConfig } from "@/utils/hooks/useConfig";
 
 export function TriggerEditor() {
+  const t = useTranslations("workflows.trigger");
   const {
     v2Properties: properties,
     updateV2Properties,
@@ -115,7 +117,7 @@ export function TriggerEditor() {
             )}
             <div>
               <div className="flex  items-center">
-                <Subtitle>CEL Expression</Subtitle>
+                <Subtitle>{t("celExpression")}</Subtitle>
                 <Icon
                   icon={QuestionMarkCircleIcon}
                   variant="simple"
@@ -125,14 +127,14 @@ export function TriggerEditor() {
                   onClick={() => {
                     window.open(`${docsUrl}/overview/cel`, "_blank");
                   }}
-                  tooltip="Read more about CEL expressions"
+                  tooltip={t("readMoreAboutCel")}
                 />
               </div>
               <div className="flex items-center mt-1 relative">
                 <CelInput
                   staticPositionForSuggestions={true}
                   value={properties.alert.cel}
-                  placeholder="CEL expression based trigger"
+                  placeholder={t("celPlaceholder")}
                   onValueChange={(value: string) => updateAlertCel(value)}
                   onClearValue={() => updateAlertCel("")}
                   fieldsForSuggestions={alertFields}
@@ -143,15 +145,14 @@ export function TriggerEditor() {
                   vertical
                   presetCEL={properties.alert.cel}
                   isDebouncing={false}
-                  description="The number of alerts from the past that would have triggered this workflow"
+                  description={t("alertsCountDescription")}
                 />
               </div>
             </div>
             <div>
-              <Subtitle className="mt-2.5">Alert filter (deprecated)</Subtitle>
+              <Subtitle className="mt-2.5">{t("alertFilterDeprecated")}</Subtitle>
               <Text className="text-sm text-gray-500">
-                Please convert your alert filters to CEL expressions to ensure
-                stability and performance.
+                {t("convertFiltersToCel")}
               </Text>
               <div className="w-1/2">
                 <Button
@@ -162,7 +163,7 @@ export function TriggerEditor() {
                   color="gray"
                   icon={FunnelIcon}
                 >
-                  Add Filter
+                  {t("addFilter")}
                 </Button>
               </div>
               {properties.alert.filters &&
@@ -172,7 +173,7 @@ export function TriggerEditor() {
                     <div className="flex items-center mt-1">
                       <TextInput
                         key={filter}
-                        placeholder={`Set alert ${filter}`}
+                        placeholder={t("setAlertFilter", { filter })}
                         onChange={(e: any) =>
                           updateAlertFilter(filter, e.target.value)
                         }
@@ -185,7 +186,7 @@ export function TriggerEditor() {
                         icon={BackspaceIcon}
                         className="cursor-pointer"
                         color="red"
-                        tooltip={`Remove ${filter} filter`}
+                        tooltip={t("removeFilter", { filter })}
                         onClick={() => deleteFilter(filter)}
                       />
                     </div>
@@ -198,7 +199,7 @@ export function TriggerEditor() {
       case "incident":
         return (
           <>
-            <Subtitle className="mt-2.5">Incident events</Subtitle>
+            <Subtitle className="mt-2.5">{t("incidentEvents")}</Subtitle>
             {Array("created", "updated", "deleted").map((event) => (
               <div key={`incident-${event}`} className="flex">
                 <Switch
@@ -224,7 +225,7 @@ export function TriggerEditor() {
                   htmlFor={`incident-${event}`}
                   className="text-sm text-gray-500"
                 >
-                  <Text>{event}</Text>
+                  <Text>{t(`incidentEvent.${event}`)}</Text>
                 </label>
               </div>
             ))}
@@ -235,9 +236,9 @@ export function TriggerEditor() {
         const value = properties[selectedTriggerKey];
         return (
           <>
-            <Subtitle className="mt-2.5">Interval (in seconds)</Subtitle>
+            <Subtitle className="mt-2.5">{t("intervalInSeconds")}</Subtitle>
             <TextInput
-              placeholder={`Set the ${selectedTriggerKey}`}
+              placeholder={t("setInterval", { trigger: selectedTriggerKey })}
               onChange={(e: any) =>
                 handleChange(selectedTriggerKey, e.target.value)
               }
@@ -247,7 +248,7 @@ export function TriggerEditor() {
             />
             {value && (
               <Text className="text-sm text-gray-500">
-                Workflow will run every {getHumanReadableInterval(value)}
+                {t("workflowWillRunEvery", { interval: getHumanReadableInterval(value) })}
               </Text>
             )}
           </>
@@ -262,7 +263,7 @@ export function TriggerEditor() {
   return (
     <EditorLayout>
       <Subtitle className="font-medium flex items-baseline justify-between">
-        {capitalize(selectedTriggerKey)} Trigger
+        {t("triggerTitle", { type: capitalize(selectedTriggerKey) })}
       </Subtitle>
       <div className="flex flex-col gap-2">{renderTriggerContent()}</div>
     </EditorLayout>

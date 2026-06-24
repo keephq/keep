@@ -45,6 +45,7 @@ export default function Pagination<T>({ table, isRefreshAllowed }: Props<T>) {
       </Text>
       <div className="flex gap-1">
         <Select
+          instanceId="pagination-select"
           components={{ SingleValue }}
           value={{
             value: table.getState().pagination.pageSize.toString(),

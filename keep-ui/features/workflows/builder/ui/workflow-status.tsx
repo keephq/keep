@@ -4,9 +4,11 @@ import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { useWorkflowStore } from "@/entities/workflows";
 import clsx from "clsx";
 import { ValidationError } from "@/entities/workflows/lib/validate-definition";
+import { useState } from "react";
 
 function ErrorList({
   validationErrors,
@@ -15,32 +17,42 @@ function ErrorList({
   validationErrors: Record<string, ValidationError>;
   onErrorClick: (id: string) => void;
 }) {
-  const textSummary = `${Object.keys(validationErrors).length} error${
-    Object.keys(validationErrors).length === 1 ? "" : "s"
-  }`;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const errorCount = Object.keys(validationErrors).length;
+  const textSummary = `${errorCount} error${errorCount === 1 ? "" : "s"}`;
+
   return (
-    <details className="flex flex-col gap-1">
-      <summary className="text-sm font-medium">{textSummary}</summary>
-      <span className="flex flex-col gap-1">
-        {Object.entries(validationErrors).map(([id, error]) => (
-          <span key={id}>
-            {!id.startsWith("workflow_") && (
-              <span
-                className="font-medium hover:underline cursor-pointer"
-                onClick={() => onErrorClick(id)}
-              >
-                {id}:
-              </span>
-            )}{" "}
-            {error[0]}
-          </span>
-        ))}
-      </span>
-    </details>
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        className="text-sm font-medium text-left hover:underline"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {isExpanded ? "▼" : "▶"} {textSummary}
+      </button>
+      {isExpanded && (
+        <div className="flex flex-col gap-1 pl-2">
+          {Object.entries(validationErrors).map(([id, error]) => (
+            <span key={id}>
+              {!id.startsWith("workflow_") && (
+                <span
+                  className="font-medium hover:underline cursor-pointer"
+                  onClick={() => onErrorClick(id)}
+                >
+                  {id}:
+                </span>
+              )}{" "}
+              {error[0]}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 export const WorkflowStatus = ({ className }: { className?: string }) => {
+  const t = useTranslations("workflows.status");
   const {
     validationErrors,
     canDeploy,
@@ -77,42 +89,51 @@ export const WorkflowStatus = ({ className }: { className?: string }) => {
     return (
       <Callout
         className={clsx("rounded p-2 text-sm", className)}
-        title="Workflow is valid"
+        title={t("workflowIsValid")}
         icon={CheckCircleIcon}
         color="teal"
       >
-        It can be deployed and run
+        {t("canBeDeployedAndRun")}
       </Callout>
     );
   }
   if (canDeploy) {
     return (
-      <Callout
-        className={clsx("rounded p-2 text-sm", className)}
-        title="Workflow has errors"
-        icon={ExclamationTriangleIcon}
-        color="yellow"
+      <div
+        className={clsx(
+          "rounded p-2 text-sm",
+          "bg-yellow-50 border border-yellow-200 text-yellow-800",
+          className
+        )}
       >
-        It can be saved, but to run it, fix errors
-        {/* TODO: fix In HTML, <summary> cannot be a descendant of <p>. */}
+        <div className="flex items-center gap-2 font-medium">
+          <ExclamationTriangleIcon className="h-5 w-5" />
+          {t("workflowHasErrors")}
+        </div>
+        <div className="mt-1">{t("canBeSavedFixErrors")}</div>
         <ErrorList
           validationErrors={validationErrors}
           onErrorClick={handleErrorClick}
         />
-      </Callout>
+      </div>
     );
   }
   return (
-    <Callout
-      className={clsx("rounded p-2 text-sm", className)}
-      title="Fix the errors before saving"
-      icon={ExclamationCircleIcon}
-      color="rose"
+    <div
+      className={clsx(
+        "rounded p-2 text-sm",
+        "bg-red-50 border border-red-200 text-red-800",
+        className
+      )}
     >
+      <div className="flex items-center gap-2 font-medium">
+        <ExclamationCircleIcon className="h-5 w-5" />
+        {t("fixErrorsBeforeSaving")}
+      </div>
       <ErrorList
         validationErrors={validationErrors}
         onErrorClick={handleErrorClick}
       />
-    </Callout>
+    </div>
   );
 };

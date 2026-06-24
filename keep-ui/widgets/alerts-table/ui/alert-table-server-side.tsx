@@ -77,6 +77,7 @@ import { PaginationState } from "@/features/filter/pagination";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { usePresetColumnState } from "@/entities/presets/model";
 import { STATIC_PRESET_IDS, STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
+import { useTranslations } from "next-intl";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -136,6 +137,7 @@ export function AlertTableServerSide({
   onReload,
   onQueryChange,
 }: Props) {
+  const t = useTranslations("alerts.table");
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
@@ -551,8 +553,8 @@ export function AlertTableServerSide({
             <div className="flex flex-col justify-center items-center w-full p-4">
               <EmptyStateCard
                 noCard
-                title="No Alerts to Display"
-                description="Connect a data source to start receiving alerts, or simulate an alert to test the platform"
+                title={t("noAlerts")}
+                description={t("noAlertsDesc")}
               >
                 <div className="flex gap-2 justify-center">
                   <Button
@@ -561,7 +563,7 @@ export function AlertTableServerSide({
                     variant="secondary"
                     onClick={handleModalOpen}
                   >
-                    Simulate Alert
+                    {t("simulateAlert")}
                   </Button>
                   <Button
                     icon={PlusIcon}
@@ -571,7 +573,7 @@ export function AlertTableServerSide({
                       router.push("/providers?labels=alert");
                     }}
                   >
-                    Connect Data Source
+                    {t("connectDataSource")}
                   </Button>
                 </div>
               </EmptyStateCard>
@@ -593,8 +595,8 @@ export function AlertTableServerSide({
               <div className="flex flex-col justify-center items-center w-full p-4">
                 <EmptyStateCard
                   noCard
-                  title="No Alerts Matching Your Filter"
-                  description="Reset filter to see all alerts"
+                  title={t("noAlertsFilter")}
+                  description={t("noAlertsFilterDesc")}
                   icon={FunnelIcon}
                 >
                   <Button
@@ -602,7 +604,7 @@ export function AlertTableServerSide({
                     variant="secondary"
                     onClick={() => setClearFiltersToken(uuidV4())}
                   >
-                    Reset filter
+                    {t("resetFilter")}
                   </Button>
                 </EmptyStateCard>
               </div>
@@ -618,8 +620,8 @@ export function AlertTableServerSide({
               <div className="flex flex-col justify-center items-center w-full p-4">
                 <EmptyStateCard
                   noCard
-                  title="No Alerts Matching Your CEL Query"
-                  description="Check your CEL query and try again"
+                  title={t("noAlertsCel")}
+                  description={t("noAlertsCelDesc")}
                   icon={MagnifyingGlassIcon}
                 />
               </div>

@@ -10,6 +10,7 @@ import Loading from "@/app/(keep)/loading";
 import { PermissionsTable } from "./permissions-table";
 import PermissionSidebar from "./permissions-sidebar";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useTranslations } from "next-intl";
 
 interface Props {
   isDisabled?: boolean;
@@ -28,6 +29,7 @@ interface ResourcePermission {
 }
 
 export default function PermissionsTab({ isDisabled = false }: Props) {
+  const t = useTranslations("settings.permissions");
   const api = useApi();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<any>(null);
@@ -132,12 +134,12 @@ export default function PermissionsTab({ isDisabled = false }: Props) {
   return (
     <div className="h-full w-full flex flex-col">
       <div className="mb-4">
-        <Title>Permissions Management</Title>
-        <Subtitle>Manage permissions for resources</Subtitle>
+        <Title>{t("permissionsManagement")}</Title>
+        <Subtitle>{t("managePermissions")}</Subtitle>
       </div>
 
       <TextInput
-        placeholder="Search resources"
+        placeholder={t("searchResources")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"

@@ -8,24 +8,26 @@ import { BellAlertIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
-
-export const tabs = [
-  { icon: BellAlertIcon, label: "Alerts", path: "alerts" },
-  { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
-  { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
-  {
-    icon: IoIosGitNetwork,
-    label: "Topology",
-    path: "topology",
-  },
-  { icon: Workflows, label: "Workflows", path: "workflows" },
-];
+import { useTranslations } from "next-intl";
 
 export function IncidentTabsNavigation() {
+  const t = useTranslations("incidents.tabs");
   // Using type assertion because this component only renders on the /incidents/[id] routes
   const { id } = useParams<{ id: string }>() as { id: string };
   const pathname = usePathname();
   const { data: alerts } = useIncidentAlerts(id);
+
+  const tabs = [
+    { icon: BellAlertIcon, label: t("alerts"), path: "alerts" },
+    { icon: BoltIcon, label: t("activity"), path: "activity", prefetch: true },
+    { icon: CiViewTimeline, label: t("timeline"), path: "timeline" },
+    {
+      icon: IoIosGitNetwork,
+      label: t("topology"),
+      path: "topology",
+    },
+    { icon: Workflows, label: t("workflows"), path: "workflows" },
+  ];
 
   return (
     <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted">

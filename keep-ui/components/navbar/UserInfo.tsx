@@ -14,6 +14,8 @@ import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -22,6 +24,7 @@ type UserDropdownProps = {
 };
 
 const UserDropdown = ({ session }: UserDropdownProps) => {
+  const t = useTranslations("nav");
   const { data: configData } = useConfig();
   const signOut = useSignOut();
   const { refs, floatingStyles } = useFloating({
@@ -61,7 +64,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
                 href="/settings"
                 className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
               >
-                Settings
+                {t("settings")}
               </Menu.Item>
             </li>
           )}
@@ -72,7 +75,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
                 className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
                 onClick={signOut}
               >
-                Sign out
+                {t("signOut")}
               </Menu.Item>
             </li>
           )}
@@ -87,6 +90,7 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
+  const t = useTranslations("nav");
   const { data: config } = useConfig();
 
   const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keephq.dev";
@@ -96,7 +100,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
       <ul className="space-y-2 p-2">
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-            <Subtitle className="text-xs">Providers</Subtitle>
+            <Subtitle className="text-xs">{t("providers")}</Subtitle>
           </LinkWithIcon>
         </li>
         <li className="flex text-xs items-center gap-2">
@@ -106,7 +110,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             className="w-auto pr-3.5"
             target="_blank"
           >
-            Slack
+            {t("slack")}
           </LinkWithIcon>
           <LinkWithIcon
             icon={HiOutlineDocumentText}
@@ -115,13 +119,16 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             className="w-auto px-3.5"
             target="_blank"
           >
-            Docs
+            {t("docs")}
           </LinkWithIcon>
         </li>
         <div className="flex items-center gap-2">
           {session && <UserDropdown session={session} />}
           <ThemeControl className="text-sm size-10 flex-shrink-0 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
         </div>
+        <li>
+          <LanguageSwitcher />
+        </li>
       </ul>
     </>
   );

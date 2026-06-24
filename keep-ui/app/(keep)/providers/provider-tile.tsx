@@ -21,6 +21,7 @@ import { FaCode } from "react-icons/fa";
 import TimeAgo from "react-timeago";
 import "./provider-tile.css";
 import { DynamicImageProviderIcon } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 interface Props {
   provider: Provider;
@@ -111,6 +112,7 @@ function getIconForTag(tag: TProviderLabels) {
 }
 
 export default function ProviderTile({ provider, onClick }: Props) {
+  const t = useTranslations("providers.tile");
   const renderTags = () => {
     if (provider.installed || provider.linked) {
       return null;
@@ -185,7 +187,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
               color="green"
               size="sm"
-              tooltip="Webhook available"
+              tooltip={t("webhookAvailable")}
             />
           )}
         {provider.oauth2_url && !provider.installed && !provider.linked && (
@@ -198,7 +200,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             } grayscale hover:grayscale-0 group-hover:grayscale-0`}
             color="green"
             size="sm"
-            tooltip="OAuth2 available"
+            tooltip={t("oauth2Available")}
           />
         )}
         {provider.installed ? (
@@ -206,16 +208,16 @@ export default function ProviderTile({ provider, onClick }: Props) {
             {provider.provider_metadata &&
             provider.provider_metadata.version ? (
               <span>
-                Connected | Version: {provider.provider_metadata.version}
+                {t("connected")} | {t("version")}: {provider.provider_metadata.version}
               </span>
             ) : (
-              <span>Connected</span>
+              <span>{t("connected")}</span>
             )}
           </Text>
         ) : null}
         {provider.linked ? (
           <Text color={"green"} className="flex text-xs">
-            Linked
+            {t("linked")}
           </Text>
         ) : null}
         {provider.provisioned ? (
@@ -224,7 +226,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             className="absolute top-[-15px] right-[-15px]"
             color="orange"
             size="sm"
-            tooltip="Provisioned"
+            tooltip={t("provisioned")}
           />
         ) : null}
         <div className="flex flex-col gap-2">
@@ -232,25 +234,25 @@ export default function ProviderTile({ provider, onClick }: Props) {
             <Title className="capitalize" title={provider.details?.name}>
               {provider.display_name}{" "}
               {provider.coming_soon && !provider.linked && (
-                <span className="text-sm">(Coming Soon)</span>
+                <span className="text-sm">({t("comingSoon")})</span>
               )}
             </Title>
 
             {provider.details && provider.details.name && (
               <Subtitle className="truncate">
-                Name: {provider.details.name}
+                {t("name")}: {provider.details.name}
               </Subtitle>
             )}
             {provider.last_alert_received ? (
               <Text>
-                Last alert:{" "}
+                {t("lastAlert")}{" "}
                 <TimeAgo date={provider.last_alert_received + "Z"} />
               </Text>
             ) : (
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text className="truncate">Name: {provider.id}</Text>
+              <Text className="truncate">{t("name")}: {provider.id}</Text>
             ) : null}
             {renderChart()}
           </div>
@@ -277,7 +279,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             icon={Cog6ToothIcon}
             color="gray"
             className="w-6 h-6 self-end place-self-end"
-            tooltip="Modify"
+            tooltip={t("modify")}
           />
         ) : null}
       </div>
