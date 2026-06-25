@@ -1,6 +1,6 @@
 """
-Flowtriq Provider is a class that allows receiving DDoS attack alerts from Flowtriq
-and querying the Flowtriq API for alert enrichment.
+Flowtriq Provider is a class that allows receiving DDoS incident alerts from Flowtriq
+and querying the Flowtriq API for incident enrichment.
 """
 
 import dataclasses
@@ -39,19 +39,19 @@ class FlowtriqProviderAuthConfig:
 
 
 class FlowtriqProvider(BaseProvider):
-    """Receive DDoS attack alerts from Flowtriq and query the Flowtriq API."""
+    """Receive DDoS incident alerts from Flowtriq and query the Flowtriq API."""
 
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Flowtriq dashboard:
+To send DDoS incident alerts from Flowtriq to Keep, configure a webhook in your Flowtriq dashboard:
 
 1. Log in to your Flowtriq dashboard.
 2. Navigate to Settings > Integrations > Webhooks.
 3. Click "Add Webhook".
 4. Set the webhook URL to {keep_webhook_api_url}.
 5. Add a header with key "X-API-KEY" and value {api_key}.
-6. Select the alert events you want to forward (e.g. attack start, attack end).
+6. Select the incident events you want to forward (e.g. incident detected, incident resolved).
 7. Save the webhook configuration.
 """
 
@@ -62,11 +62,11 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
     PROVIDER_SCOPES = [
         ProviderScope(
             name="read_alerts",
-            description="Read DDoS attack alerts from Flowtriq",
+            description="Read DDoS incident alerts from Flowtriq",
         ),
     ]
 
-    FINGERPRINT_FIELDS = ["id", "target_ip"]
+    FINGERPRINT_FIELDS = ["id", "node_ip_address"]
 
     # Map Flowtriq severity levels to Keep severity levels.
     # Flowtriq classifies attacks by volume and impact.
@@ -79,7 +79,7 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
         "info": AlertSeverity.INFO,
     }
 
-    # Map Flowtriq attack status to Keep alert status.
+    # Map Flowtriq incident status to Keep alert status.
     STATUS_MAP = {
         "active": AlertStatus.FIRING,
         "ongoing": AlertStatus.FIRING,
@@ -102,11 +102,11 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
         )
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        """Validate that the API key has read access by hitting the alerts endpoint."""
+        """Validate that the API key has read access by hitting the incidents endpoint."""
         self.logger.info("Validating Flowtriq provider scopes")
         try:
             response = requests.get(
-                url=f"{self.authentication_config.api_url}/api/v1/alerts",
+                url=f"{self.authentication_config.api_url}/api/v1/incidents",
                 headers=self._build_headers(),
                 timeout=10,
             )
@@ -129,43 +129,46 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
         }
 
     def _get_alerts(self) -> list[AlertDto]:
-        """Pull active alerts from the Flowtriq API."""
-        self.logger.info("Fetching alerts from Flowtriq")
+        """Pull active incidents from the Flowtriq API."""
+        self.logger.info("Fetching incidents from Flowtriq")
         try:
             response = requests.get(
-                url=f"{self.authentication_config.api_url}/api/v1/alerts",
+                url=f"{self.authentication_config.api_url}/api/v1/incidents",
                 headers=self._build_headers(),
                 timeout=30,
             )
             response.raise_for_status()
-            alerts_data = response.json()
+            data = response.json()
 
             alerts = []
-            for event in alerts_data.get("alerts", []):
+            for event in data.get("incidents", []):
+                # API list responses use the same nested structure as webhooks
                 alerts.append(self._format_alert(event))
             return alerts
 
         except Exception as e:
-            self.logger.exception("Failed to fetch alerts from Flowtriq")
-            raise Exception(f"Failed to fetch alerts from Flowtriq: {e}")
+            self.logger.exception("Failed to fetch incidents from Flowtriq")
+            raise Exception(f"Failed to fetch incidents from Flowtriq: {e}")
 
-    def _query(self, alert_id: str = "", **kwargs) -> dict:
+    def _query(self, incident_id: str = "", **kwargs) -> dict:
         """
-        Query Flowtriq API for alert details (enrichment).
+        Query Flowtriq API for incident details (enrichment).
 
         Args:
-            alert_id: The Flowtriq alert/attack ID to look up.
+            incident_id: The Flowtriq incident UUID to look up.
 
         Returns:
-            dict: Full alert details from Flowtriq.
+            dict: Full incident details from Flowtriq.
         """
-        if not alert_id:
-            raise ValueError("alert_id is required for Flowtriq queries")
+        if not incident_id:
+            raise ValueError("incident_id is required for Flowtriq queries")
 
-        self.logger.info("Querying Flowtriq alert", extra={"alert_id": alert_id})
+        self.logger.info(
+            "Querying Flowtriq incident", extra={"incident_id": incident_id}
+        )
         try:
             response = requests.get(
-                url=f"{self.authentication_config.api_url}/api/v1/alerts/{alert_id}",
+                url=f"{self.authentication_config.api_url}/api/v1/incidents/{incident_id}",
                 headers=self._build_headers(),
                 timeout=30,
             )
@@ -173,9 +176,12 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
             return response.json()
         except Exception as e:
             self.logger.exception(
-                "Failed to query Flowtriq alert", extra={"alert_id": alert_id}
+                "Failed to query Flowtriq incident",
+                extra={"incident_id": incident_id},
             )
-            raise Exception(f"Failed to query Flowtriq alert {alert_id}: {e}")
+            raise Exception(
+                f"Failed to query Flowtriq incident {incident_id}: {e}"
+            )
 
     @staticmethod
     def _format_alert(
@@ -184,24 +190,32 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
         """
         Format a Flowtriq webhook event or API response into a Keep AlertDto.
 
-        Flowtriq sends DDoS attack alerts with fields like:
-        - id: unique attack identifier
-        - target_ip: the IP under attack
-        - attack_type: classification (e.g. UDP flood, SYN flood, DNS amplification)
-        - severity: critical, high, warning, low, info
-        - status: active, ongoing, mitigated, ended, resolved
-        - bandwidth_bps: peak attack bandwidth in bits per second
-        - packets_pps: peak attack packet rate
-        - started_at: ISO timestamp of attack start
-        - ended_at: ISO timestamp of attack end (if resolved)
-        - description: human-readable summary
-        - source_countries: list of top source countries
+        Flowtriq webhook payloads use a nested structure:
+        - incident.id: unique incident identifier (UUID)
+        - incident.title: human-readable title
+        - incident.severity: critical, high, warning, low, info
+        - incident.status: active, ongoing, mitigated, ended, resolved
+        - incident.attack_family: classification (e.g. udp_flood, syn_flood)
+        - incident.peak_bps: peak attack bandwidth in bits per second
+        - incident.peak_pps: peak attack packet rate
+        - incident.source_ip_count: number of unique source IPs
+        - incident.duration_seconds: attack duration so far
+        - incident.started_at: ISO timestamp of attack start
+        - incident.resolved_at: ISO timestamp of resolution (null if active)
+        - incident.dashboard_url: link to Flowtriq dashboard
+        - incident.description: human-readable summary
+        - node.name: name of the target node
+        - node.ip_address: IP address of the target node
         """
-        attack_id = event.get("id")
-        target_ip = event.get("target_ip", "unknown")
-        attack_type = event.get("attack_type", "DDoS Attack")
-        raw_severity = event.get("severity", "info")
-        raw_status = event.get("status", "active")
+        incident = event.get("incident", {})
+        node = event.get("node", {})
+
+        attack_id = incident.get("id")
+        node_ip = node.get("ip_address", "unknown")
+        node_name = node.get("name")
+        attack_family = incident.get("attack_family", "DDoS Attack")
+        raw_severity = incident.get("severity", "info")
+        raw_status = incident.get("status", "active")
 
         severity = FlowtriqProvider.SEVERITIES_MAP.get(
             raw_severity.lower(), AlertSeverity.INFO
@@ -211,22 +225,26 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
         )
 
         # Build a descriptive name
-        name = f"{attack_type} on {target_ip}"
+        title = incident.get("title")
+        if title:
+            name = title
+        else:
+            name = f"{attack_family} on {node_ip}"
 
         # Build description with attack metrics if available
         description_parts = []
-        if event.get("description"):
-            description_parts.append(event["description"])
-        if event.get("bandwidth_bps"):
-            bps = event["bandwidth_bps"]
+        if incident.get("description"):
+            description_parts.append(incident["description"])
+        if incident.get("peak_bps"):
+            bps = incident["peak_bps"]
             if bps >= 1_000_000_000:
                 description_parts.append(f"Peak bandwidth: {bps / 1e9:.1f} Gbps")
             elif bps >= 1_000_000:
                 description_parts.append(f"Peak bandwidth: {bps / 1e6:.1f} Mbps")
             else:
                 description_parts.append(f"Peak bandwidth: {bps / 1e3:.1f} Kbps")
-        if event.get("packets_pps"):
-            pps = event["packets_pps"]
+        if incident.get("peak_pps"):
+            pps = incident["peak_pps"]
             if pps >= 1_000_000:
                 description_parts.append(f"Peak packet rate: {pps / 1e6:.1f} Mpps")
             else:
@@ -234,21 +252,19 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
 
         description = ". ".join(description_parts) if description_parts else None
 
-        # Build the fingerprint from attack id and target
-        fingerprint = f"flowtriq-{attack_id}-{target_ip}" if attack_id else None
+        # Build the fingerprint from incident id and target node IP
+        fingerprint = f"flowtriq-{attack_id}-{node_ip}" if attack_id else None
 
         # Collect labels
         labels = {}
-        if event.get("attack_type"):
-            labels["attack_type"] = event["attack_type"]
-        if event.get("target_ip"):
-            labels["target_ip"] = event["target_ip"]
-        if event.get("source_countries"):
-            labels["source_countries"] = ", ".join(event["source_countries"])
-        if event.get("target_port"):
-            labels["target_port"] = str(event["target_port"])
-        if event.get("protocol"):
-            labels["protocol"] = event["protocol"]
+        if incident.get("attack_family"):
+            labels["attack_family"] = incident["attack_family"]
+        if node_ip != "unknown":
+            labels["node_ip_address"] = node_ip
+        if node_name:
+            labels["node_name"] = node_name
+        if incident.get("source_ip_count"):
+            labels["source_ip_count"] = str(incident["source_ip_count"])
 
         alert = AlertDto(
             id=attack_id,
@@ -257,22 +273,22 @@ To send DDoS attack alerts from Flowtriq to Keep, configure a webhook in your Fl
             severity=severity,
             description=description,
             lastReceived=(
-                event.get("ended_at")
-                or event.get("updated_at")
-                or event.get("started_at")
+                incident.get("resolved_at")
+                or incident.get("started_at")
                 or datetime.datetime.now(datetime.timezone.utc).isoformat()
             ),
             source=["flowtriq"],
             fingerprint=fingerprint,
-            url=event.get("url"),
+            url=incident.get("dashboard_url"),
             labels=labels,
-            # Extra fields passed through to AlertDto via **kwargs / extra attributes
-            target_ip=target_ip,
-            attack_type=event.get("attack_type"),
-            bandwidth_bps=event.get("bandwidth_bps"),
-            packets_pps=event.get("packets_pps"),
-            started_at=event.get("started_at"),
-            ended_at=event.get("ended_at"),
+            # Extra fields passed through to AlertDto
+            node_ip_address=node_ip,
+            node_name=node_name,
+            attack_family=incident.get("attack_family"),
+            peak_bps=incident.get("peak_bps"),
+            peak_pps=incident.get("peak_pps"),
+            started_at=incident.get("started_at"),
+            resolved_at=incident.get("resolved_at"),
         )
 
         return alert

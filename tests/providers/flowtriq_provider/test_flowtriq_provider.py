@@ -2,7 +2,7 @@
 Tests for the Flowtriq DDoS detection provider.
 
 Tests cover:
-- Alert formatting from webhook payloads
+- Alert formatting from webhook payloads (nested incident/node structure)
 - Severity and status mapping
 - Handling of missing/partial fields
 - Bandwidth and packet rate formatting in descriptions
@@ -18,21 +18,30 @@ class TestFormatAlert:
     """Test _format_alert static method with various webhook payloads."""
 
     def test_full_attack_alert(self):
-        """Complete DDoS attack alert with all fields."""
+        """Complete DDoS incident alert with all fields."""
         event = {
-            "id": "atk-12345",
-            "target_ip": "203.0.113.50",
-            "attack_type": "UDP Flood",
-            "severity": "critical",
-            "status": "active",
-            "bandwidth_bps": 5_000_000_000,
-            "packets_pps": 2_500_000,
-            "started_at": "2026-06-25T10:00:00Z",
-            "description": "Volumetric UDP flood detected",
-            "source_countries": ["CN", "RU", "BR"],
-            "target_port": 53,
-            "protocol": "UDP",
-            "url": "https://app.flowtriq.com/attacks/atk-12345",
+            "source": "flowtriq",
+            "event_type": "incident.detected",
+            "timestamp": "2026-06-25T10:00:00Z",
+            "incident": {
+                "id": "atk-12345",
+                "title": "UDP Flood on 203.0.113.50",
+                "severity": "critical",
+                "status": "active",
+                "attack_family": "udp_flood",
+                "peak_bps": 5_000_000_000,
+                "peak_pps": 2_500_000,
+                "source_ip_count": 300,
+                "duration_seconds": 45,
+                "started_at": "2026-06-25T10:00:00Z",
+                "resolved_at": None,
+                "dashboard_url": "https://flowtriq.com/incident/atk-12345",
+                "description": "Volumetric UDP flood detected",
+            },
+            "node": {
+                "name": "web-01",
+                "ip_address": "203.0.113.50",
+            },
         }
 
         alert = FlowtriqProvider._format_alert(event)
@@ -45,22 +54,29 @@ class TestFormatAlert:
         assert "2.5 Mpps" in alert.description
         assert alert.fingerprint == "flowtriq-atk-12345-203.0.113.50"
         assert alert.source == ["flowtriq"]
-        assert alert.labels["attack_type"] == "UDP Flood"
-        assert alert.labels["target_ip"] == "203.0.113.50"
-        assert "CN" in alert.labels["source_countries"]
-        assert alert.labels["target_port"] == "53"
-        assert alert.labels["protocol"] == "UDP"
+        assert alert.labels["attack_family"] == "udp_flood"
+        assert alert.labels["node_ip_address"] == "203.0.113.50"
+        assert alert.labels["node_name"] == "web-01"
+        assert alert.labels["source_ip_count"] == "300"
+        assert alert.url == "https://flowtriq.com/incident/atk-12345"
 
     def test_resolved_attack(self):
-        """Attack that has ended maps to RESOLVED status."""
+        """Incident that has ended maps to RESOLVED status."""
         event = {
-            "id": "atk-99999",
-            "target_ip": "10.0.0.1",
-            "attack_type": "SYN Flood",
-            "severity": "high",
-            "status": "ended",
-            "started_at": "2026-06-25T08:00:00Z",
-            "ended_at": "2026-06-25T08:15:00Z",
+            "source": "flowtriq",
+            "event_type": "incident.resolved",
+            "incident": {
+                "id": "atk-99999",
+                "severity": "high",
+                "status": "ended",
+                "attack_family": "syn_flood",
+                "started_at": "2026-06-25T08:00:00Z",
+                "resolved_at": "2026-06-25T08:15:00Z",
+            },
+            "node": {
+                "name": "db-01",
+                "ip_address": "10.0.0.1",
+            },
         }
 
         alert = FlowtriqProvider._format_alert(event)
@@ -72,10 +88,14 @@ class TestFormatAlert:
     def test_mitigated_status(self):
         """Mitigated status maps to RESOLVED."""
         event = {
-            "id": "atk-555",
-            "target_ip": "192.168.1.1",
-            "severity": "warning",
-            "status": "mitigated",
+            "incident": {
+                "id": "atk-555",
+                "severity": "warning",
+                "status": "mitigated",
+            },
+            "node": {
+                "ip_address": "192.168.1.1",
+            },
         }
 
         alert = FlowtriqProvider._format_alert(event)
@@ -84,8 +104,12 @@ class TestFormatAlert:
     def test_minimal_event(self):
         """Minimal webhook payload with only required fields."""
         event = {
-            "id": "atk-minimal",
-            "target_ip": "10.0.0.1",
+            "incident": {
+                "id": "atk-minimal",
+            },
+            "node": {
+                "ip_address": "10.0.0.1",
+            },
         }
 
         alert = FlowtriqProvider._format_alert(event)
@@ -96,20 +120,26 @@ class TestFormatAlert:
         assert alert.status == AlertStatus.FIRING
         assert alert.source == ["flowtriq"]
 
-    def test_missing_target_ip(self):
-        """Event without target_ip uses 'unknown' fallback."""
-        event = {"id": "atk-no-ip"}
+    def test_missing_node(self):
+        """Event without node object uses 'unknown' fallback for IP."""
+        event = {
+            "incident": {"id": "atk-no-node"},
+        }
 
         alert = FlowtriqProvider._format_alert(event)
 
         assert alert.name == "DDoS Attack on unknown"
-        assert alert.fingerprint == "flowtriq-atk-no-ip-unknown"
+        assert alert.fingerprint == "flowtriq-atk-no-node-unknown"
 
     def test_missing_id(self):
         """Event without id still produces a valid alert."""
         event = {
-            "target_ip": "10.0.0.1",
-            "severity": "low",
+            "incident": {
+                "severity": "low",
+            },
+            "node": {
+                "ip_address": "10.0.0.1",
+            },
         }
 
         alert = FlowtriqProvider._format_alert(event)
@@ -117,6 +147,33 @@ class TestFormatAlert:
         assert alert.id is None
         assert alert.fingerprint is None
         assert alert.severity == AlertSeverity.LOW
+
+    def test_title_used_as_name(self):
+        """When incident has a title field, it is used as the alert name."""
+        event = {
+            "incident": {
+                "id": "atk-title",
+                "title": "Custom Attack Title",
+                "attack_family": "dns_amplification",
+            },
+            "node": {
+                "ip_address": "10.0.0.1",
+            },
+        }
+
+        alert = FlowtriqProvider._format_alert(event)
+        assert alert.name == "Custom Attack Title"
+
+    def test_empty_event(self):
+        """Completely empty event still produces a valid alert."""
+        event = {}
+
+        alert = FlowtriqProvider._format_alert(event)
+
+        assert alert.id is None
+        assert alert.name == "DDoS Attack on unknown"
+        assert alert.severity == AlertSeverity.INFO
+        assert alert.status == AlertStatus.FIRING
 
 
 class TestSeverityMapping:
@@ -136,12 +193,24 @@ class TestSeverityMapping:
         ],
     )
     def test_severity_mapping(self, flowtriq_severity, expected):
-        event = {"id": "test", "target_ip": "10.0.0.1", "severity": flowtriq_severity}
+        event = {
+            "incident": {
+                "id": "test",
+                "severity": flowtriq_severity,
+            },
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert alert.severity == expected
 
     def test_unknown_severity_defaults_to_info(self):
-        event = {"id": "test", "target_ip": "10.0.0.1", "severity": "unknown_level"}
+        event = {
+            "incident": {
+                "id": "test",
+                "severity": "unknown_level",
+            },
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert alert.severity == AlertSeverity.INFO
 
@@ -160,12 +229,24 @@ class TestStatusMapping:
         ],
     )
     def test_status_mapping(self, flowtriq_status, expected):
-        event = {"id": "test", "target_ip": "10.0.0.1", "status": flowtriq_status}
+        event = {
+            "incident": {
+                "id": "test",
+                "status": flowtriq_status,
+            },
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert alert.status == expected
 
     def test_unknown_status_defaults_to_firing(self):
-        event = {"id": "test", "target_ip": "10.0.0.1", "status": "something_else"}
+        event = {
+            "incident": {
+                "id": "test",
+                "status": "something_else",
+            },
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert alert.status == AlertStatus.FIRING
 
@@ -174,26 +255,41 @@ class TestBandwidthFormatting:
     """Test bandwidth and packet rate formatting in descriptions."""
 
     def test_gbps_formatting(self):
-        event = {"id": "t", "target_ip": "10.0.0.1", "bandwidth_bps": 10_000_000_000}
+        event = {
+            "incident": {"id": "t", "peak_bps": 10_000_000_000},
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert "10.0 Gbps" in alert.description
 
     def test_mbps_formatting(self):
-        event = {"id": "t", "target_ip": "10.0.0.1", "bandwidth_bps": 500_000_000}
+        event = {
+            "incident": {"id": "t", "peak_bps": 500_000_000},
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert "500.0 Mbps" in alert.description
 
     def test_kbps_formatting(self):
-        event = {"id": "t", "target_ip": "10.0.0.1", "bandwidth_bps": 500_000}
+        event = {
+            "incident": {"id": "t", "peak_bps": 500_000},
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert "500.0 Kbps" in alert.description
 
     def test_mpps_formatting(self):
-        event = {"id": "t", "target_ip": "10.0.0.1", "packets_pps": 5_000_000}
+        event = {
+            "incident": {"id": "t", "peak_pps": 5_000_000},
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert "5.0 Mpps" in alert.description
 
     def test_kpps_formatting(self):
-        event = {"id": "t", "target_ip": "10.0.0.1", "packets_pps": 500_000}
+        event = {
+            "incident": {"id": "t", "peak_pps": 500_000},
+            "node": {"ip_address": "10.0.0.1"},
+        }
         alert = FlowtriqProvider._format_alert(event)
         assert "500.0 Kpps" in alert.description
