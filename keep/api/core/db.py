@@ -2841,6 +2841,34 @@ def get_last_alert_hashes_by_fingerprints(
     return alert_hash_dict
 
 
+def get_last_alert_statuses_by_fingerprints(
+    tenant_id: str, fingerprints: list[str]
+) -> dict[str, str | None]:
+    """Get the status of the last alert for each fingerprint.
+
+    Returns a dict mapping fingerprint -> status string (or None if not found).
+    """
+    if not fingerprints:
+        return {}
+
+    with Session(engine) as session:
+        query = (
+            select(LastAlert.fingerprint, Alert.event)
+            .join(Alert, LastAlert.alert_id == Alert.id)
+            .where(LastAlert.tenant_id == tenant_id)
+            .where(LastAlert.fingerprint.in_(fingerprints))
+        )
+        results = session.execute(query).all()
+
+    status_dict: dict[str, str | None] = {}
+    for fingerprint, event in results:
+        if isinstance(event, dict):
+            status_dict[fingerprint] = event.get("status")
+        else:
+            status_dict[fingerprint] = None
+    return status_dict
+
+
 def update_key_last_used(
     tenant_id: str,
     reference_id: str,
