@@ -114,3 +114,99 @@ class TestPollAlertsPayloadOverLimit:
         result = poll_alerts_payload(fingerprints, alert_transitions=transitions)
         assert result["fingerprints"] == fingerprints
         assert len(result["alerts"]) == FINGERPRINT_PAYLOAD_LIMIT
+
+
+class TestGetLastAlertStatusesByFingerprints:
+    """DB-backed tests using the sqlite db_session fixture."""
+
+    def test_returns_status_from_last_alert(self, db_session):
+        from keep.api.core.db import get_last_alert_statuses_by_fingerprints, set_last_alert
+        from keep.api.core.dependencies import SINGLE_TENANT_UUID
+        from keep.api.models.db.alert import Alert
+
+        # Create an alert with status "firing"
+        alert = Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event={"status": "firing", "name": "test-alert"},
+            fingerprint="fp-status-test",
+        )
+        db_session.add(alert)
+        db_session.commit()
+
+        set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+
+        result = get_last_alert_statuses_by_fingerprints(
+            SINGLE_TENANT_UUID, ["fp-status-test"]
+        )
+        assert result == {"fp-status-test": "firing"}
+
+    def test_returns_resolved_status(self, db_session):
+        from keep.api.core.db import get_last_alert_statuses_by_fingerprints, set_last_alert
+        from keep.api.core.dependencies import SINGLE_TENANT_UUID
+        from keep.api.models.db.alert import Alert
+
+        alert = Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event={"status": "resolved", "name": "resolved-alert"},
+            fingerprint="fp-resolved-test",
+        )
+        db_session.add(alert)
+        db_session.commit()
+
+        set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+
+        result = get_last_alert_statuses_by_fingerprints(
+            SINGLE_TENANT_UUID, ["fp-resolved-test"]
+        )
+        assert result == {"fp-resolved-test": "resolved"}
+
+    def test_returns_empty_for_unknown_fingerprints(self, db_session):
+        from keep.api.core.db import get_last_alert_statuses_by_fingerprints
+        from keep.api.core.dependencies import SINGLE_TENANT_UUID
+
+        result = get_last_alert_statuses_by_fingerprints(
+            SINGLE_TENANT_UUID, ["fp-nonexistent"]
+        )
+        assert result == {}
+
+    def test_returns_empty_for_empty_fingerprints(self, db_session):
+        from keep.api.core.db import get_last_alert_statuses_by_fingerprints
+        from keep.api.core.dependencies import SINGLE_TENANT_UUID
+
+        result = get_last_alert_statuses_by_fingerprints(SINGLE_TENANT_UUID, [])
+        assert result == {}
+
+    def test_multiple_fingerprints(self, db_session):
+        from keep.api.core.db import get_last_alert_statuses_by_fingerprints, set_last_alert
+        from keep.api.core.dependencies import SINGLE_TENANT_UUID
+        from keep.api.models.db.alert import Alert
+
+        alert1 = Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event={"status": "firing", "name": "alert-1"},
+            fingerprint="fp-multi-1",
+        )
+        alert2 = Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event={"status": "acknowledged", "name": "alert-2"},
+            fingerprint="fp-multi-2",
+        )
+        db_session.add(alert1)
+        db_session.add(alert2)
+        db_session.commit()
+
+        set_last_alert(SINGLE_TENANT_UUID, alert1, db_session)
+        set_last_alert(SINGLE_TENANT_UUID, alert2, db_session)
+
+        result = get_last_alert_statuses_by_fingerprints(
+            SINGLE_TENANT_UUID, ["fp-multi-1", "fp-multi-2"]
+        )
+        assert result == {"fp-multi-1": "firing", "fp-multi-2": "acknowledged"}

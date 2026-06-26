@@ -2846,27 +2846,29 @@ def get_last_alert_statuses_by_fingerprints(
 ) -> dict[str, str | None]:
     """Get the status of the last alert for each fingerprint.
 
+    Uses dialect-aware JSON extraction so it works on Postgres, MySQL, and SQLite.
+
+    Note: This returns the raw event status, not the enrichment-effective status.
+    If an alert's status was overridden via AlertEnrichment.enrichments.status,
+    that override is NOT reflected here. For the intended use case (transition
+    detection in poll-alerts), the raw event status is sufficient.
+
     Returns a dict mapping fingerprint -> status string (or None if not found).
     """
     if not fingerprints:
         return {}
 
     with Session(engine) as session:
+        status_field = get_json_extract_field(session, Alert.event, "status")
         query = (
-            select(LastAlert.fingerprint, Alert.event)
+            select(LastAlert.fingerprint, status_field)
             .join(Alert, LastAlert.alert_id == Alert.id)
             .where(LastAlert.tenant_id == tenant_id)
             .where(LastAlert.fingerprint.in_(fingerprints))
         )
         results = session.execute(query).all()
 
-    status_dict: dict[str, str | None] = {}
-    for fingerprint, event in results:
-        if isinstance(event, dict):
-            status_dict[fingerprint] = event.get("status")
-        else:
-            status_dict[fingerprint] = None
-    return status_dict
+    return {fingerprint: status for fingerprint, status in results}
 
 
 def update_key_last_used(
