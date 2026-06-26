@@ -20,7 +20,7 @@ from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, fingerprints_for_poll_payload, poll_alerts_payload
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, poll_alerts_payload
 from keep.api.core.alerts import (
     get_alert_facets,
     get_alert_facets_data,
