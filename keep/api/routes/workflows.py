@@ -1184,9 +1184,13 @@ def toggle_workflow_state(
     if workflow.provisioned:
         raise HTTPException(403, detail="Cannot modify a provisioned workflow")
 
-    # Toggle the disabled state
-    # TODO: update workflow_raw
+    # Toggle the disabled state and sync workflow_raw YAML
     workflow.is_disabled = not workflow.is_disabled
+
+    workflow_raw_data = cyaml.safe_load(workflow.workflow_raw)
+    workflow_raw_data["disabled"] = workflow.is_disabled
+    workflow.workflow_raw = cyaml.dump(workflow_raw_data, width=99999)
+
     workflow.last_updated = datetime.datetime.now()
 
     session.add(workflow)
