@@ -114,6 +114,20 @@ def test_threshold_condition_one_value_is_precentage():
         threshold_condition.apply("90", "80%")
 
 
+def test_threshold_condition_percentage_values_compared_numerically():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
+    threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
+        condition_type="threshold",
+        condition_name="mock",
+        condition_config={"compare_type": "gt"},
+    )
+    # Percentages must be compared numerically, not lexicographically:
+    # as strings "100%" < "90%" and "9%" > "50%".
+    assert threshold_condition.apply("90%", "100%") is True
+    assert threshold_condition.apply("50%", "9%") is False
+
+
 def test_threshold_condition_multithreshold():
     context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
