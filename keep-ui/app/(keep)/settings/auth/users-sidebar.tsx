@@ -266,17 +266,27 @@ const UsersSidebar = ({
                 )}
                 {/* Password Field */}
                 {(authType === AuthType.DB || authType === AuthType.KEYCLOAK) &&
-                  isNewUser &&
                   userCreationAllowed && (
                     <div className="mt-4">
-                      <Subtitle>Password</Subtitle>
+                      <Subtitle>
+                        {isNewUser ? "Password" : "Reset Password"}
+                      </Subtitle>
                       <Controller
                         name="password"
                         control={control}
-                        rules={{ required: "Password is required" }}
+                        rules={{
+                          required: isNewUser
+                            ? "Password is required"
+                            : false,
+                        }}
                         render={({ field }) => (
                           <TextInput
                             type="password"
+                            placeholder={
+                              isNewUser
+                                ? undefined
+                                : "Leave empty to keep current password"
+                            }
                             {...field}
                             error={!!errors.password}
                             errorMessage={
