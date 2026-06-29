@@ -5,13 +5,13 @@ import logging
 import pydantic
 from google.auth.transport import requests
 from google.cloud.container_v1 import ClusterManagerClient
-from google.oauth2 import service_account
 from kubernetes import client, config
 from kubernetes.stream import stream
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.gke_provider.gke_credentials import build_gke_credentials
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -21,18 +21,19 @@ from keep.providers.providers_factory import ProvidersFactory
 class GkeProviderAuthConfig:
     """GKE authentication configuration."""
 
+    cluster_name: str = dataclasses.field(
+        metadata={"required": True, "description": "The name of the cluster"}
+    )
     service_account_json: str = dataclasses.field(
+        default="",
         metadata={
-            "required": True,
-            "description": "The service account JSON with container.viewer role",
+            "required": False,
+            "description": "The service account JSON with container.viewer role. Leave empty to use Application Default Credentials (e.g. GKE Workload Identity)",
             "sensitive": True,
             "type": "file",
             "name": "service_account_json",
             "file_type": "application/json",
-        }
-    )
-    cluster_name: str = dataclasses.field(
-        metadata={"required": True, "description": "The name of the cluster"}
+        },
     )
     region: str = dataclasses.field(
         default="us-central1",
@@ -40,6 +41,14 @@ class GkeProviderAuthConfig:
             "required": False,
             "description": "The GKE cluster region",
             "hint": "us-central1",
+        },
+    )
+    project_id: str = dataclasses.field(
+        default="",
+        metadata={
+            "required": False,
+            "description": "The GCP project id (defaults to the service account project or the Application Default Credentials project)",
+            "hint": "my-gcp-project",
         },
     )
 
@@ -157,14 +166,18 @@ class GkeProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        try:
-            self._service_account_data = json.loads(
-                self.authentication_config.service_account_json
-            )
-            self._project_id = self._service_account_data.get("project_id")
-        except Exception:
-            self._service_account_data = None
-            self._project_id = None
+        self._service_account_data = None
+        self._project_id = self.authentication_config.project_id or None
+        if self.authentication_config.service_account_json:
+            try:
+                self._service_account_data = json.loads(
+                    self.authentication_config.service_account_json
+                )
+                self._project_id = self._project_id or self._service_account_data.get(
+                    "project_id"
+                )
+            except Exception:
+                self._service_account_data = None
         self._region = self.authentication_config.region
         self._cluster_name = self.authentication_config.cluster_name
         self._client = None
@@ -174,25 +187,30 @@ class GkeProvider(BaseProvider):
         if self._client:
             self._client.api_client.rest_client.pool_manager.clear()
 
+    def _get_credentials(self):
+        credentials, project_id = build_gke_credentials(
+            self._service_account_data, self._project_id
+        )
+        self._project_id = project_id
+        return credentials
+
     def validate_config(self):
         """Validate the provided configuration."""
         self.authentication_config = GkeProviderAuthConfig(**self.config.authentication)
 
     def validate_scopes(self) -> dict[str, bool | str]:
         """Validate if the service account has the required permissions."""
-        if not self._service_account_data or not self._project_id:
-            return {"roles/container.viewer": "Service account JSON is invalid"}
-
         scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
 
         try:
             # Test GKE API permissions
-            credentials = service_account.Credentials.from_service_account_info(
-                self._service_account_data,
-                scopes=["https://www.googleapis.com/auth/cloud-platform"],
-            )
+            credentials = self._get_credentials()
             auth_request = requests.Request()
             credentials.refresh(auth_request)
+            if not self._project_id:
+                raise ProviderException(
+                    "Could not resolve the GCP project id; set project_id or provide a service account JSON"
+                )
             gke_client = ClusterManagerClient(credentials=credentials)
 
             try:
@@ -425,10 +443,7 @@ class GkeProvider(BaseProvider):
         """Generate a Kubernetes client configured for GKE."""
         try:
             # Create GKE client with credentials
-            credentials = service_account.Credentials.from_service_account_info(
-                self._service_account_data,
-                scopes=["https://www.googleapis.com/auth/cloud-platform"],
-            )
+            credentials = self._get_credentials()
             auth_request = requests.Request()
             credentials.refresh(auth_request)
             gke_client = ClusterManagerClient(credentials=credentials)
