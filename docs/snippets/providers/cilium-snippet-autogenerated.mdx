@@ -1,9 +1,13 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
 - **cilium_base_endpoint**: The base endpoint of the cilium hubble relay (required: True, sensitive: False)
+- **use_tls**: Connect to the hubble relay over TLS (required: False, sensitive: False)
+- **ca_certificate**: CA certificate (PEM) used to verify the hubble relay server (required: False, sensitive: True)
+- **client_certificate**: Client certificate (PEM) for mutual TLS (required: False, sensitive: True)
+- **client_key**: Client private key (PEM) for mutual TLS (required: False, sensitive: True)
 
 
 ## In workflows
@@ -14,6 +18,6 @@ This provider can't be used as a "step" or "action" in workflows. If you want to
 
 
 ## Topology
-This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
-and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
 for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).

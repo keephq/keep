@@ -1,12 +1,12 @@
 import dataclasses
 from collections import defaultdict
 
-import grpc
 import pydantic
 
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.cilium_provider.secure_channel import build_cilium_channel
 from keep.providers.models.provider_config import ProviderConfig
 from keep.validation.fields import NoSchemeUrl
 
@@ -23,6 +23,50 @@ class CiliumProviderAuthConfig:
             "hint": "localhost:4245",
             "validation": "no_scheme_url",
         }
+    )
+
+    use_tls: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "name": "use_tls",
+            "description": "Connect to the hubble relay over TLS",
+            "required": False,
+            "sensitive": False,
+            "type": "switch",
+        },
+    )
+
+    ca_certificate: str = dataclasses.field(
+        default="",
+        metadata={
+            "name": "ca_certificate",
+            "description": "CA certificate (PEM) used to verify the hubble relay server",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+        },
+    )
+
+    client_certificate: str = dataclasses.field(
+        default="",
+        metadata={
+            "name": "client_certificate",
+            "description": "Client certificate (PEM) for mutual TLS",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+        },
+    )
+
+    client_key: str = dataclasses.field(
+        default="",
+        metadata={
+            "name": "client_key",
+            "description": "Client private key (PEM) for mutual TLS",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+        },
     )
 
 
@@ -88,7 +132,13 @@ class CiliumProvider(BaseTopologyProvider):
             ObserverStub,
         )
 
-        channel = grpc.insecure_channel(self.authentication_config.cilium_base_endpoint)
+        channel = build_cilium_channel(
+            self.authentication_config.cilium_base_endpoint,
+            use_tls=self.authentication_config.use_tls,
+            ca_certificate=self.authentication_config.ca_certificate,
+            client_certificate=self.authentication_config.client_certificate,
+            client_key=self.authentication_config.client_key,
+        )
         stub = ObserverStub(channel)
 
         # Create a request for the last 1000 flows
