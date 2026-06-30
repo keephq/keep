@@ -2146,6 +2146,25 @@ def update_user_role(tenant_id, username, role):
     return user
 
 
+def update_user_password(tenant_id, username, password):
+    from keep.api.models.db.user import User
+
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.username == username)
+        ).first()
+        if not user:
+            return None
+        user.password_hash = password_hash
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    return user
+
+
 def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     with Session(engine) as session:
         workflow_execution = session.exec(

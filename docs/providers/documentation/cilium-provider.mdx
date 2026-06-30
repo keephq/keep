@@ -40,6 +40,10 @@ The Cilium provider leverages Hubble's network flow data to automatically discov
 | Parameter | Description | Example |
 |-----------|-------------|----------|
 | `cilium_base_endpoint` | The base endpoint of the Cilium Hubble relay | `localhost:4245` |
+| `use_tls` | Connect to the Hubble relay over TLS | `true` |
+| `ca_certificate` | CA certificate (PEM) used to verify the Hubble relay server | `-----BEGIN CERTIFICATE-----` |
+| `client_certificate` | Client certificate (PEM) for mutual TLS | `-----BEGIN CERTIFICATE-----` |
+| `client_key` | Client private key (PEM) for mutual TLS | `-----BEGIN PRIVATE KEY-----` |
 
 ## Outputs
 
