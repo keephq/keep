@@ -11,7 +11,10 @@ from kubernetes.stream import stream
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.gke_provider.gke_credentials import build_gke_credentials
+from keep.providers.gke_provider.gke_credentials import (
+    build_gke_credentials,
+    resolve_service_account,
+)
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -166,18 +169,11 @@ class GkeProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        self._service_account_data = None
-        self._project_id = self.authentication_config.project_id or None
-        if self.authentication_config.service_account_json:
-            try:
-                self._service_account_data = json.loads(
-                    self.authentication_config.service_account_json
-                )
-                self._project_id = self._project_id or self._service_account_data.get(
-                    "project_id"
-                )
-            except Exception:
-                self._service_account_data = None
+        self._service_account_data, self._project_id = resolve_service_account(
+            self.authentication_config.service_account_json,
+            self.authentication_config.project_id,
+            self.logger,
+        )
         self._region = self.authentication_config.region
         self._cluster_name = self.authentication_config.cluster_name
         self._client = None
@@ -205,12 +201,12 @@ class GkeProvider(BaseProvider):
         try:
             # Test GKE API permissions
             credentials = self._get_credentials()
-            auth_request = requests.Request()
-            credentials.refresh(auth_request)
             if not self._project_id:
                 raise ProviderException(
                     "Could not resolve the GCP project id; set project_id or provide a service account JSON"
                 )
+            auth_request = requests.Request()
+            credentials.refresh(auth_request)
             gke_client = ClusterManagerClient(credentials=credentials)
 
             try:
