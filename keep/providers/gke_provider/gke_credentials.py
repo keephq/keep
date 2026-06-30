@@ -13,12 +13,7 @@ def resolve_service_account(
     project_id: str | None = None,
     logger=None,
 ) -> tuple[dict | None, str | None]:
-    """Parse the optional service account JSON and resolve the project id.
-
-    Returns (service_account_data, project_id). When the JSON is empty or cannot
-    be parsed the data is None so the caller falls back to Application Default
-    Credentials; a malformed JSON is logged so the fallback is observable.
-    """
+    """Parse the optional service account JSON; data is None to fall back to ADC."""
     resolved_project = project_id or None
     if not service_account_json:
         return None, resolved_project
@@ -38,13 +33,7 @@ def build_gke_credentials(
     service_account_data: dict | None = None,
     project_id: str | None = None,
 ) -> tuple[Credentials, str | None]:
-    """Return (credentials, project_id) for accessing a GKE cluster.
-
-    When a service account JSON is supplied its credentials are used directly.
-    Otherwise the environment's Application Default Credentials are used (for
-    example a GKE Workload Identity service account), which also resolves the
-    project when it is not provided explicitly.
-    """
+    """Return (credentials, project_id) from the service account JSON, or ADC if none."""
     if service_account_data:
         credentials = service_account.Credentials.from_service_account_info(
             service_account_data, scopes=GKE_SCOPES
