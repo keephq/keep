@@ -1106,6 +1106,95 @@ def test_incident_workflow_enrichment_integration(db_session, client, test_app):
     ],
     indirect=True,
 )
+def test_incident_workflow_enrichment_with_foreach_service_context(
+    db_session, client, test_app
+):
+    """
+    Regression test: incident enrichment should use the incident context when a
+    workflow action is inside a foreach loop over plain service names.
+    """
+
+    workflow_definition = """workflow:
+  id: incident-foreach-service-enricher-test
+  name: Incident Foreach Service Enricher Test
+  description: Test workflow that enriches incidents from foreach service context
+  disabled: false
+  triggers:
+    - type: incident
+      events:
+        - created
+  actions:
+    - name: enrich-service-ticket
+      foreach: "{{ incident.services }}"
+      if: '{{ foreach.value }} == "service"'
+      provider:
+        type: console
+        with:
+          message: "Enriching incident {{ incident.user_generated_name }} for {{ foreach.value }}"
+          enrich_incident:
+            - key: jira_ticket_url
+              value: "https://jira.example.com/browse/KAN-1"
+"""
+
+    workflow = Workflow(
+        id="incident-foreach-service-enricher-test",
+        name="Incident Foreach Service Enricher Test",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Test workflow that enriches incidents from foreach service context",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition,
+        last_updated=datetime.utcnow(),
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+    incident_payload = {
+        "user_generated_name": "Test Incident for Foreach Service Enrichment",
+        "user_summary": "Test incident for foreach service enrichment regression",
+        "severity": "critical",
+        "status": "firing",
+        "affected_services": ["service"],
+    }
+
+    response = client.post(
+        "/incidents",
+        headers={"x-api-key": "some-key"},
+        json=incident_payload,
+    )
+    assert response.status_code == 202
+    incident_id = response.json()["id"]
+
+    assert wait_for_workflow_in_run_queue("incident-foreach-service-enricher-test")
+
+    workflow_execution = wait_for_workflow_execution(
+        SINGLE_TENANT_UUID, "incident-foreach-service-enricher-test"
+    )
+
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    response = client.get(
+        f"/incidents/{incident_id}",
+        headers={"x-api-key": "some-key"},
+    )
+    assert response.status_code == 200
+    incident_data = response.json()
+
+    assert incident_data["services"] == ["service"]
+    assert incident_data["enrichments"]["jira_ticket_url"] == (
+        "https://jira.example.com/browse/KAN-1"
+    )
+
+
+@pytest.mark.parametrize(
+    "test_app, db_session",
+    [
+        ("NO_AUTH", None),
+        ("NO_AUTH", {"db": "mysql"}),
+    ],
+    indirect=True,
+)
 def test_alert_enrichment_via_api_uuid(db_session, client, test_app, create_alert):
     fingerprint = str(uuid.uuid4())
 
