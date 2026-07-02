@@ -24,6 +24,7 @@ from dateutil.parser import parse
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
     get_custom_deduplication_rule,
+    get_correlation_deduplication_rule,
     get_enrichments,
     get_provider_by_name,
     is_linked_provider,
@@ -487,23 +488,41 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 alert.providerId = provider_id
                 alert.providerType = provider_type
 
-        # if there is no custom deduplication rule, return the formatted alert
-        if not custom_deduplication_rule:
-            return formatted_alert
-        # if there is a custom deduplication rule, apply it
-        # apply the custom deduplication rule to calculate the fingerprint
-        for alert in formatted_alert:
-            logger.info(
-                "Applying custom deduplication rule",
-                extra={
-                    "tenant_id": tenant_id,
-                    "provider_id": provider_id,
-                    "alert_id": alert.id,
-                },
-            )
-            alert.fingerprint = cls.get_alert_fingerprint(
-                alert, custom_deduplication_rule.fingerprint_fields
-            )
+        # apply split rule: overrides the provider's default fingerprint
+        if custom_deduplication_rule:
+            for alert in formatted_alert:
+                logger.info(
+                    "Applying split deduplication rule",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "alert_id": alert.id,
+                    },
+                )
+                alert.fingerprint = cls.get_alert_fingerprint(
+                    alert, custom_deduplication_rule.fingerprint_fields
+                )
+
+        # apply correlate rule: computes a secondary correlation key without changing the fingerprint
+        correlation_deduplication_rule = get_correlation_deduplication_rule(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+        )
+        if correlation_deduplication_rule:
+            for alert in formatted_alert:
+                logger.info(
+                    "Applying correlate deduplication rule",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "alert_id": alert.id,
+                    },
+                )
+                alert.correlation_fingerprint = cls.get_alert_fingerprint(
+                    alert, correlation_deduplication_rule.fingerprint_fields
+                )
+
         return formatted_alert
 
     @staticmethod
@@ -585,6 +604,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 for alert in alerts:
                     alert.fingerprint = self.get_alert_fingerprint(
                         alert, custom_deduplication_rule.fingerprint_fields
+                    )
+
+            correlation_deduplication_rule = get_correlation_deduplication_rule(
+                tenant_id=self.context_manager.tenant_id,
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+            )
+            if correlation_deduplication_rule:
+                for alert in alerts:
+                    alert.correlation_fingerprint = self.get_alert_fingerprint(
+                        alert, correlation_deduplication_rule.fingerprint_fields
                     )
 
             return alerts
