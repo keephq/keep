@@ -21,7 +21,7 @@ from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
-from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY, fingerprints_for_poll_payload
+from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY, poll_alerts_payload
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     enrich_alerts_with_incidents,
@@ -29,6 +29,7 @@ from keep.api.core.db import (
     get_all_presets_dtos,
     get_enrichment_with_session,
     get_last_alert_hashes_by_fingerprints,
+    get_last_alert_statuses_by_fingerprints,
     get_session_sync,
     get_started_at_for_alerts,
     set_last_alert,
@@ -445,6 +446,11 @@ def __handle_formatted_events(
         )
 
     with tracer.start_as_current_span("process_event_save_to_db"):
+        # Capture previous statuses before save overwrites LastAlert
+        previous_statuses = get_last_alert_statuses_by_fingerprints(
+            tenant_id, [event.fingerprint for event in formatted_events if event.fingerprint]
+        )
+
         # save to db
         enriched_formatted_events = __save_to_db(
             tenant_id,
@@ -594,14 +600,19 @@ def __handle_formatted_events(
                     for event in enriched_formatted_events
                     if event.fingerprint
                 ]
+                alert_transitions = [
+                    {
+                        "fingerprint": event.fingerprint,
+                        "status": event.status,
+                        "previous_status": previous_statuses.get(event.fingerprint),
+                    }
+                    for event in enriched_formatted_events
+                    if event.fingerprint
+                ]
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    {
-                        "fingerprints": fingerprints_for_poll_payload(
-                            alert_fingerprints
-                        )
-                    },
+                    poll_alerts_payload(alert_fingerprints, alert_transitions),
                 )
                 logger.info("Told client to poll alerts")
             except Exception:

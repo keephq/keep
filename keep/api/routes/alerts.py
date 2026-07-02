@@ -20,7 +20,7 @@ from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, fingerprints_for_poll_payload
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, poll_alerts_payload
 from keep.api.core.alerts import (
     get_alert_facets,
     get_alert_facets_data,
@@ -993,7 +993,7 @@ def batch_enrich_alerts(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    {"fingerprints": fingerprints_for_poll_payload(fingerprints)},
+                    poll_alerts_payload(fingerprints),
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
@@ -1142,11 +1142,7 @@ def _enrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    {
-                        "fingerprints": fingerprints_for_poll_payload(
-                            [enrich_data.fingerprint]
-                        )
-                    },
+                    poll_alerts_payload([enrich_data.fingerprint]),
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
@@ -1263,11 +1259,7 @@ def unenrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    {
-                        "fingerprints": fingerprints_for_poll_payload(
-                            [enrich_data.fingerprint]
-                        )
-                    },
+                    poll_alerts_payload([enrich_data.fingerprint]),
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
