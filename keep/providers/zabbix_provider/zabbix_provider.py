@@ -529,6 +529,7 @@ class ZabbixProvider(BaseProvider):
             {
                 "recent": False,
                 "selectSuppressionData": "extend",
+                "selectHosts": ["host", "name"],
                 "time_from": time_from,
             },
         )
@@ -546,6 +547,9 @@ class ZabbixProvider(BaseProvider):
                 problem.pop("status", "").lower(), AlertStatus.FIRING
             )
 
+            hosts = problem.pop("hosts", None) or []
+            hostname = hosts[0].get("name") or hosts[0].get("host") if hosts else None
+
             formatted_alerts.append(
                 AlertDto(
                     id=problem.pop("eventid"),
@@ -559,6 +563,8 @@ class ZabbixProvider(BaseProvider):
                     message=name,
                     severity=severity,
                     environment=environment,
+                    service=hostname,
+                    hostname=hostname,
                     problem=problem,
                 )
             )
@@ -735,8 +741,8 @@ class ZabbixProvider(BaseProvider):
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("url", None)
-        hostname = event.pop("service", None) or event.get("hostName")
-        ip_address = event.get("hostIp")
+        hostname = event.pop("service", None) or event.pop("host_name", None)
+        ip_address = event.pop("host_ip", None)
 
         if zabbix_url == "{$ZABBIX.URL}":
             # This means user did not configure $ZABBIX.URL in Zabbix probably
