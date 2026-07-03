@@ -50,6 +50,17 @@ class JiraonpremProviderAuthConfig:
         default="",
     )
 
+    verify: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "required": False,
+            "description": "Verify the Jira server's TLS certificate",
+            "hint": "Disabled by default; enable if the server uses a trusted certificate",
+            "type": "switch",
+            "config_main_group": "authentication",
+        },
+    )
+
 
 class JiraonpremProvider(BaseProvider):
     """Enrich alerts with Jira tickets."""
@@ -118,7 +129,7 @@ class JiraonpremProvider(BaseProvider):
         resp = requests.get(
             f"{self.jira_host}/rest/api/2/myself",
             headers=headers,
-            verify=False,
+            verify=self.authentication_config.verify,
             timeout=10,
         )
         try:
@@ -139,7 +150,7 @@ class JiraonpremProvider(BaseProvider):
             f"{self.jira_host}/rest/api/2/mypermissions",
             headers=headers,
             params=params,
-            verify=False,
+            verify=self.authentication_config.verify,
             timeout=10,
         )
         try:
@@ -178,7 +189,9 @@ class JiraonpremProvider(BaseProvider):
         # otherwise, try to use https:
         try:
             requests.get(
-                f"https://{self.authentication_config.host}", verify=False, timeout=10
+                f"https://{self.authentication_config.host}",
+                verify=self.authentication_config.verify,
+                timeout=10,
             )
             self.logger.debug("Using https")
             self._host = f"https://{self.authentication_config.host}"
@@ -239,7 +252,12 @@ class JiraonpremProvider(BaseProvider):
                 query_params={"projectKeys": project_key},
             )
             headers = self.__get_auth_header()
-            response = requests.get(url=url, headers=headers, verify=False, timeout=10)
+            response = requests.get(
+                url=url,
+                headers=headers,
+                verify=self.authentication_config.verify,
+                timeout=10,
+            )
 
             response.raise_for_status()
 
@@ -322,7 +340,7 @@ class JiraonpremProvider(BaseProvider):
                 url=url,
                 json=request_body,
                 headers=self.__get_auth_header(),
-                verify=False,
+                verify=self.authentication_config.verify,
                 timeout=10,
             )
             try:
@@ -387,7 +405,7 @@ class JiraonpremProvider(BaseProvider):
                 url=url,
                 json=request_body,
                 headers=self.__get_auth_header(),
-                verify=False,
+                verify=self.authentication_config.verify,
                 timeout=10,
             )
 
@@ -421,7 +439,7 @@ class JiraonpremProvider(BaseProvider):
         boards_response = requests.get(
             f"{self.jira_host}/rest/agile/1.0/board",
             headers=headers,
-            verify=False,
+            verify=self.authentication_config.verify,
             timeout=10,
         )
         if boards_response.status_code == 200:
@@ -434,7 +452,7 @@ class JiraonpremProvider(BaseProvider):
                     board_configuration = requests.get(
                         f"{self.jira_host}/rest/agile/1.0/board/{board_id}/configuration",
                         headers=headers,
-                        verify=False,
+                        verify=self.authentication_config.verify,
                         timeout=10,
                     )
                     if board_configuration.status_code != 200:
@@ -447,7 +465,7 @@ class JiraonpremProvider(BaseProvider):
                     filter_response = requests.get(
                         f"{self.jira_host}/rest/api/2/filter/{filter_id}",
                         headers=headers,
-                        verify=False,
+                        verify=self.authentication_config.verify,
                         timeout=10,
                     )
                     if filter_response.status_code != 200:
@@ -483,7 +501,7 @@ class JiraonpremProvider(BaseProvider):
         issue_key = requests.get(
             f"{self.jira_host}/rest/api/2/issue/{issue_id}",
             headers=headers,
-            verify=False,
+            verify=self.authentication_config.verify,
             timeout=10,
         )
 
@@ -586,7 +604,10 @@ class JiraonpremProvider(BaseProvider):
                 f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
             )
             response = requests.get(
-                request_url, headers=self.__get_auth_header(), verify=False, timeout=10
+                request_url,
+                headers=self.__get_auth_header(),
+                verify=self.authentication_config.verify,
+                timeout=10,
             )
             if not response.ok:
                 raise ProviderException(
@@ -597,7 +618,10 @@ class JiraonpremProvider(BaseProvider):
         else:
             request_url = self.__get_url(paths=["issue", ticket_id])
             response = requests.get(
-                request_url, headers=self.__get_auth_header(), verify=False, timeout=10
+                request_url,
+                headers=self.__get_auth_header(),
+                verify=self.authentication_config.verify,
+                timeout=10,
             )
             if not response.ok:
                 raise ProviderException(
