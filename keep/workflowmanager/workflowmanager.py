@@ -15,6 +15,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.metrics import workflow_execution_duration
 from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.db.maintenance_window import MaintenanceWindowDto
 from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
@@ -22,6 +23,15 @@ from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
 from keep.api.utils.cel_utils import preprocess_cel_expression
+
+
+def get_maintenance_events(workflow_triggers: typing.List[dict]) -> typing.List[str]:
+    return [
+        event
+        for trigger in workflow_triggers
+        if trigger.get("type") == "maintenance"
+        for event in trigger.get("events", [])
+    ]
 
 
 class WorkflowManager:
@@ -171,6 +181,41 @@ class WorkflowManager:
                         "tenant_id": tenant_id,
                         "triggered_by": "incident:{}".format(trigger),
                         "event": incident,
+                    }
+                )
+            self.logger.info("Workflow added to run")
+
+    def insert_maintenance(
+        self, tenant_id: str, maintenance: MaintenanceWindowDto, trigger: str
+    ):
+        all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
+        self.logger.info(
+            "Got all workflows",
+            extra={"num_of_workflows": len(all_workflow_models)},
+        )
+        for workflow_model in all_workflow_models:
+            if workflow_model.is_disabled:
+                continue
+            workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+            if workflow is None:
+                continue
+
+            maintenance_events = get_maintenance_events(workflow.workflow_triggers)
+            if trigger not in maintenance_events:
+                self.logger.debug(
+                    "workflow does not contain maintenance trigger %s, skipping",
+                    trigger,
+                )
+                continue
+
+            with self.scheduler.lock:
+                self.scheduler.workflows_to_run.append(
+                    {
+                        "workflow": workflow,
+                        "workflow_id": workflow_model.id,
+                        "tenant_id": tenant_id,
+                        "triggered_by": "maintenance:{}".format(trigger),
+                        "event": maintenance,
                     }
                 )
             self.logger.info("Workflow added to run")
