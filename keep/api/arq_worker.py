@@ -14,6 +14,7 @@ from starlette.datastructures import CommaSeparatedStrings
 
 import keep.api.logging
 from keep.api.consts import (
+    KEEP_ALERT_RETENTION_DAYS,
     KEEP_ARQ_QUEUE_BASIC,
     KEEP_ARQ_TASK_POOL,
     KEEP_ARQ_TASK_POOL_ALL,
@@ -158,6 +159,8 @@ class WorkerSettings:
     timeout = 30
     functions: list = FUNCTIONS
     cron_jobs: list = [cron("keep.api.tasks.process_watcher_task.async_process_watcher", second=max(0, WATCHER_LAPSED_TIME-1))]
+    if KEEP_ALERT_RETENTION_DAYS > 0:
+        cron_jobs.append(cron("keep.api.tasks.process_retention_task.async_process_retention", hour=2, minute=0))
     queue_name: str
     health_check_interval: int = 10
     health_check_key: str

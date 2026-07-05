@@ -25,7 +25,7 @@ from starlette_context.middleware import RawContextMiddleware
 from keep.api.arq_pool import get_pool
 import keep.api.logging
 import keep.api.observability
-from keep.api.tasks import process_watcher_task
+from keep.api.tasks import process_retention_task, process_watcher_task
 import keep.api.utils.import_ee
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
@@ -67,7 +67,7 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerTypes,
 )
 from keep.topologies.topology_processor import TopologyProcessor
-from keep.api.consts import KEEP_ARQ_QUEUE_MAINTENANCE, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
+from keep.api.consts import KEEP_ALERT_RETENTION_DAYS, KEEP_ARQ_QUEUE_MAINTENANCE, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
 
 # load all providers into cache
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -187,6 +187,27 @@ async def startup():
                     "task": "task",
                 },
             )
+
+    if KEEP_ALERT_RETENTION_DAYS > 0:
+        if REDIS:
+            try:
+                logger.info("Starting the alert retention process")
+                redis: ArqRedis = await get_pool()
+                job = await redis.enqueue_job(
+                    "async_process_retention",
+                    _queue_name=KEEP_ARQ_QUEUE_MAINTENANCE,
+                )
+                logger.info(
+                    "Enqueued job",
+                    extra={
+                        "job_id": job.job_id,
+                        "queue": KEEP_ARQ_QUEUE_MAINTENANCE,
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to start the alert retention process")
+        else:
+            asyncio.create_task(process_retention_task.async_process_retention())
     logger.info("Services started successfully")
 
 

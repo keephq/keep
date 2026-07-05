@@ -349,6 +349,20 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 | **MAINTENANCE_WINDOW_STRATEGY**  |          Choose the strategy                |           No            |    "default"  |      "default" or "recover_previous_status"       |
 | **WATCHER_LAPSED_TIME**          | Time in seconds to execute the alert review |           No            |       60      |             Valid positive integer                |
 
+### Alert Retention
+
+<Info>
+  Alert retention deletes alerts older than the configured number of days from
+  the database, together with their incident links. It is disabled unless
+  KEEP_ALERT_RETENTION_DAYS is set to a positive value.
+</Info>
+
+|                Env var                |                           Purpose                            |        Required         | Default Value |               Valid options                       |
+| :-----------------------------------: | :----------------------------------------------------------: | :---------------------: | :-----------: | :-----------------------------------------------: |
+| **KEEP_ALERT_RETENTION_DAYS**         | Delete alerts older than this number of days (0 disables it) |           No            |       0       |             Valid positive integer                |
+| **KEEP_ALERT_RETENTION_INTERVAL**     |        Time in seconds between retention runs                |           No            |     86400     |             Valid positive integer                |
+| **KEEP_ALERT_RETENTION_BATCH_SIZE**   |        Number of alerts deleted per batch                    |           No            |     1000      |             Valid positive integer                |
+
 ## Frontend Environment Variables
 
 <Info>
