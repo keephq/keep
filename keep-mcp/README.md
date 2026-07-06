@@ -9,15 +9,10 @@ Runs as an independent container alongside `keep-backend` and `keep-frontend`. T
 **Tools**
 
 - `search_alerts(cel, limit, offset)` — query alerts with a CEL expression (same expression language the Keep UI uses).
-- `list_incidents(status, severity, limit, offset)` — list incidents, filterable by status (`firing`, `acknowledged`, `resolved`, `merged`, `deleted`) and severity.
-- `get_incident_with_alerts(incident_id, alerts_limit)` — fetch an incident and its linked alerts in one call.
+- `list_incidents(status, severity, limit, offset, cel)` — list incidents, defaulting to active (`firing` + `acknowledged`).
+- `get_incident(incident_id)` — fetch a single incident by UUID.
+- `list_incident_alerts(incident_id, limit, offset)` — list alerts linked to an incident.
 - `get_topology(service)` — service dependency graph, optionally scoped to one service.
-
-**Resources**
-
-- `keep://alerts` — recent alerts
-- `keep://incidents` — active incidents
-- `keep://topology` — full topology
 
 Write tools (`enrich_alert`, `create_incident`, `run_workflow`, …) and LGTM passthrough (`loki_query_range`, `mimir_query_range`, `tempo_search_traces`) are planned for v0.2 / v0.3. See `plan.md` in the parent worktree for the full roadmap.
 
