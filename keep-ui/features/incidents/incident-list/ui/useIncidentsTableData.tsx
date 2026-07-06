@@ -19,6 +19,7 @@ export interface IncidentsTableDataQuery {
   limit: number;
   offset: number;
   sorting: { id: string; desc: boolean };
+  searchCel: string | null;
   filterCel: string | null;
   timeFrame: TimeFrameV2 | null;
 }
@@ -129,25 +130,38 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
   }, [JSON.stringify(query)]);
 
   const mainCelQuery = useMemo(() => {
-    const filterArray = ["is_candidate == false", dateRangeCel];
+    if (query.searchCel === null) {
+      return null;
+    }
 
-    return filterArray.filter(Boolean).join(" && ");
-  }, [dateRangeCel]);
+    const filterArray = ["is_candidate == false", query.searchCel, dateRangeCel];
+    return filterArray
+      .filter(Boolean)
+      .map((cel) => `(${cel})`)
+      .join(" && ");
+  }, [dateRangeCel, query.searchCel]);
 
   useEffect(() => {
-    if (query.filterCel === null) {
+    if (query.filterCel === null || mainCelQuery === null) {
       return;
     }
 
+    const filterCel = query.filterCel ? `(${query.filterCel})` : "";
     setIncidentsQueryState({
       candidate: null,
       predicted: null,
       limit: query.limit,
       offset: query.offset,
       sorting: query.sorting,
-      cel: [mainCelQuery, query.filterCel].filter(Boolean).join(" && "),
+      cel: [mainCelQuery, filterCel].filter(Boolean).join(" && "),
     });
-  }, [query.sorting, query.filterCel, query.limit, query.offset, mainCelQuery]);
+  }, [
+    query.sorting,
+    query.filterCel,
+    query.limit,
+    query.offset,
+    mainCelQuery,
+  ]);
 
   const {
     data: paginatedIncidentsFromHook,
@@ -214,7 +228,7 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     isEmptyState: defaultIncidents?.count === 0,
     predictedIncidents,
     isPredictedLoading,
-    facetsCel: mainCelQuery,
+    facetsCel: mainCelQuery ?? "",
     incidentChangeToken,
     incidentsError,
   };
