@@ -8,7 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import pytz
-from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
+from pydantic import AnyHttpUrl, BaseModel, Extra, Field, root_validator, validator
 
 from keep.api.models.severity_base import SeverityBaseInterface
 
@@ -113,6 +113,11 @@ class AlertDto(BaseModel):
 
     enriched_fields: list = []
     incident: str | None = None
+    keep_raw_payload: dict | None = Field(
+        default=None,
+        exclude=True,
+        description="In-memory only: full provider webhook for correlation enrichments; not persisted.",
+    )
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -127,7 +132,7 @@ class AlertDto(BaseModel):
 
             # Fields to exclude from comparison since they are bit different in different db's
             # todo: solve it in a better way
-            exclude_fields = {"lastReceived", "startedAt", "event_id"}
+            exclude_fields = {"lastReceived", "startedAt", "event_id", "keep_raw_payload"}
 
             # Remove excluded fields from both dictionaries
             for field in exclude_fields:
