@@ -1,75 +1,20 @@
 # keep-mcp
 
-Model Context Protocol (MCP) server for [Keep](https://github.com/keephq/keep) — exposes Keep's alerts, incidents, and topology to LLM agents as MCP tools and resources.
+Read-only Model Context Protocol server for [Keep](https://github.com/keephq/keep). Sidecar container next to `keep-backend` / `keep-frontend`, thin proxy over the Keep REST API (`X-API-KEY`).
 
-Runs as an independent container alongside `keep-backend` and `keep-frontend`. Talks to the Keep REST API via `X-API-KEY`; never touches Keep's database or secret manager directly.
+## Tools
 
-## v0.1 scope (read-only)
+`search_alerts` · `list_incidents` · `get_incident` · `list_incident_alerts` · `get_topology`
 
-**Tools**
+Query language for `search_alerts` is CEL — see [docs.keephq.dev](https://docs.keephq.dev).
 
-- `search_alerts(cel, limit, offset)` — query alerts with a CEL expression (same expression language the Keep UI uses).
-- `list_incidents(status, severity, limit, offset, cel)` — list incidents, defaulting to active (`firing` + `acknowledged`).
-- `get_incident(incident_id)` — fetch a single incident by UUID.
-- `list_incident_alerts(incident_id, limit, offset)` — list alerts linked to an incident.
-- `get_topology(service)` — service dependency graph, optionally scoped to one service.
-
-Write tools (`enrich_alert`, `create_incident`, `run_workflow`, …) and LGTM passthrough (`loki_query_range`, `mimir_query_range`, `tempo_search_traces`) are planned for v0.2 / v0.3. See `plan.md` in the parent worktree for the full roadmap.
-
-## Configuration
-
-Every setting is an environment variable. Prefix `KEEP_MCP_`.
-
-| Variable | Default | Description |
-|---|---|---|
-| `KEEP_MCP_KEEP_API_URL` | `http://keep-backend:8080` | Base URL of the Keep REST API |
-| `KEEP_MCP_KEEP_API_KEY` | *(required)* | API key used on every request (`X-API-KEY`) |
-| `KEEP_MCP_TRANSPORT` | `stdio` | `stdio` or `streamable-http` |
-| `KEEP_MCP_HTTP_HOST` | `0.0.0.0` | Bind host for `streamable-http` |
-| `KEEP_MCP_HTTP_PORT` | `8090` | Bind port for `streamable-http` |
-| `KEEP_MCP_HTTP_TIMEOUT` | `30` | httpx timeout for calls to `keep-backend` |
-| `KEEP_MCP_LOG_LEVEL` | `INFO` | Root log level |
-
-## Running locally (stdio, for Claude Desktop / Copilot CLI / Cursor)
+## Run
 
 ```bash
-poetry install
-KEEP_MCP_KEEP_API_URL=http://localhost:8080 \
-KEEP_MCP_KEEP_API_KEY=your-key \
-poetry run keep-mcp
+KEEP_MCP_KEEP_API_KEY=<your-key> docker compose --profile mcp up keep-mcp
+curl http://localhost:8090/healthz
 ```
 
-Example client config (`~/.copilot/mcp.json`):
+Env: `KEEP_MCP_KEEP_API_URL` (default `http://keep-backend:8080`), `KEEP_MCP_KEEP_API_KEY` (required), `KEEP_MCP_TRANSPORT` (`stdio` | `streamable-http`, default `stdio`), `KEEP_MCP_HTTP_HOST`/`PORT` (streamable-http only).
 
-```json
-{
-  "servers": {
-    "keep": {
-      "command": "poetry",
-      "args": ["run", "keep-mcp"],
-      "cwd": "/path/to/keep/keep-mcp",
-      "env": {
-        "KEEP_MCP_KEEP_API_URL": "http://localhost:8080",
-        "KEEP_MCP_KEEP_API_KEY": "your-key"
-      }
-    }
-  }
-}
-```
-
-## Running in Docker (streamable-http)
-
-Ships as `keep-mcp` in the repo's `docker-compose.yml`. Enable it with:
-
-```bash
-KEEP_MCP_KEEP_API_KEY=your-key docker compose up keep-mcp
-```
-
-Health checks:
-
-- `GET http://localhost:8090/healthz` — process liveness
-- `GET http://localhost:8090/readyz` — verifies `keep-backend` reachable
-
-## Architecture
-
-Thin adapter. All auth/RBAC/tenancy stay in `keep-backend`. This container is a stateless HTTP client — safe to scale horizontally and safe to restart at will.
+Write tools and LGTM passthrough land in v0.2/v0.3.

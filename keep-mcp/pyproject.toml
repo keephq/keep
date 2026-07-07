@@ -10,8 +10,6 @@ packages = [{ include = "keep_mcp", from = "src" }]
 python = ">=3.11,<3.14"
 mcp = "^1.2.0"
 httpx = "^0.27.0"
-pydantic = "^2.7"
-pydantic-settings = "^2.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
