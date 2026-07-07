@@ -1,11 +1,12 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
-- **service_account_json**: The service account JSON with container.viewer role (required: True, sensitive: True)
 - **cluster_name**: The name of the cluster (required: True, sensitive: False)
+- **service_account_json**: The service account JSON with container.viewer role. Leave empty to use Application Default Credentials (e.g. GKE Workload Identity) (required: False, sensitive: True)
 - **region**: The GKE cluster region (required: False, sensitive: False)
+- **project_id**: The GCP project id (defaults to the service account project or the Application Default Credentials project) (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **roles/container.viewer**: Read access to GKE resources (mandatory) 
