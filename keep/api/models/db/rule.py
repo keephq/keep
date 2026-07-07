@@ -58,3 +58,6 @@ class Rule(SQLModel, table=True):
     multi_level_property_name: str | None = None
     threshold: int = Field(sa_column_args=(CheckConstraint("threshold>0"),), default=1)
     assignee: str | None = None
+    # when set, the incident is locked after this many seconds from its creation:
+    # alerts arriving after the window open a fresh incident instead of extending it
+    max_incident_window: int | None = None
