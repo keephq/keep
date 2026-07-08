@@ -8,14 +8,17 @@ it is flagged with is_correlated=True and correlated_to=<representative fingerpr
 """
 
 import time
+import uuid
 from datetime import datetime
 
 import pytest
 
 from keep.api.core.db import get_last_alert_by_correlation_fingerprint, get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import Alert, AlertDeduplicationRule, LastAlert
+from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.db.alert import Alert, AlertDeduplicationRule, AlertEnrichment, LastAlert
+from keep.api.tasks.process_event_task import process_event
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 
@@ -47,6 +50,42 @@ def _add_rule(db_session, rule_type, fingerprint_fields, name=None):
 def _alert_details(name, source="keep", **extra):
     """Build a details dict compatible with the create_alert fixture."""
     return {"name": name, "source": [source], **extra}
+
+
+def _batch_alert(fingerprint, correlation_fingerprint, status=AlertStatus.FIRING, **extra):
+    """Build an already-formatted AlertDto for a single alert within a batch.
+
+    Alerts are passed to process_event pre-formatted (as real webhook payloads
+    with several alerts are formatted into a list of AlertDto by the provider
+    in one shot) so process_event's list branch appends them as-is instead of
+    re-running them through format_alert.
+    """
+    return AlertDto(
+        id=str(uuid.uuid4()),
+        fingerprint=fingerprint,
+        name="same-batch-alert",
+        status=status,
+        lastReceived=datetime.utcnow().isoformat(),
+        correlation_fingerprint=correlation_fingerprint,
+        source=["keep"],
+        **extra,
+    )
+
+
+def _process_batch(events):
+    """Send several alerts through process_event in a single call, simulating
+    alerts arriving together in one webhook payload."""
+    return process_event(
+        ctx={"job_try": 1},
+        trace_id="test",
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_id="test",
+        provider_type="keep",
+        fingerprint=None,
+        api_key_name="test",
+        event=events,
+        notify_client=False,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -291,3 +330,220 @@ def test_split_rule_default_type(db_session, client, test_app):
     rule = next((r for r in rules if r["name"] == "Default Type Rule"), None)
     assert rule is not None
     assert rule["rule_type"] == "split"
+
+
+# ---------------------------------------------------------------------------
+# Same-batch correlation tests (Fix 1, see same-batch.md)
+#
+# The DB lookup inside apply_deduplication only sees committed LastAlert rows,
+# so siblings that arrive together in a single webhook payload can't correlate
+# to each other through that path alone. These tests exercise the batch-local
+# correlation pass in __handle_formatted_events.
+# ---------------------------------------------------------------------------
+
+
+def test_same_batch_second_alert_correlated_to_first(db_session):
+    """Two alerts sharing a correlation fingerprint, pushed in one payload with
+    distinct fingerprints, must correlate to each other even though neither is
+    committed to the DB yet when the batch is processed."""
+    corr_fp = "same-batch-corr-1"
+
+    _process_batch(
+        [
+            _batch_alert("fp-batch-1", corr_fp),
+            _batch_alert("fp-batch-2", corr_fp),
+        ]
+    )
+
+    first = db_session.query(Alert).filter(Alert.fingerprint == "fp-batch-1").first()
+    second = db_session.query(Alert).filter(Alert.fingerprint == "fp-batch-2").first()
+
+    assert first.event.get("is_correlated") is False
+    assert first.event.get("correlated_to") is None
+    assert second.event.get("is_correlated") is True
+    assert second.event.get("correlated_to") == "fp-batch-1"
+
+
+def test_same_batch_with_existing_db_representative(db_session):
+    """When an active representative already exists in the DB, apply_deduplication
+    correlates every batch member to it directly; the batch-local pass must not
+    override that with an in-batch representative."""
+    corr_fp = "same-batch-corr-2"
+
+    _process_batch([_batch_alert("fp-existing-rep", corr_fp)])
+
+    _process_batch(
+        [
+            _batch_alert("fp-new-1", corr_fp),
+            _batch_alert("fp-new-2", corr_fp),
+        ]
+    )
+
+    new_1 = db_session.query(Alert).filter(Alert.fingerprint == "fp-new-1").first()
+    new_2 = db_session.query(Alert).filter(Alert.fingerprint == "fp-new-2").first()
+
+    assert new_1.event.get("is_correlated") is True
+    assert new_1.event.get("correlated_to") == "fp-existing-rep"
+    assert new_2.event.get("is_correlated") is True
+    assert new_2.event.get("correlated_to") == "fp-existing-rep"
+
+
+def test_same_batch_resolved_sibling_not_representative(db_session):
+    """A resolved alert sharing the payload must never become the representative
+    and must never be marked correlated itself."""
+    corr_fp = "same-batch-corr-3"
+
+    _process_batch(
+        [
+            _batch_alert("fp-resolved", corr_fp, status=AlertStatus.RESOLVED),
+            _batch_alert("fp-firing", corr_fp, status=AlertStatus.FIRING),
+        ]
+    )
+
+    resolved = db_session.query(Alert).filter(Alert.fingerprint == "fp-resolved").first()
+    firing = db_session.query(Alert).filter(Alert.fingerprint == "fp-firing").first()
+
+    assert resolved.event.get("is_correlated") is False
+    assert resolved.event.get("correlated_to") is None
+    assert firing.event.get("is_correlated") is False
+    assert firing.event.get("correlated_to") is None
+
+
+def test_same_batch_single_alert_stays_uncorrelated(db_session):
+    """A single alert in the payload with no DB representative stays uncorrelated."""
+    corr_fp = "same-batch-corr-4"
+
+    _process_batch([_batch_alert("fp-lonely", corr_fp)])
+
+    alert = db_session.query(Alert).filter(Alert.fingerprint == "fp-lonely").first()
+    assert alert.event.get("is_correlated") is False
+    assert alert.event.get("correlated_to") is None
+
+
+# ---------------------------------------------------------------------------
+# Persist correlation on deduplicated occurrences (Fix 2, see
+# persist-correlation.md)
+#
+# apply_deduplication recomputes is_correlated/correlated_to on every repeat
+# notification, even full duplicates that never get their own Alert row. These
+# tests check that the recomputed flags are propagated onto the stored alert
+# via enrichment, healing alerts that were persisted uncorrelated.
+# ---------------------------------------------------------------------------
+
+
+def test_deduplicated_occurrence_heals_stale_correlation(db_session, create_alert):
+    """A full-duplicate re-send of an alert must push its freshly-computed
+    is_correlated/correlated_to onto the stored alert view via enrichment, even
+    though the stored Alert row itself is never touched again."""
+    _add_rule(db_session, "correlate", ["name"])
+    ts = datetime.utcnow()
+
+    create_alert(
+        "fp-persist-a",
+        AlertStatus.FIRING,
+        ts,
+        _alert_details("same-alert-persist", id="id-persist-a"),
+    )
+    create_alert(
+        "fp-persist-b",
+        AlertStatus.FIRING,
+        ts,
+        _alert_details("same-alert-persist", id="id-persist-b"),
+    )
+
+    b_alert = db_session.query(Alert).filter(Alert.fingerprint == "fp-persist-b").first()
+    assert b_alert.event.get("is_correlated") is True
+    assert b_alert.event.get("correlated_to") == "fp-persist-a"
+
+    # Simulate a stale/previously-mis-stored alert (e.g. from the since-fixed
+    # same-batch race) whose stored row still says uncorrelated.
+    b_alert.event = {**b_alert.event, "is_correlated": False, "correlated_to": None}
+    db_session.add(b_alert)
+    db_session.commit()
+
+    alerts_count_before = db_session.query(Alert).count()
+
+    # Re-send B unchanged (same id, so the dedup hash matches): classified as a
+    # full duplicate and discarded.
+    create_alert(
+        "fp-persist-b",
+        AlertStatus.FIRING,
+        ts,
+        _alert_details("same-alert-persist", id="id-persist-b"),
+    )
+
+    # No new Alert row was created for the duplicate occurrence.
+    assert db_session.query(Alert).count() == alerts_count_before
+
+    db_session.refresh(b_alert)
+    # The underlying row is untouched by the duplicate; only the enrichment
+    # carries the fix. Check this before convert_db_alerts_to_dto_alerts, which
+    # merges enrichments into alert.event in place.
+    assert b_alert.event.get("is_correlated") is False
+
+    healed = convert_db_alerts_to_dto_alerts([b_alert])[0]
+    assert healed.is_correlated is True
+    assert healed.correlated_to == "fp-persist-a"
+
+
+def test_new_occurrence_disposes_stale_enrichment(db_session, create_alert):
+    """A genuinely new (non-duplicate) occurrence saves its own row and disposes
+    the disposable enrichment, so the flags come from the new row, not a stale
+    enrichment left over from a previous duplicate."""
+    _add_rule(db_session, "correlate", ["name"])
+    ts = datetime.utcnow()
+
+    create_alert("fp-dispose-a", AlertStatus.FIRING, ts, _alert_details("same-alert-dispose"))
+    create_alert("fp-dispose-b", AlertStatus.FIRING, ts, _alert_details("same-alert-dispose"))
+
+    alerts_count_before = db_session.query(Alert).count()
+
+    # Changed payload -> not a full duplicate -> a new Alert row is saved.
+    create_alert(
+        "fp-dispose-b",
+        AlertStatus.FIRING,
+        ts,
+        _alert_details("same-alert-dispose", message="changed payload"),
+    )
+
+    assert db_session.query(Alert).count() == alerts_count_before + 1
+
+    new_row = (
+        db_session.query(Alert)
+        .filter(Alert.fingerprint == "fp-dispose-b")
+        .order_by(Alert.timestamp.desc())
+        .first()
+    )
+    assert new_row.event.get("is_correlated") is True
+    assert new_row.event.get("correlated_to") == "fp-dispose-a"
+
+    enrichment = (
+        db_session.query(AlertEnrichment)
+        .filter(AlertEnrichment.alert_fingerprint == "fp-dispose-b")
+        .first()
+    )
+    assert "disposable_is_correlated" not in (enrichment.enrichments if enrichment else {})
+
+
+def test_full_duplicate_without_correlation_only_enriches_last_received(db_session, create_alert):
+    """A full-duplicate occurrence of an alert with no correlation must not add
+    is_correlated/correlated_to keys to the enrichment - only lastReceived."""
+    ts = datetime.utcnow()
+
+    create_alert(
+        "fp-no-corr", AlertStatus.FIRING, ts, _alert_details("lonely-alert", id="id-no-corr")
+    )
+    # Re-send unchanged (same id, so the dedup hash matches) -> full duplicate.
+    create_alert(
+        "fp-no-corr", AlertStatus.FIRING, ts, _alert_details("lonely-alert", id="id-no-corr")
+    )
+
+    enrichment = (
+        db_session.query(AlertEnrichment)
+        .filter(AlertEnrichment.alert_fingerprint == "fp-no-corr")
+        .first()
+    )
+    assert enrichment is not None
+    assert "lastReceived" in enrichment.enrichments
+    assert "is_correlated" not in enrichment.enrichments
+    assert "correlated_to" not in enrichment.enrichments
