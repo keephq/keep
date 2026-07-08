@@ -54,3 +54,11 @@ else:
 OPENAI_MODEL_NAME = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-2024-08-06")
 
 KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
+
+FINGERPRINT_PAYLOAD_LIMIT = 100
+
+
+def fingerprints_for_poll_payload(fingerprints: list[str]) -> list[str]:
+    if len(fingerprints) <= FINGERPRINT_PAYLOAD_LIMIT:
+        return fingerprints
+    return []

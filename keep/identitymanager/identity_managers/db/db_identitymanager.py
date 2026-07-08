@@ -8,6 +8,8 @@ from keep.api.core.db import create_user as create_user_in_db
 from keep.api.core.db import delete_user as delete_user_from_db
 from keep.api.core.db import get_user
 from keep.api.core.db import get_users as get_users_from_db
+from keep.api.core.db import update_user_password as update_user_password_in_db
+from keep.api.core.db import update_user_role as update_user_role_in_db
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
@@ -110,4 +112,32 @@ class DbIdentityManager(BaseIdentityManager):
         return DbAuthVerifier(scopes)
 
     def update_user(self, user_email: str, update_data: dict) -> User:
-        raise NotImplementedError("DbIdentityManager.update_user")
+        # For DB auth the identifier is the username (stored as `email` in the DTO)
+        password = update_data.get("password")
+        role = update_data.get("role")
+
+        updated_user = None
+        if password:
+            updated_user = update_user_password_in_db(
+                self.tenant_id, user_email, password
+            )
+            if not updated_user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+        if role:
+            updated_user = update_user_role_in_db(self.tenant_id, user_email, role)
+            if not updated_user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+        if updated_user is None:
+            raise HTTPException(status_code=400, detail="No update data provided")
+
+        return User(
+            email=updated_user.username,
+            name=updated_user.username,
+            role=updated_user.role,
+            last_login=(
+                str(updated_user.last_sign_in) if updated_user.last_sign_in else None
+            ),
+            created_at=str(updated_user.created_at),
+        )

@@ -3,25 +3,64 @@ import { useWebsocket } from "@/utils/hooks/usePusher";
 import { Observable } from "rxjs";
 import { v4 as generateGuid } from "uuid";
 
+type PollAlertsPayload = {
+  fingerprints?: string[];
+};
+
+export function parsePollAlertsPayload(data: unknown): string[] {
+  if (!data) {
+    return [];
+  }
+
+  let payload: unknown = data;
+  if (typeof data === "string") {
+    try {
+      payload = JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "fingerprints" in payload
+  ) {
+    const fingerprints = (payload as PollAlertsPayload).fingerprints;
+    if (!Array.isArray(fingerprints)) {
+      return [];
+    }
+
+    return fingerprints.filter(
+      (fingerprint): fingerprint is string =>
+        typeof fingerprint === "string" && fingerprint.length > 0
+    );
+  }
+
+  return [];
+}
+
 export const useAlertPolling = (isEnabled: boolean) => {
   const { bind, unbind } = useWebsocket();
-  const [pollAlerts, setPollAlerts] = useState<string | null>(null);
-
-  console.log("useAlertPolling: Initializing");
+  const [data, setData] = useState<string | null>(null);
+  const [fingerprints, setFingerprints] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isEnabled) {
-      console.log("useAlertPolling: Disabling polling");
       return;
     }
 
-    const subscription = new Observable((subscriber) => {
-      const callback = () => subscriber.next(true);
+    const subscription = new Observable<unknown>((subscriber) => {
+      const callback = (eventData: unknown) => subscriber.next(eventData);
       bind("poll-alerts", callback);
       return () => unbind("poll-alerts", callback);
-    }).subscribe(() => setPollAlerts(generateGuid()));
+    }).subscribe((eventData) => {
+      setData(generateGuid());
+      setFingerprints(parsePollAlertsPayload(eventData));
+    });
+
     return () => subscription.unsubscribe();
   }, [isEnabled, bind, unbind]);
 
-  return { data: pollAlerts };
+  return { data, fingerprints };
 };

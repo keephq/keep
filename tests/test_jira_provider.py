@@ -126,6 +126,51 @@ class TestJiraProvider:
         # Verify the result
         assert result["issue"]["key"] == "TEST-123"
 
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_jiraonprem_ssl_verification_disabled_by_default(
+        self, mock_get, mock_post, jiraonprem_provider
+    ):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "projects": [{"issuetypes": [{"name": "Task"}]}]
+        }
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {"key": "TEST-1", "id": "1"}
+
+        jiraonprem_provider._JiraonpremProvider__create_issue(
+            project_key="TEST", summary="Test Summary"
+        )
+
+        assert mock_post.call_args[1]["verify"] is False
+
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_jiraonprem_ssl_verification_enabled_via_config(
+        self, mock_get, mock_post, context_manager
+    ):
+        config = ProviderConfig(
+            description="Test Jira On-Prem Provider",
+            authentication={
+                "host": "https://test-jira.com",
+                "personal_access_token": "test_token",
+                "verify": True,
+            },
+        )
+        provider = JiraonpremProvider(context_manager, "test_jiraonprem_verify", config)
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "projects": [{"issuetypes": [{"name": "Task"}]}]
+        }
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {"key": "TEST-1", "id": "1"}
+
+        provider._JiraonpremProvider__create_issue(
+            project_key="TEST", summary="Test Summary"
+        )
+
+        assert mock_post.call_args[1]["verify"] is True
+
     @patch("requests.put")
     @patch("requests.get")
     def test_update_issue_with_custom_fields_jira_cloud(

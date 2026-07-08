@@ -299,6 +299,10 @@ jobs:
       - name: Dump logs
         if: always()
         run: |
+          if [ ! -f tests/e2e_tests/docker-compose-modified.yml ]; then
+            echo "docker-compose-modified.yml not found; skipping log collection"
+            exit 0
+          fi
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend > backend_logs-${{ inputs.db-type }}.txt
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-frontend > frontend_logs-${{ inputs.db-type }}.txt
           docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml logs keep-backend-db-auth > backend_logs-${{ inputs.db-type }}-db-auth.txt
@@ -330,4 +334,8 @@ jobs:
       - name: Tear down environment
         if: always()
         run: |
-          docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          if [ -f tests/e2e_tests/docker-compose-modified.yml ]; then
+            docker compose -p keep --project-directory . -f tests/e2e_tests/docker-compose-modified.yml down
+          else
+            echo "docker-compose-modified.yml not found; skipping tear down"
+          fi

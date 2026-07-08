@@ -87,6 +87,8 @@ class ThresholdCondition(BaseCondition):
                     compare_to, compare_value
                 )
             )
+        if self._is_percentage(compare_to) and self._is_percentage(compare_value):
+            return float(compare_to.strip("%")), float(compare_value.strip("%"))
         return compare_to, compare_value
 
     def apply(self, compare_to, compare_value) -> bool:

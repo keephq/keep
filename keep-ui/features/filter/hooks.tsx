@@ -100,15 +100,22 @@ export const useFacetOptions = (
     }
 
     const fetchedData: FacetOptionsDict = swrValue.data.response;
-    const newFacetOptions: FacetOptionsDict = JSON.parse(
-      JSON.stringify(mergedFacetOptions || {})
-    );
+    // Shallow copy of the per-facet map only; we never mutate the existing
+    // option arrays/objects, so a full JSON deep-clone (which duplicated the
+    // entire options tree on every poll and spiked memory with high facet
+    // cardinality, see #6577) is unnecessary.
+    const newFacetOptions: FacetOptionsDict = { ...(mergedFacetOptions || {}) };
     Object.entries(fetchedData).forEach(([facetId, newOptions]) => {
-      if (newFacetOptions[facetId]) {
-        const currentFacetOptionsMap = newFacetOptions[facetId].reduce(
+      const existingOptions = newFacetOptions[facetId];
+      if (existingOptions) {
+        // Preserve previously known option values with a 0 match count so they
+        // remain visible/selectable, then overlay the freshly fetched counts.
+        const currentFacetOptionsMap = existingOptions.reduce(
           (accumulator, oldOption) => {
-            accumulator[oldOption.display_name] = oldOption;
-            oldOption.matches_count = 0;
+            accumulator[oldOption.display_name] = {
+              ...oldOption,
+              matches_count: 0,
+            };
             return accumulator;
           },
           {} as Record<string, FacetOptionDto>

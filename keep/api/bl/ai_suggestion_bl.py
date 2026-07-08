@@ -21,6 +21,7 @@ from keep.api.models.incident import (
     IncidentDto,
     IncidentsClusteringSuggestion,
 )
+from keep.api.utils.ai_utils import get_ai_temperature_kwargs
 
 
 class AISuggestionBl:
@@ -461,7 +462,7 @@ class AISuggestionBl:
                     },
                 },
             },
-            temperature=0.2,
+            **get_ai_temperature_kwargs(0.2),
         )
 
     def _process_incidents(

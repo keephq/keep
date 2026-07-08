@@ -8,7 +8,7 @@ import { FacetValue } from "./facet-value";
 import { FacetDto, FacetOptionDto } from "./models";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useExistingFacetsPanelStore } from "./store";
-import { stringToValue, valueToString } from "./store/utils";
+import { isLazyFacet, stringToValue, valueToString } from "./store/utils";
 
 export interface FacetProps {
   facet: FacetDto;
@@ -30,8 +30,13 @@ export const Facet: React.FC<FacetProps> = ({
   // Get preset name from URL
   const presetName = pathname?.split("/").pop() || "default";
 
-  // Store open/close state in localStorage with a unique key per preset and facet
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+  // Lazy facets (high-cardinality user-defined facets) start collapsed and only
+  // fetch their options when the user expands them. Static facets (severity,
+  // status, source, ...) always render eagerly. Eagerly mounting and loading
+  // options for every lazy facet is what froze the alerts page when many (200+)
+  // facets existed (see issue #6577).
+  const isLazy = isLazyFacet(facet);
+  const [isOpen, setIsOpen] = useState<boolean>(!isLazy);
   const [isLoaded, setIsLoaded] = useState<boolean>(!!options?.length);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -40,8 +45,14 @@ export const Facet: React.FC<FacetProps> = ({
   const facetRef = useRef(facet);
   facetRef.current = facet;
 
-  const facetOptionsLoadingState = useExistingFacetsPanelStore(
-    (state) => state.facetOptionsLoadingState
+  // Subscribe only to this facet's slice of the loading/selection state.
+  // Previously every Facet subscribed to the whole `facetOptionsLoadingState`
+  // and `facetsState` objects, so toggling one option re-rendered all facets.
+  const facetLoadingState = useExistingFacetsPanelStore(
+    (state) => state.facetOptionsLoadingState[facet.id]
+  );
+  const hasLoadingState = useExistingFacetsPanelStore(
+    (state) => Object.keys(state.facetOptionsLoadingState).length > 0
   );
   const toggleFacetOption = useExistingFacetsPanelStore(
     (state) => state.toggleFacetOption
@@ -52,19 +63,34 @@ export const Facet: React.FC<FacetProps> = ({
   const selectAllFacetOptions = useExistingFacetsPanelStore(
     (state) => state.selectAllFacetOptions
   );
-  const facetsState = useExistingFacetsPanelStore((state) => state.facetsState);
-  const facetState: Record<string, boolean> = useMemo(
-    () => facetsState?.[facet.id],
-    [facet.id, facetsState]
+  const setFacetActive = useExistingFacetsPanelStore(
+    (state) => state.setFacetActive
+  );
+  const facetState: Record<string, boolean> = useExistingFacetsPanelStore(
+    (state) => state.facetsState?.[facet.id]
   );
 
-  const facetsConfig = useExistingFacetsPanelStore(
-    (state) => state.facetsConfig
+  const facetConfig = useExistingFacetsPanelStore(
+    (state) => state.facetsConfig?.[facet.id]
   );
-  const facetConfig = facetsConfig?.[facet.id];
+
+  const isFacetActive = useExistingFacetsPanelStore(
+    (state) => !!state.activeFacetIds?.[facet.id]
+  );
 
   const facetStateRef = useRef(facetState);
   facetStateRef.current = facetState;
+
+  // Auto-open a lazy facet once it becomes active — either it received a
+  // selection (e.g. restored from URL query params after mount) or it was just
+  // added by the user via "Add Facet" — so the user can see its values.
+  const didAutoOpenRef = useRef(false);
+  useEffect(() => {
+    if (isLazy && !didAutoOpenRef.current && (facetState || isFacetActive)) {
+      didAutoOpenRef.current = true;
+      setIsOpen(true);
+    }
+  }, [isLazy, facetState, isFacetActive]);
 
   function getSelectedValues(): string[] {
     return Object.keys(facetStateRef.current || {});
@@ -140,7 +166,14 @@ export const Facet: React.FC<FacetProps> = ({
   };
 
   const handleExpandCollapse = (isOpen: boolean) => {
-    setIsOpen(!isOpen);
+    const willOpen = !isOpen;
+    setIsOpen(willOpen);
+
+    // Mark the facet active when expanding so its options get loaded. Lazy
+    // facets are inactive until expanded (#6577).
+    if (willOpen) {
+      setFacetActive(facet.id);
+    }
 
     if (!isLoaded && !isLoading) {
       onLoadOptions && onLoadOptions();
@@ -205,10 +238,7 @@ export const Facet: React.FC<FacetProps> = ({
   }
 
   function renderBody() {
-    if (
-      facetOptionsLoadingState[facet.id] === "loading" ||
-      !Object.keys(facetOptionsLoadingState).length
-    ) {
+    if (facetLoadingState === "loading" || !hasLoadingState) {
       return Array.from({ length: 3 }).map((_, index) =>
         renderSkeleton(`skeleton-${index}`)
       );
@@ -283,7 +313,7 @@ export const Facet: React.FC<FacetProps> = ({
             </div>
           )}
           <div
-            className={`max-h-60 overflow-y-auto${facetOptionsLoadingState[facet.id] === "reloading" ? " pointer-events-none opacity-70" : ""}`}
+            className={`max-h-60 overflow-y-auto${facetLoadingState === "reloading" ? " pointer-events-none opacity-70" : ""}`}
           >
             {renderBody()}
           </div>
